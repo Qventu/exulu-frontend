@@ -36,7 +36,7 @@ export function AgentSelector({
   const [navigating, setNavigating] = useState(false);
 
   const { loading, error, data, refetch } = useQuery(GET_AGENTS, {
-    fetchPolicy: "cache-first",
+    fetchPolicy: "network-only",
     nextFetchPolicy: "network-only",
     variables: {
       page: 1,

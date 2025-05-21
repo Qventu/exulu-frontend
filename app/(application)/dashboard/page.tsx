@@ -198,7 +198,7 @@ export default function DashboardPage() {
 
                             <p className="text-xs text-muted-foreground">
                                 {compareData?.[STATISTICS_TYPE_ENUM.EMBEDDER_UPSERT]! >= currentData?.[STATISTICS_TYPE_ENUM.EMBEDDER_UPSERT]! && <span>+</span>}
-                                {currentData?.[STATISTICS_TYPE_ENUM.EMBEDDER_UPSERT]! === 0 ? 0 : 
+                                    {currentData?.[STATISTICS_TYPE_ENUM.EMBEDDER_UPSERT]! === 0 ? 0 :  
                                     ((compareData?.[STATISTICS_TYPE_ENUM.EMBEDDER_UPSERT]! - currentData?.[STATISTICS_TYPE_ENUM.EMBEDDER_UPSERT]!) / currentData?.[STATISTICS_TYPE_ENUM.EMBEDDER_UPSERT]!) * 100}% growth compared to previous 7 days
                             </p>
                         </CardContent>

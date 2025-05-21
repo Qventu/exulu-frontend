@@ -2,11 +2,11 @@ import { gql } from "@apollo/client";
 
 const USER_FIELDS = `
 id
-firstName
-lastName
+firstname
+lastname
 email
 super_admin
-apiKey
+apikey
 type
 roles {
  id
@@ -125,14 +125,17 @@ export const GET_JOBS = gql`
   query GetJobs(
     $page: Int!
     $limit: Int!
-    $filters: FilterFindManyJobsInput
-    $sort: SortFindManyJobsInput = CREATEDAT_DESC
+    $filters: [FilterJob]
+    $sort: SortBy = {
+      field: "createdAt",
+      direction: DESC
+    }
   ) {
-    jobPagination(
+    jobsPagination(
       page: $page
-      perPage: $limit
+      limit: $limit
       sort: $sort
-      filter: $filters
+      filters: $filters
     ) {
       items {
         id
@@ -153,7 +156,7 @@ export const GET_JOBS = gql`
 `;
 export const GET_USER_ROLES = gql`
   query GetUserRoles($page: Int!, $limit: Int!) {
-    userRolePagination(page: $page, perPage: $limit) {
+    rolesPagination(page: $page, limit: $limit) {
       pageInfo {
         pageCount
         itemCount
@@ -164,12 +167,9 @@ export const GET_USER_ROLES = gql`
       items {
         id
         createdAt
-        agents {
-          id
-          name
-        }
+        agents
         is_admin
-        role
+        name
       }
     }
   }
@@ -178,9 +178,9 @@ export const GET_USERS = gql`
   query GetUsers(
     $page: Int!
     $limit: Int!
-    $filters: FilterFindManyUsersInput
+    $filters: [FilterUser]
   ) {
-    userPagination(page: $page, perPage: $limit, filter: $filters) {
+    usersPagination(page: $page, limit: $limit, filters: $filters) {
       pageInfo {
         pageCount
         itemCount
@@ -190,43 +190,33 @@ export const GET_USERS = gql`
       }
       items {
         id
-        firstName
-        lastName
+        firstname
+        lastname
         email
-        lastUsed
+        last_used
         createdAt
         type
-        apiKey
+        apikey
         emailVerified
-        roles {
-          id
-          role
-          agents {
-            id
-            name
-          }
-        }
+        role
       }
     }
   }
 `;
 export const GET_USER_ROLE_BY_ID = gql`
-  query GetUserRoleById($id: MongoID!) {
-    userRoleByid(id: $id) {
+  query GetUserRoleById($id: ID!) {
+    roleById(id: $id) {
       id
-      role
+      name
       is_admin
-      agents {
-        id
-        name
-      }
+      agents
       createdAt
       updatedAt
     }
   }
 `;
 export const GET_JOB_BY_ID = gql`
-  query GetJobById($id: MongoID!) {
+  query GetJobById($id: ID!) {
   jobById(id: $id) {
         id
         status
@@ -282,15 +272,15 @@ export const GET_AGENT_SESSION = gql`
 export const UPDATE_USER_BY_ID = gql`
     mutation UpdateUser(
       $email: String,
-      $firstName: String,
-      $lastName: String,
+      $firstname: String,
+      $lastname: String,
       $roles: [MongoID],
       $id: MongoID!
      ) {
         userUpdateById(id: $id, record: {
             email: $email,
-            firstName: $firstName,
-            lastName: $lastName,
+            firstname: $firstname,
+            lastname: $lastname,
             roles: $roles
         }) {
             record {
@@ -305,54 +295,39 @@ export const UPDATE_USER_BY_ID = gql`
 `;
 export const CREATE_API_USER = gql`
     mutation CreateUser(
-      $firstName: String,
+      $firstname: String,
       $type: String,
-      $apiKey: String,
+      $apikey: String,
       $email: String,
      ) {
-        userCreateOne(record: {
-            firstName: $firstName,
+      usersCreateOne(input: {
+            firstname: $firstname,
             type: $type,
-            apiKey: $apiKey,
+            apikey: $apikey,
             email: $email
         }) {
-            record {
-                ${USER_FIELDS}
-            }
-            error {
-                message
-                __typename
-            }
+            id
         }
     }
 `;
 export const UPDATE_USER_ROLE_BY_ID = gql`
   mutation UpdateUserRole(
-    $id: MongoID!
-    $role: String
+    $id: ID!
+    $name: String
     $is_admin: Boolean
-    $agents: [MongoID]
+    $agents: JSON
   ) {
-    userRoleUpdateById(
+    rolesUpdateOneById(
       id: $id
-      record: {
-        role: $role
+      input: {
+        name: $name
         is_admin: $is_admin
         agents: $agents
       }
     ) {
-      record {
         id
         createdAt
-        agents {
-          id
-          name
-        }
-      }
-      error {
-        message
-        __typename
-      }
+        agents
     }
   }
 `;
@@ -407,49 +382,41 @@ export const CREATE_AGENT = gql`
 `;
 export const UPDATE_AGENT = gql`
   mutation UpdateAgent(
-    $id: MongoID!
+    $id: ID!
     $name: String
     $backend: String
     $description: String
-    $tools: [String]
+    $tools: JSON
     $active: Boolean
     $public: Boolean
   ) {
     agentsUpdateOne(
-      record: { name: $name, backend: $backend, description: $description, active: $active, public: $public, tools: $tools }
-      filter: { id: $id }
+      input: { name: $name, backend: $backend, description: $description, active: $active, public: $public, tools: $tools }
+      where: { id: $id }
     ) {
-      record {
         id
         name
-      }
     }
   }
 `;
 export const CREATE_USER_ROLE = gql`
-  mutation CreateUserRole($role: String!) {
-    userRoleCreateOne(record: { role: $role }) {
-      record {
+  mutation CreateUserRole($name: String!) {
+    rolesCreateOne(input: { name: $name }) {
         id
         createdAt
-        role
-      }
+        name
     }
   }
 `;
 export const REMOVE_USER_BY_ID = gql`
-  mutation RemoveUserById($id: MongoID!) {
-    userRemoveById(id: $id) {
-      error {
-        message
-        __typename
-      }
-      recordId
+  mutation RemoveUserById($id: ID!) {
+    usersRemoveOneById(id: $id) {
+      id
     }
   }
 `;
 export const REMOVE_USER_ROLE_BY_ID = gql`
-  mutation RemoveUserRoleById($id: MongoID!) {
+  mutation RemoveUserRoleById($id: ID!) {
     userRoleRemoveById(id: $id) {
       error {
         message
@@ -460,24 +427,16 @@ export const REMOVE_USER_ROLE_BY_ID = gql`
   }
 `;
 export const REMOVE_AGENT_BY_ID = gql`
-  mutation RemoveAgentById($id: MongoID!) {
-    agentRemoveById(id: $id) {
-      error {
-        message
-        __typename
-      }
-      recordId
+  mutation RemoveAgentById($id: ID!) {
+    agentsRemoveOneById(id: $id) {
+      id
     }
   }
 `;
 export const REMOVE_AGENT_SESSION_BY_ID = gql`
-  mutation RemoveAgentSessionById($id: MongoID!) {
+  mutation RemoveAgentSessionById($id: ID!) {
     agentSessionRemoveById(id: $id) {
-      error {
-        message
-        __typename
-      }
-      recordId
+      id
     }
   }
 `;

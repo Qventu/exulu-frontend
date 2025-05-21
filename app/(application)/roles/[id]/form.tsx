@@ -84,9 +84,9 @@ export default function UserRoleForm({ role: init }: { role: UserRole }) {
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
     defaultValues: {
-      name: init.role,
+      name: init.name,
       is_admin: init.is_admin,
-      agents: init.agents?.map((agent) => agent.id),
+      agents: init.agents?.map((agent) => agent),
     },
   });
 
@@ -151,9 +151,9 @@ export default function UserRoleForm({ role: init }: { role: UserRole }) {
           <div>
             <h3 className="mb-4 text-lg font-medium">Agents access</h3>
             {agents?.loading && <Loading />}
-            {!agents?.loading && agents.data?.agentPagination?.items ? (
+            {!agents?.loading && agents.data?.agentsPagination?.items ? (
               <>
-                {agents.data.agentPagination.items.map((agent, index) => {
+                {agents.data.agentsPagination.items.map((agent, index) => {
                   return (
                     <div key={index} className="space-y-4 my-3">
                       <FormField
@@ -173,8 +173,8 @@ export default function UserRoleForm({ role: init }: { role: UserRole }) {
                                   ?.includes(agent.id)}
                                 onCheckedChange={(value) => {
                                   const updatedAgents = value
-                                    ? [...role.agents, agent]
-                                    : role.agents.filter(
+                                    ? [...(role.agents || []), agent]
+                                    : (role.agents || []).filter(
                                         (id) => id !== agent.id,
                                       );
                                   form.setValue(
@@ -197,8 +197,8 @@ export default function UserRoleForm({ role: init }: { role: UserRole }) {
               </>
             ) : null}
             {!agents?.loading &&
-            !agents.data.agentPagination?.items?.length ? (
-              <p>No agents found</p>
+            !agents.data.agentsPagination?.items?.length ? (
+              <p>No agents found.</p>
             ) : null}
           </div>
 

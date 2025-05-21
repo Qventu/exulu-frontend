@@ -15,26 +15,49 @@ import {GET_JOBS} from "@/queries/queries";
 import {TruncatedText} from "@/components/truncated-text";
 import {JOB_STATUS} from "@/util/enums/job-status";
 
+export type FilterOperator = { 
+  eq?: string,
+  ne?: string,
+  in?: string[],
+  contains?: string,
+}
+
+export type JobFilters = {
+  redis?: FilterOperator,
+  session?: FilterOperator,
+  status?: FilterOperator,
+  type?: FilterOperator,
+  result?: FilterOperator,
+  name?: FilterOperator,
+  agent?: FilterOperator,
+  user?: FilterOperator,
+  item?: FilterOperator,
+  inputs?: FilterOperator,
+  finished_at?: FilterOperator,
+  duration?: FilterOperator,
+}
+
 export function RecentJobs({ statusses, agent, session, type }: { statusses: string, agent?: string, session?: string, type?: "workflow" | "embedder" }) {
 
-  const filters: any = {}
+  let filters: JobFilters[] = []
+
   if (statusses) {
-    if (!filters.AND) filters.AND = []
-    filters.AND.push({
-      OR: statusses.split(",")?.map( status => ({ status: status }))
+    if (!filters) filters = []
+    filters.push({
+      status: { in: statusses.split(",") }
     });
   }
   if (agent) {
-    if (!filters.AND) filters.AND = []
-    filters.AND.push({ agent: agent })
+    if (!filters) filters = []
+    filters.push({ agent: { eq: agent } })
   }
   if (session) {
-    if (!filters.AND) filters.AND = []
-    filters.AND.push({ session: session })
+    if (!filters) filters = []
+    filters.push({ session: { eq: session } })
   }
   if (type) {
-    if (!filters.AND) filters.AND = []
-    filters.AND.push({ type: type })
+    if (!filters) filters = []
+    filters.push({ type: { eq: type } })
   }
 
   const { loading, error, data, refetch } = useQuery(GET_JOBS, {

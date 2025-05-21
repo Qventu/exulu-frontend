@@ -298,43 +298,6 @@ export function DataList({
                         })
                     }} />
                 </div>
-                {/* 
-                    
-                    - todo handle search
-
-                <Dialog open={open} onOpenChange={setOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" className="ml-2 ml-auto lg:flex">
-                            <MixerHorizontalIcon className="mr-2 size-4"/>
-                            Filters ({filterCount || 0})
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogBody>
-                            <ItemsFilterForm
-                                editing={true}
-                                submit={true}
-                                hideCollapse={true}
-                                auto={false}
-                                parallel={false}
-                                folder={activeFolder}
-                                archived={activeFolder === "archived"}
-                                preview={false}
-                                init={JSON.stringify(query?.base)}
-                                onUpdate={({base, decorated}) => {
-                                    setQuery({
-                                        base: base || {},
-                                        decorated: decorated || {},
-                                    });
-                                    setPage(1);
-                                    setOpen(false);
-                                }}
-                            />
-                        </DialogBody>
-                        <DialogFooter></DialogFooter>
-                    </DialogContent>
-                </Dialog>
-                */}
                 <Button
                     onClick={() => {
                         createItemMutation.mutate({

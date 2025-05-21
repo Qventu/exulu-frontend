@@ -47,7 +47,16 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { UserRole } from "@EXULU_SHARED/models/user-role";
-
+import { FilterOperator } from "@/components/custom/recent-jobs";
+export type UserFilters = {
+  firstname?: FilterOperator,
+  lastname?: FilterOperator,
+  email?: FilterOperator,
+  type?: FilterOperator,
+  status?: FilterOperator,
+  createdAt?: FilterOperator,
+  updatedAt?: FilterOperator,
+}
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
 }
@@ -80,7 +89,7 @@ export function DataTable<TData, TValue>({
     [],
   );
 
-  const [filters, setFilters] = useState<any>({});
+  const [filters, setFilters] = useState<UserFilters[]>([]);
 
   /* todo: get rid of own page state and use the table.currentPage() instead */
   let [page, setPage] = useState(1);
@@ -92,14 +101,13 @@ export function DataTable<TData, TValue>({
     variables: {
       page: page,
       limit: 10,
-      filters: {
+      filters: [
         ...filters,
-        _operators: {
-          type : {
+        {
+          type: {
             ne: "api"
           }
-        }
-      },
+        }],
     },
     pollInterval: 30000, // polls every 30 seconds for updates on users
   });
@@ -123,15 +131,15 @@ export function DataTable<TData, TValue>({
 
   let items;
   let pageCount;
-  if (loading && previousData?.userPagination?.items) {
-    items = previousData?.userPagination?.items;
-    pageCount = previousData?.userPagination?.pageInfo?.pageCount;
-  } else if (data?.userPagination?.items) {
-    items = data?.userPagination?.items;
-    pageCount = data?.userPagination?.pageInfo?.pageCount;
-  } else if (previousData?.userPagination?.items) {
-    items = previousData?.userPagination?.items;
-    pageCount = previousData?.userPagination?.pageInfo?.pageCount;
+  if (loading && previousData?.usersPagination?.items) {
+    items = previousData?.usersPagination?.items;
+    pageCount = previousData?.usersPagination?.pageInfo?.pageCount;
+  } else if (data?.usersPagination?.items) {
+    items = data?.usersPagination?.items;
+    pageCount = data?.usersPagination?.pageInfo?.pageCount;
+  } else if (previousData?.usersPagination?.items) {
+    items = previousData?.usersPagination?.items;
+    pageCount = previousData?.usersPagination?.pageInfo?.pageCount;
   }
 
   const table = useReactTable({
@@ -160,18 +168,22 @@ export function DataTable<TData, TValue>({
   });
 
   const search = (value: string) => {
-    setFilters({
-      ...filters,
-      emailSearch: value,
-    });
+    const copy = [...filters];
+    const exists = copy.find((filter) => filter.email);
+    if (exists?.email) {
+      exists.email.contains = value;
+    } else {
+      copy.push({
+        email: {
+          contains: value,
+        },
+      });
+    }
+    setFilters(copy);
     refetch();
   };
 
-  const isFiltered =
-    filters.OR ||
-    filters.emailSearch ||
-    filters.item ||
-    filters.status;
+  const isFiltered = filters.length > 0;
 
   return (
     <div className="space-y-4">
@@ -179,7 +191,7 @@ export function DataTable<TData, TValue>({
         <div className="flex flex-1 items-center space-x-2">
           <Input
             placeholder="Filter users..."
-            value={filters?.emailSearch ?? ""}
+            value={filters?.find((filter) => filter.email)?.email?.contains ?? ""}
             onChange={(event) => {
               search(event.target.value);
             }}
@@ -314,7 +326,13 @@ export function DataTable<TData, TValue>({
             <Button
               variant="ghost"
               onClick={() => {
-                router.refresh();
+                const copy = [...filters];
+                const emailFilter = copy.find((filter) => filter.email);
+                if (emailFilter) {
+                  copy.splice(copy.indexOf(emailFilter), 1);
+                }
+                setFilters(copy);
+                refetch();
               }}
             >
               Reset
@@ -335,9 +353,9 @@ export function DataTable<TData, TValue>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
                     </TableHead>
                   );
                 })}
@@ -414,7 +432,7 @@ export function DataTable<TData, TValue>({
                 setPage(1);
                 refetch();
               }}
-              disabled={!data?.userPagination?.pageInfo.hasPreviousPage}
+              disabled={!data?.usersPagination?.pageInfo.hasPreviousPage}
             >
               <span className="sr-only">Go to first page</span>
               <DoubleArrowLeftIcon className="size-4" />
@@ -427,7 +445,7 @@ export function DataTable<TData, TValue>({
                 setPage(page - 1);
                 refetch();
               }}
-              disabled={!data?.userPagination?.pageInfo.hasPreviousPage}
+              disabled={!data?.usersPagination?.pageInfo.hasPreviousPage}
             >
               <span className="sr-only">Go to previous page</span>
               <ChevronLeftIcon className="size-4" />
@@ -440,7 +458,7 @@ export function DataTable<TData, TValue>({
                 setPage(page + 1);
                 refetch();
               }}
-              disabled={!data?.userPagination?.pageInfo.hasNextPage}
+              disabled={!data?.usersPagination?.pageInfo.hasNextPage}
             >
               <span className="sr-only">Go to next page</span>
               <ChevronRightIcon className="size-4" />
@@ -455,7 +473,7 @@ export function DataTable<TData, TValue>({
                 setPage(table.getPageCount());
                 refetch();
               }}
-              disabled={!data?.userPagination?.pageInfo.hasNextPage}
+              disabled={!data?.usersPagination?.pageInfo.hasNextPage}
             >
               <span className="sr-only">Go to last page</span>
               <DoubleArrowRightIcon className="size-4" />

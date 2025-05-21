@@ -35,7 +35,7 @@ interface ApiKey {
     name: string
     key: string
     createdAt: Date
-    lastUsed?: Date
+    last_used?: Date
 }
 
 export default function ApiKeyManagement() {
@@ -51,9 +51,9 @@ export default function ApiKeyManagement() {
         variables: {
             page: 1,
             limit: 10,
-            filters: {
-                type: "api"
-            },
+            filters: [{
+                type: { eq: "api"}
+            }],
         },
         pollInterval: 30000, // polls every 30 seconds for updates on users
     });
@@ -78,7 +78,7 @@ export default function ApiKeyManagement() {
         const encryptedKey = await encryptApiKey(plainKey)
         const response = await createApiUser({
             variables: {
-                firstName: `${newKeyName}`,
+                firstname: `${newKeyName}`,
                 type: "api",
                 apiKey: `${encryptedKey}${postFix}`,
                 email: `${encryptedKey}@exulu-api-user.com`
@@ -87,7 +87,7 @@ export default function ApiKeyManagement() {
 
         console.log("response", response)
         setNewlyGeneratedKey({
-            id: `${response.data?.userCreateOne?.record?.id}`,
+            id: `${response.data?.usersCreateOne?.id}`,
             name: newKeyName,
             key: `${plainKey}${postFix}`,
             createdAt: new Date()
@@ -223,7 +223,7 @@ export default function ApiKeyManagement() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {data?.userPagination?.items?.length === 0 ? (
+                    {data?.usersPagination?.items?.length === 0 ? (
                         <div className="text-center py-6 text-muted-foreground">
                             No API keys found. Generate your first key above.
                         </div>
@@ -240,9 +240,9 @@ export default function ApiKeyManagement() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {data?.userPagination?.items?.map((user) => (
+                                    {data?.usersPagination?.items?.map((user) => (
                                         <TableRow key={user.id}>
-                                            <TableCell className="font-medium">{user.firstName}</TableCell>
+                                            <TableCell className="font-medium">{user.firstname}</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <code className="bg-muted px-1 py-0.5 rounded text-xs">****************</code>
@@ -250,7 +250,7 @@ export default function ApiKeyManagement() {
                                             </TableCell>
                                             <TableCell>{user.createdAt}</TableCell>
                                             <TableCell>
-                                                {user.lastUsed ? (user.lastUsed) : (
+                                                {user.last_used ? (user.last_used) : (
                                                     <Badge variant="outline" className="text-xs">
                                                         Never
                                                     </Badge>

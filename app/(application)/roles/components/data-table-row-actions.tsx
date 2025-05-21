@@ -39,7 +39,7 @@ export const userRoleSchema = z.object({
         )
         .nullable()
         .optional(),
-    role: z.string(),
+    name: z.string(),
 });
 
 
@@ -88,7 +88,7 @@ export function DataTableRowActions<TData>({
       <DropdownMenuContent align="end" className="w-[160px]">
         <DropdownMenuItem
           onClick={() => {
-            if (role.role === "admin" || role.role === "developer") {
+            if (role.name === "admin" || role.name === "developer") {
               toast({ title: "Can't remove 'admin' or 'developer' role." });
             }
             removeUserRole({

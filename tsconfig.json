@@ -24,7 +24,7 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@EXULU_SHARED/*": ["../types/*"],
+      "@EXULU_SHARED/*": ["./types/*"],
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "custom.d.ts", "../types/**/*.ts"],

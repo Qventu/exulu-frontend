@@ -1,20 +1,15 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
-  Bar,
-  BarChart,
-  CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Area, AreaChart
+  ResponsiveContainer, Tooltip, XAxis, Area, AreaChart
 } from "recharts"
-import { Skeleton } from "@/components/ui/skeleton";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="custom-tooltip">
         <p className="label">{`${label} : ${payload[0].value}`}</p>
-        <span>View jobs</span>
       </div>
     );
   }
@@ -23,18 +18,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function DashboardMainChart({ data }: { data: any[] | null }) {
-
-  const router = useRouter();
-
-  const handleClick = (data: any, index: number) => {
-    /* todo: convert index to valid date object */
-    router.push(`/jobs?dateFrom=${index}&dateTo=${index}`);
-  };
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return `${date.getDate()} ${date.toLocaleString("default", { month: "short" })}`
-  }
 
   let chartData = data;
   if (!chartData) {

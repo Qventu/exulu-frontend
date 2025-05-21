@@ -34,9 +34,9 @@ export const columns: ColumnDef<UserRole>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "role",
+    accessorKey: "name",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Role" />
+      <DataTableColumnHeader column={column} title="Name" />
     ),
     cell: ({ row }) => {
       /*const label = labels.find((label) => label.value === row.original.label)*/
@@ -45,7 +45,7 @@ export const columns: ColumnDef<UserRole>[] = [
         <div className="flex space-x-2">
           {/*{label && <Badge variant="outline">{label.label}</Badge>}*/}
           <span className="max-w-[300px] truncate font-medium">
-            {row.original.role}
+            {row.original.name}
           </span>
         </div>
       );

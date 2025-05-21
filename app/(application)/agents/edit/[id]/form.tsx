@@ -62,29 +62,23 @@ const agentFormSchema = z.object({
     .nullable()
     .optional(),
   public: z.boolean().nullable().optional(),
-  id: z.string().nullable().optional(),
+  id: z.string().or(z.number()).nullable().optional(),
   active: z.any(),
   access: z.boolean().nullable().optional(),
 });
 
 export default function AgentForm({
   agent,
-  tools,
   refetch,
 }: {
   agent: Agent;
-  tools: Tool[];
   refetch: any;
 }) {
 
   const router = useRouter();
   const [errors, setErrors] = useState<string>();
   const { user, setUser } = useContext(UserContext);
-  const [enabledTools, setEnabledTools] = useState<Tool[]>( agent.tools ? agent.tools.map(_tool => {
-    const tool = tools.find(tool => tool.id === _tool.id);
-    return tool;
-  }).filter(tool => tool !== undefined) as Tool[] : []);
-  const [unassignedTools, setUnassignedTools] = useState<Tool[]>(tools.filter(tool => !agent.tools?.map(x => x.id).includes(tool.id)));
+  const [enabledTools, setEnabledTools] = useState<string[]>(agent.enabledTools || [])
 
 
   const [updateUserRole, updateUserRoleResult] = useMutation(
@@ -320,10 +314,10 @@ export default function AgentForm({
                                       {!agentForm.getValues("public") && (
                                         <>
                                           {!roles.data?.loading &&
-                                            roles.data?.userRolePagination
+                                            roles.data?.rolesPagination
                                               ?.items ? (
                                             <>
-                                              {roles.data.userRolePagination.items.map(
+                                              {roles.data.rolesPagination.items.map(
                                                 (role: UserRole, index) => {
                                                   return (
                                                     <div
@@ -333,7 +327,7 @@ export default function AgentForm({
                                                       <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                                                         <div className="space-y-0.5 w-full ">
                                                           <label className="font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-base">
-                                                            {role.role}
+                                                            {role.name}
                                                           </label>
                                                         </div>
                                                         <Switch
@@ -341,11 +335,7 @@ export default function AgentForm({
                                                             updateUserRoleResult.loading
                                                           }
                                                           checked={role.agents
-                                                            .map(
-                                                              (agent) =>
-                                                                agent.id,
-                                                            )
-                                                            .includes(
+                                                            ?.includes(
                                                               agent.id,
                                                             )}
                                                           onCheckedChange={(
@@ -354,18 +344,10 @@ export default function AgentForm({
                                                             const updated =
                                                               value
                                                                 ? [
-                                                                  ...role.agents.map(
-                                                                    (role) =>
-                                                                      role.id,
-                                                                  ),
+                                                                  ...(role.agents || []),
                                                                   agent.id,
                                                                 ]
-                                                                : role.agents
-                                                                  .map(
-                                                                    (role) =>
-                                                                      role.id,
-                                                                  )
-                                                                  .filter(
+                                                                : (role.agents || []).filter(
                                                                     (id) =>
                                                                       id !==
                                                                       agent.id,
@@ -373,7 +355,7 @@ export default function AgentForm({
                                                             updateUserRole({
                                                               variables: {
                                                                 id: role.id,
-                                                                agents: updated,
+                                                                agents: JSON.stringify(updated),
                                                               },
                                                             });
                                                           }}
@@ -514,7 +496,7 @@ export default function AgentForm({
                                   <div>
                                     <h3 className="text-lg font-medium">Enabled Tools</h3>
                                     <p className="text-sm text-muted-foreground">Tools that are currently enabled for this agent.</p>
-                                    {enabledTools.map((tool: Tool) => (
+                                    {agent.availableTools?.map((tool: Tool) => (
                                       <div key={tool?.id} className="flex items-center justify-between rounded-lg border p-4 mt-2">
                                         <div>
                                           <div className="font-medium">{tool?.name}</div>
@@ -522,60 +504,26 @@ export default function AgentForm({
                                           <Badge variant={"outline"} className="mt-2">{tool?.type}</Badge>
                                         </div>
                                         <Switch
-                                          checked={true}
-                                          onCheckedChange={() => {
-                                            console.log("tool", tool)
-                                            const updatedTools = enabledTools.filter(t => t.id !== tool.id);
+                                          checked={enabledTools.includes(tool.id)}
+                                          onCheckedChange={(value) => {
+                                            let updated = [...enabledTools]
+                                            if (value) {
+                                              updated = [...enabledTools, tool.id]
+                                            } else {
+                                              updated = enabledTools.filter(t => t !== tool.id);
+                                            }
+                                            setEnabledTools(updated);
                                             updateAgent({
                                               variables: {
                                                 id: agent.id,
-                                                tools: updatedTools.map(t => t.id)
+                                                tools: JSON.stringify(updated)
                                               },
                                             });
-                                            setEnabledTools(updatedTools.map(t => tools.find(tool => tool.id === t.id)).filter(tool => tool !== undefined) as Tool[]);
-                                            setUnassignedTools([
-                                              ...unassignedTools,
-                                              tool
-                                            ]);
+
                                           }}
                                         />
                                       </div>
                                     ))}
-                                    {!enabledTools.length && (
-                                      <p className="text-sm text-muted-foreground mt-4 text-center">No tools enabled.</p>
-                                    )}
-                                  </div>
-                                  
-                                  <div className="mt-6">
-                                    <h3 className="text-lg font-medium">Disabled Tools</h3>
-                                    <p className="text-sm text-muted-foreground">Tools that can be enabled for this agent.</p>
-                                    {unassignedTools.map((tool) => (
-                                      <div key={tool.id} className="flex items-center justify-between rounded-lg border p-4 mt-2">
-                                        <div>
-                                          <div className="font-medium">{tool.name}</div>
-                                          <div className="text-sm text-muted-foreground">{tool.description}</div>
-                                          <Badge variant={"outline"} className="mt-2">{tool?.type}</Badge>
-                                        </div>
-                                        <Switch
-                                          checked={false}
-                                          onCheckedChange={() => {
-                                            console.log("tool", tool)
-                                            const updatedTools = [...enabledTools, tool];
-                                            updateAgent({
-                                              variables: {
-                                                id: agent.id,
-                                                tools: updatedTools.map(t => t.id)
-                                              },
-                                            });
-                                            setEnabledTools(updatedTools.map(t => tools.find(tool => tool.id === t.id)).filter(tool => tool !== undefined) as Tool[]);
-                                            setUnassignedTools(unassignedTools.filter(t => t.id !== tool.id));
-                                          }}
-                                        />
-                                      </div>
-                                    ))}
-                                    {!unassignedTools.length && (
-                                      <p className="text-sm text-muted-foreground mt-4 text-center">No tools disabled.</p>
-                                    )}
                                   </div>
                                 </div>
                               </div>

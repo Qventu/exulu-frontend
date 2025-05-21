@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import {JOB_STATUS} from "@/util/enums/job-status";
+import { JobFilters } from "@/components/custom/recent-jobs";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -80,7 +81,7 @@ export function DataTable<TData, TValue>({
     [],
   );
 
-  const [filters, setFilters] = useState<any>({});
+  const [filters, setFilters] = useState<JobFilters[]>([]);
 
   /* todo: get rid of own page state and use the table.currentPage() instead */
   let [page, setPage] = useState(1);
@@ -90,7 +91,9 @@ export function DataTable<TData, TValue>({
     fetchPolicy: "network-only",
     nextFetchPolicy: "network-only",
     variables: {
+      page: page ?? 1,
       limit: 10,
+      filters: filters
     },
     pollInterval: 5000, // polls every 5 seconds for updates on jobs
   });
@@ -113,7 +116,7 @@ export function DataTable<TData, TValue>({
 
   const table = useReactTable({
     data: items ?? defaultData,
-    pageCount: pageCount ?? -1,
+    pageCount: pageCount ?? 1,
     columns,
     state: {
       sorting,
@@ -154,13 +157,7 @@ export function DataTable<TData, TValue>({
     }
   })
 
-  const isFiltered =
-    filters.OR ||
-    filters.nameSearch ||
-    filters.chain ||
-    filters.item ||
-    filters.context ||
-    filters.status;
+  const isFiltered = filters.length > 0;
 
   /*todo: useEffect if jobs data array changes to add recurring job checks for those that have status running, and remove all the preious recurring checks*/
   /* todo: useQuery has a pollInterval option for this!*/
@@ -172,11 +169,18 @@ export function DataTable<TData, TValue>({
         <div className="flex flex-1 items-center space-x-2">
           <Input
             placeholder="Filter jobs..."
-            value={filters?.nameSearch ?? ""}
+            value={filters?.find(filter => filter.name)?.name?.eq ?? ""}
             onChange={(event) => {
-              const copy = { ...filters };
-              copy.nameSearch = event.target.value;
+              const copy = [ ...filters ];
+              const existing = copy.find(filter => filter.name)
+              if (existing?.name) {
+                existing.name.contains = event.target.value;
+                setFilters(copy);
+                return;
+              }
+              copy.push({ name: { contains: event.target.value } });
               setFilters(copy);
+              return;
             }}
             className="w-[150px] lg:w-[250px]"
           />
@@ -184,7 +188,13 @@ export function DataTable<TData, TValue>({
             navigate={false}
             onSelect={(item) => {
               const copy = { ...filters };
-              copy.item = item.id;
+              const existing = copy.find(filter => filter.item)
+              if (existing?.item) {
+                existing.item.eq = item.id;
+                setFilters(copy);
+                return;
+              }
+              copy.push({ item: { eq: item.id } });
               setFilters(copy);
             }}
           />
@@ -192,12 +202,18 @@ export function DataTable<TData, TValue>({
             <DataTableFacetedFilter
               onSelect={(values) => {
                 const copy = { ...filters };
-                if (!values && copy?.OR) {
-                  delete copy.OR;
+                const existing = copy.find(filter => filter.status)
+                if (!values && existing?.status) {
+                  copy.splice(copy.indexOf(existing), 1);
                   setFilters(copy);
                   return;
                 }
-                copy.OR = values.map((value) => ({ status: value }));
+                if (existing?.status) {
+                  existing.status.in = values;
+                  setFilters(copy);
+                  return;
+                }
+                copy.push({ status: { in: values } });
                 setFilters(copy);
               }}
               column={table.getColumn("status")}
@@ -237,8 +253,7 @@ export function DataTable<TData, TValue>({
                   });
                 }}
                 variant="secondary"
-                disabled={cancelJob.isPending}
-              >
+                disabled={cancelJob.isPending}>
                 {cancelJob.isPending ? (
                   <Loading />
                 ) : (
@@ -246,7 +261,6 @@ export function DataTable<TData, TValue>({
                 )}
                 <span className="ml-2">Cancel selected</span>
               </Button>
-
               <Button
                 className="ml-2"
                 onClick={() => {
@@ -404,7 +418,7 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      {/*<div className="flex items-center justify-between px-2">
+      <div className="flex items-center justify-between px-2">
         <div className="text-muted-foreground flex-1 text-sm">
           {table.getFilteredSelectedRowModel().rows.length} of{" "}
           {table.getFilteredRowModel().rows.length} row(s) selected.
@@ -470,7 +484,7 @@ export function DataTable<TData, TValue>({
             </Button>
           </div>
         </div>
-      </div>*/}
+      </div>
     </div>
   );
 }

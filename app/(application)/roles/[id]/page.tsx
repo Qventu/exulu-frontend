@@ -25,9 +25,9 @@ export default function Data({ params }) {
     return <div>Error: {error.message}</div>;
   }
 
-  if (!data?.userRoleByid) {
-    return <div>Not found</div>;
+  if (!data?.roleById) {
+    return <div>Not found.</div>;
   }
 
-  return <UserRoleForm role={data?.userRoleByid} />;
+  return <UserRoleForm role={data?.roleById} />;
 }

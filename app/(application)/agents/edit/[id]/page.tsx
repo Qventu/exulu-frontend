@@ -23,22 +23,13 @@ export default function Page({ params }: { params: { id: string } }) {
     }
   })
 
-  const toolsQuery = useQuery({
-    queryKey: ["tools"],
-    queryFn: async () => {
-      const response = await tools.get({});
-      const json: Tool[] = await response.json();
-      return json;
-    }
-  })
-
-  if (agentQuery.isLoading || toolsQuery.isLoading) {
+  if (agentQuery.isLoading) {
     return <div>
       <Skeleton className="w-full h-full" />
     </div>
   }
 
-  if (agentQuery.error || toolsQuery.error) {
+  if (agentQuery.error) {
     return <Alert variant="destructive">
     <ExclamationTriangleIcon className="size-4" />
     <AlertTitle>Error</AlertTitle>
@@ -48,7 +39,7 @@ export default function Page({ params }: { params: { id: string } }) {
   </Alert>
   } 
 
-  if (!agentQuery.data || !toolsQuery.data) {
+  if (!agentQuery.data) {
     return  <Alert variant="destructive">
     <ExclamationTriangleIcon className="size-4" />
     <AlertTitle>Error</AlertTitle>
@@ -62,7 +53,6 @@ export default function Page({ params }: { params: { id: string } }) {
   return (
     <AgentForm
       agent={agentQuery.data}
-      tools={toolsQuery.data}
       refetch={agentQuery.refetch}
     />
   );

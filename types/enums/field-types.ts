@@ -1,0 +1,1 @@
+export type ExuluFieldTypes = "text" | "longText" | "shortText" | "number" | "boolean" | "code" | "json"

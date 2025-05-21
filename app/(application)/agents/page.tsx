@@ -21,9 +21,10 @@ export default function ChatsPage() {
       CREATE_AGENT,
     {
       onCompleted: (data: {
-        agentCreateOne: { record: { id: string } };
+        agentsCreateOne: {  id: string };
       }) => {
-        router.push(`/agents/edit/${data?.agentCreateOne?.record.id}`, {
+        console.log(data);
+        router.push(`/agents/edit/${data?.agentsCreateOne?.id}`, {
           scroll: false,
         });
       },
@@ -55,7 +56,7 @@ export default function ChatsPage() {
           </div>
           <div className="bg-muted">
             <Image
-                src="/assets/robot.jpg"
+                src="/assets/exulu_background_01.png"
                 alt="Image"
                 width="1920"
                 height="1080"

@@ -134,15 +134,15 @@ export function DataTable<TData, TValue>({
 
   let items;
   let pageCount;
-  if (loading && previousData?.userRolePagination?.items) {
-    items = previousData?.userRolePagination?.items;
-    pageCount = previousData?.userRolePagination?.pageInfo?.pageCount;
-  } else if (data?.userRolePagination?.items) {
-    items = data?.userRolePagination?.items;
-    pageCount = data?.userRolePagination?.pageInfo?.pageCount;
-  } else if (previousData?.userRolePagination?.items) {
-    items = previousData?.userRolePagination?.items;
-    pageCount = previousData?.userRolePagination?.pageInfo?.pageCount;
+  if (loading && previousData?.rolesPagination?.items) {
+    items = previousData?.rolesPagination?.items;
+    pageCount = previousData?.rolesPagination?.pageInfo?.pageCount;
+  } else if (data?.rolesPagination?.items) {
+    items = data?.rolesPagination?.items;
+    pageCount = data?.rolesPagination?.pageInfo?.pageCount;
+  } else if (previousData?.rolesPagination?.items) {
+    items = previousData?.rolesPagination?.items;
+    pageCount = previousData?.rolesPagination?.pageInfo?.pageCount;
   }
 
   const table = useReactTable({
@@ -198,7 +198,7 @@ export function DataTable<TData, TValue>({
                 }
                 createUserRole({
                   variables: {
-                    role: newRoleName,
+                    name: newRoleName,
                   },
                 });
               }}
@@ -215,8 +215,8 @@ export function DataTable<TData, TValue>({
                   table.getSelectedRowModel().rows.forEach((row: Row<any>) => {
                     // don't allow removing default roles
                     if (
-                      row.original.role !== "admin" &&
-                      row.original.role !== "developer"
+                      row.original.name !== "admin" &&
+                      row.original.name !== "developer"
                     ) {
                       promises.push(
                         removeUserRole({
@@ -374,7 +374,7 @@ export function DataTable<TData, TValue>({
                 setPage(1);
                 refetch();
               }}
-              disabled={!data?.userRolePagination?.pageInfo.hasPreviousPage}
+              disabled={!data?.rolesPagination?.pageInfo.hasPreviousPage}
             >
               <span className="sr-only">Go to first page</span>
               <DoubleArrowLeftIcon className="size-4" />
@@ -387,7 +387,7 @@ export function DataTable<TData, TValue>({
                 setPage(page - 1);
                 refetch();
               }}
-              disabled={!data?.userRolePagination?.pageInfo.hasPreviousPage}
+              disabled={!data?.rolesPagination?.pageInfo.hasPreviousPage}
             >
               <span className="sr-only">Go to previous page</span>
               <ChevronLeftIcon className="size-4" />
@@ -400,7 +400,7 @@ export function DataTable<TData, TValue>({
                 setPage(page + 1);
                 refetch();
               }}
-              disabled={!data?.userRolePagination?.pageInfo.hasNextPage}
+              disabled={!data?.rolesPagination?.pageInfo.hasNextPage}
             >
               <span className="sr-only">Go to next page</span>
               <ChevronRightIcon className="size-4" />
@@ -415,7 +415,7 @@ export function DataTable<TData, TValue>({
                 setPage(table.getPageCount());
                 refetch();
               }}
-              disabled={!data?.userRolePagination?.pageInfo.hasNextPage}
+              disabled={!data?.rolesPagination?.pageInfo.hasNextPage}
             >
               <span className="sr-only">Go to last page</span>
               <DoubleArrowRightIcon className="size-4" />
