@@ -21,7 +21,7 @@ export function CreateNewAgent({ createAgent, createAgentResult, company }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [backend, setBackend] = useState("");
-  const [type, setType] = useState(AGENT_TYPES.FLOW);
+  const [type, setType] = useState(AGENT_TYPES.CHAT);
 
   return (
     <Dialog>
@@ -70,6 +70,9 @@ export function CreateNewAgent({ createAgent, createAgentResult, company }) {
                 <SelectItem key={AGENT_TYPES.FLOW} value={AGENT_TYPES.FLOW}>
                   Flow
                 </SelectItem>
+                <SelectItem key={AGENT_TYPES.CUSTOM} value={AGENT_TYPES.CUSTOM}>
+                  Custom
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -89,7 +92,7 @@ export function CreateNewAgent({ createAgent, createAgentResult, company }) {
                   name,
                   description,
                   backend,
-                  type: type.toLowerCase()
+                  type: type.toLowerCase(),
                 },
               });
             }}

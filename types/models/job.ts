@@ -1,8 +1,13 @@
+import { EXULU_JOB_STATUS } from "@/util/enums/job-status";
+
 export type Job = {
   id: string
   name: string
-  status: string
+  agent: string
+  status: EXULU_JOB_STATUS,
   result?: string
-  date_done?: Date
-  date_started?: Date
+  type: "workflow" | "embedder"
+  finished_at?: Date
+  updatedAt: Date
+  createdAt?: Date
 };

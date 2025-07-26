@@ -39,25 +39,19 @@ export type JobFilters = {
 
 export function RecentJobs({ statusses, agent, session, type }: { statusses: string, agent?: string, session?: string, type?: "workflow" | "embedder" }) {
 
-  let filters: JobFilters[] = []
+  let filters: JobFilters = {}
 
   if (statusses) {
-    if (!filters) filters = []
-    filters.push({
-      status: { in: statusses.split(",") }
-    });
+    filters["status"] = { in: statusses.split(",") }
   }
   if (agent) {
-    if (!filters) filters = []
-    filters.push({ agent: { eq: agent } })
+    filters["agent"] = { eq: agent }
   }
   if (session) {
-    if (!filters) filters = []
-    filters.push({ session: { eq: session } })
+    filters["session"] = { eq: session }
   }
   if (type) {
-    if (!filters) filters = []
-    filters.push({ type: { eq: type } })
+    filters["type"] = { eq: type }
   }
 
   const { loading, error, data, refetch } = useQuery(GET_JOBS, {

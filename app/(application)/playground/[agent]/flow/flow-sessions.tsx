@@ -3,17 +3,14 @@
 import { useMutation, useQuery } from "@apollo/client";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useContext, useEffect, useState } from "react";
 import { UserContext } from "@/app/(application)/authenticated";
-import { Agent } from "@EXULU_SHARED/models/agent";
-import { AgentSession } from "@EXULU_SHARED/models/agent-session";
 import {
-  CREATE_AGENT_SESSION,
-  GET_AGENT_SESSIONS,
-  REMOVE_AGENT_SESSION_BY_ID,
+  GET_JOBS,
+  REMOVE_JOB_BY_ID,
 } from "@/queries/queries";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +29,9 @@ import {
   TooltipContent, TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { JobFilters } from "@/components/custom/recent-jobs";
+import { Job } from "@/types/models/job";
+import { JOB_STATUS } from "@/util/enums/job-status";
 
 export function FlowSessionsComponent({ agent, type }: { agent: string, type: string }) {
 
@@ -41,7 +41,6 @@ export function FlowSessionsComponent({ agent, type }: { agent: string, type: st
   const [isMobile, setIsMobile] = useState(false);
   const [showSessions, setShowSessions] = useState(true);
   const { user, setUser } = useContext(UserContext);
-  const [sessionName, setSessionName] = useState("");
 
   useEffect(() => {
     const checkScreenWidth = () => {
@@ -64,59 +63,37 @@ export function FlowSessionsComponent({ agent, type }: { agent: string, type: st
 
   let [search, setSearch]: any = useState({ searchString: null });
 
-  const sessionsQuery = useQuery(GET_AGENT_SESSIONS, {
+  console.log("USER",user)
+
+  let filters: JobFilters = {}
+  filters["agent"] = { eq: agent }
+  filters["type"] = { eq: "workflow" }
+  filters["user"] = { eq: `${user.id}` }
+
+  const jobsQuery = useQuery(GET_JOBS, {
     returnPartialData: true,
     fetchPolicy: "network-only",
     nextFetchPolicy: "network-only",
     variables: {
       page: 1,
-      limit: 40,
-      filters: {
-        agentId: agent
-      }
+      limit: 40, // todo pagination
+      filters: filters
     },
   });
 
   const [removeSession, removeSessionResult] = useMutation(
-    REMOVE_AGENT_SESSION_BY_ID,
+    REMOVE_JOB_BY_ID,
     {
       refetchQueries: [
-        GET_AGENT_SESSIONS,
-        "GetAgentSessions",
+        GET_JOBS,
+        "GetJobs",
       ],
     },
   );
 
-  const [createAgentSession, createAgentSessionResult] = useMutation(
-    CREATE_AGENT_SESSION,
-  );
-
   const handleCreateSession = async () => {
-         // create a new session
-         const newSession = await createAgentSession({
-          variables: {
-            user: user.id,
-            agent: agent,
-            type: "FLOW",
-            title: sessionName.trim(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        });
-        if (newSession.errors) {
-          console.error("error", newSession.errors);
-          return;
-        }
-        if (
-          !newSession.data?.agentSessionCreateOne?.record?.id
-        ) {
-          console.error("error", "failed to create session");
-          return;
-        }
-        setSessionName("");
-        sessionsQuery.refetch();
         router.push(
-          `/playground/${agent}/${type}/${newSession.data?.agentSessionCreateOne?.record?.id}`,
+          `/playground/${agent}/${type}/new`,
         );
   }
 
@@ -126,11 +103,11 @@ export function FlowSessionsComponent({ agent, type }: { agent: string, type: st
       limit: 40,
     };
     if (search && search?.length > 2) {
-      variables.filters = { agentId: agent, nameSearch: search };
+      filters["name"] = { contains: search }
     } else {
-      variables.filters = { agentId: agent };
+      delete filters["name"];
     }
-    sessionsQuery.refetch(variables);
+    jobsQuery.refetch(variables);
   }, [search]);
 
   useEffect(() => {
@@ -153,7 +130,7 @@ export function FlowSessionsComponent({ agent, type }: { agent: string, type: st
           x-chunk="dashboard-03-chunk-0"
         >
           <div className="m-auto rotate-90 flex">
-            <span className="mt-3">
+            <span>
               Sessions
             </span>
           </div>
@@ -181,27 +158,14 @@ export function FlowSessionsComponent({ agent, type }: { agent: string, type: st
             </form>
           </div>
 
-          <div className="flex w-full items-center gap-2 p-3 border-t">
-            <Input
-              autoFocus={true}
-              value={sessionName}
-              onChange={(e) => setSessionName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleCreateSession();
-                }
-              }}
-              placeholder="New session name"
-              className="flex-1"
-            />
+          <div className="flex w-full items-center gap-2 p-3 border-t justify-between">
             <Button
               variant="secondary"
-              disabled={createAgentSessionResult.loading || !sessionName.trim()}
               onClick={async () => {
                 handleCreateSession();
               }}
             >
-              <div className="font-semibold">Create</div>
+              <div className="font-semibold">New session</div>
             </Button>
             <TooltipProvider>
               <Tooltip delayDuration={100}>
@@ -219,56 +183,55 @@ export function FlowSessionsComponent({ agent, type }: { agent: string, type: st
             </TooltipProvider>
           </div>
 
-          {sessionsQuery.loading && (
+          {jobsQuery.loading && (
             <div className="w-full flex">
               <Loading className="mx-auto mt-5" />
             </div>
           )}
 
 
-          {!sessionsQuery.loading && !sessionsQuery?.data?.agentSessionPagination?.items?.length && (
+          {!jobsQuery.loading && !jobsQuery?.data?.jobsPagination?.items?.length && (
             <div className="w-full flex">
               <p className="mx-auto mt-5">No sessions found.</p>
             </div>
           )}
 
-          {!sessionsQuery.loading
-            ? sessionsQuery?.data?.agentSessionPagination?.items?.map(
+          {!jobsQuery.loading
+            ? jobsQuery?.data?.jobsPagination?.items?.map(
               (
-                item: Omit<AgentSession, "agent"> & {
-                  agent: Agent;
-                },
+                job: Job,
               ) => (
+                <div className="w-full p-2 flex flex-col items-start gap-0 rounded-none border-none text-left text-sm">
                 <button
-                  key={item.id}
+                  key={job.id}
                   className={cn(
-                    "w-full flex flex-col items-start gap-2 rounded-lg border-t p-3 text-left text-sm transition-all hover:bg-accent",
-                    pathname.includes(item.id) && "bg-muted",
+                    "p-2 w-full flex flex-col items-start gap-2 rounded-md border-none p-3 text-left text-sm transition-all hover:bg-accent",
+                    pathname.split("/").pop()?.includes(job.id) ? "bg-muted" : "",
                   )}
                   onClick={() => {
-                    router.push(`/playground/${agent}/${type}/${item.id}`);
+                    router.push(`/playground/${agent}/${type}/${job.id}`);
                   }}
                 >
                   <div className="flex w-full flex-col gap-1">
                     <div className="flex items-center">
                       <div className="flex items-center gap-2">
                         <div className="text-xs font-medium">
-                          {item.title
-                            ? item.title?.substring(0, 20)
+                          {job.name
+                            ? job.name?.substring(0, 50)
                             : "No title"}
                         </div>
                       </div>
                       <div
                         className={cn(
                           "ml-auto text-xs",
-                          pathname.includes(item.id)
+                          pathname.includes(job.id)
                             ? "text-foreground"
                             : "text-muted-foreground",
                         )}
                       >
-                        {item.updatedAt && !isCollapsed
+                        {job.updatedAt && !isCollapsed
                           ? formatDistanceToNow(
-                            new Date(item.updatedAt),
+                            new Date(job.updatedAt),
                             {
                               addSuffix: true,
                             },
@@ -290,10 +253,14 @@ export function FlowSessionsComponent({ agent, type }: { agent: string, type: st
                           align="end"
                           className="w-[160px]">
                           <DropdownMenuItem
+                            disabled={
+                              job.status !== JOB_STATUS.completed &&
+                              job.status !== JOB_STATUS.failed
+                            }
                             onClick={() => {
                               removeSession({
                                 variables: {
-                                  id: item.id,
+                                  id: job.id,
                                 },
                               });
                               toast({
@@ -303,14 +270,24 @@ export function FlowSessionsComponent({ agent, type }: { agent: string, type: st
                             }}>
                             Delete
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                              navigator.clipboard.writeText(job.id);
+                              toast({
+                                title: "Copied to clipboard",
+                                description: "Copied the job id to clipboard.",
+                              });
+                            }}>
+                            Copy job id
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                     <small className="text-xs text-muted-foreground">
-                      {item.agent?.name}
+                      {job.status}
                     </small>
                   </div>
                 </button>
+                </div>
               ),
             )
             : null}

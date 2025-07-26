@@ -3,6 +3,7 @@ import { useState } from "react"
 import { Copy, Key, Loader2, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { format } from "date-fns"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
@@ -17,13 +18,12 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/components/ui/use-toast"
-
 import bcrypt from "bcryptjs";
 import {useMutation, useQuery} from "@apollo/client";
-import {CREATE_API_USER, GET_USERS, REMOVE_USER_BY_ID, UPDATE_USER_BY_ID} from "@/queries/queries";
+import {CREATE_API_USER, GET_USERS, REMOVE_USER_BY_ID} from "@/queries/queries";
 const SALT_ROUNDS = 12;
 
-async function encryptApiKey(apiKey) {
+export async function encryptApiKey(apiKey) {
     const hash = await bcrypt.hash(apiKey, SALT_ROUNDS);
     return hash;
 }
@@ -80,7 +80,7 @@ export default function ApiKeyManagement() {
             variables: {
                 firstname: `${newKeyName}`,
                 type: "api",
-                apiKey: `${encryptedKey}${postFix}`,
+                apikey: `${encryptedKey}${postFix}`,
                 email: `${encryptedKey}@exulu-api-user.com`
             }
         })
@@ -104,7 +104,7 @@ export default function ApiKeyManagement() {
         ],
     });
 
-    const [createApiUser, createApiUserResult] = useMutation(CREATE_API_USER, {
+    const [ createApiUser, createApiUserResult] = useMutation(CREATE_API_USER, {
         refetchQueries: [
             GET_USERS, // DocumentNode object parsed with gql
             "GetUsers", // Query name
@@ -242,15 +242,15 @@ export default function ApiKeyManagement() {
                                 <TableBody>
                                     {data?.usersPagination?.items?.map((user) => (
                                         <TableRow key={user.id}>
-                                            <TableCell className="font-medium">{user.firstname}</TableCell>
+                                            <TableCell className="font-medium">{user.name || user.firstname}</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <code className="bg-muted px-1 py-0.5 rounded text-xs">****************</code>
                                                 </div>
                                             </TableCell>
-                                            <TableCell>{user.createdAt}</TableCell>
+                                            <TableCell>{format(new Date(Number(user.createdAt)), "PP hh:mm")}</TableCell>
                                             <TableCell>
-                                                {user.last_used ? (user.last_used) : (
+                                                {user.last_used ? (format(new Date(Number(user.last_used)), "PP hh:mm")) : (
                                                     <Badge variant="outline" className="text-xs">
                                                         Never
                                                     </Badge>
@@ -277,7 +277,7 @@ export default function ApiKeyManagement() {
                                                         <DialogHeader>
                                                             <DialogTitle>Delete API Key</DialogTitle>
                                                             <DialogDescription>
-                                                                Are you sure you want to delete the API key "{user.firstName}"? This action cannot be
+                                                                Are you sure you want to delete the API key "{user.name || user.firstname}"? This action cannot be
                                                                 undone.
                                                             </DialogDescription>
                                                         </DialogHeader>

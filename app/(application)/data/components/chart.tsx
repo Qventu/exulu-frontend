@@ -11,7 +11,7 @@ export default function EmbeddingChart({ jobs }: { jobs: {
   if (jobs?.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">No data available</p>
+        <p className="text-muted-foreground">No data available.</p>
       </div>
     )
   }

@@ -35,6 +35,15 @@ export function AgentBackendSelector({
         console.log("result", result)
         json = await result.json()
         console.log("json", json)
+        json = json.filter((agent: any) => agent.type === "agent")
+      }
+
+      if (type === "CUSTOM") {
+        result = await agents.get(null, 20);
+        console.log("result", result)
+        json = await result.json()
+        json = json.filter((agent: any) => agent.type === "custom")
+        console.log("json", json)
       }
 
       if (params?.id) {

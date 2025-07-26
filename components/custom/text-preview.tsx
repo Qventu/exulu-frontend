@@ -8,12 +8,17 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
+import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
-export function TextPreview({text,
-                                sliceLength,
-                            }: {
+export function TextPreview({
+    text,
+    sliceLength,
+    markdown
+}: {
     text: string;
     sliceLength?: number;
+    markdown?: boolean;
 }) {
     const { toast } = useToast();
 
@@ -21,7 +26,7 @@ export function TextPreview({text,
         <Dialog>
             <DialogTrigger asChild>
                 <p className="cursor-pointer text-sm text-base">
-                    {text?.slice(0, sliceLength ?? 200)}...
+                    {text?.slice(0, sliceLength ?? 200)}{(sliceLength && text.length > sliceLength) ? "..." : ""}
                 </p>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[800px] max-h-[500px] overflow-y-scroll">
@@ -34,7 +39,7 @@ export function TextPreview({text,
                             toast({ title: "Copied to clipboard" });
                         }}
                     >
-                        {text}
+                        {markdown ? <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown> : text}
                     </DialogDescription>
                 </DialogHeader>
             </DialogContent>

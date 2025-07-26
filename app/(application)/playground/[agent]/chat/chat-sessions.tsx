@@ -153,7 +153,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
           x-chunk="dashboard-03-chunk-0"
         >
           <div className="m-auto rotate-90 flex">
-            <span className="mt-3">
+            <span>
               Sessions
             </span>
           </div>
@@ -180,7 +180,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
             </form>
           </div>
 
-          <div className="flex w-full items-center gap-2 p-3 border-t">
+          <div className="flex w-full items-center gap-2 p-3 border-t justify-between">
             <Input
               autoFocus={true}
               value={sessionName}
@@ -239,78 +239,80 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
                   agent: Agent;
                 },
               ) => (
-                <button
-                  key={item.id}
-                  className={cn(
-                    "w-full flex flex-col items-start gap-2 rounded-lg border-t p-3 text-left text-sm transition-all hover:bg-accent",
-                    pathname.includes(item.id) && "bg-muted",
-                  )}
-                  onClick={() => {
-                    router.push(`/playground/${agent}/${type}/${item.id}`);
-                  }}
-                >
-                  <div className="flex w-full flex-col gap-1">
-                    <div className="flex items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="text-xs font-medium">
-                          {item.title
-                            ? item.title?.substring(0, 20)
-                            : "No title"}
+                <div className="w-full p-2 flex flex-col items-start gap-0 rounded-none border-none text-left text-sm">
+                  <button
+                    key={item.id}
+                    className={cn(
+                      "p-2 w-full flex flex-col items-start gap-2 rounded-md border-none p-3 text-left text-sm transition-all hover:bg-accent",
+                      pathname.includes(item.id) && "bg-muted",
+                    )}
+                    onClick={() => {
+                      router.push(`/playground/${agent}/${type}/${item.id}`);
+                    }}
+                  >
+                    <div className="flex w-full flex-col gap-1">
+                      <div className="flex items-center">
+                        <div className="flex items-center gap-2">
+                          <div className="text-xs font-medium">
+                            {item.title
+                              ? item.title?.substring(0, 20)
+                              : "No title"}
+                          </div>
                         </div>
-                      </div>
-                      <div
-                        className={cn(
-                          "ml-auto text-xs",
-                          pathname.includes(item.id)
-                            ? "text-foreground"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {item.updatedAt && !isCollapsed
-                          ? formatDistanceToNow(
-                            new Date(item.updatedAt),
-                            {
-                              addSuffix: true,
-                            },
-                          )
-                          : null}
-                      </div>
+                        <div
+                          className={cn(
+                            "ml-auto text-xs",
+                            pathname.includes(item.id)
+                              ? "text-foreground"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {item.updatedAt && !isCollapsed
+                            ? formatDistanceToNow(
+                              new Date(item.updatedAt),
+                              {
+                                addSuffix: true,
+                              },
+                            )
+                            : null}
+                        </div>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            className="flex size-8 p-0 data-[state=open]:bg-muted"
-                          >
-                            <DotsHorizontalIcon className="size-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="w-[160px]">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              removeSession({
-                                variables: {
-                                  id: item.id,
-                                },
-                              });
-                              toast({
-                                title: "Deleting session",
-                                description: "We deleted the session.",
-                              });
-                            }}>
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              className="flex size-8 p-0 data-[state=open]:bg-muted"
+                            >
+                              <DotsHorizontalIcon className="size-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="w-[160px]">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                removeSession({
+                                  variables: {
+                                    id: item.id,
+                                  },
+                                });
+                                toast({
+                                  title: "Deleting session",
+                                  description: "We deleted the session.",
+                                });
+                              }}>
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <small className="text-xs text-muted-foreground">
+                        {item.agent?.name}
+                      </small>
                     </div>
-                    <small className="text-xs text-muted-foreground">
-                      {item.agent?.name}
-                    </small>
-                  </div>
-                </button>
+                  </button>
+                </div>
               ),
             )
             : null}

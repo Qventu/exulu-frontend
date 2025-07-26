@@ -12,41 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-const navigationItems = [
-  {
-    label: "Dashboard",
-    path: "dashboard",
-  },
-  {
-    label: "Data",
-    path: "data",
-  },
-  {
-    label: "Jobs",
-    path: "jobs",
-  },
-  {
-    label: "Agents",
-    path: "agents",
-  },
-  {
-    label: "Playground",
-    path: "playground",
-  },
-  {
-    label: "Users",
-    path: "users",
-  },
-  {
-    label: "Configuration",
-    path: "configuration/keys",
-  },
-  {
-    label: "API",
-    path: "explorer",
-  },
-];
-
 export function MainNav({
   className,
   ...props
@@ -57,8 +22,54 @@ export function MainNav({
 
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  if (!user.super_admin) {
-    return <></>;
+  let navigationItems: { label: string; path: string }[] = [];
+
+  if (user.super_admin) {
+    navigationItems = [
+      {
+        label: "Dashboard",
+        path: "dashboard",
+      },
+      {
+        label: "Data",
+        path: "data",
+      },
+      {
+        label: "Jobs",
+        path: "jobs",
+      },
+      {
+        label: "Agents",
+        path: "agents",
+      },
+      {
+        label: "Playground",
+        path: "playground",
+      },
+      {
+        label: "Users",
+        path: "users",
+      },
+      {
+        label: "Configuration",
+        path: "configuration/keys",
+      },
+      {
+        label: "API",
+        path: "explorer",
+      },
+    ]
+  } else {
+    navigationItems = [
+      {
+        label: "Dashboard",
+        path: "dashboard",
+      },
+      {
+        label: "Playground",
+        path: "playground",
+      }
+    ]
   }
 
   useEffect(() => {

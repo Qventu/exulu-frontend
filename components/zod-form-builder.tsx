@@ -18,8 +18,8 @@ import UppyDashboard from "./uppy-dashboard"
 import { UserContext } from "@/app/(application)/authenticated"
 
 type ZodFormProps<T extends z.ZodType> = {
-    zodSchema: T
-    jsonSchema: any
+  zodSchema: T
+  jsonSchema: any
   onSubmit: (values: z.infer<T>) => void
   submitText?: string
   formDescription?: string
@@ -30,19 +30,19 @@ type ZodFormProps<T extends z.ZodType> = {
 type ZodFieldTypes = "boolean" | "array" | "enum" | "string" | "number" | "object"
 
 type ZodFieldType = {
-    type: ZodFieldTypes
-    kind?: "email" | "password"
-    description?: string;
-    values?: string[]
-    isOptional: boolean
-    element?: {
-        properties: {
-            [key: string]: ZodFieldType;
-        }
-        values?: string[]
-        type: ZodFieldTypes
+  type: ZodFieldTypes
+  kind?: "email" | "password"
+  description?: string;
+  values?: string[]
+  isOptional: boolean
+  element?: {
+    properties: {
+      [key: string]: ZodFieldType;
     }
+    values?: string[]
+    type: ZodFieldTypes
   }
+}
 
 // Helper to parse metadata from describe() JSON string
 const parseMetadata = (description?: string) => {
@@ -94,52 +94,94 @@ export function ZodFormBuilder<T extends z.ZodType>({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-          
+
           {
             // @ts-ignore
             Object.entries(properties).map(([name, property]: [string, ZodFieldType]) => {
-            const metadata = parseMetadata(property.description)
+              const metadata = parseMetadata(property.description)
 
-            console.log("metadata", metadata)
-            if (metadata?.isFile) {
-              return (
-                <FormField
-                  key={name}
-                  control={form.control}
-                  name={name as any}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{metadata.label || name}</FormLabel>
-                      {metadata.description && <FormDescription>{metadata.description}</FormDescription>}
-                      <FormControl>
-                        <UppyDashboard preselectedFile={field.value} id={field.name} allowedFileTypes={metadata.allowedFileTypes} dependencies={[field.name]} onSelect={(key) => {
-                          console.log("[EXULU] selected file", key)
-                          field.onChange(key)
-                        }} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              )
-            }
+              console.log("metadata", metadata)
+              if (metadata?.isFile) {
+                return (
+                  <FormField
+                    key={name}
+                    control={form.control}
+                    name={name as any}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{metadata.label || name}</FormLabel>
+                        {metadata.description && <FormDescription>{metadata.description}</FormDescription>}
+                        <FormControl>
+                          <UppyDashboard preselectedFile={field.value} id={field.name} allowedFileTypes={metadata.allowedFileTypes} dependencies={[field.name]} onSelect={(key) => {
+                            console.log("[EXULU] selected file", key)
+                            field.onChange(key)
+                          }} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                )
+              }
 
-            // Handle array of objects
-            if (property.type === "array" && property.element && property.element?.type === "object") {
-              return (
-                <div key={name} className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <FormLabel className="text-base">{metadata.label || name}</FormLabel>
+              // Handle array of objects
+              if (property.type === "array" && property.element && (property.element?.type === "object" || property.element?.type === "string")) {
+                return (
+                  <div key={name} className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <FormLabel className="text-base">{metadata.label || name}</FormLabel>
+                    </div>
+
+                    {metadata.description && <FormDescription>{metadata.description}</FormDescription>}
+
+                    <ArrayField name={name} schema={property} form={form} />
                   </div>
+                )
+              }
 
-                  {metadata.description && <FormDescription>{metadata.description}</FormDescription>}
+              // Handle array of enums (checkbox group)
+              if (property.type === "array" && property.element && property.element?.type === "enum") {
+                return (
+                  <FormField
+                    key={name}
+                    control={form.control}
+                    name={name as any}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{metadata.label || name}</FormLabel>
+                        {metadata.description && <FormDescription>{metadata.description}</FormDescription>}
+                        <div className="space-y-2">
+                          {property.element?.values?.map((option: string) => {
+                            const values: any[] = field.value || []
+                            return (
+                              <div key={option} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`${name}-${option}`}
+                                  checked={values.includes(option)}
+                                  onCheckedChange={(checked) => {
+                                    const updatedValues = checked
+                                      ? [...values, option]
+                                      : values.filter((value: string) => value !== option)
+                                    field.onChange(updatedValues)
+                                  }}
+                                />
+                                <label
+                                  htmlFor={`${name}-${option}`}
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                  {option}
+                                </label>
+                              </div>
+                            )
+                          })}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )
+              }
 
-                  <ArrayField name={name} schema={property} form={form} />
-                </div>
-              )
-            }
-
-            // Handle array of enums (checkbox group)
-            if (property.type === "array" && property.element && property.element?.type === "enum") {
+              // Handle regular fields
               return (
                 <FormField
                   key={name}
@@ -148,56 +190,14 @@ export function ZodFormBuilder<T extends z.ZodType>({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{metadata.label || name}</FormLabel>
+                      <FormControl>{renderControl(property, field, metadata, name)}</FormControl>
                       {metadata.description && <FormDescription>{metadata.description}</FormDescription>}
-                      <div className="space-y-2">
-                        {property.element?.values?.map((option: string) => {
-                          const values: any[] = field.value || []
-                          return (
-                            <div key={option} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`${name}-${option}`}
-                                checked={values.includes(option)}
-                                onCheckedChange={(checked) => {
-                                  const updatedValues = checked
-                                    ? [...values, option]
-                                    : values.filter((value: string) => value !== option)
-                                  field.onChange(updatedValues)
-                                }}
-                              />
-                              <label
-                                htmlFor={`${name}-${option}`}
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                              >
-                                {option}
-                              </label>
-                            </div>
-                          )
-                        })}
-                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               )
-            }
-
-            // Handle regular fields
-            return (
-              <FormField
-                key={name}
-                control={form.control}
-                name={name as any}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{metadata.label || name}</FormLabel>
-                    <FormControl>{renderControl(property, field, metadata, name)}</FormControl>
-                    {metadata.description && <FormDescription>{metadata.description}</FormDescription>}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )
-          })}
+            })}
 
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Submitting..." : submitText}
@@ -216,6 +216,7 @@ function ArrayField({ name, schema, form }: { name: string; schema: ZodFieldType
     name: name as any,
   })
 
+  console.log("schema", schema)
   const metadata = parseMetadata(schema.description)
   const itemProperties = schema.element?.properties || {}
 
@@ -308,6 +309,24 @@ function renderControl(schema: ZodFieldType, field: any, metadata: any, name: st
   // Render appropriate control
   switch (fieldType) {
     case "textarea":
+      return (
+        <Textarea
+          {...field}
+          placeholder={metadata.placeholder || `Enter ${metadata.label || name}`}
+          value={field.value || ""}
+        />
+      )
+
+    case "string":
+      return (
+        <Textarea
+          {...field}
+          placeholder={metadata.placeholder || `Enter ${metadata.label || name}`}
+          value={field.value || ""}
+        />
+      )
+
+    case "text":
       return (
         <Textarea
           {...field}

@@ -5,6 +5,7 @@ import {cn} from "@/lib/utils";
 import {getServerSession} from "next-auth";
 import {getAuthOptions, pool} from "@/app/api/auth/[...nextauth]/options";
 import {redirect} from "next/navigation";
+import {headers} from "next/headers";
 import {ThemeProvider} from "@/components/theme-provider";
 import {TanstackQueryClientProvider} from "@/app/(application)/query-client";
 import Authenticated from "@/app/(application)/authenticated";
@@ -21,15 +22,29 @@ export default async function RootLayout({
     children: React.ReactNode;
 }) {
 
-
+    const headersList = headers();
+    const pathname = headersList.get('x-next-pathname') || '/';
+    
     const authOptions = await getAuthOptions()
     const session: any = await getServerSession(authOptions);
-    if (!session?.user) return redirect("/login");
-    const res = await pool.query('SELECT * FROM users RIGHT JOIN roles ON users.role = roles.id WHERE email = $1', [session.user.email])
+    if (!session?.user) return redirect(`/login${pathname ? `?destination=${pathname}` : ''}`);
+    const res = await pool.query(`
+      SELECT 
+        users.*,
+        json_build_object(
+          'id', roles.id,
+          'name', roles.name,
+          'is_admin', roles.is_admin,
+          'agents', roles.agents
+        ) as role
+      FROM users 
+      LEFT JOIN roles ON users.role = roles.id 
+      WHERE users.email = $1
+    `, [session.user.email])
     const user: any = res.rows[0];
     console.log("res",res.rows)
     console.log("session.user.email",session.user.email)
-    if (!user) return redirect("/login");
+    if (!user) return redirect(`/login${pathname ? `?destination=${pathname}` : ''}`);
 
     return (
         <html lang="en" suppressHydrationWarning>

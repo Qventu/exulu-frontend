@@ -19,7 +19,11 @@ export function AgentNav() {
     variables: {
       page: 1,
       limit: 200,
-      filters: {},
+      filters: {
+        type: {
+          in: ["agent", "flow"]
+        }
+      },
     },
   });
 
@@ -31,7 +35,7 @@ export function AgentNav() {
           <div className="space-y-1">
             {agents.loading && <Loading />}
             {!agents.loading
-                ? agents?.data?.agentPagination?.items?.map(
+                ? agents?.data?.agentsPagination?.items?.map(
                     (agent: Agent) => (
                         <Link key={agent.id} href={`/playground/${agent.id}/${agent.type.toLowerCase()}`}>
                           <Button

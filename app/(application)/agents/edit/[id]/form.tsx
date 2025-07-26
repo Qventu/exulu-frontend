@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -43,6 +44,8 @@ import Link from "next/link";
 import { UserContext } from "@/app/(application)/authenticated";
 import { Tool } from "@EXULU_SHARED/models/tool";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import { CopyIcon } from "@/icons";
 
 const agentFormSchema = z.object({
   name: z
@@ -79,7 +82,16 @@ export default function AgentForm({
   const [errors, setErrors] = useState<string>();
   const { user, setUser } = useContext(UserContext);
   const [enabledTools, setEnabledTools] = useState<string[]>(agent.enabledTools || [])
+  const { toast } = useToast();
 
+  const copyAgentId = async () => {
+    try {
+      await navigator.clipboard.writeText(agent.id);
+      toast({ title: "Agent ID copied to clipboard" });
+    } catch (error) {
+      toast({ title: "Failed to copy Agent ID", variant: "destructive" });
+    }
+  };
 
   const [updateUserRole, updateUserRoleResult] = useMutation(
     UPDATE_USER_ROLE_BY_ID,
@@ -195,7 +207,20 @@ export default function AgentForm({
                             <div className="flex flex-col space-y-2">
                               <Card>
                                 <CardHeader>
-                                  <CardTitle>Agent</CardTitle>
+                                  <div className="flex items-center justify-between">
+                                    <CardTitle>Agent</CardTitle>
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                      <span>ID: {agent.id}</span>
+                                      <button
+                                        type="button"
+                                        onClick={copyAgentId}
+                                        className="p-1 hover:bg-muted rounded transition-colors text-muted-foreground"
+                                        title="Copy Agent ID"
+                                      >
+                                        <CopyIcon />
+                                      </button>
+                                    </div>
+                                  </div>
                                   {errors ? (
                                     <Alert variant="destructive">
                                       <ExclamationTriangleIcon className="size-4" />
@@ -348,10 +373,10 @@ export default function AgentForm({
                                                                   agent.id,
                                                                 ]
                                                                 : (role.agents || []).filter(
-                                                                    (id) =>
-                                                                      id !==
-                                                                      agent.id,
-                                                                  );
+                                                                  (id) =>
+                                                                    id !==
+                                                                    agent.id,
+                                                                );
                                                             updateUserRole({
                                                               variables: {
                                                                 id: role.id,
@@ -383,109 +408,128 @@ export default function AgentForm({
                               )}
                             />
 
-                            <Card>
-                              <CardContent className="grid gap-4 pt-6">
-                                <p>
-                                  You can test this agent using the Exulu
-                                  UI without activating the agent if you
-                                  are an admin.
-                                </p>
-                                <Button
-                                  onClick={async () => {
-                                    const result = await createAgentSession({
-                                      variables: {
-                                        user: user.id,
-                                        agent: agent.id,
-                                        type: agent.type,
-                                        createdAt: new Date().toISOString(),
-                                        updatedAt: new Date().toISOString(),
-                                      }
-                                    })
-                                    console.log("result", result)
-                                    const sessionId = result?.data?.agentSessionCreateOne?.record?.id
-                                    router.push(
-                                      `/playground/${agent.id}/${agent.type}/${sessionId}`,
-                                    );
-                                  }}
-                                  type={"button"}
-                                  variant={"default"}>
-                                  Go to playground
-                                </Button>
-                              </CardContent>
-                            </Card>
+                            {
+                              agent.type !== "custom" && (
+
+                                <Card>
+                                  <CardContent className="grid gap-4 pt-6">
+                                    <p>
+                                      You can test this agent using the Exulu
+                                      UI without activating the agent if you
+                                      are an admin.
+                                    </p>
+                                    <Button
+                                      onClick={async () => {
+                                        console.log("agent", agent)
+                                        if (agent.type === "flow") {
+                                          router.push(
+                                            `/playground/${agent.id}/${agent.type}`,
+                                          );
+                                          return;
+                                        } else {
+                                          // todo fix create session!
+                                          const result = await createAgentSession({
+                                            variables: {
+                                              user: user.id,
+                                              agent: agent.id,
+                                              type: agent.type,
+                                              createdAt: new Date().toISOString(),
+                                              updatedAt: new Date().toISOString(),
+                                            }
+                                          })
+                                          console.log("result", result)
+                                          const sessionId = result?.data?.agentSessionCreateOne?.record?.id
+                                          router.push(
+                                            `/playground/${agent.id}/${agent.type}/${sessionId}`,
+                                          );
+                                        }
+                                      }}
+                                      type={"button"}
+                                      variant={"default"}>
+                                      Go to playground
+                                    </Button>
+                                  </CardContent>
+                                </Card>
+                              )
+                            }
                           </div>
                         </div>
                         <div className="col">
-                          <Card>
-                            <CardHeader>
-                              <CardTitle>Capabilities</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="flex flex-col space-y-4">
-                                <div className="space-y-4">
-                                  <p className="text-sm text-muted-foreground">
-                                    This agent can use the following capabilities:
-                                  </p>
-                                  <div className="grid gap-3">
-                                    <div className="flex items-center justify-between rounded-lg border p-3">
-                                      <span className="font-medium">Tools</span>
-                                      <Badge variant={agent.capabilities?.tools ? "default" : "secondary"}>
-                                        {agent.capabilities?.tools ? "Enabled" : "Disabled"}
-                                      </Badge>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-lg border p-3">
-                                      <span className="font-medium">Images</span>
-                                      <div className="flex gap-1">
-                                        {agent.capabilities?.images?.length ? (
-                                          agent.capabilities.images.map((format, i) => (
-                                            <Badge key={i} variant="outline">{format}</Badge>
-                                          ))
-                                        ) : (
-                                          <Badge variant="secondary">None</Badge>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-lg border p-3">
-                                      <span className="font-medium">Files</span>
-                                      <div className="flex gap-1">
-                                        {agent.capabilities?.files?.length ? (
-                                          agent.capabilities.files.map((format, i) => (
-                                            <Badge key={i} variant="outline">{format}</Badge>
-                                          ))
-                                        ) : (
-                                          <Badge variant="secondary">None</Badge>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-lg border p-3">
-                                      <span className="font-medium">Audio</span>
-                                      <div className="flex gap-1">
-                                        {agent.capabilities?.audio?.length ? (
-                                          agent.capabilities.audio.map((format, i) => (
-                                            <Badge key={i} variant="outline">{format}</Badge>
-                                          ))
-                                        ) : (
-                                          <Badge variant="secondary">None</Badge>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-lg border p-3">
-                                      <span className="font-medium">Video</span>
-                                      <div className="flex gap-1">
-                                        {agent.capabilities?.video?.length ? (
-                                          agent.capabilities.video.map((format, i) => (
-                                            <Badge key={i} variant="outline">{format}</Badge>
-                                          ))
-                                        ) : (
-                                          <Badge variant="secondary">None</Badge>
-                                        )}
+                          {
+                            agent.type !== "custom" && (
+                              <Card>
+                                <CardHeader>
+                                  <CardTitle>Capabilities</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="flex flex-col space-y-4">
+                                    <div className="space-y-4">
+                                      <p className="text-sm text-muted-foreground">
+                                        This agent can use the following capabilities:
+                                      </p>
+                                      <div className="grid gap-3">
+                                        <div className="flex items-center justify-between rounded-lg border p-3">
+                                          <span className="font-medium">Tools</span>
+                                          <Badge variant={agent.capabilities?.tools ? "default" : "secondary"}>
+                                            {agent.capabilities?.tools ? "Enabled" : "Disabled"}
+                                          </Badge>
+                                        </div>
+                                        <div className="flex items-center justify-between rounded-lg border p-3">
+                                          <span className="font-medium">Images</span>
+                                          <div className="flex gap-1">
+                                            {agent.capabilities?.images?.length ? (
+                                              agent.capabilities.images.map((format, i) => (
+                                                <Badge key={i} variant="outline">{format}</Badge>
+                                              ))
+                                            ) : (
+                                              <Badge variant="secondary">None</Badge>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between rounded-lg border p-3">
+                                          <span className="font-medium">Files</span>
+                                          <div className="flex gap-1">
+                                            {agent.capabilities?.files?.length ? (
+                                              agent.capabilities.files.map((format, i) => (
+                                                <Badge key={i} variant="outline">{format}</Badge>
+                                              ))
+                                            ) : (
+                                              <Badge variant="secondary">None</Badge>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between rounded-lg border p-3">
+                                          <span className="font-medium">Audio</span>
+                                          <div className="flex gap-1">
+                                            {agent.capabilities?.audio?.length ? (
+                                              agent.capabilities.audio.map((format, i) => (
+                                                <Badge key={i} variant="outline">{format}</Badge>
+                                              ))
+                                            ) : (
+                                              <Badge variant="secondary">None</Badge>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between rounded-lg border p-3">
+                                          <span className="font-medium">Video</span>
+                                          <div className="flex gap-1">
+                                            {agent.capabilities?.video?.length ? (
+                                              agent.capabilities.video.map((format, i) => (
+                                                <Badge key={i} variant="outline">{format}</Badge>
+                                              ))
+                                            ) : (
+                                              <Badge variant="secondary">None</Badge>
+                                            )}
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
+                                </CardContent>
+                              </Card>
+                            )
+                          }
+
                           <Card className="mt-4">
                             <CardHeader>
                               <CardTitle>Tools</CardTitle>

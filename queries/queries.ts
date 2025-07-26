@@ -7,11 +7,8 @@ lastname
 email
 super_admin
 apikey
+anthropic_token
 type
-roles {
- id
- role
-}
 `;
 
 export const GET_AGENTS = gql`
@@ -138,10 +135,9 @@ export const GET_JOBS = gql`
       filters: $filters
     ) {
       items {
-        id
+        id  
         status
         name
-        result
         createdAt
       }
       pageInfo {
@@ -190,6 +186,7 @@ export const GET_USERS = gql`
       }
       items {
         id
+        name
         firstname
         lastname
         email
@@ -198,6 +195,7 @@ export const GET_USERS = gql`
         type
         apikey
         emailVerified
+        anthropic_token
         role
       }
     }
@@ -221,13 +219,14 @@ export const GET_JOB_BY_ID = gql`
         id
         status
         name
+        inputs
         result
         createdAt
     }
   }
 `;
 export const GET_AGENT_BY_ID = gql`
-  query GetAgentById($id: MongoID!) {
+  query GetAgentById($id: ID!) {
     agentById(id: $id) {
       id
       name
@@ -273,23 +272,17 @@ export const UPDATE_USER_BY_ID = gql`
     mutation UpdateUser(
       $email: String,
       $firstname: String,
+      $anthropic_token: String,
       $lastname: String,
-      $roles: [MongoID],
-      $id: MongoID!
+      $id: ID!
      ) {
-        userUpdateById(id: $id, record: {
+        usersUpdateOneById(id: $id, input: {
             email: $email,
             firstname: $firstname,
+            anthropic_token: $anthropic_token,
             lastname: $lastname,
-            roles: $roles
         }) {
-            record {
-                ${USER_FIELDS}
-            }
-            error {
-                message
-                __typename
-            }
+          ${USER_FIELDS}
         }
     }
 `;
@@ -411,6 +404,14 @@ export const CREATE_USER_ROLE = gql`
 export const REMOVE_USER_BY_ID = gql`
   mutation RemoveUserById($id: ID!) {
     usersRemoveOneById(id: $id) {
+      id
+    }
+  }
+`;
+
+export const REMOVE_JOB_BY_ID = gql`
+  mutation RemoveJobById($id: ID!) {
+    jobsRemoveOneById(id: $id) {
       id
     }
   }

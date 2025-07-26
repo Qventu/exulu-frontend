@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Uppy from "@uppy/core";
 import AwsS3 from "@uppy/aws-s3";
 import "@uppy/core/dist/style.min.css";
@@ -28,7 +28,7 @@ export const initializeUppy = async (options: InitializeOptions): Promise<Uppy> 
     if (!process.env.NEXT_PUBLIC_UPLOAD_URL) {
         throw new Error("No process.env.NEXT_PUBLIC_UPLOAD_URL set.")
     }
-    const { callbacks, fileKey, fileKeyPrefix, maxNumberOfFiles, uppyOptions } = options || {};
+    const { callbacks, maxNumberOfFiles, uppyOptions } = options || {};
     const { uploadSuccess } = callbacks || {};
     const { allowedFileTypes, id } = uppyOptions || {};
     const token = await getToken()

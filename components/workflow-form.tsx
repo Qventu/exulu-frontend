@@ -1,14 +1,14 @@
 "use client"
 
 import type React from "react"
-import {useState} from "react"
-import {Upload} from "lucide-react"
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
-import {Input} from "@/components/ui/input"
-import {Label} from "@/components/ui/label"
-import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
-import {Agent} from "@EXULU_SHARED/models/agent";
-import {AgentBackend} from "@EXULU_SHARED/models/agent-backend";
+import { useState } from "react"
+import { Upload } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Agent } from "@EXULU_SHARED/models/agent";
+import { AgentBackend } from "@EXULU_SHARED/models/agent-backend";
 import { dezerialize } from "zodex";
 import { ZodFormBuilder } from "./zod-form-builder"
 
@@ -17,10 +17,12 @@ interface AgentFormProps {
     onBatchSubmit: (file: File) => Promise<void>
     agent: Agent
     backend: AgentBackend
+    inputs: any
 }
 
-export function WorkflowForm({onSubmit, onBatchSubmit, agent, backend}: AgentFormProps) {
+export function WorkflowForm({ onSubmit, onBatchSubmit, agent, backend, inputs }: AgentFormProps) {
 
+    const [showInputs, setShowInputs] = useState(true);
     const [isLoading, setIsLoading] = useState(false)
 
     async function handleSubmit(data: any) {
@@ -45,7 +47,9 @@ export function WorkflowForm({onSubmit, onBatchSubmit, agent, backend}: AgentFor
                 <TabsList>
                     <TabsTrigger value="single">Single Run</TabsTrigger>
                     <TabsTrigger disabled={!backend.enable_batch} value="batch">Batch Upload</TabsTrigger>
+                    <TabsTrigger value="hidden">Hide inputs</TabsTrigger>
                 </TabsList>
+                <TabsContent value="hidden"></TabsContent>
                 <TabsContent value="single">
                     <Card>
                         <CardHeader>
@@ -54,7 +58,11 @@ export function WorkflowForm({onSubmit, onBatchSubmit, agent, backend}: AgentFor
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <ZodFormBuilder jsonSchema={backend.inputSchema} zodSchema={zodSchema} onSubmit={handleSubmit}/>
+                            <ZodFormBuilder
+                                jsonSchema={backend.inputSchema}
+                                defaultValues={inputs}
+                                zodSchema={zodSchema}
+                                onSubmit={handleSubmit} />
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -69,11 +77,11 @@ export function WorkflowForm({onSubmit, onBatchSubmit, agent, backend}: AgentFor
                                 <div className="space-y-2">
                                     <Label htmlFor="csv">CSV File</Label>
                                     <Input id="csv" type="file" accept=".csv" onChange={handleBatchUpload}
-                                           disabled={isLoading}/>
+                                        disabled={isLoading} />
                                 </div>
                                 <div className="rounded-lg border border-dashed p-4">
                                     <div className="flex flex-col items-center gap-2 text-center">
-                                        <Upload className="h-8 w-8 text-muted-foreground"/>
+                                        <Upload className="h-8 w-8 text-muted-foreground" />
                                         <p className="text-sm text-muted-foreground">Upload a CSV file with the following
                                             columns:</p>
                                         <p className="text-xs text-muted-foreground">title, content, file_url</p>

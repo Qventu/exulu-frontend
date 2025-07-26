@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { User } from "@EXULU_SHARED/models/user";
 import { DataTableColumnHeader } from "./data-table-column-header";
 import { DataTableRowActions } from "./data-table-row-actions";
+import { ClaudeCodeToggle } from "./claude-code-toggle";
 
 export const columns: ColumnDef<User>[] = [
   {
@@ -101,6 +102,18 @@ export const columns: ColumnDef<User>[] = [
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id));
     },
+  },
+  {
+    accessorKey: "anthropic_token",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Claude Code" />
+    ),
+    cell: ({ row }) => {
+      return (
+        <ClaudeCodeToggle user={row.original} />
+      );
+    },
+    enableSorting: false,
   },
   {
     id: "actions",

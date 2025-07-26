@@ -1,4 +1,5 @@
 import { STATISTICS_TYPE } from "@EXULU_SHARED/enums/statistics";
+import { getSession } from "next-auth/react";
 
 export const uris = {
     langfuse:
@@ -17,29 +18,14 @@ export const uris = {
         process.env.NEXT_PUBLIC_BACKEND + "/items",
     export:
         process.env.NEXT_PUBLIC_HOST + "/api/export",
-    token:
-        process.env.NEXT_PUBLIC_HOST + "/api/token",
     files:
         process.env.NEXT_PUBLIC_UPLOAD_URL
 };
 
-export const auth = {
-    token: () => {
-        return fetch(`${uris.token}`)
-    }
-}
-
 export const getToken = async () => {
-    const response = await auth.token()
-    const { token } = await response.json()
-
-    console.log("token", token)
-
-    if (!token) {
-      throw new Error("No valid session token available.")
-    }
-    
-    return token;
+    const session = await getSession()
+    // @ts-ignore
+    return session?.user?.jwt;
 }
 
 export const statistics = {

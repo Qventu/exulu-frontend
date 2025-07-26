@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { StatsCards } from "@/components/stats-cards"
-import {RecentJobs} from "@/components/custom/recent-jobs";
-import {JOB_STATUS} from "@/util/enums/job-status";
 import * as React from "react";
-import {useQuery as apolloQuery} from "@apollo/client/react/hooks/useQuery";
-import {GET_AGENT_BY_ID} from "@/queries/queries";
+import {useQuery as apolloQuery, useQuery} from "@apollo/client/react/hooks/useQuery";
+import {GET_AGENT_BY_ID, GET_JOB_BY_ID} from "@/queries/queries";
 import {useQuery as reactQuery} from "@tanstack/react-query";
 import {AgentBackend} from "@EXULU_SHARED/models/agent-backend";
 import {workflows} from "@/util/api";
@@ -16,6 +14,9 @@ import { WorkflowForm } from "@/components/workflow-form";
 import { Job } from "@EXULU_SHARED/models/job";
 import JobMonitor from "../components/job-monitor";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import { TextPreview } from "@/components/custom/text-preview";
+import JsonViewerComponent, { JsonViewer } from "../components/json-viewer";
 export const dynamic = "force-dynamic";
 
 
@@ -57,6 +58,16 @@ export default function AgentPage({ params }: PageProps) {
     },
   });
 
+  const jobQuery = useQuery(GET_JOB_BY_ID, {
+    returnPartialData: true,
+    fetchPolicy: "network-only",
+    nextFetchPolicy: "network-only",
+    skip: !params.session || params.session === "new",
+    variables: {
+      id: params.session,
+    },
+  });
+
   const backendQuery = reactQuery<AgentBackend>({
     queryKey: ["agentsBackend", agentQuery.data?.agentById?.backend],
     enabled: !!agentQuery.data?.agentById,
@@ -69,7 +80,7 @@ export default function AgentPage({ params }: PageProps) {
     },
   });
 
-  if (agentQuery.loading || backendQuery.isLoading) {
+  if (agentQuery.loading || backendQuery.isLoading || jobQuery.loading) {
     return (
         <>
           <div className="w-full pr-6">
@@ -92,6 +103,13 @@ export default function AgentPage({ params }: PageProps) {
         </Alert>
     );
 
+  if (jobQuery.error)
+    return (
+        <Alert title="Error" variant="destructive" className="m-5">
+          {jobQuery.error.message}
+        </Alert>
+    );
+
   if (backendQuery.error)
     return (
         <Alert title="Error" variant="destructive" className="m-5">
@@ -102,7 +120,7 @@ export default function AgentPage({ params }: PageProps) {
   if (!agentQuery.data?.agentById || !backendQuery.data)
     return (
         <Alert title="Error" variant="destructive" className="m-5">
-          No data found
+          No data found.
         </Alert>
     );
 
@@ -111,6 +129,7 @@ export default function AgentPage({ params }: PageProps) {
 
   async function handleSubmit(data: any) {
     console.log("Processing single job:", data)!
+    console.log("backend", backend)
     const response = await workflows.run(backend.slug, {
       inputs: data,
       agent: agent.id,
@@ -122,7 +141,10 @@ export default function AgentPage({ params }: PageProps) {
     setSelectedJob({
       id: json.job.jobId,
       name: json.job.name,
-      status: json.job.status
+      status: json.job.status,
+      agent: agent.id,
+      type: "workflow",
+      updatedAt: new Date(json.job.updatedAt)
     })
     return { ...json.job, status: data?.job?.status };
   }
@@ -131,6 +153,65 @@ export default function AgentPage({ params }: PageProps) {
     // Process batch jobs from CSV
     console.log("Processing batch jobs from:", file)
   }
+
+  const renderJsonValue = (value: any, label: string) => {
+    if (value === null || value === undefined) {
+      return (
+        <div>
+          <h3 className="text-lg font-semibold tracking-tight">{label}:</h3>
+          <TextPreview text={value} markdown={true} />
+        </div>
+      );
+    }
+
+    if (typeof value === 'object') {
+      if (Array.isArray(value)) {
+        return (
+          <div>
+            <h3 className="text-lg font-semibold tracking-tight">{label}:</h3>
+            {value.map((item, index) => (
+              <div key={index} className="ml-4 mt-2">
+                {renderJsonValue(item, `Item ${index + 1}`)}
+              </div>
+            ))}
+          </div>
+        );
+      }
+
+      return (
+        <div>
+          <h3 className="text-lg font-semibold tracking-tight">{label}:</h3>
+          {Object.entries(value).map(([key, val]) => (
+            <div key={key} className="ml-4 mt-2">
+              {renderJsonValue(val, key)}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        <h3 className="text-lg font-semibold tracking-tight">{label}:</h3>
+        <TextPreview text={value} markdown={true} />
+      </div>
+    );
+  };
+
+  const results = () => {
+    try {
+      const json = JSON.parse(jobQuery.data?.jobById?.result || "{}");
+      return renderJsonValue(json, "Result");
+    } catch (error) {
+      return (
+        <div>
+          <h3 className="text-lg font-semibold tracking-tight">Error</h3>
+          <TextPreview text="Invalid JSON data" markdown={true} />
+        </div>
+      );
+    }
+  };
+  
 
   return (
       <div className="flex-1 space-y-8 p-8 pt-6 overflow-y-scroll">
@@ -144,27 +225,21 @@ export default function AgentPage({ params }: PageProps) {
             setSelectedJob(undefined)
           }} job={selectedJob.id}/>
         }
+
         {
-          !selectedJob?.id && <WorkflowForm agent={agent} backend={backend} onSubmit={handleSubmit}
+          !selectedJob?.id && <WorkflowForm agent={agent} inputs={jobQuery.data?.jobById?.inputs} backend={backend} onSubmit={handleSubmit}
           onBatchSubmit={handleBatchSubmit}/>
         }
-        
+      
         <div className="space-y-4">
-          <h3 className="text-xl font-semibold tracking-tight">Recent Runs for this session</h3>
-          <div className="rounded-md border p-5">
-            <RecentJobs
-                agent={agent.id}
-                session={params.session}
-                statusses={[
-                  JOB_STATUS.completed,
-                  JOB_STATUS.active,
-                  JOB_STATUS.waiting,
-                  JOB_STATUS.delayed,
-                  JOB_STATUS.failed,
-                ].join(",")}
-            />
-          </div>
+          <h3 className="text-xl font-semibold tracking-tight">Results</h3>
+          {
+              jobQuery.data?.jobById?.result ? <JsonViewer data={JSON.parse(jobQuery.data?.jobById?.result || "{}")} /> : <Alert title="No results" variant="destructive" className="mt-5">
+                No results found.
+              </Alert>
+            }
         </div>
+
       </div>
 )
 }

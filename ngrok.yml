@@ -1,0 +1,10 @@
+version: "2"
+authtoken: 1bDq4H21OulxgyopkEHZ5eH3Psh_6aNDpzDuBCTCVjtK7nMNx
+tunnels:
+    backend:
+        #host_header: "rewrite"
+        #response_header:
+            #add: ["Access-Control-Allow-Origin: *"]
+        proto: http
+        addr: 3020
+        domain: exulu.ngrok.app
