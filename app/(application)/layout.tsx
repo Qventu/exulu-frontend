@@ -1,5 +1,5 @@
 import "../globals.css";
-import { Inter as FontSans } from "next/font/google";
+import { fontVariables } from "@/lib/fonts";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -10,11 +10,6 @@ import { TanstackQueryClientProvider } from "@/app/(application)/query-client";
 import Authenticated from "@/app/(application)/authenticated";
 import { Toaster } from "@/components/ui/toaster";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
-
-const fontSans = FontSans({
-    subsets: ["latin"],
-    variable: "--font-sans",
-});
 
 export default async function RootLayout({
     children,
@@ -33,7 +28,7 @@ export default async function RootLayout({
             <body
                 className={cn(
                     `min-h-screen flex flex-col bg-background font-sans antialiased h-[100vh]`,
-                    fontSans.variable,
+                    fontVariables,
                 )}
             >
                 <script type="module" defer src="https://cdn.jsdelivr.net/npm/ldrs/dist/auto/grid.js"></script>

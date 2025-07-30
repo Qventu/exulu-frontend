@@ -1,15 +1,11 @@
 import "../globals.css";
-import { Inter as FontSans } from "next/font/google";
+import { fontVariables } from "@/lib/fonts";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import {Toaster} from "@/components/ui/toaster";
 import Image from "next/image";
 import {ThemeProvider} from "@/components/theme-provider";
 import {TanstackQueryClientProvider} from "@/app/(application)/query-client";
-const fontSans = FontSans({
-  subsets: ["latin"],
-  variable: "--font-sans",
-});
 
 export default function RootLayout({
   children,
@@ -22,7 +18,7 @@ export default function RootLayout({
         <body
           className={cn(
             `flex flex-col bg-background font-sans antialiased`,
-            fontSans.variable,
+            fontVariables,
           )}
         >
         <ThemeProvider

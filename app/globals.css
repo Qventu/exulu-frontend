@@ -1,7 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap');
 
 .recharts-surface {
   overflow: visible !important;
@@ -41,8 +40,8 @@
     --sidebar-accent-foreground: 0 0% 0%;
     --sidebar-border: 0 0% 92.1569%;
     --sidebar-ring: 0 0% 0%;
-    --font-sans: 'Merriweather', serif;
-    --font-serif: 'Source Serif 4', serif;
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-serif: 'Merriweather', serif;
     --font-mono: 'JetBrains Mono', monospace;
     --radius: 1.4rem;
     --shadow-2xs: 0px 2px 3px 0px hsl(0 0% 0% / 0.08);
@@ -90,8 +89,8 @@
     --sidebar-accent-foreground: 257.6687 100% 68.0392%;
     --sidebar-border: 222.8571 6.4220% 21.3725%;
     --sidebar-ring: 257.6687 100% 68.0392%;
-    --font-sans: 'Merriweather', serif;
-    --font-serif: 'Source Serif 4', serif;
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-serif: 'Merriweather', serif;
     --font-mono: 'JetBrains Mono', monospace;
     --radius: 1.4rem;
     --shadow-2xs: 0px 2px 3px 0px hsl(0 0% 0% / 0.08);
