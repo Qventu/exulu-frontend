@@ -47,7 +47,7 @@ jobs:
           brew install --cask docker
           
           # Start Docker Desktop
-          open -a Docker
+          open -a "Docker Desktop"
           
           # Wait for Docker to be ready
           echo "Waiting for Docker to start..."
