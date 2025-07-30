@@ -85,7 +85,7 @@ export const columns: ColumnDef<UserRole>[] = [
             <>
               {row.original.agents.slice(0, 3).map((agent, index) => (
                 <Badge key={index} variant={"outline"}>
-                  {agent.name}
+                  {agent}
                 </Badge>
               ))}
               {row.original.agents.length > 3 && (

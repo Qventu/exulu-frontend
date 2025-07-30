@@ -28,11 +28,9 @@ export default async function DataPage({
     item = params.query[1] || null;
   }
 
-
   return (
     <>
       <DataDisplay
-        expand={true}
         actions={true}
         contextId={context}
         itemId={item}

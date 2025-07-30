@@ -18,15 +18,10 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/components/ui/use-toast"
-import bcrypt from "bcryptjs";
 import {useMutation, useQuery} from "@apollo/client";
 import {CREATE_API_USER, GET_USERS, REMOVE_USER_BY_ID} from "@/queries/queries";
+import bcrypt from "bcryptjs";
 const SALT_ROUNDS = 12;
-
-export async function encryptApiKey(apiKey) {
-    const hash = await bcrypt.hash(apiKey, SALT_ROUNDS);
-    return hash;
-}
 // we dont decrypt, as we only show the key once to the user
 
 // Type for API key
@@ -75,7 +70,7 @@ export default function ApiKeyManagement() {
 
         const plainKey = `sk_${Math.random().toString(36).substring(2, 15)}_${Math.random().toString(36).substring(2, 15)}`;
         const postFix = `/${newKeyName.toLowerCase().trim().replaceAll(" ", "_")}`
-        const encryptedKey = await encryptApiKey(plainKey)
+        const encryptedKey = await bcrypt.hash(plainKey, SALT_ROUNDS);
         const response = await createApiUser({
             variables: {
                 firstname: `${newKeyName}`,
@@ -248,9 +243,9 @@ export default function ApiKeyManagement() {
                                                     <code className="bg-muted px-1 py-0.5 rounded text-xs">****************</code>
                                                 </div>
                                             </TableCell>
-                                            <TableCell>{format(new Date(Number(user.createdAt)), "PP hh:mm")}</TableCell>
+                                            <TableCell>{format(new Date(user.createdAt), "PP hh:mm")}</TableCell>
                                             <TableCell>
-                                                {user.last_used ? (format(new Date(Number(user.last_used)), "PP hh:mm")) : (
+                                                {user.last_used ? (format(new Date(user.last_used), "PP hh:mm")) : (
                                                     <Badge variant="outline" className="text-xs">
                                                         Never
                                                     </Badge>

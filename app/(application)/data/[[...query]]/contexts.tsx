@@ -79,7 +79,7 @@ const Contexts = ({ activeFolder, activeArchived, activeSettings }: { activeFold
                         </Link>
                     </Button>
                 </div> : <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground ml-5 pt-3">Select a folder:</span>
+                    <span className="text-sm text-muted-foreground ml-5 pt-3">Select a context:</span>
                 </div>
             }
             <nav

@@ -23,10 +23,7 @@ export const userRoleSchema = z.object({
     id: z.string(),
     agents: z
         .array(
-            z.object({
-                id: z.string(),
-                name: z.string().nullable().optional(),
-            }),
+            z.string(),
         )
         .nullable()
         .optional(),

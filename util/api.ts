@@ -6,6 +6,8 @@ export const uris = {
         process.env.NEXT_PUBLIC_LANGFUSE_URI ? process.env.NEXT_PUBLIC_LANGFUSE_URI + "/api" : null,
     agents:
         process.env.NEXT_PUBLIC_BACKEND + "/agents",
+    providers:
+        process.env.NEXT_PUBLIC_BACKEND + "/providers",
     tools:
         process.env.NEXT_PUBLIC_BACKEND + "/tools",
     contexts:
@@ -96,6 +98,26 @@ export const agents = {
             url += `/${parameters.id}`
         }
 
+        const token = await getToken()
+
+        if (!token) {
+            throw new Error("No valid session token available.")
+        }
+
+        return fetch(url, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+        });
+    },
+};
+
+export const providers = {
+    get: async (limit: number = 20): Promise<any> => {
+
+        let url = `${uris.providers}`;
         const token = await getToken()
 
         if (!token) {
@@ -263,6 +285,8 @@ export const items = {
         context: string
         name?: string
         archived?: boolean
+        sort?: "created_at" | "embeddings_updated_at"
+        order?: "desc" | "asc"
     } | null, page: number = 1, limit: number = 20): Promise<any> => {
         const url = new URL(`${uris.items}/${parameters?.context}`);
 
@@ -278,6 +302,14 @@ export const items = {
 
         if (parameters?.name) {
             url.searchParams.set("name", parameters.name);
+        }
+
+        if (parameters?.sort) {
+            url.searchParams.set("sort", parameters.sort);
+        }
+
+        if (parameters?.order) {
+            url.searchParams.set("order", parameters.order);
         }
 
         url.searchParams.set("page", page.toString());

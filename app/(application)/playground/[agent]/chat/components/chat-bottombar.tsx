@@ -6,7 +6,7 @@ import React, { useContext } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { UserContext } from "@/app/(application)/authenticated";
 import { Button } from "@/components/ui/button";
-import { ChatProps } from "@/app/(application)/playground/[agent]/chat/[session]/chat";
+import { ChatProps } from "../[session]/chat";
 
 export default function ChatBottombar({
                                         agentId,

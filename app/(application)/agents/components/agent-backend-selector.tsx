@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { agents, workflows } from "@/util/api";
+import { providers, workflows } from "@/util/api";
 import { useQuery } from "@tanstack/react-query";
 import { AgentBackend } from "@EXULU_SHARED/models/agent-backend";
 import { useEffect } from "react";
@@ -31,7 +31,7 @@ export function AgentBackendSelector({
       }
 
       if (type === "CHAT") {
-        result = await agents.get(null, 20);
+        result = await providers.get(20);
         console.log("result", result)
         json = await result.json()
         console.log("json", json)
@@ -39,7 +39,7 @@ export function AgentBackendSelector({
       }
 
       if (type === "CUSTOM") {
-        result = await agents.get(null, 20);
+        result = await providers.get(20);
         console.log("result", result)
         json = await result.json()
         json = json.filter((agent: any) => agent.type === "custom")

@@ -2,8 +2,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import EmbeddingChart from "./chart"
-import { RecentJobs } from "@/components/custom/recent-jobs"
-import { JOB_STATUS } from "@/util/enums/job-status"
 import { useQuery } from "@tanstack/react-query"
 import { Skeleton } from "@/components/ui/skeleton"
 import { contexts } from "@/util/api"
@@ -40,7 +38,7 @@ export default function ContextsDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Embedding Jobs</CardDescription>
+              <CardDescription>Embeddings Generated</CardDescription>
               {
                 isLoading ? <Skeleton className="h-10 w-20" /> : <CardTitle className="text-2xl">{ data?.totals.embeddings || 0 }</CardTitle>
               }
@@ -82,7 +80,7 @@ export default function ContextsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Embedding Generations</CardTitle>
-                <CardDescription>Number of embeddings generated over time</CardDescription>
+                <CardDescription>Number of embeddings generated over time.</CardDescription>
               </div>
               {/* <Tabs defaultValue="30days" className="w-auto">
                 <TabsList>
@@ -97,24 +95,6 @@ export default function ContextsDashboard() {
             {
               isLoading ? <Skeleton className="h-full w-full" /> : <EmbeddingChart jobs={data?.jobs ?? []} />
             }
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent jobs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RecentJobs
-              type="embedder"
-              statusses={[
-                JOB_STATUS.completed,
-                JOB_STATUS.active,
-                JOB_STATUS.waiting,
-                JOB_STATUS.delayed,
-                JOB_STATUS.paused,
-                JOB_STATUS.failed
-              ].join(",")}
-            />
           </CardContent>
         </Card>
       </div>

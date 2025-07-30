@@ -36,7 +36,7 @@ export default function EmbeddingChart({ jobs }: { jobs: {
       return (
         <div className="bg-background border rounded-md shadow-sm p-2 text-sm">
           <p className="font-medium">{formatDate(label)}</p>
-          <p className="text-primary">Embedding jobs: {payload[0].value}</p>
+          <p className="text-primary">Embeddings Generated: {payload[0].value}</p>
         </div>
       )
     }

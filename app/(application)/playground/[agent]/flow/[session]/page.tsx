@@ -14,9 +14,8 @@ import { WorkflowForm } from "@/components/workflow-form";
 import { Job } from "@EXULU_SHARED/models/job";
 import JobMonitor from "../components/job-monitor";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent } from "@/components/ui/card";
 import { TextPreview } from "@/components/custom/text-preview";
-import JsonViewerComponent, { JsonViewer } from "../components/json-viewer";
+import { JsonViewer } from "../components/json-viewer";
 export const dynamic = "force-dynamic";
 
 

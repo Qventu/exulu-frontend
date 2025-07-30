@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { ChatLayout } from "@/app/(application)/playground/[agent]/chat/[session]/chat";
-import { agents, auth } from "@/util/api";
+import { agents, getToken } from "@/util/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { Agent } from "@EXULU_SHARED/models/agent";
@@ -24,12 +24,12 @@ export default function SessionsPage({
       const agent: Agent = await response.json();
       console.log("[EXULU] agent", agent)
       
-      const authentication = await auth.token()
-      const { token } = await authentication.json()
+      const token = await getToken()
   
       console.log("token", token)
   
       if (!token) {
+        console.error("No valid session token available.")
         throw new Error("No valid session token available.")
       }
 
@@ -51,7 +51,7 @@ export default function SessionsPage({
     <ExclamationTriangleIcon className="size-4" />
     <AlertTitle>Error</AlertTitle>
     <AlertDescription>
-      Error loading agent.
+      Error loading agent {query.error?.message}.
     </AlertDescription>
   </Alert>
   } 

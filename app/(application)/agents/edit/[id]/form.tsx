@@ -68,6 +68,16 @@ const agentFormSchema = z.object({
   id: z.string().or(z.number()).nullable().optional(),
   active: z.any(),
   access: z.boolean().nullable().optional(),
+  firewall: z.object({
+    enabled: z.boolean().optional(),
+    scanners: z.object({
+      promptGuard: z.boolean().optional(),
+      codeShield: z.boolean().optional(),
+      agentAlignment: z.boolean().optional(),
+      hiddenAscii: z.boolean().optional(),
+      piiDetection: z.boolean().optional(),
+    }).optional(),
+  }).optional(),
 });
 
 export default function AgentForm({
@@ -82,6 +92,14 @@ export default function AgentForm({
   const [errors, setErrors] = useState<string>();
   const { user, setUser } = useContext(UserContext);
   const [enabledTools, setEnabledTools] = useState<string[]>(agent.enabledTools || [])
+  const [firewallEnabled, setFirewallEnabled] = useState<boolean>(agent.firewall?.enabled || false)
+  const [firewallScanners, setFirewallScanners] = useState({
+    promptGuard: agent.firewall?.scanners?.promptGuard || false,
+    codeShield: agent.firewall?.scanners?.codeShield || false,
+    agentAlignment: agent.firewall?.scanners?.agentAlignment || false,
+    hiddenAscii: agent.firewall?.scanners?.hiddenAscii || false,
+    piiDetection: agent.firewall?.scanners?.piiDetection || false,
+  })
   const { toast } = useToast();
 
   const copyAgentId = async () => {
@@ -138,6 +156,16 @@ export default function AgentForm({
     defaultValues: agent ?? {
       name: "New agent",
       steps: [],
+      firewall: {
+        enabled: false,
+        scanners: {
+          promptGuard: false,
+          codeShield: false,
+          agentAlignment: false,
+          hiddenAscii: false,
+          piiDetection: false,
+        }
+      },
     },
     mode: "onChange",
   });
@@ -162,6 +190,10 @@ export default function AgentForm({
                       public: data.public,
                       description: data.description,
                       active: data.active,
+                      firewall: JSON.stringify({
+                        enabled: firewallEnabled,
+                        scanners: firewallScanners
+                      }),
                     },
                   });
                   refetch();
@@ -407,6 +439,129 @@ export default function AgentForm({
                                 </FormItem>
                               )}
                             />
+                            
+                            <FormField
+                              control={agentForm.control}
+                              name="firewall.enabled"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                  <div className="space-y-0.5">
+                                    <FormLabel className="text-base">
+                                      LLM Firewall Protection
+                                    </FormLabel>
+                                    <FormDescription>
+                                      Enable firewall to protect against malicious inputs and outputs.
+                                    </FormDescription>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={firewallEnabled}
+                                      onCheckedChange={(value) => {
+                                        setFirewallEnabled(value)
+                                        field.onChange(value)
+                                      }}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            
+                            {firewallEnabled && (
+                              <Card>
+                                <CardHeader>
+                                  <CardTitle>Firewall Scanner Configuration</CardTitle>
+                                  <CardDescription>
+                                    Configure which security scanners to enable for different types of threats.
+                                  </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                  <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                      <FormLabel className="text-base">
+                                        Prompt Guard
+                                      </FormLabel>
+                                      <FormDescription>
+                                        Detects and blocks prompt injection attacks.
+                                      </FormDescription>
+                                    </div>
+                                    <Switch
+                                      checked={firewallScanners.promptGuard}
+                                      onCheckedChange={(value) => {
+                                        setFirewallScanners(prev => ({ ...prev, promptGuard: value }))
+                                      }}
+                                    />
+                                  </div>
+                                  
+                                  <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                      <FormLabel className="text-base">
+                                        Code Shield
+                                      </FormLabel>
+                                      <FormDescription>
+                                        Prevents generation of malicious code or exploits.
+                                      </FormDescription>
+                                    </div>
+                                    <Switch
+                                      checked={firewallScanners.codeShield}
+                                      onCheckedChange={(value) => {
+                                        setFirewallScanners(prev => ({ ...prev, codeShield: value }))
+                                      }}
+                                    />
+                                  </div>
+                                  
+                                  <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                      <FormLabel className="text-base">
+                                        Agent Alignment
+                                      </FormLabel>
+                                      <FormDescription>
+                                        Ensures responses align with safety guidelines and policies.
+                                      </FormDescription>
+                                    </div>
+                                    <Switch
+                                      checked={firewallScanners.agentAlignment}
+                                      onCheckedChange={(value) => {
+                                        setFirewallScanners(prev => ({ ...prev, agentAlignment: value }))
+                                      }}
+                                    />
+                                  </div>
+                                  
+                                  <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                      <FormLabel className="text-base">
+                                        Hidden ASCII Detection
+                                      </FormLabel>
+                                      <FormDescription>
+                                        Detects hidden or malformed characters that could bypass other filters.
+                                      </FormDescription>
+                                    </div>
+                                    <Switch
+                                      checked={firewallScanners.hiddenAscii}
+                                      onCheckedChange={(value) => {
+                                        setFirewallScanners(prev => ({ ...prev, hiddenAscii: value }))
+                                      }}
+                                    />
+                                  </div>
+                                  
+                                  <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                      <FormLabel className="text-base">
+                                        PII Detection
+                                      </FormLabel>
+                                      <FormDescription>
+                                        Identifies and protects personally identifiable information.
+                                      </FormDescription>
+                                    </div>
+                                    <Switch
+                                      checked={firewallScanners.piiDetection}
+                                      onCheckedChange={(value) => {
+                                        setFirewallScanners(prev => ({ ...prev, piiDetection: value }))
+                                      }}
+                                    />
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
 
                             {
                               agent.type !== "custom" && (
@@ -430,15 +585,13 @@ export default function AgentForm({
                                           // todo fix create session!
                                           const result = await createAgentSession({
                                             variables: {
+                                              title: "New session",
                                               user: user.id,
                                               agent: agent.id,
-                                              type: agent.type,
-                                              createdAt: new Date().toISOString(),
-                                              updatedAt: new Date().toISOString(),
                                             }
                                           })
                                           console.log("result", result)
-                                          const sessionId = result?.data?.agentSessionCreateOne?.record?.id
+                                          const sessionId = result?.data?.agent_sessionsCreateOne?.id
                                           router.push(
                                             `/playground/${agent.id}/${agent.type}/${sessionId}`,
                                           );
@@ -465,7 +618,7 @@ export default function AgentForm({
                                   <div className="flex flex-col space-y-4">
                                     <div className="space-y-4">
                                       <p className="text-sm text-muted-foreground">
-                                        This agent can use the following capabilities:
+                                        This agent uses <b>{agent.model}</b> from <b>{agent.provider}</b> and can use the following capabilities:
                                       </p>
                                       <div className="grid gap-3">
                                         <div className="flex items-center justify-between rounded-lg border p-3">

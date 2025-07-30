@@ -73,7 +73,9 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
       page: 1,
       limit: 40,
       filters: {
-        agentId: agent
+        agent: {
+          eq: agent
+        }
       }
     },
   });
@@ -98,9 +100,9 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
       limit: 40,
     };
     if (search && search?.length > 2) {
-      variables.filters = { agentId: agent, nameSearch: search };
+      variables.filters = { agent: { eq: agent }, title: { contains: search } };
     } else {
-      variables.filters = { agentId: agent };
+      variables.filters = { agent: { eq: agent } };
     }
     sessionsQuery.refetch(variables);
   }, [search]);
@@ -121,7 +123,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
       return;
     }
     if (
-      !newSession.data?.agentSessionCreateOne?.record?.id
+      !newSession.data?.agent_sessionsCreateOne?.id
     ) {
       console.error("error", "failed to create session");
       return;
@@ -129,7 +131,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
     setSessionName("");
     sessionsQuery.refetch();
     router.push(
-      `/playground/${agent}/${type}/${newSession.data?.agentSessionCreateOne?.record?.id}`,
+      `/playground/${agent}/${type}/${newSession.data?.agent_sessionsCreateOne?.id}`,
     );
   }
 
@@ -226,14 +228,14 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
             </div>
           )}
 
-          {!sessionsQuery.loading && !sessionsQuery?.data?.agentSessionPagination?.items?.length && (
+          {!sessionsQuery.loading && !sessionsQuery?.data?.agent_sessionsPagination?.items?.length && (
             <div className="w-full flex">
               <p className="mx-auto mt-5">No sessions found.</p>
             </div>
           )}
 
           {!sessionsQuery.loading
-            ? sessionsQuery?.data?.agentSessionPagination?.items?.map(
+            ? sessionsQuery?.data?.agent_sessionsPagination?.items?.map(
               (
                 item: Omit<AgentSession, "agent"> & {
                   agent: Agent;

@@ -51,14 +51,14 @@ export const GET_AGENT_SESSIONS = gql`
   query GetAgentSessions(
     $page: Int!
     $limit: Int!
-    $filters: FilterFindManyAgentSessionsInput
-    $sort: SortFindManyAgentSessionsInput = UPDATEDAT_DESC
+    $filters: [FilterAgent_session]
+    $sort: SortBy = { field: "updatedAt", direction: DESC }
   ) {
-    agentSessionPagination(
+    agent_sessionsPagination(
       page: $page
-      perPage: $limit
+      limit: $limit
       sort: $sort
-      filter: $filters
+      filters: $filters
     ) {
       pageInfo {
         pageCount
@@ -70,11 +70,9 @@ export const GET_AGENT_SESSIONS = gql`
       items {
           createdAt
           updatedAt
-          resourceId
+          user
           title
-          agentId
-          metadata
-          id
+          agent
           id
       }
     }
@@ -85,14 +83,14 @@ export const GET_AGENT_MESSAGES = gql`
   query GetAgentSessionMessages(
     $page: Int!
     $limit: Int!
-    $filters: FilterFindManyAgentMessagesInput
-    $sort: SortFindManyAgentMessagesInput = CREATEDAT_DESC
+    $filters: [FilterAgent_message]
+    $sort: SortBy = { field: "createdAt", direction: DESC }
   ) {
-    agentMessagePagination(
+    agent_messagesPagination(
       page: $page
-      perPage: $limit
+      limit: $limit
       sort: $sort
-      filter: $filters
+      filters: $filters
     ) {
       pageInfo {
         pageCount
@@ -103,12 +101,9 @@ export const GET_AGENT_MESSAGES = gql`
       }
       items {
         id
-        thread_id
+        session
         content
-        role
-        type
         createdAt
-        id
       }
     }
   }
@@ -240,29 +235,25 @@ export const GET_AGENT_BY_ID = gql`
   }
 `;
 export const GET_AGENT_SESSION_BY_ID = gql`
-  query GetAgentSessionById($id: MongoID!) {
-    agentSessionById(id: $id) {
+  query GetAgentSessionById($id: ID!) {
+    agent_sessionById(id: $id) {
         createdAt
         updatedAt
-        resourceId
+        user
         title
-        agentId
-        metadata
-        id
+        agent
         id
     }
   }
 `;
 export const GET_AGENT_SESSION = gql`
-  query GetAgentSession($filter: FilterFindOneAgentSessionsInput) {
-    agentSessionOne(filter: $filter) {
+  query GetAgentSession($filters: [FilterAgent_session]) {
+    agent_sessionOne(filters: $filters) {
         createdAt
         updatedAt
-        resourceId
+        user
         title
-        agentId
-        metadata
-        id
+        agent
         id
     }
   }
@@ -326,7 +317,7 @@ export const UPDATE_USER_ROLE_BY_ID = gql`
 `;
 export const GET_USER_BY_EMAIL = gql`
    query GetUserByEmail($email: String!) {
-        userOne(filter: {email: $email}) {
+        userOne(filters: {email: $email}) {
             ${USER_FIELDS}
         }
     }
@@ -335,18 +326,13 @@ export const GET_USER_BY_EMAIL = gql`
 export const CREATE_AGENT_SESSION = gql`
   mutation createAgentSession(
     $title: String,
-    $user: String
+    $user: Float
     $agent: String
-    $type: EnumAgentSessionsType
-    $createdAt: String
-    $updatedAt: String
   ) {
-    agentSessionCreateOne(
-      record: { agentId: $agent, resourceId: $user, type: $type, createdAt: $createdAt, updatedAt: $updatedAt, title: $title }
+    agent_sessionsCreateOne(
+      input: { agent: $agent, user: $user, title: $title }
     ) {
-      record {
-        id
-      }
+      id
     }
   }
 `;
@@ -408,7 +394,6 @@ export const REMOVE_USER_BY_ID = gql`
     }
   }
 `;
-
 export const REMOVE_JOB_BY_ID = gql`
   mutation RemoveJobById($id: ID!) {
     jobsRemoveOneById(id: $id) {
@@ -436,14 +421,14 @@ export const REMOVE_AGENT_BY_ID = gql`
 `;
 export const REMOVE_AGENT_SESSION_BY_ID = gql`
   mutation RemoveAgentSessionById($id: ID!) {
-    agentSessionRemoveById(id: $id) {
+    agent_sessionsRemoveOneById(id: $id) {
       id
     }
   }
 `;
 
 export const GET_JOB_STATISTICS = gql`
-  query GetJobStatistics($user: MongoID, $agent: String, $from: Date, $to: Date) {
+  query GetJobStatistics($user: Float, $agent: String, $from: String, $to: String) {
     jobStatistics(user: $user, agent: $agent, from: $from, to: $to) {
       completedCount
       failedCount

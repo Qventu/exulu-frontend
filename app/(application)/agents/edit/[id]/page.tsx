@@ -3,12 +3,11 @@
 import * as React from "react";
 import AgentForm from "@/app/(application)/agents/edit/[id]/form";
 import { useQuery } from "@tanstack/react-query";
-import { agents, auth, tools } from "@/util/api";
+import { agents } from "@/util/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { Agent } from "@EXULU_SHARED/models/agent";
-import { Tool } from "@EXULU_SHARED/models/tool";
 export const dynamic = "force-dynamic";
 
 export default function Page({ params }: { params: { id: string } }) {

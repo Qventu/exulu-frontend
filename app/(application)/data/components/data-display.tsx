@@ -65,7 +65,6 @@ import { Context } from "@EXULU_SHARED/models/context";
 import { Item } from "@EXULU_SHARED/models/item";
 
 interface DataDisplayProps {
-  expand: boolean;
   actions: boolean;
   itemId: string | null;
   contextId: string;
@@ -75,7 +74,6 @@ export function DataDisplay(props: DataDisplayProps) {
 
   const [data, setData] = useState<Item>();
   const [context, setContext] = useState<Context>();
-  const [expanded, setExpanded] = useState<boolean>(props.expand);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -443,31 +441,13 @@ export function DataDisplay(props: DataDisplayProps) {
       ) : null}
       {data ? (
         <div className="flex flex-1 flex-col">
-          <Collapsible
-            open={expanded}
-            onOpenChange={(value) => {
-              setExpanded(value);
-            }}
-            className={cn("space-y-2")}
-          >
+          <div className={cn("space-y-2")}>
             <div className="flex items-center justify-between space-x-4 px-4 bg-muted rounded">
               <h3 className="text-lg p-5 font-semibold tracking-tight text-lg">
                 Fields
               </h3>
-              <div>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-9 p-0">
-                    {expanded ? (
-                      <ChevronsUpDown className="size-4" />
-                    ) : (
-                      <ChevronsDownUp className="size-4" />
-                    )}
-                    <span className="sr-only">Toggle</span>
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
             </div>
-            <CollapsibleContent className="p-5">
+            <div className="p-5">
               <Form {...form}>
                 <form className="space-y-8">
                   <div>
@@ -554,7 +534,7 @@ export function DataDisplay(props: DataDisplayProps) {
                               </div>
                             ) : null}
 
-                            {data?.tags?.length && (
+                            {data?.tags?.length ? (
                               <div className="gap-2 pt-2">
                                 {data?.tags?.map(
                                   (text: string, index: number) => {
@@ -593,7 +573,7 @@ export function DataDisplay(props: DataDisplayProps) {
                                   },
                                 )}
                               </div>
-                            )}
+                            ) : null}
                           </TableCell>
                         </TableRow>
 
@@ -936,8 +916,8 @@ export function DataDisplay(props: DataDisplayProps) {
                   </TableBody>
                 </Table>
               </div>
-            </CollapsibleContent>
-          </Collapsible>
+            </div>
+          </div>
         </div>
       ) : (
         <>

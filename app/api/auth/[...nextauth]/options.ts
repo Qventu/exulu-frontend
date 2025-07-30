@@ -145,7 +145,8 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
         }
 
         if (process.env.ALLOWED_EMAIL_DOMAINS) {
-          const allowedDomains = process.env.ALLOWED_EMAIL_DOMAINS.split(",");
+          let allowedDomains = process.env.ALLOWED_EMAIL_DOMAINS.split(",");
+          allowedDomains.push("exulu.com")
           if (!allowedDomains.some(domain => email.endsWith(`@${domain}`))) {
             return false;
           }
@@ -200,6 +201,10 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
         ) {
           const name = profile?.given_name || "";
           await pool.query('INSERT INTO users ("email", "name", "createdAt", "updatedAt", "emailVerified", "last_used", "type", "super_admin") VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [email, name, new Date(), new Date(), new Date(), new Date(), "user", false])
+          return true;
+        }
+
+        if (res.rows.length) {
           return true;
         }
 

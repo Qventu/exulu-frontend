@@ -3,6 +3,7 @@ export interface Item {
     name?: string;
     description?: string,
     createdAt?: string;
+    embeddings_updated_at?: string;
     updatedAt?: string;
     external_id?: string;
     source?: string;

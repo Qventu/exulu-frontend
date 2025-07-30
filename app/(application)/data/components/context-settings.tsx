@@ -21,6 +21,7 @@ import { contexts } from "@/util/api";
 import { Embedding } from "@EXULU_SHARED/models/embedding";
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton";
+import { RecentEmbeddings } from "@/components/custom/recent-embeddings";
 
 interface DataDisplayProps {
     expand: boolean;
@@ -42,7 +43,7 @@ export function ContextSettings(props: DataDisplayProps) {
                     source.updaters.forEach((updater) => {
                         if (updater.type === "manual") {
                             const formValues: Record<string, string> = {}
-        
+
                             // For each configuration field, initialize with example value
                             // todo
                             /* Object.entries(updater.configuration).forEach(([fieldName, fieldConfig]) => {
@@ -50,12 +51,12 @@ export function ContextSettings(props: DataDisplayProps) {
                                     formValues[fieldName] = fieldConfig.example
                                 }
                             }) */
-        
+
                             initialForms[updater.id] = formValues
                         }
                     })
                 })
-        
+
                 setUpdaterForms(initialForms)
             }
 
@@ -157,7 +158,7 @@ export function ContextSettings(props: DataDisplayProps) {
         );
     }
 
-   
+
 
     return (
         <div className="flex h-full flex-col">
@@ -183,7 +184,6 @@ export function ContextSettings(props: DataDisplayProps) {
                     <Card className="border-0 rounded-none">
                         <CardHeader>
                             <CardTitle className="text-lg">Settings</CardTitle>
-                            {/* todo shows any embedding jobs currently running */}
                         </CardHeader>
                         <CardContent className="grid gap-4">
                             <ScrollArea className="max-h-[600px]">
@@ -195,6 +195,20 @@ export function ContextSettings(props: DataDisplayProps) {
                                             <span className="text-sm font-medium mr-2">Embedder:</span>
                                             <Badge variant="outline">{data.embedder}</Badge>
                                         </div>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm font-medium mr-2">Calculate Vectors:</span>
+                                        <Badge variant="secondary">
+                                            {data.configuration?.calculateVectors
+                                                ? data.configuration.calculateVectors.charAt(0).toUpperCase() + data.configuration.calculateVectors.slice(1)
+                                                : "Manual"}
+                                        </Badge>
+                                    <div className="mt-2 text-xs text-muted-foreground">
+                                        <span className="block"><b>Manual</b>: Vectors are only calculated when triggered manually.</span>
+                                        <span className="block"><b>On Update</b>: Vectors are recalculated whenever an item is updated.</span>
+                                        <span className="block"><b>On Insert</b>: Vectors are calculated when a new item is inserted.</span>
+                                        <span className="block"><b>Always</b>: Vectors are calculated on both insert and update operations.</span>
+                                    </div>
                                     </div>
 
                                     <Separator />
@@ -309,6 +323,18 @@ export function ContextSettings(props: DataDisplayProps) {
                                     </div> */}
                                 </div>
                             </ScrollArea>
+                        </CardContent>
+                    </Card>
+
+                    {/* TODO change to show recently updated or generated embeddings based on the embeddings_updated_at field on the context items */}
+                    <Card className="bg-none border-0 rounded-none">
+                        <CardHeader>
+                            <CardTitle>Recent embedding generations</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <RecentEmbeddings
+                                contextId={data.id}
+                            />
                         </CardContent>
                     </Card>
 
@@ -465,23 +491,23 @@ const UsedByAgents = ({ ids }: { ids: string[] }) => {
             {agents.length > 0 ? (
                 <CardContent className="grid gap-4">
                     <div>
-                    {query.data?.agentPagination.items.map((agent) => (
-                        <Card className="border-0 p-0" key={agent.id}>
-                            <CardHeader className="p-3">
-                                <div className="flex flex-col gap-1">
-                                    <div className="flex items-center gap-2">
-                                        <Bot className="size-4" />
-                                        <Link href={`/agents/edit/${agent.id}`} className="text-primary hover:underline">
-                                            <CardTitle className="text-sm">{agent.name}</CardTitle>
-                                        </Link>
+                        {query.data?.agentPagination.items.map((agent) => (
+                            <Card className="border-0 p-0" key={agent.id}>
+                                <CardHeader className="p-3">
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2">
+                                            <Bot className="size-4" />
+                                            <Link href={`/agents/edit/${agent.id}`} className="text-primary hover:underline">
+                                                <CardTitle className="text-sm">{agent.name}</CardTitle>
+                                            </Link>
+                                        </div>
+                                        <CardDescription className="text-xs">{agent.description}</CardDescription>
                                     </div>
-                                    <CardDescription className="text-xs">{agent.description}</CardDescription>
-                                </div>
-                            </CardHeader>
-                        </Card>
-                    ))}
-                </div>
-            </CardContent>
+                                </CardHeader>
+                            </Card>
+                        ))}
+                    </div>
+                </CardContent>
             ) : (
                 <CardContent className="grid gap-4">
                     <p>No agents using this context.</p>

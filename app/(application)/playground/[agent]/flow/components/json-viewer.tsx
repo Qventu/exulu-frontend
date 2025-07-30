@@ -28,11 +28,20 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({ data }) => {
   const copyToClipboard = async (text: string, id: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      setCopiedItems((prev) => new Set([...prev, id]))
+      setCopiedItems((prev) => {
+        const newSet = new Set<string>()
+        prev.forEach(item => newSet.add(item))
+        newSet.add(id)
+        return newSet
+      })
       setTimeout(() => {
         setCopiedItems((prev) => {
-          const newSet = new Set(prev)
-          newSet.delete(id)
+          const newSet = new Set<string>()
+          prev.forEach(item => {
+            if (item !== id) {
+              newSet.add(item)
+            }
+          })
           return newSet
         })
       }, 2000)
@@ -111,11 +120,20 @@ const JsonNode: React.FC<JsonNodeProps> = ({ data, keyName, level = 0, isLast = 
   const copyToClipboard = async (text: string, id: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      setCopiedItems((prev) => new Set([...prev, id]))
+      setCopiedItems((prev) => {
+        const newSet = new Set<string>()
+        prev.forEach(item => newSet.add(item))
+        newSet.add(id)
+        return newSet
+      })
       setTimeout(() => {
         setCopiedItems((prev) => {
-          const newSet = new Set(prev)
-          newSet.delete(id)
+          const newSet = new Set<string>()
+          prev.forEach(item => {
+            if (item !== id) {
+              newSet.add(item)
+            }
+          })
           return newSet
         })
       }, 2000)

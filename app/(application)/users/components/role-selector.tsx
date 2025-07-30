@@ -44,7 +44,7 @@ export function RoleSelector({ navigate, onSelect, params, ...props }: any) {
           aria-expanded={open}
           className="flex-1 justify-between md:max-w-[200px] lg:max-w-[300px]"
         >
-          {selected ? selected.role : "Select a role"}
+          {selected ? selected.id : "Select a role"}
           <CaretSortIcon className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -68,7 +68,7 @@ export function RoleSelector({ navigate, onSelect, params, ...props }: any) {
                       setOpen(false);
                     }}
                   >
-                    {role.role ? role.role : role.id}
+                    {role.id}
                   </CommandItem>
                 ))}
                 <CommandEmpty>No roles found.</CommandEmpty>
