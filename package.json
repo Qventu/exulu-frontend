@@ -17,7 +17,8 @@
     "prettier:fix": "prettier --write \"**/*.{js,jsx,ts,tsx}\"",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "cron": "node cron.js",
-    "prepare": "husky"
+    "prepare": "husky",
+    "semantic-release": "semantic-release"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.21",
@@ -162,6 +163,8 @@
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@parcel/watcher": "^2.4.1",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/github": "^9.2.6",
     "@types/node": "^20.1.4",
     "@types/react": "18.2.6",
     "@types/react-dom": "18.2.4",
