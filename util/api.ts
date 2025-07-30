@@ -21,7 +21,7 @@ export const uris = {
     export:
         process.env.NEXT_PUBLIC_HOST + "/api/export",
     files:
-        process.env.NEXT_PUBLIC_UPLOAD_URL
+        process.env.NEXT_PUBLIC_BACKEND
 };
 
 export const getToken = async () => {

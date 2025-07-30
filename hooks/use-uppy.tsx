@@ -25,8 +25,8 @@ interface InitializeOptions {
 }
 
 export const initializeUppy = async (options: InitializeOptions): Promise<Uppy> => {
-    if (!process.env.NEXT_PUBLIC_UPLOAD_URL) {
-        throw new Error("No process.env.NEXT_PUBLIC_UPLOAD_URL set.")
+    if (!process.env.NEXT_PUBLIC_BACKEND) {
+        throw new Error("No process.env.NEXT_PUBLIC_BACKEND set.")
     }
     const { callbacks, maxNumberOfFiles, uppyOptions } = options || {};
     const { uploadSuccess } = callbacks || {};
@@ -45,7 +45,7 @@ export const initializeUppy = async (options: InitializeOptions): Promise<Uppy> 
     })
         .use(AwsS3, {
             id: "Exulu",
-            endpoint: process.env.NEXT_PUBLIC_UPLOAD_URL,
+            endpoint: process.env.NEXT_PUBLIC_BACKEND,
             headers: {      
                 Authorization: `Bearer ${token}`,
                 Session: localStorage.getItem("session") ?? "",

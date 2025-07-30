@@ -21,8 +21,8 @@ interface AuthenticatedProps {
   user: any;
 }
 
-const uri = process.env.NEXT_PUBLIC_GRAPHQL_SERVER
-  ? process.env.NEXT_PUBLIC_GRAPHQL_SERVER
+const uri = process.env.NEXT_PUBLIC_BACKEND
+  ? process.env.NEXT_PUBLIC_BACKEND + "/graphql"
   : "http://localhost:9001/graphql";
 export const UserContext = React.createContext<any>(null);
 
@@ -77,8 +77,8 @@ const Authenticated = ({ children, user}: AuthenticatedProps) => {
   const link = ApolloLink.from([basic, authLink, new HttpLink({ uri: uri })]);
 
   const client = new ApolloClient({
-    uri: process.env.NEXT_PUBLIC_GRAPHQL_SERVER
-      ? process.env.NEXT_PUBLIC_GRAPHQL_SERVER
+    uri: process.env.NEXT_PUBLIC_BACKEND
+      ? process.env.NEXT_PUBLIC_BACKEND + "/graphql"
       : "http://localhost:9001/graphql", // can't move to environment vars because they are not compiled to client side
     cache: new InMemoryCache({
       addTypename: false,

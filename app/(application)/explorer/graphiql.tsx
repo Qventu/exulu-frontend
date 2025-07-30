@@ -35,7 +35,7 @@ export default function GraphiQLComponent() {
     console.log("token", data)
 
     const fetcher = createGraphiQLFetcher({
-        url: `${process.env.NEXT_PUBLIC_GRAPHQL_SERVER}`, headers: {
+        url: `${process.env.NEXT_PUBLIC_BACKEND}/graphql`, headers: {
             "Authorization": `Bearer ${data}`
         }
     });
