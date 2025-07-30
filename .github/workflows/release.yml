@@ -23,6 +23,7 @@ permissions:
   pull-requests: write # to be able to comment on released pull requests
   id-token: write # to enable use of OIDC for npm provenance
   packages: write # to be able to push Docker images
+  attestations: write # to be able to create attestations
 
 jobs:
   build:
@@ -85,6 +86,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
 
       - name: Generate Artifact Attestation
+        if: github.event_name != 'pull_request'
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
