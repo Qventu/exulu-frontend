@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 // A route that provides information regarding the 
 // application configuration. Used by the Claude Code
 // CLI for providing the correct backend url.
