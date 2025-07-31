@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { files } from "@/util/api"
 import { UserContext } from "@/app/(application)/authenticated";
 import { useTheme } from "next-themes";
+import { ConfigContext } from "./config-context";
 
 export default function UppyDashboard({ id, allowedFileTypes, dependencies, onSelect, preselectedFile }: { 
   id: string,
@@ -28,13 +29,14 @@ export default function UppyDashboard({ id, allowedFileTypes, dependencies, onSe
   onSelect: (key: string) => void
 }) {
   const { user, setUser } = useContext(UserContext); 
-  
+  const configContext = useContext(ConfigContext);
   const [selectedFile, setSelectedFile] = useState<string | undefined>(preselectedFile)
   
   const { theme } = useTheme()
   console.log("theme", theme)
   const uppy = useUppy(
         {
+            backend: configContext?.backend || "",
             uppyOptions: {
                 id,
                 allowedFileTypes
