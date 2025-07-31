@@ -20,6 +20,7 @@ import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import CodeDisplayBlock from "@/components/custom/code-display-block";
+import { ConfigContext } from "@/components/config-context";
 
 export interface ChatProps {
   chatId?: string;
@@ -40,6 +41,7 @@ export interface ChatProps {
 
 export function ChatLayout({ session: id, type, agent, token }: { session: string | null, type: string | null, agent: Agent, token: string }) {
 
+  const configContext = React.useContext(ConfigContext);
   const [isMobile, setIsMobile] = useState(false);
   const [files, setFiles] = useState<any[] | null>(null);
   const { user, setUser } = useContext(UserContext);
@@ -131,7 +133,7 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
     setMessages,
     addToolResult
   } = useChat({
-    api: `${process.env.NEXT_PUBLIC_BACKEND}${agent.slug}/${agent.id}`,
+    api: `${configContext?.backend}${agent.slug}/${agent.id}`,
     headers: {
       Authorization: localStorage.getItem("token") ?? "",
       Session: localStorage.getItem("session") ?? "",

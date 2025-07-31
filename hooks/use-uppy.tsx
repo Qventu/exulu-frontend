@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import Uppy from "@uppy/core";
 import AwsS3 from "@uppy/aws-s3";
 import "@uppy/core/dist/style.min.css";
@@ -6,8 +6,10 @@ import "@uppy/dashboard/dist/style.min.css";
 import '@uppy/core/dist/style.min.css';
 import '@uppy/dashboard/dist/style.min.css';
 import { getToken } from "@/util/api";
+import { ConfigContext } from "@/components/config-context";
 
 interface InitializeOptions {
+    backend: string;
     callbacks?: {
         uploadSuccess?: (response: {
             file: any | null;
@@ -25,8 +27,8 @@ interface InitializeOptions {
 }
 
 export const initializeUppy = async (options: InitializeOptions): Promise<Uppy> => {
-    if (!process.env.NEXT_PUBLIC_BACKEND) {
-        throw new Error("No process.env.NEXT_PUBLIC_BACKEND set.")
+    if (!options.backend) {
+        throw new Error("No backend set.")
     }
     const { callbacks, maxNumberOfFiles, uppyOptions } = options || {};
     const { uploadSuccess } = callbacks || {};
@@ -45,7 +47,7 @@ export const initializeUppy = async (options: InitializeOptions): Promise<Uppy> 
     })
         .use(AwsS3, {
             id: "Exulu",
-            endpoint: process.env.NEXT_PUBLIC_BACKEND,
+            endpoint: options.backend,
             headers: {      
                 Authorization: `Bearer ${token}`,
                 Session: localStorage.getItem("session") ?? "",
@@ -77,10 +79,14 @@ export const initializeUppy = async (options: InitializeOptions): Promise<Uppy> 
 };
 
 function useUppy(options: InitializeOptions, deps: any[] = []) {
+    const configContext = useContext(ConfigContext);
     const [uppy, setUppy] = useState<Uppy | undefined>(undefined);
     useEffect(() => {
         const initUppy = async () => {
-            const uppyInstance = await initializeUppy(options);
+            const uppyInstance = await initializeUppy({
+                ...options,
+                backend: configContext?.backend || "",
+            });
             setUppy(uppyInstance);
         };
         initUppy()

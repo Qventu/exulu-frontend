@@ -6,11 +6,11 @@
     "node": "22.17.1"
   },
   "scripts": {
-    "dev": "next dev -p 3020",
+    "dev": "next dev -p 3000",
     "build": "next build",
     "graphql-query-typings-compile": "graphql-codegen",
     "graphql-query-typings-watch": "graphql-codegen -w",
-    "start": "next start -p 3020",
+    "start": "next start -p 3000",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "prettier": "prettier --check \"**/*.{js,jsx,ts,tsx}\"",

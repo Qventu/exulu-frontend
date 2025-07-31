@@ -10,8 +10,11 @@ import { getToken } from "@/util/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { ConfigContext } from "@/components/config-context";
 
 export default function GraphiQLComponent() {
+
+    const configContext = React.useContext(ConfigContext);
 
     const { data, isLoading, error } = useQuery({
         queryKey: ["user"],
@@ -35,7 +38,7 @@ export default function GraphiQLComponent() {
     console.log("token", data)
 
     const fetcher = createGraphiQLFetcher({
-        url: `${process.env.NEXT_PUBLIC_BACKEND}/graphql`, headers: {
+        url: `${configContext?.backend}/graphql`, headers: {
             "Authorization": `Bearer ${data}`
         }
     });

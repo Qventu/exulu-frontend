@@ -6,5 +6,5 @@ tunnels:
         #response_header:
             #add: ["Access-Control-Allow-Origin: *"]
         proto: http
-        addr: 3020
+        addr: 3000
         domain: exulu.ngrok.app

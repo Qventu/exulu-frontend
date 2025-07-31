@@ -15,15 +15,14 @@ import { MainNav } from "@/components/custom/main-nav";
 import { buttonVariants } from "@/components/ui/button";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import { getToken } from "@/util/api";
+import { ConfigContext } from "@/components/config-context";
 
 interface AuthenticatedProps {
   children: React.ReactNode;
   user: any;
 }
 
-const uri = process.env.NEXT_PUBLIC_BACKEND
-  ? process.env.NEXT_PUBLIC_BACKEND + "/graphql"
-  : "http://localhost:9001/graphql";
+
 export const UserContext = React.createContext<any>(null);
 
 const User = ({ children, user }: AuthenticatedProps) => {
@@ -58,7 +57,14 @@ const User = ({ children, user }: AuthenticatedProps) => {
     </UserContext.Provider>
   );
 };
-const Authenticated = ({ children, user}: AuthenticatedProps) => {
+const Authenticated = ({ children, user }: AuthenticatedProps) => {
+
+  const configContext = React.useContext(ConfigContext);
+
+  const uri = configContext?.backend
+    ? configContext?.backend + "/graphql"
+    : "http://localhost:9001/graphql";
+
   const basic = setContext((operation, context) => ({
     headers: {
       Accept: "charset=utf-8",
@@ -77,9 +83,7 @@ const Authenticated = ({ children, user}: AuthenticatedProps) => {
   const link = ApolloLink.from([basic, authLink, new HttpLink({ uri: uri })]);
 
   const client = new ApolloClient({
-    uri: process.env.NEXT_PUBLIC_BACKEND
-      ? process.env.NEXT_PUBLIC_BACKEND + "/graphql"
-      : "http://localhost:9001/graphql", // can't move to environment vars because they are not compiled to client side
+    uri: uri,
     cache: new InMemoryCache({
       addTypename: false,
     }),

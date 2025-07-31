@@ -15,9 +15,6 @@ This directory contains local font files to avoid dependency on Google Fonts dur
 - **Merriweather** - Serif font family
   - `Merriweather-Regular.woff2` - Regular weight
 
-- **Source Serif 4** - Alternative serif font family
-  - `SourceSerif4-Regular.woff2` - Regular weight
-
 ## Usage
 
 These fonts are configured in `frontend/lib/fonts.ts` and used throughout the application via CSS variables:

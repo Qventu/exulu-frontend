@@ -1,1 +1,1 @@
-schema: http://localhost:3020/api/graphql/introspection
+schema: http://localhost:9001/api/graphql/introspection

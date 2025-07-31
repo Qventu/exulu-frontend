@@ -15,8 +15,10 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
+import { ConfigContext } from "@/components/config-context";
 
 export default function Login() {
+  const configContext = React.useContext(ConfigContext);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submittedOTP, setSubmittedOTP] = useState(false);
@@ -54,7 +56,7 @@ export default function Login() {
     }
   }, [code]);
 
-  const authMode: "otp" | "password" | undefined = process.env.NEXT_PUBLIC_AUTH_MODE as "otp" | "password";
+  const authMode: "otp" | "password" | undefined = configContext?.auth_mode as "otp" | "password";
 
   const handleFormSignIn = async (e) => {
     e.preventDefault();
@@ -194,7 +196,7 @@ export default function Login() {
               </Button>
 
               {
-                process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (<Button
+                configContext?.google_client_id && (<Button
                   variant="outline"
                   disabled={submitting}
                   type="button"
