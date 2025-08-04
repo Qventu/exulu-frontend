@@ -24,6 +24,7 @@ const generateJWT = async (payload) => {
 export const pool = new Pool({
   host: process.env.POSTGRES_DB_HOST,
   user: process.env.POSTGRES_DB_USER,
+  port: parseInt(process.env.POSTGRES_DB_PORT || "5432", 10),
   password: process.env.POSTGRES_DB_PASSWORD,
   database: "exulu",
   max: 20,
@@ -62,8 +63,11 @@ const providers: Provider[] = [
         }
       }
     }
-  }),
-  EmailProvider({
+  })
+]
+
+if (process.env.EMAIL_SERVER_HOST) {
+  providers.push(EmailProvider({
     async sendVerificationRequest({
       identifier: email,
       token,
@@ -93,8 +97,8 @@ const providers: Provider[] = [
       },
     },
     from: process.env.EMAIL_FROM,
-  }),
-]
+  }))
+}
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   providers.push(GoogleProvider({
     clientId: process.env.GOOGLE_CLIENT_ID,
