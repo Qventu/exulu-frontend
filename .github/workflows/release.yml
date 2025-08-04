@@ -46,9 +46,26 @@ jobs:
 
       # Run semantic-release to create a new release
       - name: Release
+        id: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: HUSKY=0 npm run semantic-release
+        run: |
+          # Run semantic-release and capture the output
+          OUTPUT=$(HUSKY=0 npm run semantic-release 2>&1)
+          echo "$OUTPUT"
+          
+          # Extract version from the output (look for "Created tag" or similar)
+          VERSION=$(echo "$OUTPUT" | grep -o 'Created tag v[0-9]*\.[0-9]*\.[0-9]*' | grep -o '[0-9]*\.[0-9]*\.[0-9]*' || echo "0.0.0")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      # Verify version was captured
+      - name: Verify version
+        run: |
+          echo "Release version: ${{ steps.release.outputs.version }}"
+          if [ "${{ steps.release.outputs.version }}" = "0.0.0" ]; then
+            echo "Warning: Could not extract version from semantic-release output"
+          fi
 
       # Install the cosign tool except on PR
       # https://github.com/sigstore/cosign-installer
@@ -88,6 +105,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.release.outputs.version }}
 
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
