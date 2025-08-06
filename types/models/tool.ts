@@ -5,4 +5,9 @@ export interface Tool {
     type: string;
     inputSchema: any;
     outputSchema: any;
+    config: {
+        name: string;
+        description: string;
+        value?: string; // the exulu variable reference
+    }[];
 }

@@ -134,7 +134,7 @@ export default function ApiKeyManagement() {
             <div className="flex flex-col gap-2">
                 <h1 className="text-3xl font-bold tracking-tight">API Keys</h1>
                 <p className="text-muted-foreground">
-                    Manage your API keys for accessing the API. Keep your keys secure - they have full access to your account.
+                    Manage your API keys for accessing the Exulu IMP API. Keep your keys secure - they have full access to your account.
                 </p>
             </div>
 

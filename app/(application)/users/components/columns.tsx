@@ -8,8 +8,10 @@ import { User } from "@EXULU_SHARED/models/user";
 import { DataTableColumnHeader } from "./data-table-column-header";
 import { DataTableRowActions } from "./data-table-row-actions";
 import { ClaudeCodeToggle } from "./claude-code-toggle";
+import { SuperAdminToggle } from "./super-admin-toggle";
+import { UserContext } from "@/app/(application)/authenticated";
 
-export const columns: ColumnDef<User>[] = [
+export const createColumns = (currentUser: any): ColumnDef<User>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -115,6 +117,18 @@ export const columns: ColumnDef<User>[] = [
     },
     enableSorting: false,
   },
+  ...(currentUser?.super_admin ? [{
+    accessorKey: "super_admin",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Super Admin" />
+    ),
+    cell: ({ row }) => {
+      return (
+        <SuperAdminToggle user={row.original} />
+      );
+    },
+    enableSorting: false,
+  }] : []),
   {
     id: "actions",
     cell: ({ row }) => <DataTableRowActions row={row} />,

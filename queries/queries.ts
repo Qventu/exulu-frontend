@@ -191,6 +191,7 @@ export const GET_USERS = gql`
         apikey
         emailVerified
         anthropic_token
+        super_admin
         role
       }
     }
@@ -264,6 +265,7 @@ export const UPDATE_USER_BY_ID = gql`
       $email: String,
       $firstname: String,
       $anthropic_token: String,
+      $super_admin: Boolean,
       $lastname: String,
       $id: ID!
      ) {
@@ -271,6 +273,7 @@ export const UPDATE_USER_BY_ID = gql`
             email: $email,
             firstname: $firstname,
             anthropic_token: $anthropic_token,
+            super_admin: $super_admin,
             lastname: $lastname,
         }) {
           ${USER_FIELDS}
@@ -433,6 +436,119 @@ export const GET_JOB_STATISTICS = gql`
       completedCount
       failedCount
       averageDuration
+    }
+  }
+`;
+
+export const GET_VARIABLES = gql`
+  query GetVariables(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterVariable]
+    $sort: SortBy = { field: "updatedAt", direction: DESC }
+  ) {
+    variablesPagination(
+      page: $page
+      limit: $limit
+      sort: $sort
+      filters: $filters
+    ) {
+      pageInfo {
+        pageCount
+        itemCount
+        currentPage
+        hasPreviousPage
+        hasNextPage
+      }
+      items {
+        id
+        name
+        value
+        encrypted
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+export const GET_VARIABLE_BY_ID = gql`
+  query GetVariableById($id: ID!) {
+    variableById(id: $id) {
+      id
+      name
+      value
+      encrypted
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const CREATE_VARIABLE = gql`
+  mutation CreateVariable(
+    $name: String!
+    $value: String!
+    $encrypted: Boolean
+  ) {
+    variablesCreateOne(
+      input: {
+        name: $name
+        value: $value
+        encrypted: $encrypted
+      }
+    ) {
+      id
+      name
+      value
+      encrypted
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const UPDATE_VARIABLE = gql`
+  mutation UpdateVariable(
+    $id: ID!
+    $name: String
+    $value: String
+    $encrypted: Boolean
+  ) {
+    variablesUpdateOneById(
+      id: $id
+      input: {
+        name: $name
+        value: $value
+        encrypted: $encrypted
+      }
+    ) {
+      id
+      name
+      value
+      encrypted
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const REMOVE_VARIABLE_BY_ID = gql`
+  mutation RemoveVariableById($id: ID!) {
+    variablesRemoveOneById(id: $id) {
+      id
+    }
+  }
+`;
+
+export const GET_USER_BY_ID = gql`
+  query GetUserById($id: ID!) {
+    userById(id: $id) {
+      id
+      name
+      firstname
+      lastname
+      email
     }
   }
 `;

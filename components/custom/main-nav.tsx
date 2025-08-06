@@ -55,6 +55,10 @@ export function MainNav({
         path: "configuration/keys",
       },
       {
+        label: "Variables",
+        path: "variables",
+      },
+      {
         label: "API",
         path: "explorer",
       },

@@ -3,6 +3,7 @@ export type User = {
   email: string;
   emailVerified?: string;
   type?: "api" | "user"
+  super_admin?: boolean;
   roles?: {
     id: string;
     role: string;

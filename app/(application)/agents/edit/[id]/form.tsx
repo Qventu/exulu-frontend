@@ -12,7 +12,7 @@ import { AgentDelete } from "@/app/(application)/agents/components/agent-delete"
 import {
   GET_USER_ROLES,
   UPDATE_USER_ROLE_BY_ID,
-  REMOVE_AGENT_BY_ID, UPDATE_AGENT, GET_AGENT_BY_ID, CREATE_AGENT_SESSION
+  REMOVE_AGENT_BY_ID, UPDATE_AGENT, GET_AGENT_BY_ID, CREATE_AGENT_SESSION, GET_VARIABLES
 } from "@/queries/queries";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,91 @@ import { Tool } from "@EXULU_SHARED/models/tool";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { CopyIcon } from "@/icons";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// Component for handling individual tool configuration items
+const ToolConfigItem = ({ 
+  configItem, 
+  currentValue, 
+  variables, 
+  onVariableSelect 
+}: {
+  configItem: { name: string; description: string },
+  currentValue: string,
+  variables: any[],
+  onVariableSelect: (variableName: string) => void
+}) => {
+  const [popoverOpen, setPopoverOpen] = React.useState(false);
+  const selectedVariable = variables.find((v: any) => v.name === currentValue);
+  
+  return (
+    <div className="space-y-2">
+      <div className="text-sm">
+        <div className="font-medium">{configItem.name}</div>
+        <div className="text-muted-foreground text-xs">{configItem.description}</div>
+      </div>
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={popoverOpen}
+            className="w-full justify-between text-sm"
+          >
+            {selectedVariable ? selectedVariable.name : "Select variable..."}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-full p-0">
+          <Command>
+            <CommandInput placeholder="Search variables..." />
+            <CommandList>
+              <CommandEmpty>No variables found.</CommandEmpty>
+              <CommandGroup>
+                {variables.map((variable: any) => (
+                  <CommandItem
+                    key={variable.id}
+                    onSelect={() => {
+                      onVariableSelect(variable.name);
+                      setPopoverOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        currentValue === variable.name ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <div className="flex flex-col">
+                      <span>{variable.name}</span>
+                      {variable.encrypted && (
+                        <span className="text-xs text-muted-foreground">🔒 Encrypted</span>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+};
 
 const agentFormSchema = z.object({
   name: z
@@ -91,7 +176,10 @@ export default function AgentForm({
   const router = useRouter();
   const [errors, setErrors] = useState<string>();
   const { user, setUser } = useContext(UserContext);
-  const [enabledTools, setEnabledTools] = useState<string[]>(agent.enabledTools || [])
+  const [enabledTools, setEnabledTools] = useState<{toolId: string, config: {name: string, variable: string}[]}[]>(
+    // Convert legacy string[] format to new object format
+    agent.enabledTools ? agent.enabledTools : []
+  )
   const [firewallEnabled, setFirewallEnabled] = useState<boolean>(agent.firewall?.enabled || false)
   const [firewallScanners, setFirewallScanners] = useState({
     promptGuard: agent.firewall?.scanners?.promptGuard || false,
@@ -101,6 +189,12 @@ export default function AgentForm({
     piiDetection: agent.firewall?.scanners?.piiDetection || false,
   })
   const { toast } = useToast();
+
+  const { data: variablesData } = useQuery(GET_VARIABLES, {
+    variables: { page: 1, limit: 100 },
+  });
+
+  const variables = variablesData?.variablesPagination?.items || [];
 
   const copyAgentId = async () => {
     try {
@@ -375,7 +469,7 @@ export default function AgentForm({
                                               ?.items ? (
                                             <>
                                               {roles.data.rolesPagination.items.map(
-                                                (role: UserRole, index) => {
+                                                (role: UserRole, index: number) => {
                                                   return (
                                                     <div
                                                       key={index}
@@ -693,34 +787,89 @@ export default function AgentForm({
                                   <div>
                                     <h3 className="text-lg font-medium">Enabled Tools</h3>
                                     <p className="text-sm text-muted-foreground">Tools that are currently enabled for this agent.</p>
-                                    {agent.availableTools?.map((tool: Tool) => (
-                                      <div key={tool?.id} className="flex items-center justify-between rounded-lg border p-4 mt-2">
-                                        <div>
-                                          <div className="font-medium">{tool?.name}</div>
-                                          <div className="text-sm text-muted-foreground">{tool?.description}</div>
-                                          <Badge variant={"outline"} className="mt-2">{tool?.type}</Badge>
+                                    {agent.availableTools?.map((tool: Tool) => {
+                                      const isEnabled = enabledTools.some(et => et.toolId === tool.id);
+                                      const toolConfig = enabledTools.find(et => et.toolId === tool.id);
+                                      
+                                      return (
+                                        <div key={tool?.id} className="rounded-lg border p-4 mt-2">
+                                          <div className="flex items-center justify-between">
+                                            <div>
+                                              <div className="font-medium">{tool?.name}</div>
+                                              <div className="text-sm text-muted-foreground">{tool?.description}</div>
+                                              <Badge variant={"outline"} className="mt-2">{tool?.type}</Badge>
+                                            </div>
+                                            <Switch
+                                              checked={isEnabled}
+                                              onCheckedChange={(value) => {
+                                                let updated = [...enabledTools];
+                                                if (value) {
+                                                  // Add tool with empty config initially
+                                                  const newToolConfig = {
+                                                    toolId: tool.id,
+                                                    config: tool.config?.map(configItem => ({
+                                                      name: configItem.name,
+                                                      variable: ''
+                                                    })) || []
+                                                  };
+                                                  updated = [...enabledTools, newToolConfig];
+                                                } else {
+                                                  updated = enabledTools.filter(t => t.toolId !== tool.id);
+                                                }
+                                                setEnabledTools(updated);
+                                                updateAgent({
+                                                  variables: {
+                                                    id: agent.id,
+                                                    tools: JSON.stringify(updated)
+                                                  },
+                                                });
+                                              }}
+                                            />
+                                          </div>
+                                          
+                                          {/* Tool Configuration Fields */}
+                                          {isEnabled && tool.config && tool.config.length > 0 && (
+                                            <div className="mt-4 pt-4 border-t space-y-3">
+                                              <div className="text-sm font-medium text-muted-foreground">Configuration</div>
+                                              {tool.config.map((configItem, configIndex) => {
+                                                const currentValue = toolConfig?.config.find(c => c.name === configItem.name)?.variable || '';
+                                                
+                                                return (
+                                                  <ToolConfigItem
+                                                    key={configIndex}
+                                                    configItem={configItem}
+                                                    currentValue={currentValue}
+                                                    variables={variables}
+                                                    onVariableSelect={(variableName) => {
+                                                      const updated = enabledTools.map(et => {
+                                                        if (et.toolId === tool.id) {
+                                                          return {
+                                                            ...et,
+                                                            config: et.config.map(c => 
+                                                              c.name === configItem.name 
+                                                                ? { ...c, variable: variableName }
+                                                                : c
+                                                            )
+                                                          };
+                                                        }
+                                                        return et;
+                                                      });
+                                                      setEnabledTools(updated);
+                                                      updateAgent({
+                                                        variables: {
+                                                          id: agent.id,
+                                                          tools: JSON.stringify(updated)
+                                                        },
+                                                      });
+                                                    }}
+                                                  />
+                                                );
+                                              })}
+                                            </div>
+                                          )}
                                         </div>
-                                        <Switch
-                                          checked={enabledTools.includes(tool.id)}
-                                          onCheckedChange={(value) => {
-                                            let updated = [...enabledTools]
-                                            if (value) {
-                                              updated = [...enabledTools, tool.id]
-                                            } else {
-                                              updated = enabledTools.filter(t => t !== tool.id);
-                                            }
-                                            setEnabledTools(updated);
-                                            updateAgent({
-                                              variables: {
-                                                id: agent.id,
-                                                tools: JSON.stringify(updated)
-                                              },
-                                            });
-
-                                          }}
-                                        />
-                                      </div>
-                                    ))}
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               </div>

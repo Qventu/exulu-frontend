@@ -23,7 +23,13 @@ export interface Agent {
     description?: string;
     slug?: string;
     availableTools?: Tool[];
-    enabledTools?: string[];
+    enabledTools?: {
+        toolId: string;
+        config: {
+            name: string;
+            variable: string;
+        }[];
+    }[];
     capabilities?: {
         tools: boolean;
         images: string[];

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
+import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -12,10 +13,31 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { GET_USERS, UPDATE_USER_BY_ID } from "@/queries/queries";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { GET_USERS, UPDATE_USER_BY_ID, GET_VARIABLES, GET_VARIABLE_BY_ID } from "@/queries/queries";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface Variable {
+  id: string;
+  name: string;
+  value: string;
+  encrypted: boolean;
+}
 
 interface ClaudeCodeToggleProps {
   user: {
@@ -27,9 +49,12 @@ interface ClaudeCodeToggleProps {
 
 export function ClaudeCodeToggle({ user }: ClaudeCodeToggleProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [apiKey, setApiKey] = useState("");
+  const [selectedVariableId, setSelectedVariableId] = useState("");
+  const [selectedVariableName, setSelectedVariableName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const [updateUser] = useMutation(UPDATE_USER_BY_ID, {
     refetchQueries: [
@@ -37,6 +62,18 @@ export function ClaudeCodeToggle({ user }: ClaudeCodeToggleProps) {
       "GetUsers",
     ],
   });
+
+  const { data: variablesData, loading: variablesLoading } = useQuery(GET_VARIABLES, {
+    variables: { page: 1, limit: 100 },
+    skip: !isDialogOpen,
+  });
+
+  const { data: selectedVariableData } = useQuery(GET_VARIABLE_BY_ID, {
+    variables: { id: selectedVariableId },
+    skip: !selectedVariableId,
+  });
+
+  const variables: Variable[] = variablesData?.variablesPagination?.items || [];
 
   const hasClaudeCode = Boolean(user.anthropic_token);
 
@@ -75,10 +112,20 @@ export function ClaudeCodeToggle({ user }: ClaudeCodeToggleProps) {
   };
 
   const handleConfirm = async () => {
-    if (!apiKey.trim()) {
+    if (!selectedVariableId) {
       toast({
         title: "Error",
-        description: "Please enter a Claude Code API key.",
+        description: "Please select a variable containing the Claude Code API key.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const variableValue = selectedVariableData?.variableById?.name;
+    if (!variableValue) {
+      toast({
+        title: "Error",
+        description: "Selected variable has no value.",
         variant: "destructive",
       });
       return;
@@ -89,15 +136,16 @@ export function ClaudeCodeToggle({ user }: ClaudeCodeToggleProps) {
       await updateUser({
         variables: {
           id: user.id,
-          anthropic_token: apiKey,
+          anthropic_token: variableValue,
         },
       });
       
       setIsDialogOpen(false);
-      setApiKey("");
+      setSelectedVariableId("");
+      setSelectedVariableName("");
       toast({
         title: "Claude Code Enabled",
-        description: "Claude Code access has been enabled for this user.",
+        description: `Claude Code access has been enabled using variable: ${selectedVariableName}`,
       });
     } catch (error) {
       toast({
@@ -112,7 +160,13 @@ export function ClaudeCodeToggle({ user }: ClaudeCodeToggleProps) {
 
   const handleCancel = () => {
     setIsDialogOpen(false);
-    setApiKey("");
+    setSelectedVariableId("");
+    setSelectedVariableName("");
+  };
+
+  const handleCreateNewVariable = () => {
+    router.push("/variables/create");
+    setIsDialogOpen(false);
   };
 
   return (
@@ -132,22 +186,68 @@ export function ClaudeCodeToggle({ user }: ClaudeCodeToggleProps) {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[475px]">
           <DialogHeader>
-            <DialogTitle>Enable Claude Code for {user.email}.</DialogTitle>
+            <DialogTitle>Enable Claude Code for {user.email}</DialogTitle>
             <DialogDescription>
-              Enter the Claude Code API key for this user. The key will be encrypted and stored securely.
+              Select a variable containing the Claude Code API key for this user. The variable value will be used securely.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="apiKey">Claude Code API Key</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                placeholder="sk-ant-..."
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                autoFocus
-              />
+              <Label>Claude Code API Key Variable</Label>
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={popoverOpen}
+                    className="w-full justify-between"
+                    disabled={variablesLoading}
+                  >
+                    {selectedVariableName || "Select variable..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search variables..." />
+                    <CommandList>
+                      <CommandEmpty>No variables found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          onSelect={handleCreateNewVariable}
+                          className="text-orange-600 font-medium"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create new variable
+                        </CommandItem>
+                        {variables.map((variable) => (
+                          <CommandItem
+                            key={variable.id}
+                            onSelect={() => {
+                              setSelectedVariableId(variable.id);
+                              setSelectedVariableName(variable.name);
+                              setPopoverOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedVariableId === variable.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span>{variable.name}</span>
+                              {variable.encrypted && (
+                                <span className="text-xs text-muted-foreground">🔒 Encrypted</span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           <DialogFooter>
@@ -156,7 +256,7 @@ export function ClaudeCodeToggle({ user }: ClaudeCodeToggleProps) {
             </Button>
             <Button 
               onClick={handleConfirm}
-              disabled={isLoading || !apiKey.trim()}
+              disabled={isLoading || !selectedVariableId}
               className="bg-orange-500 hover:bg-orange-600"
             >
               {isLoading ? "Confirming..." : "Confirm"}
