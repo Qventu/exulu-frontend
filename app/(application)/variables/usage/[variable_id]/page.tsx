@@ -4,7 +4,7 @@ import { useQuery } from "@apollo/client";
 import { ArrowLeft, User, Bot, Workflow } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   GET_VARIABLE_BY_ID,
   GET_USER_BY_ID,
