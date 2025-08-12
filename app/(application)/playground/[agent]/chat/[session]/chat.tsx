@@ -21,6 +21,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import CodeDisplayBlock from "@/components/custom/code-display-block";
 import { ConfigContext } from "@/components/config-context";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, ChevronRight, Copy, Check } from "lucide-react";
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { useToast } from "@/components/ui/use-toast"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface ChatProps {
   chatId?: string;
@@ -44,12 +50,26 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
   const configContext = React.useContext(ConfigContext);
   const [isMobile, setIsMobile] = useState(false);
   const [files, setFiles] = useState<any[] | null>(null);
+  const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
   const { user, setUser } = useContext(UserContext);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [copyingTableId, setCopyingTableId] = useState<string | null>(null);
+  const { toast } = useToast()
 
   const bottomRef = React.useRef<HTMLDivElement>(null);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  };
+
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    const isAtBottom = Math.abs(scrollHeight - scrollTop - clientHeight) < 5; // More precise detection
+    
+    setShouldAutoScroll(isAtBottom);
   };
 
 
@@ -147,8 +167,10 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
   });
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (shouldAutoScroll) {
+      scrollToBottom();
+    }
+  }, [messages, shouldAutoScroll]);
 
   console.log("ChatList render - messages:", messages);
   console.log("ChatList render - messages length:", messages?.length);
@@ -166,12 +188,63 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
     setFiles(files);
   };
 
+  const convertTableToCSV = (tableElement: HTMLTableElement): string => {
+    const rows = Array.from(tableElement.querySelectorAll('tr'));
+    const csvRows: string[] = [];
+    
+    rows.forEach(row => {
+      const cells = Array.from(row.querySelectorAll('th, td'));
+      const csvRow = cells.map(cell => {
+        // Escape quotes and wrap in quotes if contains comma, newline, or quote
+        let text = cell.textContent || '';
+        text = text.replace(/"/g, '""');
+        if (text.includes(',') || text.includes('\n') || text.includes('"')) {
+          text = `"${text}"`;
+        }
+        return text;
+      });
+      csvRows.push(csvRow.join(','));
+    });
+    
+    return csvRows.join('\n');
+  };
+
+  const copyTableAsCSV = async (tableElement: HTMLTableElement, tableId: string) => {
+    setCopyingTableId(tableId);
+    
+    try {
+      const csv = convertTableToCSV(tableElement);
+      await navigator.clipboard.writeText(csv);
+      
+      toast({
+        title: "Table copied!",
+        description: "Table data has been copied to clipboard as CSV",
+      });
+      
+      // Reset the copying state after a short delay
+      setTimeout(() => {
+        setCopyingTableId(null);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy table:', err);
+      toast({
+        title: "Copy failed",
+        description: "Failed to copy table to clipboard",
+        variant: "destructive",
+      });
+      setCopyingTableId(null);
+    }
+  };
+
   const onSubmit = async (
     e: FormEvent<HTMLFormElement>,
     options?: ChatRequestOptions,
   ) => {
     e.preventDefault();
     setMessages([...messages]);
+
+    // Reset auto-scroll when user sends a new message
+    setShouldAutoScroll(true);
 
     const token = await getToken()
 
@@ -231,6 +304,8 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
                   </p>
                 </div>
               </div> : <div
+                ref={scrollContainerRef}
+                onScroll={handleScroll}
                 id="scroller"
                 className="size-full overflow-y-scroll overflow-x-hidden justify-end"
               >
@@ -287,7 +362,51 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
                                       return part.text && typeof part.text === 'string' ? part.text.split("```").map((part, index) => {
                                         if (index % 2 === 0) {
                                           return (
-                                            <React.Fragment key={index}>{part}</React.Fragment>
+                                            <React.Fragment key={index}>
+                                              <ReactMarkdown
+                                                  remarkPlugins={[remarkGfm]}
+                                                  components={{
+                                                    table: ({ children, ...props }) => {
+                                                      const tableId = `table-${Math.random().toString(36).substr(2, 9)}`;
+                                                      const isCopying = copyingTableId === tableId;
+                                                      
+                                                      return (
+                                                        <TooltipProvider>
+                                                          <div className="chat-table-wrapper group relative">
+                                                            <Tooltip>
+                                                              <TooltipTrigger asChild>
+                                                                <button
+                                                                  onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    const tableElement = e.currentTarget.parentElement?.querySelector('table');
+                                                                    if (tableElement) {
+                                                                      copyTableAsCSV(tableElement, tableId);
+                                                                    }
+                                                                  }}
+                                                                  disabled={isCopying}
+                                                                  className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-background border border-border rounded-md p-2 hover:bg-accent hover:text-accent-foreground shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                >
+                                                                  {isCopying ? (
+                                                                    <Check className="h-4 w-4 text-green-600" />
+                                                                  ) : (
+                                                                    <Copy className="h-4 w-4" />
+                                                                  )}
+                                                                </button>
+                                                              </TooltipTrigger>
+                                                              <TooltipContent>
+                                                                <p>Copy as CSV</p>
+                                                              </TooltipContent>
+                                                            </Tooltip>
+                                                            <table className="chat-table" {...props}>
+                                                              {children}
+                                                            </table>
+                                                          </div>
+                                                        </TooltipProvider>
+                                                      );
+                                                    }
+                                                  }}
+                                              >{part}</ReactMarkdown>
+                                            </React.Fragment>
                                           );
                                         } else {
                                           return (
@@ -355,7 +474,6 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
                                         }
                                       }
 
-                                      console.log("!!part!!", part);
                                       return (
                                         <div key={index} className="border rounded-lg p-4 bg-muted/50 mt-2">
                                           <div className="flex items-center gap-2 mb-3">
@@ -386,23 +504,47 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
                                           )}
 
                                           {part.toolInvocation.state === 'result' && (
-                                            <div>
-                                              <h4 className="text-sm font-medium mb-2">Result:</h4>
-                                              <div className="bg-background rounded border p-3">
-                                                {typeof part.toolInvocation.result === 'object' ? (
-                                                  <div className="space-y-2">
-                                                    {Object.entries(part.toolInvocation.result).map(([key, value]) => (
-                                                      <div key={key} className="flex gap-2 text-sm">
-                                                        <span className="font-mono text-muted-foreground min-w-0 shrink-0">{key}:</span>
-                                                        <span className="font-mono break-all">{JSON.stringify(value)}</span>
-                                                      </div>
-                                                    ))}
-                                                  </div>
-                                                ) : (
-                                                  <pre className="text-sm font-mono whitespace-pre-wrap">{JSON.stringify(part.toolInvocation.result, null, 2)}</pre>
-                                                )}
-                                              </div>
-                                            </div>
+                                            <Collapsible 
+                                              open={expandedResults.has(callId)}
+                                              onOpenChange={(open) => {
+                                                if (open) {
+                                                  setExpandedResults(prev => new Set([...Array.from(prev), callId]));
+                                                } else {
+                                                  setExpandedResults(prev => {
+                                                    const newSet = new Set(Array.from(prev));
+                                                    newSet.delete(callId);
+                                                    return newSet;
+                                                  });
+                                                }
+                                              }}
+                                            >
+                                              <CollapsibleTrigger asChild>
+                                                <div className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors">
+                                                  <h4 className="text-sm font-medium">Result:</h4>
+                                                  {expandedResults.has(callId) ? (
+                                                    <ChevronDown className="h-4 w-4" />
+                                                  ) : (
+                                                    <ChevronRight className="h-4 w-4" />
+                                                  )}
+                                                </div>
+                                              </CollapsibleTrigger>
+                                              <CollapsibleContent>
+                                                <div className="bg-background rounded border p-3 mt-2">
+                                                  {typeof part.toolInvocation.result === 'object' ? (
+                                                    <div className="space-y-2">
+                                                      {Object.entries(part.toolInvocation.result).map(([key, value]) => (
+                                                        <div key={key} className="flex gap-2 text-sm">
+                                                          <span className="font-mono text-muted-foreground min-w-0 shrink-0">{key}:</span>
+                                                          <span className="font-mono break-all">{JSON.stringify(value)}</span>
+                                                        </div>
+                                                      ))}
+                                                    </div>
+                                                  ) : (
+                                                    <pre className="text-sm font-mono whitespace-pre-wrap">{JSON.stringify(part.toolInvocation.result, null, 2)}</pre>
+                                                  )}
+                                                </div>
+                                              </CollapsibleContent>
+                                            </Collapsible>
                                           )}
                                         </div>
                                       );

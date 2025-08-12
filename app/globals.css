@@ -147,3 +147,80 @@
   box-sizing: border-box;
   /* Ensures padding is included in the element's total width and height */
 }
+
+/* Table styling for ReactMarkdown in chat */
+.chat-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+}
+
+.chat-table thead {
+  background-color: hsl(var(--muted));
+}
+
+.chat-table th {
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  border-bottom: 1px solid hsl(var(--border));
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.chat-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.chat-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.chat-table tbody tr:hover {
+  background-color: hsl(var(--accent));
+}
+
+.chat-table tbody tr:nth-child(even) {
+  background-color: hsl(var(--muted) / 0.3);
+}
+
+.chat-table tbody tr:nth-child(even):hover {
+  background-color: hsl(var(--accent));
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+  .chat-table {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+  
+  .chat-table th,
+  .chat-table td {
+    padding: 0.5rem;
+  }
+}
+
+/* Table wrapper for horizontal scroll on small screens */
+.chat-table-wrapper {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.chat-table-wrapper .chat-table {
+  margin: 0;
+  min-width: 100%;
+}

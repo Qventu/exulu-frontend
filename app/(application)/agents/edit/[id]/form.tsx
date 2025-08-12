@@ -153,6 +153,7 @@ const agentFormSchema = z.object({
   id: z.string().or(z.number()).nullable().optional(),
   active: z.any(),
   access: z.boolean().nullable().optional(),
+  providerApiKey: z.string().nullable().optional(),
   firewall: z.object({
     enabled: z.boolean().optional(),
     scanners: z.object({
@@ -180,6 +181,7 @@ export default function AgentForm({
     // Convert legacy string[] format to new object format
     agent.enabledTools ? agent.enabledTools : []
   )
+  const [providerApiKey, setProviderApiKey] = useState<string>(agent.providerApiKey || '')
   const [firewallEnabled, setFirewallEnabled] = useState<boolean>(agent.firewall?.enabled || false)
   const [firewallScanners, setFirewallScanners] = useState({
     promptGuard: agent.firewall?.scanners?.promptGuard || false,
@@ -284,6 +286,7 @@ export default function AgentForm({
                       public: data.public,
                       description: data.description,
                       active: data.active,
+                      providerApiKey: providerApiKey,
                       firewall: JSON.stringify({
                         enabled: firewallEnabled,
                         scanners: firewallScanners
@@ -397,6 +400,55 @@ export default function AgentForm({
                                       );
                                     }}
                                   />
+                                  <div className="space-y-2">
+                                    <div className="text-sm">
+                                      <div className="font-medium">Provider API Key</div>
+                                      <div className="text-muted-foreground text-xs">Select a variable containing the API key for the provider</div>
+                                    </div>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          role="combobox"
+                                          className="w-full justify-between text-sm"
+                                        >
+                                          {variables.find((v: any) => v.name === providerApiKey)?.name || "Select variable..."}
+                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-full p-0">
+                                        <Command>
+                                          <CommandInput placeholder="Search variables..." />
+                                          <CommandList>
+                                            <CommandEmpty>No variables found.</CommandEmpty>
+                                            <CommandGroup>
+                                              {variables.map((variable: any) => (
+                                                <CommandItem
+                                                  key={variable.id}
+                                                  onSelect={() => {
+                                                    setProviderApiKey(variable.name);
+                                                  }}
+                                                >
+                                                  <Check
+                                                    className={cn(
+                                                      "mr-2 h-4 w-4",
+                                                      providerApiKey === variable.name ? "opacity-100" : "opacity-0"
+                                                    )}
+                                                  />
+                                                  <div className="flex flex-col">
+                                                    <span>{variable.name}</span>
+                                                    {variable.encrypted && (
+                                                      <span className="text-xs text-muted-foreground">🔒 Encrypted</span>
+                                                    )}
+                                                  </div>
+                                                </CommandItem>
+                                              ))}
+                                            </CommandGroup>
+                                          </CommandList>
+                                        </Command>
+                                      </PopoverContent>
+                                    </Popover>
+                                  </div>
                                 </CardContent>
                               </Card>
                             </div>

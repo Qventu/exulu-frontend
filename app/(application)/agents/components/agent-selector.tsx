@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@apollo/client";
+import { useQuery } from "@tanstack/react-query";
 import { CaretSortIcon, CheckIcon } from "@radix-ui/react-icons";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -20,8 +20,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {Agent} from "@EXULU_SHARED/models/agent";
+import { agents } from "@/util/api";
 
 export function AgentSelector({
   navigate,
@@ -35,25 +37,15 @@ export function AgentSelector({
   const router = useRouter();
   const [navigating, setNavigating] = useState(false);
 
-  const { loading, error, data, refetch } = useQuery(GET_AGENTS, {
-    fetchPolicy: "network-only",
-    nextFetchPolicy: "network-only",
-    variables: {
-      page: 1,
-      limit: 200,
-      filters: {},
-    },
-    pollInterval: 60000, // polls every 60 seconds for updates on agents
-    onCompleted: () => {
-      if (params?.id) {
-        setSelectedAgent(
-          data?.agentsPagination?.items.find(
-            (item: any) => item.id === params.id,
-          ),
-        );
-      }
-    },
-  });
+  const { isLoading, error, data, refetch } = useQuery({
+    queryKey: ["agents"],
+    queryFn: async () => {
+      const response = await agents.get({});
+      const results: Agent[] = await response.json();
+      console.log("[EXULU] agents", results)
+      return results;
+    }
+  })
 
   return (
     <Popover open={open} onOpenChange={setOpen} {...props}>
@@ -80,7 +72,7 @@ export function AgentSelector({
           <CommandInput placeholder="Search agents..." />
           <CommandEmpty>No agents found.</CommandEmpty>
           <CommandGroup heading="Agents">
-            {data?.agentsPagination?.items.map((agent: Agent) => (
+            {data?.map((agent: Agent) => (
               <CommandItem
                 key={agent.id}
                 onSelect={() => {
@@ -99,7 +91,14 @@ export function AgentSelector({
                   setOpen(false);
                 }}
               >
-                {agent.name}
+                <div className="flex flex-col items-start w-full">
+                  <span className="font-medium">{agent.name}</span>
+                  {agent.model && (
+                    <span className="text-xs text-muted-foreground">
+                      {agent.model}
+                    </span>
+                  )}
+                </div>
                 <CheckIcon
                   className={cn(
                     "ml-auto h-4 w-4",

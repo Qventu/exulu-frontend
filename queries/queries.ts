@@ -36,6 +36,7 @@ export const GET_AGENTS = gql`
         name
         description
         type
+        providerApiKey
         extensions
         backend
         active
@@ -226,6 +227,7 @@ export const GET_AGENT_BY_ID = gql`
     agentById(id: $id) {
       id
       name
+      providerApiKey
       description
       type
       backend
@@ -370,10 +372,11 @@ export const UPDATE_AGENT = gql`
     $description: String
     $tools: JSON
     $active: Boolean
+    $providerApiKey: String
     $public: Boolean
   ) {
     agentsUpdateOne(
-      input: { name: $name, backend: $backend, description: $description, active: $active, public: $public, tools: $tools }
+      input: { name: $name, backend: $backend, description: $description, active: $active, public: $public, tools: $tools, providerApiKey: $providerApiKey }
       where: { id: $id }
     ) {
         id
