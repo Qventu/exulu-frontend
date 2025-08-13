@@ -4,7 +4,7 @@ import { useQuery } from "@apollo/client";
 import { ChatRequestOptions } from "ai";
 import { useChat, Message } from '@ai-sdk/react';
 import * as React from "react";
-import { FormEvent, useContext, useEffect, useState } from "react";
+import { FormEvent, useContext, useEffect, useState, useMemo } from "react";
 import { UserContext } from "@/app/(application)/authenticated";
 import ChatBottombar from "@/app/(application)/playground/[agent]/chat/components/chat-bottombar";
 import { AgentMessage, AgentSession } from "@EXULU_SHARED/models/agent-session";
@@ -22,11 +22,14 @@ import { cn } from "@/lib/utils";
 import CodeDisplayBlock from "@/components/custom/code-display-block";
 import { ConfigContext } from "@/components/config-context";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight, Copy, Check } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy, Check, Workflow, Plus } from "lucide-react";
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useToast } from "@/components/ui/use-toast"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { SaveWorkflowModal } from "@/components/save-workflow-modal";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export interface ChatProps {
   chatId?: string;
@@ -54,6 +57,7 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
   const { user, setUser } = useContext(UserContext);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [copyingTableId, setCopyingTableId] = useState<string | null>(null);
+  const [showSaveWorkflowModal, setShowSaveWorkflowModal] = useState(false);
   const { toast } = useToast()
 
   const bottomRef = React.useRef<HTMLDivElement>(null);
@@ -165,6 +169,13 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
     }
     // Use the newer streaming protocol that supports tool calls
   });
+
+  // Check if conversation has enough content for a workflow
+  const canCreateWorkflow = useMemo(() => {
+    const userMessages = messages?.filter(m => m.role === 'user') || [];
+    const assistantMessages = messages?.filter(m => m.role === 'assistant') || [];
+    return userMessages.length >= 1 && assistantMessages.length >= 1;
+  }, [messages]);
 
   useEffect(() => {
     if (shouldAutoScroll) {
@@ -291,7 +302,32 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
 
             {messages?.length === 0 ?
               <div className="size-full flex justify-center items-center">
-                <div className="flex flex-col gap-4 items-center">
+                <div className="flex flex-col gap-4 items-center max-w-2xl w-full px-4">
+                  {/* Workflow Banner for new users */}
+                  <Card className="w-full mb-6">
+                    <CardHeader className="text-center">
+                      <CardTitle className="flex items-center justify-center gap-2">
+                        <Workflow className="w-5 h-5" />
+                        Create Reusable Workflows
+                      </CardTitle>
+                      <CardDescription>
+                        Turn your conversations into templates that can be reused with different inputs. Perfect for recurring tasks and processes.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-center">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        disabled
+                        className="text-muted-foreground"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Save as Workflow
+                        <span className="ml-2 text-xs">(Available after chatting)</span>
+                      </Button>
+                    </CardContent>
+                  </Card>
+
                   <Image
                     src="/exulu_logo.svg"
                     alt="AI"
@@ -582,6 +618,25 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
                 <div id="anchor" ref={bottomRef}></div>
               </div>
             }
+            
+            {/* Save as Workflow button - appears when conversation has content */}
+            {canCreateWorkflow && (
+              <div className="flex justify-between items-center px-4 py-2 border-t bg-muted/20">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Workflow className="w-4 h-4" />
+                  Turn this conversation into a reusable workflow
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowSaveWorkflowModal(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Save as Workflow
+                </Button>
+              </div>
+            )}
+
             <ChatBottombar
               agentId={sessionQuery.data?.agent_sessionById.agentId}
               messages={messages}
@@ -594,6 +649,14 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
               onFilesSelected={onFilesSelected} />
           </>
         )}
+
+        {/* Save Workflow Modal */}
+        <SaveWorkflowModal
+          isOpen={showSaveWorkflowModal}
+          onClose={() => setShowSaveWorkflowModal(false)}
+          messages={messages || []}
+          sessionTitle={sessionQuery.data?.agent_sessionById?.title}
+        />
       </div>
     </>
   );

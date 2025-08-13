@@ -555,3 +555,150 @@ export const GET_USER_BY_ID = gql`
     }
   }
 `;
+
+export const GET_WORKFLOW_TEMPLATES = gql`
+  query GetWorkflowTemplates(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterWorkflow_template]
+    $sort: SortBy = { field: "updatedAt", direction: DESC }
+  ) {
+    workflow_templatesPagination(
+      page: $page
+      limit: $limit
+      sort: $sort
+      filters: $filters
+    ) {
+      pageInfo {
+        pageCount
+        itemCount
+        currentPage
+        hasPreviousPage
+        hasNextPage
+      }
+      items {
+        id
+        name
+        description
+        owner
+        visibility
+        shared_user_ids
+        shared_role_ids
+        variables
+        steps_json
+        example_metadata_json
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+export const GET_WORKFLOW_TEMPLATE_BY_ID = gql`
+  query GetWorkflowTemplateById($id: ID!) {
+    workflow_templateById(id: $id) {
+      id
+      name
+      description
+      owner
+      visibility
+      shared_user_ids
+      shared_role_ids
+      variables
+      steps_json
+      example_metadata_json
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const CREATE_WORKFLOW_TEMPLATE = gql`
+  mutation CreateWorkflowTemplate(
+    $name: String!
+    $description: String
+    $owner: Float!
+    $visibility: String!
+    $shared_user_ids: JSON
+    $shared_role_ids: JSON
+    $variables: JSON
+    $steps_json: JSON!
+    $example_metadata_json: JSON
+  ) {
+    workflow_templatesCreateOne(
+      input: {
+        name: $name
+        description: $description
+        owner: $owner
+        visibility: $visibility
+        shared_user_ids: $shared_user_ids
+        shared_role_ids: $shared_role_ids
+        variables: $variables
+        steps_json: $steps_json
+        example_metadata_json: $example_metadata_json
+      }
+    ) {
+      id
+      name
+      description
+      owner
+      visibility
+      shared_user_ids
+      shared_role_ids
+      variables
+      steps_json
+      example_metadata_json
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const UPDATE_WORKFLOW_TEMPLATE = gql`
+  mutation UpdateWorkflowTemplate(
+    $id: ID!
+    $name: String
+    $description: String
+    $visibility: String
+    $shared_user_ids: JSON
+    $shared_role_ids: JSON
+    $variables: JSON
+    $steps_json: JSON
+    $example_metadata_json: JSON
+  ) {
+    workflow_templatesUpdateOneById(
+      id: $id
+      input: {
+        name: $name
+        description: $description
+        visibility: $visibility
+        shared_user_ids: $shared_user_ids
+        shared_role_ids: $shared_role_ids
+        variables: $variables
+        steps_json: $steps_json
+        example_metadata_json: $example_metadata_json
+      }
+    ) {
+      id
+      name
+      description
+      owner
+      visibility
+      shared_user_ids
+      shared_role_ids
+      variables
+      steps_json
+      example_metadata_json
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const REMOVE_WORKFLOW_TEMPLATE_BY_ID = gql`
+  mutation RemoveWorkflowTemplateById($id: ID!) {
+    workflow_templatesRemoveOneById(id: $id) {
+      id
+    }
+  }
+`;
