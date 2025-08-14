@@ -40,7 +40,18 @@ export const GET_AGENTS = gql`
         extensions
         backend
         active
-        public
+        rights_mode
+        RBAC {
+          type
+          users {
+            id
+            rights
+          }
+          roles {
+            id
+            rights
+          }
+        }
         createdAt
         updatedAt
       }
@@ -231,9 +242,22 @@ export const GET_AGENT_BY_ID = gql`
       description
       type
       backend
-      public
       active
       tools
+      rights_mode
+      RBAC {
+        type
+        users {
+          id
+          rights
+        }
+        roles {
+          id
+          rights
+        }
+      }
+      createdAt
+      updatedAt
     }
   }
 `;
@@ -346,20 +370,36 @@ export const CREATE_AGENT = gql`
     $name: String!
     $description: String!
     $type: String!
+    $rights_mode: String!
     $backend: String!
+    $RBAC: RBACInput
   ) {
     agentsCreateOne(
       input: {
         name: $name
         description: $description
         type: $type
+        rights_mode: $rights_mode
         backend: $backend
+        RBAC: $RBAC
       }
     ) {
         id
         name
         description
         type
+        rights_mode
+        RBAC {
+          type
+          users {
+            id
+            rights
+          }
+          roles {
+            id
+            rights
+          }
+        }
         createdAt
     }
   }
@@ -370,23 +410,56 @@ export const UPDATE_AGENT = gql`
     $name: String
     $backend: String
     $description: String
+    $rights_mode: String
     $tools: JSON
     $active: Boolean
     $providerApiKey: String
-    $public: Boolean
+    $RBAC: RBACInput
   ) {
     agentsUpdateOne(
-      input: { name: $name, backend: $backend, description: $description, active: $active, public: $public, tools: $tools, providerApiKey: $providerApiKey }
+      input: { 
+        name: $name
+        backend: $backend
+        description: $description
+        rights_mode: $rights_mode
+        active: $active
+        tools: $tools
+        providerApiKey: $providerApiKey
+        RBAC: $RBAC
+      }
       where: { id: $id }
     ) {
         id
         name
+        description
+        rights_mode
+        RBAC {
+          type
+          users {
+            id
+            rights
+          }
+          roles {
+            id
+            rights
+          }
+        }
     }
   }
 `;
 export const CREATE_USER_ROLE = gql`
   mutation CreateUserRole($name: String!) {
     rolesCreateOne(input: { name: $name }) {
+        id
+        createdAt
+        name
+    }
+  }
+`;
+
+export const CREATE_USER = gql`
+  mutation CreateUser($email: String!, $password: String) {
+    usersCreateOne(input: { email: $email, password: $password }) {
         id
         createdAt
         name
@@ -581,14 +654,23 @@ export const GET_WORKFLOW_TEMPLATES = gql`
         name
         description
         owner
-        visibility
-        shared_user_ids
-        shared_role_ids
+        rights_mode
         variables
         steps_json
         example_metadata_json
         createdAt
         updatedAt
+        RBAC {
+        type
+        users {
+          id
+          rights
+        }
+        roles {
+          id
+          rights
+        }
+      }
       }
     }
   }
@@ -601,9 +683,7 @@ export const GET_WORKFLOW_TEMPLATE_BY_ID = gql`
       name
       description
       owner
-      visibility
-      shared_user_ids
-      shared_role_ids
+      rights_mode
       variables
       steps_json
       example_metadata_json
@@ -618,9 +698,8 @@ export const CREATE_WORKFLOW_TEMPLATE = gql`
     $name: String!
     $description: String
     $owner: Float!
-    $visibility: String!
-    $shared_user_ids: JSON
-    $shared_role_ids: JSON
+    $rights_mode: String!
+    $RBAC: RBACInput
     $variables: JSON
     $steps_json: JSON!
     $example_metadata_json: JSON
@@ -630,9 +709,8 @@ export const CREATE_WORKFLOW_TEMPLATE = gql`
         name: $name
         description: $description
         owner: $owner
-        visibility: $visibility
-        shared_user_ids: $shared_user_ids
-        shared_role_ids: $shared_role_ids
+        rights_mode: $rights_mode
+        RBAC: $RBAC
         variables: $variables
         steps_json: $steps_json
         example_metadata_json: $example_metadata_json
@@ -642,9 +720,19 @@ export const CREATE_WORKFLOW_TEMPLATE = gql`
       name
       description
       owner
-      visibility
-      shared_user_ids
-      shared_role_ids
+      rights_mode
+      rights_mode
+      RBAC {
+        type
+        users {
+          id
+          rights
+        }
+        roles {
+          id
+          rights
+        }
+      }
       variables
       steps_json
       example_metadata_json
@@ -659,9 +747,8 @@ export const UPDATE_WORKFLOW_TEMPLATE = gql`
     $id: ID!
     $name: String
     $description: String
-    $visibility: String
-    $shared_user_ids: JSON
-    $shared_role_ids: JSON
+    $rights_mode: String
+    $RBAC: RBACInput
     $variables: JSON
     $steps_json: JSON
     $example_metadata_json: JSON
@@ -671,9 +758,8 @@ export const UPDATE_WORKFLOW_TEMPLATE = gql`
       input: {
         name: $name
         description: $description
-        visibility: $visibility
-        shared_user_ids: $shared_user_ids
-        shared_role_ids: $shared_role_ids
+        rights_mode: $rights_mode
+        RBAC: $RBAC
         variables: $variables
         steps_json: $steps_json
         example_metadata_json: $example_metadata_json
@@ -683,9 +769,18 @@ export const UPDATE_WORKFLOW_TEMPLATE = gql`
       name
       description
       owner
-      visibility
-      shared_user_ids
-      shared_role_ids
+      rights_mode
+      RBAC {
+        type
+        users {
+          id
+          rights
+        }
+        roles {
+          id
+          rights
+        }
+      }
       variables
       steps_json
       example_metadata_json
@@ -699,6 +794,18 @@ export const REMOVE_WORKFLOW_TEMPLATE_BY_ID = gql`
   mutation RemoveWorkflowTemplateById($id: ID!) {
     workflow_templatesRemoveOneById(id: $id) {
       id
+    }
+  }
+`;
+
+export const GET_JOB_STATISTICS_ENHANCED = gql`
+  query GetJobStatisticsEnhanced($user: Float, $agent: String, $from: String, $to: String) {
+    jobStatistics(user: $user, agent: $agent, from: $from, to: $to) {
+      runningCount
+      erroredCount
+      completedCount
+      failedCount
+      averageDuration
     }
   }
 `;

@@ -91,6 +91,7 @@ export function CreateNewAgent({ createAgent, createAgentResult, company }) {
                 variables: {
                   name,
                   description,
+                  rights_mode: "private",
                   backend,
                   type: type.toLowerCase(),
                 },

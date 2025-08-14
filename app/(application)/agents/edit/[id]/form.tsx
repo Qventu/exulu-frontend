@@ -10,9 +10,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { AgentDelete } from "@/app/(application)/agents/components/agent-delete";
 import {
-  GET_USER_ROLES,
-  UPDATE_USER_ROLE_BY_ID,
-  REMOVE_AGENT_BY_ID, UPDATE_AGENT, GET_AGENT_BY_ID, CREATE_AGENT_SESSION, GET_VARIABLES
+  REMOVE_AGENT_BY_ID, UPDATE_AGENT, GET_AGENT_BY_ID, CREATE_AGENT_SESSION, GET_VARIABLES,
 } from "@/queries/queries";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -38,9 +36,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { UserRole } from "@EXULU_SHARED/models/user-role";
 import { Agent } from "@EXULU_SHARED//models/agent";
-import Link from "next/link";
 import { UserContext } from "@/app/(application)/authenticated";
 import { Tool } from "@EXULU_SHARED/models/tool";
 import { Badge } from "@/components/ui/badge";
@@ -61,13 +57,19 @@ import {
 } from "@/components/ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RBACControl } from "@/components/rbac";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 
 // Component for handling individual tool configuration items
-const ToolConfigItem = ({ 
-  configItem, 
-  currentValue, 
-  variables, 
-  onVariableSelect 
+const ToolConfigItem = ({
+  configItem,
+  currentValue,
+  variables,
+  onVariableSelect
 }: {
   configItem: { name: string; description: string },
   currentValue: string,
@@ -76,7 +78,7 @@ const ToolConfigItem = ({
 }) => {
   const [popoverOpen, setPopoverOpen] = React.useState(false);
   const selectedVariable = variables.find((v: any) => v.name === currentValue);
-  
+
   return (
     <div className="space-y-2">
       <div className="text-sm">
@@ -149,10 +151,8 @@ const agentFormSchema = z.object({
     })
     .nullable()
     .optional(),
-  public: z.boolean().nullable().optional(),
   id: z.string().or(z.number()).nullable().optional(),
   active: z.any(),
-  access: z.boolean().nullable().optional(),
   providerApiKey: z.string().nullable().optional(),
   firewall: z.object({
     enabled: z.boolean().optional(),
@@ -177,12 +177,17 @@ export default function AgentForm({
   const router = useRouter();
   const [errors, setErrors] = useState<string>();
   const { user, setUser } = useContext(UserContext);
-  const [enabledTools, setEnabledTools] = useState<{toolId: string, config: {name: string, variable: string}[]}[]>(
+  const [enabledTools, setEnabledTools] = useState<{ toolId: string, config: { name: string, variable: string }[] }[]>(
     // Convert legacy string[] format to new object format
     agent.enabledTools ? agent.enabledTools : []
   )
   const [providerApiKey, setProviderApiKey] = useState<string>(agent.providerApiKey || '')
   const [firewallEnabled, setFirewallEnabled] = useState<boolean>(agent.firewall?.enabled || false)
+  const [rbac, setRbac] = useState({
+    rights_mode: agent.rights_mode,
+    users: agent.RBAC?.users,
+    roles: agent.RBAC?.roles
+  })
   const [firewallScanners, setFirewallScanners] = useState({
     promptGuard: agent.firewall?.scanners?.promptGuard || false,
     codeShield: agent.firewall?.scanners?.codeShield || false,
@@ -190,6 +195,7 @@ export default function AgentForm({
     hiddenAscii: agent.firewall?.scanners?.hiddenAscii || false,
     piiDetection: agent.firewall?.scanners?.piiDetection || false,
   })
+
   const { toast } = useToast();
 
   const { data: variablesData } = useQuery(GET_VARIABLES, {
@@ -207,24 +213,7 @@ export default function AgentForm({
     }
   };
 
-  const [updateUserRole, updateUserRoleResult] = useMutation(
-    UPDATE_USER_ROLE_BY_ID,
-    {
-      refetchQueries: [
-        GET_USER_ROLES, // DocumentNode object parsed with gql
-        "GetUserRoles", // Query name
-      ],
-    },
-  );
-
-  const roles = useQuery(GET_USER_ROLES, {
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "network-only",
-    variables: {
-      page: 1,
-      limit: 30,
-    },
-  });
+  // Reset selected users and roles when visibility changes
 
   const [deleteAgent, deleteAgentResult] = useMutation(
     REMOVE_AGENT_BY_ID,
@@ -279,14 +268,19 @@ export default function AgentForm({
               onClick={agentForm.handleSubmit(
                 async (data) => {
                   console.log("data", data)
+
                   updateAgent({
                     variables: {
                       id: data.id,
                       name: data.name,
-                      public: data.public,
                       description: data.description,
                       active: data.active,
                       providerApiKey: providerApiKey,
+                      rights_mode: rbac.rights_mode,
+                      RBAC: {
+                        users: rbac.users || [],
+                        roles: rbac.roles || []
+                      },
                       firewall: JSON.stringify({
                         enabled: firewallEnabled,
                         scanners: firewallScanners
@@ -303,7 +297,7 @@ export default function AgentForm({
               disabled={updateAgentResult.loading}
               variant={"secondary"}
               type="submit">
-              Save {updateAgentResult.loading && <Loading />}
+              Save {updateAgentResult.loading && <Loading className="ml-2" />}
             </Button>
           )}
           <Button
@@ -475,117 +469,41 @@ export default function AgentForm({
                                 </FormItem>
                               )}
                             />
-                            <FormField
-                              control={agentForm.control}
-                              name="access"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                  <div className="space-y-0.5 w-full">
-                                    <FormLabel className="text-base">
-                                      Access levels
-                                    </FormLabel>
 
-                                    <div className="w-full !mt-3">
-                                      <FormField
-                                        control={agentForm.control}
-                                        name={`public`}
-                                        render={({ field }) => (
-                                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                            <div className="space-y-0.5">
-                                              <FormLabel className="text-base">
-                                                Public
-                                              </FormLabel>
-                                              <FormDescription>
-                                                If set to public anyone with the
-                                                url can access it.
-                                              </FormDescription>
-                                            </div>
-                                            <FormControl>
-                                              <Switch
-                                                checked={
-                                                  agentForm.getValues(
-                                                    "public",
-                                                  ) ?? false
-                                                }
-                                                onCheckedChange={field.onChange}
-                                              />
-                                            </FormControl>
-                                          </FormItem>
-                                        )}
-                                      />
+                            <Card>
 
-                                      {!agentForm.getValues("public") && (
-                                        <>
-                                          {!roles.data?.loading &&
-                                            roles.data?.rolesPagination
-                                              ?.items ? (
-                                            <>
-                                              {roles.data.rolesPagination.items.map(
-                                                (role: UserRole, index: number) => {
-                                                  return (
-                                                    <div
-                                                      key={index}
-                                                      className="space-y-4 my-3 w-full"
-                                                    >
-                                                      <div className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                                        <div className="space-y-0.5 w-full ">
-                                                          <label className="font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-base">
-                                                            {role.name}
-                                                          </label>
-                                                        </div>
-                                                        <Switch
-                                                          disabled={
-                                                            updateUserRoleResult.loading
-                                                          }
-                                                          checked={role.agents
-                                                            ?.includes(
-                                                              agent.id,
-                                                            )}
-                                                          onCheckedChange={(
-                                                            value,
-                                                          ) => {
-                                                            const updated =
-                                                              value
-                                                                ? [
-                                                                  ...(role.agents || []),
-                                                                  agent.id,
-                                                                ]
-                                                                : (role.agents || []).filter(
-                                                                  (id) =>
-                                                                    id !==
-                                                                    agent.id,
-                                                                );
-                                                            updateUserRole({
-                                                              variables: {
-                                                                id: role.id,
-                                                                agents: JSON.stringify(updated),
-                                                              },
-                                                            });
-                                                          }}
-                                                        />
-                                                      </div>
-                                                    </div>
-                                                  );
-                                                },
-                                              )}
-                                            </>
-                                          ) : (
-                                            <div className="p-3">
-                                              <p className="text-center">
-                                                No user roles found. You can create roles <Link
-                                                  href="/roles">here</Link>
-                                              </p>
-                                            </div>
-                                          )}
-                                        </>
-                                      )}
-                                    </div>
-                                    <FormMessage />
+                              <Collapsible>
+                                <CardHeader className="px-6 pt-6 !pb-0">
+                                  <div className="flex items-center justify-between">
+                                    <CardTitle>Access Control</CardTitle>
+                                    <CollapsibleTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="size-8">
+                                        <ChevronsUpDown className="size-4" />
+                                        <span className="sr-only">Toggle</span>
+                                      </Button>
+                                    </CollapsibleTrigger>
                                   </div>
-                                </FormItem>
-                              )}
-                            />
-                            
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                  <CollapsibleContent className="mt-5">
+                                    <RBACControl
+                                      initialRightsMode={agent.rights_mode}
+                                      initialUsers={agent.RBAC?.users}
+                                      initialRoles={agent.RBAC?.roles}
+                                      onChange={(rights_mode, users, roles) => {
+                                        setRbac({
+                                          rights_mode,
+                                          users,
+                                          roles
+                                        })
+                                      }}
+                                    />
+                                  </CollapsibleContent>
+
+                                </CardContent>
+                              </Collapsible>
+                            </Card>
+
                             <FormField
                               control={agentForm.control}
                               name="firewall.enabled"
@@ -611,7 +529,7 @@ export default function AgentForm({
                                 </FormItem>
                               )}
                             />
-                            
+
                             {firewallEnabled && (
                               <Card>
                                 <CardHeader>
@@ -637,7 +555,7 @@ export default function AgentForm({
                                       }}
                                     />
                                   </div>
-                                  
+
                                   <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                                     <div className="space-y-0.5">
                                       <FormLabel className="text-base">
@@ -654,7 +572,7 @@ export default function AgentForm({
                                       }}
                                     />
                                   </div>
-                                  
+
                                   <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                                     <div className="space-y-0.5">
                                       <FormLabel className="text-base">
@@ -671,7 +589,7 @@ export default function AgentForm({
                                       }}
                                     />
                                   </div>
-                                  
+
                                   <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                                     <div className="space-y-0.5">
                                       <FormLabel className="text-base">
@@ -688,7 +606,7 @@ export default function AgentForm({
                                       }}
                                     />
                                   </div>
-                                  
+
                                   <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                                     <div className="space-y-0.5">
                                       <FormLabel className="text-base">
@@ -842,7 +760,7 @@ export default function AgentForm({
                                     {agent.availableTools?.map((tool: Tool) => {
                                       const isEnabled = enabledTools.some(et => et.toolId === tool.id);
                                       const toolConfig = enabledTools.find(et => et.toolId === tool.id);
-                                      
+
                                       return (
                                         <div key={tool?.id} className="rounded-lg border p-4 mt-2">
                                           <div className="flex items-center justify-between">
@@ -878,14 +796,14 @@ export default function AgentForm({
                                               }}
                                             />
                                           </div>
-                                          
+
                                           {/* Tool Configuration Fields */}
                                           {isEnabled && tool.config && tool.config.length > 0 && (
                                             <div className="mt-4 pt-4 border-t space-y-3">
                                               <div className="text-sm font-medium text-muted-foreground">Configuration</div>
                                               {tool.config.map((configItem, configIndex) => {
                                                 const currentValue = toolConfig?.config.find(c => c.name === configItem.name)?.variable || '';
-                                                
+
                                                 return (
                                                   <ToolConfigItem
                                                     key={configIndex}
@@ -897,8 +815,8 @@ export default function AgentForm({
                                                         if (et.toolId === tool.id) {
                                                           return {
                                                             ...et,
-                                                            config: et.config.map(c => 
-                                                              c.name === configItem.name 
+                                                            config: et.config.map(c =>
+                                                              c.name === configItem.name
                                                                 ? { ...c, variable: variableName }
                                                                 : c
                                                             )

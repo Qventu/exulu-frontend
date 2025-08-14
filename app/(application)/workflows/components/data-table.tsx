@@ -24,16 +24,13 @@ import {
   VisibilityState,
 } from "@tanstack/react-table";
 import { Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import * as React from "react";
 import {
-  GET_USERS,
-  REMOVE_USER_BY_ID,
-  UPDATE_USER_BY_ID,
+  GET_WORKFLOW_TEMPLATES,
+  REMOVE_WORKFLOW_TEMPLATE_BY_ID,
 } from "@/queries/queries";
-import { DataTableViewOptions } from "@/app/(application)/users/components/data-table-view-options";
-import { RoleSelector } from "@/app/(application)/users/components/role-selector";
+import { DataTableViewOptions } from "./data-table-view-options";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loading } from "@/components/ui/loading";
@@ -46,27 +43,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { UserRole } from "@EXULU_SHARED/models/user-role";
 import { FilterOperator } from "@/components/custom/recent-jobs";
-import { AddUserModal } from "@/app/(application)/users/components/add-user-modal";
-import { UserContext } from "@/app/(application)/authenticated";
-import { Plus } from "lucide-react";
-export type UserFilters = {
-  firstname?: FilterOperator,
-  lastname?: FilterOperator,
-  email?: FilterOperator,
-  type?: FilterOperator,
-  status?: FilterOperator,
+
+export type WorkflowFilters = {
+  name?: FilterOperator,
+  visibility?: FilterOperator,
   createdAt?: FilterOperator,
   updatedAt?: FilterOperator,
 }
+
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
 }
 
 export function usePagination() {
   const [pagination, setPagination] = useState({
-    pageSize: 5,
+    pageSize: 10,
     pageIndex: 0,
   });
   const { pageSize, pageIndex } = pagination;
@@ -83,68 +75,50 @@ export function DataTable<TData, TValue>({
   columns,
 }: DataTableProps<TData, TValue>) {
   const { toast } = useToast();
-  const router = useRouter();
-  const { user } = React.useContext(UserContext);
   const [rowSelection, setRowSelection] = React.useState({});
-  const [selectedRole, setSelectedRole] = React.useState<UserRole | null>(null);
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
   );
-  const [isAddUserModalOpen, setIsAddUserModalOpen] = React.useState(false);
 
-  const [filters, setFilters] = useState<UserFilters[]>([]);
+  const [filters, setFilters] = useState<WorkflowFilters[]>([]);
 
-  /* todo: get rid of own page state and use the table.currentPage() instead */
   let [page, setPage] = useState(1);
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
-  const { loading, error, data, refetch, previousData } = useQuery(GET_USERS, {
+  const { loading, error, data, refetch, previousData } = useQuery(GET_WORKFLOW_TEMPLATES, {
     fetchPolicy: "no-cache",
     nextFetchPolicy: "network-only",
     variables: {
       page: page,
       limit: 10,
-      filters: [
-        ...filters,
-        {
-          type: {
-            ne: "api"
-          }
-        }],
+      filters: filters,
     },
-    pollInterval: 30000, // polls every 30 seconds for updates on users
+    pollInterval: 30000,
   });
 
   const defaultData = React.useMemo(() => [], []);
   const { limit, onPaginationChange, skip, pagination } = usePagination();
 
-  const [updateUser, updateUserResult] = useMutation(UPDATE_USER_BY_ID, {
+  const [removeWorkflow, removeWorkflowResult] = useMutation(REMOVE_WORKFLOW_TEMPLATE_BY_ID, {
     refetchQueries: [
-      GET_USERS, // DocumentNode object parsed with gql
-      "GetUsers", // Query name
-    ],
-  });
-
-  const [removeUser, removeUserResult] = useMutation(REMOVE_USER_BY_ID, {
-    refetchQueries: [
-      GET_USERS, // DocumentNode object parsed with gql
-      "GetUsers", // Query name
+      GET_WORKFLOW_TEMPLATES,
+      "GetWorkflowTemplates",
     ],
   });
 
   let items;
   let pageCount;
-  if (loading && previousData?.usersPagination?.items) {
-    items = previousData?.usersPagination?.items;
-    pageCount = previousData?.usersPagination?.pageInfo?.pageCount;
-  } else if (data?.usersPagination?.items) {
-    items = data?.usersPagination?.items;
-    pageCount = data?.usersPagination?.pageInfo?.pageCount;
-  } else if (previousData?.usersPagination?.items) {
-    items = previousData?.usersPagination?.items;
-    pageCount = previousData?.usersPagination?.pageInfo?.pageCount;
+  if (loading && previousData?.workflow_templatesPagination?.items) {
+    items = previousData?.workflow_templatesPagination?.items;
+    pageCount = previousData?.workflow_templatesPagination?.pageInfo?.pageCount;
+  } else if (data?.workflow_templatesPagination?.items) {
+    items = data?.workflow_templatesPagination?.items;
+    pageCount = data?.workflow_templatesPagination?.pageInfo?.pageCount;
+  } else if (previousData?.workflow_templatesPagination?.items) {
+    items = previousData?.workflow_templatesPagination?.items;
+    pageCount = previousData?.workflow_templatesPagination?.pageInfo?.pageCount;
   }
 
   const table = useReactTable({
@@ -174,12 +148,12 @@ export function DataTable<TData, TValue>({
 
   const search = (value: string) => {
     const copy = [...filters];
-    const exists = copy.find((filter) => filter.email);
-    if (exists?.email) {
-      exists.email.contains = value;
+    const exists = copy.find((filter) => filter.name);
+    if (exists?.name) {
+      exists.name.contains = value;
     } else {
       copy.push({
-        email: {
+        name: {
           contains: value,
         },
       });
@@ -195,31 +169,13 @@ export function DataTable<TData, TValue>({
       <div className="flex items-center justify-between">
         <div className="flex flex-1 items-center space-x-2">
           <Input
-            placeholder="Filter users..."
-            value={filters?.find((filter) => filter.email)?.email?.contains ?? ""}
+            placeholder="Search workflows..."
+            value={filters?.find((filter) => filter.name)?.name?.contains ?? ""}
             onChange={(event) => {
               search(event.target.value);
             }}
             className="w-[150px] lg:w-[250px]"
           />
-
-          <Button
-            onClick={() => {
-              router.push("/roles");
-            }}
-          >
-            Manage roles
-          </Button>
-
-          {user?.super_admin && (
-            <Button
-              onClick={() => setIsAddUserModalOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <Plus className="size-4" />
-              Add User
-            </Button>
-          )}
 
           {table.getIsSomeRowsSelected() || table.getIsAllRowsSelected() ? (
             <div className="flex gap-x-2">
@@ -228,7 +184,7 @@ export function DataTable<TData, TValue>({
                   const promises: any[] = [];
                   table.getSelectedRowModel().rows.forEach((row: Row<any>) => {
                     promises.push(
-                      removeUser({
+                      removeWorkflow({
                         variables: {
                           id: row.original.id,
                         },
@@ -238,102 +194,27 @@ export function DataTable<TData, TValue>({
                   Promise.all(promises).then(() => {
                     table.resetRowSelection();
                     toast({
-                      title: "Removed users",
-                      description: "We removed " + promises.length + " users.",
+                      title: "Workflows deleted",
+                      description: "Successfully deleted " + promises.length + " workflow(s).",
+                    });
+                  }).catch(() => {
+                    toast({
+                      title: "Error",
+                      description: "Failed to delete some workflows. Please try again.",
+                      variant: "destructive",
                     });
                   });
                 }}
                 variant="secondary"
-                disabled={removeUserResult.loading}
+                disabled={removeWorkflowResult.loading}
               >
-                {removeUserResult.loading ? (
+                {removeWorkflowResult.loading ? (
                   <Loading />
                 ) : (
                   <Trash2 className="size-4" />
                 )}
-                <span className="ml-2">Remove selected</span>
+                <span className="ml-2">Delete selected</span>
               </Button>
-
-              <RoleSelector
-                onSelect={(role: UserRole) => {
-                  setSelectedRole(role);
-                }}
-              />
-
-              {selectedRole ? (
-                <Button
-                  onClick={() => {
-                    const promises: any[] = [];
-                    table
-                      .getSelectedRowModel()
-                      .rows.forEach((row: Row<any>) => {
-                        promises.push(
-                          updateUser({
-                            variables: {
-                              id: row.original.id,
-                              roles: [
-                                ...row.original.roles.map((role) => role.id),
-                                selectedRole.id,
-                              ],
-                            },
-                          }),
-                        );
-                      });
-                    Promise.all(promises).then(() => {
-                      table.resetRowSelection();
-                      toast({
-                        title: "Updated users",
-                        description:
-                          "We updated " + promises.length + " users.",
-                      });
-                      setSelectedRole(null);
-                    });
-                  }}
-                  variant="secondary"
-                  disabled={updateUserResult.loading}
-                >
-                  {updateUserResult.loading ? <Loading /> : null}
-                  <span>Add role to selected</span>
-                </Button>
-              ) : null}
-
-              {selectedRole ? (
-                <Button
-                  onClick={() => {
-                    const promises: any[] = [];
-                    table
-                      .getSelectedRowModel()
-                      .rows.forEach((row: Row<any>) => {
-                        promises.push(
-                          updateUser({
-                            variables: {
-                              id: row.original.id,
-                              roles: row.original.roles
-                                .map((role) => role.id)
-                                .filter(
-                                  (roleId) => roleId !== selectedRole.id,
-                                ),
-                            },
-                          }),
-                        );
-                      });
-                    Promise.all(promises).then(() => {
-                      table.resetRowSelection();
-                      toast({
-                        title: "Updated users",
-                        description:
-                          "We updated " + promises.length + " users.",
-                      });
-                      setSelectedRole(null);
-                    });
-                  }}
-                  variant="secondary"
-                  disabled={updateUserResult.loading}
-                >
-                  {updateUserResult.loading ? <Loading /> : null}
-                  <span>Remove role from selected</span>
-                </Button>
-              ) : null}
             </div>
           ) : null}
 
@@ -342,9 +223,9 @@ export function DataTable<TData, TValue>({
               variant="ghost"
               onClick={() => {
                 const copy = [...filters];
-                const emailFilter = copy.find((filter) => filter.email);
-                if (emailFilter) {
-                  copy.splice(copy.indexOf(emailFilter), 1);
+                const nameFilter = copy.find((filter) => filter.name);
+                if (nameFilter) {
+                  copy.splice(copy.indexOf(nameFilter), 1);
                 }
                 setFilters(copy);
                 refetch();
@@ -400,7 +281,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  No workflows found.
                 </TableCell>
               </TableRow>
             )}
@@ -413,28 +294,6 @@ export function DataTable<TData, TValue>({
           {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
         <div className="flex items-center space-x-6 lg:space-x-8">
-          {/*<div className="flex items-center space-x-2">
-            <p className="text-sm font-medium">Rows per page</p>
-            <Select
-              value={`${table.getState().pagination.pageSize}`}
-              onValueChange={(value) => {
-                table.setPageSize(Number(value));
-              }}
-            >
-              <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue
-                  placeholder={table.getState().pagination.pageSize}
-                />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {[10, 20, 30, 40, 50].map((pageSize) => (
-                  <SelectItem key={pageSize} value={`${pageSize}`}>
-                    {pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>*/}
           <div className="flex w-[100px] items-center justify-center text-sm font-medium">
             Page {page} of {table.getPageCount()}
           </div>
@@ -447,7 +306,7 @@ export function DataTable<TData, TValue>({
                 setPage(1);
                 refetch();
               }}
-              disabled={!data?.usersPagination?.pageInfo.hasPreviousPage}
+              disabled={!data?.workflow_templatesPagination?.pageInfo.hasPreviousPage}
             >
               <span className="sr-only">Go to first page</span>
               <DoubleArrowLeftIcon className="size-4" />
@@ -460,7 +319,7 @@ export function DataTable<TData, TValue>({
                 setPage(page - 1);
                 refetch();
               }}
-              disabled={!data?.usersPagination?.pageInfo.hasPreviousPage}
+              disabled={!data?.workflow_templatesPagination?.pageInfo.hasPreviousPage}
             >
               <span className="sr-only">Go to previous page</span>
               <ChevronLeftIcon className="size-4" />
@@ -473,7 +332,7 @@ export function DataTable<TData, TValue>({
                 setPage(page + 1);
                 refetch();
               }}
-              disabled={!data?.usersPagination?.pageInfo.hasNextPage}
+              disabled={!data?.workflow_templatesPagination?.pageInfo.hasNextPage}
             >
               <span className="sr-only">Go to next page</span>
               <ChevronRightIcon className="size-4" />
@@ -482,13 +341,11 @@ export function DataTable<TData, TValue>({
               variant="outline"
               className="hidden size-8 p-0 lg:flex"
               onClick={() => {
-                () => {
-                  table.setPageIndex(table.getPageCount() - 1);
-                };
+                table.setPageIndex(table.getPageCount() - 1);
                 setPage(table.getPageCount());
                 refetch();
               }}
-              disabled={!data?.usersPagination?.pageInfo.hasNextPage}
+              disabled={!data?.workflow_templatesPagination?.pageInfo.hasNextPage}
             >
               <span className="sr-only">Go to last page</span>
               <DoubleArrowRightIcon className="size-4" />
@@ -496,11 +353,6 @@ export function DataTable<TData, TValue>({
           </div>
         </div>
       </div>
-      
-      <AddUserModal 
-        isOpen={isAddUserModalOpen} 
-        onClose={() => setIsAddUserModalOpen(false)} 
-      />
     </div>
   );
 }

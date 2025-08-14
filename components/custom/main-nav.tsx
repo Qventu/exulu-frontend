@@ -32,7 +32,7 @@ export function MainNav({
       },
       {
         label: "Data",
-        path: "data",
+        path: "data", 
       },
       {
         label: "Jobs",
@@ -41,6 +41,10 @@ export function MainNav({
       {
         label: "Agents",
         path: "agents",
+      },
+      {
+        label: "Workflows",
+        path: "workflows",
       },
       {
         label: "Playground",
@@ -68,6 +72,10 @@ export function MainNav({
       {
         label: "Dashboard",
         path: "dashboard",
+      },
+      {
+        label: "Workflows",
+        path: "workflows",
       },
       {
         label: "Playground",

@@ -20,7 +20,6 @@ export interface Agent {
         }
     }
     active?: boolean;
-    public?: boolean;
     description?: string;
     slug?: string;
     availableTools?: Tool[];
@@ -38,4 +37,13 @@ export interface Agent {
         audio: string[];
         video: string[];
     }
+    // New RBAC fields
+    rights_mode?: 'private' | 'users' | 'roles' | 'public';
+    RBAC?: {
+        type?: string;
+        users?: Array<{ id: string; rights: 'read' | 'write' }>;
+        roles?: Array<{ id: string; rights: 'read' | 'write' }>;
+    };
+    createdAt?: string;
+    updatedAt?: string;
 }

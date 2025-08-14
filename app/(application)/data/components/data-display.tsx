@@ -4,8 +4,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Archive,
-  ChevronsDownUp,
-  ChevronsUpDown,
   Edit,
   PackageOpen,
   SaveIcon,
@@ -13,22 +11,15 @@ import {
   XCircle,
   XSquare,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { UserContext } from "@/app/(application)/authenticated";
 import { CodePreview } from "@/components/custom/code-preview";
 import { TextPreview } from "@/components/custom/text-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Form,
   FormControl,

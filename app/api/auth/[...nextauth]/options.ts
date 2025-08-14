@@ -57,6 +57,7 @@ const providers: Provider[] = [
       }
       for (const user of res.rows) {
         const isMatch = await bcrypt.compare(credentials.password, user.password)
+        console.log("[NEXT AUTH] isMatch", isMatch)
         if (isMatch) {
           await pool.query('UPDATE users SET last_used = $1 WHERE email = $2', [new Date(), user.email])
           return user;
@@ -151,6 +152,7 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
         if (process.env.ALLOWED_EMAIL_DOMAINS) {
           let allowedDomains = process.env.ALLOWED_EMAIL_DOMAINS.split(",");
           allowedDomains.push("exulu.com")
+          allowedDomains.push("qventu.com")
           if (!allowedDomains.some(domain => email.endsWith(`@${domain}`))) {
             return false;
           }
@@ -207,6 +209,8 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
           await pool.query('INSERT INTO users ("email", "name", "createdAt", "updatedAt", "emailVerified", "last_used", "type", "super_admin") VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [email, name, new Date(), new Date(), new Date(), new Date(), "user", false])
           return true;
         }
+
+        console.log("[NEXT AUTH] res.rows.length", res.rows.length)
 
         if (res.rows.length) {
           return true;
