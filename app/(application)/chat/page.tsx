@@ -1,7 +1,7 @@
 import {Bot} from "lucide-react";
 import * as React from "react";
 
-export default function PlaygroundEmptyPage() {
+export default function ChatEmptyPage() {
     return (
         <div className="m-auto">
             <div className="flex flex-col">

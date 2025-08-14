@@ -34,6 +34,7 @@ import { DataTableViewOptions } from "./data-table-view-options";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loading } from "@/components/ui/loading";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -271,6 +272,16 @@ export function DataTable<TData, TValue>({
                         cell.column.columnDef.cell,
                         cell.getContext(),
                       )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : loading && !previousData ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <TableRow key={index}>
+                  {columns.map((_, colIndex) => (
+                    <TableCell key={colIndex}>
+                      <Skeleton className="h-4 w-full" />
                     </TableCell>
                   ))}
                 </TableRow>

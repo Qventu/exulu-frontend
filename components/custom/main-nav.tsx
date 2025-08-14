@@ -43,12 +43,12 @@ export function MainNav({
         path: "agents",
       },
       {
-        label: "Workflows",
-        path: "workflows",
+        label: "Chat",
+        path: "chat",
       },
       {
-        label: "Playground",
-        path: "playground",
+        label: "Workflows",
+        path: "workflows",
       },
       {
         label: "Users",
@@ -74,12 +74,12 @@ export function MainNav({
         path: "dashboard",
       },
       {
-        label: "Workflows",
-        path: "workflows",
+        label: "Chat",
+        path: "chat",
       },
       {
-        label: "Playground",
-        path: "playground",
+        label: "Workflows",
+        path: "workflows",
       }
     ]
   }

@@ -1,14 +1,25 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, Edit, Eye, Play } from "lucide-react";
+import { ArrowUpDown, Edit, Eye, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SaveWorkflowModal } from "@/components/save-workflow-modal";
 import { formatDistanceToNow } from "date-fns";
-import { useQuery } from "@apollo/client";
-import { GET_JOBS } from "@/queries/queries";
+import { useQuery, useMutation } from "@apollo/client";
+import { GET_JOBS, REMOVE_WORKFLOW_TEMPLATE_BY_ID, GET_WORKFLOW_TEMPLATES } from "@/queries/queries";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 
 export type Workflow = {
   id: string;
@@ -83,6 +94,9 @@ function LastRunCell({ workflowId }: { workflowId: string }) {
 
 function WorkflowActionsCell({ workflow, user }: { workflow: WorkflowWithLastRun; user: any }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const { toast } = useToast();
   
   // Determine if user has write access
   const hasWriteAccess = (() => {
@@ -98,6 +112,39 @@ function WorkflowActionsCell({ workflow, user }: { workflow: WorkflowWithLastRun
     }
     return false;
   })();
+
+  const [removeWorkflow] = useMutation(REMOVE_WORKFLOW_TEMPLATE_BY_ID, {
+    refetchQueries: [GET_WORKFLOW_TEMPLATES, "GetWorkflowTemplates"],
+  });
+
+  const handleDelete = async () => {
+    if (deleteConfirmation !== workflow.name) {
+      toast({
+        title: "Error",
+        description: "Please type the workflow name exactly to confirm deletion.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await removeWorkflow({
+        variables: { id: workflow.id },
+      });
+      toast({
+        title: "Workflow deleted",
+        description: `"${workflow.name}" has been successfully deleted.`,
+      });
+      setIsDeleteModalOpen(false);
+      setDeleteConfirmation('');
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete the workflow. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Transform workflow back to messages format for the modal
   const workflowMessages = workflow.steps_json?.map((step: any, index: number) => ({
@@ -117,24 +164,36 @@ function WorkflowActionsCell({ workflow, user }: { workflow: WorkflowWithLastRun
   })) || [];
 
   return (
-    <div className="flex items-center gap-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setIsEditModalOpen(true)}
-      >
-        {hasWriteAccess ? <Edit className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => {
-          // TODO: Implement workflow run functionality
-          console.log('Run workflow:', workflow.id);
-        }}
-      >
-        <Play className="h-4 w-4" />
-      </Button>
+    <>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsEditModalOpen(true)}
+        >
+          {hasWriteAccess ? <Edit className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            // TODO: Implement workflow run functionality
+            console.log('Run workflow:', workflow.id);
+          }}
+        >
+          <Play className="h-4 w-4" />
+        </Button>
+        {hasWriteAccess && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
       
       <SaveWorkflowModal
         isOpen={isEditModalOpen}
@@ -152,7 +211,50 @@ function WorkflowActionsCell({ workflow, user }: { workflow: WorkflowWithLastRun
         }}
         isReadOnly={!hasWriteAccess}
       />
-    </div>
+
+      <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Workflow</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will permanently delete the workflow "{workflow.name}" and cannot be undone.
+              <br /><br />
+              To confirm, please type the workflow name below:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Label htmlFor="delete-confirmation" className="text-sm font-medium">
+              Workflow name
+            </Label>
+            <Input
+              id="delete-confirmation"
+              value={deleteConfirmation}
+              onChange={(e) => setDeleteConfirmation(e.target.value)}
+              placeholder={workflow.name}
+              className="mt-2"
+            />
+          </div>
+          <AlertDialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setDeleteConfirmation('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteConfirmation !== workflow.name}
+            >
+              Delete Workflow
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

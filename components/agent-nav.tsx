@@ -43,7 +43,7 @@ export function AgentNav() {
             {!agents.loading
               ? agents?.data?.agentsPagination?.items?.map(
                 (agent: Agent) => (
-                  <Link key={agent.id} href={`/playground/${agent.id}/${agent.type.toLowerCase()}`}>
+                  <Link key={agent.id} href={`/chat/${agent.id}/${agent.type.toLowerCase()}`}>
                     <Button
                       variant={pathname.includes(agent.id) ? "secondary" : "ghost"}
                       className="w-full justify-start gap-2">

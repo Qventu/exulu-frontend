@@ -642,7 +642,7 @@ export default function AgentForm({
                                         console.log("agent", agent)
                                         if (agent.type === "flow") {
                                           router.push(
-                                            `/playground/${agent.id}/${agent.type}`,
+                                            `/chat/${agent.id}/${agent.type}`,
                                           );
                                           return;
                                         } else {
@@ -657,13 +657,13 @@ export default function AgentForm({
                                           console.log("result", result)
                                           const sessionId = result?.data?.agent_sessionsCreateOne?.id
                                           router.push(
-                                            `/playground/${agent.id}/${agent.type}/${sessionId}`,
+                                            `/chat/${agent.id}/${agent.type}/${sessionId}`,
                                           );
                                         }
                                       }}
                                       type={"button"}
                                       variant={"default"}>
-                                      Go to playground
+                                      Go to chat
                                     </Button>
                                   </CardContent>
                                 </Card>

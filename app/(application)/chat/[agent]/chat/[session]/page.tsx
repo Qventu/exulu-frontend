@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react";
-import { ChatLayout } from "@/app/(application)/playground/[agent]/chat/[session]/chat";
+import { ChatLayout } from "@/app/(application)/chat/[agent]/chat/[session]/chat";
 import { agents, getToken } from "@/util/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";

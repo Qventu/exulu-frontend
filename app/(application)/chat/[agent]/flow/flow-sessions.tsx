@@ -93,7 +93,7 @@ export function FlowSessionsComponent({ agent, type }: { agent: string, type: st
 
   const handleCreateSession = async () => {
         router.push(
-          `/playground/${agent}/${type}/new`,
+          `/chat/${agent}/${type}/new`,
         );
   }
 
@@ -209,7 +209,7 @@ export function FlowSessionsComponent({ agent, type }: { agent: string, type: st
                     pathname.split("/").pop()?.includes(job.id) ? "bg-muted" : "",
                   )}
                   onClick={() => {
-                    router.push(`/playground/${agent}/${type}/${job.id}`);
+                    router.push(`/chat/${agent}/${type}/${job.id}`);
                   }}
                 >
                   <div className="flex w-full flex-col gap-1">

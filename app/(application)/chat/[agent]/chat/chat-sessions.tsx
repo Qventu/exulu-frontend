@@ -131,7 +131,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
     setSessionName("");
     sessionsQuery.refetch();
     router.push(
-      `/playground/${agent}/${type}/${newSession.data?.agent_sessionsCreateOne?.id}`,
+      `/chat/${agent}/${type}/${newSession.data?.agent_sessionsCreateOne?.id}`,
     );
   }
 
@@ -249,7 +249,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
                       pathname.includes(item.id) && "bg-muted",
                     )}
                     onClick={() => {
-                      router.push(`/playground/${agent}/${type}/${item.id}`);
+                      router.push(`/chat/${agent}/${type}/${item.id}`);
                     }}
                   >
                     <div className="flex w-full flex-col gap-1">

@@ -6,7 +6,7 @@ import { useChat, Message } from '@ai-sdk/react';
 import * as React from "react";
 import { FormEvent, useContext, useEffect, useState, useMemo } from "react";
 import { UserContext } from "@/app/(application)/authenticated";
-import ChatBottombar from "@/app/(application)/playground/[agent]/chat/components/chat-bottombar";
+import ChatBottombar from "@/app/(application)/chat/[agent]/chat/components/chat-bottombar";
 import { AgentMessage, AgentSession } from "@EXULU_SHARED/models/agent-session";
 import {
   GET_AGENT_MESSAGES,
