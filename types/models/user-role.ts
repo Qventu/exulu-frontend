@@ -1,6 +1,8 @@
 export type UserRole = {
   id: string;
   name: string;
-  is_admin: boolean;
-  agents?: string[];
+  agents?: "read" | "write" | null;
+  workflows?: "read" | "write" | null;
+  variables?: "read" | "write" | null;
+  users?: "read" | "write" | null;
 };

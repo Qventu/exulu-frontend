@@ -78,11 +78,7 @@ export function AgentSelector({
                 onSelect={() => {
                   if (navigate) {
                     setNavigating(true);
-                    if (agent.type === "flow") {
-                      router.push(`/workflows/edit/${agent.id}`);
-                    } else {
-                      router.push(`/agents/edit/${agent.id}`);
-                    }
+                    router.push(`/agents/edit/${agent.id}`);
                   }
                   if (onSelect) {
                     onSelect(agent);

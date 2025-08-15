@@ -17,8 +17,6 @@ const getUris = async () => {
             context.backend + "/tools",
         contexts:
             context.backend + "/contexts",
-        workflows:
-            context.backend + "/workflows",
         statistics:
             context.backend + "/statistics",
         items:
@@ -260,46 +258,6 @@ export const files = {
         });
     }
 }
-
-export const workflows = {
-    get: async (parameters: {
-        id?: string
-    } | null, limit: number = 20): Promise<any> => {
-
-        const uris = await getUris();
-        let url = `${uris.workflows}${parameters?.id ? "/" + parameters.id : ""}`;
-
-        const token = await getToken()
-
-        return fetch(url, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-        });
-    },
-    run: async (slug: string, parameters: {
-        inputs: {}
-        agent: string
-        label: string
-        session: string
-    }): Promise<any> => {
-
-        const uris = await getUris();
-        const url = `${uris.base}${slug}`;
-
-        const token = await getToken()
-        return fetch(url, {
-            method: "POST",
-            body: JSON.stringify(parameters),
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-        });
-    },
-};
 
 export const items = {
     list: async (parameters: {

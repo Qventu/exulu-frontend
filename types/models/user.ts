@@ -4,8 +4,12 @@ export type User = {
   emailVerified?: string;
   type?: "api" | "user"
   super_admin?: boolean;
-  roles?: {
+  role?: {
     id: string;
-    role: string;
-  }[];
+    name: string;
+    agents: "read" | "write";
+    workflows: "read" | "write";
+    variables: "read" | "write";
+    users: "read" | "write";
+  };
 };

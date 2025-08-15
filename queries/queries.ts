@@ -9,6 +9,7 @@ super_admin
 apikey
 anthropic_token
 type
+role
 `;
 
 export const GET_AGENTS = gql`
@@ -170,8 +171,11 @@ export const GET_USER_ROLES = gql`
       items {
         id
         createdAt
+        updatedAt
         agents
-        is_admin
+        workflows
+        variables
+        users
         name
       }
     }
@@ -214,8 +218,10 @@ export const GET_USER_ROLE_BY_ID = gql`
     roleById(id: $id) {
       id
       name
-      is_admin
       agents
+      workflows
+      variables
+      users
       createdAt
       updatedAt
     }
@@ -293,6 +299,7 @@ export const UPDATE_USER_BY_ID = gql`
       $anthropic_token: String,
       $super_admin: Boolean,
       $lastname: String,
+      $role: String,
       $id: ID!
      ) {
         usersUpdateOneById(id: $id, input: {
@@ -301,6 +308,7 @@ export const UPDATE_USER_BY_ID = gql`
             anthropic_token: $anthropic_token,
             super_admin: $super_admin,
             lastname: $lastname,
+            role: $role,
         }) {
           ${USER_FIELDS}
         }
@@ -312,12 +320,14 @@ export const CREATE_API_USER = gql`
       $type: String,
       $apikey: String,
       $email: String,
+      $role: String
      ) {
       usersCreateOne(input: {
             firstname: $firstname,
             type: $type,
             apikey: $apikey,
-            email: $email
+            email: $email,
+            role: $role
         }) {
             id
         }
@@ -327,20 +337,27 @@ export const UPDATE_USER_ROLE_BY_ID = gql`
   mutation UpdateUserRole(
     $id: ID!
     $name: String
-    $is_admin: Boolean
-    $agents: JSON
+    $agents: String
+    $workflows: String
+    $variables: String
+    $users: String
   ) {
     rolesUpdateOneById(
       id: $id
       input: {
         name: $name
-        is_admin: $is_admin
         agents: $agents
+        workflows: $workflows
+        variables: $variables
+        users: $users
       }
     ) {
         id
         createdAt
         agents
+        workflows
+        variables
+        users
     }
   }
 `;
@@ -448,10 +465,14 @@ export const UPDATE_AGENT = gql`
   }
 `;
 export const CREATE_USER_ROLE = gql`
-  mutation CreateUserRole($name: String!) {
-    rolesCreateOne(input: { name: $name }) {
+  mutation CreateUserRole($name: String!, $agents: String, $workflows: String, $variables: String, $users: String) {
+    rolesCreateOne(input: { name: $name, agents: $agents, workflows: $workflows, variables: $variables, users: $users }) {
         id
         createdAt
+        agents
+        workflows
+        variables
+        users
         name
     }
   }

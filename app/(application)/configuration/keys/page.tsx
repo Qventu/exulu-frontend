@@ -18,8 +18,9 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/components/ui/use-toast"
+import { RoleSelector } from "@/components/ui/role-selector"
 import {useMutation, useQuery} from "@apollo/client";
-import {CREATE_API_USER, GET_USERS, REMOVE_USER_BY_ID} from "@/queries/queries";
+import {CREATE_API_USER, GET_USERS, REMOVE_USER_BY_ID, UPDATE_USER_BY_ID} from "@/queries/queries";
 import bcrypt from "bcryptjs";
 const SALT_ROUNDS = 12;
 // we dont decrypt, as we only show the key once to the user
@@ -36,6 +37,7 @@ interface ApiKey {
 export default function ApiKeyManagement() {
 
     const [newKeyName, setNewKeyName] = useState("")
+    const [selectedRole, setSelectedRole] = useState<string>("")
     const [isGenerating, setIsGenerating] = useState(false)
     const [newlyGeneratedKey, setNewlyGeneratedKey] = useState<ApiKey | null>(null)
     const [deleteKeyId, setDeleteKeyId] = useState<string | null>(null)
@@ -76,7 +78,8 @@ export default function ApiKeyManagement() {
                 firstname: `${newKeyName}`,
                 type: "api",
                 apikey: `${encryptedKey}${postFix}`,
-                email: `${encryptedKey}@exulu-api-user.com`
+                email: `${encryptedKey}@exulu-api-user.com`,
+                role: selectedRole || undefined
             }
         })
 
@@ -88,21 +91,28 @@ export default function ApiKeyManagement() {
             createdAt: new Date()
         })
         setNewKeyName("")
+        setSelectedRole("")
         setIsGenerating(false)
-
     }
 
     const [removeApiUser, removeApiUserResult] = useMutation(REMOVE_USER_BY_ID, {
         refetchQueries: [
-            GET_USERS, // DocumentNode object parsed with gql
-            "GetUsers", // Query name
+            GET_USERS,
+            "GetUsers",
         ],
     });
 
     const [ createApiUser, createApiUserResult] = useMutation(CREATE_API_USER, {
         refetchQueries: [
-            GET_USERS, // DocumentNode object parsed with gql
-            "GetUsers", // Query name
+            GET_USERS, 
+            "GetUsers",
+        ],
+    });
+
+    const [ updateUser, updateUserResult] = useMutation(UPDATE_USER_BY_ID, {
+        refetchQueries: [
+            GET_USERS, 
+            "GetUsers",
         ],
     });
 
@@ -129,6 +139,28 @@ export default function ApiKeyManagement() {
         })
     }
 
+    // Update API key role
+    const updateApiKeyRole = async (userId: string, roleId: string) => {
+        try {
+            await updateUser({
+                variables: {
+                    id: userId,
+                    role: roleId || null
+                }
+            })
+            toast({
+                title: "Updated",
+                description: "API key role has been updated",
+            })
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to update API key role",
+                variant: "destructive",
+            })
+        }
+    }
+
     return (
         <div className="container mx-auto py-6 space-y-8 max-w-5xl">
             <div className="flex flex-col gap-2">
@@ -147,17 +179,26 @@ export default function ApiKeyManagement() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex flex-col gap-4 sm:flex-row">
-                        <Input
-                            placeholder="API Key Name (e.g. Production, Development)"
-                            value={newKeyName}
-                            onChange={(e) => setNewKeyName(e.target.value)}
-                            className="flex-1"
-                        />
+                    <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-4 sm:flex-row">
+                            <Input
+                                placeholder="API Key Name (e.g. Production, Development)"
+                                value={newKeyName}
+                                onChange={(e) => setNewKeyName(e.target.value)}
+                                className="flex-1"
+                            />
+                            <div className="sm:w-64">
+                                <RoleSelector
+                                    value={selectedRole}
+                                    onChange={setSelectedRole}
+                                    placeholder="Select role"
+                                />
+                            </div>
+                        </div>
                         <Button
                             onClick={generateApiKey}
                             disabled={isGenerating || !newKeyName.trim()}
-                            className="whitespace-nowrap"
+                            className="whitespace-nowrap self-start"
                         >
                             {isGenerating ? (
                                 <>
@@ -229,18 +270,28 @@ export default function ApiKeyManagement() {
                                     <TableRow>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Key</TableHead>
+                                        <TableHead>Role</TableHead>
                                         <TableHead>Created</TableHead>
                                         <TableHead>Last Used</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {data?.usersPagination?.items?.map((user) => (
+                                    {data?.usersPagination?.items?.map((user: any) => (
                                         <TableRow key={user.id}>
                                             <TableCell className="font-medium">{user.name || user.firstname}</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <code className="bg-muted px-1 py-0.5 rounded text-xs">****************</code>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="w-48">
+                                                    <RoleSelector
+                                                        value={user.role}
+                                                        onChange={(roleId) => updateApiKeyRole(user.id, roleId)}
+                                                        placeholder="No role assigned"
+                                                    />
                                                 </div>
                                             </TableCell>
                                             <TableCell>{format(new Date(user.createdAt), "PP hh:mm")}</TableCell>

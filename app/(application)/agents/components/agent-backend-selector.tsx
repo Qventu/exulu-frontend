@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { providers, workflows } from "@/util/api";
+import { providers } from "@/util/api";
 import { useQuery } from "@tanstack/react-query";
 import { AgentBackend } from "@EXULU_SHARED/models/agent-backend";
 import { useEffect } from "react";
@@ -10,9 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export function AgentBackendSelector({
   params,
   onSelect,
-  type,
-  ...props
-}: any & { onSelect: (id) => void, type: "FLOW" | "CHAT", params?: { id: string } }) {
+  type
+}: any & { onSelect: (id) => void, type: "CHAT", params?: { id: string } }) {
 
   const [selected, setSelected] = React.useState<AgentBackend | undefined>();
 
@@ -22,13 +21,6 @@ export function AgentBackendSelector({
       let result: any = {};
       let json: any = {};
       console.log("type", type)
-
-      if (type === "FLOW") {
-        result = await workflows.get(null, 20);
-        console.log("result", result)
-        json = await result.json()
-        console.log("json", json)
-      }
 
       if (type === "CHAT") {
         result = await providers.get(20);

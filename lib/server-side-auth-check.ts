@@ -11,8 +11,10 @@ export const serverSideAuthCheck = async (): Promise<boolean> => {
         json_build_object(
           'id', roles.id,
           'name', roles.name,
-          'is_admin', roles.is_admin,
-          'agents', roles.agents
+          'agents', roles.agents,
+          'workflows', roles.workflows,
+          'variables', roles.variables,
+          'users', roles.users
         ) as role
       FROM users 
       LEFT JOIN roles ON users.role = roles.id 

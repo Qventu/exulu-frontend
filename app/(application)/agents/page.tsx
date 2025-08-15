@@ -21,18 +21,12 @@ export default function ChatsPage() {
       CREATE_AGENT,
     {
       onCompleted: (data: {
-        agentsCreateOne: {  id: string, type: "chat" | "flow" };
+        agentsCreateOne: {  id: string, type: "chat" };
       }) => {
         console.log(data);
-        if (data?.agentsCreateOne?.type === "flow") {
-          router.push(`/workflows/edit/${data?.agentsCreateOne?.id}`, {
-            scroll: false,
-          });
-        } else {
-          router.push(`/agents/edit/${data?.agentsCreateOne?.id}`, {
-            scroll: false,
-          });
-        }
+        router.push(`/agents/edit/${data?.agentsCreateOne?.id}`, {
+          scroll: false,
+        });
       },
     },
   );

@@ -55,25 +55,18 @@ export const createColumns = (currentUser: any): ColumnDef<User>[] => [
     },
   },
   {
-    accessorKey: "roles",
+    accessorKey: "role",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Roles" />
+      <DataTableColumnHeader column={column} title="Role" />
     ),
     cell: ({ row }) => {
       return (
         <div className="gap-x-2 flex">
-          {row.original.roles?.length ? (
+          {row.original.role ? (
             <>
-              {row.original.roles.slice(0, 3).map((role, index) => (
-                <Badge key={index} variant={"outline"}>
-                  {role.role}
-                </Badge>
-              ))}
-              {row.original.roles.length > 3 && (
-                <Badge variant={"outline"}>
-                  + {row.original.roles.length - 3} more
-                </Badge>
-              )}
+              <Badge variant={"outline"}>
+                {row.original.role.name}
+              </Badge>
             </>
           ) : (
             <Badge variant={"outline"}>N/a</Badge>

@@ -15,7 +15,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
 import { RBACControl } from './rbac'
 
-interface Variable {
+interface WorkflowVariable {
   name: string
   description?: string
   type: 'string'
@@ -32,23 +32,25 @@ interface WorkflowStep {
   variablesUsed?: string[]
 }
 
+interface WorkflowTemplate {
+  id: string
+  name: string
+  description?: string
+  rights_mode?: 'private' | 'users' | 'roles' | 'public'
+  RBAC?: {
+    users?: Array<{ id: string; rights: 'read' | 'write' }>
+    roles?: Array<{ id: string; rights: 'read' | 'write' }>
+  }
+  variables?: WorkflowVariable[]
+  steps_json?: WorkflowStep[]
+}
+
 interface SaveWorkflowModalProps {
   isOpen: boolean
   onClose: () => void
   messages: Message[]
   sessionTitle?: string
-  existingWorkflow?: {
-    id: string
-    name: string
-    description?: string
-    rights_mode?: 'private' | 'users' | 'roles' | 'public'
-    RBAC?: {
-      users?: Array<{ id: string; rights: 'read' | 'write' }>
-      roles?: Array<{ id: string; rights: 'read' | 'write' }>
-    }
-    variables?: Variable[]
-    steps_json?: WorkflowStep[]
-  }
+  existingWorkflow?: WorkflowTemplate
   isReadOnly?: boolean
 }
 
@@ -65,7 +67,7 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
   // Form state
   const [workflowName, setWorkflowName] = useState(existingWorkflow?.name || '')
   const [workflowDescription, setWorkflowDescription] = useState(existingWorkflow?.description || '')
-  const [variables, setVariables] = useState<Variable[]>(existingWorkflow?.variables || [])
+  const [variables, setVariables] = useState<WorkflowVariable[]>(existingWorkflow?.variables || [])
   const [steps, setSteps] = useState<WorkflowStep[]>(existingWorkflow?.steps_json || [])
   const [isCreating, setIsCreating] = useState(false)
 
@@ -128,7 +130,7 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
       return true // Variable already exists, that's fine
     }
 
-    const newVariable: Variable = {
+    const newVariable: WorkflowVariable = {
       name,
       type: 'string',
       required: true,
@@ -384,56 +386,56 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
                 {steps.map((step, index) => (
                   <div key={step.id}>
                     <div className="border rounded-md p-3 bg-muted/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={cn(
-                        "text-xs font-medium px-1.5 py-0.5 rounded",
-                        step.type === 'user' ? "bg-blue-100 text-blue-700" :
-                          step.type === 'assistant' ? "bg-gray-100 text-gray-700" :
-                            "bg-purple-100 text-purple-700"
-                      )}>
-                        {step.type === 'user' ? 'User' :
-                          step.type === 'assistant' ? 'Assistant' :
-                            `Tool: ${step.toolName}`}
-                      </span>
-                      {step.variablesUsed && step.variablesUsed.length > 0 && (
-                        <div className="flex gap-1">
-                          {step.variablesUsed.map(varName => (
-                            <span key={varName} className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-mono">
-                              {`{${varName}}`}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {step.type === 'user' ? (
-                      <div>
-                        <Textarea
-                          value={step.content || ''}
-                          onChange={(e) => handleStepContentChange(step.id, e.target.value)}
-                          placeholder="Enter your message..."
-                          className="min-h-[60px] resize-none text-sm"
-                          rows={2}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Use {`{variable_name}`} syntax to create variables
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="bg-muted/40 p-2 rounded text-sm text-muted-foreground">
-                        {step.type === 'assistant' ? (
-                          <div>
-                            <div className="text-xs text-bold font-medium mb-1">Example response (will be regenerated):</div>
-                            <div className="text-xs line-clamp-2">{step.contentExample}</div>
-                          </div>
-                        ) : (
-                          <div>
-                            <div className="text-xs font-medium mb-1">Tool: {step.toolName}</div>
-                            <div className="text-xs">Parameters will be generated dynamically</div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={cn(
+                          "text-xs font-medium px-1.5 py-0.5 rounded",
+                          step.type === 'user' ? "bg-blue-100 text-blue-700" :
+                            step.type === 'assistant' ? "bg-gray-100 text-gray-700" :
+                              "bg-purple-100 text-purple-700"
+                        )}>
+                          {step.type === 'user' ? 'User' :
+                            step.type === 'assistant' ? 'Assistant' :
+                              `Tool: ${step.toolName}`}
+                        </span>
+                        {step.variablesUsed && step.variablesUsed.length > 0 && (
+                          <div className="flex gap-1">
+                            {step.variablesUsed.map(varName => (
+                              <span key={varName} className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-mono">
+                                {`{${varName}}`}
+                              </span>
+                            ))}
                           </div>
                         )}
                       </div>
-                    )}
+
+                      {step.type === 'user' ? (
+                        <div>
+                          <Textarea
+                            value={step.content || ''}
+                            onChange={(e) => handleStepContentChange(step.id, e.target.value)}
+                            placeholder="Enter your message..."
+                            className="min-h-[60px] resize-none text-sm"
+                            rows={2}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Use {`{variable_name}`} syntax to create variables
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-muted/40 p-2 rounded text-sm text-muted-foreground">
+                          {step.type === 'assistant' ? (
+                            <div>
+                              <div className="text-xs text-bold font-medium mb-1">Example response (will be regenerated):</div>
+                              <div className="text-xs line-clamp-2">{step.contentExample}</div>
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="text-xs font-medium mb-1">Tool: {step.toolName}</div>
+                              <div className="text-xs">Parameters will be generated dynamically</div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     {index < steps.length - 1 && (
                       <div className="flex justify-center my-2">

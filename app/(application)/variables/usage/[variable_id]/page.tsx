@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 
 interface ResourceInfo {
   id: string;
-  type: 'user' | 'agent' | 'flow';
+  type: 'user' | 'agent' | 'workflow';
   name: string;
   loading: boolean;
   error?: string;
@@ -64,7 +64,7 @@ export default function VariableUsagePage() {
         const [type, id] = resourceId.split('/');
         initialResources[resourceId] = {
           id,
-          type: type as 'user' | 'agent' | 'flow',
+          type: type as 'user' | 'agent' | 'workflow',
           name: '',
           loading: true,
         };
@@ -78,7 +78,7 @@ export default function VariableUsagePage() {
     const [type, id] = resourceId.split('/');
     
     if (type === 'user') {
-      const { data, loading, error } = useQuery(GET_USER_BY_ID, {
+      useQuery(GET_USER_BY_ID, {
         variables: { id },
         skip: !id,
         onCompleted: (data) => {
@@ -105,8 +105,8 @@ export default function VariableUsagePage() {
           }));
         }
       });
-    } else if (type === 'agent' || type === 'flow') {
-      const { data, loading, error } = useQuery(GET_AGENT_BY_ID, {
+    } else if (type === 'agent' || type === 'workflow') {
+      useQuery(GET_AGENT_BY_ID, {
         variables: { id },
         skip: !id,
         onCompleted: (data) => {
@@ -142,7 +142,7 @@ export default function VariableUsagePage() {
         return <User className="h-4 w-4" />;
       case 'agent':
         return <Bot className="h-4 w-4" />;
-      case 'flow':
+      case 'workflow':
         return <Workflow className="h-4 w-4" />;
       default:
         return null;
@@ -155,7 +155,7 @@ export default function VariableUsagePage() {
         return 'default';
       case 'agent':
         return 'secondary';
-      case 'flow':
+      case 'workflow':
         return 'outline';
       default:
         return 'outline';
