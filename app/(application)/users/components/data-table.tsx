@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useLazyQuery } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -25,13 +25,11 @@ import {
 } from "@tanstack/react-table";
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import * as React from "react";
 import {
   GET_USERS,
-  GET_USER_ROLE_BY_ID,
   REMOVE_USER_BY_ID,
-  UPDATE_USER_BY_ID,
 } from "@/queries/queries";
 import { DataTableViewOptions } from "@/app/(application)/users/components/data-table-view-options";
 import { Button } from "@/components/ui/button";
@@ -50,7 +48,6 @@ import { FilterOperator } from "@/components/custom/recent-jobs";
 import { AddUserModal } from "@/app/(application)/users/components/add-user-modal";
 import { UserContext } from "@/app/(application)/authenticated";
 import { Plus } from "lucide-react";
-import { RoleSelector } from "@/components/ui/role-selector";
 export type UserFilters = {
   firstname?: FilterOperator,
   lastname?: FilterOperator,
@@ -93,7 +90,6 @@ export function DataTable<TData, TValue>({
   );
   const [isAddUserModalOpen, setIsAddUserModalOpen] = React.useState(false);
   const [filters, setFilters] = useState<UserFilters[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
 
   /* todo: get rid of own page state and use the table.currentPage() instead */
   let [page, setPage] = useState(1);
@@ -104,7 +100,7 @@ export function DataTable<TData, TValue>({
     nextFetchPolicy: "network-only",
     variables: {
       page: page,
-      limit: 20,
+      limit: 10,
       filters: [
         ...filters,
         {
@@ -117,8 +113,14 @@ export function DataTable<TData, TValue>({
   });
 
   const defaultData = React.useMemo(() => [], []);
-  const { onPaginationChange } = usePagination();
-  const [getRoleById] = useLazyQuery(GET_USER_ROLE_BY_ID);
+  const { limit, onPaginationChange, skip, pagination } = usePagination();
+
+  const [removeUser, removeUserResult] = useMutation(REMOVE_USER_BY_ID, {
+    refetchQueries: [
+      GET_USERS, // DocumentNode object parsed with gql
+      "GetUsers", // Query name
+    ],
+  });
 
   let items;
   let pageCount;
@@ -133,68 +135,8 @@ export function DataTable<TData, TValue>({
     pageCount = previousData?.usersPagination?.pageInfo?.pageCount;
   }
 
-  // Hydrate users with role names
-  useEffect(() => {
-    const hydrateUsersWithRoles = async () => {
-      if (!items || items.length === 0) {
-        setUsers([]);
-        return;
-      }
-
-      const usersWithRoles = await Promise.all(
-        items.map(async (user: any) => {
-          if (!user.role) {
-            return { ...user, role: { id: null, name: 'No role' } };
-          }
-
-          try {
-            const { data } = await getRoleById({
-              variables: { id: user.role },
-              fetchPolicy: 'cache-first'
-            });
-
-            return {
-              ...user,
-              role: {
-                id: user.role,
-                name: data?.roleById?.name || 'Unknown role'
-              }
-            };
-          } catch (error) {
-            console.error(`Failed to fetch role for user ${user.id}:`, error);
-            return {
-              ...user,
-              role: {
-                id: user.role,
-                name: 'Unknown role'
-              }
-            };
-          }
-        })
-      );
-
-      setUsers(usersWithRoles);
-    };
-
-    hydrateUsersWithRoles();
-  }, [items, getRoleById]);
-
-  const [updateUser, updateUserResult] = useMutation(UPDATE_USER_BY_ID, {
-    refetchQueries: [
-      GET_USERS, // DocumentNode object parsed with gql
-      "GetUsers", // Query name
-    ],
-  });
-
-  const [removeUser, removeUserResult] = useMutation(REMOVE_USER_BY_ID, {
-    refetchQueries: [
-      GET_USERS, // DocumentNode object parsed with gql
-      "GetUsers", // Query name
-    ],
-  });
-
   const table = useReactTable({
-    data: users.length > 0 ? users : (items ?? defaultData),
+    data: items ?? defaultData,
     pageCount: pageCount ?? -1,
     columns,
     state: {
@@ -304,34 +246,6 @@ export function DataTable<TData, TValue>({
                 )}
                 <span className="ml-2">Remove selected</span>
               </Button>
-
-              <RoleSelector
-                onChange={(roleId) => {
-                  // confirm modal
-                  const confirm = window.confirm("Are you sure you want to update the role for the selected users?");
-                  if (!confirm) {
-                    return;
-                  }
-                  const promises: any[] = [];
-                  table.getSelectedRowModel().rows.forEach((row: Row<any>) => {
-                    promises.push(
-                      updateUser({
-                        variables: {
-                          id: row.original.id,
-                          role: roleId,
-                        },
-                      }),
-                    );
-                  });
-                  Promise.all(promises).then(() => {
-                    toast({
-                      title: "Updated roles",
-                      description: "Updated " + promises.length + " roles.",
-                    });
-                  });
-                }}
-                placeholder="Change role for selection"
-              />
             </div>
           ) : null}
 
@@ -494,10 +408,10 @@ export function DataTable<TData, TValue>({
           </div>
         </div>
       </div>
-
-      <AddUserModal
-        isOpen={isAddUserModalOpen}
-        onClose={() => setIsAddUserModalOpen(false)}
+      
+      <AddUserModal 
+        isOpen={isAddUserModalOpen} 
+        onClose={() => setIsAddUserModalOpen(false)} 
       />
     </div>
   );

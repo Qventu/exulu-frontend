@@ -87,7 +87,7 @@ export function DataTable<TData, TValue>({
   let [page, setPage] = useState(1);
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
-  const { loading, error, data, refetch, previousData } = useQuery(GET_JOBS, {
+  const { loading, data, refetch, previousData } = useQuery(GET_JOBS, {
     fetchPolicy: "network-only",
     nextFetchPolicy: "network-only",
     variables: {
@@ -99,7 +99,7 @@ export function DataTable<TData, TValue>({
   });
 
   const defaultData = React.useMemo(() => [], []);
-  const { limit, onPaginationChange, skip, pagination } = usePagination();
+  const { onPaginationChange } = usePagination();
 
   let items;
   let pageCount;

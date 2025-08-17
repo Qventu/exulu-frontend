@@ -24,7 +24,7 @@ export const serverSideAuthCheck = async (): Promise<boolean> => {
     if (!user) {
         return false;
     }
-    console.log("res",res.rows)
+    console.log("[EXULU] Server side auth check",res.rows)
     console.log("session.user.email",session.user.email)
     return user;
 

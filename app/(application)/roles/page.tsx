@@ -21,24 +21,14 @@ import { toast } from "@/components/ui/use-toast"
 import { useMutation, useQuery } from "@apollo/client"
 import { GET_USER_ROLES, CREATE_USER_ROLE, UPDATE_USER_ROLE_BY_ID, REMOVE_USER_ROLE_BY_ID } from "@/queries/queries"
 import { RoleForm } from "@/components/role-form"
-
-interface Role {
-    id: string
-    name: string
-    agents?: string
-    workflows?: string
-    variables?: string
-    users?: string
-    createdAt: string
-    updatedAt: string
-}
+import { UserRole } from "@/types/models/user-role"
 
 export default function RoleManagement() {
     const [searchTerm, setSearchTerm] = useState("")
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-    const [selectedRole, setSelectedRole] = useState<Role | null>(null)
+    const [selectedRole, setSelectedRole] = useState<UserRole | null>(null)
 
     const { loading, error, data, refetch } = useQuery(GET_USER_ROLES, {
         variables: { page: 1, limit: 100 },
@@ -58,12 +48,12 @@ export default function RoleManagement() {
         refetchQueries: [GET_USER_ROLES, "GetUserRoles"],
     })
 
-    const roles: Role[] = data?.rolesPagination?.items || []
+    const roles: UserRole[] = data?.rolesPagination?.items || []
     const filteredRoles = roles.filter(role =>
         role.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-    const formatPermissions = (role: Role) => {
+    const formatPermissions = (role: UserRole) => {
         const permissions: { name: string; level: string }[] = []
         
         if (role.agents) {
@@ -102,6 +92,15 @@ export default function RoleManagement() {
             }
         }
 
+        if (role.api) {
+            const apiPerms = role.api.toLowerCase()
+            if (apiPerms.includes('write') || apiPerms.includes('create') || apiPerms.includes('update') || apiPerms.includes('delete')) {
+                permissions.push({ name: "API", level: "Read/Write" })
+            } else if (apiPerms.includes('read') || apiPerms.includes('view')) {
+                permissions.push({ name: "API", level: "Read" })
+            }
+        }
+
         return permissions
     }
 
@@ -111,6 +110,7 @@ export default function RoleManagement() {
                 variables: {
                     name: roleData.name,
                     agents: roleData.agents,
+                    api: roleData.api,
                     workflows: roleData.workflows,
                     variables: roleData.variables,
                     users: roleData.users,
@@ -139,6 +139,7 @@ export default function RoleManagement() {
                     id: selectedRole.id,
                     name: roleData.name,
                     agents: roleData.agents,
+                    api: roleData.api,
                     workflows: roleData.workflows,
                     variables: roleData.variables,
                     users: roleData.users,
@@ -186,7 +187,7 @@ export default function RoleManagement() {
             <div className="flex flex-col gap-2">
                 <h1 className="text-3xl font-bold tracking-tight">Role Management</h1>
                 <p className="text-muted-foreground">
-                    Create and manage roles with specific permissions for agents, workflows, variables, and users.
+                    Create and manage roles with specific permissions for agents, workflows, variables, the api and users.
                 </p>
             </div>
 
@@ -283,10 +284,10 @@ export default function RoleManagement() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                {format(new Date(role.createdAt), "PP hh:mm")}
+                                                {format(new Date(role.createdAt || ""), "PP hh:mm")}
                                             </TableCell>
                                             <TableCell>
-                                                {format(new Date(role.updatedAt), "PP hh:mm")}
+                                                {format(new Date(role.updatedAt || ""), "PP hh:mm")}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex items-center justify-end gap-2">

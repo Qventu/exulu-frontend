@@ -174,6 +174,7 @@ export const GET_USER_ROLES = gql`
         updatedAt
         agents
         workflows
+        api
         variables
         users
         name
@@ -220,6 +221,7 @@ export const GET_USER_ROLE_BY_ID = gql`
       name
       agents
       workflows
+      api
       variables
       users
       createdAt
@@ -339,6 +341,7 @@ export const UPDATE_USER_ROLE_BY_ID = gql`
     $name: String
     $agents: String
     $workflows: String
+    $api: String
     $variables: String
     $users: String
   ) {
@@ -348,6 +351,7 @@ export const UPDATE_USER_ROLE_BY_ID = gql`
         name: $name
         agents: $agents
         workflows: $workflows
+        api: $api
         variables: $variables
         users: $users
       }
@@ -355,6 +359,7 @@ export const UPDATE_USER_ROLE_BY_ID = gql`
         id
         createdAt
         agents
+        api
         workflows
         variables
         users
@@ -465,11 +470,12 @@ export const UPDATE_AGENT = gql`
   }
 `;
 export const CREATE_USER_ROLE = gql`
-  mutation CreateUserRole($name: String!, $agents: String, $workflows: String, $variables: String, $users: String) {
-    rolesCreateOne(input: { name: $name, agents: $agents, workflows: $workflows, variables: $variables, users: $users }) {
+  mutation CreateUserRole($name: String!, $agents: String, $workflows: String, $variables: String, $users: String, $api: String) {
+    rolesCreateOne(input: { name: $name, agents: $agents, workflows: $workflows, variables: $variables, users: $users, api: $api }) {
         id
         createdAt
         agents
+        api
         workflows
         variables
         users

@@ -11,6 +11,77 @@ import { UserContext } from "@/app/(application)/authenticated";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { UserRole } from "@/types/models/user-role";
+
+const buildNavigation = (user, role: UserRole) => {
+  const navigationItems: { label: string; path: string }[] = [];
+
+  if (user.super_admin) {
+    navigationItems.push({
+      label: "Dashboard",
+      path: "dashboard",
+    });
+  }
+
+  navigationItems.push({
+    label: "Data",
+    path: "data",
+  });
+
+  navigationItems.push({
+    label: "Jobs",
+    path: "jobs",
+  });
+  
+  if (user.super_admin || role.agents === "write") {
+    navigationItems.push({
+      label: "Agents",
+      path: "agents",
+    });
+  }
+
+  navigationItems.push({
+    label: "Chat",
+    path: "chat",
+  });
+
+  if (user.super_admin || role.workflows === "write") {
+    navigationItems.push({
+      label: "Workflows",
+      path: "workflows",
+    });
+  }
+
+  if (user.super_admin || role.users === "write") {
+    navigationItems.push({
+      label: "Users",
+      path: "users",
+    });
+  }
+
+  if (user.super_admin || role.api === "write") {
+    navigationItems.push({
+      label: "Keys",
+      path: "keys",
+    });
+  }
+
+  if (user.super_admin || role.variables === "write") {
+    navigationItems.push({
+      label: "Variables",
+      path: "variables",
+    });
+  }
+
+  if (user.super_admin || role.api === "write") {
+    navigationItems.push({
+      label: "API",
+      path: "explorer",
+    });
+  }
+
+  return navigationItems;
+}
 
 export function MainNav({
   className,
@@ -22,67 +93,7 @@ export function MainNav({
 
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  let navigationItems: { label: string; path: string }[] = [];
-
-  if (user.super_admin) {
-    navigationItems = [
-      {
-        label: "Dashboard",
-        path: "dashboard",
-      },
-      {
-        label: "Data",
-        path: "data", 
-      },
-      {
-        label: "Jobs",
-        path: "jobs",
-      },
-      {
-        label: "Agents",
-        path: "agents",
-      },
-      {
-        label: "Chat",
-        path: "chat",
-      },
-      {
-        label: "Workflows",
-        path: "workflows",
-      },
-      {
-        label: "Users",
-        path: "users",
-      },
-      {
-        label: "Configuration",
-        path: "configuration/keys",
-      },
-      {
-        label: "Variables",
-        path: "variables",
-      },
-      {
-        label: "API",
-        path: "explorer",
-      },
-    ]
-  } else {
-    navigationItems = [
-      {
-        label: "Dashboard",
-        path: "dashboard",
-      },
-      {
-        label: "Chat",
-        path: "chat",
-      },
-      {
-        label: "Workflows",
-        path: "workflows",
-      }
-    ]
-  }
+  let navigationItems = buildNavigation(user, user.role);
 
   useEffect(() => {
     setSheetOpen(false);

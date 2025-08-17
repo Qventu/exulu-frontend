@@ -1,24 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Loader2, Shield, Users, Workflow, Variable, Bot } from "lucide-react"
+import { Loader2, Shield, Users, Workflow, Variable, Bot, CodeSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-
-interface Role {
-    id?: string
-    name: string
-    agents?: string
-    workflows?: string
-    variables?: string
-    users?: string
-}
+import { UserRole } from "@/types/models/user-role"
 
 interface RoleFormProps {
-    initialData?: Role | null
+    initialData?: UserRole | null
     onSubmit: (roleData: any) => Promise<void>
     loading: boolean
     onCancel: () => void
@@ -54,6 +46,12 @@ const PERMISSION_AREAS = [
         label: "Users",
         icon: Users,
         description: "User management and roles"
+    },
+    {
+        key: "api" as const,
+        label: "API",
+        icon: CodeSquare,
+        description: "API access and management"
     }
 ]
 
@@ -61,6 +59,7 @@ export function RoleForm({ initialData, onSubmit, loading, onCancel }: RoleFormP
     const [name, setName] = useState(initialData?.name || "")
     const [permissions, setPermissions] = useState({
         agents: initialData?.agents || "",
+        api: initialData?.api || "",
         workflows: initialData?.workflows || "",
         variables: initialData?.variables || "",
         users: initialData?.users || "",
@@ -71,6 +70,7 @@ export function RoleForm({ initialData, onSubmit, loading, onCancel }: RoleFormP
             setName(initialData.name)
             setPermissions({
                 agents: initialData.agents || "",
+                api: initialData.api || "",
                 workflows: initialData.workflows || "",
                 variables: initialData.variables || "",
                 users: initialData.users || "",
@@ -95,6 +95,7 @@ export function RoleForm({ initialData, onSubmit, loading, onCancel }: RoleFormP
         const roleData = {
             name: name.trim(),
             agents: permissions.agents || null,
+            api: permissions.api || null,
             workflows: permissions.workflows || null,
             variables: permissions.variables || null,
             users: permissions.users || null,

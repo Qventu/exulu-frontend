@@ -9,9 +9,9 @@ import { DataTableColumnHeader } from "./data-table-column-header";
 import { DataTableRowActions } from "./data-table-row-actions";
 import { ClaudeCodeToggle } from "./claude-code-toggle";
 import { SuperAdminToggle } from "./super-admin-toggle";
-import { UserContext } from "@/app/(application)/authenticated";
+import { RoleSelector } from "@/components/ui/role-selector";
 
-export const createColumns = (currentUser: any): ColumnDef<User>[] => [
+export const createColumns = (currentUser: any, roleChange: (role: string) => void): ColumnDef<User>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -64,9 +64,15 @@ export const createColumns = (currentUser: any): ColumnDef<User>[] => [
         <div className="gap-x-2 flex">
           {row.original.role ? (
             <>
-              <Badge variant={"outline"}>
-                {row.original.role.name}
-              </Badge>
+              <RoleSelector value={row.original.role} onChange={(role) => {
+                // warning modal
+                // todo rbac and / or super_admin check
+                const confirm = window.confirm("Are you sure you want to update the role for this user?");
+                if (!confirm) {
+                  return;
+                }
+                roleChange(role);
+              }} />
             </>
           ) : (
             <Badge variant={"outline"}>N/a</Badge>

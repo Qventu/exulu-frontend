@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { AlertTriangle } from "lucide-react";
 import { GET_USERS, UPDATE_USER_BY_ID } from "@/queries/queries";
+import { UserContext } from "@/app/(application)/authenticated";
 
 interface SuperAdminToggleProps {
   user: {
@@ -30,6 +31,7 @@ export function SuperAdminToggle({ user }: SuperAdminToggleProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingChange, setPendingChange] = useState<boolean | null>(null);
   const { toast } = useToast();
+  const { user: currentUser } = useContext(UserContext);
 
   const [updateUser] = useMutation(UPDATE_USER_BY_ID, {
     refetchQueries: [
@@ -39,8 +41,17 @@ export function SuperAdminToggle({ user }: SuperAdminToggleProps) {
   });
 
   const isSuperAdmin = Boolean(user.super_admin);
+  const isCurrentUser = currentUser?.id === user.id;
 
   const handleToggleChange = (checked: boolean) => {
+    if (isCurrentUser && isSuperAdmin && !checked) {
+      toast({
+        title: "Cannot Disable Own Super Admin Rights",
+        description: "You cannot disable your own super admin privileges for security reasons.",
+        variant: "destructive",
+      });
+      return;
+    }
     setPendingChange(checked);
     setIsDialogOpen(true);
   };

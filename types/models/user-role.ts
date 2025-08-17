@@ -5,4 +5,7 @@ export type UserRole = {
   workflows?: "read" | "write" | null;
   variables?: "read" | "write" | null;
   users?: "read" | "write" | null;
+  api?: "read" | "write" | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
