@@ -65,7 +65,6 @@ export function ZodFormBuilder<T extends z.ZodType>({
 }: ZodFormProps<T>) {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { user, setUser } = useContext(UserContext);
   // Create form with react-hook-form and zod resolver
   const form = useForm<z.infer<T>>({
     resolver: zodResolver(zodSchema),

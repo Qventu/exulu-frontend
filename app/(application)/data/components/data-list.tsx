@@ -82,7 +82,7 @@ export function DataList({
     const params = useSearchParams();
     const page = params.get("page") ? parseInt(params.get("page")!) : 1;
     const search = params.get("search");
-    const { user, setUser } = useContext(UserContext);
+    const { user } = useContext(UserContext);
     const { toast } = useToast();
     const [company, setCompany] = useState<any>({ ...user.company });
     const [exporting, setExporting] = React.useState(false);

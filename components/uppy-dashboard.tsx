@@ -28,7 +28,7 @@ export default function UppyDashboard({ id, allowedFileTypes, dependencies, onSe
   preselectedFile?: string
   onSelect: (key: string) => void
 }) {
-  const { user, setUser } = useContext(UserContext); 
+  const { user } = useContext(UserContext); 
   const configContext = useContext(ConfigContext);
   const [selectedFile, setSelectedFile] = useState<string | undefined>(preselectedFile)
   

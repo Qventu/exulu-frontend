@@ -1,4 +1,3 @@
-import { STATISTICS_TYPE } from "@EXULU_SHARED/enums/statistics";
 import { getSession } from "next-auth/react";
 
 const getUris = async () => {
@@ -17,8 +16,6 @@ const getUris = async () => {
             context.backend + "/tools",
         contexts:
             context.backend + "/contexts",
-        statistics:
-            context.backend + "/statistics",
         items:
             context.backend + "/items",
         files:
@@ -34,16 +31,16 @@ export const getToken = async () => {
     return session?.user?.jwt;
 }
 
-export const statistics = {
-    get: {
-        timeseries: async (parameters: {
-            type: STATISTICS_TYPE;
-            from: Date;
-            to: Date;
-        }) => {
-            const uris = await getUris();
-            const url = `${uris.statistics}/timeseries`;
 
+export const agents = {
+    image: {
+        generate: async (parameters: {
+            name: string,
+            description: string,
+            style?: "origami" | "anime" | "japanese_anime" | "vaporwave" | "lego" | "paper_cut" | "felt_puppet" | "3d"
+        }): Promise<any> => {
+            const uris = await getUris();
+            const url = `${uris.base}/generate/agent/image`;
             const token = await getToken()
 
             if (!token) {
@@ -52,48 +49,14 @@ export const statistics = {
 
             return fetch(url, {
                 method: "POST",
-                body: JSON.stringify({
-                    type: parameters.type,
-                    from: parameters.from,
-                    to: parameters.to,
-                }),
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-        },
-        totals: async (parameters: {
-            type: STATISTICS_TYPE;
-            from: Date;
-            to: Date;
-        }) => {
-            const uris = await getUris();
-            const url = `${uris.statistics}/totals`;
-
-            const token = await getToken()
-
-            if (!token) {
-                throw new Error("No valid session token available.")
-            }
-
-            return fetch(url, {
-                method: "POST",
-                body: JSON.stringify({
-                    type: parameters.type,
-                    from: parameters.from,
-                    to: parameters.to,
-                }),
+                body: JSON.stringify(parameters),
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
             });
         }
-    }
-};
-
-export const agents = {
+    },
     get: async (parameters: {
         id?: string
     } | null, limit: number = 20): Promise<any> => {
@@ -118,8 +81,8 @@ export const agents = {
                 Authorization: `Bearer ${token}`,
             },
         });
-    },
-};
+    }
+}
 
 export const providers = {
     get: async (limit: number = 20): Promise<any> => {
@@ -174,7 +137,7 @@ export const contexts = {
     get: async (parameters: {
         id?: string
     } | null, limit: number = 20): Promise<any> => {
-        
+
         const uris = await getUris();
         let url = `${uris.contexts}`
 
@@ -195,31 +158,12 @@ export const contexts = {
                 Authorization: `Bearer ${token}`,
             },
         });
-    },
-    statistics: async () => {
-        
-        const uris = await getUris();
-        const url = `${uris.contexts}/statistics`;
-
-        const token = await getToken()
-
-        if (!token) {
-            throw new Error("No valid session token available.")
-        }
-
-        return fetch(url, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-        });
     }
 };
 
 export const files = {
     list: async (prefix: string) => {
-        
+
         const uris = await getUris();
         let url = `${uris.files}/s3/list?prefix=${prefix}`;
 
@@ -239,7 +183,7 @@ export const files = {
         });
     },
     download: async (key: string) => {
-        
+
         const uris = await getUris();
         let url = `${uris.files}/s3/download?key=${key}`;
 

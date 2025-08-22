@@ -1,103 +1,74 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import EmbeddingChart from "./chart"
-import { useQuery } from "@tanstack/react-query"
-import { Skeleton } from "@/components/ui/skeleton"
-import { contexts } from "@/util/api"
+import { subDays } from "date-fns";
+import * as React from "react";
+import { useState } from "react";
+import { DateRange } from "react-day-picker";
+import { STATISTICS_TYPE, STATISTICS_TYPE_ENUM } from "@/types/enums/statistics";
+import { DateRangeSelector } from "@/components/dashboard/date-range-selector";
+import { TimeSeriesChart } from "@/components/dashboard/time-series-chart";
+import { DonutChart } from "@/components/dashboard/donut-chart";
+
+export const dynamic = "force-dynamic";
 
 export default function ContextsDashboard() {
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 7),
+    to: new Date()
+  });
 
-  const { data, isLoading } = useQuery<{
-    active: number,
-    inactive: number,
-    sources: number,
-    queries: number,
-    jobs: {
-      date: string,
-      count: number
-    }[]
-    totals: {
-      embeddings: number
-    }
-  }>({
-    queryKey: ["context-statistics"],
-    queryFn: async () => {
-      const response = await contexts.statistics();
-      const json = await response.json();
-      console.log({ statistics: json})
-      return json
-    },
-    staleTime: 60000
-  })
+  const [selectedType, setSelectedType] = useState<STATISTICS_TYPE>("EMBEDDER_GENERATE");
+  const [groupBy, setGroupBy] = useState<string>("label");
 
   return (
-    <main className="w-100 p-10">
-      <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-bold">Data manager</h1>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Embeddings Generated</CardDescription>
-              {
-                isLoading ? <Skeleton className="h-10 w-20" /> : <CardTitle className="text-2xl">{ data?.totals.embeddings || 0 }</CardTitle>
-              }
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Active Contexts</CardDescription>
-              {
-                isLoading ? <Skeleton className="h-10 w-20" /> : <CardTitle className="text-2xl">{ data?.active || 0 }</CardTitle>
-              }
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total Sources</CardDescription>
-              <CardTitle className="text-2xl">
-              {
-                isLoading ? <Skeleton className="h-10 w-20" /> : <CardTitle className="text-2xl">{ data?.sources || 0 }</CardTitle>
-              }
-              </CardTitle>
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Embedding Queries</CardDescription>
-              {
-                isLoading ? <Skeleton className="h-10 w-20" /> : <CardTitle className="text-2xl">{ data?.queries || 0 }</CardTitle>
-              }
-            </CardHeader>
-          </Card>
+    <div className="flex-1 flex flex-col p-8 pt-6 h-screen">
+      {/* Header Section */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="space-y-2">
+          <h2 className="text-4xl font-bold tracking-tight bg-clip-text">
+            Contexts Dashboard
+          </h2>
+          <p className="text-lg">
+            Monitor your contexts and their usage.
+          </p>
         </div>
 
-        <Card className="col-span-4">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Embedding Generations</CardTitle>
-                <CardDescription>Number of embeddings generated over time.</CardDescription>
-              </div>
-              {/* <Tabs defaultValue="30days" className="w-auto">
-                <TabsList>
-                  <TabsTrigger value="7days">Last 7 days</TabsTrigger>
-                  <TabsTrigger value="30days">Last 30 days</TabsTrigger>
-                  <TabsTrigger value="3months">Last 3 months</TabsTrigger>
-                </TabsList>
-              </Tabs> */}
-            </div>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            {
-              isLoading ? <Skeleton className="h-full w-full" /> : <EmbeddingChart jobs={data?.jobs ?? []} />
-            }
-          </CardContent>
-        </Card>
+        {/* Date Range Selector - moved to header */}
+        <div className="flex items-center space-x-2">
+          <DateRangeSelector
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+            maxDays={30}
+          />
+        </div>
       </div>
-    </main>
-  )
+
+      {/* Charts Grid - Improved layout and spacing */}
+      <div className="flex-1 grid gap-6 md:grid-cols-3 min-h-0">
+        <div className="rounded-lg border md:col-span-2 p-6 flex flex-col">
+          <TimeSeriesChart
+            dateRange={dateRange}
+            selectedType={selectedType}
+            onTypeChange={setSelectedType}
+            dataTypes={[
+              STATISTICS_TYPE_ENUM.CONTEXT_RETRIEVE,
+              STATISTICS_TYPE_ENUM.EMBEDDER_UPSERT,
+              STATISTICS_TYPE_ENUM.EMBEDDER_GENERATE,
+              STATISTICS_TYPE_ENUM.EMBEDDER_DELETE,
+              STATISTICS_TYPE_ENUM.CONTEXT_UPSERT
+            ]}
+          />
+        </div>
+        <div className="rounded-lg border p-6 flex flex-col">
+          <DonutChart
+            groupByOptions={[]}
+            dateRange={dateRange}
+            selectedType={selectedType}
+            groupBy={groupBy}
+            onGroupByChange={setGroupBy}
+          />
+        </div>
+      </div>
+    </div>
+  );
 }

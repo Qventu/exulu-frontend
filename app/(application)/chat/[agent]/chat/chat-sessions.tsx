@@ -41,7 +41,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showSessions, setShowSessions] = useState(true);
-  const { user, setUser } = useContext(UserContext);
+  const { user } = useContext(UserContext);
   const [sessionName, setSessionName] = useState("");
 
   useEffect(() => {
@@ -241,7 +241,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
                   agent: Agent;
                 },
               ) => (
-                <div className="w-full p-2 flex flex-col items-start gap-0 rounded-none border-none text-left text-sm">
+                <div className="w-full px-2 flex flex-col items-start gap-0 rounded-none border-none text-left text-sm">
                   <button
                     key={item.id}
                     className={cn(
@@ -252,7 +252,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
                       router.push(`/chat/${agent}/${type}/${item.id}`);
                     }}
                   >
-                    <div className="flex w-full flex-col gap-1">
+                    <div className="flex w-full flex-col px-2">
                       <div className="flex items-center">
                         <div className="flex items-center gap-2">
                           <div className="text-xs font-medium">

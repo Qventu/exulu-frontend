@@ -24,7 +24,7 @@ const buildNavigation = (user, role: UserRole) => {
   }
 
   navigationItems.push({
-    label: "Data",
+    label: "Contexts",
     path: "data",
   });
 
@@ -89,7 +89,7 @@ export function MainNav({
 }: React.HTMLAttributes<HTMLElement>) {
   const pathname = usePathname();
 
-  const { user, setUser } = useContext(UserContext);
+  const { user } = useContext(UserContext);
 
   const [sheetOpen, setSheetOpen] = useState(false);
 

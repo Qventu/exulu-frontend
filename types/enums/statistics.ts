@@ -1,13 +1,13 @@
-export type STATISTICS_TYPE = "context.retrieve" | "source.update" | "embedder.upsert" | "embedder.delete" | "workflow.run" | "context.upsert" | "tool.call" | "agent.run";
+export type STATISTICS_TYPE = "CONTEXT_RETRIEVE" | "SOURCE_UPDATE" | "EMBEDDER_UPSERT" | "EMBEDDER_GENERATE" | "EMBEDDER_DELETE" | "WORKFLOW_RUN" | "CONTEXT_UPSERT" | "TOOL_CALL" | "AGENT_RUN";
 
 export const STATISTICS_TYPE_ENUM = {
-    CONTEXT_RETRIEVE: "context.retrieve",
-    SOURCE_UPDATE: "source.update",
-    EMBEDDER_UPSERT: "embedder.upsert",
-    EMBEDDER_GENERATE: "embedder.generate",
-    EMBEDDER_DELETE: "embedder.delete",
-    WORKFLOW_RUN: "workflow.run",
-    CONTEXT_UPSERT: "context.upsert",
-    TOOL_CALL: "tool.call",
-    AGENT_RUN: "agent.run"
+    CONTEXT_RETRIEVE: "CONTEXT_RETRIEVE",
+    SOURCE_UPDATE: "SOURCE_UPDATE",
+    EMBEDDER_UPSERT: "EMBEDDER_UPSERT",
+    EMBEDDER_GENERATE: "EMBEDDER_GENERATE",
+    EMBEDDER_DELETE: "EMBEDDER_DELETE",
+    WORKFLOW_RUN: "WORKFLOW_RUN",
+    CONTEXT_UPSERT: "CONTEXT_UPSERT",
+    TOOL_CALL: "TOOL_CALL",
+    AGENT_RUN: "AGENT_RUN"
 };

@@ -8,6 +8,7 @@ export interface Agent {
     type: "chat" | "flow" | "custom";
     extensions: string[];
     name: string;
+    image?: string;
     providerApiKey?: string;
     firewall?: {
         enabled: boolean;
@@ -31,7 +32,7 @@ export interface Agent {
         }[];
     }[];
     capabilities?: {
-        tools: boolean;
+        text: boolean;
         images: string[];
         files: string[];
         audio: string[];

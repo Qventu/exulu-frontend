@@ -10,6 +10,33 @@ apikey
 anthropic_token
 type
 role
+favourite_agents
+`;
+
+const AGENT_FIELDS = `
+id
+name
+providerApiKey
+description
+type
+backend
+active
+image
+tools
+rights_mode
+RBAC {
+      type
+      users {
+      id
+      rights
+      }
+      roles {
+      id
+      rights
+      }
+}
+createdAt
+updatedAt
 `;
 
 export const GET_AGENTS = gql`
@@ -41,6 +68,7 @@ export const GET_AGENTS = gql`
         extensions
         backend
         active
+        image
         rights_mode
         RBAC {
           type
@@ -97,7 +125,7 @@ export const GET_AGENT_MESSAGES = gql`
     $page: Int!
     $limit: Int!
     $filters: [FilterAgent_message]
-    $sort: SortBy = { field: "createdAt", direction: DESC }
+    $sort: SortBy = { field: "createdAt", direction: ASC }
   ) {
     agent_messagesPagination(
       page: $page
@@ -244,28 +272,14 @@ export const GET_JOB_BY_ID = gql`
 export const GET_AGENT_BY_ID = gql`
   query GetAgentById($id: ID!) {
     agentById(id: $id) {
-      id
-      name
-      providerApiKey
-      description
-      type
-      backend
-      active
-      tools
-      rights_mode
-      RBAC {
-        type
-        users {
-          id
-          rights
-        }
-        roles {
-          id
-          rights
-        }
-      }
-      createdAt
-      updatedAt
+      ${AGENT_FIELDS}
+    }
+  }
+`;
+export const GET_AGENTS_BY_IDS = gql`
+  query GetAgentsByIds($ids: [ID!]!) {
+    agentByIds(ids: $ids) {
+      ${AGENT_FIELDS}
     }
   }
 `;
@@ -302,6 +316,7 @@ export const UPDATE_USER_BY_ID = gql`
       $super_admin: Boolean,
       $lastname: String,
       $role: String,
+      $favourite_agents: JSON,
       $id: ID!
      ) {
         usersUpdateOneById(id: $id, input: {
@@ -311,6 +326,7 @@ export const UPDATE_USER_BY_ID = gql`
             super_admin: $super_admin,
             lastname: $lastname,
             role: $role,
+            favourite_agents: $favourite_agents
         }) {
           ${USER_FIELDS}
         }
@@ -394,6 +410,7 @@ export const CREATE_AGENT = gql`
     $type: String!
     $rights_mode: String!
     $backend: String!
+    $image: String
     $RBAC: RBACInput
   ) {
     agentsCreateOne(
@@ -403,6 +420,7 @@ export const CREATE_AGENT = gql`
         type: $type
         rights_mode: $rights_mode
         backend: $backend
+        image: $image
         RBAC: $RBAC
       }
     ) {
@@ -833,6 +851,100 @@ export const GET_JOB_STATISTICS_ENHANCED = gql`
       completedCount
       failedCount
       averageDuration
+    }
+  }
+`;
+
+// Analytics Dashboard Queries
+
+// Summary Cards Queries (24h vs 7-day average)
+export const GET_AGENT_SESSIONS_STATISTICS = gql`
+  query AgentSessionsStatistics($from: Date!, $to: Date!) {
+    agent_sessionsStatistics(filters: {
+      createdAt: { and: [{ gte: $from }, { lte: $to }] }
+    }) {
+      group
+      count
+    }
+  }
+`;
+
+export const GET_WORKFLOW_RUNS_STATISTICS = gql`
+  query WorkflowRunsStatistics($from: Date!, $to: Date!) {
+    jobsStatistics(filters: {
+      type: { eq: "workflow" }
+      createdAt: { and: [{ gte: $from }, { lte: $to }] }
+    }) {
+      group
+      count
+    }
+  }
+`;
+
+export const GET_EMBEDDING_JOBS_STATISTICS = gql`
+  query EmbeddingJobsStatistics($from: Date!, $to: Date!) {
+    jobsStatistics(filters: {
+      type: { eq: "embedder" }
+      createdAt: { and: [{ gte: $from }, { lte: $to }] }
+    }) {
+      group
+      count
+    }
+  }
+`;
+
+export const GET_FUNCTION_CALLS_STATISTICS = gql`
+  query FunctionCallsStatistics($from: Date!, $to: Date!) {
+    trackingStatistics(filters: {
+      type: { eq: TOOL_CALL }
+      createdAt: { and: [{ gte: $from }, { lte: $to }] }
+    }) {
+      group
+      count
+    }
+  }
+`;
+
+export const GET_AGENT_RUN_STATISTICS = gql`  
+  query AgentCallsStatistics($from: Date!, $to: Date!) {
+    trackingStatistics(filters: {
+      type: { eq: AGENT_RUN }
+      createdAt: { and: [{ gte: $from }, { lte: $to }] }
+    }) {
+      group
+      count
+    }
+  }
+`;
+
+// Time Series Chart Query
+export const GET_TIME_SERIES_STATISTICS = gql`
+  query TimeSeriesStatistics($type: typeEnum!, $from: Date!, $to: Date!) {
+    trackingStatistics(
+      groupBy: "createdAt"
+      filters: {
+        type: { eq: $type }
+        createdAt: { and: [{ gte: $from }, { lte: $to }] }
+      }
+    ) {
+      group
+      count
+    }
+  }
+`;
+
+// Donut Chart Query  
+export const GET_DONUT_STATISTICS = gql`
+  query DonutStatistics($type: typeEnum!, $groupBy: String!, $from: Date!, $to: Date!) {
+    trackingStatistics(
+      groupBy: $groupBy
+      filters: {
+        type: { eq: $type }
+        createdAt: { and: [{ gte: $from }, { lte: $to }] }
+      }
+    ) {
+      group
+      count
     }
   }
 `;

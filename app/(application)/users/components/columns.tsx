@@ -62,9 +62,7 @@ export const createColumns = (currentUser: any, roleChange: (role: string) => vo
     cell: ({ row }) => {
       return (
         <div className="gap-x-2 flex">
-          {row.original.role ? (
-            <>
-              <RoleSelector value={row.original.role} onChange={(role) => {
+          <RoleSelector value={row.original.role} onChange={(role) => {
                 // warning modal
                 // todo rbac and / or super_admin check
                 const confirm = window.confirm("Are you sure you want to update the role for this user?");
@@ -73,10 +71,6 @@ export const createColumns = (currentUser: any, roleChange: (role: string) => vo
                 }
                 roleChange(role);
               }} />
-            </>
-          ) : (
-            <Badge variant={"outline"}>N/a</Badge>
-          )}
         </div>
       );
     },

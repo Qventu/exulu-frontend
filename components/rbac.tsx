@@ -76,6 +76,13 @@ export function RBACControl({
     variables: {
       page: 1,
       limit: 30,
+      filters: [
+        {
+          type: {
+            ne: "api"
+          }
+        }
+      ]
     },
   });
 
@@ -83,7 +90,11 @@ export function RBACControl({
   // User search function
   const searchUsers = useCallback((value: string) => {
     setUserSearchValue(value)
-    const copy = [...userFilters]
+    const copy = [...userFilters, {
+      type: {
+        ne: "api"
+      }
+    }]
     const exists = copy.find((filter) => filter.email)
     if (exists?.email) {
       exists.email.contains = value

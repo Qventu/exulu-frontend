@@ -5,4 +5,5 @@ export type User = {
   type?: "api" | "user"
   super_admin?: boolean;
   role?: string;
+  favourite_agents?: string[];
 };

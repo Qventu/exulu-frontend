@@ -55,14 +55,28 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Wrench, Image, FileText, Volume2, Video, Info, AlertCircle, Settings, Text } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RBACControl } from "@/components/rbac";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+} from "@/components/ui/collapsible";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 // Component for handling individual tool configuration items
 const ToolConfigItem = ({
@@ -176,11 +190,12 @@ export default function AgentForm({
 
   const router = useRouter();
   const [errors, setErrors] = useState<string>();
-  const { user, setUser } = useContext(UserContext);
+  const { user } = useContext(UserContext);
   const [enabledTools, setEnabledTools] = useState<{ toolId: string, config: { name: string, variable: string }[] }[]>(
     // Convert legacy string[] format to new object format
     agent.enabledTools ? agent.enabledTools : []
   )
+  const [sheetOpen, setSheetOpen] = useState<boolean | string>(false);
   const [providerApiKey, setProviderApiKey] = useState<string>(agent.providerApiKey || '')
   const [firewallEnabled, setFirewallEnabled] = useState<boolean>(agent.firewall?.enabled || false)
   const [rbac, setRbac] = useState({
@@ -331,7 +346,18 @@ export default function AgentForm({
                               <Card>
                                 <CardHeader>
                                   <div className="flex items-center justify-between">
-                                    <CardTitle>Agent</CardTitle>
+                                    <div className="flex items-center gap-3">
+                                      {agent.image && (
+                                        <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                                          <img
+                                            src={agent.image}
+                                            alt={`${agent.name} profile`}
+                                            className="w-full h-full object-cover"
+                                          />
+                                        </div>
+                                      )}
+                                      <CardTitle>Agent</CardTitle>
+                                    </div>
                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                       <span>ID: {agent.id}</span>
                                       <button
@@ -443,9 +469,109 @@ export default function AgentForm({
                                       </PopoverContent>
                                     </Popover>
                                   </div>
+                                  {agent.type !== "custom" && (
+                                    <div>
+                                      <div className="text-sm font-medium mb-2">Modalities</div>
+                                      <p className="text-sm text-muted-foreground mb-2">
+                                        This agent uses <b>{agent.model}</b> from <b>{agent.provider}</b> and can use the following capabilities:
+                                      </p>
+                                      <TooltipProvider>
+                                        <div className="flex items-center gap-3 mt-2">
+                                          <div className={`p-2 rounded-md ${agent.capabilities?.text ? 'bg-green-500 text-primary-foreground' : 'bg-red-800 text-white'}`}>
+                                            <Text className="h-4 w-4" />
+                                          </div>
+
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <div className={`p-2 rounded-md ${agent.capabilities?.images?.length ? 'bg-primary text-primary-foreground' : 'bg-red-800 text-white'}`}>
+                                                <Image className="h-4 w-4" />
+                                              </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>Images: {agent.capabilities?.images?.length ? agent.capabilities.images.join(", ") : "None"}</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <div className={`p-2 rounded-md ${agent.capabilities?.files?.length ? 'bg-primary text-primary-foreground' : 'bg-red-800 text-white'}`}>
+                                                <FileText className="h-4 w-4" />
+                                              </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>Files: {agent.capabilities?.files?.length ? agent.capabilities.files.join(", ") : "None"}</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <div className={`p-2 rounded-md ${agent.capabilities?.audio?.length ? 'bg-primary text-primary-foreground' : 'bg-red-800 text-white'}`}>
+                                                <Volume2 className="h-4 w-4" />
+                                              </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>Audio: {agent.capabilities?.audio?.length ? agent.capabilities.audio.join(", ") : "None"}</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <div className={`p-2 rounded-md ${agent.capabilities?.video?.length ? 'bg-primary text-primary-foreground' : 'bg-red-800 text-white'}`}>
+                                                <Video className="h-4 w-4" />
+                                              </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>Video: {agent.capabilities?.video?.length ? agent.capabilities.video.join(", ") : "None"}</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </div>
+                                      </TooltipProvider>
+                                    </div>
+                                  )}
+
+                                  {
+                                    agent.type !== "custom" && (
+                                      <>
+                                        <div className="text-sm font-medium mb-0">    You can test this agent using the Exulu
+                                          UI without activating the agent if you
+                                          are a super admin:</div>
+                                        <Button
+                                          className="mt-0"
+                                          onClick={async () => {
+                                            console.log("agent", agent)
+                                            if (agent.type === "flow") {
+                                              router.push(
+                                                `/chat/${agent.id}/${agent.type}`,
+                                              );
+                                              return;
+                                            } else {
+                                              // todo fix create session!
+                                              const result = await createAgentSession({
+                                                variables: {
+                                                  title: "New session",
+                                                  user: user.id,
+                                                  agent: agent.id,
+                                                }
+                                              })
+                                              console.log("result", result)
+                                              const sessionId = result?.data?.agent_sessionsCreateOne?.id
+                                              router.push(
+                                                `/chat/${agent.id}/${agent.type}/${sessionId}`,
+                                              );
+                                            }
+                                          }}
+                                          type={"button"}
+                                          variant={"default"}>
+                                          Go to chat
+                                        </Button>
+                                      </>
+                                    )
+                                  }
+
                                 </CardContent>
                               </Card>
                             </div>
+
                             <FormField
                               control={agentForm.control}
                               name="active"
@@ -470,12 +596,18 @@ export default function AgentForm({
                               )}
                             />
 
-                            <Card>
-
+                            <Card className="bg-transparent">
                               <Collapsible>
-                                <CardHeader className="px-6 pt-6 !pb-0">
+                                <CardHeader className="p-4">
                                   <div className="flex items-center justify-between">
-                                    <CardTitle>Access Control</CardTitle>
+                                    <div className="flex flex-col">
+                                      <p className="text-base">
+                                        Access Control
+                                      </p>
+                                      <p className="text-sm text-muted-foreground mb-0">
+                                        Control access to this agent.
+                                      </p>
+                                    </div>
                                     <CollapsibleTrigger asChild>
                                       <Button variant="ghost" size="icon" className="size-8">
                                         <ChevronsUpDown className="size-4" />
@@ -484,8 +616,9 @@ export default function AgentForm({
                                     </CollapsibleTrigger>
                                   </div>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
-                                  <CollapsibleContent className="mt-5">
+
+                                <CollapsibleContent className="mt-5">
+                                  <CardContent className="space-y-4">
                                     <RBACControl
                                       initialRightsMode={agent.rights_mode}
                                       initialUsers={agent.RBAC?.users}
@@ -498,9 +631,10 @@ export default function AgentForm({
                                         })
                                       }}
                                     />
-                                  </CollapsibleContent>
+                                  </CardContent>
+                                </CollapsibleContent>
 
-                                </CardContent>
+
                               </Collapsible>
                             </Card>
 
@@ -627,127 +761,12 @@ export default function AgentForm({
                               </Card>
                             )}
 
-                            {
-                              agent.type !== "custom" && (
 
-                                <Card>
-                                  <CardContent className="grid gap-4 pt-6">
-                                    <p>
-                                      You can test this agent using the Exulu
-                                      UI without activating the agent if you
-                                      are an admin.
-                                    </p>
-                                    <Button
-                                      onClick={async () => {
-                                        console.log("agent", agent)
-                                        if (agent.type === "flow") {
-                                          router.push(
-                                            `/chat/${agent.id}/${agent.type}`,
-                                          );
-                                          return;
-                                        } else {
-                                          // todo fix create session!
-                                          const result = await createAgentSession({
-                                            variables: {
-                                              title: "New session",
-                                              user: user.id,
-                                              agent: agent.id,
-                                            }
-                                          })
-                                          console.log("result", result)
-                                          const sessionId = result?.data?.agent_sessionsCreateOne?.id
-                                          router.push(
-                                            `/chat/${agent.id}/${agent.type}/${sessionId}`,
-                                          );
-                                        }
-                                      }}
-                                      type={"button"}
-                                      variant={"default"}>
-                                      Go to chat
-                                    </Button>
-                                  </CardContent>
-                                </Card>
-                              )
-                            }
                           </div>
                         </div>
                         <div className="col">
-                          {
-                            agent.type !== "custom" && (
-                              <Card>
-                                <CardHeader>
-                                  <CardTitle>Capabilities</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="flex flex-col space-y-4">
-                                    <div className="space-y-4">
-                                      <p className="text-sm text-muted-foreground">
-                                        This agent uses <b>{agent.model}</b> from <b>{agent.provider}</b> and can use the following capabilities:
-                                      </p>
-                                      <div className="grid gap-3">
-                                        <div className="flex items-center justify-between rounded-lg border p-3">
-                                          <span className="font-medium">Tools</span>
-                                          <Badge variant={agent.capabilities?.tools ? "default" : "secondary"}>
-                                            {agent.capabilities?.tools ? "Enabled" : "Disabled"}
-                                          </Badge>
-                                        </div>
-                                        <div className="flex items-center justify-between rounded-lg border p-3">
-                                          <span className="font-medium">Images</span>
-                                          <div className="flex gap-1">
-                                            {agent.capabilities?.images?.length ? (
-                                              agent.capabilities.images.map((format, i) => (
-                                                <Badge key={i} variant="outline">{format}</Badge>
-                                              ))
-                                            ) : (
-                                              <Badge variant="secondary">None</Badge>
-                                            )}
-                                          </div>
-                                        </div>
-                                        <div className="flex items-center justify-between rounded-lg border p-3">
-                                          <span className="font-medium">Files</span>
-                                          <div className="flex gap-1">
-                                            {agent.capabilities?.files?.length ? (
-                                              agent.capabilities.files.map((format, i) => (
-                                                <Badge key={i} variant="outline">{format}</Badge>
-                                              ))
-                                            ) : (
-                                              <Badge variant="secondary">None</Badge>
-                                            )}
-                                          </div>
-                                        </div>
-                                        <div className="flex items-center justify-between rounded-lg border p-3">
-                                          <span className="font-medium">Audio</span>
-                                          <div className="flex gap-1">
-                                            {agent.capabilities?.audio?.length ? (
-                                              agent.capabilities.audio.map((format, i) => (
-                                                <Badge key={i} variant="outline">{format}</Badge>
-                                              ))
-                                            ) : (
-                                              <Badge variant="secondary">None</Badge>
-                                            )}
-                                          </div>
-                                        </div>
-                                        <div className="flex items-center justify-between rounded-lg border p-3">
-                                          <span className="font-medium">Video</span>
-                                          <div className="flex gap-1">
-                                            {agent.capabilities?.video?.length ? (
-                                              agent.capabilities.video.map((format, i) => (
-                                                <Badge key={i} variant="outline">{format}</Badge>
-                                              ))
-                                            ) : (
-                                              <Badge variant="secondary">None</Badge>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            )
-                          }
 
-                          <Card className="mt-4">
+                          <Card>
                             <CardHeader>
                               <CardTitle>Tools</CardTitle>
                             </CardHeader>
@@ -755,19 +774,115 @@ export default function AgentForm({
                               <div className="flex flex-col space-y-4">
                                 <div className="space-y-4">
                                   <div>
-                                    <h3 className="text-lg font-medium">Enabled Tools</h3>
-                                    <p className="text-sm text-muted-foreground">Tools that are currently enabled for this agent.</p>
+                                    <p className="text-sm text-muted-foreground">Tools available for this agent:</p>
                                     {agent.availableTools?.map((tool: Tool) => {
                                       const isEnabled = enabledTools.some(et => et.toolId === tool.id);
                                       const toolConfig = enabledTools.find(et => et.toolId === tool.id);
+                                      // Calculate config status
+                                      const requiredConfigCount = tool.config?.length || 0;
+                                      const filledConfigCount = toolConfig?.config?.filter(c => c.variable && c.variable.trim() !== '').length || 0;
+                                      const hasEmptyConfigs = isEnabled && requiredConfigCount > 0 && filledConfigCount < requiredConfigCount;
 
                                       return (
                                         <div key={tool?.id} className="rounded-lg border p-4 mt-2">
                                           <div className="flex items-center justify-between">
-                                            <div>
-                                              <div className="font-medium">{tool?.name}</div>
-                                              <div className="text-sm text-muted-foreground">{tool?.description}</div>
-                                              <Badge variant={"outline"} className="mt-2">{tool?.type}</Badge>
+                                            <div className="flex items-center flex-1">
+                                              <div className="flex-1">
+                                                <div className="flex items-center gap-2">
+                                                  <div className="font-medium">{tool?.name}</div>
+                                                  {requiredConfigCount > 0 && (
+                                                    <div className="flex items-center gap-1">
+                                                      {
+                                                        isEnabled && <>
+                                                          <Badge variant="secondary" className="text-xs">
+                                                            {filledConfigCount}/{requiredConfigCount}
+                                                          </Badge>
+                                                          {hasEmptyConfigs && (
+                                                            <AlertCircle className="h-4 w-4 text-destructive" />
+                                                          )}
+                                                        </>
+                                                      }
+                                                      <Badge variant={"outline"}>{tool?.type}</Badge>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              </div>
+                                              <Sheet open={sheetOpen === tool.id} onOpenChange={() => {
+                                                if (sheetOpen === tool.id) {
+                                                  setSheetOpen(false);
+                                                } else {
+                                                  setSheetOpen(tool.id);
+                                                }
+                                              }}>
+                                                <SheetTrigger asChild>
+                                                  <Button className="pr-0" variant="ghost" size="sm">
+                                                    <Settings className="h-4 w-4" />
+                                                  </Button>
+                                                </SheetTrigger>
+                                                <SheetTrigger asChild>
+                                                  <Button variant="ghost" size="sm">
+                                                    <Info className="h-4 w-4" />
+                                                  </Button>
+                                                </SheetTrigger>
+                                                <SheetContent className="w-[400px] sm:w-[540px]">
+                                                  <SheetHeader>
+                                                    <SheetTitle>{tool?.name}</SheetTitle>
+                                                    <SheetDescription>
+                                                      {tool?.description}
+                                                    </SheetDescription>
+                                                  </SheetHeader>
+                                                  <div className="py-6">
+                                                    <div className="space-y-4">
+                                                      {/* Tool Configuration in Sheet */}
+                                                      {tool.config && tool.config.length > 0 && (
+                                                        <div className="space-y-4">
+                                                          <div className="text-md font-medium">Configuration variables:</div>
+                                                          {tool.config.map((configItem, configIndex) => {
+                                                            const currentValue = toolConfig?.config.find(c => c.name === configItem.name)?.variable || '';
+                                                            return (
+                                                              <div key={configIndex} className="space-y-2">
+                                                                {isEnabled ? (
+                                                                  <ToolConfigItem
+                                                                    configItem={configItem}
+                                                                    currentValue={currentValue}
+                                                                    variables={variables}
+                                                                    onVariableSelect={(variableName) => {
+                                                                      const updated = enabledTools.map(et => {
+                                                                        if (et.toolId === tool.id) {
+                                                                          return {
+                                                                            ...et,
+                                                                            config: et.config.map(c =>
+                                                                              c.name === configItem.name
+                                                                                ? { ...c, variable: variableName }
+                                                                                : c
+                                                                            )
+                                                                          };
+                                                                        }
+                                                                        return et;
+                                                                      });
+                                                                      setEnabledTools(updated);
+                                                                      updateAgent({
+                                                                        variables: {
+                                                                          id: agent.id,
+                                                                          tools: JSON.stringify(updated)
+                                                                        },
+                                                                      });
+                                                                    }}
+                                                                  />
+                                                                ) : (
+                                                                  <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
+                                                                    Enable this tool to configure
+                                                                  </div>
+                                                                )}
+                                                              </div>
+                                                            );
+                                                          })}
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                </SheetContent>
+                                              </Sheet>
                                             </div>
                                             <Switch
                                               checked={isEnabled}
@@ -783,6 +898,9 @@ export default function AgentForm({
                                                     })) || []
                                                   };
                                                   updated = [...enabledTools, newToolConfig];
+                                                  if (tool.config?.length > 0) {
+                                                    setSheetOpen(tool.id);
+                                                  }
                                                 } else {
                                                   updated = enabledTools.filter(t => t.toolId !== tool.id);
                                                 }
@@ -796,47 +914,6 @@ export default function AgentForm({
                                               }}
                                             />
                                           </div>
-
-                                          {/* Tool Configuration Fields */}
-                                          {isEnabled && tool.config && tool.config.length > 0 && (
-                                            <div className="mt-4 pt-4 border-t space-y-3">
-                                              <div className="text-sm font-medium text-muted-foreground">Configuration</div>
-                                              {tool.config.map((configItem, configIndex) => {
-                                                const currentValue = toolConfig?.config.find(c => c.name === configItem.name)?.variable || '';
-
-                                                return (
-                                                  <ToolConfigItem
-                                                    key={configIndex}
-                                                    configItem={configItem}
-                                                    currentValue={currentValue}
-                                                    variables={variables}
-                                                    onVariableSelect={(variableName) => {
-                                                      const updated = enabledTools.map(et => {
-                                                        if (et.toolId === tool.id) {
-                                                          return {
-                                                            ...et,
-                                                            config: et.config.map(c =>
-                                                              c.name === configItem.name
-                                                                ? { ...c, variable: variableName }
-                                                                : c
-                                                            )
-                                                          };
-                                                        }
-                                                        return et;
-                                                      });
-                                                      setEnabledTools(updated);
-                                                      updateAgent({
-                                                        variables: {
-                                                          id: agent.id,
-                                                          tools: JSON.stringify(updated)
-                                                        },
-                                                      });
-                                                    }}
-                                                  />
-                                                );
-                                              })}
-                                            </div>
-                                          )}
                                         </div>
                                       );
                                     })}

@@ -107,7 +107,8 @@ export function DataTable<TData, TValue>({
           type: {
             ne: "api"
           }
-        }],
+        }
+      ],
     },
     pollInterval: 30000, // polls every 30 seconds for updates on users
   });
@@ -192,6 +193,7 @@ export function DataTable<TData, TValue>({
           />
 
           <Button
+            variant="outline"
             onClick={() => {
               router.push("/roles");
             }}
