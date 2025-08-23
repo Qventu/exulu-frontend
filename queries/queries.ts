@@ -527,12 +527,8 @@ export const REMOVE_JOB_BY_ID = gql`
 `;
 export const REMOVE_USER_ROLE_BY_ID = gql`
   mutation RemoveUserRoleById($id: ID!) {
-    userRoleRemoveById(id: $id) {
-      error {
-        message
-        __typename
-      }
-      recordId
+    rolesRemoveOneById(id: $id) {
+      id
     }
   }
 `;

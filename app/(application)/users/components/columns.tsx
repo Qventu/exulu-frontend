@@ -2,7 +2,6 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { User } from "@EXULU_SHARED/models/user";
 import { DataTableColumnHeader } from "./data-table-column-header";
@@ -11,7 +10,7 @@ import { ClaudeCodeToggle } from "./claude-code-toggle";
 import { SuperAdminToggle } from "./super-admin-toggle";
 import { RoleSelector } from "@/components/ui/role-selector";
 
-export const createColumns = (currentUser: any, roleChange: (role: string) => void): ColumnDef<User>[] => [
+export const createColumns = (currentUser: any, roleChange: (user: User, role: string) => void): ColumnDef<User>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -69,7 +68,7 @@ export const createColumns = (currentUser: any, roleChange: (role: string) => vo
                 if (!confirm) {
                   return;
                 }
-                roleChange(role);
+                roleChange(row.original, role);
               }} />
         </div>
       );

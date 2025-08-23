@@ -815,12 +815,12 @@ export default function AgentForm({
                                                 }
                                               }}>
                                                 <SheetTrigger asChild>
-                                                  <Button className="pr-0" variant="ghost" size="sm">
+                                                  <Button variant="ghost" size="sm">
                                                     <Settings className="h-4 w-4" />
                                                   </Button>
                                                 </SheetTrigger>
                                                 <SheetTrigger asChild>
-                                                  <Button variant="ghost" size="sm">
+                                                  <Button className="mr-2" variant="ghost" size="sm">
                                                     <Info className="h-4 w-4" />
                                                   </Button>
                                                 </SheetTrigger>

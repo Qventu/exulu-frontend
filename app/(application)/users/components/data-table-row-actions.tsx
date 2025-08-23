@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
 import { userSchema } from "../data/schema";
-
+import { UserContext } from "@/app/(application)/authenticated";
+import { useContext } from "react";
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
 }
@@ -25,6 +26,7 @@ interface DataTableRowActionsProps<TData> {
 export function DataTableRowActions<TData>({
   row,
 }: DataTableRowActionsProps<TData>) {
+  const { user: currentUser } = useContext(UserContext);
   const user = userSchema.parse(row.original);
 
   const { toast } = useToast();
@@ -57,6 +59,20 @@ export function DataTableRowActions<TData>({
       <DropdownMenuContent align="end" className="w-[160px]">
         <DropdownMenuItem
           onClick={() => {
+            if (currentUser.id === user.id) {
+              toast({
+                title: "Cannot delete your own user",
+                description: "You cannot delete your own user, that would be a bad idea.",
+              });
+              return;
+            }
+
+            const confirm = window.confirm("Are you sure you want to delete this user?");
+            
+            if (!confirm) {
+              return;
+            }
+
             removeUser({
               variables: {
                 id: user.id,

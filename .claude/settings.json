@@ -1,7 +1,0 @@
-{
-    "env": {
-        "ANTHROPIC_BASE_URL": "https://backend.ai.open.de/gateway/anthropic/305fa947-c3e2-4b34-ace7-48fc401d1554",
-        "DISABLE_AUTOUPDATER": 1
-    },
-    "apiKeyHelper": "echo eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjEiLCJlbWFpbCI6ImFkbWluQGV4dWx1LmNvbSIsImlhdCI6MTc1NDU4NzQ3NCwiZXhwIjoxNzg2MTIzNDc0fQ.irOtNm2XGWwIomplFxuB7HWK51K5u4iwD53WaZECfz4"
-}

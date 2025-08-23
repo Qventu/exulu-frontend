@@ -10,8 +10,10 @@ import { useMutation } from "@apollo/client";
 export const dynamic = "force-dynamic";
 
 export default function UsersPage() {
-  const { user } = useContext(UserContext);
-  const columns = createColumns(user, (role) => {
+  const { user: currentUser } = useContext(UserContext);
+  const columns = createColumns(currentUser, (user, role) => {
+    console.log("user", user);
+    console.log("role", role);
     updateUser({
       variables: {
         id: user.id,
