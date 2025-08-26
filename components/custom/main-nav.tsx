@@ -102,14 +102,6 @@ const buildNavigation = (user: User, role: UserRole) => {
     });
   }
 
-  if (user.super_admin || role.coding_standards === "write" || role.coding_standards === "read") {
-    navigationItems.push({
-      label: "Coding Standards",
-      path: "coding-standards",
-      icon: <FileCheck />,
-    });
-  }
-
   if (user.super_admin || role.api === "write") {
     navigationItems.push({
       label: "API",
