@@ -59,46 +59,34 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { contexts, items } from "@/util/api";
-import { Context } from "@EXULU_SHARED/models/context";
+import { items } from "@/util/api";
 import { Item } from "@EXULU_SHARED/models/item";
+import { GET_CONTEXT_BY_ID } from "@/queries/queries";
+import { Context } from "@/types/models/context";
 
 interface DataDisplayProps {
   actions: boolean;
   itemId: string | null;
-  contextId: string;
+  context: Context;
 }
 
 export function DataDisplay(props: DataDisplayProps) {
 
   const [data, setData] = useState<Item>();
-  const [context, setContext] = useState<Context>();
   const { toast } = useToast();
   const router = useRouter();
 
-  const contextQuery = useQuery({
-    queryKey: ["getContextById", props.contextId],
-    enabled: !!props.itemId && !!props.contextId,
-    queryFn: async () => {
-      if (!props.contextId || !props.itemId) {
-        return null;
-      }
-      const response = await contexts.get({ id: props.contextId })
-      const json = await response.json()
-      setContext(json)
-      return json;
-    }
-  })
+  const context = props.context;
 
   const itemsQuery = useQuery({
     queryKey: ["getItemById", props.itemId],
-    enabled: !!props.itemId && !!props.contextId,
+    enabled: !!props.itemId && !!props.context?.id,
     queryFn: async () => {
-      if (!props.contextId || !props.itemId) {
+      if (!props.context?.id || !props.itemId) {
         return null;
       }
       const response = await items.get({
-        context: props.contextId,
+        context: props.context.id,
         id: props.itemId
       })
       const json = await response.json();
@@ -235,7 +223,7 @@ export function DataDisplay(props: DataDisplayProps) {
     }
   }, [data?.id]);
 
-  if (itemsQuery.isLoading || contextQuery.isLoading) {
+  if (itemsQuery.isLoading) {
     return (
       <div className="p-8 text-center text-muted-foreground">
         <Skeleton className="w-full h-[80px] rounded-md" />
@@ -247,7 +235,7 @@ export function DataDisplay(props: DataDisplayProps) {
       </div>
     )
   }
-  if (itemsQuery.error || contextQuery.error) {
+  if (itemsQuery.error) {
     return (
       <Alert variant="destructive">
         <ExclamationTriangleIcon className="size-4" />
@@ -275,7 +263,7 @@ export function DataDisplay(props: DataDisplayProps) {
                             return;
                           }
                           updateItemMutation.mutate({
-                            context: props.contextId,
+                            context: props.context.id,
                             id: data.id,
                             item: {
                               archived: false,
@@ -308,7 +296,7 @@ export function DataDisplay(props: DataDisplayProps) {
                           if (!data.id) {
                             return;
                           }
-                          deleteItemMutation.mutate({ context: props.contextId, id: data.id });
+                          deleteItemMutation.mutate({ context: props.context.id, id: data.id });
                           router.push("./");
                         }}
                         variant="ghost"
@@ -336,7 +324,7 @@ export function DataDisplay(props: DataDisplayProps) {
                         }
                         updateItemMutation.mutate({
                           id: data.id,
-                          context: props.contextId,
+                          context: props.context.id,
                           item: { archived: true },
                         });
                         setData({
@@ -387,9 +375,9 @@ export function DataDisplay(props: DataDisplayProps) {
                           }
                           updateItemMutation.mutate({
                             id: data.id,
-                            context: props.contextId,
+                            context: props.context.id,
                             item: {
-                              textLength: data?.text?.length,
+                              textlength: data?.text?.length,
                               description: data?.description,
                               name: data?.name,
                               externalId: data?.externalId,

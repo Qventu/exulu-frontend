@@ -74,7 +74,6 @@
     "@tanstack/react-query": "^5.24.1",
     "@tanstack/react-table": "^8.11.7",
     "@types/bcrypt": "^5.0.2",
-    "@uiw/react-md-editor": "^4.0.8",
     "@uppy/aws-s3": "^4.2.3",
     "@uppy/core": "^4.4.4",
     "@uppy/dashboard": "^4.3.3",

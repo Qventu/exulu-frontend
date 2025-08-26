@@ -1,12 +1,9 @@
-import { Tool } from "./tool";
-
 export interface Agent {
     id: string;
-    provider?: string;
-    model?: string;
+    modelName?: string;
+    providerName?: string;
     backend: string;
     type: "chat" | "flow" | "custom";
-    extensions: string[];
     name: string;
     image?: string;
     providerApiKey?: string;
@@ -23,8 +20,7 @@ export interface Agent {
     active?: boolean;
     description?: string;
     slug?: string;
-    availableTools?: Tool[];
-    enabledTools?: {
+    tools?: {
         toolId: string;
         config: {
             name: string;

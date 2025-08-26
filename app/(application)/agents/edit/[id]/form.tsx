@@ -11,6 +11,7 @@ import * as z from "zod";
 import { AgentDelete } from "@/app/(application)/agents/components/agent-delete";
 import {
   REMOVE_AGENT_BY_ID, UPDATE_AGENT, GET_AGENT_BY_ID, CREATE_AGENT_SESSION, GET_VARIABLES,
+  GET_TOOLS,
 } from "@/queries/queries";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Variable } from "@/types/models/variable";
 
 // Component for handling individual tool configuration items
 const ToolConfigItem = ({
@@ -122,6 +124,7 @@ const ToolConfigItem = ({
                     key={variable.id}
                     onSelect={() => {
                       onVariableSelect(variable.name);
+                      console.log("variable", variable)
                       setPopoverOpen(false);
                     }}
                   >
@@ -193,7 +196,7 @@ export default function AgentForm({
   const { user } = useContext(UserContext);
   const [enabledTools, setEnabledTools] = useState<{ toolId: string, config: { name: string, variable: string }[] }[]>(
     // Convert legacy string[] format to new object format
-    agent.enabledTools ? agent.enabledTools : []
+    agent.tools ? agent.tools : []
   )
   const [sheetOpen, setSheetOpen] = useState<boolean | string>(false);
   const [providerApiKey, setProviderApiKey] = useState<string>(agent.providerApiKey || '')
@@ -213,7 +216,19 @@ export default function AgentForm({
 
   const { toast } = useToast();
 
-  const { data: variablesData } = useQuery(GET_VARIABLES, {
+  const { data: toolsData } = useQuery<{
+    tools: {
+      items: Tool[]
+    }
+  }>(GET_TOOLS, {
+    variables: { page: 1, limit: 100 },
+  });
+
+  const { data: variablesData } = useQuery<{
+    variablesPagination: {
+      items: Variable[]
+    }
+  }>(GET_VARIABLES, {
     variables: { page: 1, limit: 100 },
   });
 
@@ -473,7 +488,7 @@ export default function AgentForm({
                                     <div>
                                       <div className="text-sm font-medium mb-2">Modalities</div>
                                       <p className="text-sm text-muted-foreground mb-2">
-                                        This agent uses <b>{agent.model}</b> from <b>{agent.provider}</b> and can use the following capabilities:
+                                        This agent uses <b>{agent.modelName}</b> from <b>{agent.providerName}</b> and can use the following capabilities:
                                       </p>
                                       <TooltipProvider>
                                         <div className="flex items-center gap-3 mt-2">
@@ -775,10 +790,9 @@ export default function AgentForm({
                                 <div className="space-y-4">
                                   <div>
                                     <p className="text-sm text-muted-foreground">Tools available for this agent:</p>
-                                    {agent.availableTools?.map((tool: Tool) => {
+                                    {toolsData?.tools?.items?.map((tool: Tool) => {
                                       const isEnabled = enabledTools.some(et => et.toolId === tool.id);
                                       const toolConfig = enabledTools.find(et => et.toolId === tool.id);
-                                      // Calculate config status
                                       const requiredConfigCount = tool.config?.length || 0;
                                       const filledConfigCount = toolConfig?.config?.filter(c => c.variable && c.variable.trim() !== '').length || 0;
                                       const hasEmptyConfigs = isEnabled && requiredConfigCount > 0 && filledConfigCount < requiredConfigCount;

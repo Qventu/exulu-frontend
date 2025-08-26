@@ -8,7 +8,7 @@ export interface Item {
     external_id?: string;
     source?: string;
     tags?: string[];
-    textLength?: number;
+    textlength?: number;
     chunks?: {
         id: string;
         index: number;

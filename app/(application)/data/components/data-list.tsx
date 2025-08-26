@@ -89,31 +89,6 @@ export function DataList({
 
     const router = useRouter();
 
-    const csv = async () => {
-
-        setExporting(true);
-        try {
-            if (table.getSelectedRowModel().rows?.length) {
-                const ids = table.getSelectedRowModel().rows.map((row) => row.original.id);
-                // todo allow export of specific ids
-            }
-            // todo get query from query params
-            const response: any = await items.export({ context: activeFolder });
-            const csvData = await response.text();
-            const blob = new Blob([csvData], { type: "text/csv" });
-            const link = document.createElement("a");
-            link.href = window.URL.createObjectURL(blob);
-            link.download = new Date().toISOString() + "_items_export.csv";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } catch (e) {
-            console.error(e);
-            // todo: show error message toast
-        }
-        setExporting(false);
-    };
-
     const [rowSelection, setRowSelection] = React.useState({});
 
     const [columnVisibility, setColumnVisibility] =
@@ -308,7 +283,7 @@ export function DataList({
                             item: {
                                 name: "New item",
                                 source: "manual",
-                                textLength: 0,
+                                textlength: 0,
                                 company: company.id,
                             },
                         });
@@ -320,21 +295,6 @@ export function DataList({
             </div>
             {table.getIsSomeRowsSelected() || table.getIsAllRowsSelected() ? (
                 <div className="flex px-4 pb-4">
-
-                    <TooltipProvider>
-                        <Tooltip delayDuration={100}>
-                            <TooltipTrigger asChild>
-                                <Button onClick={csv} variant="secondary" disabled={exporting}>
-                                    {exporting ? <Loading /> : <Download className="size-4" />}
-                                    <span className="ml-2">Export</span>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Max. 10.000</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-
                     {archived ? (
                         <>
                             <Button

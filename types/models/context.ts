@@ -1,5 +1,4 @@
 import type { ExuluFieldTypes } from "../enums/field-types"
-import type { Agent } from "./agent"
 
 export interface Context {
     id: string
@@ -8,11 +7,14 @@ export interface Context {
     embedder: string
     active: boolean
     slug: string
+    configuration: {
+        calculateVectors: string
+        defaultRightsMode: "private" | "users" | "roles" | "public" | "projects"
+    }
     fields: {
       name: string
       type: ExuluFieldTypes
       label: string
     }[]
-    agents: Agent[]
   }
   

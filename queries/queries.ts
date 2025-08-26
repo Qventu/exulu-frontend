@@ -1,5 +1,16 @@
 import { gql } from "@apollo/client";
 
+const CONTEXT_FIELDS = `
+    id
+    name
+    description
+    embedder
+    slug
+    active
+    fields
+    configuration
+`;
+
 const USER_FIELDS = `
 id
 firstname
@@ -19,10 +30,28 @@ name
 providerApiKey
 description
 type
-backend
 active
 image
 tools
+providerName
+modelName
+slug
+rateLimit {
+  name
+  rate_limit {
+    time
+    limit
+  }
+}
+streaming
+capabilities {
+  text
+  images
+  files
+  audio
+  video
+}
+backend
 rights_mode
 RBAC {
       type
@@ -60,29 +89,7 @@ export const GET_AGENTS = gql`
         hasNextPage
       }
       items {
-        id
-        name
-        description
-        type
-        providerApiKey
-        extensions
-        backend
-        active
-        image
-        rights_mode
-        RBAC {
-          type
-          users {
-            id
-            rights
-          }
-          roles {
-            id
-            rights
-          }
-        }
-        createdAt
-        updatedAt
+        ${AGENT_FIELDS}
       }
     }
   }
@@ -116,6 +123,24 @@ export const GET_AGENT_SESSIONS = gql`
           agent
           id
       }
+    }
+  }
+`;
+
+export const GET_CONTEXTS = gql`
+  query GetContexts {
+    contexts {
+      items {
+        ${CONTEXT_FIELDS}
+      }
+    }
+  }
+`;
+
+export const GET_CONTEXT_BY_ID = gql`
+  query GetContextById($id: ID!) {
+    contextById(id: $id) {
+      ${CONTEXT_FIELDS}
     }
   }
 `;
@@ -444,6 +469,21 @@ export const CREATE_AGENT = gql`
     }
   }
 `;
+
+export const GET_TOOLS = gql`
+  query GetTools {
+    tools {
+      items {
+        id
+        name
+        description
+        config
+        type
+      }
+    }
+  }
+`;
+
 export const UPDATE_AGENT = gql`
   mutation UpdateAgent(
     $id: ID!
@@ -511,6 +551,22 @@ export const CREATE_USER = gql`
     }
   }
 `;
+
+export const GET_PROVIDERS = gql`
+  query GetProviders {
+    providers {
+      items {
+        id
+        name
+        description
+        modelName
+        providerName
+        type
+      }
+    }
+  }
+`;
+
 export const REMOVE_USER_BY_ID = gql`
   mutation RemoveUserById($id: ID!) {
     usersRemoveOneById(id: $id) {

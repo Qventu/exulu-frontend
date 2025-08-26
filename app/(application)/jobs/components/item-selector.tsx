@@ -77,17 +77,17 @@ export function ItemSelector({
 const ContextsList = ({ onSelect }: { onSelect: (context: Context) => void }) => {
 
 
-  const contextsQuery = useContexts();
+  const { data, loading, error } = useContexts();
 
   return (
     <CommandList className="h-[var(--cmdk-list-height)] max-h-[400px]">
-      {contextsQuery.isLoading ? (
+      {loading ? (
         <CommandItem key={"loading"}>
           <Loading />
         </CommandItem>
       ) : (
         <CommandGroup>
-          {contextsQuery.data?.map((item: any) => (
+          {data?.contexts?.items.map((item: any) => (
             <CommandItem
               key={item.id}
               onSelect={() => {

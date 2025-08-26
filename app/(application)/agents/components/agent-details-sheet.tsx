@@ -1,12 +1,11 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@apollo/client";
 import { Agent } from "@EXULU_SHARED//models/agent";
 import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -16,8 +15,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Image, FileText, Volume2, Video, Shield, Users, Lock, Wrench, Text } from "lucide-react";
-import { agents } from "@/util/api";
+import { Image, FileText, Volume2, Video, Shield, Users, Wrench, Text } from "lucide-react";
+import { GET_AGENT_BY_ID, GET_TOOLS } from "@/queries/queries";
+import { Tool } from "@/types/models/tool";
 
 interface AgentDetailsSheetProps {
   agentId: string;
@@ -27,17 +27,21 @@ interface AgentDetailsSheetProps {
 
 export function AgentDetailsSheet({ agentId, open, onOpenChange }: AgentDetailsSheetProps) {
 
-  const { data: agent, isLoading: loading } = useQuery({
-    queryKey: ["agent", agentId],
-    queryFn: async () => {
-      const response = await agents.get({ id: agentId });
-      const agent: Agent = await response.json();
-      console.log("[EXULU] agent", agent)
-      return agent;
-    }
-  })
+  const { data: agentData, loading: agentLoading } = useQuery<{
+    agentById: Agent
+  }>(GET_AGENT_BY_ID, {
+    variables: {
+      id: agentId,
+    },
+  });
 
-  if (loading || !agent) {
+  const { data: toolsData, loading: toolsLoading } = useQuery<{
+    tools: {
+      items: Tool[]
+    }
+  }>(GET_TOOLS);
+
+  if (agentLoading || !agentData?.agentById || toolsLoading || !toolsData?.tools) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent className="w-[400px] sm:w-[540px]">
@@ -49,8 +53,8 @@ export function AgentDetailsSheet({ agentId, open, onOpenChange }: AgentDetailsS
     );
   }
 
-  const enabledToolsCount = agent.enabledTools?.length || 0;
-  const availableToolsCount = agent.availableTools?.length || 0;
+  const agent = agentData.agentById;
+  const tools = toolsData.tools;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -76,7 +80,7 @@ export function AgentDetailsSheet({ agentId, open, onOpenChange }: AgentDetailsS
                 <Badge variant={agent.active ? "default" : "secondary"}>
                   {agent.active ? "Active" : "Inactive"}
                 </Badge>
-                <Badge variant="outline">{agent.model}</Badge>
+                <Badge variant="outline">{agent.modelName}</Badge>
               </div>
             </div>
           </div>
@@ -155,13 +159,13 @@ export function AgentDetailsSheet({ agentId, open, onOpenChange }: AgentDetailsS
               <Wrench className="h-4 w-4" />
               <h3 className="text-sm font-medium">Tools</h3>
               <Badge variant="outline" className="text-xs">
-                {enabledToolsCount}/{availableToolsCount}
+                {agent.tools?.length  || 0}/{tools.items?.length || 0}
               </Badge>
             </div>
             <div className="space-y-2">
-              {agent.enabledTools?.length > 0 ? (
-                agent.availableTools?.map((tool) => {
-                  const isEnabled = agent.enabledTools.some(et => et.toolId === tool.id);
+              {agent.tools?.length && agent.tools.length > 0 ? (
+                tools?.items?.map((tool) => {
+                  const isEnabled = agent.tools?.some(et => et.toolId === tool.id);
                   if (!isEnabled) return null;
                   return (
                     <div key={tool.id} className="flex items-center justify-between p-2 rounded border">

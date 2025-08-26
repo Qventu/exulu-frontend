@@ -1,27 +1,23 @@
 "use client";
 
-import { useState } from "react";
 import { Agent } from "@EXULU_SHARED//models/agent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Info } from "lucide-react";
-import { AgentDetailsSheet } from "./agent-details-sheet";
 
 interface AgentCardProps {
   agent: Agent;
   onSelect?: (agent: Agent) => void;
-  showDetails?: boolean;
+  showDetails: (agent: Agent) => void;
 }
 
-export function AgentCard({ agent, onSelect, showDetails = true }: AgentCardProps) {
-  const [detailsOpen, setDetailsOpen] = useState(false);
+export function AgentCard({ agent, onSelect, showDetails }: AgentCardProps) {
 
   const handleCardClick = () => {
     if (onSelect) {
@@ -31,7 +27,7 @@ export function AgentCard({ agent, onSelect, showDetails = true }: AgentCardProp
 
   const handleDetailsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setDetailsOpen(true);
+    showDetails(agent);
   };
 
   // Truncate description to 200 characters
@@ -69,16 +65,14 @@ export function AgentCard({ agent, onSelect, showDetails = true }: AgentCardProp
               <div className="flex items-center justify-between mb-2">
                 <CardTitle className="text-lg line-clamp-1 flex-1 min-w-0">{agent.name}</CardTitle>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  {showDetails && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleDetailsClick}
-                      className="p-1 h-auto"
-                    >
-                      <Info className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDetailsClick}
+                    className="p-1 h-auto"
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
 
@@ -97,14 +91,6 @@ export function AgentCard({ agent, onSelect, showDetails = true }: AgentCardProp
           </div>
         </CardHeader>
       </Card>
-
-      {showDetails && (
-        <AgentDetailsSheet
-          agentId={agent.id}
-          open={detailsOpen}
-          onOpenChange={setDetailsOpen}
-        />
-      )}
     </>
   );
 }

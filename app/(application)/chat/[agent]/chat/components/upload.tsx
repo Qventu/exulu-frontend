@@ -32,8 +32,8 @@ import { UploadActions } from "./upload-actions";
 interface UploadProps {
   label?: string;
   splice?: number;
-  extensions: string[];
   metaData: Metadata;
+  extensions?: string[];
   collection: string;
   onUploadComplete?: (file: any) => void;
   onSelect: (file: any) => void;

@@ -1,64 +1,43 @@
 "use client";
 
 import * as React from "react";
-import { providers } from "@/util/api";
-import { useQuery } from "@tanstack/react-query";
 import { AgentBackend } from "@EXULU_SHARED/models/agent-backend";
 import { useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@apollo/client";
+import { GET_PROVIDERS } from "@/queries/queries";
 
 export function AgentBackendSelector({
-  params,
   onSelect,
   type
-}: any & { onSelect: (id) => void, type: "CHAT", params?: { id: string } }) {
+}: any & { onSelect: (id) => void, type: "CHAT" | "CUSTOM" }) {
 
   const [selected, setSelected] = React.useState<AgentBackend | undefined>();
-
-  const { isLoading, error, data, refetch } = useQuery<AgentBackend[]>({
-    queryKey: ["backend"],
-    queryFn: async () => {
-      let result: any = {};
-      let json: any = {};
-      console.log("type", type)
-
-      if (type === "CHAT") {
-        result = await providers.get(20);
-        console.log("result", result)
-        json = await result.json()
-        console.log("json", json)
-        json = json.filter((agent: any) => agent.type === "agent")
-      }
-
-      if (type === "CUSTOM") {
-        result = await providers.get(20);
-        console.log("result", result)
-        json = await result.json()
-        json = json.filter((agent: any) => agent.type === "custom")
-        console.log("json", json)
-      }
-
-      if (params?.id) {
-        setSelected(
-          result.agents.find(
-            (item: any) => item.id === params.id,
-          ),
-        );
-      }
-
-      return json || [];
-    },
+  const { loading: isLoading, error, data, refetch, previousData } = useQuery(GET_PROVIDERS, {
+    fetchPolicy: "no-cache",
+    nextFetchPolicy: "network-only",
   });
+
+  let providers: AgentBackend[] = []
+
+  console.log("data", data)
+
+  if (type.toLowerCase() === "chat") {
+    providers = data?.providers?.items?.filter((provider: any) => provider.type === "agent")
+  }
+
+  if (type.toLowerCase() === "custom") {
+    providers = data?.providers?.items?.filter((provider: any) => provider.type === "custom")
+  }
 
   useEffect(() => {
     refetch()
-    setSelected(undefined)
   }, [type]);
 
   return (
     <Select onValueChange={(value) => {
-      setSelected(data?.find((agent) => agent.id === value))
-      onSelect(value);
+      setSelected(providers?.find((agent) => agent.id === value))
+      onSelect(value);  
     }} defaultValue={type}>
       <SelectTrigger>
         <SelectValue placeholder={selected?.name || `Select an agent backend`} />
@@ -70,7 +49,7 @@ export function AgentBackendSelector({
               Loading...
             </SelectItem>
           ) :
-            data?.map((agent) => (
+            providers?.map((agent) => (
               <SelectItem key={agent.id} value={agent.id}>
                 {agent.name}
               </SelectItem>

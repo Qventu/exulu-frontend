@@ -65,7 +65,7 @@ const ContextLink = ({ index, folder, edit, indented, children }: { index: numbe
 
 const Contexts = ({ activeFolder, activeArchived, activeSettings }: { activeFolder: string, activeArchived: boolean, activeSettings: boolean }) => {
 
-    const contextsQuery = useContexts();
+    const { data, loading, error } = useContexts();
 
     return (<>
         <div className="group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2 pb-5">
@@ -85,12 +85,12 @@ const Contexts = ({ activeFolder, activeArchived, activeSettings }: { activeFold
             <nav
                 className="grid gap-1 px-2 group-[[data-collapsed=true]]:justify-center group-[[data-collapsed=true]]:px-2">
                 {
-                    contextsQuery?.isLoading ? <ContextLink index={111} folder={{
+                    loading ? <ContextLink index={111} folder={{
                         label: `Loading...`,
                         active: false,
                         icon: Loader,
                         variant: "ghost"
-                    }} /> : contextsQuery?.data?.map((folder, index) => {
+                    }} /> : data?.contexts?.items.map((folder, index) => {
                         return (<ContextLink index={index} folder={{
                             label: `${folder.name}`,
                             icon: Folder,

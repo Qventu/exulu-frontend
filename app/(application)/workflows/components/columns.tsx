@@ -26,7 +26,7 @@ export type Workflow = {
   name: string;
   description?: string;
   owner: number;
-  rights_mode: "private" | "users" | "roles" | "public";
+  rights_mode: "private" | "users" | "roles" | "public" | "projects";
   RBAC: {
     users: Array<{ id: string; rights: "read" | "write" }>;
     roles: Array<{ id: string; rights: "read" | "write" }>;

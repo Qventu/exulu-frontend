@@ -49,7 +49,7 @@ export interface ChatProps {
   stop?: () => void;
 }
 
-export function ChatLayout({ session: id, type, agent, token }: { session: string, type: string | null, agent: Agent, token: string }) {
+export function ChatLayout({ session: id, agent }: { session: string, agent: Agent }) {
 
   const configContext = React.useContext(ConfigContext);
   const isMobile = useIsMobile();
@@ -386,24 +386,6 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
             onSubmit={onSubmit}
             className="w-full items-center flex relative gap-2 px-6"
           >
-            {/*{agent?.extensions?.length ? (
-              <div className="flex">
-                <FileUpload
-                  splice={10}
-                  onSelect={(file) => {
-                    setFile(file);
-                    onFilesSelected([file]);
-                  }}
-                  extensions={agent?.extensions}
-                  collection={"files"}
-                  metaData={{
-                    userEmail: user.email,
-                    userId: user.id,
-                    query: [],
-                  }}
-                />
-              </div>
-            ) : null}*/}
             <TextareaAutosize
               autoComplete="off"
               autoFocus={true}

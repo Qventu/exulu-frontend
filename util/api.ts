@@ -8,14 +8,6 @@ const getUris = async () => {
     return {
         langfuse:
             context.langfuse ? context.langfuse + "/api" : null,
-        agents:
-            context.backend + "/agents",
-        providers:
-            context.backend + "/providers",
-        tools:
-            context.backend + "/tools",
-        contexts:
-            context.backend + "/contexts",
         items:
             context.backend + "/items",
         files:
@@ -56,110 +48,8 @@ export const agents = {
                 },
             });
         }
-    },
-    get: async (parameters: {
-        id?: string
-    } | null, limit: number = 20): Promise<any> => {
-
-        const uris = await getUris();
-        let url = `${uris.agents}`;
-
-        if (parameters?.id) {
-            url += `/${parameters.id}`
-        }
-
-        const token = await getToken()
-
-        if (!token) {
-            throw new Error("No valid session token available.")
-        }
-
-        return fetch(url, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-        });
     }
 }
-
-export const providers = {
-    get: async (limit: number = 20): Promise<any> => {
-
-        const uris = await getUris();
-        let url = `${uris.providers}`;
-        const token = await getToken()
-
-        if (!token) {
-            throw new Error("No valid session token available.")
-        }
-
-        return fetch(url, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-        });
-    },
-};
-
-export const tools = {
-    get: async (parameters: {
-        id?: string
-    } | null) => {
-
-        const uris = await getUris();
-        let url = `${uris.tools}`;
-
-        if (parameters?.id) {
-            url += `/${parameters.id}`
-        }
-
-        const token = await getToken()
-
-        if (!token) {
-            throw new Error("No valid session token available.")
-        }
-
-        return fetch(url, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-        });
-    }
-}
-
-export const contexts = {
-    get: async (parameters: {
-        id?: string
-    } | null, limit: number = 20): Promise<any> => {
-
-        const uris = await getUris();
-        let url = `${uris.contexts}`
-
-        if (parameters?.id) {
-            url = `${url}/${parameters.id}`
-        }
-
-        const token = await getToken()
-
-        if (!token) {
-            throw new Error("No valid session token available.")
-        }
-
-        return fetch(url, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-        });
-    }
-};
 
 export const files = {
     list: async (prefix: string) => {
@@ -256,28 +146,6 @@ export const items = {
 
         const uris = await getUris();
         const url = `${uris.items}/${parameters?.context}/${parameters?.id}`;
-
-        const token = await getToken()
-
-        if (!token) {
-            throw new Error("No valid session token available.")
-        }
-
-        return fetch(url, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-                Session: localStorage.getItem("session") ?? "",
-            },
-        });
-    },
-    export: async (parameters: {
-        context: string
-    } | null): Promise<any> => {
-
-        const uris = await getUris();
-        const url = `${uris.items}/export/${parameters?.context}`;
 
         const token = await getToken()
 

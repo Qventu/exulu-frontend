@@ -1,18 +1,17 @@
 "use client";
 
-import { useMutation } from "@apollo/client";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@apollo/client";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useContext, useState, useMemo } from "react";
 import { UserContext } from "@/app/(application)/authenticated";
 import { AgentCard } from "@/app/(application)/agents/components/agent-card";
 import { CreateNewAgentCard } from "@/app/(application)/agents/components/create-new-agent-card";
-import { CREATE_AGENT } from "@/queries/queries";
+import { CREATE_AGENT, GET_AGENTS } from "@/queries/queries";
 import { Agent } from "@EXULU_SHARED//models/agent";
-import { agents } from "@/util/api";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { AgentDetailsSheet } from "./components/agent-details-sheet";
 
 export const dynamic = "force-dynamic";
 
@@ -21,23 +20,27 @@ export default function AgentsPage() {
   const { user } = useContext(UserContext);
   const company = user.company;
   const [searchQuery, setSearchQuery] = useState("");
+  const [showDetails, setShowDetails] = useState<Agent | null>(null);
 
-  const { isLoading, error, data } = useQuery({
-    queryKey: ["agents"],
-    queryFn: async () => {
-      const response = await agents.get({});
-      const results: Agent[] = await response.json();
-      console.log("[EXULU] agents", results);
-      return results;
+  const { data, loading: isLoading, error } = useQuery<{
+    agentsPagination: {
+      items: Agent[]
     }
+  }>(GET_AGENTS, {
+    variables: {
+      page: 1,
+      limit: 100,
+      filters: [],
+      sort: { field: "updatedAt", direction: "DESC" },
+    },
   });
 
   // Filter agents based on search query
   const filteredAgents = useMemo(() => {
-    if (!data) return [];
-    if (!searchQuery.trim()) return data;
-    
-    return data.filter(agent =>
+    if (!data?.agentsPagination?.items) return [];
+    if (!searchQuery.trim()) return data.agentsPagination.items;
+
+    return data.agentsPagination.items.filter(agent =>
       agent.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [data, searchQuery]);
@@ -79,7 +82,7 @@ export default function AgentsPage() {
         <p className="text-muted-foreground mb-6">
           Manage your AI agents and create new ones.
         </p>
-        
+
         {/* Search Bar */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -103,32 +106,42 @@ export default function AgentsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {/* Create new agent card */}
-          <CreateNewAgentCard 
+          <CreateNewAgentCard
             createAgent={createAgent}
             createAgentResult={createAgentResult}
             company={company}
           />
-          
+
           {/* Agent cards */}
           {filteredAgents.map((agent: Agent) => (
             <AgentCard
               key={agent.id}
               agent={agent}
               onSelect={handleAgentSelect}
+              showDetails={setShowDetails}
             />
           ))}
         </div>
       )}
 
+
+      {showDetails && (
+        <AgentDetailsSheet
+          agentId={showDetails.id}
+          open={!!showDetails}
+          onOpenChange={() => setShowDetails(null)}
+        />
+      )}
+
       {/* No agents at all */}
-      {!isLoading && (!data || data.length === 0) && (
+      {!isLoading && (!data?.agentsPagination || data.agentsPagination.items.length === 0) && (
         <div className="text-center py-12">
           <h2 className="text-xl font-semibold mb-4">No agents found</h2>
           <p className="text-muted-foreground mb-6">
             Get started by creating your first AI agent
           </p>
           <div className="flex justify-center">
-            <CreateNewAgentCard 
+            <CreateNewAgentCard
               createAgent={createAgent}
               createAgentResult={createAgentResult}
               company={company}
@@ -138,14 +151,14 @@ export default function AgentsPage() {
       )}
 
       {/* No agents match search */}
-      {!isLoading && data && data.length > 0 && filteredAgents.length === 0 && (
+      {!isLoading && data?.agentsPagination?.items && data.agentsPagination.items.length > 0 && filteredAgents.length === 0 && (
         <div className="text-center py-12">
           <h2 className="text-xl font-semibold mb-4">No agents match your search</h2>
           <p className="text-muted-foreground mb-6">
             Try adjusting your search query or create a new agent
           </p>
           <div className="flex justify-center">
-            <CreateNewAgentCard 
+            <CreateNewAgentCard
               createAgent={createAgent}
               createAgentResult={createAgentResult}
               company={company}

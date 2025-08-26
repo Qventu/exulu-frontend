@@ -2,57 +2,55 @@
 
 import * as React from "react";
 import AgentForm from "@/app/(application)/agents/edit/[id]/form";
-import { useQuery } from "@tanstack/react-query";
-import { agents } from "@/util/api";
+import { useQuery } from "@apollo/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { Agent } from "@EXULU_SHARED/models/agent";
+import { GET_AGENT_BY_ID } from "@/queries/queries";
+import { Agent } from "@/types/models/agent";
 export const dynamic = "force-dynamic";
 
 export default function Page({ params }: { params: { id: string } }) {
 
-  const agentQuery = useQuery({
-    queryKey: ["agent", params.id],
-    queryFn: async () => {
-      const response = await agents.get({id: params.id});
-      const agent: Agent = await response.json();
-      console.log("[EXULU] agent", agent)
-      return agent;
-    }
-  })
+  const { data, loading, error, refetch } = useQuery<{
+    agentById: Agent
+  }>(GET_AGENT_BY_ID, {
+    variables: {
+      id: params.id,
+    },
+  });
 
-  if (agentQuery.isLoading) {
+  if (loading) {
     return <div>
       <Skeleton className="w-full h-full" />
     </div>
   }
 
-  if (agentQuery.error) {
+  if (error) {
     return <Alert variant="destructive">
-    <ExclamationTriangleIcon className="size-4" />
-    <AlertTitle>Error</AlertTitle>
-    <AlertDescription>
-      Error loading agent.
-    </AlertDescription>
-  </Alert>
-  } 
-
-  if (!agentQuery.data) {
-    return  <Alert variant="destructive">
-    <ExclamationTriangleIcon className="size-4" />
-    <AlertTitle>Error</AlertTitle>
-    <AlertDescription>
-      Agent not found.
-    </AlertDescription>
-  </Alert>
+      <ExclamationTriangleIcon className="size-4" />
+      <AlertTitle>Error</AlertTitle>
+      <AlertDescription>
+        Error loading agent.
+      </AlertDescription>
+    </Alert>
   }
-  
+
+  if (!data) {
+    return <Alert variant="destructive">
+      <ExclamationTriangleIcon className="size-4" />
+      <AlertTitle>Error</AlertTitle>
+      <AlertDescription>
+        Agent not found.
+      </AlertDescription>
+    </Alert>
+  }
+
 
   return (
     <AgentForm
-      agent={agentQuery.data}
-      refetch={agentQuery.refetch}
+      agent={data.agentById}
+      refetch={refetch}
     />
   );
 }
