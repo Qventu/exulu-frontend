@@ -111,7 +111,7 @@ export function AgentNav() {
 
   return (
     <>
-      <div className="pb-12 w-64">
+      <div className="pb-12 w-[250px]">
         <div className="space-y-4 py-4">
           <div className="px-3 py-2">
             <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">Agents</h2>
@@ -148,7 +148,7 @@ export function AgentNav() {
                           className="w-full justify-start gap-2 pr-1">
                           {renderAgentImage(agent)}
                           <span className="flex-1 text-left">
-                            <TruncatedText text={agent.name} length={14} />
+                            <TruncatedText text={agent.name} length={10} />
                           </span>
                         </Button>
                       </Link>

@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Archive,
   Edit,
+  Expand,
   PackageOpen,
   SaveIcon,
   Trash2,
@@ -46,6 +47,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -217,6 +225,7 @@ export function DataDisplay(props: DataDisplayProps) {
   };
 
   const [editing, setEditing] = useState(false);
+  const [expandedField, setExpandedField] = useState<{name: string, value: string} | null>(null);
 
   useEffect(() => {
     if (data?.text === "New item") {
@@ -593,19 +602,62 @@ export function DataDisplay(props: DataDisplayProps) {
                                   ) : (
                                     <>
                                       <FormControl>
-                                        <Textarea
-                                          autoFocus={true}
-                                          disabled={!editing}
-                                          onChange={(e) => {
-                                            setData({
-                                              ...data,
-                                              description: e.target.value,
-                                            });
-                                          }}
-                                          placeholder="Item text content"
-                                          className="resize-none"
-                                          value={data.description ?? ""}
-                                        />
+                                        <div className="relative">
+                                          <Textarea
+                                            autoFocus={true}
+                                            disabled={!editing}
+                                            onChange={(e) => {
+                                              setData({
+                                                ...data,
+                                                description: e.target.value,
+                                              });
+                                            }}
+                                            placeholder="Item text content"
+                                            className="resize-none"
+                                            value={data.description ?? ""}
+                                          />
+                                          <Dialog>
+                                            <DialogTrigger asChild>
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="absolute top-2 right-2 h-6 w-6 p-0"
+                                                onClick={() => setExpandedField({
+                                                  name: "description",
+                                                  value: data.description ?? ""
+                                                })}
+                                              >
+                                                <Expand className="h-3 w-3" />
+                                                <span className="sr-only">Expand</span>
+                                              </Button>
+                                            </DialogTrigger>
+                                            <DialogContent className="max-w-4xl max-h-[80vh]">
+                                              <DialogHeader>
+                                                <DialogTitle>Edit Description</DialogTitle>
+                                              </DialogHeader>
+                                              <div className="mt-4">
+                                                <Textarea
+                                                  rows={20}
+                                                  className="min-h-[400px] resize-none"
+                                                  value={expandedField?.name === "description" ? expandedField.value : data.description ?? ""}
+                                                  onChange={(e) => {
+                                                    const newValue = e.target.value;
+                                                    setExpandedField(prev => 
+                                                      prev?.name === "description"
+                                                        ? {...prev, value: newValue}
+                                                        : prev
+                                                    );
+                                                    setData({
+                                                      ...data,
+                                                      description: newValue,
+                                                    });
+                                                  }}
+                                                />
+                                              </div>
+                                            </DialogContent>
+                                          </Dialog>
+                                        </div>
                                       </FormControl>
                                       <FormMessage />
                                     </>
@@ -675,7 +727,7 @@ export function DataDisplay(props: DataDisplayProps) {
                               return (
                                 <TableRow key={index}>
                                   <TableCell className="font-medium capitalize">
-                                    {contextField.name}
+                                    {contextField.label}
                                   </TableCell>
                                   {!editing ? (
                                     <TableCell>
@@ -768,24 +820,67 @@ export function DataDisplay(props: DataDisplayProps) {
                                             render={({ field }) => (
                                               <FormItem>
                                                 <FormControl>
-                                                  <Textarea
-                                                    id={contextField.name}
-                                                    rows={
-                                                      contextField.type ===
-                                                        "shortText"
-                                                        ? 2
-                                                        : 7
-                                                    }
-                                                    onChange={(e) => {
-                                                      setData({
-                                                        ...data,
-                                                        [contextField.name]: e.target.value,
-                                                      });
-                                                    }}
-                                                    value={
-                                                      data[contextField.name] ?? ""
-                                                    }
-                                                  />
+                                                  <div className="relative">
+                                                    <Textarea
+                                                      id={contextField.name}
+                                                      rows={
+                                                        contextField.type ===
+                                                          "shortText"
+                                                          ? 2
+                                                          : 7
+                                                      }
+                                                      onChange={(e) => {
+                                                        setData({
+                                                          ...data,
+                                                          [contextField.name]: e.target.value,
+                                                        });
+                                                      }}
+                                                      value={
+                                                        data[contextField.name] ?? ""
+                                                      }
+                                                    />
+                                                    <Dialog>
+                                                      <DialogTrigger asChild>
+                                                        <Button
+                                                          type="button"
+                                                          variant="ghost"
+                                                          size="sm"
+                                                          className="absolute top-2 right-2 h-6 w-6 p-0"
+                                                          onClick={() => setExpandedField({
+                                                            name: contextField.name,
+                                                            value: data[contextField.name] ?? ""
+                                                          })}
+                                                        >
+                                                          <Expand className="h-3 w-3" />
+                                                          <span className="sr-only">Expand</span>
+                                                        </Button>
+                                                      </DialogTrigger>
+                                                      <DialogContent className="max-w-4xl max-h-[80vh]">
+                                                        <DialogHeader>
+                                                          <DialogTitle>Edit {contextField.name}</DialogTitle>
+                                                        </DialogHeader>
+                                                        <div className="mt-4">
+                                                          <Textarea
+                                                            rows={20}
+                                                            className="min-h-[400px] resize-none"
+                                                            value={expandedField?.name === contextField.name ? expandedField.value : data[contextField.name] ?? ""}
+                                                            onChange={(e) => {
+                                                              const newValue = e.target.value;
+                                                              setExpandedField(prev => 
+                                                                prev?.name === contextField.name 
+                                                                  ? {...prev, value: newValue}
+                                                                  : prev
+                                                              );
+                                                              setData({
+                                                                ...data,
+                                                                [contextField.name]: newValue,
+                                                              });
+                                                            }}
+                                                          />
+                                                        </div>
+                                                      </DialogContent>
+                                                    </Dialog>
+                                                  </div>
                                                 </FormControl>
                                                 <FormMessage />
                                               </FormItem>

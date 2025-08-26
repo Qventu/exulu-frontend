@@ -35,40 +35,15 @@ export function ContextSettings(props: DataDisplayProps) {
         queryKey: ["context", props.context],
         queryFn: async () => {
             const response = await contexts.get({ id: props.context });
-            const json = await response.json();
-
-            if (json) {
-                const initialForms: Record<string, Record<string, string>> = {}
-                json.sources.forEach((source) => {
-                    source.updaters.forEach((updater) => {
-                        if (updater.type === "manual") {
-                            const formValues: Record<string, string> = {}
-
-                            // For each configuration field, initialize with example value
-                            // todo
-                            /* Object.entries(updater.configuration).forEach(([fieldName, fieldConfig]) => {
-                                if (fieldConfig && typeof fieldConfig === "object" && fieldConfig.example) {
-                                    formValues[fieldName] = fieldConfig.example
-                                }
-                            }) */
-
-                            initialForms[updater.id] = formValues
-                        }
-                    })
-                })
-
-                setUpdaterForms(initialForms)
-            }
-
+            const json = await response.json()
             return json;
         },
     });
-    const [embeddings, setEmbeddings] = useState<Embedding[]>();
+
     const [search, setSearch] = useState<any>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [filterForm, setFilterForm] = useState(false);
     const [filterCount, setFilterCount] = useState<number>();
-    const [updaterForms, setUpdaterForms] = useState<Record<string, Record<string, string>>>({})
     const [editing, setEditing] = useState(false);
     const router = useRouter();
     const [query, setQuery] = useState<{
@@ -94,16 +69,6 @@ export function ContextSettings(props: DataDisplayProps) {
         getEmbeddings();
     }, [search]);
 
-    const handleInputChange = (updaterId: string, fieldName: string, value: string) => {
-        setUpdaterForms((prev) => ({
-            ...prev,
-            [updaterId]: {
-                ...(prev[updaterId] || {}),
-                [fieldName]: value,
-            },
-        }))
-    }
-
     const getEmbeddings = async () => {
 
         const backend = data.embedder;
@@ -117,16 +82,6 @@ export function ContextSettings(props: DataDisplayProps) {
         // setEmbeddings(json.objects);
         setLoading(false);
     };
-
-    const handleManualUpdate = async (sourceId: string, updaterId: string) => {
-        // Get the form values for this updater
-        const formValues = updaterForms[updaterId] || {}
-
-        // Mock API call for manual update with form values
-        console.log(`Triggering manual update for source ${sourceId}, updater ${updaterId}`, formValues)
-        // In a real app, you would call an API here
-        alert(`Manual update triggered for updater ${updaterId} with values: ${JSON.stringify(formValues)}`)
-    }
 
     if (isLoading) {
         return (
@@ -193,7 +148,7 @@ export function ContextSettings(props: DataDisplayProps) {
                                         <p className="text-muted-foreground mt-1">{data.description}</p>
                                         <div className="mt-3 flex items-center">
                                             <span className="text-sm font-medium mr-2">Embedder:</span>
-                                            <Badge variant="outline">{data.embedder}</Badge>
+                                            <Badge variant="outline">{data.embedder || "None"}</Badge>
                                         </div>
                                     </div>
                                     <div>
@@ -210,117 +165,7 @@ export function ContextSettings(props: DataDisplayProps) {
                                         <span className="block"><b>Always</b>: Vectors are calculated on both insert and update operations.</span>
                                     </div>
                                     </div>
-
                                     <Separator />
-
-                                    {/* <div>
-                                        <h3 className="text-lg font-semibold mb-3">Sources</h3>
-                                        {data.sources.length === 0 ? (
-                                            <p className="text-muted-foreground">No sources available</p>
-                                        ) : (
-                                            <div className="space-y-4">
-                                                {data.sources.map((source) => (
-                                                    <Card key={source.id}>
-                                                        <CardHeader className="pb-2">
-                                                            <div className="flex items-center">
-                                                                <Database className="h-4 w-4 mr-2 text-muted-foreground" />
-                                                                <CardTitle className="text-base">{source.name}</CardTitle>
-                                                            </div>
-                                                            <CardDescription>{source.description}</CardDescription>
-                                                        </CardHeader>
-                                                        <Separator className="my-5" />
-                                                        <CardContent>
-                                                            <h4 className="text-sm font-medium mb-2">Updaters:</h4>
-                                                            <Accordion type="single" collapsible className="w-full">
-                                                                {source.updaters.map((updater) => (
-                                                                    <AccordionItem className="border-0" key={updater.id} value={updater.id}>
-                                                                        <AccordionTrigger className="text-sm">
-                                                                            <div className="flex items-center">
-                                                                                {updater.type === "manual" && <RefreshCw className="h-3.5 w-3.5 mr-2" />}
-                                                                                {updater.type === "cron" && <Clock className="h-3.5 w-3.5 mr-2" />}
-                                                                                {updater.type === "webhook" && <Webhook className="h-3.5 w-3.5 mr-2" />}
-                                                                                <span>{updater.type.charAt(0).toUpperCase() + updater.type.slice(1)} Updater</span>
-                                                                            </div>
-                                                                        </AccordionTrigger>
-                                                                        <AccordionContent>
-                                                                            <div className="pl-2">
-                                                                                {updater.type === "manual" ? (
-                                                                                    <div className="space-y-4">
-                                                                                        <div className="space-y-3">
-                                                                                            {Object.entries(updater.configuration).map(([fieldName, fieldConfig]) => (
-                                                                                                <div key={fieldName} className="space-y-1">
-                                                                                                    <Label htmlFor={`${updater.id}-${fieldName}`} className="text-sm">
-                                                                                                        {fieldName.charAt(0).toUpperCase() + fieldName.slice(1)}
-                                                                                                    </Label>
-                                                                                                    {
-                                                                                                        fieldConfig.type === "query" ? (
-                                                                                                            <Dialog open={filterForm} onOpenChange={setFilterForm}>
-                                                                                                                <DialogTrigger asChild>
-                                                                                                                    <Button variant="outline" className="lg:flex">
-                                                                                                                        <MixerHorizontalIcon className="mr-2 size-4" />
-                                                                                                                        Edit filters for {source.name} context updater ({filterCount || 0})
-                                                                                                                    </Button>
-                                                                                                                </DialogTrigger>
-                                                                                                                <DialogContent className="max-w-[1000px]">
-                                                                                                                    <DialogBody>
-                                                                                                                        <ItemsFilterForm
-                                                                                                                            editing={true}
-                                                                                                                            submit={true}
-                                                                                                                            hideCollapse={true}
-                                                                                                                            auto={false}
-                                                                                                                            parallel={true}
-                                                                                                                            folder={undefined}
-                                                                                                                            archived={false}
-                                                                                                                            preview={true}
-                                                                                                                            init={undefined} // todo
-                                                                                                                            onUpdate={({ base, decorated }) => {
-                                                                                                                                setQuery({
-                                                                                                                                    base: base || {},
-                                                                                                                                    decorated: decorated || {},
-                                                                                                                                });
-                                                                                                                                setFilterForm(false);
-                                                                                                                            }}
-                                                                                                                        />
-                                                                                                                    </DialogBody>
-                                                                                                                    <DialogFooter></DialogFooter>
-                                                                                                                </DialogContent>
-                                                                                                            </Dialog>
-                                                                                                        ) : null
-                                                                                                    }
-                                                                                                    {
-                                                                                                        fieldConfig.type === "string" || fieldConfig.type === "number" ? (
-                                                                                                            <Input
-                                                                                                                id={`${updater.id}-${fieldName}`}
-                                                                                                                value={updaterForms[updater.id]?.[fieldName] || fieldConfig.example}
-                                                                                                                onChange={(e) => handleInputChange(updater.id, fieldName, e.target.value)}
-                                                                                                                placeholder={fieldConfig.example}
-                                                                                                                className="text-sm"
-                                                                                                            />
-                                                                                                        ) : null
-                                                                                                    }
-                                                                                                </div>
-                                                                                            ))}
-                                                                                        </div>
-                                                                                        <Button size="default" onClick={() => handleManualUpdate(source.id, updater.id)}>
-                                                                                            Trigger Manual Update
-                                                                                        </Button>
-                                                                                    </div>
-                                                                                ) : (
-                                                                                    <pre className="text-xs bg-muted p-2 rounded overflow-auto">
-                                                                                        {JSON.stringify(updater.configuration, null, 2)}
-                                                                                    </pre>
-                                                                                )}
-                                                                            </div>
-                                                                        </AccordionContent>
-                                                                    </AccordionItem>
-                                                                ))}
-                                                            </Accordion>
-                                                        </CardContent>
-                                                    </Card>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div> */}
                                 </div>
                             </ScrollArea>
                         </CardContent>

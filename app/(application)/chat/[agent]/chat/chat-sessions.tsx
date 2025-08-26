@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "@apollo/client";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
-import { ChevronLeft, Search } from "lucide-react";
+import { ChevronLeft, PlusIcon, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useContext, useEffect, useState } from "react";
@@ -163,7 +163,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
       )}
       {showSessions && (
         <div
-          className="md:min-w-[400px] relative hidden flex-col items-start md:flex h-100 overflow-y-scroll border-r"
+          className="md:min-w-[220px] relative hidden flex-col items-start md:flex h-100 overflow-y-scroll border-r"
           x-chunk="dashboard-03-chunk-0"
         >
           <div className="bg-background/95 w-full backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -192,7 +192,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
                   handleCreateSession();
                 }
               }}
-              placeholder="New session name"
+              placeholder="Name"
               className="flex-1"
             />
             <Button
@@ -204,7 +204,9 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
                 handleCreateSession();
               }}
             >
-              <div className="font-semibold">Create</div>
+              <div className="font-semibold">
+                <PlusIcon/>
+              </div>
             </Button>
             <TooltipProvider>
               <Tooltip delayDuration={100}>

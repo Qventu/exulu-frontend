@@ -125,7 +125,7 @@ export function DataList({
     const [sorting, setSorting] = React.useState<SortingState>([]);
 
     const fetchItems = async () => {
-    
+
         console.log("[EXULU] fetchItems", page, search);
         // todo get query from query params
         const response = await items.list({
@@ -232,9 +232,12 @@ export function DataList({
     }>({
         mutationFn: async (parameters) => {
             const response = await items.create({ context: parameters.context, item: parameters.item });
-            return await response.json();
+            const json = await response.json();
+            console.log("json", json);
+            return json.id;
         },
         onSuccess: (data) => {
+            console.log("data", data);
             itemsData.refetch();
             toast({
                 title: "Item created",
@@ -467,7 +470,7 @@ export function DataList({
                                                     {row.getVisibleCells().map((cell, index) => {
                                                         if (index > 0) {
                                                             return (<TableCell className="cursor-pointer" onClick={() => {
-                                                               selectItem(row.original.id)
+                                                                selectItem(row.original.id)
                                                             }} key={cell.id}>
                                                                 {flexRender(
                                                                     cell.column.columnDef.cell,

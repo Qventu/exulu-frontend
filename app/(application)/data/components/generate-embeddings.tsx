@@ -38,11 +38,6 @@ export function GenerateEmbeddings({
       return;
     }
 
-    if (!context.sources?.length) {
-      console.error("Missing backend sources");
-      return;
-    }
-
     if (!context?.id) {
       console.error("Missing context id");
       return;

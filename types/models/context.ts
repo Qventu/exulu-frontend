@@ -11,25 +11,8 @@ export interface Context {
     fields: {
       name: string
       type: ExuluFieldTypes
+      label: string
     }[]
-    sources: ContextSource[]
     agents: Agent[]
-  }
-  
-  export interface ContextSource {
-    id: string
-    name: string
-    description: string
-    updaters: Updater[]
-  }
-  
-  export interface Updater {
-    id: string
-    type: string
-    configuration: Configuration
-  }
-  
-  export interface Configuration {
-    query: string
   }
   

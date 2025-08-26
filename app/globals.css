@@ -33,13 +33,13 @@
     --chart-4: 217.0787 76.7241% 54.5098%;
     --chart-5: 0 0% 45.4902%;
     --sidebar: 210 42.8571% 97.2549%;
-    --sidebar-foreground: 0 0% 0%;
-    --sidebar-primary: 0 0% 0%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 92.1569%;
-    --sidebar-accent-foreground: 0 0% 0%;
-    --sidebar-border: 0 0% 92.1569%;
-    --sidebar-ring: 0 0% 0%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
     --font-sans: 'Inter', system-ui, sans-serif;
     --font-serif: 'Merriweather', serif;
     --font-mono: 'JetBrains Mono', monospace;
@@ -54,6 +54,7 @@
     --shadow-2xl: 0px 2px 3px 0px hsl(0 0% 0% / 0.40);
     --tracking-normal: -0.025em;
     --spacing: 0.27rem;
+    --sidebar-background: 0 0% 98%;
   }
 
   .dark {
@@ -82,13 +83,13 @@
     --chart-4: 217.5484 87.5706% 65.2941%;
     --chart-5: 0 0% 62.7451%;
     --sidebar: 240 4.3478% 9.0196%;
-    --sidebar-foreground: 0 0% 94.1176%;
-    --sidebar-primary: 257.6687 100% 68.0392%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 226.6667 9.6774% 18.2353%;
-    --sidebar-accent-foreground: 257.6687 100% 68.0392%;
-    --sidebar-border: 222.8571 6.4220% 21.3725%;
-    --sidebar-ring: 257.6687 100% 68.0392%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
     --font-sans: 'Inter', system-ui, sans-serif;
     --font-serif: 'Merriweather', serif;
     --font-mono: 'JetBrains Mono', monospace;
@@ -101,6 +102,7 @@
     --shadow-lg: 0px 2px 3px 0px hsl(0 0% 0% / 0.16), 0px 4px 6px -1px hsl(0 0% 0% / 0.16);
     --shadow-xl: 0px 2px 3px 0px hsl(0 0% 0% / 0.16), 0px 8px 10px -1px hsl(0 0% 0% / 0.16);
     --shadow-2xl: 0px 2px 3px 0px hsl(0 0% 0% / 0.40);
+    --sidebar-background: 240 5.9% 10%;
   }
 
   html {
@@ -223,4 +225,15 @@
 .chat-table-wrapper .chat-table {
   margin: 0;
   min-width: 100%;
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }

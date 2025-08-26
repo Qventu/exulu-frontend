@@ -1,54 +1,80 @@
 "use client";
 
-import {
-  PanelLeft,
-} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
-import { useContext, useEffect, useState } from "react";
+import { useContext } from "react";
 import { UserContext } from "@/app/(application)/authenticated";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger
+} from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/models/user-role";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { ChevronUp, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard, Database, ListTodo, Bot, Route, Variable, FileCheck, Sparkles, Settings } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
+import { Badge } from "../ui/badge";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import Image from "next/image"
 
-const buildNavigation = (user, role: UserRole) => {
-  const navigationItems: { label: string; path: string }[] = [];
+interface User {
+  email: string;
+  super_admin: boolean;
+  role: UserRole;
+}
+
+const buildNavigation = (user: User, role: UserRole) => {
+  const navigationItems: { label: string; path: string; icon: React.ReactNode }[] = [];
 
   if (user.super_admin) {
     navigationItems.push({
       label: "Dashboard",
       path: "dashboard",
+      icon: <LayoutDashboard />,
     });
   }
 
   navigationItems.push({
     label: "Contexts",
     path: "data",
+    icon: <Database />,
   });
 
   navigationItems.push({
     label: "Jobs",
     path: "jobs",
+    icon: <ListTodo />,
   });
-  
+
   if (user.super_admin || role.agents === "write") {
     navigationItems.push({
       label: "Agents",
       path: "agents",
+      icon: <Bot />,
     });
   }
 
   navigationItems.push({
     label: "Chat",
     path: "chat",
+    icon: <MessageCircle />,
   });
 
   if (user.super_admin || role.workflows === "write") {
     navigationItems.push({
       label: "Workflows",
       path: "workflows",
+      icon: <Route />,
     });
   }
 
@@ -56,6 +82,7 @@ const buildNavigation = (user, role: UserRole) => {
     navigationItems.push({
       label: "Users",
       path: "users",
+      icon: <Users />,
     });
   }
 
@@ -63,6 +90,7 @@ const buildNavigation = (user, role: UserRole) => {
     navigationItems.push({
       label: "Keys",
       path: "keys",
+      icon: <Key />,
     });
   }
 
@@ -70,6 +98,15 @@ const buildNavigation = (user, role: UserRole) => {
     navigationItems.push({
       label: "Variables",
       path: "variables",
+      icon: <Variable />,
+    });
+  }
+
+  if (user.super_admin || role.coding_standards === "write" || role.coding_standards === "read") {
+    navigationItems.push({
+      label: "Coding Standards",
+      path: "coding-standards",
+      icon: <FileCheck />,
     });
   }
 
@@ -77,85 +114,148 @@ const buildNavigation = (user, role: UserRole) => {
     navigationItems.push({
       label: "API",
       path: "explorer",
+      icon: <Code />,
     });
   }
 
   return navigationItems;
 }
 
-export function MainNav({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLElement>) {
+function NavigationItems({ items }: { items: { label: string; path: string; icon: React.ReactNode }[] }) {
   const pathname = usePathname();
 
+  return (
+    <SidebarMenu className="space-y-1">
+      {items.map((navItem, index) => {
+        const isActive = pathname.includes(navItem.path);
+        return (
+          <SidebarMenuItem key={index}>
+            <SidebarMenuButton
+              asChild
+              isActive={isActive}
+              tooltip={navItem.label}
+              className={cn(
+                "h-10 transition-all duration-200",
+                isActive && "bg-gradient-to-r from-purple-500/10 to-purple-500/10"
+              )}
+            >
+              <Link href={`/${navItem.path}`} className="flex items-center gap-3">
+                <div className={cn(
+                  "flex h-5 w-5 items-center justify-center transition-colors",
+                  isActive && "text-purple-500"
+                )}>
+                  {navItem.icon}
+                </div>
+                <span className={cn(
+                  "font-medium transition-colors",
+                  isActive && "text-purple-500"
+                )}>
+                  {navItem.label}
+                </span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        );
+      })}
+    </SidebarMenu>
+  );
+}
+
+export function MainNavSidebar() {
   const { user } = useContext(UserContext);
-
-  const [sheetOpen, setSheetOpen] = useState(false);
-
-  let navigationItems = buildNavigation(user, user.role);
-
-  useEffect(() => {
-    setSheetOpen(false);
-  }, [pathname]);
+  const navigationItems = buildNavigation(user, user.role);
+  const router = useRouter();
+  const { setTheme, theme } = useTheme();
 
   return (
-    <>
-      <header className="lg:hidden sticky top-0 z-30 flex h-14 items-center gap-4 bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetTrigger asChild>
-            <Button size="icon" variant="outline" className="sm:hidden">
-              <PanelLeft className="size-5" />
-              <span className="sr-only">Toggle Menu</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="sm:max-w-xs">
-            <nav className="grid gap-6 text-lg font-medium">
-              {navigationItems.map((navItem, index) => (
-                <Link
-                  key={index}
-                  href={`/${navItem.path}`}
-                  className={cn(
-                    pathname.includes(navItem.path) && "text-secondary",
-                    `flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground`,
-                  )}
-                >
-                  {navItem.label}
-                </Link>
-              ))}
-            </nav>
-          </SheetContent>
-        </Sheet>
-      </header>
-      <nav
-        className={cn(
-          "hidden lg:flex items-center space-x-4 lg:space-x-6",
-          className,
-        )}
-        {...props}
-      >
-        {navigationItems.map((navItem, index) => (
-          <Link
-            href={`/${navItem.path}`}
-            key={index}
-            className={cn(
-              !pathname.includes(navItem.path) && "text-muted-foreground",
-              `text-sm font-medium transition-colors hover:text-primary`,
-            )}
-          >
-            {navItem.label}
-          </Link>
-        ))}
-        {/*<Link
-                href="/settings"
-                className={cn(
-                    pathname !== "settings" && "text-muted-foreground",
-                    `text-sm font-medium transition-colors hover:text-primary`,
-                )}
-            >
-                Settings
-            </Link>*/}
-      </nav>
-    </>
+    <Sidebar collapsible="icon" className="border-r">
+      <div className="flex items-center gap-3 border-b bg-background/80 backdrop-blur-sm p-[12px] sticky top-0 z-10">
+        <SidebarTrigger />
+        <div className="flex items-center gap-2">
+          <Image src="/exulu_logo.svg" height={40} width={100} alt="Exulu Logo" />
+        </div>
+      </div>
+      <SidebarContent className="px-2">
+        <SidebarGroup className="mt-4">
+          <SidebarGroupContent>
+            <NavigationItems items={navigationItems} />
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      {/*<Link href="/" className="flex items-center h-20 gap-2 sm:gap-4">
+            <Image
+              src="/exulu_logo.svg"
+              alt="Exulu Logo"
+              width={50}
+              height={32}
+              className="invert dark:invert-0"
+              priority
+            />
+          </Link>*/}
+
+      <SidebarFooter className="border-t bg-muted/20 p-[5px]">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton className="h-12 hover:bg-accent/50">
+                  <Avatar className="h-5 w-5">
+                    <AvatarFallback className="bg-gradient-to-br from-purple-200 to-purple-600 text-white text-sm">
+                      {user.email.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col items-start group-data-[collapsible=icon]:hidden">
+                    <span className="text-sm font-medium capitalize">{user.email.split('@')[0]}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-muted-foreground">{user.email.split('@')[1]}</span>
+                    </div>
+                  </div>
+                  <ChevronUp className="ml-auto h-4 w-4 group-data-[collapsible=icon]:hidden" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="top"
+                className="w-[--radix-popper-anchor-width] mb-2"
+                align="start"
+              >
+                <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+                  <div className="flex items-center gap-2 w-full">
+                    {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    <span>Toggle theme</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <div className="flex items-center gap-2 w-full">
+                    <Settings className="h-4 w-4" />
+                    <span>Settings</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/api/auth/signout")} className="text-red-600 focus:text-red-600">
+                  <span>Logout</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.open("https://www.exulu.com/toc", "_blank")}>
+                  <span>Terms and conditions</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
+
+export function MainNavProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarProvider>
+      <div className="flex h-screen w-full bg-background">
+        <MainNavSidebar />
+
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </div>
+    </SidebarProvider>
   );
 }

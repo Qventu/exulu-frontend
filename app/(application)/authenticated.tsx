@@ -11,9 +11,7 @@ import { setContext } from "@apollo/client/link/context";
 import Link from "next/link";
 import { SessionProvider } from "next-auth/react";
 import * as React from "react";
-import { MainNav } from "@/components/custom/main-nav";
-import { buttonVariants } from "@/components/ui/button";
-import { ModeToggle } from "@/components/ui/mode-toggle";
+import { MainNav, MainNavProvider } from "@/components/custom/main-nav";
 import { getToken } from "@/util/api";
 import { ConfigContext } from "@/components/config-context";
 
@@ -29,31 +27,10 @@ const User = ({ children, user }: AuthenticatedProps) => {
 
   return (
     <UserContext.Provider value={{ user }}>
-      <div className="border-b">
-        <div className="flex h-16 items-center px-4">
-          {/*<Link href="/" className="flex items-center h-20 gap-2 sm:gap-4">
-            <Image
-              src="/exulu_logo.svg"
-              alt="Exulu Logo"
-              width={50}
-              height={32}
-              className="invert dark:invert-0"
-              priority
-            />
-          </Link>*/}
-          <MainNav className="mx-6" />
-          <div className="ml-auto flex items-center space-x-4">
-            <Link
-              href="/api/auth/signout"
-              className={buttonVariants({ variant: "outline" })}
-            >
-              Logout
-            </Link>
-            <ModeToggle></ModeToggle>
-          </div>
-        </div>
-      </div>
-      {children}
+      <MainNavProvider>
+        {children}
+      </MainNavProvider>
+
     </UserContext.Provider>
   );
 };

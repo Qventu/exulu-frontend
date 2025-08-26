@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Loader2, Shield, Users, Workflow, Variable, Bot, CodeSquare } from "lucide-react"
+import { Loader2, Shield, Users, Workflow, Variable, Bot, CodeSquare, Brain } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -73,7 +73,7 @@ export function RoleForm({ initialData, onSubmit, loading, onCancel }: RoleFormP
                 api: initialData.api || "",
                 workflows: initialData.workflows || "",
                 variables: initialData.variables || "",
-                users: initialData.users || "",
+                users: initialData.users || ""
             })
         }
     }, [initialData])
@@ -98,7 +98,7 @@ export function RoleForm({ initialData, onSubmit, loading, onCancel }: RoleFormP
             api: permissions.api || null,
             workflows: permissions.workflows || null,
             variables: permissions.variables || null,
-            users: permissions.users || null,
+            users: permissions.users || null
         }
 
         await onSubmit(roleData)

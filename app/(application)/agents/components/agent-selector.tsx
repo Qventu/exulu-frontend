@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import * as React from "react";
-import { GET_AGENTS } from "@/queries/queries";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -20,7 +19,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {Agent} from "@EXULU_SHARED/models/agent";
 import { agents } from "@/util/api";

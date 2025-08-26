@@ -4,46 +4,33 @@ import { useQuery } from "@apollo/client";
 import { ChatRequestOptions, DefaultChatTransport, UIMessage } from "ai";
 import { useChat } from '@ai-sdk/react';
 import * as React from "react";
-import { FormEvent, useContext, useEffect, useState, useMemo } from "react";
+import { useContext, useEffect, useState, useMemo } from "react";
 import { UserContext } from "@/app/(application)/authenticated";
-import { PaperPlaneIcon, StopIcon } from "@radix-ui/react-icons";
+import { StopIcon } from "@radix-ui/react-icons";
 import { AgentMessage, AgentSession } from "@EXULU_SHARED/models/agent-session";
 import { Message, MessageContent } from '@/components/ai-elements/message';
 import { Actions, Action } from '@/components/ai-elements/actions';
 import { Loader } from '@/components/ai-elements/loader';
-import {
-  PromptInput,
-  PromptInputTextarea,
-  PromptInputSubmit,
-} from '@/components/ai-elements/prompt-input';
 import TextareaAutosize from "react-textarea-autosize";
 import {
   GET_AGENT_MESSAGES,
   GET_AGENT_SESSION_BY_ID,
-  GET_AGENT_SESSIONS,
 } from "@/queries/queries";
 import { getToken } from "@/util/api"
 import { Agent } from "@EXULU_SHARED/models/agent";
 import Image from "next/image";
-import { AnimatePresence, motion } from "framer-motion";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import CodeDisplayBlock from "@/components/custom/code-display-block";
 import { ConfigContext } from "@/components/config-context";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight, Copy, Check, Workflow, Plus, RefreshCcwIcon, CopyIcon, ArrowUp } from "lucide-react";
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { Workflow, Plus, RefreshCcwIcon, CopyIcon, ArrowUp } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SaveWorkflowModal } from "@/components/save-workflow-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Conversation, ConversationContent } from "@/components/ai-elements/conversation";
 import { Response } from '@/components/ai-elements/response';
-import { threadId } from "worker_threads";
 import { Reasoning, ReasoningTrigger, ReasoningContent } from "@/components/ai-elements/reasoning";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/source";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface ChatProps {
   chatId?: string;
@@ -62,12 +49,11 @@ export interface ChatProps {
   stop?: () => void;
 }
 
-export function ChatLayout({ session: id, type, agent, token }: { session: string | null, type: string | null, agent: Agent, token: string }) {
+export function ChatLayout({ session: id, type, agent, token }: { session: string, type: string | null, agent: Agent, token: string }) {
 
   const configContext = React.useContext(ConfigContext);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [files, setFiles] = useState<any[] | null>(null);
-  const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
   const { user, setUser } = useContext(UserContext);
   const [copyingTableId, setCopyingTableId] = useState<string | null>(null);
   const [showSaveWorkflowModal, setShowSaveWorkflowModal] = useState(false);
@@ -76,24 +62,6 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
   const { toast } = useToast()
 
   console.log("[EXULU] agent", agent)
-
-  useEffect(() => {
-    const checkScreenWidth = () => {
-      setIsMobile(window.innerWidth <= 1023);
-    };
-
-    // Initial check
-    checkScreenWidth();
-
-    // Event listener for screen width changes
-    window.addEventListener("resize", checkScreenWidth);
-
-    // Cleanup the event listener on component unmount
-    return () => {
-      window.removeEventListener("resize", checkScreenWidth);
-    };
-  }, []);
-
 
   const sessionQuery = useQuery<{
     agent_sessionById: AgentSession;
@@ -270,7 +238,6 @@ export function ChatLayout({ session: id, type, agent, token }: { session: strin
         <div className="flex flex-col h-full w-full">
           {!sessionQuery.loading && sessionQuery.data?.agent_sessionById && (
             <Conversation className="overflow-y-hidden">
-
               {/* Save as Workflow button - appears when conversation has content */}
               {canCreateWorkflow && (
                 <div className="flex justify-between absolute top-0 left-0 right-0 items-center px-4 py-2 border-b z-10 dark:bg-black bg-white">

@@ -39,7 +39,7 @@ export default function DataLayout({ children, params }: { children: any, params
                         sizes,
                     )}`;
                 }}
-                className="h-full max-h-[88vh] items-stretch">
+                className="h-full items-stretch">
                 <ResizablePanel
                     defaultSize={defaultLayout[0]}
                     collapsedSize={navCollapsedSize}

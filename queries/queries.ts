@@ -489,7 +489,7 @@ export const UPDATE_AGENT = gql`
 `;
 export const CREATE_USER_ROLE = gql`
   mutation CreateUserRole($name: String!, $agents: String, $workflows: String, $variables: String, $users: String, $api: String) {
-    rolesCreateOne(input: { name: $name, agents: $agents, workflows: $workflows, variables: $variables, users: $users, api: $api }) {
+    rolesCreateOne(input: { name: $name, agents: $agents, workflows: $workflows, variables: $variables, users: $users, api: $api}) {
         id
         createdAt
         agents
