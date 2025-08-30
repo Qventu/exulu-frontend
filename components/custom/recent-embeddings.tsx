@@ -1,11 +1,12 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
+import { useQuery } from "@apollo/client";
+import { useRef } from "react";
 import Link from "next/link";
 import * as React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { items } from "@/util/api";
 import { TruncatedText } from "@/components/truncated-text";
 import { Item } from "@/types/models/item";
+import { GET_ITEMS, PAGINATION_POSTFIX } from "@/queries/queries";
 
 export type FilterOperator = {
   eq?: string,
@@ -20,34 +21,42 @@ export type ItemsFilters = {
 
 export function RecentEmbeddings({ contextId }: { contextId: string }) {
 
-  const fetchItems = async () => {
-    const response = await items.list({
+  // Make stable ref of date
+  const twentyOneDaysAgoRef = useRef(new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString());
+  let { loading, data: raw, refetch, previousData: prev, error } = useQuery<{
+    [key: string]: {
+      pageInfo: {
+        pageCount: number;
+        itemCount: number;
+        currentPage: number;
+        hasPreviousPage: boolean;
+        hasNextPage: boolean;
+      };
+      items: Item[];
+    }
+  }>(GET_ITEMS(contextId, []), {
+    fetchPolicy: "no-cache",
+    nextFetchPolicy: "network-only",
+    variables: {
       context: contextId,
-      sort: "embeddings_updated_at",
-      order: "desc",
-    }, 1, 10);
-    const data = await response.json();
-    console.log("[EXULU] items", data);
-    return data;
-  };
-
-  const itemsData = useQuery<{
-    pagination: {
-      pageCount: number;
-      totalCount: number;
-      currentPage: number | null;
-      previousPage: number | null;
-      nextPage: number | null;
-    };
-    items: Item[];
-  }>({
-    queryKey: ["GetItems", contextId, 1],
-    staleTime: 0,
-    placeholderData: keepPreviousData,
-    queryFn: () => fetchItems(),
+      page: 1,
+      limit: 5,
+      filters: [{
+        embeddings_updated_at: {
+          // 21 days ago
+          gte: twentyOneDaysAgoRef.current,
+        },
+      }],
+      sort: {
+        field: "embeddings_updated_at",
+        direction: "DESC",
+      }
+    },
   });
 
-  return itemsData.isLoading ? (
+  const data = raw?.[contextId + PAGINATION_POSTFIX] as any;
+
+  return loading ? (
     <div className="flex flex-col gap-2 pt-0">
       <Skeleton className="w-full h-[50px] rounded-lg mb-2" />
       <Skeleton className="w-full h-[50px] rounded-lg mb-2" />
@@ -55,8 +64,8 @@ export function RecentEmbeddings({ contextId }: { contextId: string }) {
     </div>
   ) : (
     <div className="space-y-8">
-      {itemsData.data?.items.length ? (
-        itemsData.data?.items?.map(
+      {data?.items?.length ? (
+        data?.items?.map(
           (
             item: Item,
             index: number,

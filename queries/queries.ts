@@ -1,5 +1,8 @@
 import { gql } from "@apollo/client";
 
+export const PAGINATION_POSTFIX = "_itemsPagination";
+export const CREATE_ONE_POSTFIX = "_itemsCreateOne";
+
 const CONTEXT_FIELDS = `
     id
     name
@@ -9,6 +12,18 @@ const CONTEXT_FIELDS = `
     active
     fields
     configuration
+`;
+
+const ITEM_FIELDS = (fields: string[]) => `
+id
+name
+description
+tags
+external_id
+createdAt
+embeddings_updated_at
+updatedAt
+${fields.join("\n")}
 `;
 
 const USER_FIELDS = `
@@ -144,6 +159,98 @@ export const GET_CONTEXT_BY_ID = gql`
     }
   }
 `;
+
+export const GET_ITEMS = (context: string, fields: string[]) => {
+  const upperCaseContext = context.charAt(0).toUpperCase() + context.slice(1)
+  return gql`
+    query ${context}Pagination($page: Int!, $limit: Int!, $filters: [Filter${upperCaseContext}_items], $sort: SortBy = { field: "updatedAt", direction: DESC }) {
+      ${context}${PAGINATION_POSTFIX}(page: $page, limit: $limit, filters: $filters, sort: $sort) {
+        pageInfo {
+          pageCount
+          itemCount
+          currentPage
+          hasPreviousPage
+          hasNextPage
+        }
+        items {
+          ${ITEM_FIELDS(fields)}
+        }
+      }
+    }
+  `;
+};
+
+export const GET_ITEM_BY_ID = (context: string, fields: string[], chunks: boolean = false) => {
+  return gql`
+    query ${context}ById($id: ID!) {
+      ${context}_itemsById(id: $id) {
+        ${ITEM_FIELDS(fields)}
+        ${chunks ? "chunks { fts_rank hybrid_score content source chunk_index chunk_id chunk_created_at chunk_updated_at embedding_size }" : ""}
+      }
+    }
+  `;
+};
+
+export const CREATE_ITEM = (context: string) => {
+  return gql`
+    mutation CreateOne${context}($input: ${context}_itemsInput!) {
+      ${context}_itemsCreateOne(input: $input) {
+        item {
+          id
+        }
+        job
+      }
+    }
+  `;
+};
+
+export const DELETE_CHUNKS = (context: string) => {
+  const upperCaseContext = context.charAt(0).toUpperCase() + context.slice(1)
+  return gql`
+    mutation DeleteChunks${context}($where: [Filter${upperCaseContext}_items]) {
+      ${context}_itemsDeleteChunks(where: $where) {
+        items
+        jobs
+      }
+    }
+  `;
+};
+
+
+export const GENERATE_CHUNKS = (context: string) => {
+  const upperCaseContext = context.charAt(0).toUpperCase() + context.slice(1)
+  return gql`
+    mutation GenerateChunks${context}($where: [Filter${upperCaseContext}_items]) {
+      ${context}_itemsGenerateChunks(where: $where) {
+        items
+        jobs
+      }
+    }
+  `;
+};
+
+export const UPDATE_ITEM = (context: string) => {
+  return gql`
+    mutation UpdateOneById${context}($id: ID!, $input: ${context}_itemsInput!) {
+      ${context}_itemsUpdateOneById(id: $id, input: $input) {
+        item {
+          id
+        }
+        job
+      }
+    }
+  `;
+};
+
+export const DELETE_ITEM = (context: string) => {
+  return gql`
+    mutation DeleteOneById${context}($id: ID!) {
+      ${context}_itemsRemoveOneById(id: $id) {
+        id
+      }
+    }
+  `;
+};
 
 export const GET_AGENT_MESSAGES = gql`
   query GetAgentSessionMessages(

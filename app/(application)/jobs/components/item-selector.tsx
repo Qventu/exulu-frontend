@@ -22,10 +22,10 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useContexts } from "@/hooks/contexts";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@apollo/client";
 import { Item } from "@EXULU_SHARED/models/item";
-import { items } from "@/util/api";
 import { Context } from "@EXULU_SHARED/models/context";
+import { GET_ITEMS, PAGINATION_POSTFIX } from "@/queries/queries";
 
 export function ItemSelector({
   navigate,
@@ -110,33 +110,38 @@ const ItemsList = ({ context, navigate, onSelect, onBack }: { context: Context, 
   const router = useRouter();
   const pathname = usePathname();
 
-  const fetchItems = async () => {
-    const response = await items.list({
+  let { loading, data: raw, refetch, previousData: prev, error } = useQuery<{
+    [key: string]: {
+      pageInfo: {
+        pageCount: number;
+        itemCount: number;
+        currentPage: number;
+        hasPreviousPage: boolean;
+        hasNextPage: boolean;
+      };
+      items: Item[];
+    }
+  }>(GET_ITEMS(context.id, []), {
+    fetchPolicy: "no-cache",
+    nextFetchPolicy: "network-only",
+    variables: {
       context: context.id,
-      archived: false,
-      ...(search ? { name: search } : {}),
-    }, 1, 10);
-
-    const data = await response.json();
-    console.log("[EXULU] items", data);
-    return data;
-  };
-
-  const itemsData = useQuery<{
-    pagination: {
-      pageCount: number;
-      totalCount: number;
-      currentPage: number | null;
-      previousPage: number | null;
-      nextPage: number | null;
-    };
-    items: Item[];
-  }>({
-    queryKey: ["GetItems", search],
-    staleTime: 0,
-    placeholderData: keepPreviousData,
-    queryFn: () => fetchItems(),
+      page: 1,
+      limit: 10,
+      sort: {
+        field: "updatedAt",
+        direction: "DESC",
+      },
+      filters: {
+        archived: {
+          eq: false
+        },
+        ...(search ? { name: { contains: `${search}` } } : {}),
+      },
+    },
   });
+
+  const data = raw?.[context.id + PAGINATION_POSTFIX] as any;
 
   const searchParams = useSearchParams();
 
@@ -153,7 +158,7 @@ const ItemsList = ({ context, navigate, onSelect, onBack }: { context: Context, 
   );
 
   useEffect(() => {
-    itemsData.refetch();
+    refetch();
   }, [search]);
 
   return (<CommandList className="h-[var(--cmdk-list-height)] max-h-[400px]">
@@ -181,7 +186,7 @@ const ItemsList = ({ context, navigate, onSelect, onBack }: { context: Context, 
         )}
       />
     </div>
-    {itemsData.isLoading ? (
+    {loading ? (
       <CommandItem key={"loading"}>
         <Loading />
       </CommandItem>
@@ -192,7 +197,7 @@ const ItemsList = ({ context, navigate, onSelect, onBack }: { context: Context, 
             {context.name}
           </span>
         </CommandItem>
-        {itemsData.data?.items?.map((item: Item) => (
+        {data?.items?.map((item: Item) => (
           <CommandItem
             key={item.id}
             onSelect={() => {

@@ -43,7 +43,7 @@ const ContextLink = ({ index, folder, edit, indented, children }: { index: numbe
                     {folder.icon !== null && (
                         <span
                             className={cn(
-                                "ml-0",
+                                "ml-0 overflow-hidden text-ellipsis max-w-[170px]",
                                 folder.variant === "default" &&
                                 "text-background dark:text-white",
                             )}>

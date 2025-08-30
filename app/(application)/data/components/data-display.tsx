@@ -1,11 +1,12 @@
 "use client"
 
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@apollo/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Archive,
   Edit,
   Expand,
+  MoreVertical,
   PackageOpen,
   SaveIcon,
   Trash2,
@@ -54,6 +55,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -61,8 +78,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { items } from "@/util/api";
 import { Item } from "@EXULU_SHARED/models/item";
-import { GET_CONTEXT_BY_ID } from "@/queries/queries";
 import { Context } from "@/types/models/context";
+import { DELETE_CHUNKS, DELETE_ITEM, GENERATE_CHUNKS, GET_ITEM_BY_ID, UPDATE_ITEM } from "@/queries/queries";
 
 interface DataDisplayProps {
   actions: boolean;
@@ -77,56 +94,48 @@ export function DataDisplay(props: DataDisplayProps) {
   const router = useRouter();
 
   const context = props.context;
+  const fields = props.context.fields.map(field => field.name);
 
-  const itemsQuery = useQuery({
-    queryKey: ["getItemById", props.itemId],
-    enabled: !!props.itemId && !!props.context?.id,
-    queryFn: async () => {
-      if (!props.context?.id || !props.itemId) {
-        return null;
-      }
-      const response = await items.get({
-        context: props.context.id,
-        id: props.itemId
-      })
-      const json = await response.json();
-      console.log("json", json);
-      if (!json?.id) {
-        return null;
-      }
-      setData({
-        ...json,
-        tags: json.tags ? json.tags.split(",") : [],
-      })
-      return json;
+  console.log("fields", fields);
+
+  const { loading, error, refetch } = useQuery<{
+    item: Item;
+  }>(GET_ITEM_BY_ID(props.context.id, fields, true), {
+    skip: !props.itemId || !props.context?.id,
+    variables: {
+      context: props.context.id,
+      id: props.itemId
     },
+    fetchPolicy: "no-cache",
+    nextFetchPolicy: "network-only",
+    onCompleted: (data) => {
+      const item = data[props.context.id + "_itemsById"];
+      setData({
+        ...item,
+        tags: item.tags ? item.tags.split(",") : [],
+      });
+    }
   });
 
   useEffect(() => {
-    itemsQuery.refetch();
+    refetch();
   }, [props.itemId]);
 
-  const updateItemMutation = useMutation<any, Error, {
-    context: string;
-    id: string;
-    item: {
-      name?: string;
-      description?: string;
-      archived?: boolean;
-      tags?: string;
-      external_id?: string;
-      [key: string]: any;
+
+  const [updateItemMutation, updateItemMutationResult] = useMutation<{
+    [key: string]: {
+      job: string;
+      item: {
+        name?: string;
+        archived?: boolean;
+        description?: string;
+        tags?: string[];
+        external_id?: string;
+        [key: string]: any;
+      }
     }
-  }>({
-    mutationFn: async (parameters) => {
-      const response = await items.update({
-        context: parameters.context,
-        id: parameters.id,
-        item: parameters.item,
-      });
-      return await response.json();
-    },
-    onSuccess: (data) => {
+  }>(UPDATE_ITEM(props.context.id), {
+    onCompleted: () => {
       toast({
         title: "Item updated",
         description: "Item updated successfully.",
@@ -140,18 +149,10 @@ export function DataDisplay(props: DataDisplayProps) {
     }
   });
 
-  const deleteItemMutation = useMutation<any, Error, {
-    context: string;
+  const [deleteItemMutation, deleteItemMutationResult] = useMutation<{
     id: string;
-  }>({
-    mutationFn: async (parameters) => {
-      const response = await items.delete({
-        context: parameters.context,
-        id: parameters.id
-      });
-      return await response.json();
-    },
-    onSuccess: (data) => {
+  }>(DELETE_ITEM(props.context.id), {
+    onCompleted: () => {
       toast({
         title: "Item deleted",
         description: "Item deleted successfully.",
@@ -163,6 +164,51 @@ export function DataDisplay(props: DataDisplayProps) {
         description: error.message,
       })
     }
+  });
+
+  const [generateChunksMutation, generateChunksMutationResult] = useMutation<{
+    [key: string]: {
+      jobs: string[];
+      items: number;
+    }
+  }>(GENERATE_CHUNKS(props.context.id), {
+    onCompleted: (output) => {
+      const data = output[props.context.id + "_itemsGenerateChunks"];
+      if (data.jobs?.length > 0) {
+        toast({
+          title: "Chunks generation started",
+          description: "Jobs have been started in the background, depending on the size of the item this may take a while.",
+        })
+        return;
+      }
+      toast({
+        title: "Chunks generated",
+        description: "Chunks generated successfully.",
+      })
+    },
+  });
+
+
+  const [deleteChunksMutation, deleteChunksMutationResult] = useMutation<{
+    [key: string]: {
+      jobs: string[];
+      items: number;
+    }
+  }>(DELETE_CHUNKS(props.context.id), {
+    onCompleted: (output) => {
+      const data = output[props.context.id + "_itemsDeleteChunks"];
+      if (data.jobs?.length > 0) {
+        toast({
+          title: "Chunks deletion started",
+          description: "Jobs have been started in the background, depending on the size of the item this may take a while.",
+        })
+        return;
+      }
+      toast({
+        title: "Chunks deleted",
+        description: "Chunks deleted successfully.",
+      })
+    },
   });
 
   const itemFormSchema = z.object({
@@ -213,7 +259,8 @@ export function DataDisplay(props: DataDisplayProps) {
   };
 
   const [editing, setEditing] = useState(false);
-  const [expandedField, setExpandedField] = useState<{name: string, value: string} | null>(null);
+  const [expandedField, setExpandedField] = useState<{ name: string, value: string } | null>(null);
+  const [confirmationModal, setConfirmationModal] = useState<"generate" | "delete" | null>(null);
 
   useEffect(() => {
     if (data?.text === "New item") {
@@ -223,7 +270,7 @@ export function DataDisplay(props: DataDisplayProps) {
     }
   }, [data?.id]);
 
-  if (itemsQuery.isLoading) {
+  if (loading) {
     return (
       <div className="p-8 text-center text-muted-foreground">
         <Skeleton className="w-full h-[80px] rounded-md" />
@@ -235,13 +282,13 @@ export function DataDisplay(props: DataDisplayProps) {
       </div>
     )
   }
-  if (itemsQuery.error) {
+  if (error) {
     return (
       <Alert variant="destructive">
         <ExclamationTriangleIcon className="size-4" />
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>
-          {itemsQuery.error?.message || "Error loading item."}
+          {error?.message || "Error loading item."}
         </AlertDescription>
       </Alert>
     )
@@ -262,12 +309,13 @@ export function DataDisplay(props: DataDisplayProps) {
                           if (!data.id) {
                             return;
                           }
-                          updateItemMutation.mutate({
-                            context: props.context.id,
-                            id: data.id,
-                            item: {
-                              archived: false,
-                            },
+                          updateItemMutation({
+                            variables: {
+                              id: data.id,
+                              input: {
+                                archived: false,
+                              },
+                            }
                           });
                           setData({
                             ...data,
@@ -277,9 +325,9 @@ export function DataDisplay(props: DataDisplayProps) {
                         }}
                         variant="ghost"
                         size="icon"
-                        disabled={!data || updateItemMutation.isPending}
+                        disabled={!data || updateItemMutationResult.loading}
                       >
-                        {updateItemMutation.isPending ? (
+                        {updateItemMutationResult.loading ? (
                           <Loading />
                         ) : (
                           <PackageOpen className="size-4" />
@@ -296,14 +344,18 @@ export function DataDisplay(props: DataDisplayProps) {
                           if (!data.id) {
                             return;
                           }
-                          deleteItemMutation.mutate({ context: props.context.id, id: data.id });
+                          deleteItemMutation({
+                            variables: {
+                              id: data.id,
+                            }
+                          });
                           router.push("./");
                         }}
                         variant="ghost"
                         size="icon"
-                        disabled={!data || deleteItemMutation.isPending}
+                        disabled={!data || deleteItemMutationResult.loading}
                       >
-                        {deleteItemMutation.isPending ? (
+                        {deleteItemMutationResult.loading ? (
                           <Loading />
                         ) : (
                           <Trash2 className="size-4" />
@@ -322,10 +374,11 @@ export function DataDisplay(props: DataDisplayProps) {
                         if (!data?.id) {
                           return;
                         }
-                        updateItemMutation.mutate({
-                          id: data.id,
-                          context: props.context.id,
-                          item: { archived: true },
+                        updateItemMutation({
+                          variables: {
+                            id: data.id,
+                            input: { archived: true },
+                          }
                         });
                         setData({
                           ...data,
@@ -335,9 +388,9 @@ export function DataDisplay(props: DataDisplayProps) {
                       }}
                       variant="ghost"
                       size="icon"
-                      disabled={!data || updateItemMutation.isPending}
+                      disabled={!data || updateItemMutationResult.loading}
                     >
-                      {updateItemMutation.isPending ? (
+                      {updateItemMutationResult.loading ? (
                         <Loading />
                       ) : (
                         <Archive className="size-4" />
@@ -368,27 +421,28 @@ export function DataDisplay(props: DataDisplayProps) {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        disabled={updateItemMutation.isPending}
+                        disabled={updateItemMutationResult.loading}
                         onClick={() => {
                           if (!data?.id) {
                             return;
                           }
-                          updateItemMutation.mutate({
-                            id: data.id,
-                            context: props.context.id,
-                            item: {
-                              textlength: data?.text?.length,
-                              description: data?.description,
-                              name: data?.name,
-                              externalId: data?.externalId,
-                              tags: data?.tags?.join(","),
-                              source: data?.source,
-                              archived: data?.archived,
-                              ...(context?.fields?.reduce((acc, field) => ({
-                                ...acc,
-                                [field.name]: data?.[field.name]
-                              }), {}) ?? {})
-                            },
+                          updateItemMutation({
+                            variables: {
+                              id: data.id,
+                              input: {
+                                textlength: data?.text?.length,
+                                description: data?.description,
+                                name: data?.name,
+                                externalId: data?.externalId,
+                                tags: data?.tags?.join(","),
+                                source: data?.source,
+                                archived: data?.archived,
+                                ...(context?.fields?.reduce((acc, field) => ({
+                                  ...acc,
+                                  [field.name]: data?.[field.name]
+                                }), {}) ?? {})
+                              },
+                            }
                           });
                           setEditing(false);
                         }}
@@ -397,7 +451,7 @@ export function DataDisplay(props: DataDisplayProps) {
                       >
                         <SaveIcon className="size-4" />
                         <span className="sr-only">
-                          Save {updateItemMutation.isPending ?? <Loading />}
+                          Save {updateItemMutationResult.loading ?? <Loading />}
                         </span>
                       </Button>
                     </TooltipTrigger>
@@ -413,7 +467,7 @@ export function DataDisplay(props: DataDisplayProps) {
                       }}
                       variant="ghost"
                       size="icon"
-                      disabled={!data || updateItemMutation.isPending}
+                      disabled={!data || updateItemMutationResult.loading}
                     >
                       <Edit className="size-4" />
                       <span className="sr-only">Edit</span>
@@ -631,9 +685,9 @@ export function DataDisplay(props: DataDisplayProps) {
                                                   value={expandedField?.name === "description" ? expandedField.value : data.description ?? ""}
                                                   onChange={(e) => {
                                                     const newValue = e.target.value;
-                                                    setExpandedField(prev => 
+                                                    setExpandedField(prev =>
                                                       prev?.name === "description"
-                                                        ? {...prev, value: newValue}
+                                                        ? { ...prev, value: newValue }
                                                         : prev
                                                     );
                                                     setData({
@@ -854,9 +908,9 @@ export function DataDisplay(props: DataDisplayProps) {
                                                             value={expandedField?.name === contextField.name ? expandedField.value : data[contextField.name] ?? ""}
                                                             onChange={(e) => {
                                                               const newValue = e.target.value;
-                                                              setExpandedField(prev => 
-                                                                prev?.name === contextField.name 
-                                                                  ? {...prev, value: newValue}
+                                                              setExpandedField(prev =>
+                                                                prev?.name === contextField.name
+                                                                  ? { ...prev, value: newValue }
                                                                   : prev
                                                               );
                                                               setData({
@@ -943,7 +997,25 @@ export function DataDisplay(props: DataDisplayProps) {
               </Form>
 
               <div className="mt-4 border border-primary/20 p-3 pb-5 rounded">
-                <h1 className="text-lg font-medium ml-4 mt-3">Embeddings</h1>
+                <div className="flex items-center justify-between ml-4 mt-3 mr-4 mb-2">
+                  <h1 className="text-lg font-medium">Embeddings</h1>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreVertical className="h-4 w-4" />
+                        <span className="sr-only">Open menu</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setConfirmationModal("generate")}>
+                        Generate embeddings
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setConfirmationModal("delete")}>
+                        Delete embeddings
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                 <Table>
                   <TableCaption>
                     A list of all embeddings for this item.
@@ -975,7 +1047,7 @@ export function DataDisplay(props: DataDisplayProps) {
                               <TextPreview text={chunk.content} />
                             </TableCell>
                             <TableCell>
-                              {chunk.embedding}
+                              {chunk.embedding_size || 0}
                             </TableCell>
                             <TableCell>
                               {new Date(chunk.createdAt).toLocaleString()}
@@ -1007,6 +1079,76 @@ export function DataDisplay(props: DataDisplayProps) {
           )}
         </>
       )}
+
+      <AlertDialog open={confirmationModal === "generate"} onOpenChange={(open) => !open && setConfirmationModal(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Generate Embeddings</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to generate embeddings for this item? This will create new embedding vectors for the content.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={generateChunksMutationResult.loading}
+              onClick={() => {
+                if (!data?.id) {
+                  return;
+                }
+                console.log("Generate embeddings for item:", data?.id);
+                setConfirmationModal(null);
+                generateChunksMutation({
+                  variables: {
+                    where: {
+                      id: {
+                        eq: data?.id,
+                      }
+                    },
+                  },
+                });
+              }}>
+              Generate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmationModal === "delete"} onOpenChange={(open) => !open && setConfirmationModal(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Embeddings</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete all embeddings for this item? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteChunksMutationResult.loading}
+              onClick={async () => {
+                if (!data?.id) {
+                  return;
+                }
+                console.log("Delete embeddings for item:", data?.id);
+                setConfirmationModal(null);
+                deleteChunksMutation({
+                  variables: {
+                    where: {
+                      id: {
+                        eq: data?.id,
+                      }
+                    },
+                  },
+                });
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

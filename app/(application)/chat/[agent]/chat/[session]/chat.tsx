@@ -13,6 +13,12 @@ import { Actions, Action } from '@/components/ai-elements/actions';
 import { Loader } from '@/components/ai-elements/loader';
 import TextareaAutosize from "react-textarea-autosize";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   GET_AGENT_MESSAGES,
   GET_AGENT_SESSION_BY_ID,
 } from "@/queries/queries";
@@ -25,6 +31,7 @@ import { Workflow, Plus, RefreshCcwIcon, CopyIcon, ArrowUp } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { SaveWorkflowModal } from "@/components/save-workflow-modal";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Conversation, ConversationContent } from "@/components/ai-elements/conversation";
 import { Response } from '@/components/ai-elements/response';
@@ -58,6 +65,7 @@ export function ChatLayout({ session: id, agent }: { session: string, agent: Age
   const [copyingTableId, setCopyingTableId] = useState<string | null>(null);
   const [showSaveWorkflowModal, setShowSaveWorkflowModal] = useState(false);
   const [input, setInput] = useState('');
+  const [disabledTools, setDisabledTools] = useState<string[]>([]);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast()
 
@@ -118,17 +126,20 @@ export function ChatLayout({ session: id, agent }: { session: string, agent: Age
       api: `${configContext?.backend}${agent.slug}/${agent.id}`,
       // only send the last message to the server: we load
       // the history from the database.
-      prepareSendMessagesRequest: async ({ messages, id: chatId }) => {
+      prepareSendMessagesRequest: async ({ messages, id: chatId, body }) => {
         const token = await getToken()
         console.log("token", token)
+        console.log("[EXULU] body", body)
         if (!token) {
           throw new Error("No valid session token available.")
         }
+        console.log("[EXULU] disabled tools", disabledTools)
         return {
           body: {
+            ...body,
             message: messages[messages.length - 1],
             id: chatId,
-            session: id
+            session: id,
           }, headers: {
             User: user.id,
             Session: id,
@@ -218,6 +229,10 @@ export function ChatLayout({ session: id, agent }: { session: string, agent: Age
     e.preventDefault();
     sendMessage({
       text: input,
+    }, {
+      body: {
+        disabledTools: disabledTools,
+      },
     });
     setInput('');
   };
@@ -229,201 +244,265 @@ export function ChatLayout({ session: id, agent }: { session: string, agent: Age
     }
   };
 
+  const toggleTool = (toolId: string) => {
+    setDisabledTools(prev =>
+      prev.includes(toolId)
+        ? prev.filter(name => name !== toolId)
+        : [...prev, toolId]
+    );
+  };
+
   return (
     <div className="flex flex-col w-full">
 
 
       <div className="mx-auto relative size-full pb-6">
 
-        <div className="flex flex-col h-full w-full">
-          {!sessionQuery.loading && sessionQuery.data?.agent_sessionById && (
-            <Conversation className="overflow-y-hidden">
-              {/* Save as Workflow button - appears when conversation has content */}
-              {canCreateWorkflow && (
-                <div className="flex justify-between absolute top-0 left-0 right-0 items-center px-4 py-2 border-b z-10 dark:bg-black bg-white">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Workflow className="w-4 h-4" />
-                    Turn this conversation into a reusable workflow
+        <div className="flex h-full w-full">
+          {/* Main conversation area */}
+          <div className="flex flex-col flex-1">
+            {!sessionQuery.loading && sessionQuery.data?.agent_sessionById && (
+              <Conversation className="overflow-y-hidden">
+                {/* Save as Workflow button - appears when conversation has content */}
+                {canCreateWorkflow && (
+                  <div className="flex justify-between absolute top-0 left-0 right-0 items-center px-4 py-2 border-b z-10 dark:bg-black bg-white">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Workflow className="w-4 h-4" />
+                      Turn this conversation into a reusable workflow
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSaveWorkflowModal(true)}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Save as Workflow
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowSaveWorkflowModal(true)}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Save as Workflow
-                  </Button>
-                </div>
-              )}
-              {messages?.length === 0 ?
-                <div className="size-full flex justify-center items-center">
-                  <div className="flex flex-col gap-4 items-center max-w-2xl w-full px-4 my-auto">
-                    <Image
-                      src="/exulu_logo.svg"
-                      alt="AI"
-                      width={120}
-                      height={120}
-                      className="h-30 w-40 object-contain" /*invert dark:invert-0*/
-                    />
-                    <p className="text-center text-lg text-muted-foreground">
-                      How can I help you today?
-                    </p>
+                )}
+                {messages?.length === 0 ?
+                  <div className="size-full flex justify-center items-center">
+                    <div className="flex flex-col gap-4 items-center max-w-2xl w-full px-4 my-auto">
+                      <Image
+                        src="/exulu_logo.svg"
+                        alt="AI"
+                        width={120}
+                        height={120}
+                        className="h-30 w-40 object-contain" /*invert dark:invert-0*/
+                      />
+                      <p className="text-center text-lg text-muted-foreground">
+                        How can I help you today?
+                      </p>
 
-                    {/* Workflow Banner for new users */}
-                    <Card className="w-full mb-6">
-                      <CardHeader className="text-center">
-                        <CardTitle className="flex items-center justify-center gap-2">
-                          <Workflow className="w-5 h-5" />
-                          Create Reusable Workflows
-                        </CardTitle>
-                        <CardDescription>
-                          Turn your conversations into templates that can be reused with different inputs. Perfect for recurring tasks and processes.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="text-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled
-                          className="text-muted-foreground"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Save as Workflow
-                          <span className="ml-2 text-xs">(Available after chatting)</span>
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div> : null}
-              <ConversationContent className="px-6">
-                {messages?.length > 0 ?
-                  <>
-                    {messages?.map((message, messageIndex) => {
-                      const isFirstMessage =
-                        messageIndex === 0;
-                      return (
-                        <Message className={cn(isFirstMessage && 'mt-10')} from={message.role} key={message.id}>
-                          <MessageContent>
-                            {message.parts.map((part, i) => {
-                              switch (part.type) {
-                                case 'source-url':
-                                  <Sources>
-                                    <SourcesTrigger
-                                      count={message.parts.filter(
-                                        (part) => part.type === 'source-url'
-                                      ).length}
-                                    />
-                                    <SourcesContent key={`${message.id}`}>
-                                      {message.parts.map((part, i) => {
-                                        switch (part.type) {
-                                          case 'source-url':
-                                            return (<Source
-                                              key={`${message.id}-${i}`}
-                                              href={part.url}
-                                              title={part.title}
-                                            />)
-                                        }
-                                      })}
-                                    </SourcesContent>
-                                  </Sources>
-                                case 'text':
-                                  const isLastMessage =
-                                    messageIndex === messages.length - 1;
-                                  return (
-                                    <div key={`${message.id}-${i}`}>
-                                      <Response>
-                                        {part.text}
-                                      </Response>
-                                      {message.role === 'assistant' && isLastMessage && (
-                                        <Actions className="mt-2">
-                                          <Action
-                                            onClick={() => regenerate()}
-                                            label="Retry"
-                                          >
-                                            <RefreshCcwIcon className="size-3" />
-                                          </Action>
-                                          <Action
-                                            onClick={() =>
-                                              navigator.clipboard.writeText(part.text)
-                                            }
-                                            label="Copy"
-                                          >
-                                            <CopyIcon className="size-3" />
-                                          </Action>
-                                        </Actions>
-                                      )}
-                                    </div>
-                                  );
-                                case 'reasoning':
-                                  return (
-                                    <Reasoning
-                                      key={`${message.id}-${i}`}
-                                      className="w-full"
-                                      isStreaming={status === 'streaming'}
-                                    >
-                                      <ReasoningTrigger />
-                                      <ReasoningContent>{part.text}</ReasoningContent>
-                                    </Reasoning>
-                                  );
-                                default:
-                                  return null;
-                              }
-                            })}
-                          </MessageContent>
-                        </Message>
-                      )
-                    })}
-                  </>
-                  : null}
+                      {/* Workflow Banner for new users */}
+                      <Card className="w-full mb-6">
+                        <CardHeader className="text-center">
+                          <CardTitle className="flex items-center justify-center gap-2">
+                            <Workflow className="w-5 h-5" />
+                            Create Reusable Workflows
+                          </CardTitle>
+                          <CardDescription>
+                            Turn your conversations into templates that can be reused with different inputs. Perfect for recurring tasks and processes.
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="text-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled
+                            className="text-muted-foreground"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Save as Workflow
+                            <span className="ml-2 text-xs">(Available after chatting)</span>
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div> : null}
+                <ConversationContent className="px-6">
+                  {messages?.length > 0 ?
+                    <>
+                      {messages?.map((message, messageIndex) => {
+                        const isFirstMessage =
+                          messageIndex === 0;
+                        return (
+                          <Message className={cn(isFirstMessage && 'mt-10')} from={message.role} key={message.id}>
+                            <MessageContent>
+                              {message.parts.map((part, i) => {
+                                switch (part.type) {
+                                  case 'source-url':
+                                    <Sources>
+                                      <SourcesTrigger
+                                        count={message.parts.filter(
+                                          (part) => part.type === 'source-url'
+                                        ).length}
+                                      />
+                                      <SourcesContent key={`${message.id}`}>
+                                        {message.parts.map((part, i) => {
+                                          switch (part.type) {
+                                            case 'source-url':
+                                              return (<Source
+                                                key={`${message.id}-${i}`}
+                                                href={part.url}
+                                                title={part.title}
+                                              />)
+                                          }
+                                        })}
+                                      </SourcesContent>
+                                    </Sources>
+                                  case 'text':
+                                    const isLastMessage =
+                                      messageIndex === messages.length - 1;
+                                    return (
+                                      <div key={`${message.id}-${i}`}>
+                                        <Response>
+                                          {part.text}
+                                        </Response>
+                                        {message.role === 'assistant' && isLastMessage && (
+                                          <Actions className="mt-2">
+                                            <Action
+                                              onClick={() => regenerate()}
+                                              label="Retry"
+                                            >
+                                              <RefreshCcwIcon className="size-3" />
+                                            </Action>
+                                            <Action
+                                              onClick={() =>
+                                                navigator.clipboard.writeText(part.text)
+                                              }
+                                              label="Copy"
+                                            >
+                                              <CopyIcon className="size-3" />
+                                            </Action>
+                                          </Actions>
+                                        )}
+                                      </div>
+                                    );
+                                  case 'reasoning':
+                                    return (
+                                      <Reasoning
+                                        key={`${message.id}-${i}`}
+                                        className="w-full"
+                                        isStreaming={status === 'streaming'}
+                                      >
+                                        <ReasoningTrigger />
+                                        <ReasoningContent>{part.text}</ReasoningContent>
+                                      </Reasoning>
+                                    );
+                                  default:
+                                    return null;
+                                }
+                              })}
+                            </MessageContent>
+                          </Message>
+                        )
+                      })}
+                    </>
+                    : null}
 
-                {status === "streaming" ? <Loader /> : null}
+                  {status === "streaming" ? <Loader /> : null}
 
-              </ConversationContent>
-            </Conversation>
-          )}
-          {sessionQuery.loading && <div className="size-full flex justify-center items-center"><Loader /></div>}
-          <form
-            onSubmit={onSubmit}
-            className="w-full items-center flex relative gap-2 px-6"
-          >
-            <TextareaAutosize
-              autoComplete="off"
-              autoFocus={true}
-              value={input}
-              ref={inputRef}
-              onKeyDown={handleKeyPress}
-              onChange={(e) => setInput(e.target.value)}
-              name="message"
-              placeholder={`Ask me anything...`}
-              className="border-input max-h-20 px-5 py-4 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full border rounded flex items-center h-14 resize-none overflow-hidden dark:bg-card/35"
-            />
-            {status !== "streaming" ? (
-              <Button
-                className="shrink-0"
-                variant="secondary"
-                size="icon"
-                disabled={status === "submitted" || !input?.trim()}
-              >
-                <ArrowUp className=" size-6 text-muted-foreground" />
-              </Button>
-            ) : (
-              <Button
-                className="shrink-0"
-                variant="secondary"
-                size="icon"
-                onClick={stop}
-              >
-                <StopIcon className="size-6 text-muted-foreground" />
-              </Button>
+                </ConversationContent>
+              </Conversation>
             )}
-          </form>
-          {/* Save Workflow Modal */}
-          <SaveWorkflowModal
-            isOpen={showSaveWorkflowModal}
-            onClose={() => setShowSaveWorkflowModal(false)}
-            messages={messages || []}
-            sessionTitle={sessionQuery.data?.agent_sessionById?.title}
-          />
+            {sessionQuery.loading && <div className="size-full flex justify-center items-center"><Loader /></div>}
+            <form
+              onSubmit={onSubmit}
+              className="w-full items-center flex relative gap-2 px-6"
+            >
+              <TextareaAutosize
+                autoComplete="off"
+                autoFocus={true}
+                value={input}
+                ref={inputRef}
+                onKeyDown={handleKeyPress}
+                onChange={(e) => setInput(e.target.value)}
+                name="message"
+                placeholder={`Ask me anything...`}
+                className="border-input max-h-20 px-5 py-4 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full border rounded flex items-center h-14 resize-none overflow-hidden dark:bg-card/35"
+              />
+              {status !== "streaming" ? (
+                <Button
+                  className="shrink-0"
+                  variant="secondary"
+                  size="icon"
+                  disabled={status === "submitted" || !input?.trim()}
+                >
+                  <ArrowUp className=" size-6 text-muted-foreground" />
+                </Button>
+              ) : (
+                <Button
+                  className="shrink-0"
+                  variant="secondary"
+                  size="icon"
+                  onClick={stop}
+                >
+                  <StopIcon className="size-6 text-muted-foreground" />
+                </Button>
+              )}
+            </form>
+            {/* Save Workflow Modal */}
+            <SaveWorkflowModal
+              isOpen={showSaveWorkflowModal}
+              onClose={() => setShowSaveWorkflowModal(false)}
+              messages={messages || []}
+              sessionTitle={sessionQuery.data?.agent_sessionById?.title}
+            />
+          </div>
+
+          {/* Agent Details Sidebar */}
+          <div className="w-80 border-l bg-muted/20 p-4 space-y-4">
+            <div>
+              <h3 className="font-semibold text-sm mb-2">Agent Details</h3>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium">{agent.name}</p>
+                  {agent.description && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {agent.description}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Tools (click to toggle):</p>
+                  <small className="text-xs text-muted-foreground">
+                    You can disable tools for individual messages.
+                  </small>
+                  <TooltipProvider>
+                    <div className="space-y-1">
+                      {agent.tools && agent.tools.length > 0 ? (
+                        agent.tools.map((tool) => {
+                          const isEnabled = !disabledTools.includes(tool.toolId);
+                          return (
+                            <Tooltip key={tool.name}>
+                              <TooltipTrigger asChild>
+                                <div className="p-2 rounded-md border text-xs bg-background flex items-center justify-between">
+                                  <p className="font-medium flex items-center gap-2">
+                                    {tool.name}
+                                  </p>
+                                  <Switch
+                                    checked={isEnabled}
+                                    onCheckedChange={() => toggleTool(tool.toolId)}
+                                  />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{tool.description}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })
+                      ) : (
+                        <p className="text-xs text-muted-foreground">No tools enabled.</p>
+                      )}
+                    </div>
+                  </TooltipProvider>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

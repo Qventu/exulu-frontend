@@ -132,40 +132,6 @@ export default function AgentsPage() {
           onOpenChange={() => setShowDetails(null)}
         />
       )}
-
-      {/* No agents at all */}
-      {!isLoading && (!data?.agentsPagination || data.agentsPagination.items.length === 0) && (
-        <div className="text-center py-12">
-          <h2 className="text-xl font-semibold mb-4">No agents found</h2>
-          <p className="text-muted-foreground mb-6">
-            Get started by creating your first AI agent
-          </p>
-          <div className="flex justify-center">
-            <CreateNewAgentCard
-              createAgent={createAgent}
-              createAgentResult={createAgentResult}
-              company={company}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* No agents match search */}
-      {!isLoading && data?.agentsPagination?.items && data.agentsPagination.items.length > 0 && filteredAgents.length === 0 && (
-        <div className="text-center py-12">
-          <h2 className="text-xl font-semibold mb-4">No agents match your search</h2>
-          <p className="text-muted-foreground mb-6">
-            Try adjusting your search query or create a new agent
-          </p>
-          <div className="flex justify-center">
-            <CreateNewAgentCard
-              createAgent={createAgent}
-              createAgentResult={createAgentResult}
-              company={company}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

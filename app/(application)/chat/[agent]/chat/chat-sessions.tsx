@@ -163,7 +163,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
       )}
       {showSessions && (
         <div
-          className="md:min-w-[220px] relative hidden flex-col items-start md:flex h-100 overflow-y-scroll border-r"
+          className="w-[400px] relative hidden flex-col items-start md:flex h-100 overflow-y-scroll border-r"
           x-chunk="dashboard-03-chunk-0"
         >
           <div className="bg-background/95 w-full backdrop-blur supports-[backdrop-filter]:bg-background/60">

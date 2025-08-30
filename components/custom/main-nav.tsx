@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/models/user-role";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { ChevronUp, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard, Database, ListTodo, Bot, Route, Variable, FileCheck, Sparkles, Settings } from "lucide-react";
+import { ChevronUp, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard, Database, ListTodo, Bot, Route, Variable, FileCheck, Sparkles, Settings, LogOut, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Badge } from "../ui/badge";
@@ -217,17 +217,17 @@ export function MainNavSidebar() {
                     <span>Toggle theme</span>
                   </div>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/api/auth/signout")}>
                   <div className="flex items-center gap-2 w-full">
-                    <Settings className="h-4 w-4" />
-                    <span>Settings</span>
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
                   </div>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push("/api/auth/signout")} className="text-red-600 focus:text-red-600">
-                  <span>Logout</span>
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => window.open("https://www.exulu.com/toc", "_blank")}>
-                  <span>Terms and conditions</span>
+                  <div className="flex items-center gap-2 w-full">
+                    <FileText className="h-4 w-4" />
+                    <span>Terms and conditions</span>
+                  </div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

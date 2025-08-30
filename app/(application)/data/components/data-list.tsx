@@ -5,7 +5,7 @@ import {
     ChevronRightIcon,
     DoubleArrowLeftIcon, ExclamationTriangleIcon,
 } from "@radix-ui/react-icons";
-import { keepPreviousData, useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@apollo/client";
 import {
     ColumnFiltersState,
     flexRender,
@@ -21,7 +21,6 @@ import {
 } from "@tanstack/react-table";
 import {
     Archive,
-    Download,
     PackageOpen,
     Plus,
     Trash2,
@@ -34,7 +33,6 @@ import {
 import * as React from "react";
 import { useContext, useState } from "react";
 import { UserContext } from "@/app/(application)/authenticated";
-import { items } from "@/util/api";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loading } from "@/components/ui/loading";
@@ -45,13 +43,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { columns } from "./columns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-    Tooltip,
-    TooltipContent, TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { SearchBar } from "./search-bar";
 import { Item } from "@EXULU_SHARED/models/item";
+import { CREATE_ITEM, CREATE_ONE_POSTFIX, DELETE_ITEM, GET_ITEMS, PAGINATION_POSTFIX, UPDATE_ITEM } from "@/queries/queries";
 
 function usePagination() {
     const [pagination, setPagination] = useState({
@@ -80,12 +74,11 @@ export function DataList({
 
     const path = usePathname();
     const params = useSearchParams();
-    const page = params.get("page") ? parseInt(params.get("page")!) : 1;
+    const [page, setPage] = useState(params.get("page") ? parseInt(params.get("page")!) : 1);
     const search = params.get("search");
     const { user } = useContext(UserContext);
     const { toast } = useToast();
     const [company, setCompany] = useState<any>({ ...user.company });
-    const [exporting, setExporting] = React.useState(false);
 
     const router = useRouter();
 
@@ -99,80 +92,72 @@ export function DataList({
     );
     const [sorting, setSorting] = React.useState<SortingState>([]);
 
-    const fetchItems = async () => {
-
-        console.log("[EXULU] fetchItems", page, search);
-        // todo get query from query params
-        const response = await items.list({
+    let { loading, data: raw, refetch, previousData: prev, error } = useQuery<{
+        [key: string]: {
+            pageInfo: {
+                pageCount: number;
+                itemCount: number;
+                currentPage: number;
+                hasPreviousPage: boolean;
+                hasNextPage: boolean;
+            };
+            items: Item[];
+        }
+    }>(GET_ITEMS(activeFolder, []), {
+        fetchPolicy: "no-cache",
+        nextFetchPolicy: "network-only",
+        variables: {
             context: activeFolder,
-            archived,
-            ...(search ? { name: search } : {}),
-        }, page ?? 1, 10);
-
-        const data = await response.json();
-        console.log("[EXULU] items", data);
-        return data;
-    };
-
-    const itemsData = useQuery<{
-        pagination: {
-            pageCount: number;
-            totalCount: number;
-            currentPage: number | null;
-            previousPage: number | null;
-            nextPage: number | null;
-        };
-        items: Item[];
-    }>({
-        queryKey: ["GetItems", page, search],
-        staleTime: 0,
-        placeholderData: keepPreviousData,
-        queryFn: () => fetchItems(),
+            page: page ?? 1,
+            limit: 10,
+            sort: {
+                field: "updatedAt",
+                direction: "DESC",
+            },
+            filters: {
+                archived: {
+                    eq: archived
+                },
+                ...(search ? { name: { contains: `${search}` } } : {}),
+            },
+        },
     });
 
-    const updateItemMutation = useMutation<any, Error, {
-        context: string;
+    const data = raw?.[activeFolder + PAGINATION_POSTFIX] as any;
+    const previousData = prev?.[activeFolder + PAGINATION_POSTFIX] as any;
+
+    const [updateItemMutation, updateItemMutationResult] = useMutation<{
+        [key: string]: {
+            job: string;
+            item: {
+                name?: string;
+                archived?: boolean;
+                description?: string;
+                tags?: string[];
+                external_id?: string;
+                [key: string]: any;
+            }
+        }
+    }>(UPDATE_ITEM(activeFolder), {
+        onCompleted: () => {
+            refetch();
+        }
+    });
+
+    const [deleteItemMutation, deleteItemMutationResult] = useMutation<{
         id: string;
-        item: {
-            name?: string;
-            archived?: boolean;
-            description?: string;
-            tags?: string[];
-            external_id?: string;
-            [key: string]: any;
-        }
-    }>({
-        mutationFn: async (parameters) => {
-            const response = await items.update({
-                context: parameters.context,
-                id: parameters.id,
-                item: parameters.item,
-            });
-            return await response.json();
-        },
-        onSuccess: () => {
-            itemsData.refetch();
+    }>(DELETE_ITEM(activeFolder), {
+        onCompleted: () => {
+            refetch();
         }
     });
 
-    const deleteItemMutation = useMutation<any, Error, {
-        context: string,
-        id: string,
-    }>({
-        mutationFn: async (parameters) => {
-            const response = await items.delete({ context: parameters.context, id: parameters.id });
-            return await response.json();
-        },
-        onSuccess: () => {
-            itemsData.refetch();
-        }
-    });
     const defaultData = React.useMemo(() => [], []);
     const { limit, onPaginationChange, skip, pagination } = usePagination();
 
     const table = useReactTable({
-        data: itemsData.data?.items ?? defaultData,
-        pageCount: itemsData?.data?.pagination?.pageCount ?? -1,
+        data: loading && previousData?.items ? previousData.items : data?.items ?? defaultData,
+        pageCount: data?.pageInfo?.pageCount ?? -1,
         columns,
         state: {
             sorting,
@@ -195,30 +180,21 @@ export function DataList({
         onPaginationChange,
     });
 
-    const createItemMutation = useMutation<any, Error, {
-        context: string
-        item: {
-            name?: string
-            description?: string
-            tags?: string[]
-            external_id?: string
-            [key: string]: any
+    const [createItemMutation, createItemMutationResult] = useMutation<{
+        [key: string]: {
+            item: {
+                id: string;
+            }
+            job: string;
         }
-    }>({
-        mutationFn: async (parameters) => {
-            const response = await items.create({ context: parameters.context, item: parameters.item });
-            const json = await response.json();
-            console.log("json", json);
-            return json.id;
-        },
-        onSuccess: (data) => {
+    }>(CREATE_ITEM(activeFolder), {
+        onCompleted: (data) => {
             console.log("data", data);
-            itemsData.refetch();
-            toast({
-                title: "Item created",
-                description: "Item created successfully.",
-            })
-            selectItem(data.id);
+            const id = data ? data[activeFolder + CREATE_ONE_POSTFIX]?.item?.id : undefined;
+            if (id) {
+                router.push(`/data/${activeFolder}/${id}`);
+            }
+            refetch();
         }
     });
 
@@ -229,6 +205,7 @@ export function DataList({
         page?: number;
         search?: string;
     }) => {
+        setPage(page ?? 1);
         const params = new URLSearchParams();
         if (page) {
             params.set("page", page.toString());
@@ -247,11 +224,11 @@ export function DataList({
         }
     }
 
-    if (itemsData.error) return <Alert className="p-4" variant="destructive">
+    if (error) return <Alert className="p-4" variant="destructive">
         <ExclamationTriangleIcon className="size-4" />
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>
-            {itemsData.error?.message || ": unknown"}
+            {error?.message || ": unknown"}
         </AlertDescription>
     </Alert>;
 
@@ -278,19 +255,20 @@ export function DataList({
                 </div>
                 <Button
                     onClick={() => {
-                        createItemMutation.mutate({
-                            context: activeFolder,
-                            item: {
-                                name: "New item",
-                                source: "manual",
-                                textlength: 0,
-                                company: company.id,
-                            },
+                        createItemMutation({
+                            variables: {
+                                input: {
+                                    name: "New item",
+                                    source: "manual",
+                                    textlength: 0,
+                                    company: company.id,
+                                },
+                            }
                         });
                     }}
-                    disabled={createItemMutation.isPending || archived}
+                    disabled={createItemMutationResult.loading || archived}
                     className="ml-2 ml-auto lg:flex">
-                    {createItemMutation.isPending ? <Loading /> : <Plus size={18} />}
+                    {createItemMutationResult.loading ? <Loading /> : <Plus size={18} />}
                 </Button>
             </div>
             {table.getIsSomeRowsSelected() || table.getIsAllRowsSelected() ? (
@@ -303,10 +281,11 @@ export function DataList({
                                     const promises: any[] = [];
                                     table.getSelectedRowModel().rows.forEach((row) => {
                                         promises.push(
-                                            updateItemMutation.mutate({
-                                                context: activeFolder,
-                                                id: row.original.id,
-                                                item: { archived: false },
+                                            updateItemMutation({
+                                                variables: {
+                                                    id: row.original.id,
+                                                    input: { archived: false },
+                                                }
                                             }),
                                         );
                                     });
@@ -320,9 +299,8 @@ export function DataList({
                                     });
                                 }}
                                 variant="secondary"
-                                disabled={updateItemMutation.isPending}
-                            >
-                                {updateItemMutation.isPending ? (
+                                disabled={updateItemMutationResult.loading}>
+                                {updateItemMutationResult.loading ? (
                                     <Loading />
                                 ) : (
                                     <PackageOpen className="size-4" />
@@ -335,9 +313,11 @@ export function DataList({
                                     const promises: any[] = [];
                                     table.getSelectedRowModel().rows.forEach((row) => {
                                         promises.push(
-                                            deleteItemMutation.mutate({
-                                                context: activeFolder,
-                                                id: row.original.id,
+                                            deleteItemMutation({
+                                                variables: {
+                                                    context: activeFolder,
+                                                    id: row.original.id,
+                                                }
                                             }),
                                         );
                                     });
@@ -350,9 +330,8 @@ export function DataList({
                                     });
                                 }}
                                 variant="secondary"
-                                disabled={deleteItemMutation.isPending}
-                            >
-                                {deleteItemMutation.isPending ? (
+                                disabled={deleteItemMutationResult.loading}>
+                                {deleteItemMutationResult.loading ? (
                                     <Loading />
                                 ) : (
                                     <Trash2 className="size-4" />
@@ -367,10 +346,11 @@ export function DataList({
                                 const promises: any[] = [];
                                 table.getSelectedRowModel().rows.forEach((row) => {
                                     promises.push(
-                                        updateItemMutation.mutate({
-                                            context: activeFolder,
-                                            id: row.original?.id,
-                                            item: { archived: true },
+                                        updateItemMutation({
+                                            variables: {
+                                                id: row.original?.id,
+                                                input: { archived: true },
+                                            }
                                         }),
                                     );
                                 });
@@ -383,9 +363,9 @@ export function DataList({
                                 });
                             }}
                             variant="secondary"
-                            disabled={updateItemMutation.isPending}
+                            disabled={updateItemMutationResult.loading}
                         >
-                            {updateItemMutation.isPending ? (
+                            {updateItemMutationResult.loading ? (
                                 <Loading />
                             ) : (
                                 <Archive className="size-4" />
@@ -395,7 +375,7 @@ export function DataList({
                     )}
                 </div>
             ) : null}
-            {itemsData.isLoading ? (
+            {loading ? (
                 <ScrollArea className="h-screen">
                     <div className="flex flex-col gap-2 p-4 pt-0">
                         <Skeleton className="mb-2 h-[100px] w-full rounded-lg" />
@@ -413,11 +393,7 @@ export function DataList({
                             <div className="border-y">
                                 <Table>
                                     <TableBody>
-                                        {itemsData.isLoading ? (
-                                            <tr>
-                                                <td>Loading</td>
-                                            </tr>
-                                        ) : table.getRowModel().rows?.length ? (
+                                        {table.getRowModel().rows?.length ? (
                                             table.getRowModel().rows.map((row) => (
                                                 <TableRow
                                                     key={row.id}
@@ -467,7 +443,7 @@ export function DataList({
                         <div className="flex-1 text-sm text-muted-foreground">
                             {table.getFilteredSelectedRowModel().rows.length} of{" "}
                             {table.getFilteredRowModel().rows.length} row(s) selected (total{" "}
-                            {itemsData.data?.pagination.totalCount} items).
+                            {data?.pageInfo.itemCount} items).
                         </div>
                         {/*todo pagination*/}
                         <div className="flex items-center space-x-6 lg:space-x-8">
@@ -481,7 +457,7 @@ export function DataList({
                                             search: search ?? undefined,
                                         });
                                     }}
-                                    disabled={!itemsData.data?.pagination.previousPage}
+                                    disabled={!data?.pageInfo.hasPreviousPage}
                                 >
                                     <span className="sr-only">Go to first page</span>
                                     <DoubleArrowLeftIcon className="size-4" />
@@ -492,17 +468,16 @@ export function DataList({
                                     onClick={() => {
                                         console.log(
                                             "itemsData.data?.pageInfo.hasPreviousPage",
-                                            itemsData.data?.pagination.previousPage,
+                                            data?.pageInfo.hasPreviousPage,
                                         );
                                         setParams({
-                                            page: itemsData.data?.pagination.previousPage ?? undefined,
+                                            page: data?.pageInfo.hasPreviousPage ? page - 1 : undefined,
                                             search: search ?? undefined,
                                         });
                                     }}
                                     disabled={
-                                        !itemsData.data?.pagination.previousPage ||
-                                        itemsData.isRefetching ||
-                                        itemsData.isFetching
+                                        !data?.pageInfo.hasPreviousPage ||
+                                        loading
                                     }
                                 >
                                     <span className="sr-only">Go to previous page</span>
@@ -513,14 +488,13 @@ export function DataList({
                                     className="size-8 p-0"
                                     onClick={() => {
                                         setParams({
-                                            page: itemsData.data?.pagination.nextPage ?? undefined,
+                                            page: data?.pageInfo.hasNextPage ? page + 1 : undefined,
                                             search: search ?? undefined,
                                         });
                                     }}
                                     disabled={
-                                        !itemsData.data?.pagination.nextPage ||
-                                        itemsData.isRefetching ||
-                                        itemsData.isFetching
+                                        !data?.pageInfo.hasNextPage ||
+                                        loading
                                     }>
                                     <span className="sr-only">Go to next page</span>
                                     <ChevronRightIcon className="size-4" />

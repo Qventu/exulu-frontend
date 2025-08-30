@@ -26,6 +26,8 @@ export interface Agent {
             name: string;
             variable: string;
         }[];
+        name: string;
+        description: string;
     }[];
     capabilities?: {
         text: boolean;

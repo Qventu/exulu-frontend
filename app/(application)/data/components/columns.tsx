@@ -50,7 +50,7 @@ export const columns: ColumnDef<any>[] = [
               : row.original.text.slice(0, 200) || "Untitled"}
           </span>
           <small className="mt-1">
-            {format(new Date(row.original.created_at), "PP")}
+            {format(new Date(row.original.createdAt), "PP")}
           </small>
         </div>
       );

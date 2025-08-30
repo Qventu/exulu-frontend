@@ -80,7 +80,7 @@ export function AgentDetailsSheet({ agentId, open, onOpenChange }: AgentDetailsS
                 <Badge variant={agent.active ? "default" : "secondary"}>
                   {agent.active ? "Active" : "Inactive"}
                 </Badge>
-                <Badge variant="outline">{agent.modelName}</Badge>
+                <Badge variant="outline">{agent.modelName || "Custom"}</Badge>
               </div>
             </div>
           </div>
