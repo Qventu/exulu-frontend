@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import * as React from "react";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { UserContext } from "@/app/(application)/authenticated";
 import {
   Sidebar,
@@ -15,7 +15,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger
+  SidebarTrigger,
+  useSidebar
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/models/user-role";
@@ -23,7 +24,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ChevronUp, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard, Database, ListTodo, Bot, Route, Variable, FileCheck, Sparkles, Settings, LogOut, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Badge } from "../ui/badge";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import Image from "next/image"
 
@@ -153,11 +153,19 @@ function NavigationItems({ items }: { items: { label: string; path: string; icon
   );
 }
 
-export function MainNavSidebar() {
+export function MainNavSidebar({ sidebarDefaultOpen }: { sidebarDefaultOpen: boolean }) {
   const { user } = useContext(UserContext);
   const navigationItems = buildNavigation(user, user.role);
   const router = useRouter();
   const { setTheme, theme } = useTheme();
+  const params = useParams()
+  const sidebar = useSidebar()
+
+  useEffect(() => {
+    if (params.agent && sidebarDefaultOpen === undefined) {
+      sidebar.setOpen(false)
+    }
+  }, [params.agent])
 
   return (
     <Sidebar collapsible="icon" className="border-r">
@@ -214,7 +222,7 @@ export function MainNavSidebar() {
                 <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
                   <div className="flex items-center gap-2 w-full">
                     {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    <span>Toggle theme</span>
+                    <span>Theme</span>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push("/api/auth/signout")}>
@@ -226,7 +234,7 @@ export function MainNavSidebar() {
                 <DropdownMenuItem onClick={() => window.open("https://www.exulu.com/toc", "_blank")}>
                   <div className="flex items-center gap-2 w-full">
                     <FileText className="h-4 w-4" />
-                    <span>Terms and conditions</span>
+                    <span>Terms</span>
                   </div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -238,12 +246,12 @@ export function MainNavSidebar() {
   );
 }
 
-export function MainNavProvider({ children }: { children: React.ReactNode }) {
+export function MainNavProvider({ children, sidebarDefaultOpen }: { children: React.ReactNode, sidebarDefaultOpen: boolean }) {
+  console.log("sidebarDefaultOpen", sidebarDefaultOpen)
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={sidebarDefaultOpen}>
       <div className="flex h-screen w-full bg-background">
-        <MainNavSidebar />
-
+        <MainNavSidebar sidebarDefaultOpen={sidebarDefaultOpen} />
         <main className="flex-1 overflow-auto">
           {children}
         </main>

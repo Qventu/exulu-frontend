@@ -49,10 +49,10 @@ export default function AgentsPage() {
     CREATE_AGENT,
     {
       onCompleted: (data: {
-        agentsCreateOne: { id: string, type: "chat" };
+        agentsCreateOne: { item: { id: string, type: "chat" } };
       }) => {
         console.log(data);
-        router.push(`/agents/edit/${data?.agentsCreateOne?.id}`, {
+        router.push(`/agents/edit/${data?.agentsCreateOne?.item?.id}`, {
           scroll: false,
         });
       },

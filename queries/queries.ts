@@ -23,6 +23,18 @@ external_id
 createdAt
 embeddings_updated_at
 updatedAt
+rights_mode
+RBAC {
+      type
+      users {
+      id
+      rights
+      }
+      roles {
+      id
+      rights
+      }
+}
 ${fields.join("\n")}
 `;
 
@@ -136,6 +148,18 @@ export const GET_AGENT_SESSIONS = gql`
           user
           title
           agent
+          rights_mode
+          RBAC {
+            type
+            users {
+              id
+              rights
+            }
+            roles {
+              id
+              rights
+            }
+          }
           id
       }
     }
@@ -251,6 +275,20 @@ export const DELETE_ITEM = (context: string) => {
     }
   `;
 };
+
+export const UPDATE_AGENT_SESSION_RBAC = gql`
+  mutation UpdateAgentSessionRbac(
+    $id: ID!
+    $RBAC: RBACInput
+    $rights_mode: String
+  ) {
+    agent_sessionsUpdateOneById(id: $id, input: { rights_mode: $rights_mode, RBAC: $RBAC }) {
+      item {
+        id
+      }
+    }
+  }
+`;
 
 export const GET_AGENT_MESSAGES = gql`
   query GetAgentSessionMessages(
@@ -423,6 +461,19 @@ export const GET_AGENT_SESSION_BY_ID = gql`
         user
         title
         agent
+        created_by
+        rights_mode
+        RBAC {
+          type
+          users {
+            id
+            rights
+          }
+          roles {
+            id
+            rights
+          }
+        }
         id
     }
   }
@@ -460,7 +511,9 @@ export const UPDATE_USER_BY_ID = gql`
             role: $role,
             favourite_agents: $favourite_agents
         }) {
-          ${USER_FIELDS}
+          item {
+            ${USER_FIELDS}
+          }
         }
     }
 `;
@@ -479,7 +532,9 @@ export const CREATE_API_USER = gql`
             email: $email,
             role: $role
         }) {
-            id
+            item {
+              id
+            }
         }
     }
 `;
@@ -504,13 +559,15 @@ export const UPDATE_USER_ROLE_BY_ID = gql`
         users: $users
       }
     ) {
-        id
-        createdAt
-        agents
-        api
-        workflows
-        variables
-        users
+        item {
+          id
+          createdAt
+          agents
+          api
+          workflows
+          variables
+          users
+        }
     }
   }
 `;
@@ -531,7 +588,9 @@ export const CREATE_AGENT_SESSION = gql`
     agent_sessionsCreateOne(
       input: { agent: $agent, user: $user, title: $title }
     ) {
-      id
+      item {
+        id
+      }
     }
   }
 `;
@@ -556,6 +615,7 @@ export const CREATE_AGENT = gql`
         RBAC: $RBAC
       }
     ) {
+       item {
         id
         name
         description
@@ -573,6 +633,7 @@ export const CREATE_AGENT = gql`
           }
         }
         createdAt
+       }
     }
   }
 `;

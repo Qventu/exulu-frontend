@@ -6,7 +6,6 @@ import { Row } from "@tanstack/react-table";
 import {
   GET_USERS,
   REMOVE_USER_BY_ID,
-  UPDATE_USER_BY_ID,
 } from "@/queries/queries";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,13 +29,6 @@ export function DataTableRowActions<TData>({
   const user = userSchema.parse(row.original);
 
   const { toast } = useToast();
-
-  const [updateUser, updateUserResult] = useMutation(UPDATE_USER_BY_ID, {
-    refetchQueries: [
-      GET_USERS, // DocumentNode object parsed with gql
-      "GetUsers", // Query name
-    ],
-  });
 
   const [removeUser, removeUserResult] = useMutation(REMOVE_USER_BY_ID, {
     refetchQueries: [

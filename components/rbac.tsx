@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useApolloClient, useQuery } from "@apollo/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { User } from "@/types/models/user";
-import { Check, ChevronsUpDown, Users, Lock, Globe, Settings, Trash2, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Users, Lock, Globe, Settings, Trash2, Loader2, Folder } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -39,21 +39,26 @@ const VISIBILITY_OPTIONS = [
   { value: 'private', label: 'Private', description: 'Only you can see this agent', icon: Lock },
   { value: 'users', label: 'Shared with Users', description: 'Share with specific users', icon: Users },
   { value: 'roles', label: 'Shared with Roles', description: 'Share with specific roles', icon: Settings },
-  { value: 'public', label: 'Public', description: 'Anyone can see this agent', icon: Globe }
+  { value: 'public', label: 'Public', description: 'Anyone can see this agent', icon: Globe },
+  { value: 'projects', label: 'Projects', description: 'Share with specific projects', icon: Folder }
 ]
 
+type Modes = 'private' | 'users' | 'roles' | 'public' | 'projects'
+
 export function RBACControl({
+  allowedModes,
   initialRightsMode,
   initialUsers,
   initialRoles,
   onChange
 }: {
-  initialRightsMode: 'private' | 'users' | 'roles' | 'public' | undefined,
+  allowedModes: Modes[],
+  initialRightsMode: 'private' | 'users' | 'roles' | 'public' | 'projects' | undefined,
   initialUsers: { id: string, rights: 'read' | 'write' }[] | undefined,
   initialRoles: { id: string, rights: 'read' | 'write' }[] | undefined,
-  onChange: (rights_mode: 'private' | 'users' | 'roles' | 'public', users: { id: string, rights: 'read' | 'write' }[], roles: { id: string, rights: 'read' | 'write' }[]) => void
+  onChange: (rights_mode: Modes, users: { id: string, rights: 'read' | 'write' }[], roles: { id: string, rights: 'read' | 'write' }[]) => void
 }) {
-  const [visibility, setVisibility] = useState<'private' | 'users' | 'roles' | 'public' | undefined>(initialRightsMode)
+  const [visibility, setVisibility] = useState<Modes | undefined>(initialRightsMode)
   const [selectedUsers, setSelectedUsers] = useState<{ id: string, rights: 'read' | 'write' }[]>(initialUsers || [])
   const [selectedRoles, setSelectedRoles] = useState<{ id: string, rights: 'read' | 'write' }[]>(initialRoles || [])
   const [hydratedUsers, setHydratedUsers] = useState<User[]>([])
@@ -144,10 +149,17 @@ export function RBACControl({
     onChange(visibility as 'private' | 'users' | 'roles' | 'public', selectedUsers, selectedRoles)
   }, [visibility, selectedUsers, selectedRoles])
 
+  const filteredUsers = hydratedUsers?.slice(0, 5).filter(user => !!user?.id)
+
+  let visibilityOptions = VISIBILITY_OPTIONS
+  if (allowedModes?.length) {
+    visibilityOptions = VISIBILITY_OPTIONS.filter(option => allowedModes.includes(option.value as Modes))
+  }
+
   return (
     <>
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Visibility & Sharing</Label>
+        <Label className="text-sm font-medium">Visibility & sharing</Label>
         <Popover open={visibilitySelectorOpen} onOpenChange={setVisibilitySelectorOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -156,7 +168,7 @@ export function RBACControl({
               aria-expanded={visibilitySelectorOpen}
               className="w-full justify-between text-sm capitalize"
             >
-              {VISIBILITY_OPTIONS.find(option => option.value === visibility)?.label || "Select visibility..."}
+              {visibilityOptions.find(option => option.value === visibility)?.label || "Select visibility..."}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
@@ -166,7 +178,7 @@ export function RBACControl({
               <CommandList>
                 <CommandEmpty>No options found.</CommandEmpty>
                 <CommandGroup>
-                  {VISIBILITY_OPTIONS.map((option: any) => (
+                  {visibilityOptions.map((option: any) => (
                     <CommandItem
                       key={option.value}
                       onSelect={() => {
@@ -203,8 +215,7 @@ export function RBACControl({
       {visibility === 'users' && (
         <div className="space-y-3 pt-3">
           <div>
-            <Label className="text-sm font-medium">Share with users ({selectedUsers?.length || 0})</Label>
-
+            <Label className="text-sm font-medium">Share with users</Label>
             {/* Search bar */}
             <div className="mt-2">
               <Input
@@ -255,11 +266,11 @@ export function RBACControl({
             )}
 
             {/* Selected users list */}
-            {hydratedUsers?.length > 0 && (
+            {filteredUsers?.length > 0 ? (
               <div className="mt-2">
                 <div className="text-xs text-muted-foreground mb-1">Selected Users:</div>
                 <div className="space-y-1">
-                  {hydratedUsers?.slice(0, 5).map((user: any) => (
+                  {filteredUsers.map((user: any) => (
                     <div key={user.id} className="flex items-center gap-2 border p-2 rounded-lg text-sm">
                       <span className="flex-1 pl-2">{user.email}</span>
                       <Select
@@ -316,6 +327,10 @@ export function RBACControl({
                     </Button>
                   )}
                 </div>
+              </div>
+            ) : (
+              <div className="mt-2 text-center py-4">
+                <span className="text-sm text-muted-foreground">No users selected.</span>
               </div>
             )}
           </div>

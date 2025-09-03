@@ -29,7 +29,6 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { items } from "@/util/api";
 import { useToast } from "@/components/ui/use-toast";
 
 interface DataDisplayProps {

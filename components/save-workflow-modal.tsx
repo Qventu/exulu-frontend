@@ -76,13 +76,11 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [editingVariable, setEditingVariable] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
-
   const [createWorkflowTemplate] = useMutation(CREATE_WORKFLOW_TEMPLATE)
   const [updateWorkflowTemplate] = useMutation(UPDATE_WORKFLOW_TEMPLATE)
 
   // Initialize steps from messages
   React.useEffect(() => {
-    console.log("messages", messages)
     if (messages.length > 0) {
       const transformedSteps: WorkflowStep[] = []
 

@@ -2,7 +2,7 @@ import "../globals.css";
 import { fontVariables } from "@/lib/fonts";
 import * as React from "react";
 import { cn } from "@/lib/utils";
-
+import { cookies } from "next/headers"
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -17,7 +17,9 @@ export default async function RootLayout({
 }: {
     children: React.ReactNode;
 }) {
-
+    const cookieStore = await cookies()
+    const defaultOpen = cookieStore.get("sidebar_state")?.value === "true"
+  
     const headersList = headers();
     const pathname = headersList.get('x-next-pathname') || '/';
 
@@ -49,7 +51,7 @@ export default async function RootLayout({
                         <main className="grow flex">
                             <div className="grow flex flex-col">
                                 <TanstackQueryClientProvider>
-                                    <Authenticated user={user}>
+                                    <Authenticated sidebarDefaultOpen={defaultOpen} user={user}>
                                         {children}
                                     </Authenticated>
                                 </TanstackQueryClientProvider>

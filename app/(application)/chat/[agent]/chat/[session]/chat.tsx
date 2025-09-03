@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import { ChatRequestOptions, DefaultChatTransport, UIMessage } from "ai";
 import { useChat } from '@ai-sdk/react';
 import * as React from "react";
@@ -21,23 +21,34 @@ import {
 import {
   GET_AGENT_MESSAGES,
   GET_AGENT_SESSION_BY_ID,
+  GET_USER_BY_ID,
+  UPDATE_AGENT_SESSION_RBAC,
 } from "@/queries/queries";
 import { getToken } from "@/util/api"
 import { Agent } from "@EXULU_SHARED/models/agent";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { ConfigContext } from "@/components/config-context";
-import { Workflow, Plus, RefreshCcwIcon, CopyIcon, ArrowUp } from "lucide-react";
+import { Workflow, Plus, RefreshCcwIcon, CopyIcon, ArrowUp, ChevronsUpDown } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast"
 import { SaveWorkflowModal } from "@/components/save-workflow-modal";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Conversation, ConversationContent } from "@/components/ai-elements/conversation";
 import { Response } from '@/components/ai-elements/response';
 import { Reasoning, ReasoningTrigger, ReasoningContent } from "@/components/ai-elements/reasoning";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/source";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { RBACControl } from "@/components/rbac";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Loading } from "@/components/ui/loading";
+import { Badge } from "@/components/ui/badge";
+import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
 
 export interface ChatProps {
   chatId?: string;
@@ -56,12 +67,12 @@ export interface ChatProps {
   stop?: () => void;
 }
 
-export function ChatLayout({ session: id, agent }: { session: string, agent: Agent }) {
+export function ChatLayout({ session, agent }: { session: AgentSession, agent: Agent }) {
 
   const configContext = React.useContext(ConfigContext);
   const isMobile = useIsMobile();
   const [files, setFiles] = useState<any[] | null>(null);
-  const { user, setUser } = useContext(UserContext);
+  const { user } = useContext(UserContext);
   const [copyingTableId, setCopyingTableId] = useState<string | null>(null);
   const [showSaveWorkflowModal, setShowSaveWorkflowModal] = useState(false);
   const [input, setInput] = useState('');
@@ -69,20 +80,22 @@ export function ChatLayout({ session: id, agent }: { session: string, agent: Age
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast()
 
-  console.log("[EXULU] agent", agent)
+  const [rbac, setRbac] = useState({
+    rights_mode: session?.rights_mode || 'private',
+    users: session?.RBAC?.users || [],
+    roles: session?.RBAC?.roles || []
+  })
 
-  const sessionQuery = useQuery<{
-    agent_sessionById: AgentSession;
-  }>(GET_AGENT_SESSION_BY_ID, {
-    returnPartialData: true,
-    fetchPolicy: "network-only",
-    nextFetchPolicy: "network-only",
-    variables: {
-      id: id
-    },
-  });
 
-  const messagesQuery = useQuery<{
+  const creatorQuery = useQuery(GET_USER_BY_ID, {
+    variables: { id: session.created_by },
+    skip: !session.created_by
+  })
+
+
+  const [updateAgentSessionRbac, updateAgentSessionRbacResult] = useMutation(UPDATE_AGENT_SESSION_RBAC);
+
+  useQuery<{
     agent_messagesPagination: {
       items: AgentMessage[]
     };
@@ -95,22 +108,17 @@ export function ChatLayout({ session: id, agent }: { session: string, agent: Age
       limit: 50,
       filters: {
         session: {
-          eq: id
+          eq: session.id
         }
       },
     },
     onCompleted: (data) => {
-      console.log("messages", data?.agent_messagesPagination.items)
       if (data?.agent_messagesPagination) {
-        console.log("messages", data?.agent_messagesPagination.items)
         const messages = data?.agent_messagesPagination.items.map((item) => (JSON.parse(item.content)))
         setMessages(messages as any[]);
       }
     },
   });
-
-  console.log("[EXULU] messages query", messagesQuery)
-  console.log("[EXULU] session query", sessionQuery.data)
 
   const {
     messages,
@@ -128,21 +136,18 @@ export function ChatLayout({ session: id, agent }: { session: string, agent: Age
       // the history from the database.
       prepareSendMessagesRequest: async ({ messages, id: chatId, body }) => {
         const token = await getToken()
-        console.log("token", token)
-        console.log("[EXULU] body", body)
         if (!token) {
           throw new Error("No valid session token available.")
         }
-        console.log("[EXULU] disabled tools", disabledTools)
         return {
           body: {
             ...body,
             message: messages[messages.length - 1],
             id: chatId,
-            session: id,
+            session: session.id,
           }, headers: {
             User: user.id,
-            Session: id,
+            Session: session.id,
             Authorization: `Bearer ${token}`,
             Stream: "true"
           }
@@ -156,18 +161,6 @@ export function ChatLayout({ session: id, agent }: { session: string, agent: Age
     const userMessages = messages?.filter(m => m.role === 'user') || [];
     const assistantMessages = messages?.filter(m => m.role === 'assistant') || [];
     return userMessages.length >= 1 && assistantMessages.length >= 1;
-  }, [messages]);
-
-  console.log("ChatList render - messages:", messages);
-  console.log("ChatList render - messages length:", messages?.length);
-
-  // Debug messages
-  console.log("Current messages:", messages);
-  console.log("Messages length:", messages?.length);
-
-  useEffect(() => {
-    console.log("Messages changed:", messages);
-    console.log("Messages array:", JSON.stringify(messages, null, 2));
   }, [messages]);
 
   const onFilesSelected = (files: any[]) => {
@@ -212,7 +205,6 @@ export function ChatLayout({ session: id, agent }: { session: string, agent: Age
         setCopyingTableId(null);
       }, 2000);
     } catch (err) {
-      console.error('Failed to copy table:', err);
       toast({
         title: "Copy failed",
         description: "Failed to copy table to clipboard",
@@ -252,257 +244,350 @@ export function ChatLayout({ session: id, agent }: { session: string, agent: Age
     );
   };
 
+  console.log("session", session)
+  console.log("user!!!", user)
+
+  const writeAccess = checkChatSessionWriteAccess(session, user);
+
   return (
     <div className="flex flex-col w-full">
-
-
-      <div className="mx-auto relative size-full pb-6">
-
+      <div className="mx-auto relative size-full">
         <div className="flex h-full w-full">
           {/* Main conversation area */}
-          <div className="flex flex-col flex-1">
-            {!sessionQuery.loading && sessionQuery.data?.agent_sessionById && (
-              <Conversation className="overflow-y-hidden">
-                {/* Save as Workflow button - appears when conversation has content */}
-                {canCreateWorkflow && (
-                  <div className="flex justify-between absolute top-0 left-0 right-0 items-center px-4 py-2 border-b z-10 dark:bg-black bg-white">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Workflow className="w-4 h-4" />
-                      Turn this conversation into a reusable workflow
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowSaveWorkflowModal(true)}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Save as Workflow
-                    </Button>
+          <div className="flex flex-col flex-1 pb-6">
+            <Conversation className="overflow-y-hidden">
+              {/* Save as Workflow button - appears when conversation has content */}
+              {canCreateWorkflow && (
+                <div className="flex justify-between absolute top-0 left-0 right-0 items-center px-4 py-2 border-b z-10 dark:bg-black bg-white">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Workflow className="w-4 h-4" />
+                    Turn this conversation into a reusable workflow
                   </div>
-                )}
-                {messages?.length === 0 ?
-                  <div className="size-full flex justify-center items-center">
-                    <div className="flex flex-col gap-4 items-center max-w-2xl w-full px-4 my-auto">
-                      <Image
-                        src="/exulu_logo.svg"
-                        alt="AI"
-                        width={120}
-                        height={120}
-                        className="h-30 w-40 object-contain" /*invert dark:invert-0*/
-                      />
-                      <p className="text-center text-lg text-muted-foreground">
-                        How can I help you today?
-                      </p>
-
-                      {/* Workflow Banner for new users */}
-                      <Card className="w-full mb-6">
-                        <CardHeader className="text-center">
-                          <CardTitle className="flex items-center justify-center gap-2">
-                            <Workflow className="w-5 h-5" />
-                            Create Reusable Workflows
-                          </CardTitle>
-                          <CardDescription>
-                            Turn your conversations into templates that can be reused with different inputs. Perfect for recurring tasks and processes.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="text-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled
-                            className="text-muted-foreground"
-                          >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Save as Workflow
-                            <span className="ml-2 text-xs">(Available after chatting)</span>
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div> : null}
-                <ConversationContent className="px-6">
-                  {messages?.length > 0 ?
-                    <>
-                      {messages?.map((message, messageIndex) => {
-                        const isFirstMessage =
-                          messageIndex === 0;
-                        return (
-                          <Message className={cn(isFirstMessage && 'mt-10')} from={message.role} key={message.id}>
-                            <MessageContent>
-                              {message.parts.map((part, i) => {
-                                switch (part.type) {
-                                  case 'source-url':
-                                    <Sources>
-                                      <SourcesTrigger
-                                        count={message.parts.filter(
-                                          (part) => part.type === 'source-url'
-                                        ).length}
-                                      />
-                                      <SourcesContent key={`${message.id}`}>
-                                        {message.parts.map((part, i) => {
-                                          switch (part.type) {
-                                            case 'source-url':
-                                              return (<Source
-                                                key={`${message.id}-${i}`}
-                                                href={part.url}
-                                                title={part.title}
-                                              />)
-                                          }
-                                        })}
-                                      </SourcesContent>
-                                    </Sources>
-                                  case 'text':
-                                    const isLastMessage =
-                                      messageIndex === messages.length - 1;
-                                    return (
-                                      <div key={`${message.id}-${i}`}>
-                                        <Response>
-                                          {part.text}
-                                        </Response>
-                                        {message.role === 'assistant' && isLastMessage && (
-                                          <Actions className="mt-2">
-                                            <Action
-                                              onClick={() => regenerate()}
-                                              label="Retry"
-                                            >
-                                              <RefreshCcwIcon className="size-3" />
-                                            </Action>
-                                            <Action
-                                              onClick={() =>
-                                                navigator.clipboard.writeText(part.text)
-                                              }
-                                              label="Copy"
-                                            >
-                                              <CopyIcon className="size-3" />
-                                            </Action>
-                                          </Actions>
-                                        )}
-                                      </div>
-                                    );
-                                  case 'reasoning':
-                                    return (
-                                      <Reasoning
-                                        key={`${message.id}-${i}`}
-                                        className="w-full"
-                                        isStreaming={status === 'streaming'}
-                                      >
-                                        <ReasoningTrigger />
-                                        <ReasoningContent>{part.text}</ReasoningContent>
-                                      </Reasoning>
-                                    );
-                                  default:
-                                    return null;
-                                }
-                              })}
-                            </MessageContent>
-                          </Message>
-                        )
-                      })}
-                    </>
-                    : null}
-
-                  {status === "streaming" ? <Loader /> : null}
-
-                </ConversationContent>
-              </Conversation>
-            )}
-            {sessionQuery.loading && <div className="size-full flex justify-center items-center"><Loader /></div>}
-            <form
-              onSubmit={onSubmit}
-              className="w-full items-center flex relative gap-2 px-6"
-            >
-              <TextareaAutosize
-                autoComplete="off"
-                autoFocus={true}
-                value={input}
-                ref={inputRef}
-                onKeyDown={handleKeyPress}
-                onChange={(e) => setInput(e.target.value)}
-                name="message"
-                placeholder={`Ask me anything...`}
-                className="border-input max-h-20 px-5 py-4 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full border rounded flex items-center h-14 resize-none overflow-hidden dark:bg-card/35"
-              />
-              {status !== "streaming" ? (
-                <Button
-                  className="shrink-0"
-                  variant="secondary"
-                  size="icon"
-                  disabled={status === "submitted" || !input?.trim()}
-                >
-                  <ArrowUp className=" size-6 text-muted-foreground" />
-                </Button>
-              ) : (
-                <Button
-                  className="shrink-0"
-                  variant="secondary"
-                  size="icon"
-                  onClick={stop}
-                >
-                  <StopIcon className="size-6 text-muted-foreground" />
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowSaveWorkflowModal(true)}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Save as Workflow
+                  </Button>
+                </div>
               )}
-            </form>
+              {messages?.length === 0 ?
+                <div className="size-full flex justify-center items-center">
+                  <div className="flex flex-col gap-4 items-center max-w-2xl w-full px-4 my-auto">
+                    <Image
+                      src="/exulu_logo.svg"
+                      alt="AI"
+                      width={120}
+                      height={120}
+                      className="h-30 w-40 object-contain" /*invert dark:invert-0*/
+                    />
+                    <p className="text-center text-lg text-muted-foreground">
+                      How can I help you today?
+                    </p>
+
+                    {/* Workflow Banner for new users */}
+                    <Card className="w-full mb-6">
+                      <CardHeader className="text-center">
+                        <CardTitle className="flex items-center justify-center gap-2">
+                          <Workflow className="w-5 h-5" />
+                          Create Reusable Workflows
+                        </CardTitle>
+                        <CardDescription>
+                          Turn your conversations into templates that can be reused with different inputs. Perfect for recurring tasks and processes.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled
+                          className="text-muted-foreground"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Save as Workflow
+                          <span className="ml-2 text-xs">(Available after chatting)</span>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div> : null}
+              <ConversationContent className="px-6">
+                {messages?.length > 0 ?
+                  <>
+                    {messages?.map((message, messageIndex) => {
+                      const isFirstMessage =
+                        messageIndex === 0;
+                      return (
+                        <Message className={cn(isFirstMessage && 'mt-10')} from={message.role} key={message.id}>
+                          <MessageContent>
+                            {message.parts.map((part, i) => {
+                              switch (part.type) {
+                                case 'source-url':
+                                  <Sources>
+                                    <SourcesTrigger
+                                      count={message.parts.filter(
+                                        (part) => part.type === 'source-url'
+                                      ).length}
+                                    />
+                                    <SourcesContent key={`${message.id}`}>
+                                      {message.parts.map((part, i) => {
+                                        switch (part.type) {
+                                          case 'source-url':
+                                            return (<Source
+                                              key={`${message.id}-${i}`}
+                                              href={part.url}
+                                              title={part.title}
+                                            />)
+                                        }
+                                      })}
+                                    </SourcesContent>
+                                  </Sources>
+                                case 'text':
+                                  const isLastMessage =
+                                    messageIndex === messages.length - 1;
+                                  return (
+                                    <div key={`${message.id}-${i}`}>
+                                      <Response>
+                                        {part.text}
+                                      </Response>
+                                      {message.role === 'assistant' && isLastMessage && (
+                                        <Actions className="mt-2">
+                                          <Action
+                                            onClick={() => regenerate()}
+                                            label="Retry"
+                                            disabled={!writeAccess}
+                                          >
+                                            <RefreshCcwIcon className="size-3" />
+                                          </Action>
+                                          <Action
+                                            onClick={() => {
+                                              navigator.clipboard.writeText(part.text)
+                                              toast({
+                                                title: "Copied message",
+                                                description: "The message was copied to your clipboard.",
+                                              });
+                                            }}
+                                            label="Copy"
+                                          >
+                                            <CopyIcon className="size-3" />
+                                          </Action>
+                                        </Actions>
+                                      )}
+                                    </div>
+                                  );
+                                case 'reasoning':
+                                  return (
+                                    <Reasoning
+                                      key={`${message.id}-${i}`}
+                                      className="w-full"
+                                      isStreaming={status === 'streaming'}
+                                    >
+                                      <ReasoningTrigger />
+                                      <ReasoningContent>{part.text}</ReasoningContent>
+                                    </Reasoning>
+                                  );
+                                default:
+                                  return null;
+                              }
+                            })}
+                          </MessageContent>
+                        </Message>
+                      )
+                    })}
+                  </>
+                  : null}
+
+                {status === "streaming" ? <Loader /> : null}
+
+              </ConversationContent>
+            </Conversation>
+            {
+              !writeAccess && (
+                <div className="px-6 mx-auto mt-3">
+                  <Badge variant="outline">Read access only</Badge>
+                </div>
+              )
+            }
+            {writeAccess && (
+              <form
+                onSubmit={onSubmit}
+                className="w-full items-center flex relative gap-2 px-6"
+              >
+                <TextareaAutosize
+                  autoComplete="off"
+                  autoFocus={true}
+                  value={input}
+                  ref={inputRef}
+                  onKeyDown={handleKeyPress}
+                  onChange={(e) => setInput(e.target.value)}
+                  name="message"
+                  placeholder={`Ask me anything...`}
+                  className="border-input max-h-20 px-5 py-4 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full border rounded flex items-center h-14 resize-none overflow-hidden dark:bg-card/35"
+                />
+                {status !== "streaming" ? (
+                  <Button
+                    className="shrink-0"
+                    variant="secondary"
+                    size="icon"
+                    disabled={status === "submitted" || !input?.trim()}
+                  >
+                    <ArrowUp className=" size-6 text-muted-foreground" />
+                  </Button>
+                ) : (
+                  <Button
+                    className="shrink-0"
+                    variant="secondary"
+                    size="icon"
+                    onClick={stop}
+                  >
+                    <StopIcon className="size-6 text-muted-foreground" />
+                  </Button>
+                )}
+              </form>
+            )}
             {/* Save Workflow Modal */}
             <SaveWorkflowModal
               isOpen={showSaveWorkflowModal}
               onClose={() => setShowSaveWorkflowModal(false)}
               messages={messages || []}
-              sessionTitle={sessionQuery.data?.agent_sessionById?.title}
+              sessionTitle={session.title}
             />
           </div>
 
           {/* Agent Details Sidebar */}
-          <div className="w-80 border-l bg-muted/20 p-4 space-y-4">
-            <div>
-              <h3 className="font-semibold text-sm mb-2">Agent Details</h3>
-              <div className="space-y-3">
+          {writeAccess && (
+            <div className="w-80 border-l bg-muted/20 p-4 space-y-4">
+              <div>
                 <div>
-                  <p className="text-sm font-medium">{agent.name}</p>
-                  {agent.description && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {agent.description}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">Tools (click to toggle):</p>
-                  <small className="text-xs text-muted-foreground">
-                    You can disable tools for individual messages.
-                  </small>
-                  <TooltipProvider>
-                    <div className="space-y-1">
-                      {agent.tools && agent.tools.length > 0 ? (
-                        agent.tools.map((tool) => {
-                          const isEnabled = !disabledTools.includes(tool.toolId);
-                          return (
-                            <Tooltip key={tool.name}>
-                              <TooltipTrigger asChild>
-                                <div className="p-2 rounded-md border text-xs bg-background flex items-center justify-between">
-                                  <p className="font-medium flex items-center gap-2">
-                                    {tool.name}
-                                  </p>
-                                  <Switch
-                                    checked={isEnabled}
-                                    onCheckedChange={() => toggleTool(tool.toolId)}
-                                  />
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{tool.description}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          );
-                        })
+                  <div>
+                    <div>
+                      {agent.image ? (
+                        <img
+                          src={agent.image}
+                          alt={`${agent.name} agent`}
+                          className="w-[100px] h-[100px] object-cover rounded-full mx-auto my-3"
+                        />
                       ) : (
-                        <p className="text-xs text-muted-foreground">No tools enabled.</p>
+                        <div className="text-3xl font-bold text-primary text-center">
+                          {agent.name?.charAt(0).toUpperCase() || 'A'}
+                        </div>
+                      )}
+                      <p className="text-sm font-medium text-center">{agent.name}</p>
+                    </div>
+                    {agent.description && (
+                      <p className="text-xs text-muted-foreground mt-1 text-center">
+                        {agent.description}
+                      </p>
+                    )}
+                  </div>
+                  <hr className="my-2" />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">You can disable tools for individual messages:</p>
+                    <TooltipProvider>
+                      <div className="space-y-1 pt-2">
+                        {agent.tools && agent.tools.length > 0 ? (
+                          agent.tools.map((tool) => {
+                            const isEnabled = !disabledTools.includes(tool.toolId);
+                            return (
+                              <Tooltip key={tool.name}>
+                                <TooltipTrigger asChild>
+                                  <div className="p-2 rounded-md border text-xs bg-background flex items-center justify-between">
+                                    <p className="font-medium flex items-center gap-2">
+                                      {tool.name}
+                                    </p>
+                                    <Switch
+                                      checked={isEnabled}
+                                      onCheckedChange={() => toggleTool(tool.toolId)}
+                                    />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{tool.description}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          })
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No tools enabled.</p>
+                        )}
+                      </div>
+                    </TooltipProvider>
+                  </div>
+                  <div className="mt-1">
+                    <div className="border rounded">
+                      {
+                        creatorQuery.loading && (
+                          <div className="flex flex-row justify-between p-3">
+                            <p className="text-sm font-medium">Session created by</p>
+                            <Loading className="ml-2" />
+                          </div>
+                        )
+                      }
+                      {creatorQuery.data?.userById && !creatorQuery.loading && (
+                        <div className="flex flex-row justify-between p-3">
+                           <p className="text-sm font-medium">Session created by</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <p className="text-sm font-medium capitalize">{creatorQuery.data.userById.name}</p>
+                            <img src={creatorQuery.data.userById.image} alt={creatorQuery.data.userById.name} className="w-4 h-4 rounded-full" />
+                          </div>
+                        </div>
                       )}
                     </div>
-                  </TooltipProvider>
+                  </div>
+                  <div className="mt-1">
+                    <Collapsible className="border rounded">
+                      <CardHeader className="px-3 py-1">
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col">
+                            <p className="text-sm font-medium">
+                              Access control
+                            </p>
+                          </div>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="icon" className="size-8">
+                              <ChevronsUpDown className="size-4" />
+                              <span className="sr-only">Toggle</span>
+                            </Button>
+                          </CollapsibleTrigger>
+                        </div>
+                      </CardHeader>
+                      <CollapsibleContent>
+                        <CardContent className="space-y-4 p-3">
+                          <RBACControl
+                            allowedModes={['private', 'users', 'roles', 'projects']}
+                            initialRightsMode={session.rights_mode}
+                            initialUsers={session.RBAC?.users}
+                            initialRoles={session.RBAC?.roles}
+                            onChange={(rights_mode, users, roles) => {
+                              setRbac({
+                                rights_mode,
+                                users,
+                                roles
+                              })
+                            }}
+                          />
+                          <Button disabled={updateAgentSessionRbacResult.loading} onClick={() => {
+                            updateAgentSessionRbac({
+                              variables: {
+                                id: session.id,
+                                rights_mode: rbac.rights_mode,
+                                RBAC: {
+                                  users: rbac.users,
+                                  roles: rbac.roles
+                                }
+                              }
+                            })
+                          }}>Save access rights {updateAgentSessionRbacResult.loading && <Loading className="ml-2" />} </Button>
+                        </CardContent>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

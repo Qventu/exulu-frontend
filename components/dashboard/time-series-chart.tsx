@@ -44,7 +44,7 @@ export function TimeSeriesChart({ dataTypes, dateRange, selectedType, onTypeChan
 
   const chartData = React.useMemo(() => {
     if (!data?.trackingStatistics || !dateRange?.from || !dateRange?.to) return [];
-    
+
     // Transform API data into a map for quick lookup
     const dataMap = new Map();
     data.trackingStatistics.forEach((item: any) => {
@@ -63,7 +63,7 @@ export function TimeSeriesChart({ dataTypes, dateRange, selectedType, onTypeChan
     return allDates.map(date => {
       const dateKey = format(date, 'yyyy-MM-dd');
       const count = dataMap.get(dateKey) || 0;
-      
+
       return {
         date: date.getTime(),
         count: count,
@@ -85,14 +85,14 @@ export function TimeSeriesChart({ dataTypes, dateRange, selectedType, onTypeChan
             <SelectContent>
               {dataTypes?.map((type) => (
                 <SelectItem key={type} value={type}>
-                  {transformEnumToLabel(type)}
+                  {transformEnumToLabel(type) + " "}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
       </div>
-      
+
       <div className="flex-1 min-h-0">
         {loading ? (
           <div className="space-y-4 h-full">
@@ -135,19 +135,19 @@ export function TimeSeriesChart({ dataTypes, dateRange, selectedType, onTypeChan
                   />
                 </linearGradient>
               </defs>
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                stroke="hsl(var(--muted-foreground))" 
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="hsl(var(--muted-foreground))"
                 strokeOpacity={0.3}
                 vertical={false}
               />
-              <XAxis 
-                dataKey="formattedDate" 
+              <XAxis
+                dataKey="formattedDate"
                 tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                 tickLine={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.5 }}
                 axisLine={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.5 }}
               />
-              <YAxis 
+              <YAxis
                 tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                 tickLine={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.5 }}
                 axisLine={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.5 }}
@@ -155,11 +155,18 @@ export function TimeSeriesChart({ dataTypes, dateRange, selectedType, onTypeChan
               <ChartTooltip
                 labelFormatter={(label: any, payload: any) => {
                   if (payload && payload[0]) {
-                    return format(payload[0].payload.dateObj, 'PPP');
+                    return format(payload[0].payload.dateObj, 'PPP') + " ";
                   }
                   return label;
                 }}
-                content={<ChartTooltipContent hideLabel />}
+                content={<ChartTooltipContent
+                  nameKey="name"
+                  hideLabel
+                  formatter={(value: any, name: any) => [
+                    typeof value === 'number' ? value.toLocaleString() : value,
+                    " " + String(name)
+                  ]}
+                />}
               />
               <ChartLegend content={<ChartLegendContent />} />
               <Area
@@ -169,15 +176,15 @@ export function TimeSeriesChart({ dataTypes, dateRange, selectedType, onTypeChan
                 strokeWidth={3}
                 fill="url(#fillCount)"
                 fillOpacity={0.6}
-                dot={{ 
-                  fill: "hsl(var(--muted-foreground))", 
-                  strokeWidth: 2, 
+                dot={{
+                  fill: "hsl(var(--muted-foreground))",
+                  strokeWidth: 2,
                   r: 4,
                   strokeOpacity: 0.8
                 }}
-                activeDot={{ 
-                  r: 6, 
-                  strokeWidth: 2, 
+                activeDot={{
+                  r: 6,
+                  strokeWidth: 2,
                   fill: "hsl(var(--background))",
                   stroke: "hsl(var(--muted-foreground))",
                   strokeOpacity: 1

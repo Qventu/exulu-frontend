@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "@apollo/client";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
-import { ChevronLeft, PlusIcon, Search } from "lucide-react";
+import { PlusIcon, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useContext, useEffect, useState } from "react";
@@ -27,42 +27,18 @@ import { Loading } from "@/components/ui/loading";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
-import {
-  Tooltip,
-  TooltipContent, TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-
+import { useIsMobile } from "@/hooks/use-mobile";
+import Link from "next/link";
+import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
 
 export function ChatSessionsComponent({ agent, type }: { agent: string, type: string }) {
 
   const pathname = usePathname();
   const { toast } = useToast();
-  const [isCollapsed, setIsCollapsed] = React.useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [showSessions, setShowSessions] = useState(true);
   const { user } = useContext(UserContext);
   const [sessionName, setSessionName] = useState("");
-
-  useEffect(() => {
-    const checkScreenWidth = () => {
-      setIsMobile(window.innerWidth <= 1023);
-    };
-
-    // Initial check
-    checkScreenWidth();
-
-    // Event listener for screen width changes
-    window.addEventListener("resize", checkScreenWidth);
-
-    // Cleanup the event listener on component unmount
-    return () => {
-      window.removeEventListener("resize", checkScreenWidth);
-    };
-  }, []);
-
+  const isMobile = useIsMobile();
   const router = useRouter();
-
   let [search, setSearch]: any = useState({ searchString: null });
 
   const sessionsQuery = useQuery(GET_AGENT_SESSIONS, {
@@ -123,7 +99,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
       return;
     }
     if (
-      !newSession.data?.agent_sessionsCreateOne?.id
+      !newSession.data?.agent_sessionsCreateOne?.item?.id
     ) {
       console.error("error", "failed to create session");
       return;
@@ -131,156 +107,122 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
     setSessionName("");
     sessionsQuery.refetch();
     router.push(
-      `/chat/${agent}/${type}/${newSession.data?.agent_sessionsCreateOne?.id}`,
+      `/chat/${agent}/${type}/${newSession.data?.agent_sessionsCreateOne?.item?.id}`,
     );
   }
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.altKey) && e.key === 'b') {
-        setShowSessions(prev => !prev);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
   return (
-    <>
-      {!showSessions && (
-        <div
-          onClick={() => setShowSessions(true)}
-          className="relative hidden min-w-[10px] flex-col items-start md:flex h-100 overflow-y-scroll border-r flex hover:bg-muted cursor-pointer"
-          x-chunk="dashboard-03-chunk-0"
-        >
-          <div className="m-auto rotate-90 flex">
-            <span>
-              Sessions
-            </span>
+    <div
+      key={agent + type}
+      className="relative hidden flex-col items-start md:flex h-100 overflow-y-scroll border-r"
+      x-chunk="dashboard-03-chunk-0">
+      <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">Sessions</h2>
+
+      <div className="bg-background/95 w-full backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <form>
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 size-4 text-muted-foreground" />
+            <Input
+              onKeyUp={(e) => {
+                const searchString = e.currentTarget.value;
+                setSearch(searchString);
+              }}
+              placeholder="Search sessions"
+              className="pl-8 border-0"
+            />
           </div>
+        </form>
+      </div>
+
+      <div className="flex w-full items-center gap-2 p-3 border-t justify-between">
+        <Input
+          autoFocus={true}
+          value={sessionName}
+          onChange={(e) => setSessionName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              handleCreateSession();
+            }
+          }}
+          placeholder="Name"
+          className="flex-1"
+        />
+        <Button
+          variant="secondary"
+          tabIndex={1}
+          disabled={createAgentSessionResult.loading || !sessionName.trim()}
+          onClick={async () => {
+            // create a new session
+            handleCreateSession();
+          }}
+        >
+          <div className="font-semibold">
+            <PlusIcon />
+          </div>
+        </Button>
+      </div>
+      {sessionsQuery.loading && (
+        <div className="w-full flex">
+          <Loading className="mx-auto mt-5" />
         </div>
       )}
-      {showSessions && (
-        <div
-          className="w-[400px] relative hidden flex-col items-start md:flex h-100 overflow-y-scroll border-r"
-          x-chunk="dashboard-03-chunk-0"
-        >
-          <div className="bg-background/95 w-full backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <form>
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 size-4 text-muted-foreground" />
-                <Input
-                  onKeyUp={(e) => {
-                    const searchString = e.currentTarget.value;
-                    setSearch(searchString);
-                  }}
-                  placeholder="Search by name"
-                  className="pl-8 border-0"
-                />
-              </div>
-            </form>
-          </div>
 
-          <div className="flex w-full items-center gap-2 p-3 border-t justify-between">
-            <Input
-              autoFocus={true}
-              value={sessionName}
-              onChange={(e) => setSessionName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleCreateSession();
-                }
-              }}
-              placeholder="Name"
-              className="flex-1"
-            />
-            <Button
-              variant="secondary"
-              tabIndex={1}
-              disabled={createAgentSessionResult.loading || !sessionName.trim()}
-              onClick={async () => {
-                // create a new session
-                handleCreateSession();
-              }}
-            >
-              <div className="font-semibold">
-                <PlusIcon/>
-              </div>
-            </Button>
-            <TooltipProvider>
-              <Tooltip delayDuration={100}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowSessions(false)}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Collapse (Ctrl+B)</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+      {!sessionsQuery.loading && !sessionsQuery?.data?.agent_sessionsPagination?.items?.length && (
+        <div className="w-full flex">
+          <p className="mx-auto mt-5">No sessions found.</p>
+        </div>
+      )}
 
-          {sessionsQuery.loading && (
-            <div className="w-full flex">
-              <Loading className="mx-auto mt-5" />
-            </div>
-          )}
+      {!sessionsQuery.loading
+        ? sessionsQuery?.data?.agent_sessionsPagination?.items?.map(
+          (
+            item: Omit<AgentSession, "agent"> & {
+              agent: Agent;
+            },
+          ) => {
 
-          {!sessionsQuery.loading && !sessionsQuery?.data?.agent_sessionsPagination?.items?.length && (
-            <div className="w-full flex">
-              <p className="mx-auto mt-5">No sessions found.</p>
-            </div>
-          )}
+            const writeAccess = checkChatSessionWriteAccess(item, user);
 
-          {!sessionsQuery.loading
-            ? sessionsQuery?.data?.agent_sessionsPagination?.items?.map(
-              (
-                item: Omit<AgentSession, "agent"> & {
-                  agent: Agent;
-                },
-              ) => (
-                <div className="w-full px-2 flex flex-col items-start gap-0 rounded-none border-none text-left text-sm">
-                  <button
-                    key={item.id}
-                    className={cn(
-                      "p-2 w-full flex flex-col items-start gap-2 rounded-md border-none p-3 text-left text-sm transition-all hover:bg-accent",
-                      pathname.includes(item.id) && "bg-muted",
-                    )}
-                    onClick={() => {
-                      router.push(`/chat/${agent}/${type}/${item.id}`);
-                    }}
-                  >
-                    <div className="flex w-full flex-col px-2">
-                      <div className="flex items-center">
-                        <div className="flex items-center gap-2">
-                          <div className="text-xs font-medium">
-                            {item.title
-                              ? item.title?.substring(0, 20)
-                              : "No title"}
-                          </div>
+            return (
+              <div key={item.id} className={`w-full px-2 flex flex-col items-start gap-0 rounded-none border-none text-left text-sm`}>
+                <Link
+                  key={item.id}
+                  href={`/chat/${agent}/${type}/${item.id}`}
+                  className={cn(
+                    `p-2 w-full flex flex-col items-start gap-2 rounded-md p-3 text-left text-sm transition-all hover:bg-accent`,
+                    pathname.includes(item.id) && "bg-muted",
+                    writeAccess ? "border border-l-4 border-r-0 border-y-0 border-gray-700" : "border border-l-4 border-r-0 border-y-0 border-yellow-900",
+                  )}
+                >
+                  <div className="flex w-full flex-col px-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-2">
+                        <div className="text-md font-medium">
+                          {item.title
+                            ? item.title?.substring(0, 20)
+                            : "No title"}
                         </div>
+
                         <div
                           className={cn(
-                            "ml-auto text-xs",
+                            "ml-auto text-xs capitalize",
                             pathname.includes(item.id)
                               ? "text-foreground"
                               : "text-muted-foreground",
                           )}
                         >
-                          {item.updatedAt && !isCollapsed
+                          {item.updatedAt
                             ? formatDistanceToNow(
                               new Date(item.updatedAt),
                               {
                                 addSuffix: true,
                               },
                             )
-                            : null}
+                            : null}.
                         </div>
+                      </div>
 
+                      {writeAccess && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -310,18 +252,18 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </div>
-                      <small className="text-xs text-muted-foreground">
-                        {item.agent?.name}
-                      </small>
+                      )}
                     </div>
-                  </button>
-                </div>
-              ),
+                    <small className="text-xs text-muted-foreground">
+                      {item.agent?.name}
+                    </small>
+                  </div>
+                </Link>
+              </div>
             )
-            : null}
-        </div>
-      )}
-    </>
+          },
+        )
+        : null}
+    </div>
   );
 }

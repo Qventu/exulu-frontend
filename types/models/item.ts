@@ -18,5 +18,11 @@ export interface Item {
         createdAt: string;
         updatedAt: string;
     }[];
+    rights_mode?: 'private' | 'users' | 'roles' | 'public';
+    RBAC?: {
+        type?: string;
+        users?: Array<{ id: string; rights: 'read' | 'write' }>;
+        roles?: Array<{ id: string; rights: 'read' | 'write' }>;
+    };
     [key: string]: any;
 }

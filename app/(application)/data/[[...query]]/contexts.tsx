@@ -68,7 +68,7 @@ const Contexts = ({ activeFolder, activeArchived, activeSettings }: { activeFold
     const { data, loading, error } = useContexts();
 
     return (<>
-        <div className="group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2 pb-5">
+        <div key={activeFolder + activeArchived + activeSettings} className="group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2 pb-5">
 
             {
                 activeFolder ? <div className="flex items-center gap-2">
@@ -91,7 +91,7 @@ const Contexts = ({ activeFolder, activeArchived, activeSettings }: { activeFold
                         icon: Loader,
                         variant: "ghost"
                     }} /> : data?.contexts?.items.map((folder, index) => {
-                        return (<ContextLink index={index} folder={{
+                        return (<ContextLink key={folder.id} index={index} folder={{
                             label: `${folder.name}`,
                             icon: Folder,
                             variant: "ghost",

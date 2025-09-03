@@ -102,12 +102,12 @@ export function AgentDetailsSheet({ agentId, open, onOpenChange }: AgentDetailsS
               <TooltipProvider>
                 <div className="flex items-center gap-3">
 
-                  <div className={`p-3 rounded-md ${agent.capabilities?.text ? 'bg-green-500 text-primary-foreground' : 'bg-red-800 text-white'}`}>
+                  <div className={`p-3 rounded-md ${agent.capabilities?.text ? 'bg-green-500 text-primary-foreground' : 'bg-gray-500 text-white'}`}>
                     <Text className="h-4 w-4" />
                   </div>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className={`p-3 rounded-md ${agent.capabilities?.images?.length ? 'bg-primary text-primary-foreground' : 'bg-red-800 text-white'}`}>
+                      <div className={`p-3 rounded-md ${agent.capabilities?.images?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
                         <Image className="h-4 w-4" />
                       </div>
                     </TooltipTrigger>
@@ -118,7 +118,7 @@ export function AgentDetailsSheet({ agentId, open, onOpenChange }: AgentDetailsS
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className={`p-3 rounded-md ${agent.capabilities?.files?.length ? 'bg-primary text-primary-foreground' : 'bg-red-800 text-white'}`}>
+                      <div className={`p-3 rounded-md ${agent.capabilities?.files?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
                         <FileText className="h-4 w-4" />
                       </div>
                     </TooltipTrigger>
@@ -129,7 +129,7 @@ export function AgentDetailsSheet({ agentId, open, onOpenChange }: AgentDetailsS
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className={`p-3 rounded-md ${agent.capabilities?.audio?.length ? 'bg-primary text-primary-foreground' : 'bg-red-800 text-white'}`}>
+                      <div className={`p-3 rounded-md ${agent.capabilities?.audio?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
                         <Volume2 className="h-4 w-4" />
                       </div>
                     </TooltipTrigger>
@@ -140,7 +140,7 @@ export function AgentDetailsSheet({ agentId, open, onOpenChange }: AgentDetailsS
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className={`p-3 rounded-md ${agent.capabilities?.video?.length ? 'bg-primary text-primary-foreground' : 'bg-red-800 text-white'}`}>
+                      <div className={`p-3 rounded-md ${agent.capabilities?.video?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
                         <Video className="h-4 w-4" />
                       </div>
                     </TooltipTrigger>

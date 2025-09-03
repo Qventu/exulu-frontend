@@ -87,13 +87,11 @@ export function DonutChart({ groupByOptions, dateRange, selectedType, groupBy, o
       <text
         x={x}
         y={y}
-        fill="hsl(var(--background))"
+        fill="black"
         textAnchor={x > cx ? 'start' : 'end'}
         dominantBaseline="central"
         fontSize="12"
         fontWeight="600"
-        stroke="hsl(var(--foreground))"
-        strokeWidth="0.5"
         paintOrder="stroke"
       >
         {`${(percent * 100).toFixed(0)}%`}
@@ -170,7 +168,6 @@ export function DonutChart({ groupByOptions, dateRange, selectedType, groupBy, o
                 outerRadius="75%"
                 innerRadius="45%"
                 dataKey="value"
-                stroke="hsl(var(--background))"
                 strokeWidth={3}
               >
                 {chartData.map((entry: any, index: number) => (
@@ -187,14 +184,10 @@ export function DonutChart({ groupByOptions, dateRange, selectedType, groupBy, o
                     hideLabel
                     formatter={(value: any, name: any) => [
                       typeof value === 'number' ? value.toLocaleString() : value,
-                      String(name)
+                      " " + String(name)
                     ]}
                   />
                 }
-              />
-              <ChartLegend
-                content={<ChartLegendContent nameKey="name" />}
-                className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
               />
             </PieChart>
           </ChartContainer>

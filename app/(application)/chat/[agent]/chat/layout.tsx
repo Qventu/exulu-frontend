@@ -1,12 +1,11 @@
 "use client"
-import * as React from "react";
-import { ChatSessionsComponent } from "./chat-sessions";
 
-export default function ChatLayout({ children, params }: { children: React.ReactNode; params: { agent: string } }) {
+import * as React from "react";
+
+export default function ChatLayout({ children, params }: { children: React.ReactNode; params: { agent: string, session?: string } }) {
 
   return (
     <>
-      <ChatSessionsComponent agent={params.agent} type={"chat"}/>
       {children}
     </>
   );

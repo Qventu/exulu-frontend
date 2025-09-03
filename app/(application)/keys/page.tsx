@@ -85,7 +85,7 @@ export default function ApiKeyManagement() {
 
         console.log("response", response)
         setNewlyGeneratedKey({
-            id: `${response.data?.usersCreateOne?.id}`,
+            id: `${response.data?.usersCreateOne?.item?.id}`,
             name: newKeyName,
             key: `${plainKey}${postFix}`,
             createdAt: new Date()
