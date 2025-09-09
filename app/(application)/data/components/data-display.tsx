@@ -105,9 +105,10 @@ export function DataDisplay(props: DataDisplayProps) {
   const router = useRouter();
 
   const [rbac, setRbac] = useState<{
-    rights_mode?: 'private' | 'users' | 'roles' | 'public';
+    rights_mode?: 'private' | 'users' | 'roles' | 'public' | 'projects';
     users?: Array<{ id: string; rights: 'read' | 'write' }>;
     roles?: Array<{ id: string; rights: 'read' | 'write' }>;
+    projects?: Array<{ id: string; rights: 'read' | 'write' }>;
   }>()
 
   const context = props.context;
@@ -135,7 +136,8 @@ export function DataDisplay(props: DataDisplayProps) {
       setRbac({
         rights_mode: item.rights_mode,
         users: item.RBAC?.users,
-        roles: item.RBAC?.roles
+        roles: item.RBAC?.roles,
+        projects: item.RBAC?.projects
       })
     }
   });
@@ -466,7 +468,8 @@ export function DataDisplay(props: DataDisplayProps) {
                                     rights_mode: rbac?.rights_mode,
                                     RBAC: {
                                       users: rbac?.users || [],
-                                      roles: rbac?.roles || []
+                                      roles: rbac?.roles || [],
+                                      projects: rbac?.projects || []
                                     },
                                     ...(context?.fields?.reduce((acc, field) => ({
                                       ...acc,
@@ -1051,11 +1054,13 @@ export function DataDisplay(props: DataDisplayProps) {
                           initialRightsMode={data.rights_mode}
                           initialUsers={data.RBAC?.users}
                           initialRoles={data.RBAC?.roles}
-                          onChange={(rights_mode, users, roles) => {
+                          initialProjects={data.RBAC?.projects}
+                          onChange={(rights_mode, users, roles, projects) => {
                             setRbac({
                               rights_mode,
                               users,
-                              roles
+                              roles,
+                              projects
                             })
                           }}
                         />

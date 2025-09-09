@@ -14,6 +14,7 @@ interface InitializeOptions {
         uploadSuccess?: (response: {
             file: any | null;
             url: string
+            key: string
         }) => void;
     };
     fileKey?: string;
@@ -42,8 +43,7 @@ export const initializeUppy = async (options: InitializeOptions): Promise<Uppy> 
         restrictions: {
             maxNumberOfFiles: maxNumberOfFiles || 5,
             allowedFileTypes: allowedFileTypes || [".heic", ".jpg", ".jpeg", ".png", ".webp", ".svg"],
-        },  
-        ...uppyOptions,
+        }
     })
         .use(AwsS3, {
             id: "Exulu",
@@ -68,8 +68,10 @@ export const initializeUppy = async (options: InitializeOptions): Promise<Uppy> 
                 return;
             }
             if (uploadSuccess) {
+                console.log("response", response)
                 uploadSuccess({
                     file: file,
+                    key: response.uploadURL.split("/").pop(),
                     url: response.uploadURL,
                 });
             }

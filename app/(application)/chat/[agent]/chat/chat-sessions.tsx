@@ -184,7 +184,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
             const writeAccess = checkChatSessionWriteAccess(item, user);
 
             return (
-              <div key={item.id} className={`w-full px-2 flex flex-col items-start gap-0 rounded-none border-none text-left text-sm`}>
+              <div key={item.id} className={`w-full px-2 flex flex-col items-start gap-0 rounded-none border-none text-left text-sm mb-2`}>
                 <Link
                   key={item.id}
                   href={`/chat/${agent}/${type}/${item.id}`}

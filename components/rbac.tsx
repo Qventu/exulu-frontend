@@ -50,13 +50,15 @@ export function RBACControl({
   initialRightsMode,
   initialUsers,
   initialRoles,
+  initialProjects,
   onChange
 }: {
-  allowedModes: Modes[],
+  allowedModes?: Modes[],
   initialRightsMode: 'private' | 'users' | 'roles' | 'public' | 'projects' | undefined,
   initialUsers: { id: string, rights: 'read' | 'write' }[] | undefined,
   initialRoles: { id: string, rights: 'read' | 'write' }[] | undefined,
-  onChange: (rights_mode: Modes, users: { id: string, rights: 'read' | 'write' }[], roles: { id: string, rights: 'read' | 'write' }[]) => void
+  initialProjects: { id: string, rights: 'read' | 'write' }[] | undefined,
+  onChange: (rights_mode: Modes, users: { id: string, rights: 'read' | 'write' }[], roles: { id: string, rights: 'read' | 'write' }[], projects: { id: string, rights: 'read' | 'write' }[]) => void
 }) {
   const [visibility, setVisibility] = useState<Modes | undefined>(initialRightsMode)
   const [selectedUsers, setSelectedUsers] = useState<{ id: string, rights: 'read' | 'write' }[]>(initialUsers || [])

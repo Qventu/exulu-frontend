@@ -3,8 +3,7 @@ export interface AgentSession {
     updatedAt: string;
     id: string;
     metadata: any;
-    agentId: string;
-    resourceId: string;
+    agent: string;
     title: string;
     created_by: string;
     rights_mode: ExuluRightsMode
@@ -12,6 +11,7 @@ export interface AgentSession {
         type?: string;
         users?: Array<{ id: string; rights: 'read' | 'write' }>;
         roles?: Array<{ id: string; rights: 'read' | 'write' }>;
+        projects?: Array<{ id: string; rights: 'read' | 'write' }>;
     };
 }
 export type ExuluRightsMode = "private" | "users" | "roles" | "public" | "projects"

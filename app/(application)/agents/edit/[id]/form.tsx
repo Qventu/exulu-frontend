@@ -204,7 +204,8 @@ export default function AgentForm({
   const [rbac, setRbac] = useState({
     rights_mode: agent.rights_mode,
     users: agent.RBAC?.users,
-    roles: agent.RBAC?.roles
+    roles: agent.RBAC?.roles,
+    projects: agent.RBAC?.projects
   })
   const [firewallScanners, setFirewallScanners] = useState({
     promptGuard: agent.firewall?.scanners?.promptGuard || false,
@@ -308,7 +309,8 @@ export default function AgentForm({
                       rights_mode: rbac.rights_mode,
                       RBAC: {
                         users: rbac.users || [],
-                        roles: rbac.roles || []
+                        roles: rbac.roles || [],
+                        projects: rbac.projects || []
                       },
                       firewall: JSON.stringify({
                         enabled: firewallEnabled,
@@ -637,21 +639,20 @@ export default function AgentForm({
                                       initialRightsMode={agent.rights_mode}
                                       initialUsers={agent.RBAC?.users}
                                       initialRoles={agent.RBAC?.roles}
-                                      onChange={(rights_mode, users, roles) => {
+                                      initialProjects={agent.RBAC?.projects}
+                                      onChange={(rights_mode, users, roles, projects) => {
                                         setRbac({
                                           rights_mode,
                                           users,
-                                          roles
+                                          roles,
+                                          projects
                                         })
                                       }}
                                     />
                                   </CardContent>
                                 </CollapsibleContent>
-
-
                               </Collapsible>
                             </Card>
-
                             <FormField
                               control={agentForm.control}
                               name="firewall.enabled"

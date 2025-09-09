@@ -25,15 +25,19 @@ embeddings_updated_at
 updatedAt
 rights_mode
 RBAC {
-      type
-      users {
-      id
-      rights
-      }
-      roles {
-      id
-      rights
-      }
+  type
+  users {
+    id
+    rights
+  }
+  roles {
+    id
+    rights
+  }
+  projects {
+    id
+    rights
+  }
 }
 ${fields.join("\n")}
 `;
@@ -83,12 +87,16 @@ rights_mode
 RBAC {
       type
       users {
-      id
-      rights
+        id
+        rights
       }
       roles {
-      id
-      rights
+        id
+        rights
+      }
+      projects {
+        id
+        rights
       }
 }
 createdAt
@@ -156,6 +164,10 @@ export const GET_AGENT_SESSIONS = gql`
               rights
             }
             roles {
+              id
+              rights
+            }
+            projects {
               id
               rights
             }
@@ -473,6 +485,10 @@ export const GET_AGENT_SESSION_BY_ID = gql`
             id
             rights
           }
+          projects {
+            id
+            rights
+          }
         }
         id
     }
@@ -584,9 +600,12 @@ export const CREATE_AGENT_SESSION = gql`
     $title: String,
     $user: Float
     $agent: String
+    $project: String
+    $rights_mode: String
+    $RBAC: RBACInput
   ) {
     agent_sessionsCreateOne(
-      input: { agent: $agent, user: $user, title: $title }
+      input: { agent: $agent, user: $user, title: $title, project: $project, rights_mode: $rights_mode, RBAC: $RBAC }
     ) {
       item {
         id
@@ -628,6 +647,10 @@ export const CREATE_AGENT = gql`
             rights
           }
           roles {
+            id
+            rights
+          }
+          projects {
             id
             rights
           }
@@ -688,6 +711,10 @@ export const UPDATE_AGENT = gql`
             rights
           }
           roles {
+            id
+            rights
+          }
+          projects {
             id
             rights
           }
@@ -926,16 +953,20 @@ export const GET_WORKFLOW_TEMPLATES = gql`
         createdAt
         updatedAt
         RBAC {
-        type
-        users {
-          id
-          rights
+          type
+          users {
+            id
+            rights
+          }
+          roles {
+            id
+            rights
+          }
+          projects {
+            id
+            rights
+          }
         }
-        roles {
-          id
-          rights
-        }
-      }
       }
     }
   }
@@ -997,6 +1028,10 @@ export const CREATE_WORKFLOW_TEMPLATE = gql`
           id
           rights
         }
+        projects {
+          id
+          rights
+        }
       }
       variables
       steps_json
@@ -1042,6 +1077,10 @@ export const UPDATE_WORKFLOW_TEMPLATE = gql`
           rights
         }
         roles {
+          id
+          rights
+        }
+        projects {
           id
           rights
         }
@@ -1165,6 +1204,113 @@ export const GET_DONUT_STATISTICS = gql`
     ) {
       group
       count
+    }
+  }
+`;
+
+const PROJECT_FIELDS = `
+  id
+  name
+  description
+  image
+  custom_instructions
+  context_files
+  rights_mode
+  created_by
+  createdAt
+  updatedAt
+  RBAC {
+    type
+    users {
+      id
+      rights
+    }
+    roles {
+      id
+      rights
+    }
+  }
+`;
+
+export const GET_PROJECTS = gql`
+  query GetProjects(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterProject]
+    $sort: SortBy = { field: "updatedAt", direction: DESC }
+  ) {
+    projectsPagination(
+      page: $page
+      limit: $limit
+      sort: $sort
+      filters: $filters
+    ) {
+      pageInfo {
+        pageCount
+        itemCount
+        currentPage
+        hasPreviousPage
+        hasNextPage
+      }
+      items {
+        ${PROJECT_FIELDS}
+      }
+    }
+  }
+`;
+
+export const GET_PROJECTS_BY_IDS = gql`
+  query GetProjectsByIds($ids: [ID!]!) {
+    projectByIds(ids: $ids) {
+      ${PROJECT_FIELDS}
+    }
+  }
+`;
+
+export const GET_PROJECT_BY_ID = gql`
+  query GetProjectById($id: ID!) {
+    projectById(id: $id) {
+      ${PROJECT_FIELDS}
+    }
+  }
+`;
+
+export const UPDATE_USER_FAVOURITE_PROJECTS = gql`
+  mutation UpdateUserFavouriteProjects($id: ID!, $favourite_projects: JSON) {
+    userUpdateById(record: { favourite_projects: $favourite_projects }, filter: { id: $id }) {
+      record {
+        id
+        favourite_projects
+      }
+    }
+  }
+`;
+
+export const CREATE_PROJECT = gql`
+  mutation CreateProject($input: projectInput!) {
+    projectsCreateOne(input: $input) {
+      item {
+        ${PROJECT_FIELDS}
+      }
+    }
+  }
+`;
+
+export const UPDATE_PROJECT = gql`
+  mutation UpdateProject($id: ID!, $input: projectInput!) {
+    projectsUpdateOneById(id: $id, input: $input) {
+      item {
+        ${PROJECT_FIELDS}
+      }
+    }
+  }
+`;
+
+export const DELETE_PROJECT = gql`
+  mutation DeleteProject($id: ID!) {
+    projectsRemoveOneById(id: $id) {
+      id
+      name
     }
   }
 `;

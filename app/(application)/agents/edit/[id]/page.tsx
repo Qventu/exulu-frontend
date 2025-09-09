@@ -46,7 +46,6 @@ export default function Page({ params }: { params: { id: string } }) {
     </Alert>
   }
 
-
   return (
     <AgentForm
       agent={data.agentById}

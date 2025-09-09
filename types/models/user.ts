@@ -5,6 +5,7 @@ export type User = {
   type?: "api" | "user"
   super_admin?: boolean;
   favourite_agents?: string[];
+  favourite_projects?: string[];
   role: {
     id: string;
     name: string;

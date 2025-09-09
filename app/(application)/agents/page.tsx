@@ -82,7 +82,6 @@ export default function AgentsPage() {
         <p className="text-muted-foreground mb-6">
           Manage your AI agents and create new ones.
         </p>
-
         {/* Search Bar */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

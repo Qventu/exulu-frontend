@@ -13,10 +13,11 @@ import * as React from "react";
 import { MainNavProvider } from "@/components/custom/main-nav";
 import { getToken } from "@/util/api";
 import { ConfigContext } from "@/components/config-context";
+import { User } from "@/types/models/user";
 
 interface AuthenticatedProps {
   children: React.ReactNode;
-  user: any;
+  user: User & { role: { id: string } };
   sidebarDefaultOpen: boolean;
 }
 

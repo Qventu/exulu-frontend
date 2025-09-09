@@ -21,7 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/models/user-role";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { ChevronUp, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard, Database, ListTodo, Bot, Route, Variable, FileCheck, Sparkles, Settings, LogOut, FileText } from "lucide-react";
+import { ChevronUp, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard, Database, ListTodo, Bot, Route, Variable, FileCheck, Sparkles, Settings, LogOut, FileText, FolderOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "../ui/avatar";
@@ -63,6 +63,12 @@ const buildNavigation = (user: User, role: UserRole) => {
       icon: <Bot />,
     });
   }
+
+  navigationItems.push({
+    label: "Projects",
+    path: "projects",
+    icon: <FolderOpen />,
+  });
 
   navigationItems.push({
     label: "Chat",

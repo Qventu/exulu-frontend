@@ -30,7 +30,10 @@ export default async function RootLayout({
         backend: process.env.BACKEND || "",
         google_client_id: process.env.GOOGLE_CLIENT_ID || "",
         auth_mode: process.env.AUTH_MODE || "",
-        langfuse: process.env.LANGFUSE_URI || ""
+        langfuse: process.env.LANGFUSE_URI || "",
+        s3Bucket: process.env.S3_BUCKET || "",
+        s3region: process.env.S3_REGION || "",
+        s3endpoint: process.env.S3_ENDPOINT || ""
     }
 
     return (

@@ -155,10 +155,10 @@ export function AgentNav() {
                       <Button
                         onClick={() => setShowAllAgents(false)}
                         variant={pathname.includes(selectedAgent.id) ? "secondary" : "ghost"}
-                        className="w-full justify-start gap-2 pr-1">
+                        className="w-full justify-start gap-2 pr-5">
                         {renderAgentImage(selectedAgent)}
                         <span className="flex-1 text-left">
-                          <TruncatedText text={selectedAgent.name} length={10} />
+                          <TruncatedText text={selectedAgent.name} length={7} />
                         </span>
                       </Button>
                     </Link>

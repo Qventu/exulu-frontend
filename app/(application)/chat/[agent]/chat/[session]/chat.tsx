@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@apollo/client";
-import { ChatRequestOptions, DefaultChatTransport, UIMessage } from "ai";
+import { ChatRequestOptions, DefaultChatTransport, FileUIPart, UIMessage } from "ai";
 import { useChat } from '@ai-sdk/react';
 import * as React from "react";
 import { useContext, useEffect, useState, useMemo } from "react";
@@ -49,6 +49,7 @@ import {
 import { Loading } from "@/components/ui/loading";
 import { Badge } from "@/components/ui/badge";
 import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
+import UppyDashboard from "@/components/uppy-dashboard";
 
 export interface ChatProps {
   chatId?: string;
@@ -71,7 +72,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
 
   const configContext = React.useContext(ConfigContext);
   const isMobile = useIsMobile();
-  const [files, setFiles] = useState<any[] | null>(null);
+  const [files, setFiles] = useState<FileUIPart[] | null>(null);
   const { user } = useContext(UserContext);
   const [copyingTableId, setCopyingTableId] = useState<string | null>(null);
   const [showSaveWorkflowModal, setShowSaveWorkflowModal] = useState(false);
@@ -83,9 +84,9 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
   const [rbac, setRbac] = useState({
     rights_mode: session?.rights_mode || 'private',
     users: session?.RBAC?.users || [],
-    roles: session?.RBAC?.roles || []
+    roles: session?.RBAC?.roles || [],
+    projects: session?.RBAC?.projects || []
   })
-
 
   const creatorQuery = useQuery(GET_USER_BY_ID, {
     variables: { id: session.created_by },
@@ -163,7 +164,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
     return userMessages.length >= 1 && assistantMessages.length >= 1;
   }, [messages]);
 
-  const onFilesSelected = (files: any[]) => {
+  const onFilesSelected = (files: FileUIPart[]) => {
     setFiles(files);
   };
 
@@ -221,6 +222,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
     e.preventDefault();
     sendMessage({
       text: input,
+      files: files || []
     }, {
       body: {
         disabledTools: disabledTools,
@@ -415,6 +417,18 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                 onSubmit={onSubmit}
                 className="w-full items-center flex relative gap-2 px-6"
               >
+                <UppyDashboard 
+                  id={`chat-${session.id}`} 
+                  allowedFileTypes={[
+                    ...agent.capabilities?.audio || [],
+                    ...agent.capabilities?.video || [],
+                    ...agent.capabilities?.files || [],
+                    ...agent.capabilities?.images || [],
+                  ]} 
+                  dependencies={[]} 
+                  onSelect={() => {}} 
+                  preselectedFile={files?.[0]?.key}
+                />
                 <TextareaAutosize
                   autoComplete="off"
                   autoFocus={true}
@@ -461,130 +475,132 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
             <div className="w-80 border-l bg-muted/20 p-4 space-y-4">
               <div>
                 <div>
-                  <div>
-                    <div>
-                      {agent.image ? (
-                        <img
-                          src={agent.image}
-                          alt={`${agent.name} agent`}
-                          className="w-[100px] h-[100px] object-cover rounded-full mx-auto my-3"
-                        />
-                      ) : (
-                        <div className="text-3xl font-bold text-primary text-center">
-                          {agent.name?.charAt(0).toUpperCase() || 'A'}
-                        </div>
-                      )}
-                      <p className="text-sm font-medium text-center">{agent.name}</p>
+                  {agent.image ? (
+                    <img
+                      src={agent.image}
+                      alt={`${agent.name} agent`}
+                      className="w-[100px] h-[100px] object-cover rounded-full mx-auto my-3"
+                    />
+                  ) : (
+                    <div className="text-3xl font-bold text-primary text-center">
+                      {agent.name?.charAt(0).toUpperCase() || 'A'}
                     </div>
-                    {agent.description && (
-                      <p className="text-xs text-muted-foreground mt-1 text-center">
-                        {agent.description}
-                      </p>
+                  )}
+                  <p className="text-sm font-medium text-center">{agent.name}</p>
+                </div>
+                {agent.description && (
+                  <p className="text-xs text-muted-foreground mt-1 text-center">
+                    {agent.description}
+                  </p>
+                )}
+              </div>
+              <hr className="my-2" />
+              <div className="mt-1">
+                <div className="border rounded">
+                  {
+                    creatorQuery.loading && (
+                      <div className="flex flex-row justify-between p-3">
+                        <p className="text-sm font-medium">Session created by</p>
+                        <Loading className="ml-2" />
+                      </div>
+                    )
+                  }
+                  {creatorQuery.data?.userById && !creatorQuery.loading && (
+                    <div className="flex flex-row justify-between p-3">
+                      <p className="text-sm font-medium">Session created by</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <p className="text-sm font-medium capitalize">{creatorQuery.data.userById.name}</p>
+                        <img src={creatorQuery.data.userById.image} alt={creatorQuery.data.userById.name} className="w-4 h-4 rounded-full" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground pt-2">
+                  You can disable tools
+                  for individual messages
+                  in this session by clicking the switch:</p>
+                <TooltipProvider>
+                  <div className="space-y-1 pt-2">
+                    {agent.tools && agent.tools.length > 0 ? (
+                      agent.tools.map((tool) => {
+                        const isEnabled = !disabledTools.includes(tool.toolId);
+                        return (
+                          <Tooltip key={tool.name}>
+                            <TooltipTrigger asChild>
+                              <div className="p-2 rounded-md border text-xs bg-background flex items-center justify-between">
+                                <p className="font-medium flex items-center gap-2">
+                                  {tool.name}
+                                </p>
+                                <Switch
+                                  checked={isEnabled}
+                                  onCheckedChange={() => toggleTool(tool.toolId)}
+                                />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{tool.description}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      })
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No tools enabled.</p>
                     )}
                   </div>
-                  <hr className="my-2" />
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">You can disable tools for individual messages:</p>
-                    <TooltipProvider>
-                      <div className="space-y-1 pt-2">
-                        {agent.tools && agent.tools.length > 0 ? (
-                          agent.tools.map((tool) => {
-                            const isEnabled = !disabledTools.includes(tool.toolId);
-                            return (
-                              <Tooltip key={tool.name}>
-                                <TooltipTrigger asChild>
-                                  <div className="p-2 rounded-md border text-xs bg-background flex items-center justify-between">
-                                    <p className="font-medium flex items-center gap-2">
-                                      {tool.name}
-                                    </p>
-                                    <Switch
-                                      checked={isEnabled}
-                                      onCheckedChange={() => toggleTool(tool.toolId)}
-                                    />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{tool.description}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            );
-                          })
-                        ) : (
-                          <p className="text-xs text-muted-foreground">No tools enabled.</p>
-                        )}
+                </TooltipProvider>
+              </div>
+              <div className="mt-1">
+                <Collapsible className="border rounded">
+                  <CardHeader className="px-3 py-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <p className="text-sm font-medium">
+                          Access control ({session.rights_mode})
+                        </p>
                       </div>
-                    </TooltipProvider>
-                  </div>
-                  <div className="mt-1">
-                    <div className="border rounded">
-                      {
-                        creatorQuery.loading && (
-                          <div className="flex flex-row justify-between p-3">
-                            <p className="text-sm font-medium">Session created by</p>
-                            <Loading className="ml-2" />
-                          </div>
-                        )
-                      }
-                      {creatorQuery.data?.userById && !creatorQuery.loading && (
-                        <div className="flex flex-row justify-between p-3">
-                           <p className="text-sm font-medium">Session created by</p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <p className="text-sm font-medium capitalize">{creatorQuery.data.userById.name}</p>
-                            <img src={creatorQuery.data.userById.image} alt={creatorQuery.data.userById.name} className="w-4 h-4 rounded-full" />
-                          </div>
-                        </div>
-                      )}
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8">
+                          <ChevronsUpDown className="size-4" />
+                          <span className="sr-only">Toggle</span>
+                        </Button>
+                      </CollapsibleTrigger>
                     </div>
-                  </div>
-                  <div className="mt-1">
-                    <Collapsible className="border rounded">
-                      <CardHeader className="px-3 py-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex flex-col">
-                            <p className="text-sm font-medium">
-                              Access control
-                            </p>
-                          </div>
-                          <CollapsibleTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8">
-                              <ChevronsUpDown className="size-4" />
-                              <span className="sr-only">Toggle</span>
-                            </Button>
-                          </CollapsibleTrigger>
-                        </div>
-                      </CardHeader>
-                      <CollapsibleContent>
-                        <CardContent className="space-y-4 p-3">
-                          <RBACControl
-                            allowedModes={['private', 'users', 'roles', 'projects']}
-                            initialRightsMode={session.rights_mode}
-                            initialUsers={session.RBAC?.users}
-                            initialRoles={session.RBAC?.roles}
-                            onChange={(rights_mode, users, roles) => {
-                              setRbac({
-                                rights_mode,
-                                users,
-                                roles
-                              })
-                            }}
-                          />
-                          <Button disabled={updateAgentSessionRbacResult.loading} onClick={() => {
-                            updateAgentSessionRbac({
-                              variables: {
-                                id: session.id,
-                                rights_mode: rbac.rights_mode,
-                                RBAC: {
-                                  users: rbac.users,
-                                  roles: rbac.roles
-                                }
-                              }
-                            })
-                          }}>Save access rights {updateAgentSessionRbacResult.loading && <Loading className="ml-2" />} </Button>
-                        </CardContent>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </div>
-                </div>
+                  </CardHeader>
+                  <CollapsibleContent>
+                    <CardContent className="space-y-4 p-3">
+                      <RBACControl
+                        allowedModes={['private', 'users', 'roles', 'projects']}
+                        initialRightsMode={session.rights_mode}
+                        initialUsers={session.RBAC?.users}
+                        initialRoles={session.RBAC?.roles}
+                        initialProjects={session.RBAC?.projects}
+                        onChange={(rights_mode, users, roles, projects) => {
+                          setRbac({
+                            rights_mode,
+                            users,
+                            roles,
+                            projects
+                          })
+                        }}
+                      />
+                      <Button disabled={updateAgentSessionRbacResult.loading} onClick={() => {
+                        updateAgentSessionRbac({
+                          variables: {
+                            id: session.id,
+                            rights_mode: rbac.rights_mode,
+                            RBAC: {
+                              users: rbac.users,
+                              roles: rbac.roles,
+                              projects: rbac.projects
+                            }
+                          }
+                        })
+                      }}>Save access rights {updateAgentSessionRbacResult.loading && <Loading className="ml-2" />} </Button>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
             </div>
           )}
