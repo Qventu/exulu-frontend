@@ -40,10 +40,16 @@ export interface Agent {
     rights_mode?: 'private' | 'users' | 'roles' | 'public' | 'projects';
     RBAC?: {
         type?: string;
-        users?: Array<{ id: string; rights: 'read' | 'write' }>;
+        users?: Array<{ id: number; rights: 'read' | 'write' }>;
         roles?: Array<{ id: string; rights: 'read' | 'write' }>;
         projects?: Array<{ id: string; rights: 'read' | 'write' }>;
     };
     createdAt?: string;
     updatedAt?: string;
 }
+
+export type imageTypes = '.png' | '.jpg' | '.jpeg' | '.gif' | '.webp';
+export type fileTypes = '.pdf' | '.docx' | '.xlsx' | '.xls' | '.csv' | '.pptx' | '.ppt';
+export type audioTypes = '.mp3' | '.wav' | '.m4a' | '.mp4' | '.mpeg';
+export type videoTypes = '.mp4' | '.m4a' | '.mp3' | '.mpeg' | '.wav';
+export type allFileTypes = imageTypes | fileTypes | audioTypes | videoTypes;

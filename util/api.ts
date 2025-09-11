@@ -48,26 +48,6 @@ export const agents = {
 }
 
 export const files = {
-    list: async (prefix: string) => {
-
-        const uris = await getUris();
-        let url = `${uris.files}/s3/list?prefix=${prefix}`;
-
-        const token = await getToken()
-
-        if (!token) {
-            throw new Error("No valid session token available.")
-        }
-
-        return fetch(url, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-                Session: localStorage.getItem("session") ?? "",
-            },
-        });
-    },
     download: async (key: string) => {
 
         const uris = await getUris();
@@ -81,6 +61,24 @@ export const files = {
 
         return fetch(url, {
             method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+        });
+    },
+    delete: async (key: string) => {
+        
+        const uris = await getUris();
+        let url = `${uris.files}/s3/delete?key=${key}`;
+        const token = await getToken()
+
+        if (!token) {
+            throw new Error("No valid session token available.")
+        }
+
+        return fetch(url, {
+            method: "DELETE",
             headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,

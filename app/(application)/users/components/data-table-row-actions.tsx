@@ -58,13 +58,10 @@ export function DataTableRowActions<TData>({
               });
               return;
             }
-
             const confirm = window.confirm("Are you sure you want to delete this user?");
-            
             if (!confirm) {
               return;
             }
-
             removeUser({
               variables: {
                 id: user.id,

@@ -197,7 +197,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
                   <div className="flex w-full flex-col px-2">
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col gap-2">
-                        <div className="text-md font-medium">
+                        <div className="text-md font-medium max-w-[80%] truncate">
                           {item.title
                             ? item.title?.substring(0, 20)
                             : "No title"}
@@ -205,7 +205,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
 
                         <div
                           className={cn(
-                            "ml-auto text-xs capitalize",
+                            "ml-0 text-xs capitalize",
                             pathname.includes(item.id)
                               ? "text-foreground"
                               : "text-muted-foreground",

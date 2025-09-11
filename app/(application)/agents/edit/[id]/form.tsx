@@ -10,7 +10,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { AgentDelete } from "@/app/(application)/agents/components/agent-delete";
 import {
-  REMOVE_AGENT_BY_ID, UPDATE_AGENT, GET_AGENT_BY_ID, CREATE_AGENT_SESSION, GET_VARIABLES,
+  REMOVE_AGENT_BY_ID, UPDATE_AGENT_BY_ID, GET_AGENT_BY_ID, CREATE_AGENT_SESSION, GET_VARIABLES,
   GET_TOOLS,
 } from "@/queries/queries";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -256,7 +256,7 @@ export default function AgentForm({
   );
 
   const [updateAgent, updateAgentResult] = useMutation(
-    UPDATE_AGENT,
+    UPDATE_AGENT_BY_ID,
     {
       refetchQueries: [
         GET_AGENT_BY_ID,

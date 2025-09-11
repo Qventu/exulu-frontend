@@ -69,7 +69,6 @@ export function CreateProjectDialog({ open, onOpenChange, refetchProjects }: Cre
             name: formData.name.trim(),
             description: formData.description.trim() || null,
             custom_instructions: formData.custom_instructions.trim() || null,
-            context_files: [],
             rights_mode: "private",
           },
         },

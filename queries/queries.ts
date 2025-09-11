@@ -278,11 +278,12 @@ export const UPDATE_ITEM = (context: string) => {
   `;
 };
 
-export const DELETE_ITEM = (context: string) => {
+export const DELETE_ITEM = (context: string, fields: string[]) => {
   return gql`
     mutation DeleteOneById${context}($id: ID!) {
       ${context}_itemsRemoveOneById(id: $id) {
         id
+        ${fields.join("\n")}
       }
     }
   `;
@@ -301,6 +302,20 @@ export const UPDATE_AGENT_SESSION_RBAC = gql`
     }
   }
 `;
+
+export const UPDATE_AGENT_SESSION_PROJECT = gql`
+  mutation UpdateAgentSessionProject(
+    $id: ID!
+    $project: String
+  ) {
+    agent_sessionsUpdateOneById(id: $id, input: {project: $project}) {
+      item {
+        id
+      }
+    }
+  }
+`;
+
 
 export const GET_AGENT_MESSAGES = gql`
   query GetAgentSessionMessages(
@@ -675,7 +690,7 @@ export const GET_TOOLS = gql`
   }
 `;
 
-export const UPDATE_AGENT = gql`
+export const UPDATE_AGENT_BY_ID = gql`
   mutation UpdateAgent(
     $id: ID!
     $name: String
@@ -687,7 +702,7 @@ export const UPDATE_AGENT = gql`
     $providerApiKey: String
     $RBAC: RBACInput
   ) {
-    agentsUpdateOne(
+    agentsUpdateOneById(
       input: { 
         name: $name
         backend: $backend
@@ -698,25 +713,27 @@ export const UPDATE_AGENT = gql`
         providerApiKey: $providerApiKey
         RBAC: $RBAC
       }
-      where: { id: $id }
+      id: $id
     ) {
-        id
-        name
-        description
-        rights_mode
-        RBAC {
-          type
-          users {
-            id
-            rights
-          }
-          roles {
-            id
-            rights
-          }
-          projects {
-            id
-            rights
+        item {
+          id
+          name
+          description
+          rights_mode
+          RBAC {
+            type
+            users {
+              id
+              rights
+            }
+            roles {
+              id
+              rights
+            }
+            projects {
+              id
+              rights
+            }
           }
         }
     }
@@ -1214,11 +1231,11 @@ const PROJECT_FIELDS = `
   description
   image
   custom_instructions
-  context_files
   rights_mode
   created_by
   createdAt
   updatedAt
+  project_items
   RBAC {
     type
     users {

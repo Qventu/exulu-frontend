@@ -1,5 +1,5 @@
 export type User = {
-  id: string;
+  id: number;
   email: string;
   emailVerified?: string;
   type?: "api" | "user"

@@ -1,17 +1,17 @@
 import Link from "next/link"
-import { ChevronLeft, Info, Search, Star, Plus } from "lucide-react"
+import { Search, Star, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useQuery, useMutation } from "@apollo/client";
 import { GET_PROJECTS, GET_PROJECTS_BY_IDS, UPDATE_USER_FAVOURITE_PROJECTS } from "@/queries/queries";
-import * as React from "react";
+import { useEffect, useState, useContext } from "react";
 import { TruncatedText } from "./truncated-text";
 import { useParams, usePathname } from "next/navigation";
 import { Skeleton } from "./ui/skeleton";
 import { UserContext } from "@/app/(application)/authenticated";
-import { useContext, useState } from "react";
 import { User } from "@/types/models/user";
 import { CreateProjectDialog } from "./create-project-dialog";
+import { useRouter } from "next/router";
 
 // Project interface based on our schema
 interface Project {
@@ -20,7 +20,6 @@ interface Project {
   description?: string;
   image?: string;
   custom_instructions?: string;
-  context_files?: any[];
   rights_mode?: string;
   created_by?: number;
   createdAt?: string;
@@ -29,9 +28,8 @@ interface Project {
 }
 
 export function ProjectNav() {
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
-  const params = useParams();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const pathname = usePathname();
   const { user: init } = useContext(UserContext);
   const [user, setUser] = useState<User>(init);
@@ -62,6 +60,10 @@ export function ProjectNav() {
       ] : undefined,
     },
   });
+
+  useEffect(() => {
+    projects.refetch();
+  }, [pathname]);
 
   const [updateUserFavouriteProjects] = useMutation(UPDATE_USER_FAVOURITE_PROJECTS);
 
@@ -111,18 +113,12 @@ export function ProjectNav() {
     }
   };
 
-  const handleInfoClick = (projectId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log("Show info for project:", projectId);
-  };
-
   const handleCreateProject = () => {
     setCreateDialogOpen(true);
   };
 
-  const allProjects = projects?.data?.projectsPagination?.items || [];
-  const favoriteProjectsList = favouriteProjects?.data?.projectByIds || [];
+  const allProjects = (projects?.data?.projectsPagination?.items || projects?.previousData?.projectsPagination?.items) || [];
+  const favoriteProjectsList = (favouriteProjects?.data?.projectByIds || favouriteProjects?.previousData?.projectByIds) || [];
 
   return (
     <div className="h-full w-[250px] flex-col gap-2 p-2">
@@ -194,8 +190,8 @@ export function ProjectNav() {
             </>
           )}
 
-          <div className="text-xs font-medium text-muted-foreground px-2 py-1">
-            All Projects
+          <div className="text-xs font-medium text-muted-foreground px-2 py-1 mt-2">
+            All projects:
           </div>
 
           {projects.loading && (

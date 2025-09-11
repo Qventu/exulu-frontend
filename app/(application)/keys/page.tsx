@@ -308,8 +308,7 @@ export default function ApiKeyManagement() {
                                                     onOpenChange={(open) => {
                                                         if (!open) setDeleteKeyId(null)
                                                         if (open) setDeleteKeyId(user.id)
-                                                    }}
-                                                >
+                                                    }}>
                                                     <DialogTrigger asChild>
                                                         <Button
                                                             variant="ghost"

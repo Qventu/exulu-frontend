@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { useState, useContext } from "react";
-import { useQuery, useMutation } from "@apollo/client";
-import { UPDATE_PROJECT, DELETE_PROJECT, GET_AGENT_SESSIONS, GET_AGENTS, CREATE_AGENT_SESSION } from "@/queries/queries";
+import { useQuery, useMutation, useApolloClient } from "@apollo/client";
+import { UPDATE_PROJECT, DELETE_PROJECT, GET_AGENT_SESSIONS, GET_AGENTS, CREATE_AGENT_SESSION, GET_ITEM_BY_ID, UPDATE_AGENT_SESSION_PROJECT, REMOVE_AGENT_SESSION_BY_ID, DELETE_ITEM } from "@/queries/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Upload, FileText, FileImage, FileSpreadsheet, Presentation, Trash2, Plus, MessageSquare, Settings2, Files, AlertTriangle, Shield, Pencil, Search, User, Bot, PackageMinus } from "lucide-react";
+import { Trash2, Plus, MessageSquare, Settings2, Files, AlertTriangle, Shield, Pencil, Search, Bot, PackageMinus } from "lucide-react";
 import { RBACControl } from "@/components/rbac";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
@@ -27,40 +27,15 @@ import Link from "next/link";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Item } from "@/types/models/item";
+import { FileItem, ItemsSelectionModal } from "./uppy-dashboard";
+import { files } from "@/util/api";
 
 interface ProjectDetailsProps {
   project: Project;
 }
-
-interface ContextFile {
-  id: string;
-  name: string;
-  type: 'pdf' | 'docx' | 'xlsx' | 'ppt' | 'txt' | 'png' | 'jpg';
-  url: string;
-  size: number;
-  uploadedAt: string;
-}
-
-const getFileIcon = (type: string) => {
-  switch (type) {
-    case 'pdf':
-    case 'docx':
-    case 'txt':
-      return <FileText className="h-4 w-4" />;
-    case 'xlsx':
-      return <FileSpreadsheet className="h-4 w-4" />;
-    case 'ppt':
-      return <Presentation className="h-4 w-4" />;
-    case 'png':
-    case 'jpg':
-      return <FileImage className="h-4 w-4" />;
-    default:
-      return <FileText className="h-4 w-4" />;
-  }
-};
 
 export function ProjectDetails({ project }: ProjectDetailsProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -71,7 +46,7 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
   const { user } = useContext(UserContext);
   const router = useRouter();
   const [deleteOptions, setDeleteOptions] = useState({
-    deleteFiles: false,
+    deleteItems: false,
     deleteSessions: false,
   });
   const [formData, setFormData] = useState({
@@ -88,10 +63,11 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
     projects: project.RBAC?.projects
   })
 
+  const [projectItems, setProjectItems] = useState<string[]>(project.project_items || []);
   const [updateProject, { loading: isSaving }] = useMutation(UPDATE_PROJECT);
   const [deleteProject] = useMutation(DELETE_PROJECT);
-
-  const { data: sessionsData, loading: sessionsLoading } = useQuery(GET_AGENT_SESSIONS, {
+  const [deletingProject, setDeletingProject] = useState(false);
+  const { data: sessionsData, loading: sessionsLoading, refetch: refetchSessions } = useQuery(GET_AGENT_SESSIONS, {
     variables: {
       page: 1,
       limit: 50,
@@ -110,27 +86,13 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
     }
   });
 
+  const apolloClient = useApolloClient()
+
   const [createAgentSession, { loading: isCreatingSession }] = useMutation(CREATE_AGENT_SESSION);
 
-  // Mock data for context files and sessions
-  const mockContextFiles: ContextFile[] = [
-    {
-      id: "1",
-      name: "Project Requirements.pdf",
-      type: "pdf",
-      url: "/data/projects/file-1",
-      size: 1024000,
-      uploadedAt: "2024-01-15"
-    },
-    {
-      id: "2",
-      name: "Budget Analysis.xlsx",
-      type: "xlsx",
-      url: "/data/projects/file-2",
-      size: 512000,
-      uploadedAt: "2024-01-14"
-    },
-  ];
+  const [updateAgentSession, { loading: isUpdatingSession }] = useMutation(UPDATE_AGENT_SESSION_PROJECT);
+
+  const [deleteSession, { loading: isDeletingSession }] = useMutation(REMOVE_AGENT_SESSION_BY_ID);
 
   const chatSessions: AgentSession[] = sessionsData?.agent_sessionsPagination?.items || [];
   const agents: Agent[] = agentsData?.agentsPagination?.items || [];
@@ -191,16 +153,6 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
     setIsEditing(false);
   };
 
-  const handleFileUpload = () => {
-    // TODO: Implement file upload
-    console.log("File upload triggered");
-  };
-
-  const handleFileDelete = (fileId: string) => {
-    // TODO: Implement file deletion with confirmation
-    console.log("Delete file:", fileId);
-  };
-
   const handleNewChatSession = () => {
     setIsAgentSelectionOpen(true);
   };
@@ -244,6 +196,41 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
 
   const handleDeleteProject = async () => {
     try {
+      setDeletingProject(true);
+      if (deleteOptions.deleteItems) {
+        await Promise.all(projectItems.map(async (item) => {
+          const context = item.split("/")[0];
+          const id = item.split("/")[1];
+          if (!context || !id) return;
+
+          const { data } = await apolloClient.mutate({
+            mutation: DELETE_ITEM(context, context === "files_default_context" ? ["s3key"] : []),
+            variables: { id },
+          });
+
+          if (data[`${context}_itemsRemoveOneById`]?.s3key) {
+            try {
+              await files.delete(data[`${context}_itemsRemoveOneById`]?.s3key)
+            } catch (error: any) {
+              console.error("[EXULU] Error deleting file from s3 storage:", error);
+            }
+          }
+
+        }));
+      }
+
+      await Promise.all(chatSessions.map(async (session) => {
+        if (deleteOptions.deleteSessions) {
+          await deleteSession({
+            variables: { id: session.id },
+          });
+        } else {
+          await updateAgentSession({
+            variables: { id: session.id, project: null },
+          });
+        }
+      }))
+
       await deleteProject({
         variables: { id: project.id },
       });
@@ -255,8 +242,10 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
 
       // Navigate back to projects list or close modal
       setIsDeleteDialogOpen(false);
+      setDeletingProject(false);
       router.push('/projects');
     } catch (error: any) {
+      setDeletingProject(false);
       console.error("Error deleting project:", error);
       toast({
         title: "Error",
@@ -276,7 +265,7 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                 <div className="space-y-3">
                   <h3 className="font-semibold text-lg">{project.name}</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    {project.description || "An example project that also doubles as a how-to guide for using Claude. Chat with it to learn more about how to get the most out of chatting with Claude!"}
+                    {project.description || "No description provided."}
                   </p>
                 </div>
               </CardContent>
@@ -413,58 +402,62 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
             )}
 
             {activeView === 'context' && (
-              <div className="space-y-6">
+              <div className="space-y-6 w-full">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Project Context Files</CardTitle>
+                    <CardTitle>Project context items</CardTitle>
                     <CardDescription>
-                      Files that provide context for sessions in this project (max 15 files)
+                      Items that provide context for sessions in this project (max 15 items). Note that different
+                      agents may have different file types supported.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <Button onClick={handleFileUpload} className="w-full" variant="outline">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload Files (PDF, DOCX, XLSX, PPT, TXT, PNG, JPG)
-                      </Button>
+                      <ItemsSelectionModal onConfirm={(data) => {
+                        const update = [...projectItems, ...data.map((x) => `${x.context.id}/${x.item.id}`)];
+                        console.log("update", update);
+                        setProjectItems(update);
+                        updateProject({
+                          variables: {
+                            id: project.id,
+                            input: {
+                              project_items: update
+                            }
+                          }
+                        })
+                      }} />
 
+                      {/* List of items */}
                       <div className="space-y-2">
-                        {mockContextFiles.map((file) => (
-                          <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              {getFileIcon(file.type)}
-                              <div>
-                                <p className="font-medium">{file.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {(file.size / 1024).toFixed(0)} KB • Uploaded {file.uploadedAt}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => window.open(file.url, '_blank')}
-                              >
-                                View
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleFileDelete(file.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                        {
+                          <div className="space-y-2">
+                            {
+                              projectItems?.length === 0 && (
+                                <div className="text-center py-8 text-muted-foreground">
+                                  <Files className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                  <p>No items added to the project context yet.</p>
+                                </div>
+                              )
+                            }
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                              {projectItems?.map((gid) => (
+                                <ProjectItem key={gid} gid={gid} onRemove={(gid) => {
+                                  const update = projectItems.filter((g) => g !== gid)
+                                  setProjectItems(update)
+                                  updateProject({
+                                    variables: {
+                                      id: project.id,
+                                      input: {
+                                        project_items: update
+                                      }
+                                    }
+                                  })
+                                }} />
+                              ))}
                             </div>
                           </div>
-                        ))}
+                        }
                       </div>
-                      {mockContextFiles.length === 0 && (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <Files className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                          <p>No context files uploaded yet</p>
-                        </div>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -504,13 +497,19 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
-                                      disabled={!writeAccess}
+                                      disabled={!writeAccess || isUpdatingSession}
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => {
-
-                                      }}
-                                    >
+                                        if (isUpdatingSession) return;
+                                        updateAgentSession({
+                                          variables: {
+                                            id: session.id,
+                                            project: null
+                                          }
+                                        })
+                                        refetchSessions();
+                                      }}>
                                       <PackageMinus className="h-4 w-4" />
                                     </Button>
                                   </TooltipTrigger>
@@ -522,18 +521,24 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
-                                      disabled={!writeAccess}
+                                      disabled={!writeAccess || isDeletingSession}
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => {
-
+                                        if (isDeletingSession) return;
+                                        deleteSession({
+                                          variables: {
+                                            id: session.id
+                                          }
+                                        })
+                                        refetchSessions();
                                       }}
                                     >
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Delete session from everywhere.</p>
+                                    <p>Delete session completely.</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </div>
@@ -650,14 +655,14 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                           <div className="space-y-4">
                             <div className="flex items-center space-x-2">
                               <Checkbox
-                                id="delete-files"
-                                checked={deleteOptions.deleteFiles}
+                                id="delete-items"
+                                checked={deleteOptions.deleteItems}
                                 onCheckedChange={(checked) =>
-                                  setDeleteOptions(prev => ({ ...prev, deleteFiles: checked as boolean }))
+                                  setDeleteOptions(prev => ({ ...prev, deleteItems: checked as boolean }))
                                 }
                               />
-                              <label htmlFor="delete-files" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                Also delete all context files ({mockContextFiles.length} files)
+                              <label htmlFor="delete-items" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                Also delete all context items ({projectItems?.length} items)
                               </label>
                             </div>
                             <div className="flex items-center space-x-2">
@@ -672,14 +677,14 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                                 Also delete all sessions ({chatSessions.length} sessions)
                               </label>
                             </div>
-                            {(deleteOptions.deleteFiles || deleteOptions.deleteSessions) && (
+                            {(deleteOptions.deleteItems || deleteOptions.deleteSessions) && (
                               <div className="flex items-start gap-2 p-3 border border-amber-200 rounded-lg bg-amber-50">
                                 <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
                                 <p className="text-sm text-amber-800">
-                                  {deleteOptions.deleteFiles && deleteOptions.deleteSessions
-                                    ? "All context files and sessions will be permanently deleted."
-                                    : deleteOptions.deleteFiles
-                                      ? "All context files will be permanently deleted."
+                                  {deleteOptions.deleteItems && deleteOptions.deleteSessions
+                                    ? "All context items and sessions will be permanently deleted."
+                                    : deleteOptions.deleteItems
+                                      ? "All context items will be permanently deleted."
                                       : "All sessions will be permanently deleted."
                                   }
                                 </p>
@@ -690,8 +695,14 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
                               Cancel
                             </Button>
-                            <Button variant="destructive" onClick={handleDeleteProject}>
-                              <Trash2 className="h-4 w-4 mr-2" />
+                            <Button disabled={deletingProject} variant="destructive" onClick={handleDeleteProject}>
+                              {
+                                deletingProject ? (
+                                  <Loading className="mr-2 w-4 h-4" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                )
+                              }
                               Delete Project
                             </Button>
                           </DialogFooter>
@@ -800,4 +811,32 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
       </Dialog>
     </div>
   );
+}
+
+function ProjectItem({ gid, onRemove }: { gid: string, onRemove: (gid: string) => void }) {
+
+  const context = gid.split("/")[0];
+  const id = gid.split("/")[1];
+  if (!context) return null;
+  if (!id) return null;
+
+  const { data, loading } = useQuery<
+    {
+      [key: string]: Item
+    }>(GET_ITEM_BY_ID(context, context === "files_default_context" ? [
+      "s3key"
+    ] : []), {
+      variables: {
+        id
+      }
+    });
+
+  console.log("data", data);
+
+  if (loading) return null;
+  const item = data?.[context + "_itemsById"];
+  if (!item) return null;
+  return <FileItem item={item} onRemove={() => {
+    onRemove(gid)
+  }} active={false} disabled={false} />
 }

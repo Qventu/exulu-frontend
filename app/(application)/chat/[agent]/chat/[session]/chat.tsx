@@ -1,5 +1,6 @@
 "use client"
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useMutation, useQuery } from "@apollo/client";
 import { ChatRequestOptions, DefaultChatTransport, FileUIPart, UIMessage } from "ai";
 import { useChat } from '@ai-sdk/react';
@@ -20,7 +21,6 @@ import {
 } from "@/components/ui/tooltip";
 import {
   GET_AGENT_MESSAGES,
-  GET_AGENT_SESSION_BY_ID,
   GET_USER_BY_ID,
   UPDATE_AGENT_SESSION_RBAC,
 } from "@/queries/queries";
@@ -49,7 +49,9 @@ import {
 import { Loading } from "@/components/ui/loading";
 import { Badge } from "@/components/ui/badge";
 import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
-import UppyDashboard from "@/components/uppy-dashboard";
+import UppyDashboard, { FileItem, getPresignedUrl } from "@/components/uppy-dashboard";
+import { Item } from "@/types/models/item";
+import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 
 export interface ChatProps {
   chatId?: string;
@@ -70,9 +72,11 @@ export interface ChatProps {
 
 export function ChatLayout({ session, agent }: { session: AgentSession, agent: Agent }) {
 
+  const [error, setError] = useState<string | null>(null);
   const configContext = React.useContext(ConfigContext);
   const isMobile = useIsMobile();
   const [files, setFiles] = useState<FileUIPart[] | null>(null);
+  const [items, setItems] = useState<Item[] | null>(null);
   const { user } = useContext(UserContext);
   const [copyingTableId, setCopyingTableId] = useState<string | null>(null);
   const [showSaveWorkflowModal, setShowSaveWorkflowModal] = useState(false);
@@ -125,12 +129,20 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
     messages,
     sendMessage,
     status,
-    error,
     stop,
     regenerate,
     setMessages,
     addToolResult
   } = useChat({
+    onError: (error) => {
+      console.log("error!!", error?.message)
+      try {
+        const { message } = JSON.parse(error?.message)
+        setError(message)
+      } catch (x) {
+        setError(error.message)
+      }
+    },
     transport: new DefaultChatTransport({
       api: `${configContext?.backend}${agent.slug}/${agent.id}`,
       // only send the last message to the server: we load
@@ -163,10 +175,6 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
     const assistantMessages = messages?.filter(m => m.role === 'assistant') || [];
     return userMessages.length >= 1 && assistantMessages.length >= 1;
   }, [messages]);
-
-  const onFilesSelected = (files: FileUIPart[]) => {
-    setFiles(files);
-  };
 
   const convertTableToCSV = (tableElement: HTMLTableElement): string => {
     const rows = Array.from(tableElement.querySelectorAll('tr'));
@@ -246,10 +254,26 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
     );
   };
 
-  console.log("session", session)
-  console.log("user!!!", user)
-
   const writeAccess = checkChatSessionWriteAccess(session, user);
+
+  const updateMessageFiles = async (items: Item[]) => {
+    const files = await Promise.all(items.map( async (item) => ({
+      type: "file" as const,
+      mediaType: item.type,
+      filename: item.name,
+      url: await getPresignedUrl(item.s3key) // todo make sure this is a pre-signed url valid for X time
+    })))
+    setFiles(files)
+  }
+
+  useEffect(() => {
+    if (!items) {
+      setFiles(null)
+      return;
+    }
+
+    updateMessageFiles(items)
+  }, [items])
 
   return (
     <div className="flex flex-col w-full">
@@ -412,53 +436,75 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                 </div>
               )
             }
+            {error && (
+              <div className="mx-5">
+                <Alert className="mb-3" variant="destructive">
+                  <ExclamationTriangleIcon className="size-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
             {writeAccess && (
               <form
                 onSubmit={onSubmit}
-                className="w-full items-center flex relative gap-2 px-6"
-              >
-                <UppyDashboard 
-                  id={`chat-${session.id}`} 
-                  allowedFileTypes={[
-                    ...agent.capabilities?.audio || [],
-                    ...agent.capabilities?.video || [],
-                    ...agent.capabilities?.files || [],
-                    ...agent.capabilities?.images || [],
-                  ]} 
-                  dependencies={[]} 
-                  onSelect={() => {}} 
-                  preselectedFile={files?.[0]?.key}
-                />
-                <TextareaAutosize
-                  autoComplete="off"
-                  autoFocus={true}
-                  value={input}
-                  ref={inputRef}
-                  onKeyDown={handleKeyPress}
-                  onChange={(e) => setInput(e.target.value)}
-                  name="message"
-                  placeholder={`Ask me anything...`}
-                  className="border-input max-h-20 px-5 py-4 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full border rounded flex items-center h-14 resize-none overflow-hidden dark:bg-card/35"
-                />
-                {status !== "streaming" ? (
-                  <Button
-                    className="shrink-0"
-                    variant="secondary"
-                    size="icon"
-                    disabled={status === "submitted" || !input?.trim()}
-                  >
-                    <ArrowUp className=" size-6 text-muted-foreground" />
-                  </Button>
-                ) : (
-                  <Button
-                    className="shrink-0"
-                    variant="secondary"
-                    size="icon"
-                    onClick={stop}
-                  >
-                    <StopIcon className="size-6 text-muted-foreground" />
-                  </Button>
-                )}
+                className="px-6 border-input border rounded flex mx-5 p-5 flex-col gap-2">
+                <div className="items-center flex relative gap-2 w-full">
+                  <UppyDashboard
+                    id={`chat-${session.id}`}
+                    allowedFileTypes={[
+                      ...agent.capabilities?.audio || [],
+                      ...agent.capabilities?.video || [],
+                      ...agent.capabilities?.files || [],
+                      ...agent.capabilities?.images || [],
+                    ]}
+                    dependencies={[]}
+                    onConfirm={(items) => {
+                      setItems(items)
+                    }}
+                  />
+                  <TextareaAutosize
+                    autoComplete="off"
+                    autoFocus={true}
+                    minRows={1}
+                    value={input}
+                    ref={inputRef}
+                    onKeyDown={handleKeyPress}
+                    onChange={(e) => setInput(e.target.value)}
+                    name="message"
+                    placeholder={`Ask me anything...`}
+                    className="max-h-40 px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full items-center h-28 resize-none overflow-hidden dark:bg-card/35"
+                  />
+                  {status !== "streaming" ? (
+                    <Button
+                      className="shrink-0"
+                      variant="secondary"
+                      size="icon"
+                      disabled={status === "submitted" || !input?.trim()}
+                    >
+                      <ArrowUp className=" size-6 text-muted-foreground" />
+                    </Button>
+                  ) : (
+                    <Button
+                      className="shrink-0"
+                      variant="secondary"
+                      size="icon"
+                      onClick={stop}
+                    >
+                      <StopIcon className="size-6 text-muted-foreground" />
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                  {/* Show  selected files */}
+                  {items?.map((item) => (
+                    <FileItem item={item} disabled={true} active={false} onRemove={() => {
+                      setItems(items?.filter((i) => i.s3key !== item.s3key))
+                    }} />
+                  ))}
+                </div>
               </form>
             )}
             {/* Save Workflow Modal */}

@@ -32,17 +32,14 @@ export function SuperAdminToggle({ user }: SuperAdminToggleProps) {
   const [pendingChange, setPendingChange] = useState<boolean | null>(null);
   const { toast } = useToast();
   const { user: currentUser } = useContext(UserContext);
-
   const [updateUser] = useMutation(UPDATE_USER_BY_ID, {
     refetchQueries: [
       GET_USERS,
       "GetUsers",
     ],
   });
-
   const isSuperAdmin = Boolean(user.super_admin);
   const isCurrentUser = currentUser?.id === user.id;
-
   const handleToggleChange = (checked: boolean) => {
     if (isCurrentUser && isSuperAdmin && !checked) {
       toast({

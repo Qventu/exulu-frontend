@@ -5,10 +5,6 @@ export type ConfigContextType = {
     backend: string;
     google_client_id: string;
     auth_mode: string;
-    langfuse: string;
-    s3Bucket: string;
-    s3region: string;
-    s3endpoint: string;
 }
 
 export const ConfigContext = createContext<ConfigContextType | null>(null);

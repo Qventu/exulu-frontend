@@ -176,7 +176,7 @@ export function DataDisplay(props: DataDisplayProps) {
 
   const [deleteItemMutation, deleteItemMutationResult] = useMutation<{
     id: string;
-  }>(DELETE_ITEM(props.context.id), {
+  }>(DELETE_ITEM(props.context.id, []), {
     onCompleted: () => {
       toast({
         title: "Item deleted",

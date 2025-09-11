@@ -7,7 +7,7 @@ export const checkChatSessionWriteAccess = (session: AgentSession, user: User) =
     const byUsers = session.rights_mode === 'users';
     const byRoles = session.rights_mode === 'roles';
     const isAdmin = user.super_admin;
-    const isCreator = session.created_by === user.id;
+    const isCreator = session.created_by === user.id.toString();
   
     let writeAccess = false;
     if (isPrivate && isCreator) {
@@ -17,7 +17,7 @@ export const checkChatSessionWriteAccess = (session: AgentSession, user: User) =
       writeAccess = true;
     }
     if (byUsers) {
-      writeAccess = session.RBAC?.users?.find(u => u.id === user.id)?.rights === 'write';
+      writeAccess = session.RBAC?.users?.find(u => u.id === user.id.toString())?.rights === 'write';
     }
     if (byRoles) {
       writeAccess = session.RBAC?.roles?.find(r => r.id === user.role?.id)?.rights === 'write';

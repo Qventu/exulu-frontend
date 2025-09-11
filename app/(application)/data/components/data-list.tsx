@@ -146,7 +146,7 @@ export function DataList({
 
     const [deleteItemMutation, deleteItemMutationResult] = useMutation<{
         id: string;
-    }>(DELETE_ITEM(activeFolder), {
+    }>(DELETE_ITEM(activeFolder, []), {
         onCompleted: () => {
             refetch();
         }
