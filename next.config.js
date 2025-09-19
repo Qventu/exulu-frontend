@@ -4,7 +4,7 @@
 const config = {
   productionBrowserSourceMaps: true,
   images: {
-    domains: ["img.clerk.com", "replicate.delivery", "www.1822direkt.de", "1822direkt.de"],
+    domains: ["img.clerk.com", "replicate.delivery", "www.1822direkt.de", "1822direkt.de", "localhost"],
   },
   experimental: {
     serverComponentsExternalPackages: [

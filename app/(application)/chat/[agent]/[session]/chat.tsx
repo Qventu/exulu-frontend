@@ -2,7 +2,7 @@
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useMutation, useQuery } from "@apollo/client";
-import { ChatRequestOptions, DefaultChatTransport, FileUIPart, UIMessage } from "ai";
+import { ChatRequestOptions, DefaultChatTransport, DynamicToolUIPart, FileUIPart, lastAssistantMessageIsCompleteWithToolCalls, UIMessage } from "ai";
 import { useChat } from '@ai-sdk/react';
 import * as React from "react";
 import { useContext, useEffect, useState, useMemo } from "react";
@@ -40,6 +40,7 @@ import { Response } from '@/components/ai-elements/response';
 import { Reasoning, ReasoningTrigger, ReasoningContent } from "@/components/ai-elements/reasoning";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/source";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { z } from 'zod';
 import { RBACControl } from "@/components/rbac";
 import {
   Collapsible,
@@ -52,6 +53,36 @@ import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-acce
 import UppyDashboard, { FileItem, getPresignedUrl } from "@/components/uppy-dashboard";
 import { Item } from "@/types/models/item";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import {
+  Context,
+  ContextTrigger,
+  ContextContent,
+  ContextContentHeader,
+  ContextContentBody,
+  ContextContentFooter,
+  ContextInputUsage,
+  ContextOutputUsage,
+  ContextReasoningUsage,
+  ContextCacheUsage,
+} from '@/components/ai-elements/context';
+import { Progress } from "@/components/ui/progress";
+import {
+  ChainOfThought,
+  ChainOfThoughtContent,
+  ChainOfThoughtHeader,
+  ChainOfThoughtImage,
+  ChainOfThoughtSearchResult,
+  ChainOfThoughtSearchResults,
+  ChainOfThoughtStep,
+} from '@/components/ai-elements/chain-of-thought';
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolOutput,
+  ToolInput,
+} from '@/components/ai-elements/tool';
+import { Skeleton } from "@/components/ui/skeleton";
 
 export interface ChatProps {
   chatId?: string;
@@ -99,6 +130,13 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
 
 
   const [updateAgentSessionRbac, updateAgentSessionRbacResult] = useMutation(UPDATE_AGENT_SESSION_RBAC);
+  const [tokenCounts, setTokenCounts] = useState<MessageMetadata>({
+    totalTokens: 0,
+    reasoningTokens: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    cachedInputTokens: 0
+  });
 
   useQuery<{
     agent_messagesPagination: {
@@ -134,6 +172,26 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
     setMessages,
     addToolResult
   } = useChat({
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    // Throttle the messages and data updates to 50ms:
+    experimental_throttle: 50,
+    async onToolCall({ toolCall }) {
+      // Check if it's a dynamic tool first for proper type narrowing
+      if (toolCall.dynamic) {
+        return;
+      }
+
+      if (toolCall.toolName === 'getLocation') {
+        const cities = ['New York', 'Los Angeles', 'Chicago', 'San Francisco'];
+
+        // No await - avoids potential deadlocks
+        addToolResult({
+          tool: 'confirm-tool-call',
+          toolCallId: toolCall.toolCallId,
+          output: cities[Math.floor(Math.random() * cities.length)],
+        });
+      }
+    },
     onError: (error) => {
       console.log("error!!", error?.message)
       try {
@@ -168,6 +226,44 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
       },
     })
   });
+
+  type MessageMetadata = {
+    totalTokens: number;
+    reasoningTokens: number;
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+  }
+
+  useEffect(() => {
+    const totalCount = messages?.reduce((acc, message) => {
+      const messageMetadata: MessageMetadata = message.metadata as any;
+      return acc + (messageMetadata?.totalTokens || 0);
+    }, 0);
+    const reasoningCount = messages?.reduce((acc, message) => {
+      const messageMetadata: MessageMetadata = message.metadata as any;
+      return acc + (messageMetadata?.reasoningTokens || 0);
+    }, 0);
+    const inputCount = messages?.reduce((acc, message) => {
+      const messageMetadata: MessageMetadata = message.metadata as any;
+      return acc + (messageMetadata?.inputTokens || 0);
+    }, 0);
+    const outputCount = messages?.reduce((acc, message) => {
+      const messageMetadata: MessageMetadata = message.metadata as any;
+      return acc + (messageMetadata?.outputTokens || 0);
+    }, 0);
+    const cachedInputCount = messages?.reduce((acc, message) => {
+      const messageMetadata: MessageMetadata = message.metadata as any;
+      return acc + (messageMetadata?.cachedInputTokens || 0);
+    }, 0);
+    setTokenCounts({
+      totalTokens: totalCount,
+      reasoningTokens: reasoningCount,
+      inputTokens: inputCount,
+      outputTokens: outputCount,
+      cachedInputTokens: cachedInputCount
+    })
+  }, [messages])
 
   // Check if conversation has enough content for a workflow
   const canCreateWorkflow = useMemo(() => {
@@ -246,23 +342,41 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
     }
   };
 
-  const toggleTool = (toolId: string) => {
+  const toggleTool = (id: string) => {
     setDisabledTools(prev =>
-      prev.includes(toolId)
-        ? prev.filter(name => name !== toolId)
-        : [...prev, toolId]
+      prev.includes(id)
+        ? prev.filter(name => name !== id)
+        : [...prev, id]
     );
   };
 
   const writeAccess = checkChatSessionWriteAccess(session, user);
 
   const updateMessageFiles = async (items: Item[]) => {
-    const files = await Promise.all(items.map( async (item) => ({
-      type: "file" as const,
-      mediaType: item.type,
-      filename: item.name,
-      url: await getPresignedUrl(item.s3key) // todo make sure this is a pre-signed url valid for X time
-    })))
+    const files = await Promise.all(items.map(async (item) => {
+
+      if (!item.s3key) {
+        // Take all item fields and turn into a data url
+        let content = "";
+        Object.entries(item).forEach(([key, value]) => {
+          content += `${key}: ${value}\n`
+        })
+        return {
+          type: "file" as const,
+          mediaType: item.type,
+          filename: item.name,
+          url: `data:text/plain;base64,${btoa(content)}`
+        }
+      }
+
+      return {
+        type: "file" as const,
+        mediaType: item.type,
+        filename: item.name,
+        url: await getPresignedUrl(item.s3key)
+      }
+
+    }))
     setFiles(files)
   }
 
@@ -271,7 +385,6 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
       setFiles(null)
       return;
     }
-
     updateMessageFiles(items)
   }, [items])
 
@@ -299,11 +412,51 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                   </Button>
                 </div>
               )}
+              {
+                /* Show a bar that fills up depending on the total tokens used */
+                agent.maxContextLength &&
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className={`absolute w-full ${canCreateWorkflow ? 'top-10' : 'top-0'}`}>
+                        <Progress className="w-full rounded-none" value={tokenCounts.totalTokens / agent.maxContextLength * 100} />
+                        <div className="justify-between flex felx-row">
+                          <div></div>
+                          <Context
+                            maxTokens={agent.maxContextLength || 0}
+                            usedTokens={tokenCounts.totalTokens}
+                            usage={{
+                              inputTokens: tokenCounts.inputTokens,
+                              outputTokens: tokenCounts.outputTokens,
+                              totalTokens: tokenCounts.totalTokens,
+                              cachedInputTokens: tokenCounts.cachedInputTokens,
+                              reasoningTokens: tokenCounts.reasoningTokens,
+                            }}>
+                            <ContextTrigger />
+                            <ContextContent>
+                              <ContextContentHeader />
+                              <ContextContentBody>
+                                <ContextInputUsage />
+                                <ContextOutputUsage />
+                                <ContextReasoningUsage />
+                                <ContextCacheUsage />
+                              </ContextContentBody>
+                            </ContextContent>
+                          </Context>
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{Intl.NumberFormat('en-US').format(tokenCounts.totalTokens)} / {Intl.NumberFormat('en-US').format(agent.maxContextLength)} tokens in the context window used.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              }
               {messages?.length === 0 ?
                 <div className="size-full flex justify-center items-center">
                   <div className="flex flex-col gap-4 items-center max-w-2xl w-full px-4 my-auto">
                     <Image
-                      src="/exulu_logo.svg"
+                      src={configContext?.backend + "/logo.png"}
                       alt="AI"
                       width={120}
                       height={120}
@@ -345,79 +498,160 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                     {messages?.map((message, messageIndex) => {
                       const isFirstMessage =
                         messageIndex === 0;
+                      const messageMetadata = message.metadata as any;
+                      const isLastMessage =
+                        messageIndex === messages.length - 1;
+
                       return (
-                        <Message className={cn(isFirstMessage && 'mt-10')} from={message.role} key={message.id}>
+                        <Message className={cn(isFirstMessage && 'mt-12')} from={message.role} key={message.id}>
                           <MessageContent>
                             {message.parts.map((part, i) => {
-                              switch (part.type) {
-                                case 'source-url':
-                                  <Sources>
-                                    <SourcesTrigger
-                                      count={message.parts.filter(
-                                        (part) => part.type === 'source-url'
-                                      ).length}
-                                    />
-                                    <SourcesContent key={`${message.id}`}>
-                                      {message.parts.map((part, i) => {
-                                        switch (part.type) {
-                                          case 'source-url':
-                                            return (<Source
-                                              key={`${message.id}-${i}`}
-                                              href={part.url}
-                                              title={part.title}
-                                            />)
-                                        }
-                                      })}
-                                    </SourcesContent>
-                                  </Sources>
-                                case 'text':
-                                  const isLastMessage =
-                                    messageIndex === messages.length - 1;
-                                  return (
-                                    <div key={`${message.id}-${i}`}>
-                                      <Response>
-                                        {part.text}
-                                      </Response>
-                                      {message.role === 'assistant' && isLastMessage && (
-                                        <Actions className="mt-2">
-                                          <Action
-                                            onClick={() => regenerate()}
-                                            label="Retry"
-                                            disabled={!writeAccess}
-                                          >
-                                            <RefreshCcwIcon className="size-3" />
-                                          </Action>
-                                          <Action
-                                            onClick={() => {
-                                              navigator.clipboard.writeText(part.text)
-                                              toast({
-                                                title: "Copied message",
-                                                description: "The message was copied to your clipboard.",
-                                              });
-                                            }}
-                                            label="Copy"
-                                          >
-                                            <CopyIcon className="size-3" />
-                                          </Action>
-                                        </Actions>
-                                      )}
-                                    </div>
-                                  );
-                                case 'reasoning':
-                                  return (
-                                    <Reasoning
-                                      key={`${message.id}-${i}`}
-                                      className="w-full"
-                                      isStreaming={status === 'streaming'}
-                                    >
-                                      <ReasoningTrigger />
-                                      <ReasoningContent>{part.text}</ReasoningContent>
-                                    </Reasoning>
-                                  );
-                                default:
-                                  return null;
+                              if (part.type === 'step-start') {
+                                // show step boundaries as horizontal lines:
+                                /* return messageIndex > 0 ? (
+                                  <div key={messageIndex} className="text-gray-500">
+                                    <hr className="my-2 border-gray-300" />
+                                  </div>
+                                ) : null; */
                               }
+
+                              if (part.type === 'text') {
+                                return (
+                                  <div key={`${message.id}-${i}`}>
+                                    <Response className="chat-response-container">
+                                      {part.text}
+                                    </Response>
+                                  </div>
+                                )
+                              }
+
+                              if (part.type === 'tool-askForConfirmation') {
+                                const callId = part.toolCallId;
+
+                                switch (part.state) {
+                                  case 'input-streaming':
+                                    return (
+                                      <div key={callId}>Loading confirmation request...</div>
+                                    );
+                                  case 'input-available':
+                                    return (
+                                      <div key={callId}>
+                                        {(part.input as { message: string }).message}
+                                        <div>
+                                          <button
+                                            onClick={() =>
+                                              addToolResult({
+                                                tool: 'askForConfirmation',
+                                                toolCallId: callId,
+                                                output: 'Yes, confirmed.',
+                                              })
+                                            }
+                                          >
+                                            Yes
+                                          </button>
+                                          <button
+                                            onClick={() =>
+                                              addToolResult({
+                                                tool: 'askForConfirmation',
+                                                toolCallId: callId,
+                                                output: 'No, denied',
+                                              })
+                                            }
+                                          >
+                                            No
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  case 'output-available':
+                                    return (
+                                      <div key={callId}>
+                                        Tool call allowed: {part.output as string}
+                                      </div>
+                                    );
+                                  case 'output-error':
+                                    return <div key={callId}>Error: {part.errorText}</div>;
+                                }
+                              }
+
+                              if (part.type.startsWith('tool-') || part.type === 'dynamic-tool') {
+                                const untypedToolPart = part as DynamicToolUIPart;
+                                const callId = untypedToolPart.toolCallId;
+                                return <UntypedToolPart
+                                  untypedToolPart={untypedToolPart}
+                                  callId={callId}
+                                  addToContext={(item) => {
+                                    setItems([...(items || []), item])
+                                  }}
+                                />
+                              }
+
+                              if (part.type === 'file') {
+                                if (part.mediaType.startsWith('image/')) {
+                                  return <Image src={part.url} width={300} height={300} alt={"Generated image"} />
+                                }
+                              }
+
+                              if (part.type === 'source-url') {
+                                return <Sources>
+                                  <SourcesTrigger
+                                    count={message.parts.filter(
+                                      (part) => part.type === 'source-url'
+                                    ).length}
+                                  />
+                                  <SourcesContent key={`${message.id}`}>
+                                    {message.parts.map((part, i) => {
+                                      switch (part.type) {
+                                        case 'source-url':
+                                          return (<Source
+                                            key={`${message.id}-${i}`}
+                                            href={part.url}
+                                            title={part.title}
+                                          />)
+                                      }
+                                    })}
+                                  </SourcesContent>
+                                </Sources>
+                              }
+                              if (part.type === 'reasoning') {
+                                return <Reasoning
+                                  key={`${message.id}-${i}`}
+                                  className="w-full"
+                                  isStreaming={status === 'streaming'}
+                                >
+                                  <ReasoningTrigger />
+                                  <ReasoningContent>{part.text}</ReasoningContent>
+                                </Reasoning>
+
+                              }
+                              return null;
                             })}
+                            {message.role === 'assistant' && (
+                              <Actions className="mt-2">
+                                <Action
+                                  onClick={() => regenerate()}
+                                  label="Retry"
+                                  disabled={!writeAccess}
+                                >
+                                  <RefreshCcwIcon className="size-3" />
+                                </Action>
+                                <Action
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(message.parts.map((part: any) => part?.text || "").join('\n'))
+                                    toast({
+                                      title: "Copied message",
+                                      description: "The message was copied to your clipboard.",
+                                    });
+                                  }}
+                                  label="Copy"
+                                >
+                                  <CopyIcon className="size-3" />
+                                </Action>
+                                {messageMetadata?.totalTokens && (
+                                  <small className="text-muted-foreground">{Intl.NumberFormat('en-US').format(messageMetadata?.totalTokens)} tokens</small>
+                                )}
+                              </Actions>
+                            )}
                           </MessageContent>
                         </Message>
                       )
@@ -500,7 +734,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                   {/* Show  selected files */}
                   {items?.map((item) => (
-                    <FileItem item={item} disabled={true} active={false} onRemove={() => {
+                    <FileItem context="files_default_context" item={item} disabled={true} active={false} onRemove={() => {
                       setItems(items?.filter((i) => i.s3key !== item.s3key))
                     }} />
                   ))}
@@ -564,14 +798,12 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground pt-2">
-                  You can disable tools
-                  for individual messages
-                  in this session by clicking the switch:</p>
+                  You can disable tools for individual messages in this session by clicking the switch:</p>
                 <TooltipProvider>
                   <div className="space-y-1 pt-2">
                     {agent.tools && agent.tools.length > 0 ? (
                       agent.tools.map((tool) => {
-                        const isEnabled = !disabledTools.includes(tool.toolId);
+                        const isEnabled = !disabledTools.includes(tool.id);
                         return (
                           <Tooltip key={tool.name}>
                             <TooltipTrigger asChild>
@@ -581,12 +813,12 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                                 </p>
                                 <Switch
                                   checked={isEnabled}
-                                  onCheckedChange={() => toggleTool(tool.toolId)}
+                                  onCheckedChange={() => toggleTool(tool.id)}
                                 />
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{tool.description}</p>
+                              <p className="max-w-[200px] text-wrap">{tool.description}</p>
                             </TooltipContent>
                           </Tooltip>
                         );
@@ -654,4 +886,42 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
       </div>
     </div>
   );
+}
+
+
+const UntypedToolPart = ({ untypedToolPart, callId, addToContext }: { untypedToolPart: DynamicToolUIPart, callId: string, addToContext: (item: Item) => void }) => {
+
+  const output = untypedToolPart.output as any;
+  console.log("output", output)
+  // Replace - and _, replace 'tool-' prefix
+  let styleToolName = untypedToolPart.type?.replace(/ /g, "-")
+  styleToolName = styleToolName?.replace(/tool-/g, "")
+  styleToolName = styleToolName?.replace(/_/g, " ")
+  styleToolName = styleToolName?.charAt(0).toUpperCase() + styleToolName?.slice(1)
+
+  return <Tool key={callId} className="mt-3" defaultOpen={false}>
+    <ToolHeader className="capitalize" type={styleToolName as `tool-${string}`} state={untypedToolPart.state} />
+    <ToolContent>
+      <ToolInput input={untypedToolPart.input} />
+      {
+        output?.items?.length ? <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 px-4 pb-4">
+          {output.items.map((item) => <FileItem addToContext={(item) => {
+            addToContext(item)
+          }} context="outputs_default_context" item={item} disabled={true} active={false} />)}
+        </div> :
+          <ToolOutput
+            output={
+              output ?
+                <Response>
+                  {typeof output === 'string' ?
+                    output : JSON.stringify(output, null, 2)
+                  }
+                </Response>
+                : !untypedToolPart.errorText && <Skeleton className="h-4 w-full" />
+            }
+            errorText={untypedToolPart.errorText}
+          />
+      }
+    </ToolContent>
+  </Tool>
 }

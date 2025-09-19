@@ -18,7 +18,7 @@ import Contexts from "@/app/(application)/data/[[...query]]/contexts";
 
 export default function DataLayout({ children, params }: { children: any, params: { query }; }) {
 
-    const defaultLayout = [265, 440, 655];
+    const defaultLayout = [15, 20, 65];
     const navCollapsedSize = 4;
     const archived = params.query && params.query[1] === "archived";
     const settings = params.query && params.query[1] === "settings";
@@ -65,7 +65,7 @@ export default function DataLayout({ children, params }: { children: any, params
                 {
                     context && !settings && <>
                         <ResizableHandle withHandle />
-                        <ResizablePanel defaultSize={defaultLayout[1]} minSize={30}>
+                        <ResizablePanel defaultSize={defaultLayout[1]} minSize={20}>
                             <Tabs defaultValue="all">
                                 <div className="flex items-center px-4 py-2 h-full">
                                     <h1 className="text-xl font-bold">Items</h1>

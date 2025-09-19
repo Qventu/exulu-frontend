@@ -13,7 +13,7 @@ import { AgentDetailsSheet } from "@/app/(application)/agents/components/agent-d
 import { UserContext } from "@/app/(application)/authenticated";
 import { useContext, useState, useEffect } from "react";
 import { User } from "@/types/models/user";
-import { ChatSessionsComponent } from "@/app/(application)/chat/[agent]/chat/chat-sessions";
+import { ChatSessionsComponent } from "@/app/(application)/chat/[agent]/chat-sessions";
 
 export function AgentNav() {
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -151,7 +151,7 @@ export function AgentNav() {
                     >
                       <ChevronLeft className="h-3 w-3" />
                     </Button>
-                    <Link onClick={() => setShowAllAgents(false)} href={`/chat/${selectedAgent.id}/${selectedAgent.type.toLowerCase()}`} className="flex-1">
+                    <Link onClick={() => setShowAllAgents(false)} href={`/chat/${selectedAgent.id}`} className="flex-1">
                       <Button
                         onClick={() => setShowAllAgents(false)}
                         variant={pathname.includes(selectedAgent.id) ? "secondary" : "ghost"}
@@ -200,7 +200,7 @@ export function AgentNav() {
                             <>
                               {displayedFavorites.map((agent: Agent) => (
                                 <div key={`fav-${agent.id}`} className="flex items-center gap-1">
-                                  <Link href={`/chat/${agent.id}/${agent.type.toLowerCase()}`} className="flex-1">
+                                  <Link href={`/chat/${agent.id}`} className="flex-1">
                                     <Button
                                       variant={pathname.includes(agent.id) ? "secondary" : "ghost"}
                                       className="w-full justify-start gap-2 pr-1">
@@ -263,7 +263,7 @@ export function AgentNav() {
                         <>
                           {displayedAgents.map((agent: Agent) => (
                             <div key={agent.id} className="flex items-center gap-1">
-                              <Link href={`/chat/${agent.id}/${agent.type.toLowerCase()}`} className="flex-1">
+                              <Link href={`/chat/${agent.id}`} className="flex-1">
                                 <Button
                                   variant={pathname.includes(agent.id) ? "secondary" : "ghost"}
                                   className="w-full justify-start gap-2 pr-1">

@@ -237,3 +237,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+.chat-response-container p {
+  margin-bottom: 0.5rem;
+  margin-top: 0.5rem;
+}

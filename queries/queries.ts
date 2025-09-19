@@ -58,15 +58,17 @@ favourite_agents
 const AGENT_FIELDS = `
 id
 name
-providerApiKey
+providerapikey
+instructions
 description
-type
 active
 image
 tools
 providerName
 modelName
+maxContextLength
 slug
+category
 rateLimit {
   name
   rate_limit {
@@ -632,7 +634,6 @@ export const CREATE_AGENT = gql`
   mutation createAgent(
     $name: String!
     $description: String!
-    $type: String!
     $rights_mode: String!
     $backend: String!
     $image: String
@@ -642,7 +643,6 @@ export const CREATE_AGENT = gql`
       input: {
         name: $name
         description: $description
-        type: $type
         rights_mode: $rights_mode
         backend: $backend
         image: $image
@@ -653,7 +653,6 @@ export const CREATE_AGENT = gql`
         id
         name
         description
-        type
         rights_mode
         RBAC {
           type
@@ -696,10 +695,12 @@ export const UPDATE_AGENT_BY_ID = gql`
     $name: String
     $backend: String
     $description: String
+    $instructions: String
     $rights_mode: String
+    $category: String
     $tools: JSON
     $active: Boolean
-    $providerApiKey: String
+    $providerapikey: String
     $RBAC: RBACInput
   ) {
     agentsUpdateOneById(
@@ -707,10 +708,12 @@ export const UPDATE_AGENT_BY_ID = gql`
         name: $name
         backend: $backend
         description: $description
+        category: $category
+        instructions: $instructions
         rights_mode: $rights_mode
         active: $active
         tools: $tools
-        providerApiKey: $providerApiKey
+        providerapikey: $providerapikey
         RBAC: $RBAC
       }
       id: $id
@@ -719,6 +722,8 @@ export const UPDATE_AGENT_BY_ID = gql`
           id
           name
           description
+          instructions
+          category
           rights_mode
           RBAC {
             type
@@ -773,7 +778,6 @@ export const GET_PROVIDERS = gql`
         description
         modelName
         providerName
-        type
       }
     }
   }
@@ -883,12 +887,14 @@ export const CREATE_VARIABLE = gql`
         encrypted: $encrypted
       }
     ) {
-      id
-      name
-      value
-      encrypted
-      createdAt
-      updatedAt
+      item {
+        id
+        name
+        value
+        encrypted
+        createdAt
+        updatedAt
+      }
     }
   }
 `;
@@ -1185,6 +1191,7 @@ export const GET_AGENT_RUN_STATISTICS = gql`
   query AgentCallsStatistics($from: Date!, $to: Date!) {
     trackingStatistics(filters: {
       type: { eq: AGENT_RUN }
+      name: { eq: "count" }
       createdAt: { and: [{ gte: $from }, { lte: $to }] }
     }) {
       group
@@ -1192,6 +1199,19 @@ export const GET_AGENT_RUN_STATISTICS = gql`
     }
   }
 `;
+
+export const GET_TOKEN_USAGE_STATISTICS = gql`  
+  query AgentCallsStatistics($from: Date!, $to: Date!) {
+    trackingStatistics(filters: {
+      name: { eq: "tokens" }
+      createdAt: { and: [{ gte: $from }, { lte: $to }] }
+    }) {
+      group
+      count
+    }
+  }
+`;
+
 
 // Time Series Chart Query
 export const GET_TIME_SERIES_STATISTICS = gql`

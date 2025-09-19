@@ -80,7 +80,7 @@ export function AgentDetailsSheet({ agentId, open, onOpenChange }: AgentDetailsS
                 <Badge variant={agent.active ? "default" : "secondary"}>
                   {agent.active ? "Active" : "Inactive"}
                 </Badge>
-                <Badge variant="outline">{agent.modelName || "Custom"}</Badge>
+                <Badge variant="outline">{agent.modelName || "No model selected"}</Badge>
               </div>
             </div>
           </div>
@@ -96,62 +96,59 @@ export function AgentDetailsSheet({ agentId, open, onOpenChange }: AgentDetailsS
           </div>
 
           {/* Capabilities */}
-          {agent.type !== "custom" && (
-            <div>
-              <h3 className="text-sm font-medium mb-3">Capabilities</h3>
-              <TooltipProvider>
-                <div className="flex items-center gap-3">
-
-                  <div className={`p-3 rounded-md ${agent.capabilities?.text ? 'bg-green-500 text-primary-foreground' : 'bg-gray-500 text-white'}`}>
-                    <Text className="h-4 w-4" />
-                  </div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className={`p-3 rounded-md ${agent.capabilities?.images?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
-                        <Image className="h-4 w-4" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Images: {agent.capabilities?.images?.length ? agent.capabilities.images.join(", ") : "None"}</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className={`p-3 rounded-md ${agent.capabilities?.files?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
-                        <FileText className="h-4 w-4" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Files: {agent.capabilities?.files?.length ? agent.capabilities.files.join(", ") : "None"}</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className={`p-3 rounded-md ${agent.capabilities?.audio?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
-                        <Volume2 className="h-4 w-4" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Audio: {agent.capabilities?.audio?.length ? agent.capabilities.audio.join(", ") : "None"}</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className={`p-3 rounded-md ${agent.capabilities?.video?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
-                        <Video className="h-4 w-4" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Video: {agent.capabilities?.video?.length ? agent.capabilities.video.join(", ") : "None"}</p>
-                    </TooltipContent>
-                  </Tooltip>
+          <div>
+            <h3 className="text-sm font-medium mb-3">Capabilities</h3>
+            <TooltipProvider>
+              <div className="flex items-center gap-3">
+                <div className={`p-3 rounded-md ${agent.capabilities?.text ? 'bg-green-500 text-primary-foreground' : 'bg-gray-500 text-white'}`}>
+                  <Text className="h-4 w-4" />
                 </div>
-              </TooltipProvider>
-            </div>
-          )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={`p-3 rounded-md ${agent.capabilities?.images?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
+                      <Image className="h-4 w-4" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Images: {agent.capabilities?.images?.length ? agent.capabilities.images.join(", ") : "None"}</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={`p-3 rounded-md ${agent.capabilities?.files?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
+                      <FileText className="h-4 w-4" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Files: {agent.capabilities?.files?.length ? agent.capabilities.files.join(", ") : "None"}</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={`p-3 rounded-md ${agent.capabilities?.audio?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
+                      <Volume2 className="h-4 w-4" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Audio: {agent.capabilities?.audio?.length ? agent.capabilities.audio.join(", ") : "None"}</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={`p-3 rounded-md ${agent.capabilities?.video?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
+                      <Video className="h-4 w-4" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Video: {agent.capabilities?.video?.length ? agent.capabilities.video.join(", ") : "None"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
+          </div>
 
           {/* Tools */}
           <div>
@@ -159,13 +156,13 @@ export function AgentDetailsSheet({ agentId, open, onOpenChange }: AgentDetailsS
               <Wrench className="h-4 w-4" />
               <h3 className="text-sm font-medium">Tools</h3>
               <Badge variant="outline" className="text-xs">
-                {agent.tools?.length  || 0}/{tools.items?.length || 0}
+                {agent.tools?.length || 0}/{tools.items?.length || 0}
               </Badge>
             </div>
             <div className="space-y-2">
               {agent.tools?.length && agent.tools.length > 0 ? (
                 tools?.items?.map((tool) => {
-                  const isEnabled = agent.tools?.some(et => et.toolId === tool.id);
+                  const isEnabled = agent.tools?.some(et => et.id === tool.id);
                   if (!isEnabled) return null;
                   return (
                     <div key={tool.id} className="flex items-center justify-between p-2 rounded border">

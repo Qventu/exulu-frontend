@@ -43,6 +43,7 @@ import { Tool } from "@EXULU_SHARED/models/tool";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { CopyIcon } from "@/icons";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Popover,
   PopoverContent,
@@ -80,6 +81,18 @@ import {
 } from "@/components/ui/sheet";
 import { Variable } from "@/types/models/variable";
 
+const categories = [
+  "marketing",
+  "sales",
+  "finance",
+  "hr",
+  "coding",
+  "support",
+  "research",
+  "knowledge",
+  "product"
+]
+
 // Component for handling individual tool configuration items
 const ToolConfigItem = ({
   configItem,
@@ -101,7 +114,7 @@ const ToolConfigItem = ({
         <div className="font-medium">{configItem.name}</div>
         <div className="text-muted-foreground text-xs">{configItem.description}</div>
       </div>
-      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen} modal={true}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -160,6 +173,7 @@ const agentFormSchema = z.object({
     .max(300, {
       message: "Agent name must not be longer than 300 characters.",
     }),
+  category: z.string().optional(),
   description: z
     .string()
     .max(10000, {
@@ -168,9 +182,17 @@ const agentFormSchema = z.object({
     })
     .nullable()
     .optional(),
+  instructions: z
+    .string()
+    .max(40000, {
+      message:
+        "Agent instructions must not be longer than 40.000 characters.",
+    })
+    .nullable()
+    .optional(),
   id: z.string().or(z.number()).nullable().optional(),
   active: z.any(),
-  providerApiKey: z.string().nullable().optional(),
+  providerapikey: z.string().nullable().optional(),
   firewall: z.object({
     enabled: z.boolean().optional(),
     scanners: z.object({
@@ -194,12 +216,12 @@ export default function AgentForm({
   const router = useRouter();
   const [errors, setErrors] = useState<string>();
   const { user } = useContext(UserContext);
-  const [enabledTools, setEnabledTools] = useState<{ toolId: string, config: { name: string, variable: string }[] }[]>(
+  const [enabledTools, setEnabledTools] = useState<{ id: string, config: { name: string, variable: string }[] }[]>(
     // Convert legacy string[] format to new object format
     agent.tools ? agent.tools : []
   )
   const [sheetOpen, setSheetOpen] = useState<boolean | string>(false);
-  const [providerApiKey, setProviderApiKey] = useState<string>(agent.providerApiKey || '')
+  const [providerapikey, setProviderapikey] = useState<string>(agent.providerapikey || '')
   const [firewallEnabled, setFirewallEnabled] = useState<boolean>(agent.firewall?.enabled || false)
   const [rbac, setRbac] = useState({
     rights_mode: agent.rights_mode,
@@ -271,6 +293,7 @@ export default function AgentForm({
     resolver: zodResolver(agentFormSchema),
     defaultValues: agent ?? {
       name: "New agent",
+      instructions: "",
       steps: [],
       firewall: {
         enabled: false,
@@ -304,8 +327,10 @@ export default function AgentForm({
                       id: data.id,
                       name: data.name,
                       description: data.description,
+                      instructions: data.instructions,
+                      category: data.category,
                       active: data.active,
-                      providerApiKey: providerApiKey,
+                      providerapikey: providerapikey,
                       rights_mode: rbac.rights_mode,
                       RBAC: {
                         users: rbac.users || [],
@@ -316,6 +341,7 @@ export default function AgentForm({
                         enabled: firewallEnabled,
                         scanners: firewallScanners
                       }),
+                      tools: JSON.stringify(enabledTools)
                     },
                   });
                   refetch();
@@ -414,6 +440,41 @@ export default function AgentForm({
                                       </FormItem>
                                     )}
                                   />
+
+                                  <FormField
+                                    control={agentForm.control}
+                                    name={`category`}
+                                    render={({ field }: any) => {
+                                      if (!field.value) {
+                                        field.value = "";
+                                      }
+                                      return (
+                                        <FormItem>
+                                          <FormLabel>Description</FormLabel>
+                                          <FormControl>
+                                            <Select onValueChange={(value) => {
+                                              field.onChange(value);
+                                            }}>
+                                              <SelectTrigger>
+                                                <SelectValue className="capitalize" placeholder={field.value || `Select a category`} />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {
+                                                  categories.map((category) => (
+                                                    <SelectItem className="capitalize" key={category} value={category}>
+                                                      {category}
+                                                    </SelectItem>
+                                                  ))
+                                                }
+                                              </SelectContent>
+                                            </Select>
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      );
+                                    }}
+                                  />
+
                                   <FormField
                                     control={agentForm.control}
                                     name={`description`}
@@ -426,6 +487,30 @@ export default function AgentForm({
                                           <FormLabel>Description</FormLabel>
                                           <FormControl>
                                             <Textarea
+                                              rows={10}
+                                              className="resize-none"
+                                              {...field}
+                                              value={field.value ?? ""}
+                                            />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      );
+                                    }}
+                                  />
+                                  <FormField
+                                    control={agentForm.control}
+                                    name={`instructions`}
+                                    render={({ field }: any) => {
+                                      if (!field.value) {
+                                        field.value = "";
+                                      }
+                                      return (
+                                        <FormItem>
+                                          <FormLabel>Instructions</FormLabel>
+                                          <FormControl>
+                                            <Textarea
+                                              rows={10}
                                               className="resize-none"
                                               {...field}
                                               value={field.value ?? ""}
@@ -448,11 +533,11 @@ export default function AgentForm({
                                           role="combobox"
                                           className="w-full justify-between text-sm"
                                         >
-                                          {variables.find((v: any) => v.name === providerApiKey)?.name || "Select variable..."}
+                                          {variables.find((v: any) => v.name === providerapikey)?.name || "Select variable..."}
                                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                       </PopoverTrigger>
-                                      <PopoverContent className="w-full p-0">
+                                      <PopoverContent className="w-full p-0 z-[9999]">
                                         <Command>
                                           <CommandInput placeholder="Search variables..." />
                                           <CommandList>
@@ -462,13 +547,13 @@ export default function AgentForm({
                                                 <CommandItem
                                                   key={variable.id}
                                                   onSelect={() => {
-                                                    setProviderApiKey(variable.name);
+                                                    setProviderapikey(variable.name);
                                                   }}
                                                 >
                                                   <Check
                                                     className={cn(
                                                       "mr-2 h-4 w-4",
-                                                      providerApiKey === variable.name ? "opacity-100" : "opacity-0"
+                                                      providerapikey === variable.name ? "opacity-100" : "opacity-0"
                                                     )}
                                                   />
                                                   <div className="flex flex-col">
@@ -485,105 +570,89 @@ export default function AgentForm({
                                       </PopoverContent>
                                     </Popover>
                                   </div>
-                                  {agent.type !== "custom" && (
-                                    <div>
-                                      <div className="text-sm font-medium mb-2">Modalities</div>
-                                      <p className="text-sm text-muted-foreground mb-2">
-                                        This agent uses <b>{agent.modelName}</b> from <b>{agent.providerName}</b> and can use the following capabilities:
-                                      </p>
-                                      <TooltipProvider>
-                                        <div className="flex items-center gap-3 mt-2">
-                                          <div className={`p-2 rounded-md ${agent.capabilities?.text ? 'bg-green-500 text-primary-foreground' : 'bg-gray-500 text-white'}`}>
-                                            <Text className="h-4 w-4" />
-                                          </div>
-
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <div className={`p-2 rounded-md ${agent.capabilities?.images?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
-                                                <Image className="h-4 w-4" />
-                                              </div>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <p>Images: {agent.capabilities?.images?.length ? agent.capabilities.images.join(", ") : "None"}</p>
-                                            </TooltipContent>
-                                          </Tooltip>
-
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <div className={`p-2 rounded-md ${agent.capabilities?.files?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
-                                                <FileText className="h-4 w-4" />
-                                              </div>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <p>Files: {agent.capabilities?.files?.length ? agent.capabilities.files.join(", ") : "None"}</p>
-                                            </TooltipContent>
-                                          </Tooltip>
-
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <div className={`p-2 rounded-md ${agent.capabilities?.audio?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
-                                                <Volume2 className="h-4 w-4" />
-                                              </div>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <p>Audio: {agent.capabilities?.audio?.length ? agent.capabilities.audio.join(", ") : "None"}</p>
-                                            </TooltipContent>
-                                          </Tooltip>
-
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <div className={`p-2 rounded-md ${agent.capabilities?.video?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
-                                                <Video className="h-4 w-4" />
-                                              </div>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <p>Video: {agent.capabilities?.video?.length ? agent.capabilities.video.join(", ") : "None"}</p>
-                                            </TooltipContent>
-                                          </Tooltip>
+                                  <div>
+                                    <div className="text-sm font-medium mb-2">Modalities</div>
+                                    <p className="text-sm text-muted-foreground mb-2">
+                                      This agent uses <b>{agent.modelName}</b> from <b>{agent.providerName}</b> and can use the following capabilities:
+                                    </p>
+                                    <TooltipProvider>
+                                      <div className="flex items-center gap-3 mt-2">
+                                        <div className={`p-2 rounded-md ${agent.capabilities?.text ? 'bg-green-500 text-primary-foreground' : 'bg-gray-500 text-white'}`}>
+                                          <Text className="h-4 w-4" />
                                         </div>
-                                      </TooltipProvider>
-                                    </div>
-                                  )}
 
-                                  {
-                                    agent.type !== "custom" && (
-                                      <>
-                                        <div className="text-sm font-medium mb-0">    You can test this agent using the Exulu
-                                          UI without activating the agent if you
-                                          are a super admin:</div>
-                                        <Button
-                                          className="mt-0"
-                                          onClick={async () => {
-                                            console.log("agent", agent)
-                                            if (agent.type === "flow") {
-                                              router.push(
-                                                `/chat/${agent.id}/${agent.type}`,
-                                              );
-                                              return;
-                                            } else {
-                                              // todo fix create session!
-                                              const result = await createAgentSession({
-                                                variables: {
-                                                  title: "New session",
-                                                  user: user.id,
-                                                  agent: agent.id,
-                                                }
-                                              })
-                                              console.log("result", result)
-                                              const sessionId = result?.data?.agent_sessionsCreateOne?.item?.id
-                                              router.push(
-                                                `/chat/${agent.id}/${agent.type}/${sessionId}`,
-                                              );
-                                            }
-                                          }}
-                                          type={"button"}
-                                          variant={"default"}>
-                                          Go to chat
-                                        </Button>
-                                      </>
-                                    )
-                                  }
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className={`p-2 rounded-md ${agent.capabilities?.images?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
+                                              <Image className="h-4 w-4" />
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Images: {agent.capabilities?.images?.length ? agent.capabilities.images.join(", ") : "None"}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
 
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className={`p-2 rounded-md ${agent.capabilities?.files?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
+                                              <FileText className="h-4 w-4" />
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Files: {agent.capabilities?.files?.length ? agent.capabilities.files.join(", ") : "None"}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className={`p-2 rounded-md ${agent.capabilities?.audio?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
+                                              <Volume2 className="h-4 w-4" />
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Audio: {agent.capabilities?.audio?.length ? agent.capabilities.audio.join(", ") : "None"}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className={`p-2 rounded-md ${agent.capabilities?.video?.length ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
+                                              <Video className="h-4 w-4" />
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Video: {agent.capabilities?.video?.length ? agent.capabilities.video.join(", ") : "None"}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </div>
+                                    </TooltipProvider>
+                                  </div>
+                                  <>
+                                    <div className="text-sm font-medium mb-0">    You can test this agent using the Exulu
+                                      UI without activating the agent if you
+                                      are a super admin:</div>
+                                    <Button
+                                      className="mt-0"
+                                      onClick={async () => {
+                                        console.log("agent", agent)
+                                        const result = await createAgentSession({
+                                          variables: {
+                                            title: "New session",
+                                            user: user.id,
+                                            agent: agent.id,
+                                          }
+                                        })
+                                        console.log("result", result)
+                                        const sessionId = result?.data?.agent_sessionsCreateOne?.item?.id
+                                        router.push(
+                                          `/chat/${agent.id}/${sessionId}`,
+                                        );
+                                      }}
+                                      type={"button"}
+                                      variant={"default"}>
+                                      Go to chat
+                                    </Button>
+                                  </>
                                 </CardContent>
                               </Card>
                             </div>
@@ -791,8 +860,11 @@ export default function AgentForm({
                                   <div>
                                     <p className="text-sm text-muted-foreground">Tools available for this agent:</p>
                                     {toolsData?.tools?.items?.map((tool: Tool) => {
-                                      const isEnabled = enabledTools.some(et => et.toolId === tool.id);
-                                      const toolConfig = enabledTools.find(et => et.toolId === tool.id);
+                                      if (tool.id === agent.id) {
+                                        return null;
+                                      }
+                                      const isEnabled = enabledTools.some(et => et.id === tool.id);
+                                      const toolConfig = enabledTools.find(et => et.id === tool.id);
                                       const requiredConfigCount = tool.config?.length || 0;
                                       const filledConfigCount = toolConfig?.config?.filter(c => c.variable && c.variable.trim() !== '').length || 0;
                                       const hasEmptyConfigs = isEnabled && requiredConfigCount > 0 && filledConfigCount < requiredConfigCount;
@@ -862,7 +934,7 @@ export default function AgentForm({
                                                                     variables={variables}
                                                                     onVariableSelect={(variableName) => {
                                                                       const updated = enabledTools.map(et => {
-                                                                        if (et.toolId === tool.id) {
+                                                                        if (et.id === tool.id) {
                                                                           return {
                                                                             ...et,
                                                                             config: et.config.map(c =>
@@ -874,13 +946,8 @@ export default function AgentForm({
                                                                         }
                                                                         return et;
                                                                       });
+                                                                      console.log("updated", updated)
                                                                       setEnabledTools(updated);
-                                                                      updateAgent({
-                                                                        variables: {
-                                                                          id: agent.id,
-                                                                          tools: JSON.stringify(updated)
-                                                                        },
-                                                                      });
                                                                     }}
                                                                   />
                                                                 ) : (
@@ -905,7 +972,8 @@ export default function AgentForm({
                                                 if (value) {
                                                   // Add tool with empty config initially
                                                   const newToolConfig = {
-                                                    toolId: tool.id,
+                                                    id: tool.id,
+                                                    type: tool.type,
                                                     config: tool.config?.map(configItem => ({
                                                       name: configItem.name,
                                                       variable: ''
@@ -916,15 +984,9 @@ export default function AgentForm({
                                                     setSheetOpen(tool.id);
                                                   }
                                                 } else {
-                                                  updated = enabledTools.filter(t => t.toolId !== tool.id);
+                                                  updated = enabledTools.filter(t => t.id !== tool.id);
                                                 }
                                                 setEnabledTools(updated);
-                                                updateAgent({
-                                                  variables: {
-                                                    id: agent.id,
-                                                    tools: JSON.stringify(updated)
-                                                  },
-                                                });
                                               }}
                                             />
                                           </div>

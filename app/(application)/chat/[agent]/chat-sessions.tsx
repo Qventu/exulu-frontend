@@ -107,7 +107,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
     setSessionName("");
     sessionsQuery.refetch();
     router.push(
-      `/chat/${agent}/${type}/${newSession.data?.agent_sessionsCreateOne?.item?.id}`,
+      `/chat/${agent}/${newSession.data?.agent_sessionsCreateOne?.item?.id}`,
     );
   }
 
@@ -187,7 +187,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
               <div key={item.id} className={`w-full px-2 flex flex-col items-start gap-0 rounded-none border-none text-left text-sm mb-2`}>
                 <Link
                   key={item.id}
-                  href={`/chat/${agent}/${type}/${item.id}`}
+                  href={`/chat/${agent}/${item.id}`}
                   className={cn(
                     `p-2 w-full flex flex-col items-start gap-2 rounded-md p-3 text-left text-sm transition-all hover:bg-accent`,
                     pathname.includes(item.id) && "bg-muted",

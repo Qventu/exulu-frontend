@@ -2,12 +2,8 @@
 
 import {
   Card,
-  CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
-import { Plus } from "lucide-react";
 import { CreateNewAgent } from "./create-new-agent";
 
 interface CreateNewAgentCardProps {

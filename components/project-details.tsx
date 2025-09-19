@@ -182,7 +182,7 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
         setIsAgentSelectionOpen(false);
         setAgentSearch("");
 
-        router.push(`/chat/${agent.id}/chat/${sessionId}`);
+        router.push(`/chat/${agent.id}/${sessionId}`);
       }
     } catch (error: any) {
       console.error("Error creating session:", error);
@@ -488,7 +488,7 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                               <div className="flex items-center gap-3">
                                 <MessageSquare className="h-4 w-4" />
                                 <div>
-                                  <Link href={`/chat/${session.agent}/chat/${session.id}`}>
+                                  <Link href={`/chat/${session.agent}/${session.id}`}>
                                     <p className="font-medium max-w-[80%] truncate">{session.title}</p>
                                   </Link>
                                 </div>
@@ -836,7 +836,7 @@ function ProjectItem({ gid, onRemove }: { gid: string, onRemove: (gid: string) =
   if (loading) return null;
   const item = data?.[context + "_itemsById"];
   if (!item) return null;
-  return <FileItem item={item} onRemove={() => {
+  return <FileItem context={context} item={item} onRemove={() => {
     onRemove(gid)
   }} active={false} disabled={false} />
 }

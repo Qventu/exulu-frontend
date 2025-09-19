@@ -13,11 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loading } from "@/components/ui/loading";
 import { AgentBackendSelector } from "@/app/(application)/agents/components/agent-backend-selector";
-import { AGENT_TYPES } from "@/util/enums/agent-types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { agents } from "@/util/api";
+import { agents, ImageStyle } from "@/util/api";
 import { toast } from "sonner";
 
 export function CreateNewAgent({ createAgent, createAgentResult, company, children }) {
@@ -25,13 +24,12 @@ export function CreateNewAgent({ createAgent, createAgentResult, company, childr
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [backend, setBackend] = useState("");
-  const [type, setType] = useState(AGENT_TYPES.CHAT);
   const [generateImage, setGenerateImage] = useState(true);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageGenerating, setImageGenerating] = useState(false);
   const [imageGenerationProgress, setImageGenerationProgress] = useState(0);
-  const [imageStyle, setImageStyle] = useState<"origami" | "anime" | "japanese_anime" | "vaporwave" | "lego" | "paper_cut" | "felt_puppet" | "3d" | "app_icon" | "pixel_art" | "isometric">("app_icon");
+  const [imageStyle, setImageStyle] = useState<ImageStyle>("app_icon");
 
   const imageStyles = [
     { value: "origami", label: "Origami" },
@@ -159,29 +157,8 @@ export function CreateNewAgent({ createAgent, createAgentResult, company, childr
                   />
                 </div>
                 <div className="grid gap-2 mt-3">
-                  <Label htmlFor="type">Type</Label>
-                  <Select onValueChange={(value) => {
-                    setType(value)
-                  }} defaultValue={type}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={type || `Select type`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem key={AGENT_TYPES.CHAT} value={AGENT_TYPES.CHAT}>
-                        Chat
-                      </SelectItem>
-                      <SelectItem key={AGENT_TYPES.FLOW} value={AGENT_TYPES.FLOW}>
-                        Flow
-                      </SelectItem>
-                      <SelectItem key={AGENT_TYPES.CUSTOM} value={AGENT_TYPES.CUSTOM}>
-                        Custom
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2 mt-3">
                   <Label htmlFor="backend">Backend</Label>
-                  <AgentBackendSelector type={type} onSelect={(id) => {
+                  <AgentBackendSelector onSelect={(id) => {
                     setBackend(id)
                   }} />
                 </div>
@@ -239,7 +216,6 @@ export function CreateNewAgent({ createAgent, createAgentResult, company, childr
                       description,
                       rights_mode: "private",
                       backend,
-                      type: type.toLowerCase(),
                       image: selectedImage
                     },
                   });
@@ -247,7 +223,7 @@ export function CreateNewAgent({ createAgent, createAgentResult, company, childr
                 }
 
                 // Validate required fields
-                if (!name || !description) {
+                if (!name) {
                   toast.error("Please fill in all fields");
                   return;
                 }
@@ -260,7 +236,6 @@ export function CreateNewAgent({ createAgent, createAgentResult, company, childr
                       description,
                       rights_mode: "private",
                       backend,
-                      type: type.toLowerCase()
                     },
                   });
                   return;

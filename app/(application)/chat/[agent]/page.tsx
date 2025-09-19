@@ -1,6 +1,5 @@
 "use client"
 
-import { Bot } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function SessionSelectPage() {

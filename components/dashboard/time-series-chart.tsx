@@ -15,7 +15,9 @@ interface TimeSeriesChartProps {
   dateRange: DateRange | undefined;
   selectedType: STATISTICS_TYPE;
   onTypeChange: (type: STATISTICS_TYPE) => void;
+  onUnitChange: (unit: 'tokens' | 'count') => void;
   dataTypes: string[];
+  unit: 'tokens' | 'count';
 }
 
 function transformEnumToLabel(enumValue: string): string {
@@ -32,10 +34,11 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function TimeSeriesChart({ dataTypes, dateRange, selectedType, onTypeChange }: TimeSeriesChartProps) {
+export function TimeSeriesChart({ dataTypes, dateRange, selectedType, onTypeChange, onUnitChange, unit }: TimeSeriesChartProps) {
   const { data, loading, error } = useQuery(GET_TIME_SERIES_STATISTICS, {
     variables: {
       type: selectedType,
+      name: unit,
       from: dateRange?.from?.toISOString(),
       to: dateRange?.to?.toISOString()
     },
@@ -77,19 +80,32 @@ export function TimeSeriesChart({ dataTypes, dateRange, selectedType, onTypeChan
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-semibold">Time Series Analytics</h3>
-        <div className="w-[200px]">
-          <Select value={selectedType} onValueChange={(value) => onTypeChange(value as STATISTICS_TYPE)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select data type" />
-            </SelectTrigger>
-            <SelectContent>
-              {dataTypes?.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {transformEnumToLabel(type) + " "}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-2">
+          <div className="w-[150px]">
+            <Select value={selectedType} onValueChange={(value) => onTypeChange(value as STATISTICS_TYPE)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select data type" />
+              </SelectTrigger>
+              <SelectContent>
+                {dataTypes?.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {transformEnumToLabel(type) + " "}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-[150px]">
+            <Select value={unit} onValueChange={(value) => onUnitChange(value as 'tokens' | 'count')}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select unit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="count">Count</SelectItem>
+                <SelectItem value="tokens">Tokens</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 

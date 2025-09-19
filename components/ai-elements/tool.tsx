@@ -43,10 +43,10 @@ const getStatusBadge = (status: ToolUIPart['state']) => {
   } as const;
 
   const icons = {
-    'input-streaming': <CircleIcon className="size-4" />,
-    'input-available': <ClockIcon className="size-4 animate-pulse" />,
-    'output-available': <CheckCircleIcon className="size-4 text-green-600" />,
-    'output-error': <XCircleIcon className="size-4 text-red-600" />,
+    'input-streaming': <CircleIcon className="size-4 mr-2" />,
+    'input-available': <ClockIcon className="size-4 animate-pulse mr-2" />,
+    'output-available': <CheckCircleIcon className="size-4 text-green-600 mr-2" />,
+    'output-error': <XCircleIcon className="size-4 text-red-600 mr-2" />,
   } as const;
 
   return (
@@ -116,19 +116,19 @@ export const ToolOutput = ({
   output,
   errorText,
   ...props
-}: ToolOutputProps) => {
+}: ToolOutputProps): JSX.Element => {
   if (!(output || errorText)) {
-    return null;
+    return <></>;
   }
 
   return (
     <div className={cn('space-y-2 p-4', className)} {...props}>
-      <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+      <h4 className="font-medium text-muted-foreground text-xs tracking-wide">
         {errorText ? 'Error' : 'Result'}
       </h4>
       <div
         className={cn(
-          'overflow-x-auto rounded-md text-xs [&_table]:w-full',
+          'overflow-x-auto rounded-md text-xs [&_table]:w-full p-5',
           errorText
             ? 'bg-destructive/10 text-destructive'
             : 'bg-muted/50 text-foreground'

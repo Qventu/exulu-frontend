@@ -42,9 +42,9 @@ export const columns: ColumnDef<any>[] = [
 
       console.log("original", row.original);
       return (
-        <div className="flex flex-column grid grid-cols-1 w-full">
+        <div className="flex flex-column grid grid-cols-1">
           {/*{label && <Badge variant="outline">{label.label}</Badge>}*/}
-          <span className="max-w-[500px] truncate font-medium w-full text-wrap">
+          <span className="max-w-[500px] truncate font-medium w-full">
             {row.original.name
               ? row.original.name
               : row.original.text.slice(0, 200) || "Untitled"}

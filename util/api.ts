@@ -1,5 +1,7 @@
 import { getSession } from "next-auth/react";
 
+export type ImageStyle = "origami" | "anime" | "japanese_anime" | "vaporwave" | "lego" | "paper_cut" | "felt_puppet" | "3d" | "app_icon" | "pixel_art" | "isometric";
+
 const getUris = async () => {
     const context = await fetch("/api/config").then(res => res.json());
     if (!context.backend) {
@@ -25,7 +27,7 @@ export const agents = {
         generate: async (parameters: {
             name: string,
             description: string,
-            style?: "origami" | "anime" | "japanese_anime" | "vaporwave" | "lego" | "paper_cut" | "felt_puppet" | "3d"
+            style?: ImageStyle
         }): Promise<any> => {
             const uris = await getUris();
             const url = `${uris.base}/generate/agent/image`;

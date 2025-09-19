@@ -38,7 +38,7 @@ export const initializeUppy = async (options: InitializeOptions): Promise<Uppy> 
 
     const uppy = new Uppy({
         autoProceed: true,
-        debug: true,
+        debug: false,
         id: id || "uppy",
         restrictions: {
             maxNumberOfFiles: maxNumberOfFiles || 5,

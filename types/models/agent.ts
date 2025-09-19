@@ -3,10 +3,10 @@ export interface Agent {
     modelName?: string;
     providerName?: string;
     backend: string;
-    type: "chat" | "flow" | "custom";
+    type: "agent";
     name: string;
     image?: string;
-    providerApiKey?: string;
+    providerapikey?: string;
     firewall?: {
         enabled: boolean;
         scanners?: {
@@ -19,9 +19,11 @@ export interface Agent {
     }
     active?: boolean;
     description?: string;
+    instructions?: string;
     slug?: string;
     tools?: {
-        toolId: string;
+        id: string;
+        type: string;
         config: {
             name: string;
             variable: string;
@@ -29,12 +31,13 @@ export interface Agent {
         name: string;
         description: string;
     }[];
+    maxContextLength?: number;
     capabilities?: {
         text: boolean;
-        images: string[];
-        files: string[];
-        audio: string[];
-        video: string[];
+        images: imageTypes[];
+        files: fileTypes[];
+        audio: audioTypes[];
+        video: videoTypes[];
     }
     // New RBAC fields
     rights_mode?: 'private' | 'users' | 'roles' | 'public' | 'projects';

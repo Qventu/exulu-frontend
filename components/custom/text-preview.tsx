@@ -2,23 +2,26 @@ import * as React from "react";
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import Markdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { Response } from '@/components/ai-elements/response';
+
+import {
+    Artifact,
+    ArtifactAction,
+    ArtifactActions,
+    ArtifactContent,
+    ArtifactHeader,
+} from '@/components/ai-elements/artifact';
+import { CopyIcon } from "lucide-react";
 
 export function TextPreview({
     text,
-    sliceLength,
-    markdown
+    sliceLength
 }: {
     text: string;
     sliceLength?: number;
-    markdown?: boolean;
 }) {
     const { toast } = useToast();
 
@@ -30,18 +33,19 @@ export function TextPreview({
                 </p>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[800px] max-h-[500px] overflow-y-scroll">
-                <DialogHeader>
-                    <DialogTitle>Text</DialogTitle>
-                    <DialogDescription
-                        className="cursor-copy"
-                        onClick={async () => {
-                            await navigator.clipboard.writeText(text);
-                            toast({ title: "Copied to clipboard" });
-                        }}
-                    >
-                        {markdown ? <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown> : text}
-                    </DialogDescription>
-                </DialogHeader>
+                <Artifact>
+                    <ArtifactHeader>
+                        <ArtifactActions>
+                            <ArtifactAction icon={CopyIcon} label="Copy" tooltip="Copy to clipboard" onClick={async () => {
+                                await navigator.clipboard.writeText(text);
+                                toast({ title: "Copied to clipboard" });
+                            }} />
+                        </ArtifactActions>
+                    </ArtifactHeader>
+                    <ArtifactContent>
+                        <Response>{text}</Response>
+                    </ArtifactContent>
+                </Artifact>
             </DialogContent>
         </Dialog>
     );

@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import Image from "next/image"
+import { ConfigContext } from "../config-context";
 
 interface User {
   email: string;
@@ -167,6 +168,8 @@ export function MainNavSidebar({ sidebarDefaultOpen }: { sidebarDefaultOpen: boo
   const params = useParams()
   const sidebar = useSidebar()
 
+  const configContext = useContext(ConfigContext)
+
   useEffect(() => {
     if (params.agent && sidebarDefaultOpen === undefined) {
       sidebar.setOpen(false)
@@ -178,7 +181,7 @@ export function MainNavSidebar({ sidebarDefaultOpen }: { sidebarDefaultOpen: boo
       <div className="flex items-center gap-3 border-b bg-background/80 backdrop-blur-sm p-[12px] sticky top-0 z-10">
         <SidebarTrigger />
         <div className="flex items-center gap-2">
-          <Image src="/exulu_logo.svg" height={40} width={100} alt="Exulu Logo" />
+          <Image src={configContext?.backend + "/logo.png"} height={40} width={100} alt="Logo" />
         </div>
       </div>
       <SidebarContent className="px-2">
@@ -188,18 +191,6 @@ export function MainNavSidebar({ sidebarDefaultOpen }: { sidebarDefaultOpen: boo
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      {/*<Link href="/" className="flex items-center h-20 gap-2 sm:gap-4">
-            <Image
-              src="/exulu_logo.svg"
-              alt="Exulu Logo"
-              width={50}
-              height={32}
-              className="invert dark:invert-0"
-              priority
-            />
-          </Link>*/}
-
       <SidebarFooter className="border-t bg-muted/20 p-[5px]">
         <SidebarMenu>
           <SidebarMenuItem>

@@ -555,7 +555,7 @@ export function DataDisplay(props: DataDisplayProps) {
                                         }}
                                         className="flex-1 whitespace-pre-wrap text-sm cursor-copy"
                                       >
-                                        {data.name}
+                                        {data.name?.length > 200 ? data.name?.slice(0, 200) + "..." : data.name}
                                       </div>
                                     ) : (
                                       <>
@@ -620,7 +620,7 @@ export function DataDisplay(props: DataDisplayProps) {
                                           className="px-3 py-2 mr-2 mb-2"
                                         >
                                           <div className="flex items-center">
-                                            <div className="text-muted-foreground">
+                                            <div className="text-muted-foreground truncate max-w-[200px]">
                                               {text}
                                             </div>
                                             {editing ? (
@@ -838,6 +838,11 @@ export function DataDisplay(props: DataDisplayProps) {
                                                 text={data[contextField.name]}
                                               />
                                             )}
+                                            {contextField.type === "markdown" && (
+                                              <TextPreview
+                                                text={data[contextField.name]}
+                                              />
+                                            )}
                                             {!contextField.type && (
                                               <TextPreview
                                                 text={data[contextField.name]}
@@ -888,6 +893,7 @@ export function DataDisplay(props: DataDisplayProps) {
                                             contextField.type === "json" ||
                                             contextField.type === "text" ||
                                             contextField.type === "longText" ||
+                                            contextField.type === "markdown" ||
                                             contextField.type === "shortText" ? (
                                             <FormField
                                               control={form.control}

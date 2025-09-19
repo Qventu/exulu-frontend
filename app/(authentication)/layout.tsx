@@ -43,8 +43,8 @@ export default async function RootLayout({
               <Toaster />
               <footer className="flex items-center h-20 gap-1 px-8 font-medium border-t md:px-20">
                 <Image
-                  src="/exulu_logo.svg"
-                  alt="Exulu Logo"
+                  src={config.backend + "/logo.png"}
+                  alt="Logo"
                   className="invert dark:invert-0"
                   width={64}
                   height={32}

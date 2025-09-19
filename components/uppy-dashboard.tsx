@@ -1,7 +1,7 @@
 import useUppy from "@/hooks/use-uppy";
 import { Dashboard } from '@uppy/react';
 import { useContext, useEffect, useState } from "react"
-import { X, File, ImageIcon, FileText, FilePlus, Download, LoaderIcon, FileWarning, Upload, PlusSquareIcon } from "lucide-react"
+import { X, File, ImageIcon, FileText, FilePlus, Download, LoaderIcon, FileWarning, Upload, PlusSquareIcon, EyeIcon, PlusIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -31,8 +31,6 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
-  CommandShortcut,
 } from "@/components/ui/command"
 import { Loading } from "./ui/loading";
 import { allFileTypes } from "@/types/models/agent";
@@ -189,7 +187,7 @@ const ItemsList = ({ context, onConfirm }: { context: Context, onConfirm: (item:
       <CommandList>
         <CommandGroup heading="Items">
           {
-            loading && (
+            !prev && loading && (
               <CommandItem key={"loading"}>
                 <Loading />
               </CommandItem>
@@ -234,8 +232,8 @@ export const FileGalleryAndUpload = ({ id, allowedFileTypes, dependencies, onCon
       '.ppt',
       '.mp3',
       '.wav',
-      '.m4a', 
-      '.mp4', 
+      '.m4a',
+      '.mp4',
       '.mpeg',
       '.mp4',
       '.m4a',
@@ -317,7 +315,6 @@ export const FileGalleryAndUpload = ({ id, allowedFileTypes, dependencies, onCon
   });
 
   const { theme } = useTheme()
-  console.log("theme", theme)
   const uppy = useUppy(
     {
       backend: configContext?.backend || "",
@@ -332,8 +329,7 @@ export const FileGalleryAndUpload = ({ id, allowedFileTypes, dependencies, onCon
             name: data.file.name,
             type: data.file.type,
             rights_mode: "private",
-            s3key: `${user?.id}/${data.key}`,
-            url: data.url
+            s3key: `${user?.id}/${data.key}`
           }
           await createItemMutation({ variables: { input: item } })
         },
@@ -370,10 +366,10 @@ export const FileGalleryAndUpload = ({ id, allowedFileTypes, dependencies, onCon
               loading && <div className="flex items-center justify-center h-full"><Loading /></div>
             }
             {
-              !loading && !data?.files_default_context_itemsPagination?.items?.length && <div>No files found.</div>
+              !loading && !data?.files_default_context_itemsPagination?.items?.length && <small className="text-muted-foreground m-auto">No files found.</small>
             }
             {(data || prev)?.files_default_context_itemsPagination?.items?.map((item: Item) => (
-              <FileItem item={item} onSelect={addSelected} active={selected.some((s) => s.s3key === item.s3key)} onRemove={() => {
+              <FileItem key={item.id} context={"files_default_context"} item={item} onSelect={addSelected} active={selected.some((s) => s.s3key === item.s3key)} onRemove={() => {
                 deleteItemMutation({ variables: { id: item.id } })
               }} disabled={false} />
             ))}
@@ -397,7 +393,15 @@ export const FileGalleryAndUpload = ({ id, allowedFileTypes, dependencies, onCon
   </>
 }
 
-export const FileItem = ({ item, onSelect, onRemove, active, disabled }: { item: Item, onSelect?: (file: Item) => void, onRemove: (file: Item) => void, active: boolean, disabled: boolean }) => {
+export const FileItem = ({ item, onSelect, onRemove, active, disabled, context, addToContext }: {
+  item: Item,
+  onSelect?: (file: Item) => void,
+  onRemove?: (file: Item) => void,
+  active: boolean,
+  disabled: boolean,
+  context: string,
+  addToContext?: (file: Item) => void
+}) => {
 
   const getFileIcon = (key: string) => {
     if (!key) {
@@ -423,13 +427,13 @@ export const FileItem = ({ item, onSelect, onRemove, active, disabled }: { item:
 
   return (
     <div
-      key={item.id} 
-      className={`${disabled ? 'opacity-50' : ''} group relative rounded-lg p-2 hover:bg-muted transition-colors cursor-pointer ${active ? 'border border-purple-500' : 'border'}`} 
+      key={item.id}
+      className={`${disabled ? 'opacity-50' : ''} group relative rounded-lg p-2 hover:bg-muted transition-colors cursor-pointer ${active ? 'border border-purple-500' : 'border'}`}
       onClick={() => {
-      if (!disabled && onSelect) {
-        onSelect(item)
-      }
-    }}>
+        if (!disabled && onSelect) {
+          onSelect(item)
+        }
+      }}>
       <div className="aspect-square relative mb-2 bg-muted/50 rounded-md overflow-hidden flex items-center justify-center">
         {(
           item.s3key && (
@@ -449,6 +453,23 @@ export const FileItem = ({ item, onSelect, onRemove, active, disabled }: { item:
       </div>
       <p className="text-xs truncate">{item.s3key ? item.s3key.split("-").pop() : item.name}</p>
       <div className="opacity-0 group-hover:opacity-100 flex absolute top-1 right-1">
+        {/* todo add ye icon with tooltip to go to the item's detail view. */}
+        <Button variant="ghost" size="icon" type="button" className="h-6 w-6 bg-background/80 hover:bg-background" onClick={() => {
+          window.open(`/data/${context}/${item.id}`, '_blank');
+        }}>
+          <EyeIcon className="h-3 w-3" />
+          <span className="sr-only">View</span>
+        </Button>
+
+        {addToContext && (
+          <Button variant="ghost" size="icon" type="button" className="h-6 w-6 bg-background/80 hover:bg-background" onClick={() => {
+            addToContext(item)
+          }}>
+            <PlusIcon className="h-3 w-3" />
+            <span className="sr-only">Add</span>
+          </Button>
+        )}
+
         {item.s3key && (
           <Button
             variant="ghost"
@@ -470,20 +491,20 @@ export const FileItem = ({ item, onSelect, onRemove, active, disabled }: { item:
           </Button>
         )}
 
-        <Button
-          onClick={(e) => {
-            e.stopPropagation()
-            if (onRemove) {
+        {onRemove && (
+          <Button
+            onClick={(e) => {
+              e.stopPropagation()
               onRemove(item)
-            }
-          }}
-          variant="ghost"
-          type="button"
-          size="icon"
-          className="h-6 w-6 opacity-0 group-hover:opacity-100 bg-background/80 hover:bg-background ml-1">
-          <X className="h-3 w-3" />
-          <span className="sr-only">Remove</span>
-        </Button>
+            }}
+            variant="ghost"
+            type="button"
+            size="icon"
+            className="h-6 w-6 opacity-0 group-hover:opacity-100 bg-background/80 hover:bg-background ml-1">
+            <X className="h-3 w-3" />
+            <span className="sr-only">Remove</span>
+          </Button>
+        )}
       </div>
     </div>
   )

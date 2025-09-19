@@ -12,9 +12,9 @@ import { DonutChart } from "@/components/dashboard/donut-chart";
 import {
     GET_AGENT_SESSIONS_STATISTICS,
     GET_WORKFLOW_RUNS_STATISTICS,
-    GET_EMBEDDING_JOBS_STATISTICS,
     GET_AGENT_RUN_STATISTICS,
-    GET_FUNCTION_CALLS_STATISTICS
+    GET_FUNCTION_CALLS_STATISTICS,
+    GET_TOKEN_USAGE_STATISTICS
 } from "@/queries/queries";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +26,7 @@ export default function DashboardPage() {
     });
 
     const [selectedType, setSelectedType] = useState<STATISTICS_TYPE>("AGENT_RUN");
+    const [unit, setUnit] = useState<"tokens" | "count">("count");
     const [groupBy, setGroupBy] = useState<string>("label");
 
     return (
@@ -53,12 +54,12 @@ export default function DashboardPage() {
 
             {/* Summary Cards - Enhanced with better spacing */}
             <div className="mb-8">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                     <SummaryCard query={GET_AGENT_SESSIONS_STATISTICS} entity="agent_sessions" title="Agent Sessions" />
                     <SummaryCard query={GET_AGENT_RUN_STATISTICS} entity="tracking" title="Agent Calls" />
+                    <SummaryCard query={GET_TOKEN_USAGE_STATISTICS} entity="tracking" title="Token Usage" />
                     <SummaryCard query={GET_WORKFLOW_RUNS_STATISTICS} entity="jobs" title="Workflow Runs" />
                     <SummaryCard query={GET_FUNCTION_CALLS_STATISTICS} entity="tracking" title="Function Calls" />
-                    
                 </div>
             </div>
 
@@ -69,6 +70,8 @@ export default function DashboardPage() {
                         dateRange={dateRange}
                         selectedType={selectedType}
                         onTypeChange={setSelectedType}
+                        onUnitChange={setUnit}
+                        unit={unit}
                         dataTypes={[
                             STATISTICS_TYPE_ENUM.CONTEXT_RETRIEVE,
                             STATISTICS_TYPE_ENUM.SOURCE_UPDATE,
