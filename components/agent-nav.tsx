@@ -44,9 +44,6 @@ export function AgentNav() {
       page: 1,
       limit: 200,
       filters: {
-        type: {
-          in: ["agent", "flow", "chat"]
-        },
         ...(searchQuery ? {
           name: {
             contains: searchQuery

@@ -118,6 +118,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+  
 }
 
 .graphiql-container .CodeMirror,
@@ -241,4 +242,9 @@
 .chat-response-container p {
   margin-bottom: 0.5rem;
   margin-top: 0.5rem;
+  color: black;
+}
+
+.dark .chat-response-container p {
+  color: white;
 }

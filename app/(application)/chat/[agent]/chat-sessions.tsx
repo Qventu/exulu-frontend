@@ -30,6 +30,7 @@ import { usePathname } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Link from "next/link";
 import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function ChatSessionsComponent({ agent, type }: { agent: string, type: string }) {
 
@@ -162,8 +163,11 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
         </Button>
       </div>
       {sessionsQuery.loading && (
-        <div className="w-full flex">
-          <Loading className="mx-auto mt-5" />
+        <div className="w-full flex flex-col p-2 pt-0 pb-2">
+          <Skeleton className="w-full rounded h-[70px] rounded-md" />
+          <Skeleton className="w-full rounded h-[70px] rounded-md mt-3" />
+          <Skeleton className="w-full rounded h-[70px] rounded-md mt-3" />
+          <Skeleton className="w-full rounded h-[70px] rounded-md mt-3" />
         </div>
       )}
 
@@ -181,7 +185,10 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
             },
           ) => {
 
-            const writeAccess = checkChatSessionWriteAccess(item, user);
+            const writeAccess = checkChatSessionWriteAccess({
+              ...item,
+              agent: item.agent.id
+            }, user);
 
             return (
               <div key={item.id} className={`w-full px-2 flex flex-col items-start gap-0 rounded-none border-none text-left text-sm mb-2`}>
@@ -237,6 +244,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
                             align="end"
                             className="w-[160px]">
                             <DropdownMenuItem
+                              className="cursor-pointer"
                               onClick={() => {
                                 removeSession({
                                   variables: {

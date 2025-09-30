@@ -12,6 +12,8 @@ import { DonutChart } from "@/components/dashboard/donut-chart";
 export const dynamic = "force-dynamic";
 
 export default function ContextsDashboard() {
+  
+  const [unit, setUnit] = useState<"tokens" | "count">("count");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 7),
     to: new Date()
@@ -50,6 +52,8 @@ export default function ContextsDashboard() {
             dateRange={dateRange}
             selectedType={selectedType}
             onTypeChange={setSelectedType}
+            onUnitChange={setUnit}
+            unit={unit}
             dataTypes={[
               STATISTICS_TYPE_ENUM.CONTEXT_RETRIEVE,
               STATISTICS_TYPE_ENUM.EMBEDDER_UPSERT,
