@@ -106,7 +106,7 @@ export function DataDisplay(props: DataDisplayProps) {
 
   const [rbac, setRbac] = useState<{
     rights_mode?: 'private' | 'users' | 'roles' | 'public' | 'projects';
-    users?: Array<{ id: string; rights: 'read' | 'write' }>;
+    users?: Array<{ id: number; rights: 'read' | 'write' }>;
     roles?: Array<{ id: string; rights: 'read' | 'write' }>;
     projects?: Array<{ id: string; rights: 'read' | 'write' }>;
   }>()
@@ -555,7 +555,7 @@ export function DataDisplay(props: DataDisplayProps) {
                                         }}
                                         className="flex-1 whitespace-pre-wrap text-sm cursor-copy"
                                       >
-                                        {data.name?.length > 200 ? data.name?.slice(0, 200) + "..." : data.name}
+                                        {data.name && data.name?.length > 200 ? data.name?.slice(0, 200) + "..." : data.name}
                                       </div>
                                     ) : (
                                       <>

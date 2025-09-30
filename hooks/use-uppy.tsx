@@ -71,7 +71,7 @@ export const initializeUppy = async (options: InitializeOptions): Promise<Uppy> 
                 console.log("response", response)
                 uploadSuccess({
                     file: file,
-                    key: response.uploadURL.split("/").pop(),
+                    key: response.uploadURL.split("/").pop() || "",
                     url: response.uploadURL,
                 });
             }

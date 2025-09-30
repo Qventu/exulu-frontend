@@ -79,6 +79,7 @@ export const InlineCitationCardBody = ({
   className,
   ...props
 }: InlineCitationCardBodyProps) => (
+  // @ts-ignore
   <HoverCardContent className={cn('relative w-80 p-0', className)} {...props} />
 );
 
@@ -95,6 +96,7 @@ export type InlineCitationCarouselContentProps = ComponentProps<'div'>;
 
 export const InlineCitationCarouselContent = (
   props: InlineCitationCarouselContentProps
+  // @ts-ignore
 ) => <CarouselContent {...props} />;
 
 export type InlineCitationCarouselItemProps = ComponentProps<'div'>;
@@ -103,6 +105,7 @@ export const InlineCitationCarouselItem = ({
   className,
   ...props
 }: InlineCitationCarouselItemProps) => (
+  // @ts-ignore
   <CarouselItem className={cn('w-full space-y-2 p-4', className)} {...props} />
 );
 

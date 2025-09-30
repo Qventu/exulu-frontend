@@ -9,7 +9,7 @@ export interface AgentSession {
     rights_mode: ExuluRightsMode
     RBAC?: {
         type?: string;
-        users?: Array<{ id: string; rights: 'read' | 'write' }>;
+        users?: Array<{ id: number; rights: 'read' | 'write' }>;
         roles?: Array<{ id: string; rights: 'read' | 'write' }>;
         projects?: Array<{ id: string; rights: 'read' | 'write' }>;
     };

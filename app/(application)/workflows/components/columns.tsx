@@ -28,8 +28,9 @@ export type Workflow = {
   owner: number;
   rights_mode: "private" | "users" | "roles" | "public" | "projects";
   RBAC: {
-    users: Array<{ id: string; rights: "read" | "write" }>;
+    users: Array<{ id: number; rights: "read" | "write" }>;
     roles: Array<{ id: string; rights: "read" | "write" }>;
+    projects: Array<{ id: string; rights: "read" | "write" }>;
   };
   variables?: any[];
   steps_json?: any[];
@@ -147,7 +148,8 @@ function WorkflowActionsCell({ workflow, user }: { workflow: WorkflowWithLastRun
   };
 
   // Transform workflow back to messages format for the modal
-  const workflowMessages = workflow.steps_json?.map((step: any, index: number) => ({
+  // TODO just keep the workflow messages in the ai-sdk format!!
+  const workflowMessages: any[] = workflow.steps_json?.map((step: any, index: number) => ({
     id: step.id || `msg_${index}`,
     role: step.type === 'user' ? 'user' as const : 
           step.type === 'assistant' ? 'assistant' as const : 

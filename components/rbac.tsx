@@ -55,13 +55,13 @@ export function RBACControl({
 }: {
   allowedModes?: Modes[],
   initialRightsMode: 'private' | 'users' | 'roles' | 'public' | 'projects' | undefined,
-  initialUsers: { id: string, rights: 'read' | 'write' }[] | undefined,
+  initialUsers: { id: number, rights: 'read' | 'write' }[] | undefined,
   initialRoles: { id: string, rights: 'read' | 'write' }[] | undefined,
   initialProjects: { id: string, rights: 'read' | 'write' }[] | undefined,
-  onChange: (rights_mode: Modes, users: { id: string, rights: 'read' | 'write' }[], roles: { id: string, rights: 'read' | 'write' }[], projects: { id: string, rights: 'read' | 'write' }[]) => void
+  onChange: (rights_mode: Modes, users: { id: number, rights: 'read' | 'write' }[], roles: { id: string, rights: 'read' | 'write' }[], projects: { id: string, rights: 'read' | 'write' }[]) => void
 }) {
   const [visibility, setVisibility] = useState<Modes | undefined>(initialRightsMode)
-  const [selectedUsers, setSelectedUsers] = useState<{ id: string, rights: 'read' | 'write' }[]>(initialUsers || [])
+  const [selectedUsers, setSelectedUsers] = useState<{ id: number, rights: 'read' | 'write' }[]>(initialUsers || [])
   const [selectedRoles, setSelectedRoles] = useState<{ id: string, rights: 'read' | 'write' }[]>(initialRoles || [])
   const [hydratedUsers, setHydratedUsers] = useState<User[]>([])
   const [visibilitySelectorOpen, setVisibilitySelectorOpen] = useState(false)
@@ -148,7 +148,7 @@ export function RBACControl({
   useEffect(() => {
     console.log("selectedUsers", selectedUsers)
     console.log("hydratedUsers", hydratedUsers)
-    onChange(visibility as 'private' | 'users' | 'roles' | 'public', selectedUsers, selectedRoles)
+    onChange(visibility as 'private' | 'users' | 'roles' | 'public', selectedUsers, selectedRoles, [])
   }, [visibility, selectedUsers, selectedRoles])
 
   const filteredUsers = hydratedUsers?.slice(0, 5).filter(user => !!user?.id)

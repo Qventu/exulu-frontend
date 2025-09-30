@@ -394,6 +394,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
         <div className="flex h-full w-full">
           {/* Main conversation area */}
           <div className="flex flex-col flex-1 pb-6">
+            {/* @ts-ignore */}
             <Conversation className="overflow-y-hidden">
               {/* Save as Workflow button - appears when conversation has content */}
               {canCreateWorkflow && (
@@ -436,9 +437,13 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                             <ContextContent>
                               <ContextContentHeader />
                               <ContextContentBody>
+                                {/* @ts-ignore */}
                                 <ContextInputUsage />
+                                {/* @ts-ignore */}
                                 <ContextOutputUsage />
+                                {/* @ts-ignore */}
                                 <ContextReasoningUsage />
+                                {/* @ts-ignore */}
                                 <ContextCacheUsage />
                               </ContextContentBody>
                             </ContextContent>
@@ -492,6 +497,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                     </Card>
                   </div>
                 </div> : null}
+                {/* @ts-ignore */}
               <ConversationContent className="px-6">
                 {messages?.length > 0 ?
                   <>

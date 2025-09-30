@@ -12,6 +12,7 @@ import type { ComponentProps } from 'react';
 export type SourcesProps = ComponentProps<'div'>;
 
 export const Sources = ({ className, ...props }: SourcesProps) => (
+  // @ts-ignore
   <Collapsible
     className={cn('not-prose mb-4 text-primary text-xs', className)}
     {...props}

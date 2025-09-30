@@ -60,7 +60,7 @@ export const createColumns = (currentUser: any, roleChange: (user: User, role: s
     cell: ({ row }) => {
       return (
         <div className="gap-x-2 flex">
-          <RoleSelector value={row.original.role} onChange={(role) => {
+          <RoleSelector value={row.original.role.name} onChange={(role) => {
                 // warning modal
                 // todo rbac and / or super_admin check
                 const confirm = window.confirm("Are you sure you want to update the role for this user?");

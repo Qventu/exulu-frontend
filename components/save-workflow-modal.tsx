@@ -40,7 +40,7 @@ interface WorkflowTemplate {
   description?: string
   rights_mode?: 'private' | 'users' | 'roles' | 'public' | 'projects'
   RBAC?: {
-    users?: Array<{ id: string; rights: 'read' | 'write' }>
+    users?: Array<{ id: number; rights: 'read' | 'write' }>
     roles?: Array<{ id: string; rights: 'read' | 'write' }>
     projects?: Array<{ id: string; rights: 'read' | 'write' }>
   }
@@ -87,7 +87,7 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
       const transformedSteps: WorkflowStep[] = []
 
       messages.forEach((message, index) => {
-        const messageContent = (message as any).content || (message.parts ? message.parts.filter(p => p.type === 'text').map(p => p.text).join('\n') : '')
+        const messageContent = (message as any).content || (message.parts ? message.parts.filter(p => p.type === 'text').map((p: any) => p.text).join('\n') : '')
 
         if (message.role === 'user') {
           transformedSteps.push({
