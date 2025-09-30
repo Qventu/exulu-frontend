@@ -26,7 +26,7 @@ export const pool = new Pool({
   user: process.env.POSTGRES_DB_USER,
   port: parseInt(process.env.POSTGRES_DB_PORT || "5432", 10),
   password: process.env.POSTGRES_DB_PASSWORD,
-  database: "exulu",
+  database: process.env.POSTGRES_DB_NAME || "exulu",
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
