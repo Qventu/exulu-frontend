@@ -21,7 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/models/user-role";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { ChevronUp, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard, Database, ListTodo, Bot, Route, Variable, FileCheck, Sparkles, Settings, LogOut, FileText, FolderOpen } from "lucide-react";
+import { ChevronUp, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard, Database, ListTodo, Bot, Route, Variable, FileCheck, Sparkles, Settings, LogOut, FileText, FolderOpen, Brain } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "../ui/avatar";
@@ -76,6 +76,14 @@ const buildNavigation = (user: User, role: UserRole) => {
     path: "chat",
     icon: <MessageCircle />,
   });
+
+  if (user.super_admin || role.evals === "read" || role.evals === "write") {
+    navigationItems.push({
+      label: "Evals",
+      path: "evals",
+      icon: <Brain />,
+    });
+  }
 
   if (user.super_admin || role.workflows === "write") {
     navigationItems.push({

@@ -11,6 +11,7 @@ import Authenticated from "@/app/(application)/authenticated";
 import { Toaster } from "@/components/ui/toaster";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 import { ConfigContextProvider } from "@/components/config-context";
+import { config as api, BackendConfigType } from "@/util/api";
 
 export default async function RootLayout({
     children,
@@ -26,10 +27,15 @@ export default async function RootLayout({
     const user = await serverSideAuthCheck();
     if (!user) return redirect(`/login${pathname ? `?destination=${pathname}` : ''}`);
 
+    const backend = await api.backend();
+    console.log("[EXULU] backend", backend)
+    const json: BackendConfigType = await backend.json();
+
     const config = {
         backend: process.env.BACKEND || "",
         google_client_id: process.env.GOOGLE_CLIENT_ID || "",
         auth_mode: process.env.AUTH_MODE || "",
+        ...json
     }
 
     return (

@@ -1314,8 +1314,8 @@ export const GET_PROJECT_BY_ID = gql`
 
 export const UPDATE_USER_FAVOURITE_PROJECTS = gql`
   mutation UpdateUserFavouriteProjects($id: ID!, $favourite_projects: JSON) {
-    userUpdateById(record: { favourite_projects: $favourite_projects }, filter: { id: $id }) {
-      record {
+    userUpdateById(input: { favourite_projects: $favourite_projects }, filter: { id: $id }) {
+      item {
         id
         favourite_projects
       }
@@ -1348,6 +1348,237 @@ export const DELETE_PROJECT = gql`
     projectsRemoveOneById(id: $id) {
       id
       name
+    }
+  }
+`;
+
+// ============================================
+// EVAL-RELATED QUERIES
+// ============================================
+
+const TEST_CASE_FIELDS = `
+  id
+  name
+  description
+  inputs
+  expected_output
+  expected_tools
+  expected_knowledge_sources
+  expected_agent_tools
+  eval_set_id
+  createdAt
+  updatedAt
+`;
+
+const EVAL_SET_FIELDS = `
+  id
+  name
+  description
+  createdAt
+  updatedAt
+`;
+
+const EVAL_RUN_FIELDS = `
+  id
+  eval_set_id
+  agent_id
+  eval_function_ids
+  config
+  scoring_method
+  pass_threshold
+  test_case_ids
+  createdAt
+  updatedAt
+  rights_mode
+  RBAC {
+    type
+    users {
+      id
+      rights
+    }
+    roles {
+      id
+      rights
+    }
+    projects {
+      id
+      rights
+    }
+  }
+`;
+
+// Test Cases
+export const GET_TEST_CASES = gql`
+  query GetTestCases(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterTest_case]
+  ) {
+    test_casesPagination(page: $page, limit: $limit, filters: $filters) {
+      pageInfo {
+        pageCount
+        itemCount
+        currentPage
+        hasPreviousPage
+        hasNextPage
+      }
+      items {
+        ${TEST_CASE_FIELDS}
+      }
+    }
+  }
+`;
+
+export const GET_TEST_CASE_BY_ID = gql`
+  query GetTestCaseById($id: ID!) {
+    test_caseById(id: $id) {
+      ${TEST_CASE_FIELDS}
+    }
+  }
+`;
+
+export const CREATE_TEST_CASE = gql`
+  mutation CreateTestCase($data: test_caseInput!) {
+    test_casesCreateOne(input: $data) {
+      item {
+        ${TEST_CASE_FIELDS}
+      }
+    }
+  }
+`;
+
+export const UPDATE_TEST_CASE = gql`
+  mutation UpdateTestCase($id: ID!, $data: test_caseInput!) {
+    test_casesUpdateOneById(id: $id, input: $data) {
+      item {
+        ${TEST_CASE_FIELDS}
+      }
+    }
+  }
+`;
+
+export const DELETE_TEST_CASE = gql`
+  mutation DeleteTestCase($id: ID!) {
+    test_casesRemoveOneById(id: $id) {
+      id
+      name
+    }
+  }
+`;
+
+// Eval Sets
+export const GET_EVAL_SETS = gql`
+  query GetEvalSets(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterEval_set]
+  ) {
+    eval_setsPagination(page: $page, limit: $limit, filters: $filters) {
+      pageInfo {
+        pageCount
+        itemCount
+        currentPage
+        hasPreviousPage
+        hasNextPage
+      }
+      items {
+        ${EVAL_SET_FIELDS}
+      }
+    }
+  }
+`;
+
+export const GET_EVAL_SET_BY_ID = gql`
+  query GetEvalSetById($id: ID!) {
+    eval_setById(id: $id) {
+      ${EVAL_SET_FIELDS}
+    }
+  }
+`;
+
+export const CREATE_EVAL_SET = gql`
+  mutation CreateEvalSet($data: eval_setInput!) {
+    eval_setsCreateOne(input: $data) {
+      item {
+        ${EVAL_SET_FIELDS}
+      }
+    }
+  }
+`;
+
+export const UPDATE_EVAL_SET = gql`
+  mutation UpdateEvalSet($id: ID!, $data: eval_setInput!) {
+    eval_setsUpdateOneById(id: $id, input: $data) {
+      item {
+        ${EVAL_SET_FIELDS}
+      }
+    }
+  }
+`;
+
+export const DELETE_EVAL_SET = gql`
+  mutation DeleteEvalSet($id: ID!) {
+    eval_setsRemoveOneById(id: $id) {
+      id
+      name
+    }
+  }
+`;
+
+// Eval Runs
+export const GET_EVAL_RUNS = gql`
+  query GetEvalRuns(
+    $page: Int!
+    $limit: Int!
+    $filters: [Filtereval_run]
+  ) {
+    eval_runsPagination(page: $page, limit: $limit, filters: $filters) {
+      pageInfo {
+        pageCount
+        itemCount
+        currentPage
+        hasPreviousPage
+        hasNextPage
+      }
+      items {
+        ${EVAL_RUN_FIELDS}
+      }
+    }
+  }
+`;
+
+export const GET_EVAL_RUN_BY_ID = gql`
+  query GetEvalRunById($id: ID!) {
+    eval_runById(id: $id) {
+      ${EVAL_RUN_FIELDS}
+    }
+  }
+`;
+
+export const CREATE_EVAL_RUN = gql`
+  mutation CreateEvalRun($data: eval_runInput!) {
+    eval_runsCreateOne(input: $data) {
+      item {
+        ${EVAL_RUN_FIELDS}
+      }
+    }
+  }
+`;
+
+export const UPDATE_EVAL_RUN = gql`
+  mutation UpdateEvalRun($id: ID!, $data: eval_runInput!) {
+    eval_runsUpdateOneById(id: $id, input: $data) {
+      item {
+        ${EVAL_RUN_FIELDS}
+      }
+    }
+  }
+`;
+
+export const DELETE_EVAL_RUN = gql`
+  mutation DeleteEvalRun($id: ID!) {
+    eval_runsRemoveOneById(id: $id) {
+      id
     }
   }
 `;

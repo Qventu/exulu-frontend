@@ -31,7 +31,7 @@ const PERMISSION_AREAS = [
     },
     {
         key: "workflows" as const,
-        label: "Workflows", 
+        label: "Workflows",
         icon: Workflow,
         description: "Workflow templates and executions"
     },
@@ -52,6 +52,12 @@ const PERMISSION_AREAS = [
         label: "API",
         icon: CodeSquare,
         description: "API access and management"
+    },
+    {
+        key: "evals" as const,
+        label: "Evals",
+        icon: Brain,
+        description: "Evaluation sets, test cases, and eval runs"
     }
 ]
 
@@ -63,6 +69,7 @@ export function RoleForm({ initialData, onSubmit, loading, onCancel }: RoleFormP
         workflows: initialData?.workflows || "",
         variables: initialData?.variables || "",
         users: initialData?.users || "",
+        evals: initialData?.evals || "",
     })
 
     useEffect(() => {
@@ -73,7 +80,8 @@ export function RoleForm({ initialData, onSubmit, loading, onCancel }: RoleFormP
                 api: initialData.api || "",
                 workflows: initialData.workflows || "",
                 variables: initialData.variables || "",
-                users: initialData.users || ""
+                users: initialData.users || "",
+                evals: initialData.evals || ""
             })
         }
     }, [initialData])
@@ -98,7 +106,8 @@ export function RoleForm({ initialData, onSubmit, loading, onCancel }: RoleFormP
             api: permissions.api || null,
             workflows: permissions.workflows || null,
             variables: permissions.variables || null,
-            users: permissions.users || null
+            users: permissions.users || null,
+            evals: permissions.evals || null
         }
 
         await onSubmit(roleData)

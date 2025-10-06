@@ -3,15 +3,26 @@ import { getSession } from "next-auth/react";
 export type ImageStyle = "origami" | "anime" | "japanese_anime" | "vaporwave" | "lego" | "paper_cut" | "felt_puppet" | "3d" | "app_icon" | "pixel_art" | "isometric";
 
 const getUris = async () => {
+    // Server-side: use environment variable directly
+    if (typeof window === 'undefined') {
+        const backend = process.env.BACKEND;
+        if (!backend) {
+            throw new Error("No backend set.")
+        }
+        return {
+            files: backend,
+            base: backend
+        }
+    }
+
+    // Client-side: fetch from API
     const context = await fetch("/api/config").then(res => res.json());
     if (!context.backend) {
         throw new Error("No backend set.")
     }
     return {
-        files:
-            context.backend,
-        base:
-            context.backend
+        files: context.backend,
+        base: context.backend
     }
 }
 
@@ -21,6 +32,28 @@ export const getToken = async () => {
     return session?.user?.jwt;
 }
 
+export type BackendConfigType = {
+    fileUploads?: {
+        s3endpoint: string;
+    }
+    workers?: {
+        redisHost: string;
+        enabled: boolean;
+    }
+}
+
+export const config = {
+    backend: async (): Promise<Response> => {
+        const uris = await getUris();
+        const url = `${uris.base}/config`
+        return fetch(url, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
+    }
+}
 
 export const agents = {
     image: {
@@ -29,6 +62,7 @@ export const agents = {
             description: string,
             style?: ImageStyle
         }): Promise<any> => {
+
             const uris = await getUris();
             const url = `${uris.base}/generate/agent/image`;
             const token = await getToken()

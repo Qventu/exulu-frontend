@@ -6,6 +6,7 @@ export type UserRole = {
   variables?: "read" | "write" | null;
   users?: "read" | "write" | null;
   api?: "read" | "write" | null;
+  evals?: "read" | "write" | null;
   createdAt?: string;
   updatedAt?: string;
 };

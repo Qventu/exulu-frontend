@@ -1,11 +1,12 @@
 "use client"
+import { BackendConfigType } from "@/util/api";
 import { createContext } from "react";
 
 export type ConfigContextType = {
     backend: string;
     google_client_id: string;
     auth_mode: string;
-}
+} & BackendConfigType | null;
 
 export const ConfigContext = createContext<ConfigContextType | null>(null);
 

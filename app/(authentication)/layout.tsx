@@ -17,7 +17,7 @@ export default async function RootLayout({
   const config = {
     backend: process.env.BACKEND || "",
     google_client_id: process.env.GOOGLE_CLIENT_ID || "",
-    auth_mode: process.env.AUTH_MODE || ""
+    auth_mode: process.env.AUTH_MODE || "",
   }
 
   return (

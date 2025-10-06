@@ -9,8 +9,6 @@ import { useContext, useEffect, useState, useMemo } from "react";
 import { UserContext } from "@/app/(application)/authenticated";
 import { StopIcon } from "@radix-ui/react-icons";
 import { AgentMessage, AgentSession } from "@EXULU_SHARED/models/agent-session";
-import { Message, MessageContent } from '@/components/ai-elements/message';
-import { Actions, Action } from '@/components/ai-elements/actions';
 import { Loader } from '@/components/ai-elements/loader';
 import TextareaAutosize from "react-textarea-autosize";
 import {
@@ -27,18 +25,14 @@ import {
 import { getToken } from "@/util/api"
 import { Agent } from "@EXULU_SHARED/models/agent";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
 import { ConfigContext } from "@/components/config-context";
-import { Workflow, Plus, RefreshCcwIcon, CopyIcon, ArrowUp, ChevronsUpDown } from "lucide-react";
+import { Workflow, Plus, ArrowUp, ChevronsUpDown } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast"
 import { SaveWorkflowModal } from "@/components/save-workflow-modal";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Conversation, ConversationContent } from "@/components/ai-elements/conversation";
-import { Response } from '@/components/ai-elements/response';
-import { Reasoning, ReasoningTrigger, ReasoningContent } from "@/components/ai-elements/reasoning";
-import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/source";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { z } from 'zod';
 import { RBACControl } from "@/components/rbac";
@@ -67,15 +61,6 @@ import {
 } from '@/components/ai-elements/context';
 import { Progress } from "@/components/ui/progress";
 import {
-  ChainOfThought,
-  ChainOfThoughtContent,
-  ChainOfThoughtHeader,
-  ChainOfThoughtImage,
-  ChainOfThoughtSearchResult,
-  ChainOfThoughtSearchResults,
-  ChainOfThoughtStep,
-} from '@/components/ai-elements/chain-of-thought';
-import {
   Tool,
   ToolContent,
   ToolHeader,
@@ -83,6 +68,8 @@ import {
   ToolInput,
 } from '@/components/ai-elements/tool';
 import { Skeleton } from "@/components/ui/skeleton";
+import { MessageRenderer } from "@/components/message-renderer";
+import { Response } from '@/components/ai-elements/response';
 
 export interface ChatProps {
   chatId?: string;
@@ -499,171 +486,19 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                 </div> : null}
                 {/* @ts-ignore */}
               <ConversationContent className="px-6">
-                {messages?.length > 0 ?
-                  <>
-                    {messages?.map((message, messageIndex) => {
-                      const isFirstMessage =
-                        messageIndex === 0;
-                      const messageMetadata = message.metadata as any;
-                      const isLastMessage =
-                        messageIndex === messages.length - 1;
-
-                      return (
-                        <Message className={cn(isFirstMessage && 'mt-12')} from={message.role} key={message.id}>
-                          <MessageContent>
-                            {message.parts.map((part, i) => {
-                              if (part.type === 'step-start') {
-                                // show step boundaries as horizontal lines:
-                                /* return messageIndex > 0 ? (
-                                  <div key={messageIndex} className="text-gray-500">
-                                    <hr className="my-2 border-gray-300" />
-                                  </div>
-                                ) : null; */
-                              }
-
-                              if (part.type === 'text') {
-                                return (
-                                  <div key={`${message.id}-${i}`}>
-                                    <Response className="chat-response-container">
-                                      {part.text}
-                                    </Response>
-                                  </div>
-                                )
-                              }
-
-                              if (part.type === 'tool-askForConfirmation') {
-                                const callId = part.toolCallId;
-
-                                switch (part.state) {
-                                  case 'input-streaming':
-                                    return (
-                                      <div key={callId}>Loading confirmation request...</div>
-                                    );
-                                  case 'input-available':
-                                    return (
-                                      <div key={callId}>
-                                        {(part.input as { message: string }).message}
-                                        <div>
-                                          <button
-                                            onClick={() =>
-                                              addToolResult({
-                                                tool: 'askForConfirmation',
-                                                toolCallId: callId,
-                                                output: 'Yes, confirmed.',
-                                              })
-                                            }
-                                          >
-                                            Yes
-                                          </button>
-                                          <button
-                                            onClick={() =>
-                                              addToolResult({
-                                                tool: 'askForConfirmation',
-                                                toolCallId: callId,
-                                                output: 'No, denied',
-                                              })
-                                            }
-                                          >
-                                            No
-                                          </button>
-                                        </div>
-                                      </div>
-                                    );
-                                  case 'output-available':
-                                    return (
-                                      <div key={callId}>
-                                        Tool call allowed: {part.output as string}
-                                      </div>
-                                    );
-                                  case 'output-error':
-                                    return <div key={callId}>Error: {part.errorText}</div>;
-                                }
-                              }
-
-                              if (part.type.startsWith('tool-') || part.type === 'dynamic-tool') {
-                                const untypedToolPart = part as DynamicToolUIPart;
-                                const callId = untypedToolPart.toolCallId;
-                                return <UntypedToolPart
-                                  untypedToolPart={untypedToolPart}
-                                  callId={callId}
-                                  addToContext={(item) => {
-                                    setItems([...(items || []), item])
-                                  }}
-                                />
-                              }
-
-                              if (part.type === 'file') {
-                                if (part.mediaType.startsWith('image/')) {
-                                  return <Image src={part.url} width={300} height={300} alt={"Generated image"} />
-                                }
-                              }
-
-                              if (part.type === 'source-url') {
-                                return <Sources>
-                                  <SourcesTrigger
-                                    count={message.parts.filter(
-                                      (part) => part.type === 'source-url'
-                                    ).length}
-                                  />
-                                  <SourcesContent key={`${message.id}`}>
-                                    {message.parts.map((part, i) => {
-                                      switch (part.type) {
-                                        case 'source-url':
-                                          return (<Source
-                                            key={`${message.id}-${i}`}
-                                            href={part.url}
-                                            title={part.title}
-                                          />)
-                                      }
-                                    })}
-                                  </SourcesContent>
-                                </Sources>
-                              }
-                              if (part.type === 'reasoning') {
-                                return <Reasoning
-                                  key={`${message.id}-${i}`}
-                                  className="w-full"
-                                  isStreaming={status === 'streaming'}
-                                >
-                                  <ReasoningTrigger />
-                                  <ReasoningContent>{part.text}</ReasoningContent>
-                                </Reasoning>
-
-                              }
-                              return null;
-                            })}
-                            {message.role === 'assistant' && (
-                              <Actions className="mt-2">
-                                <Action
-                                  onClick={() => regenerate()}
-                                  label="Retry"
-                                  disabled={!writeAccess}
-                                >
-                                  <RefreshCcwIcon className="size-3" />
-                                </Action>
-                                <Action
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(message.parts.map((part: any) => part?.text || "").join('\n'))
-                                    toast({
-                                      title: "Copied message",
-                                      description: "The message was copied to your clipboard.",
-                                    });
-                                  }}
-                                  label="Copy"
-                                >
-                                  <CopyIcon className="size-3" />
-                                </Action>
-                                {messageMetadata?.totalTokens && (
-                                  <small className="text-muted-foreground">{Intl.NumberFormat('en-US').format(messageMetadata?.totalTokens)} tokens</small>
-                                )}
-                              </Actions>
-                            )}
-                          </MessageContent>
-                        </Message>
-                      )
-                    })}
-                  </>
-                  : null}
+                {messages?.length > 0 && (
+                  <MessageRenderer
+                    messages={messages}
+                    status={status}
+                    onRegenerate={regenerate}
+                    onAddToolResult={addToolResult}
+                    UntypedToolPartComponent={UntypedToolPart}
+                    addToContext={(item) => {
+                      setItems([...(items || []), item])
+                    }}
+                    writeAccess={writeAccess}
+                  />
+                )}
 
                 {status === "streaming" ? <Loader /> : null}
 
