@@ -109,6 +109,7 @@
     "jsonwebtoken": "^9.0.2",
     "katex": "^0.16.22",
     "knex": "^3.1.0",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.309.0",
     "net": "^1.0.2",
     "next": "^14.0.4",

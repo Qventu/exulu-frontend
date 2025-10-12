@@ -6,7 +6,7 @@ export type ConfigContextType = {
     backend: string;
     google_client_id: string;
     auth_mode: string;
-} & BackendConfigType | null;
+} & BackendConfigType;
 
 export const ConfigContext = createContext<ConfigContextType | null>(null);
 

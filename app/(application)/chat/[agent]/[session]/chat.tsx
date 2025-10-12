@@ -34,7 +34,6 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Conversation, ConversationContent } from "@/components/ai-elements/conversation";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { z } from 'zod';
 import { RBACControl } from "@/components/rbac";
 import {
   Collapsible,
@@ -53,7 +52,6 @@ import {
   ContextContent,
   ContextContentHeader,
   ContextContentBody,
-  ContextContentFooter,
   ContextInputUsage,
   ContextOutputUsage,
   ContextReasoningUsage,
@@ -70,6 +68,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageRenderer } from "@/components/message-renderer";
 import { Response } from '@/components/ai-elements/response';
+import AgentVisual from "@/components/lottie";
 
 export interface ChatProps {
   chatId?: string;
@@ -94,7 +93,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
   const configContext = React.useContext(ConfigContext);
   const isMobile = useIsMobile();
   const [files, setFiles] = useState<FileUIPart[] | null>(null);
-  const [items, setItems] = useState<Item[] | null>(null);
+  const [items, setItems] = useState<string[] | null>(null);
   const { user } = useContext(UserContext);
   const [copyingTableId, setCopyingTableId] = useState<string | null>(null);
   const [showSaveWorkflowModal, setShowSaveWorkflowModal] = useState(false);
@@ -372,7 +371,11 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
       setFiles(null)
       return;
     }
-    updateMessageFiles(items)
+    updateMessageFiles(items.map(item => ({
+      s3key: item,
+      name: item,
+      type: "file"
+    })))
   }, [items])
 
   return (
@@ -458,6 +461,8 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                       How can I help you today?
                     </p>
 
+                    <AgentVisual agent={agent} status={status} />
+
                     {/* Workflow Banner for new users */}
                     <Card className="w-full mb-6">
                       <CardHeader className="text-center">
@@ -484,7 +489,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                     </Card>
                   </div>
                 </div> : null}
-                {/* @ts-ignore */}
+              {/* @ts-ignore */}
               <ConversationContent className="px-6">
                 {messages?.length > 0 && (
                   <MessageRenderer
@@ -529,6 +534,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                 <div className="items-center flex relative gap-2 w-full">
                   <UppyDashboard
                     id={`chat-${session.id}`}
+                    selectionLimit={10}
                     allowedFileTypes={[
                       ...agent.capabilities?.audio || [],
                       ...agent.capabilities?.video || [],
@@ -575,8 +581,8 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                   {/* Show  selected files */}
                   {items?.map((item) => (
-                    <FileItem context="files_default_context" item={item} disabled={true} active={false} onRemove={() => {
-                      setItems(items?.filter((i) => i.s3key !== item.s3key))
+                    <FileItem s3Key={item} disabled={true} active={false} onRemove={() => {
+                      setItems(items?.filter((i) => i !== item))
                     }} />
                   ))}
                 </div>
@@ -594,27 +600,21 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
           {/* Agent Details Sidebar */}
           {writeAccess && (
             <div className="w-80 border-l bg-muted/20 p-4 space-y-4">
+              {
+                messages?.length > 0 && (
+                  <div>
+                    <AgentVisual agent={agent} status={status} />
+                  </div>
+                )
+              }
               <div>
-                <div>
-                  {agent.image ? (
-                    <img
-                      src={agent.image}
-                      alt={`${agent.name} agent`}
-                      className="w-[100px] h-[100px] object-cover rounded-full mx-auto my-3"
-                    />
-                  ) : (
-                    <div className="text-3xl font-bold text-primary text-center">
-                      {agent.name?.charAt(0).toUpperCase() || 'A'}
-                    </div>
-                  )}
-                  <p className="text-sm font-medium text-center">{agent.name}</p>
-                </div>
-                {agent.description && (
-                  <p className="text-xs text-muted-foreground mt-1 text-center">
-                    {agent.description}
-                  </p>
-                )}
+                <p className="text-sm font-medium text-center">{agent.name}</p>
               </div>
+              {agent.description && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {agent.description}
+                </p>
+              )}
               <hr className="my-2" />
               <div className="mt-1">
                 <div className="border rounded">
@@ -631,7 +631,6 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                       <p className="text-sm font-medium">Session created by</p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <p className="text-sm font-medium capitalize">{creatorQuery.data.userById.name}</p>
-                        <img src={creatorQuery.data.userById.image} alt={creatorQuery.data.userById.name} className="w-4 h-4 rounded-full" />
                       </div>
                     </div>
                   )}
@@ -730,7 +729,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
 }
 
 
-const UntypedToolPart = ({ untypedToolPart, callId, addToContext }: { untypedToolPart: DynamicToolUIPart, callId: string, addToContext: (item: Item) => void }) => {
+const UntypedToolPart = ({ untypedToolPart, callId, addToContext }: { untypedToolPart: DynamicToolUIPart, callId: string, addToContext: (item: string) => void }) => {
 
   const output = untypedToolPart.output as any;
   console.log("output", output)
@@ -748,7 +747,7 @@ const UntypedToolPart = ({ untypedToolPart, callId, addToContext }: { untypedToo
         output?.items?.length ? <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 px-4 pb-4">
           {output.items.map((item) => <FileItem addToContext={(item) => {
             addToContext(item)
-          }} context="outputs_default_context" item={item} disabled={true} active={false} />)}
+          }} s3Key={item} disabled={true} active={false} />)}
         </div> :
           <ToolOutput
             output={

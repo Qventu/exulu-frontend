@@ -80,7 +80,7 @@ export function TestCaseModal({
   // Conversation inputs (UIMessage array)
   const [inputs, setInputs] = useState<UIMessage[]>([]);
   const [currentInput, setCurrentInput] = useState("");
-  const [currentFiles, setCurrentFiles] = useState<Item[] | null>(null);
+  const [currentFiles, setCurrentFiles] = useState<string[] | null>(null);
   const [currentFileParts, setCurrentFileParts] = useState<FileUIPart[]>([]);
 
   // Optional expected fields
@@ -121,9 +121,9 @@ export function TestCaseModal({
   }, [testCase, open]);
 
   // Convert items to FileUIPart when files are selected
-  const updateMessageFiles = async (items: Item[]) => {
-    const files = await Promise.all(items.map(async (item) => {
-      if (!item.s3key) {
+  const updateMessageFiles = async (keys: string[]) => {
+    const files = await Promise.all(keys.map(async (key) => {
+      /* if (!item.s3key) {
         // Take all item fields and turn into a data url
         let content = "";
         Object.entries(item).forEach(([key, value]) => {
@@ -135,13 +135,13 @@ export function TestCaseModal({
           filename: item.name,
           url: `data:text/plain;base64,${btoa(content)}`
         }
-      }
+      } */
 
       return {
         type: "file" as const,
-        mediaType: item.type,
-        filename: item.name,
-        url: await getPresignedUrl(item.s3key)
+        mediaType: key.split(".").pop() || "",
+        filename: key,
+        url: await getPresignedUrl(key)
       }
     }))
     setCurrentFileParts(files)
@@ -420,6 +420,7 @@ export function TestCaseModal({
                         <div className="flex items-center gap-2">
                           <UppyDashboard
                             id="test-case-files"
+                            selectionLimit={10}
                             allowedFileTypes={[
                               '.png', '.jpg', '.jpeg', '.gif', '.webp',
                               '.pdf', '.docx', '.xlsx', '.xls', '.csv', '.pptx', '.ppt',
@@ -446,13 +447,11 @@ export function TestCaseModal({
                           <div className="grid grid-cols-3 gap-2">
                             {currentFiles.map((item) => (
                               <FileItem
-                                key={item.s3key}
-                                context="files_default_context"
-                                item={item}
+                                s3Key={item}
                                 disabled={true}
                                 active={false}
                                 onRemove={() => {
-                                  setCurrentFiles(currentFiles?.filter((i) => i.s3key !== item.s3key))
+                                  setCurrentFiles(currentFiles?.filter((i) => i !== item))
                                 }}
                               />
                             ))}

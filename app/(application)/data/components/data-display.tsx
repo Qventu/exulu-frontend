@@ -7,6 +7,7 @@ import {
   ChevronsUpDown,
   Edit,
   Expand,
+  MessageCirclePlus,
   MoreVertical,
   PackageOpen,
   SaveIcon,
@@ -79,7 +80,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { Item } from "@EXULU_SHARED/models/item";
 import { Context } from "@/types/models/context";
-import { DELETE_CHUNKS, DELETE_ITEM, GENERATE_CHUNKS, GET_ITEM_BY_ID, UPDATE_ITEM } from "@/queries/queries";
+import { DELETE_CHUNKS, DELETE_ITEM, GENERATE_CHUNKS, GET_ITEM_BY_ID, PROCESS_ITEM_FIELD, UPDATE_ITEM } from "@/queries/queries";
 import { RBACControl } from "@/components/rbac";
 import {
   Collapsible,
@@ -91,6 +92,7 @@ import {
   CardContent,
   CardHeader,
 } from "@/components/ui/card";
+import UppyDashboard, { FileDataCard } from "@/components/uppy-dashboard";
 
 interface DataDisplayProps {
   actions: boolean;
@@ -115,6 +117,7 @@ export function DataDisplay(props: DataDisplayProps) {
   const fields = props.context.fields.map(field => field.name);
 
   console.log("fields", fields);
+  console.log("context", context);
 
   const { loading, error, refetch } = useQuery<{
     item: Item;
@@ -236,6 +239,26 @@ export function DataDisplay(props: DataDisplayProps) {
     },
   });
 
+  const [processFieldMutation, processFieldMutationResult] = useMutation<{
+    [key: string]: {
+      job: string;
+      result: string;
+    }
+  }>(PROCESS_ITEM_FIELD(props.context.id), {
+    onCompleted: () => {
+      toast({
+        title: "Field processed",
+        description: "Field processed successfully.",
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: "Error processing field",
+        description: error.message,
+      })
+    }
+  });
+
   const itemFormSchema = z.object({
     name: z.string().nullable().optional(),
     tags: z.string().nullable().optional(),
@@ -284,7 +307,7 @@ export function DataDisplay(props: DataDisplayProps) {
   };
 
   const [editing, setEditing] = useState(false);
-  const [expandedField, setExpandedField] = useState<{ name: string, value: string } | null>(null);
+  const [expandedField, setExpandedField] = useState<{ name: string, value: string, disabled: boolean } | null>(null);
   const [confirmationModal, setConfirmationModal] = useState<"generate" | "delete" | null>(null);
 
   useEffect(() => {
@@ -700,7 +723,8 @@ export function DataDisplay(props: DataDisplayProps) {
                                                   className="absolute top-2 right-2 h-6 w-6 p-0"
                                                   onClick={() => setExpandedField({
                                                     name: "description",
-                                                    value: data.description ?? ""
+                                                    value: data.description ?? "",
+                                                    disabled: false
                                                   })}
                                                 >
                                                   <Expand className="h-3 w-3" />
@@ -801,8 +825,41 @@ export function DataDisplay(props: DataDisplayProps) {
                               ) => {
                                 return (
                                   <TableRow key={index}>
-                                    <TableCell className="font-medium capitalize">
+                                    <TableCell className="font-medium capitalize flex flex-col">
                                       {contextField.label}
+                                      {
+                                        contextField.calculated && (
+                                          <span className="text-sm text-muted-foreground">Calculated</span>
+                                        )
+                                      }
+                                      {
+                                        contextField.processor && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button variant="secondary" size="sm" className="w-auto mt-2" onClick={() => {
+                                                processFieldMutation({
+                                                  variables: {
+                                                    item: data?.id,
+                                                    field: contextField.name
+                                                  }
+                                                });
+                                              }} disabled={processFieldMutationResult.loading}>
+                                                {
+                                                  processFieldMutationResult.loading ? (
+                                                    <Loading />
+                                                  ) : (
+                                                    <MessageCirclePlus className="size-4" />
+                                                  )
+                                                }
+                                                <span className="ml-2">Process</span>
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent className="max-w-xs">
+                                              {contextField.processor.description}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        )
+                                      }
                                     </TableCell>
                                     {!editing ? (
                                       <TableCell>
@@ -828,8 +885,7 @@ export function DataDisplay(props: DataDisplayProps) {
                                                   toast({
                                                     title: "Copied to clipboard",
                                                   });
-                                                }}
-                                              >
+                                                }}>
                                                 {data[contextField.name]}
                                               </p>
                                             )}
@@ -838,6 +894,11 @@ export function DataDisplay(props: DataDisplayProps) {
                                                 text={data[contextField.name]}
                                               />
                                             )}
+
+                                            {contextField.type === "file" && (
+                                              <FileDataCard s3key={data[contextField.name]} />
+                                            )}
+
                                             {contextField.type === "markdown" && (
                                               <TextPreview
                                                 text={data[contextField.name]}
@@ -929,6 +990,7 @@ export function DataDisplay(props: DataDisplayProps) {
                                                             className="absolute top-2 right-2 h-6 w-6 p-0"
                                                             onClick={() => setExpandedField({
                                                               name: contextField.name,
+                                                              disabled: false,
                                                               value: data[contextField.name] ?? ""
                                                             })}
                                                           >
@@ -1020,6 +1082,27 @@ export function DataDisplay(props: DataDisplayProps) {
                                               )}
                                             />
                                           ) : null}
+
+                                          {contextField.type === "file" && (
+                                            <div>
+                                              <FileDataCard s3key={data[contextField.name]}>
+                                                <UppyDashboard
+                                                  id={`item-${data.id}`}
+                                                  buttonText="Select File"
+                                                  allowedFileTypes={contextField.allowedFileTypes}
+                                                  dependencies={[]}
+                                                  selectionLimit={1}
+                                                  onConfirm={(keys) => {
+                                                    console.log("keys", keys)
+                                                    setData({
+                                                      ...data,
+                                                      [contextField.name]: keys[0],
+                                                    });
+                                                  }}
+                                                />
+                                              </FileDataCard>
+                                            </div>
+                                          )}
                                         </TableCell>
                                       </>
                                     )}
@@ -1121,7 +1204,7 @@ export function DataDisplay(props: DataDisplayProps) {
                           data?.chunks?.length && data.chunks.map((chunk) => (
                             <TableRow key={chunk.id}>
                               <TableCell className="font-medium capitalize">
-                                {chunk.index + 1}
+                                {chunk.chunk_index + 1}
                               </TableCell>
                               <TableCell>
                                 <TextPreview text={chunk.content} />
@@ -1130,10 +1213,10 @@ export function DataDisplay(props: DataDisplayProps) {
                                 {chunk.embedding_size || 0}
                               </TableCell>
                               <TableCell>
-                                {new Date(chunk.createdAt).toLocaleString()}
+                                {new Date(chunk.chunk_created_at).toLocaleString()}
                               </TableCell>
                               <TableCell>
-                                {new Date(chunk.updatedAt).toLocaleString()}
+                                {new Date(chunk.chunk_updated_at).toLocaleString()}
                               </TableCell>
                             </TableRow>
                           ))

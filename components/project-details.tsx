@@ -30,7 +30,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Item } from "@/types/models/item";
-import { FileItem, ItemsSelectionModal } from "./uppy-dashboard";
+import { FileItem } from "./uppy-dashboard";
+import { ItemsSelectionModal } from "./items-selection-modal";
 import { files } from "@/util/api";
 
 interface ProjectDetailsProps {
@@ -202,7 +203,6 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
           const context = item.split("/")[0];
           const id = item.split("/")[1];
           if (!context || !id) return;
-
           const { data } = await apolloClient.mutate({
             mutation: DELETE_ITEM(context, context === "files_default_context" ? ["s3key"] : []),
             variables: { id },
@@ -836,7 +836,16 @@ function ProjectItem({ gid, onRemove }: { gid: string, onRemove: (gid: string) =
   if (loading) return null;
   const item = data?.[context + "_itemsById"];
   if (!item) return null;
-  return <FileItem context={context} item={item} onRemove={() => {
-    onRemove(gid)
-  }} active={false} disabled={false} />
+  const fields = Object.values(item || {})
+  const files = fields.filter(x => x === "_s3key");
+
+  if (!files.length) return null;
+
+  return <>
+    {files.map(file => (
+      <FileItem s3Key={file} onRemove={() => {
+        onRemove(gid)
+      }} active={false} disabled={false} />
+    ))}
+  </>
 }

@@ -130,6 +130,7 @@ export default function EvalRunsPage() {
           ) : (
             <EvalRunsTable
               evalRuns={evalRuns}
+              evalSet={evalSet}
               canWrite={canWrite}
               onRefetch={refetch}
             />

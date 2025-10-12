@@ -83,7 +83,7 @@ export function EvalRunsTable({ evalRuns, evalSet, canWrite, onRefetch }: EvalRu
   const hasMoreRuns = sortedEvalRuns.length > visibleRuns;
 
   const getCellData = (testCaseId: string, evalRunId: string): JobResult | null => {
-    return jobResults?.find(r => r.testCaseId === testCaseId && r.evalRunId === evalRunId) || null;
+    return null; // todo
   };
 
   const getCellColor = (result: JobResult | null, run: EvalRun): string => {
@@ -249,11 +249,11 @@ export function EvalRunsTable({ evalRuns, evalSet, canWrite, onRefetch }: EvalRu
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
 
-      {loadingResults && (
+      {/* {loadingResults && (
         <div className="text-center text-sm text-muted-foreground">
           Loading results...
         </div>
-      )}
+      )} */}
     </div>
   );
 }

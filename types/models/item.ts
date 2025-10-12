@@ -11,12 +11,12 @@ export interface Item {
     textlength?: number;
     chunks?: {
         id: string;
-        index: number;
+        chunk_index: number;
         content: string;
         source: string;
         embedding_size: number;
-        createdAt: string;
-        updatedAt: string;
+        chunk_created_at: string;
+        chunk_updated_at: string;
     }[];
     rights_mode?: 'private' | 'users' | 'roles' | 'public' | 'projects';
     RBAC?: {

@@ -445,7 +445,6 @@ export function DataList({
                             {table.getFilteredRowModel().rows.length} row(s) selected (total{" "}
                             {data?.pageInfo.itemCount} items).
                         </div>
-                        {/*todo pagination*/}
                         <div className="flex items-center space-x-6 lg:space-x-8">
                             <div className="flex items-center space-x-2">
                                 <Button

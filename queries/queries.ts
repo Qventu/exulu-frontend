@@ -218,6 +218,18 @@ export const GET_ITEMS = (context: string, fields: string[]) => {
   `;
 };
 
+export const PROCESS_ITEM_FIELD = (context: string) => {
+  return gql`
+    mutation ProcessItemField${context}($item: ID!, $field: ${context}_itemsProcessorFieldEnum!) {
+      ${context}_itemsProcessItemField(item: $item, field: $field) {
+        message
+        result
+        job
+      }
+    }
+  `;
+};
+
 export const GET_ITEM_BY_ID = (context: string, fields: string[], chunks: boolean = false) => {
   return gql`
     query ${context}ById($id: ID!) {
@@ -1203,7 +1215,7 @@ export const GET_AGENT_RUN_STATISTICS = gql`
 export const GET_TOKEN_USAGE_STATISTICS = gql`  
   query AgentCallsStatistics($from: Date!, $to: Date!) {
     trackingStatistics(filters: {
-      name: { eq: "tokens" }
+      name: { in: ["inputTokens", "outputTokens"] }
       createdAt: { and: [{ gte: $from }, { lte: $to }] }
     }) {
       group

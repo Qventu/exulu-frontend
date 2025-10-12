@@ -83,7 +83,84 @@ export const agents = {
     }
 }
 
+export type S3FileListOutput = {
+    "$metadata": {
+        "httpStatusCode": number,
+        "attempts": number,
+        "totalRetryDelay": number
+    },
+    "Contents": {
+        "Key": string,
+        "LastModified": string,
+        "ETag": string,
+        "Size": number
+    }[]
+    "IsTruncated": boolean,
+    "NextContinuationToken": string,
+    "KeyCount": number,
+    "MaxKeys": number,
+    "Name": string,
+    "Prefix": string
+}
+
+export type S3ObjectOutput = {
+    "$metadata": {
+        "httpStatusCode": number,
+        "attempts": number,
+        "totalRetryDelay": number
+    },
+    "AcceptRanges": "bytes",
+    "LastModified": string,
+    "ContentLength": number,
+    "ChecksumCRC32C": string,
+    "ETag": string,
+    "CacheControl": string,
+    "ContentType": string,
+    "Expires": string,
+    "ExpiresString": string
+}
+
 export const files = {
+    object: async (key: string): Promise<S3ObjectOutput> => {
+        const uris = await getUris();
+        let url = `${uris.files}/s3/object`;
+        const token = await getToken()
+        const response = await fetch(url, {
+            method: "POST",
+            body: JSON.stringify({ key }),
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        return response.json();
+    },
+    list: async ({search, continuationToken}: {search?: string, continuationToken?: string}): Promise<S3FileListOutput> => {
+        const uris = await getUris();
+        let url = `${uris.files}/s3/list`;
+        const token = await getToken()
+
+        if (!token) {
+            throw new Error("No valid session token available.")
+        }
+
+        if (search) {
+            url += `?search=${search}`;
+        }
+        
+        if (continuationToken) {
+            url += `?continuationToken=${continuationToken}`;
+        }
+
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        return response.json();
+    },
     download: async (key: string) => {
 
         const uris = await getUris();
@@ -104,7 +181,7 @@ export const files = {
         });
     },
     delete: async (key: string) => {
-        
+
         const uris = await getUris();
         let url = `${uris.files}/s3/delete?key=${key}`;
         const token = await getToken()
