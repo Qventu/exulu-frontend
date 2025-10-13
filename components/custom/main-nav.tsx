@@ -189,7 +189,7 @@ export function MainNavSidebar({ sidebarDefaultOpen }: { sidebarDefaultOpen: boo
       <div className="flex items-center gap-3 border-b bg-background/80 backdrop-blur-sm p-[12px] sticky top-0 z-10">
         <SidebarTrigger />
         <div className="flex items-center gap-2">
-          <Image src={configContext?.backend + "/logo.png"} height={40} width={100} alt="Logo" />
+          <img src={configContext?.backend + "/logo.png"} height={40} width={100} alt="Logo" />
         </div>
       </div>
       <SidebarContent className="px-2">

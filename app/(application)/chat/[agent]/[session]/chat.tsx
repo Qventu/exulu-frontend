@@ -450,7 +450,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
               {messages?.length === 0 ?
                 <div className="size-full flex justify-center items-center">
                   <div className="flex flex-col gap-4 items-center max-w-2xl w-full px-4 my-auto">
-                    <Image
+                    <img
                       src={configContext?.backend + "/logo.png"}
                       alt="AI"
                       width={120}

@@ -223,7 +223,7 @@ export default function Login() {
         </div>
       </div>
       <div className="hidden bg-muted lg:block">
-        <Image
+        <img
           src={configContext?.backend + "/cover.jpg"}
           alt="Image"
           width="1920"

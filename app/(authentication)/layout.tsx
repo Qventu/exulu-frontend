@@ -42,13 +42,12 @@ export default async function RootLayout({
               </main>
               <Toaster />
               <footer className="flex items-center h-20 gap-1 px-8 font-medium border-t md:px-20">
-                <Image
+                <img
                   src={config.backend + "/logo.png"}
                   alt="Logo"
-                  className="invert dark:invert-0"
+                  className="dark:invert-0"
                   width={64}
                   height={32}
-                  priority
                 />
                 <span className="text-sm ml-2">© 2025</span>
                 <nav className="flex justify-end grow sm:gap-2">
