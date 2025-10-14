@@ -1,4 +1,5 @@
 import "../globals.css";
+import Script from "next/script";
 import { fontVariables } from "@/lib/fonts";
 import * as React from "react";
 import { cn } from "@/lib/utils";
@@ -12,6 +13,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 import { ConfigContextProvider } from "@/components/config-context";
 import { config as api, BackendConfigType } from "@/util/api";
+import { config as apiConfig } from "@/util/api";
 
 export default async function RootLayout({
     children,
@@ -20,7 +22,7 @@ export default async function RootLayout({
 }) {
     const cookieStore = await cookies()
     const defaultOpen = cookieStore.get("sidebar_state")?.value === "true"
-  
+
     const headersList = headers();
     const pathname = headersList.get('x-next-pathname') || '/';
 
@@ -38,8 +40,28 @@ export default async function RootLayout({
         ...json
     }
 
+    const themeConfig = await apiConfig.theme();
+
     return (
         <html lang="en" suppressHydrationWarning>
+            <head>
+                <style
+                    dangerouslySetInnerHTML={{
+                        __html: `
+        :root {
+          ${Object.entries(themeConfig.light || {})
+                                .map(([k, v]) => `${k}: ${v};`)
+                                .join("\n")}
+        }
+        .dark {
+          ${Object.entries(themeConfig.dark || {})
+                                .map(([k, v]) => `${k}: ${v};`)
+                                .join("\n")}
+        }
+      `,
+                    }}
+                />
+            </head>
             <body
                 className={cn(
                     `min-h-screen flex flex-col bg-background font-sans antialiased h-[100vh]`,

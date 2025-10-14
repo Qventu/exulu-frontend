@@ -67,6 +67,7 @@ tools
 providerName
 modelName
 maxContextLength
+provider
 slug
 category
 rateLimit {
@@ -788,6 +789,7 @@ export const GET_PROVIDERS = gql`
         id
         name
         description
+        provider
         modelName
         providerName
       }
@@ -1590,6 +1592,77 @@ export const UPDATE_EVAL_RUN = gql`
 export const DELETE_EVAL_RUN = gql`
   mutation DeleteEvalRun($id: ID!) {
     eval_runsRemoveOneById(id: $id) {
+      id
+    }
+  }
+`;
+
+const PLATFORM_CONFIGURATION_FIELDS = `
+  id
+  config_key
+  config_value
+  description
+  createdAt
+  updatedAt
+`;
+
+export const GET_PLATFORM_CONFIGURATIONS = gql`
+  query GetPlatformConfigurations {
+    platform_configurationsPagination {
+      pageInfo {
+        pageCount
+        itemCount
+        currentPage
+        hasPreviousPage
+        hasNextPage
+      }
+      items {
+        ${PLATFORM_CONFIGURATION_FIELDS}
+      }
+    }
+  }
+`;
+
+export const GET_PLATFORM_CONFIGURATION_BY_KEY = gql`
+  query GetPlatformConfigurationByKey($config_key: FilterOperatorString!) {
+    platform_configurationsPagination(page: 1, limit: 1, filters: { config_key: $config_key }) {
+      pageInfo {
+        pageCount
+        itemCount
+        currentPage
+        hasPreviousPage
+        hasNextPage
+      }
+      items {
+        ${PLATFORM_CONFIGURATION_FIELDS}
+      }
+    }
+  }
+`;
+
+export const CREATE_PLATFORM_CONFIGURATION = gql`
+  mutation CreatePlatformConfiguration($data: platform_configurationInput!) {
+    platform_configurationsCreateOne(input: $data) {
+      item {
+        ${PLATFORM_CONFIGURATION_FIELDS}
+      }
+    }
+  }
+`;
+
+export const UPDATE_PLATFORM_CONFIGURATION = gql`
+  mutation UpdatePlatformConfiguration($id: ID!, $data: platform_configurationInput!) {
+    platform_configurationsUpdateOneById(id: $id, input: $data) {
+      item {
+        ${PLATFORM_CONFIGURATION_FIELDS}
+      }
+    }
+  }
+`;
+
+export const DELETE_PLATFORM_CONFIGURATION = gql`
+  mutation DeletePlatformConfiguration($id: ID!) {
+    platform_configurationsRemoveOneById(id: $id) {
       id
     }
   }

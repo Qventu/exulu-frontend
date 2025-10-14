@@ -276,7 +276,8 @@ export function CreateNewAgent({ createAgent, createAgentResult, company, childr
               }
             }}
             type="submit">
-            {(generatedImages.length > 0 || !generateImage) ? 'Create Agent' : (imageGenerating ? 'Generating...' : 'Generate Images')} {(createAgentResult.loading || imageGenerating) && <Loading className="ml-2" />}{" "}
+            {(generatedImages.length > 0 || !generateImage) ? 'Create Agent' : (imageGenerating ? 'Generating...' : 'Generate Images')} 
+            {(createAgentResult.loading || imageGenerating) && <Loading className="ml-2" />}
           </Button>
         </DialogFooter>
       </DialogContent>

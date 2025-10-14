@@ -16,7 +16,7 @@
 # next.js
 /.next/
 /out/
-.claude
+.claude/settings.json
 
 # production
 /build

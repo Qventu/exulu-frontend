@@ -21,6 +21,10 @@ const AgentVisual = ({ agent, status }: { agent: Agent, status: 'submitted' | 's
     </div>
   }
 
+  return <div className="text-3xl font-bold text-primary text-center">
+    {agent.name?.charAt(0).toUpperCase() || 'A'}
+  </div>
+
   return <LottieVisual agent={agent} status={status} />
 
 };

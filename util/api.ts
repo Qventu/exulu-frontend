@@ -42,6 +42,11 @@ export type BackendConfigType = {
     }
 }
 
+export type ThemeConfig = {
+    light?: Record<string, string>;
+    dark?: Record<string, string>;
+}
+
 export const config = {
     backend: async (): Promise<Response> => {
         const uris = await getUris();
@@ -52,6 +57,24 @@ export const config = {
                 "Content-Type": "application/json",
             },
         })
+    },
+    theme: async (): Promise<ThemeConfig> => {
+        try {
+            const token = await getToken();
+            const uris = await getUris();
+            const res = await fetch(`${uris.base}/theme`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                },
+            })
+            const json = await res.json();
+            return json.theme;
+        } catch (error) {
+            console.error("Error fetching theme config:", error);
+            return { light: {}, dark: {} };
+        }
     }
 }
 
@@ -135,7 +158,7 @@ export const files = {
         });
         return response.json();
     },
-    list: async ({search, continuationToken}: {search?: string, continuationToken?: string}): Promise<S3FileListOutput> => {
+    list: async ({ search, continuationToken }: { search?: string, continuationToken?: string }): Promise<S3FileListOutput> => {
         const uris = await getUris();
         let url = `${uris.files}/s3/list`;
         const token = await getToken()
@@ -147,7 +170,7 @@ export const files = {
         if (search) {
             url += `?search=${search}`;
         }
-        
+
         if (continuationToken) {
             url += `?continuationToken=${continuationToken}`;
         }

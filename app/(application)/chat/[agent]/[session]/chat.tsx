@@ -387,7 +387,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
             {/* @ts-ignore */}
             <Conversation className="overflow-y-hidden">
               {/* Save as Workflow button - appears when conversation has content */}
-              {canCreateWorkflow && (
+              {canCreateWorkflow ? (
                 <div className="flex justify-between absolute top-0 left-0 right-0 items-center px-4 py-2 border-b z-10 dark:bg-black bg-white">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Workflow className="w-4 h-4" />
@@ -402,10 +402,10 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                     Save as Workflow
                   </Button>
                 </div>
-              )}
+              ) : null}
               {
                 /* Show a bar that fills up depending on the total tokens used */
-                agent.maxContextLength &&
+                agent.maxContextLength ? (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -446,7 +446,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              }
+              ) : null}
               {messages?.length === 0 ?
                 <div className="size-full flex justify-center items-center">
                   <div className="flex flex-col gap-4 items-center max-w-2xl w-full px-4 my-auto">

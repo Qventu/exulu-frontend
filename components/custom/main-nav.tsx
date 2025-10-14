@@ -125,6 +125,14 @@ const buildNavigation = (user: User, role: UserRole) => {
     });
   }
 
+  if (user.super_admin) {
+    navigationItems.push({
+      label: "Configurations",
+      path: "configuration",
+      icon: <Settings />,
+    });
+  }
+
   return navigationItems;
 }
 
@@ -142,20 +150,17 @@ function NavigationItems({ items }: { items: { label: string; path: string; icon
               isActive={isActive}
               tooltip={navItem.label}
               className={cn(
-                "h-10 transition-all duration-200",
-                isActive && "bg-gradient-to-r from-purple-500/10 to-purple-500/10"
+                "h-10 transition-all duration-200"
               )}
             >
               <Link href={`/${navItem.path}`} className="flex items-center gap-3">
                 <div className={cn(
                   "flex h-5 w-5 items-center justify-center transition-colors",
-                  isActive && "text-purple-500"
                 )}>
                   {navItem.icon}
                 </div>
                 <span className={cn(
                   "font-medium transition-colors",
-                  isActive && "text-purple-500"
                 )}>
                   {navItem.label}
                 </span>
@@ -206,7 +211,7 @@ export function MainNavSidebar({ sidebarDefaultOpen }: { sidebarDefaultOpen: boo
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton className="h-12 hover:bg-accent/50">
                   <Avatar className="h-5 w-5">
-                    <AvatarFallback className="bg-gradient-to-br from-purple-200 to-purple-600 text-white text-sm">
+                    <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/60 text-white text-sm">
                       {user.email.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
