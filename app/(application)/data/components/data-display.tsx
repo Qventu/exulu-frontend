@@ -796,13 +796,14 @@ export function DataDisplay(props: DataDisplayProps) {
                                             type="text"
                                             disabled={!editing}
                                             onChange={(e) => {
+                                              console.log("e", e)
                                               setData({
                                                 ...data,
                                                 external_id: e.target.value,
                                               });
                                             }}
                                             placeholder="xxxx-xxxx-xxxx-xxxx"
-                                            value={data.externalId ?? ""}
+                                            value={data.external_id ?? ""}
                                           />
                                         </FormControl>
 
@@ -1181,7 +1182,9 @@ export function DataDisplay(props: DataDisplayProps) {
                   </div>
                   <Table>
                     <TableCaption>
-                      A list of all embeddings for this item.
+                      {
+                        data?.chunks?.length ? "A list of all embeddings for this item." : "No embeddings found."
+                      }
                     </TableCaption>
                     <TableHeader>
                       <TableRow>
@@ -1194,13 +1197,7 @@ export function DataDisplay(props: DataDisplayProps) {
                     </TableHeader>
                     <TableBody>
                       {
-                        !data?.chunks?.length ? (
-                          <TableRow>
-                            <TableCell colSpan={5}>
-                              No chunks found.
-                            </TableCell>
-                          </TableRow>
-                        ) : (
+                        data?.chunks?.length ? (
                           data?.chunks?.length && data.chunks.map((chunk) => (
                             <TableRow key={chunk.id}>
                               <TableCell className="font-medium capitalize">
@@ -1220,7 +1217,7 @@ export function DataDisplay(props: DataDisplayProps) {
                               </TableCell>
                             </TableRow>
                           ))
-                        )
+                        ) : null
                       }
                     </TableBody>
                   </Table>

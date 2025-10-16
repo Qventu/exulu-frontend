@@ -6,6 +6,10 @@ export type User = {
   super_admin?: boolean;
   favourite_agents?: string[];
   favourite_projects?: string[];
+  role: string;
+};
+
+export type UserWithRole = User & {
   role: {
     id: string;
     name: string;
@@ -14,5 +18,5 @@ export type User = {
     evals: "read" | "write";
     variables: "read" | "write";
     users: "read" | "write";
-  };
+  }
 };

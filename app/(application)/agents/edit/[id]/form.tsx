@@ -214,7 +214,6 @@ export default function AgentForm({
 }) {
 
   const router = useRouter();
-  const [errors, setErrors] = useState<string>();
   const { user } = useContext(UserContext);
   const [enabledTools, setEnabledTools] = useState<{ id: string, config: { name: string, variable: string }[] }[]>(
     // Convert legacy string[] format to new object format
@@ -348,7 +347,6 @@ export default function AgentForm({
                 },
                 (data) => {
                   console.error("form data invalid", data);
-                  setErrors(JSON.stringify(data));
                 },
               )}
               disabled={updateAgentResult.loading}
@@ -374,8 +372,8 @@ export default function AgentForm({
       </div>
       <Separator />
       <Tabs defaultValue="complete" className="flex-1">
-        <div className="container h-full py-6">
-          <div className="grid h-full items-stretch gap-6">
+        <div className="container py-6">
+          <div className="grid items-stretch gap-6">
             <div className="md:order-1">
               <div className="flex flex-col space-y-4">
                 <div className="h-full">
@@ -412,15 +410,6 @@ export default function AgentForm({
                                       </button>
                                     </div>
                                   </div>
-                                  {errors ? (
-                                    <Alert variant="destructive">
-                                      <ExclamationTriangleIcon className="size-4" />
-                                      <AlertTitle>Error</AlertTitle>
-                                      <AlertDescription>
-                                        {errors}
-                                      </AlertDescription>
-                                    </Alert>
-                                  ) : null}
                                 </CardHeader>
                                 <CardContent className="grid gap-4">
                                   <FormField
@@ -450,7 +439,7 @@ export default function AgentForm({
                                       }
                                       return (
                                         <FormItem>
-                                          <FormLabel>Description</FormLabel>
+                                          <FormLabel>Category</FormLabel>
                                           <FormControl>
                                             <Select onValueChange={(value) => {
                                               field.onChange(value);
@@ -577,7 +566,7 @@ export default function AgentForm({
                                     </p>
                                     <TooltipProvider>
                                       <div className="flex items-center gap-3 mt-2">
-                                        <div className={`p-2 rounded-md ${agent.capabilities?.text ? 'bg-green-500 text-primary-foreground' : 'bg-gray-500 text-white'}`}>
+                                        <div className={`p-2 rounded-md ${agent.capabilities?.text ? 'bg-primary text-primary-foreground' : 'bg-gray-500 text-white'}`}>
                                           <Text className="h-4 w-4" />
                                         </div>
 
@@ -876,21 +865,19 @@ export default function AgentForm({
                                               <div className="flex-1">
                                                 <div className="flex items-center gap-2">
                                                   <div className="font-medium">{tool?.name}</div>
-                                                  {requiredConfigCount > 0 && (
-                                                    <div className="flex items-center gap-1">
-                                                      {
-                                                        isEnabled && <>
-                                                          <Badge variant="secondary" className="text-xs">
-                                                            {filledConfigCount}/{requiredConfigCount}
-                                                          </Badge>
-                                                          {hasEmptyConfigs && (
-                                                            <AlertCircle className="h-4 w-4 text-destructive" />
-                                                          )}
-                                                        </>
-                                                      }
-                                                      <Badge variant={"outline"}>{tool?.type}</Badge>
-                                                    </div>
-                                                  )}
+                                                  <div className="flex items-center gap-1">
+                                                    {
+                                                      requiredConfigCount > 0 && isEnabled && <>
+                                                        <Badge variant="secondary" className="text-xs">
+                                                          {filledConfigCount}/{requiredConfigCount}
+                                                        </Badge>
+                                                        {hasEmptyConfigs && (
+                                                          <AlertCircle className="h-4 w-4 text-destructive" />
+                                                        )}
+                                                      </>
+                                                    }
+                                                    <Badge variant={"outline"}>{tool?.type}</Badge>
+                                                  </div>
                                                 </div>
                                               </div>
                                               <Sheet open={sheetOpen === tool.id} onOpenChange={() => {
@@ -900,11 +887,16 @@ export default function AgentForm({
                                                   setSheetOpen(tool.id);
                                                 }
                                               }}>
-                                                <SheetTrigger asChild>
-                                                  <Button variant="ghost" size="sm">
+                                                {
+                                                  (requiredConfigCount > 0 && !isEnabled) ? <SheetTrigger asChild>
+                                                    <Button variant="ghost" size="sm">
+                                                      <Settings className="h-4 w-4" />
+                                                    </Button>
+                                                  </SheetTrigger> : <Button type="button" disabled={true} variant="ghost" size="sm">
                                                     <Settings className="h-4 w-4" />
                                                   </Button>
-                                                </SheetTrigger>
+                                                }
+
                                                 <SheetTrigger asChild>
                                                   <Button className="mr-2" variant="ghost" size="sm">
                                                     <Info className="h-4 w-4" />

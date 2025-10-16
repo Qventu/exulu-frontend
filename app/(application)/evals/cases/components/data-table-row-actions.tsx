@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DELETE_TEST_CASE } from "@/queries/queries";
 import { useToast } from "@/components/ui/use-toast";
-import { User } from "@EXULU_SHARED/models/user";
+import { User, UserWithRole } from "@EXULU_SHARED/models/user";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +30,7 @@ import { useState } from "react";
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
-  user: User;
+  user: UserWithRole;
 }
 
 export function DataTableRowActions<TData>({

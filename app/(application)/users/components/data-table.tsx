@@ -101,6 +101,10 @@ export function DataTable<TData, TValue>({
     variables: {
       page: page,
       limit: 10,
+      sort: {
+        field: "createdAt",
+        direction: "DESC",
+      },
       filters: [
         ...filters,
         {

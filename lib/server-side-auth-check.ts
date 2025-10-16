@@ -1,8 +1,8 @@
 import { getServerSession } from "next-auth";
 import { getAuthOptions, pool } from "@/app/api/auth/[...nextauth]/options";
-import { User } from "@/types/models/user";
+import { User, UserWithRole } from "@/types/models/user";
 
-export const serverSideAuthCheck = async (): Promise<User | false> => {
+export const serverSideAuthCheck = async (): Promise<UserWithRole | false> => {
     const authOptions = await getAuthOptions()
     const session: any = await getServerSession(authOptions);
     if (!session?.user) return false;

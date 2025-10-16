@@ -260,7 +260,7 @@ export function MainNavProvider({ children, sidebarDefaultOpen }: { children: Re
   console.log("sidebarDefaultOpen", sidebarDefaultOpen)
   return (
     <SidebarProvider defaultOpen={sidebarDefaultOpen}>
-      <div className="flex h-screen w-full bg-background">
+      <div className="flex h-screen w-full bg-background overflow-hidden">
         <MainNavSidebar sidebarDefaultOpen={sidebarDefaultOpen} />
         <main className="flex-1 overflow-auto">
           {children}

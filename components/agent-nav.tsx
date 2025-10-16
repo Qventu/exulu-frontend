@@ -44,6 +44,9 @@ export function AgentNav() {
       page: 1,
       limit: 200,
       filters: {
+        ...(user?.super_admin ? {} : {
+          active: true
+        }),
         ...(searchQuery ? {
           name: {
             contains: searchQuery

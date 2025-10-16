@@ -76,6 +76,9 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
       await createUser({
         variables: {
           email: email.trim(),
+          password: generatedPassword,
+          type: "user",
+          emailVerified: new Date(),
         },
       });
       

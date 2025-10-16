@@ -14,6 +14,7 @@ import {
   CREATE_AGENT_SESSION,
   GET_AGENT_SESSIONS,
   REMOVE_AGENT_SESSION_BY_ID,
+  UPDATE_AGENT_SESSION_TITLE,
 } from "@/queries/queries";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,8 +23,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Loading } from "@/components/ui/loading";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
@@ -41,6 +49,9 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
   const isMobile = useIsMobile();
   const router = useRouter();
   let [search, setSearch]: any = useState({ searchString: null });
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameSessionId, setRenameSessionId] = useState<string | null>(null);
+  const [newSessionName, setNewSessionName] = useState("");
 
   const sessionsQuery = useQuery(GET_AGENT_SESSIONS, {
     returnPartialData: true,
@@ -69,6 +80,16 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
 
   const [createAgentSession, createAgentSessionResult] = useMutation(
     CREATE_AGENT_SESSION,
+  );
+
+  const [updateSessionTitle, updateSessionTitleResult] = useMutation(
+    UPDATE_AGENT_SESSION_TITLE,
+    {
+      refetchQueries: [
+        GET_AGENT_SESSIONS,
+        "GetAgentSessions",
+      ],
+    },
   );
 
   useEffect(() => {
@@ -110,6 +131,36 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
     router.push(
       `/chat/${agent}/${newSession.data?.agent_sessionsCreateOne?.item?.id}`,
     );
+  }
+
+  const handleRenameSession = async () => {
+    if (!renameSessionId || !newSessionName.trim()) return;
+
+    const result = await updateSessionTitle({
+      variables: {
+        id: renameSessionId,
+        title: newSessionName.trim(),
+      },
+    });
+
+    if (result.errors) {
+      console.error("error", result.errors);
+      toast({
+        title: "Error",
+        description: "Failed to rename session.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Session renamed",
+      description: "The session has been renamed successfully.",
+    });
+
+    setRenameDialogOpen(false);
+    setRenameSessionId(null);
+    setNewSessionName("");
   }
 
   return (
@@ -245,6 +296,17 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
                             className="w-[160px]">
                             <DropdownMenuItem
                               className="cursor-pointer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setRenameSessionId(item.id);
+                                setNewSessionName(item.title || "");
+                                setRenameDialogOpen(true);
+                              }}>
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="cursor-pointer"
                               onClick={() => {
                                 removeSession({
                                   variables: {
@@ -272,6 +334,45 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
           },
         )
         : null}
+
+      <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Session</DialogTitle>
+            <DialogDescription>
+              Enter a new name for this session.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={newSessionName}
+            onChange={(e) => setNewSessionName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleRenameSession();
+              }
+            }}
+            placeholder="Session name"
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRenameDialogOpen(false);
+                setRenameSessionId(null);
+                setNewSessionName("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRenameSession}
+              disabled={updateSessionTitleResult.loading || !newSessionName.trim()}
+            >
+              Rename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

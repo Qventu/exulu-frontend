@@ -51,7 +51,8 @@ const providers: Provider[] = [
         return null;
       }
       const res = await pool.query('SELECT * FROM users WHERE email = $1', [credentials.email])
-      console.log("[NEXT AUTH} authorize res", res)
+      console.log("[NEXT AUTH] authorize res rows count:", res.rows.length)
+      console.log("[NEXT AUTH] Full user object:", JSON.stringify(res.rows[0], null, 2))
       if (!res?.rows?.length) {
         return null;
       }
@@ -149,6 +150,7 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
           email = profile?.email;
         }
 
+        console.log("[EXULU] ALLOWED_EMAIL_DOMAINS", process.env.ALLOWED_EMAIL_DOMAINS)
         if (process.env.ALLOWED_EMAIL_DOMAINS) {
           let allowedDomains = process.env.ALLOWED_EMAIL_DOMAINS.split(",");
           allowedDomains.push("exulu.com")
@@ -193,7 +195,7 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
         } */
 
         const res = await pool.query('SELECT * FROM users WHERE email = $1', [email])
-        console.log("[EXULU] Sign in callback", res)
+        console.log("[EXULU] Sign in callback user query result", res)
 
         if (res.rows.length > 0) {
           await pool.query('UPDATE users SET last_used = $1 WHERE email = $2', [new Date(), email])

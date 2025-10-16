@@ -4,11 +4,11 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "./data-table-column-header";
 import { DataTableRowActions } from "./data-table-row-actions";
 import { EvalSet } from "@/types/models/eval-set";
-import { User } from "@EXULU_SHARED/models/user";
+import { UserWithRole } from "@EXULU_SHARED/models/user";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 
-export const createColumns = (user: User): ColumnDef<EvalSet>[] => [
+export const createColumns = (user: UserWithRole): ColumnDef<EvalSet>[] => [
   {
     accessorKey: "name",
     header: ({ column }) => (

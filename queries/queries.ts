@@ -331,6 +331,19 @@ export const UPDATE_AGENT_SESSION_PROJECT = gql`
   }
 `;
 
+export const UPDATE_AGENT_SESSION_TITLE = gql`
+  mutation UpdateAgentSessionTitle(
+    $id: ID!
+    $title: String
+  ) {
+    agent_sessionsUpdateOneById(id: $id, input: {title: $title}) {
+      item {
+        id
+        title
+      }
+    }
+  }
+`;
 
 export const GET_AGENT_MESSAGES = gql`
   query GetAgentSessionMessages(
@@ -427,8 +440,9 @@ export const GET_USERS = gql`
     $page: Int!
     $limit: Int!
     $filters: [FilterUser]
+    $sort: SortBy
   ) {
-    usersPagination(page: $page, limit: $limit, filters: $filters) {
+    usersPagination(page: $page, limit: $limit, filters: $filters, sort: $sort) {
       pageInfo {
         pageCount
         itemCount
@@ -760,24 +774,40 @@ export const UPDATE_AGENT_BY_ID = gql`
 export const CREATE_USER_ROLE = gql`
   mutation CreateUserRole($name: String!, $agents: String, $workflows: String, $variables: String, $users: String, $api: String) {
     rolesCreateOne(input: { name: $name, agents: $agents, workflows: $workflows, variables: $variables, users: $users, api: $api}) {
-        id
-        createdAt
-        agents
-        api
-        workflows
-        variables
-        users
-        name
+        item {
+          id
+          createdAt
+          agents
+          api
+          workflows
+          variables
+          users
+          name
+        }
     }
   }
 `;
 
 export const CREATE_USER = gql`
-  mutation CreateUser($email: String!, $password: String) {
-    usersCreateOne(input: { email: $email, password: $password }) {
+  mutation CreateUser($email: String!, $password: String, $type: String, $emailVerified: String) {
+    usersCreateOne(input: { email: $email, password: $password, type: $type, emailVerified: $emailVerified }) {
+        item {
+          id
+          createdAt
+          emailVerified
+          type
+          name
+        }
+    }
+  }
+`;
+
+export const RESET_USER_PASSWORD = gql`
+  mutation ResetUserPassword($id: ID!, $password: String!) {
+    usersUpdateOneById(id: $id, input: { password: $password }) {
+      item {
         id
-        createdAt
-        name
+      }
     }
   }
 `;

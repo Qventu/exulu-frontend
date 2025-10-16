@@ -1,7 +1,7 @@
 import { AgentSession } from "@/types/models/agent-session";
-import { User } from "@/types/models/user";
+import { UserWithRole } from "@/types/models/user";
 
-export const checkChatSessionWriteAccess = (session: AgentSession, user: User) => {
+export const checkChatSessionWriteAccess = (session: AgentSession, user: UserWithRole) => {
     const isPrivate = session.rights_mode === 'private';
     const isPublic = session.rights_mode === 'public';
     const byUsers = session.rights_mode === 'users';

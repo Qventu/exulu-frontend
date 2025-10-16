@@ -251,6 +251,7 @@ export const FileGalleryAndUpload = ({ id, allowedFileTypes, dependencies, onCon
     refetch();
   }, [search, currentContinuationToken]);
 
+  // Loading state
   if (!uppy) {
     return null;
   }
@@ -268,15 +269,25 @@ export const FileGalleryAndUpload = ({ id, allowedFileTypes, dependencies, onCon
           onChange={(e) => setSearch(e.target.value)}
           className="mb-3"
         />
-        <div className="flex items-center justify-between text-xs text-muted-foreground pr-3 pb-2">
+        <div className="flex items-center justify-between text-xs text-muted-foreground pb-2">
           <span>{selected.length} / {selectionLimit} files selected</span>
           <span>Allowed file types: {allowedFileTypes?.map((type) => type).join(", ")}</span>
         </div>
-        <ScrollArea className="pr-3">
+        <ScrollArea>
+          {loading && (
+            <div className="flex items-center justify-center h-full w-full grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <Skeleton className="h-[120px] w-full" />
+              <Skeleton className="h-[120px] w-full" />
+              <Skeleton className="h-[120px] w-full" />
+              <Skeleton className="h-[120px] w-full" />
+              <Skeleton className="h-[120px] w-full" />
+              <Skeleton className="h-[120px] w-full" />
+              <Skeleton className="h-[120px] w-full" />
+              <Skeleton className="h-[120px] w-full" />
+              <Skeleton className="h-[120px] w-full" />
+            </div>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {
-              loading && <div className="flex items-center justify-center h-full"><Loading /></div>
-            }
             {
               !loading && !data?.Contents?.length && <small className="text-muted-foreground m-auto">No files found.</small>
             }
