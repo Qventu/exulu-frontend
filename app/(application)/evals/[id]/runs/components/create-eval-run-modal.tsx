@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { Loader2, Info, Plus } from "lucide-react";
 import {
@@ -24,80 +24,101 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CREATE_EVAL_RUN, GET_AGENTS, GET_TEST_CASES } from "@/queries/queries";
+import { CREATE_EVAL_RUN, UPDATE_EVAL_RUN, GET_AGENTS, GET_EVAL_FUNCTIONS, GET_TEST_CASES } from "@/queries/queries";
 import { useToast } from "@/components/ui/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { Eval } from "@/types/models/eval";
+import { EvalRun, ScoringMethod } from "@/types/models/eval-run";
 
 interface CreateEvalRunModalProps {
-  evalSetId: string;
+  eval_set_id: string;
+  onCreateSuccess?: () => void;
+  existingRun?: EvalRun | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function CreateEvalRunModal({
-  evalSetId,
+  eval_set_id,
+  onCreateSuccess,
+  existingRun = null,
+  open,
+  onOpenChange,
 }: CreateEvalRunModalProps) {
   const { toast } = useToast();
+  const isEditing = !!existingRun;
 
-  // State
-  const [selectedAgent, setSelectedAgent] = useState<string>("");
-  const [selectedTestCases, setSelectedTestCases] = useState<string[]>([]);
-  const [selectedEvalFunctions, setSelectedEvalFunctions] = useState<string[]>([]);
-  const [evalFunctionConfigs, setEvalFunctionConfigs] = useState<Record<string, Record<string, any>>>({});
-  const [scoringMethod, setScoringMethod] = useState<"median" | "sum" | "average">("average");
-  const [passThreshold, setPassThreshold] = useState<number>(70);
+  const [evalRun, setEvalRun] = useState<EvalRun>({
+    id: "",
+    name: "",
+    rights_mode: "private",
+    createdAt: "",
+    updatedAt: "",
+    eval_set_id,
+    agent_id: "",
+    eval_functions: [],
+    scoring_method: "average",
+    pass_threshold: 70,
+    timeout_in_seconds: 300,
+    test_case_ids: [],
+  });
+
+  // Reset form when existingRun changes
+  useEffect(() => {
+    if (existingRun) {
+      setEvalRun(existingRun);
+    } else {
+      setEvalRun({
+        id: "",
+        name: "",
+        rights_mode: "private",
+        createdAt: "",
+        updatedAt: "",
+        eval_set_id,
+        agent_id: "",
+        eval_functions: [],
+        scoring_method: "average",
+        pass_threshold: 70,
+        timeout_in_seconds: 300,
+        test_case_ids: [],
+      });
+    }
+  }, [existingRun, eval_set_id]);
 
   // Fetch agents
   const { data: agentsData } = useQuery(GET_AGENTS, {
     variables: { page: 1, limit: 100, filters: [] },
-    skip: !open,
+    skip: !eval_set_id,
   });
 
+  const { data: evalFunctionsData } = useQuery(GET_EVAL_FUNCTIONS, {
+    skip: !eval_set_id,
+  });
+  
   // Fetch test cases
   const { data: testCasesData } = useQuery(GET_TEST_CASES, {
     variables: {
       page: 1,
       limit: 500,
-      filters: [{ eval_set_id: { eq: evalSetId } }]
+      filters: [{ eval_set_id: { eq: eval_set_id } }]
     },
-    skip: !open,
+    skip: !eval_set_id,
   });
 
-  const testCasesList = useMemo(() =>
-    testCasesData?.test_casesPagination?.items || [],
-    [testCasesData]
-  );
+  const testCasesList = testCasesData?.test_casesPagination?.items || [];
 
-  // Get selected agent details
-  const selectedAgentData = useMemo(() => {
-    if (!selectedAgent || !agentsData?.agentsPagination?.items) return null;
-    return agentsData.agentsPagination.items.find((a: any) => a.id === selectedAgent);
-  }, [selectedAgent, agentsData]);
-
-  // Get eval functions from selected agent
-  const availableEvalFunctions = useMemo(() => {
-    return selectedAgentData?.evals || [];
-  }, [selectedAgentData]);
-
-  useEffect(() => {
-    if (!open) {
-      // Reset when closing
-      setSelectedAgent("");
-      setSelectedTestCases([]);
-      setSelectedEvalFunctions([]);
-      setEvalFunctionConfigs({});
-      setScoringMethod("average");
-      setPassThreshold(70);
-    }
-  }, [open]);
-
-  const [createEvalRun, { loading }] = useMutation(CREATE_EVAL_RUN, {
+  const [createEvalRun, { loading: createLoading }] = useMutation(CREATE_EVAL_RUN, {
     onCompleted: () => {
       toast({
         title: "Eval run created",
         description: "The eval run has been created successfully. You can now run it.",
       });
+      if (onCreateSuccess) {
+        onCreateSuccess();
+      }
+      onOpenChange(false);
     },
     onError: (error) => {
       toast({
@@ -108,44 +129,70 @@ export function CreateEvalRunModal({
     },
   });
 
+  const [updateEvalRun, { loading: updateLoading }] = useMutation(UPDATE_EVAL_RUN, {
+    onCompleted: () => {
+      toast({
+        title: "Eval run updated",
+        description: "The eval run has been updated successfully.",
+      });
+      if (onCreateSuccess) {
+        onCreateSuccess();
+      }
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to update eval run",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const loading = createLoading || updateLoading;
+
   const handleToggleTestCase = (testCaseId: string) => {
-    setSelectedTestCases(prev =>
-      prev.includes(testCaseId)
-        ? prev.filter(id => id !== testCaseId)
-        : [...prev, testCaseId]
-    );
+    setEvalRun(prev => ({
+      ...prev,
+      test_case_ids: prev.test_case_ids.includes(testCaseId)
+        ? prev.test_case_ids.filter(id => id !== testCaseId)
+        : [...prev.test_case_ids, testCaseId]
+    }))
   };
 
   const handleToggleAllTestCases = () => {
-    if (selectedTestCases.length === testCasesList.length) {
-      setSelectedTestCases([]);
-    } else {
-      setSelectedTestCases(testCasesList.map((tc: any) => tc.id));
-    }
-  };
-
-  const handleToggleEvalFunction = (evalFunctionId: string) => {
-    setSelectedEvalFunctions(prev =>
-      prev.includes(evalFunctionId)
-        ? prev.filter(id => id !== evalFunctionId)
-        : [...prev, evalFunctionId]
-    );
-  };
-
-  const handleConfigChange = (evalFunctionId: string, configKey: string, value: any) => {
-    setEvalFunctionConfigs(prev => ({
+    setEvalRun(prev => ({
       ...prev,
-      [evalFunctionId]: {
-        ...(prev[evalFunctionId] || {}),
-        [configKey]: value,
-      },
-    }));
+      test_case_ids: prev.test_case_ids.length === testCasesList.length
+        ? []
+        : testCasesList.map((tc: any) => tc.id)
+    }))
+  };
+
+  const handleToggleEvalFunction = (evalFunction: { id: string; config: Record<string, any> }) => {
+    setEvalRun(prev => ({
+      ...prev,
+      eval_functions: prev.eval_functions.some(ef => ef.id === evalFunction.id)
+        ? prev.eval_functions.filter(ef => ef.id !== evalFunction.id)
+        : [...prev.eval_functions, evalFunction]
+    }))
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedAgent) {
+    console.log("[EXULU] Eval run", evalRun);
+
+    if (!evalRun.name) {
+      toast({
+        title: "Validation error",
+        description: "Please enter a name for this eval run.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!evalRun.agent_id) {
       toast({
         title: "Validation error",
         description: "Please select an agent.",
@@ -154,7 +201,7 @@ export function CreateEvalRunModal({
       return;
     }
 
-    if (selectedTestCases.length === 0) {
+    if (evalRun.test_case_ids.length === 0) {
       toast({
         title: "Validation error",
         description: "Please select at least one test case.",
@@ -163,7 +210,7 @@ export function CreateEvalRunModal({
       return;
     }
 
-    if (selectedEvalFunctions.length === 0) {
+    if (evalRun.eval_functions.length === 0) {
       toast({
         title: "Validation error",
         description: "Please select at least one eval function.",
@@ -172,50 +219,74 @@ export function CreateEvalRunModal({
       return;
     }
 
-    createEvalRun({
-      variables: {
-        data: {
-          evalSetId,
-          agentId: selectedAgent,
-          testCaseIds: selectedTestCases,
-          evalFunctionIds: selectedEvalFunctions,
-          config: evalFunctionConfigs,
-          scoringMethod,
-          passThreshold,
-          rights_mode: "private",
-          RBAC: null,
+    const data = {
+      name: evalRun.name,
+      eval_set_id,
+      agent_id: evalRun.agent_id,
+      test_case_ids: evalRun.test_case_ids,
+      eval_functions: evalRun.eval_functions,
+      scoring_method: evalRun.scoring_method.toUpperCase() as ScoringMethod,
+      pass_threshold: evalRun.pass_threshold,
+      timeout_in_seconds: evalRun.timeout_in_seconds,
+      rights_mode: evalRun.rights_mode,
+      RBAC: evalRun.RBAC,
+    };
+
+    if (isEditing) {
+      updateEvalRun({
+        variables: {
+          id: evalRun.id,
+          data,
         },
-      },
-    });
+      });
+    } else {
+      createEvalRun({
+        variables: {
+          data,
+        },
+      });
+    }
   };
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          New Eval Run
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Create Eval Run</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Eval Run" : "Create Eval Run"}</DialogTitle>
           <DialogDescription>
-            Configure a new evaluation run for this eval set.
+            {isEditing ? "Update the configuration for this eval run." : "Configure a new evaluation run for this eval set."}
           </DialogDescription>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-6 p-1">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            <div className="space-y-6 pb-4">
+              {/* Name Input */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div>
+                    <h3 className="font-semibold text-sm">Name</h3>
+                    <p className="text-xs text-muted-foreground">Give this eval run a descriptive name</p>
+                  </div>
+                </div>
+                <Input
+                  type="text"
+                  placeholder="e.g., GPT-4 baseline evaluation"
+                  value={evalRun.name}
+                  onChange={(e) => setEvalRun(prev => ({ ...prev, name: e.target.value }))}
+                  className="h-11"
+                />
+              </div>
+              <Separator />
               {/* Agent Selection */}
               <div className="space-y-3">
-                <div>
-                  <h3 className="font-semibold text-sm">Agent</h3>
-                  <p className="text-xs text-muted-foreground">Choose which agent to evaluate</p>
+                <div className="flex items-center gap-2">
+                  <div>
+                    <h3 className="font-semibold text-sm">Agent</h3>
+                    <p className="text-xs text-muted-foreground">Choose which agent to evaluate</p>
+                  </div>
                 </div>
-                <Select value={selectedAgent} onValueChange={setSelectedAgent}>
-                  <SelectTrigger>
+                <Select value={evalRun.agent_id} onValueChange={(value: string) => setEvalRun(prev => ({ ...prev, agent_id: value }))}>
+                  <SelectTrigger className="h-11">
                     <SelectValue placeholder="Select an agent..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -226,26 +297,91 @@ export function CreateEvalRunModal({
                     ))}
                   </SelectContent>
                 </Select>
-                {selectedAgentData && (
-                  <div className="p-3 border rounded-lg bg-muted/50">
-                    <div className="text-sm">
-                      <p className="font-medium">{selectedAgentData.name}</p>
-                      {selectedAgentData.description && (
-                        <p className="text-muted-foreground mt-1 text-xs">
-                          {selectedAgentData.description}
-                        </p>
-                      )}
-                      <div className="mt-2 flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">
-                          {availableEvalFunctions.length} eval functions
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {selectedAgentData.backend}
-                        </Badge>
-                      </div>
+              </div>
+              <Separator />
+              {/* Eval Functions Selection */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <h3 className="font-semibold text-sm">Eval Functions</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {evalRun.eval_functions.length} of {evalFunctionsData?.evals?.items?.length || 0} selected
+                      </p>
                     </div>
                   </div>
-                )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (evalRun.eval_functions.length === evalFunctionsData?.evals?.items?.length) {
+                        setEvalRun(prev => ({ ...prev, eval_functions: [] }));
+                      } else {
+                        setEvalRun(prev => ({ ...prev, eval_functions: evalFunctionsData?.evals?.items?.map((e: Eval) => ({ id: e.id, config: e.config })) || [] }));
+                      }
+                    }}
+                  >
+                    {evalRun.eval_functions.length === evalFunctionsData?.evals?.items?.length ? "Deselect All" : "Select All"}
+                  </Button>
+                </div>
+                <div className="border rounded-lg bg-card">
+                  <div className="p-3 space-y-2">
+                    {evalFunctionsData?.evals?.items?.map((_eval: Eval) => (
+                      <label
+                        key={_eval.id}
+                        htmlFor={`eval-${_eval.id}`}
+                        className="flex items-start gap-3 p-3 rounded-md hover:bg-accent transition-colors cursor-pointer border border-transparent hover:border-border"
+                      >
+                        <Checkbox
+                          id={`eval-${_eval.id}`}
+                          checked={evalRun.eval_functions.some(ef => ef.id === _eval.id)}
+                          onCheckedChange={() => handleToggleEvalFunction({ id: _eval.id, config: _eval.config })}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{_eval.name}</span>
+                          </div>
+                          {_eval.description && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              {_eval.description}
+                            </p>
+                          )}
+                          {_eval.config && _eval.config.length > 0 && evalRun.eval_functions.some(ef => ef.id === _eval.id) && (
+                            <div className="mt-3 space-y-3 pt-3 border-t">
+                              <p className="text-xs font-medium text-muted-foreground">Configuration</p>
+                              {_eval.config.map((config: any) => (
+                                <div key={config.name} className="space-y-1.5">
+                                  <Label htmlFor={`${_eval.id}-${config.name}`} className="text-xs font-medium">
+                                    {config.name}
+                                  </Label>
+                                  <Textarea
+                                    id={`${_eval.id}-${config.name}`}
+                                    placeholder={config.description}
+                                    value={evalRun.eval_functions.find(ef => ef.id === _eval.id)?.config?.[config.name] || ''}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      setEvalRun(prev => ({ ...prev, eval_functions: prev.eval_functions.map(ef => ef.id === _eval.id ? { ...ef, config: { ...ef.config, [config.name]: e.target.value } } : ef) }));
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="min-h-[80px] text-xs resize-none"
+                                  />
+                                  {config.description && (
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                      {config.description}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <Separator />
@@ -253,11 +389,13 @@ export function CreateEvalRunModal({
               {/* Test Cases Selection */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-sm">Test Cases</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedTestCases.length} of {testCasesList.length} selected
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <h3 className="font-semibold text-sm">Test Cases</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {evalRun.test_case_ids.length} of {testCasesList.length} selected
+                      </p>
+                    </div>
                   </div>
                   <Button
                     type="button"
@@ -268,37 +406,38 @@ export function CreateEvalRunModal({
                       handleToggleAllTestCases();
                     }}
                   >
-                    {selectedTestCases.length === testCasesList.length ? "Deselect All" : "Select All"}
+                    {evalRun.test_case_ids.length === testCasesList.length ? "Deselect All" : "Select All"}
                   </Button>
                 </div>
-                <div className="border rounded-lg">
-                  <ScrollArea className="h-[200px]">
-                    <div className="p-2 space-y-1">
+                <div className="border rounded-lg bg-card">
+                  <ScrollArea className="h-[250px]">
+                    <div className="p-3 space-y-2">
                       {testCasesList.map((testCase: any) => (
-                        <div
+                        <label
                           key={testCase.id}
-                          className="flex items-start gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
-                          onClick={() => handleToggleTestCase(testCase.id)}
+                          htmlFor={`test-case-${testCase.id}`}
+                          className="flex items-start gap-3 p-3 rounded-md hover:bg-accent transition-colors cursor-pointer border border-transparent hover:border-border"
                         >
                           <Checkbox
-                            checked={selectedTestCases.includes(testCase.id)}
+                            id={`test-case-${testCase.id}`}
+                            checked={evalRun.test_case_ids.includes(testCase.id)}
                             onCheckedChange={() => handleToggleTestCase(testCase.id)}
                             className="mt-0.5"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-xs truncate">{testCase.name}</span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-sm">{testCase.name}</span>
                               <Badge variant="secondary" className="text-[10px] shrink-0">
                                 {testCase.inputs?.length || 0} msgs
                               </Badge>
                             </div>
                             {testCase.description && (
-                              <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                                 {testCase.description}
                               </p>
                             )}
                           </div>
-                        </div>
+                        </label>
                       ))}
                     </div>
                   </ScrollArea>
@@ -307,88 +446,22 @@ export function CreateEvalRunModal({
 
               <Separator />
 
-              {/* Eval Functions Selection */}
-              <div className="space-y-3">
-                <div>
-                  <h3 className="font-semibold text-sm">Eval Functions</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedEvalFunctions.length} selected
-                  </p>
-                </div>
-                {!selectedAgent ? (
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription className="text-xs">
-                      Please select an agent first to see available eval functions.
-                    </AlertDescription>
-                  </Alert>
-                ) : availableEvalFunctions.length === 0 ? (
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription className="text-xs">
-                      This agent has no eval functions configured.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <div className="space-y-2">
-                    {availableEvalFunctions.map((evalFunc: any) => (
-                      <div key={evalFunc.id} className="border rounded-lg">
-                        <div className="p-3">
-                          <div className="flex items-start gap-3">
-                            <Checkbox
-                              checked={selectedEvalFunctions.includes(evalFunc.id)}
-                              onCheckedChange={() => handleToggleEvalFunction(evalFunc.id)}
-                              className="mt-0.5"
-                            />
-                            <div className="flex-1">
-                              <p className="font-medium text-sm">{evalFunc.name}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {evalFunc.description}
-                              </p>
-                            </div>
-                          </div>
-                          {selectedEvalFunctions.includes(evalFunc.id) && evalFunc.config && evalFunc.config.length > 0 && (
-                            <div className="mt-3 pl-7 space-y-2">
-                              {evalFunc.config.map((configItem: any) => (
-                                <div key={configItem.name} className="space-y-1">
-                                  <Label htmlFor={`${evalFunc.id}-${configItem.name}`} className="text-xs">
-                                    {configItem.name}
-                                  </Label>
-                                  <Textarea
-                                    id={`${evalFunc.id}-${configItem.name}`}
-                                    placeholder={configItem.description}
-                                    value={evalFunctionConfigs[evalFunc.id]?.[configItem.name] || ""}
-                                    onChange={(e) => handleConfigChange(evalFunc.id, configItem.name, e.target.value)}
-                                    rows={2}
-                                    className="text-xs"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <Separator />
-
               {/* Scoring Configuration */}
               <div className="space-y-3">
-                <div>
-                  <h3 className="font-semibold text-sm">Scoring</h3>
-                  <p className="text-xs text-muted-foreground">Configure how scores are calculated</p>
+                <div className="flex items-center gap-2">
+                  <div>
+                    <h3 className="font-semibold text-sm">Scoring</h3>
+                    <p className="text-xs text-muted-foreground">Configure how scores are calculated</p>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/30">
                   <div className="space-y-2">
-                    <Label htmlFor="scoringMethod" className="text-xs">Scoring Method</Label>
+                    <Label htmlFor="scoringMethod" className="text-xs font-semibold">Scoring Method</Label>
                     <Select
-                      value={scoringMethod}
-                      onValueChange={(value: any) => setScoringMethod(value)}
+                      value={evalRun.scoring_method}
+                      onValueChange={(value: any) => setEvalRun(prev => ({ ...prev, scoring_method: value as ScoringMethod }))}
                     >
-                      <SelectTrigger id="scoringMethod">
+                      <SelectTrigger id="scoringMethod" className="h-10">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -397,23 +470,39 @@ export function CreateEvalRunModal({
                         <SelectItem value="sum">Sum</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                       How to combine multiple eval function scores
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="passThreshold" className="text-xs">Pass Threshold</Label>
+                    <Label htmlFor="passThreshold" className="text-xs font-semibold">Pass Threshold</Label>
                     <Input
                       id="passThreshold"
                       type="number"
                       min="0"
                       max="100"
-                      value={passThreshold}
-                      onChange={(e) => setPassThreshold(Number(e.target.value))}
+                      value={evalRun.pass_threshold}
+                      onChange={(e) => setEvalRun(prev => ({ ...prev, pass_threshold: Number(e.target.value) }))}
+                      className="h-10"
                     />
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                       Minimum score (0-100) to pass
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="timeoutInSeconds" className="text-xs font-semibold">Timeout (seconds)</Label>
+                    <Input
+                      id="timeoutInSeconds"
+                      type="number"
+                      min="1"
+                      value={evalRun.timeout_in_seconds}
+                      onChange={(e) => setEvalRun(prev => ({ ...prev, timeout_in_seconds: Number(e.target.value) }))}
+                      className="h-10"
+                    />
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Max time per test case execution
                     </p>
                   </div>
                 </div>
@@ -421,25 +510,20 @@ export function CreateEvalRunModal({
             </div>
           </ScrollArea>
 
-          <DialogFooter className="mt-4">
-            {/* <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancel
-            </Button> */}
+          <Separator className="my-4" />
+
+          <DialogFooter className="shrink-0">
             <Button
               type="submit"
-              disabled={loading || !selectedAgent || selectedTestCases.length === 0 || selectedEvalFunctions.length === 0}
+              disabled={loading || !evalRun.name || !evalRun.agent_id || evalRun.test_case_ids.length === 0 || evalRun.eval_functions.length === 0}
+              className="w-full h-11"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Eval Run
+              {isEditing ? "Update Eval Run" : "Create Eval Run"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 }

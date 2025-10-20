@@ -41,20 +41,6 @@ export const createColumns = (user: UserWithRole): ColumnDef<EvalSet>[] => [
     },
   },
   {
-    accessorKey: "testCases",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Test Cases" />
-    ),
-    cell: ({ row }) => {
-      const testCases = row.getValue("testCases") as string[];
-      return (
-        <Badge variant="secondary">
-          {testCases?.length || 0} test cases
-        </Badge>
-      );
-    },
-  },
-  {
     accessorKey: "updatedAt",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Updated" />

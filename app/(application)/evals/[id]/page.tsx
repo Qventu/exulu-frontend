@@ -4,7 +4,7 @@ import { useContext, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@apollo/client";
 import { UserContext } from "@/app/(application)/authenticated";
-import { Brain, ArrowLeft, Plus, Save, Loader2, Play } from "lucide-react";
+import { Brain, ArrowLeft, Plus, Save, Loader2, Play, FileText, ListChecks, Sparkles, Edit2, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -196,55 +196,70 @@ export default function EvalSetEditorPage() {
 
   return (
     <div className="flex h-full flex-1 flex-col space-y-8 p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push("/evals")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Edit Eval Set</h2>
-            <p className="text-muted-foreground">
-              Configure test cases for this evaluation set.
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => router.push(`/evals/${evalSetId}/runs`)}
-          >
-            <Play className="mr-2 h-4 w-4" />
-            View Runs
-          </Button>
-          {canWrite && (
-            <Button onClick={handleSave} disabled={updating}>
-              {updating ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="mr-2 h-4 w-4" />
-              )}
-              Save Changes
+      {/* Header with gradient accent */}
+      <div className="relative">
+        <div className="absolute inset-0 bg-primary/5 rounded-lg blur-xl" />
+        <div className="relative flex items-center justify-between p-6 border rounded-lg bg-card/50 backdrop-blur-sm">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push("/evals")}
+            >
+              <ArrowLeft className="h-4 w-4" />
             </Button>
-          )}
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary">
+                <Sparkles className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight">Edit Eval Set</h2>
+                <p className="text-muted-foreground">
+                  Configure test cases for this evaluation set.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/evals/${evalSetId}/runs`)}
+            >
+              <Play className="mr-2 h-4 w-4" />
+              View Runs
+            </Button>
+            {canWrite && (
+              <Button onClick={handleSave} disabled={updating}>
+                {updating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                Save Changes
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Basic Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Basic Information</CardTitle>
-          <CardDescription>
-            Edit the name and description of this eval set.
-          </CardDescription>
+      <Card className="shadow-lg">
+        <CardHeader className="border-b bg-accent/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <FileText className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle>Basic Information</CardTitle>
+              <CardDescription>
+                Edit the name and description of this eval set.
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="grid gap-2">
-            <Label htmlFor="name">Name *</Label>
+            <Label htmlFor="name" className="text-sm font-semibold">Name *</Label>
             <Input
               id="name"
               placeholder="Eval set name"
@@ -254,7 +269,7 @@ export default function EvalSetEditorPage() {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description" className="text-sm font-semibold">Description</Label>
             <Textarea
               id="description"
               placeholder="Describe what this eval set tests..."
@@ -268,14 +283,22 @@ export default function EvalSetEditorPage() {
       </Card>
 
       {/* Test Cases */}
-      <Card>
-        <CardHeader>
+      <Card className="shadow-lg">
+        <CardHeader className="border-b bg-accent/50">
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Test Cases</CardTitle>
-              <CardDescription>
-                Add up to 500 test cases to this eval set. {testCases.length}/500 selected.
-              </CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <ListChecks className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle>Test Cases</CardTitle>
+                <CardDescription>
+                  Add up to 500 test cases to this eval set.{" "}
+                  <Badge variant="secondary" className="ml-1">
+                    {testCasesList.length}/500
+                  </Badge>
+                </CardDescription>
+              </div>
             </div>
             {canWrite && (
               <div className="flex gap-2">
@@ -300,47 +323,61 @@ export default function EvalSetEditorPage() {
             )}
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {testCasesList.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              No test cases added yet. Click "Add Test Cases" to get started.
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="p-4 rounded-full bg-primary/10 mb-4">
+                <ListChecks className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">No test cases yet</h3>
+              <p className="text-muted-foreground max-w-sm">
+                Click "Create New" or "Add Existing" to start building your evaluation set.
+              </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {testCasesList.map((testCase: any) => (
                 <div
                   key={testCase.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
+                  className="group relative flex items-center justify-between p-4 border rounded-lg transition-all hover:shadow-md hover:border-primary/50 hover:scale-[1.01] hover:bg-accent/30"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{testCase.name}</span>
+                      <div className="p-1.5 rounded bg-primary/10">
+                        <FileText className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <span className="font-semibold">{testCase.name}</span>
                     </div>
                     {testCase.description && (
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-sm text-muted-foreground mt-2 ml-8">
                         {testCase.description}
                       </p>
                     )}
                   </div>
                   {canWrite && (
-                    <>
-                    {/* Edit */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setEditingTestCase(testCase);
-                        setShowCreateModal(true);
-                      }}>
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveTestCase(testCase.id)}>
-                      Remove
-                    </Button>
-                    </>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingTestCase(testCase);
+                          setShowCreateModal(true);
+                        }}
+                        className="hover:bg-primary/10"
+                      >
+                        <Edit2 className="mr-1 h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveTestCase(testCase.id)}
+                        className="hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <X className="mr-1 h-3.5 w-3.5" />
+                        Remove
+                      </Button>
+                    </div>
                   )}
                 </div>
               ))}
@@ -360,9 +397,11 @@ export default function EvalSetEditorPage() {
       <TestCaseModal
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
+        evalSetId={evalSetId}
         onSuccess={() => {
           setShowCreateModal(false);
           // Refetch to get the new test case in the list
+          refetchTestCases();
           refetch();
         }}
         testCase={editingTestCase}

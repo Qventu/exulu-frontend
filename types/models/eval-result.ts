@@ -2,9 +2,9 @@ import { UIMessage } from "ai"
 
 export interface EvalResult {
   id: string
-  evalRunId: string
-  testCaseId: string
-  evalFunctionId: string
+  eval_run_id: string
+  test_case_id: string
+  eval_function_id: string
   score: number // 0-100
   passed: boolean
   messages: UIMessage[] // Conversation from running the agent

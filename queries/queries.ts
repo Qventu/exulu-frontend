@@ -1424,9 +1424,10 @@ const EVAL_SET_FIELDS = `
 
 const EVAL_RUN_FIELDS = `
   id
+  name
   eval_set_id
   agent_id
-  eval_function_ids
+  eval_functions
   config
   scoring_method
   pass_threshold
@@ -1532,6 +1533,27 @@ export const GET_EVAL_SETS = gql`
   }
 `;
 
+const EVAL_FIELDS = `
+  id
+  name
+  description
+  config {
+    name
+    description
+  }
+  llm
+`;
+
+export const GET_EVAL_FUNCTIONS = gql`
+  query GetEvals {
+    evals {
+      items {
+        ${EVAL_FIELDS}
+      }
+    }
+  }
+`;
+
 export const GET_EVAL_SET_BY_ID = gql`
   query GetEvalSetById($id: ID!) {
     eval_setById(id: $id) {
@@ -1574,7 +1596,7 @@ export const GET_EVAL_RUNS = gql`
   query GetEvalRuns(
     $page: Int!
     $limit: Int!
-    $filters: [Filtereval_run]
+    $filters: [FilterEval_run]
   ) {
     eval_runsPagination(page: $page, limit: $limit, filters: $filters) {
       pageInfo {
@@ -1605,6 +1627,15 @@ export const CREATE_EVAL_RUN = gql`
       item {
         ${EVAL_RUN_FIELDS}
       }
+    }
+  }
+`;
+
+export const RUN_EVAL = gql`
+  mutation RunEval($id: ID!) {
+    runEval(id: $id) {
+      jobs
+      count
     }
   }
 `;

@@ -289,7 +289,13 @@ export const FileGalleryAndUpload = ({ id, allowedFileTypes, dependencies, onCon
           )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {
-              !loading && !data?.Contents?.length && <small className="text-muted-foreground m-auto">No files found.</small>
+              !loading && !data?.Contents?.length && (
+                <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
+                  <FileWarning className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground">Nothing to see here... yet!</p>
+                  <p className="text-xs text-muted-foreground/75 mt-1">Upload some files to get started</p>
+                </div>
+              )
             }
             {data?.Contents?.map((item: S3FileListOutput["Contents"][0]) => {
               return (

@@ -2,9 +2,14 @@ export type ScoringMethod = "mean" | "sum" | "average"
 
 export interface EvalRun {
   id: string
+  name: string
   eval_set_id: string
   agent_id: string
-  eval_function_ids: string[] // Array of ExuluEval IDs
+  timeout_in_seconds: number
+  eval_functions: {
+    id: string
+    config: Record<string, any>
+  }[]
   config?: Record<string, any> // Optional config for eval functions
   scoring_method: ScoringMethod
   pass_threshold: number // 0-100 percentage

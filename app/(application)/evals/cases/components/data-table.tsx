@@ -53,10 +53,12 @@ export type TestCaseFilters = {
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
+  testCase?: TestCase;
 }
 
 export function DataTable<TData, TValue>({
   columns,
+  testCase,
 }: DataTableProps<TData, TValue>) {
   const { toast } = useToast();
   const [rowSelection, setRowSelection] = React.useState({});
@@ -70,7 +72,17 @@ export function DataTable<TData, TValue>({
   const [page, setPage] = useState(1);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [showModal, setShowModal] = useState(false);
-  const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
+  const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(testCase || null);
+
+  React.useEffect(() => {
+    if (testCase) {
+      setEditingTestCase(testCase);
+      setShowModal(true);
+    } else {
+      setShowModal(false);
+      setEditingTestCase(null);
+    }
+  }, [testCase]);
 
   const { loading, error, data, refetch } = useQuery(GET_TEST_CASES, {
     fetchPolicy: "no-cache",
@@ -135,8 +147,13 @@ export function DataTable<TData, TValue>({
   }, [table.getColumn("name")?.getFilterValue()]);
 
   const handleEdit = (testCase: TestCase) => {
-    setEditingTestCase(testCase);
-    setShowModal(true);
+    if (testCase) {
+      setEditingTestCase(testCase);
+      setShowModal(true);
+    } else {
+      setShowModal(false);
+      setEditingTestCase(null);
+    }
   };
 
   const handleCloseModal = () => {

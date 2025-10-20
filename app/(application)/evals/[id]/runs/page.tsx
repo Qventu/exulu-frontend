@@ -23,7 +23,8 @@ export default function EvalRunsPage() {
   const router = useRouter();
   const { user } = useContext(UserContext);
   const config = useContext(ConfigContext);
-  const evalSetId = params.id as string;
+  const eval_set_id = params.id as string;
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   // Check if user has evals access
   const hasEvalsAccess = user.super_admin || user.role?.evals === "read" || user.role?.evals === "write";
@@ -31,8 +32,8 @@ export default function EvalRunsPage() {
 
   // Fetch eval set
   const { loading: loadingEvalSet, data: evalSetData } = useQuery(GET_EVAL_SET_BY_ID, {
-    variables: { id: evalSetId },
-    skip: !evalSetId,
+    variables: { id: eval_set_id },
+    skip: !eval_set_id,
   });
 
   // Fetch eval runs
@@ -40,9 +41,9 @@ export default function EvalRunsPage() {
     variables: {
       page: 1,
       limit: 100,
-      filters: [{ evalSetId: { eq: evalSetId } }],
+      filters: [{ eval_set_id: { eq: eval_set_id } }],
     },
-    skip: !evalSetId,
+    skip: !eval_set_id,
     pollInterval: 10000, // Poll every 10 seconds to update job statuses
   });
 
@@ -79,7 +80,7 @@ export default function EvalRunsPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => router.push(`/evals/${evalSetId}`)}
+            onClick={() => router.push(`/evals/${eval_set_id}`)}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -91,9 +92,10 @@ export default function EvalRunsPage() {
           </div>
         </div>
         {canWrite && config?.workers?.enabled && config?.workers?.redisHost && (
-          <CreateEvalRunModal
-            evalSetId={evalSetId}
-          />
+          <Button onClick={() => setCreateModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Eval Run
+          </Button>
         )}
       </div>
 
@@ -137,6 +139,15 @@ export default function EvalRunsPage() {
           )}
         </CardContent>
       </Card>
+
+      <CreateEvalRunModal
+        eval_set_id={eval_set_id}
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        onCreateSuccess={() => {
+          refetch();
+        }}
+      />
     </div>
   );
 }

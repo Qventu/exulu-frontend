@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import { Loader2, Plus, Trash2, MessageSquare, Paperclip } from "lucide-react";
+import { Loader2, Plus, MessageSquare, Info, Sparkles, Settings2, FileText, AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +32,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import UppyDashboard, { FileItem, getPresignedUrl } from "@/components/uppy-dashboard";
-import { Item } from "@/types/models/item";
 import { MessageRenderer } from "@/components/message-renderer";
 import { Conversation, ConversationContent } from "@/components/ai-elements/conversation";
 
@@ -41,11 +40,13 @@ interface TestCaseModalProps {
   onClose: () => void;
   onSuccess: () => void;
   testCase?: TestCase | null;
+  evalSetId?: string;
 }
 
 export function TestCaseModal({
   open,
   onClose,
+  evalSetId,
   onSuccess,
   testCase,
 }: TestCaseModalProps) {
@@ -215,9 +216,12 @@ export function TestCaseModal({
     const placeholderMessage: UIMessage = {
       id: `msg-${Date.now()}`,
       role: "assistant",
+      metadata: {
+        type: "placeholder",
+      },
       parts: [{
         type: "text",
-        text: "Agent response placeholder",
+        text: "💬 Placeholder, generated agent response will be added here when the test case is run...",
       }],
     };
 
@@ -232,21 +236,33 @@ export function TestCaseModal({
   };
 
   const handleAddTool = () => {
+    console.log("selectedTool", selectedTool);
+    console.log("expectedTools", expectedTools);
     if (selectedTool && !expectedTools.includes(selectedTool)) {
+      console.log("adding tool", selectedTool);
+      console.log("new expectedTools", [...expectedTools, selectedTool]);
       setExpectedTools([...expectedTools, selectedTool]);
       setSelectedTool("");
     }
   };
 
   const handleAddContext = () => {
+    console.log("selectedContext", selectedContext);
+    console.log("expectedKnowledgeSources", expectedKnowledgeSources);
     if (selectedContext && !expectedKnowledgeSources.includes(selectedContext)) {
+      console.log("adding context", selectedContext);
+      console.log("new expectedKnowledgeSources", [...expectedKnowledgeSources, selectedContext]);
       setExpectedKnowledgeSources([...expectedKnowledgeSources, selectedContext]);
       setSelectedContext("");
     }
   };
 
   const handleAddAgent = () => {
+    console.log("selectedAgent", selectedAgent);
+    console.log("expectedAgentTools", expectedAgentTools);
     if (selectedAgent && !expectedAgentTools.includes(selectedAgent)) {
+      console.log("adding agent", selectedAgent);
+      console.log("new expectedAgentTools", [...expectedAgentTools, selectedAgent]);
       setExpectedAgentTools([...expectedAgentTools, selectedAgent]);
       setSelectedAgent("");
     }
@@ -271,6 +287,7 @@ export function TestCaseModal({
       expected_tools: expectedTools.length > 0 ? expectedTools : null,
       expected_knowledge_sources: expectedKnowledgeSources.length > 0 ? expectedKnowledgeSources : null,
       expected_agent_tools: expectedAgentTools.length > 0 ? expectedAgentTools : null,
+      ...(evalSetId ? { eval_set_id: evalSetId } : {}),
     };
 
     if (isEditing) {
@@ -314,7 +331,7 @@ export function TestCaseModal({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Test Case" : "Create Test Case"}</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Test Case" : "Create Test Case"} {evalSetId ? `for Eval Set: ${evalSetId}` : ""}</DialogTitle>
           <DialogDescription>
             {isEditing ? "Update the test case details." : "Create a new test case with conversation inputs and expected outputs."}
           </DialogDescription>
@@ -323,14 +340,23 @@ export function TestCaseModal({
         <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">
           <Tabs defaultValue="basic" className="flex-1 overflow-hidden flex flex-col">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="basic">Basic Info</TabsTrigger>
-              <TabsTrigger value="conversation">Conversation</TabsTrigger>
-              <TabsTrigger value="expected">Expected Tools</TabsTrigger>
+              <TabsTrigger value="basic" className="gap-2">
+                <Info className="h-4 w-4" />
+                Basic Info
+              </TabsTrigger>
+              <TabsTrigger value="conversation" className="gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Conversation
+              </TabsTrigger>
+              <TabsTrigger value="expected" className="gap-2">
+                <Settings2 className="h-4 w-4" />
+                Expected Tools
+              </TabsTrigger>
             </TabsList>
 
             <ScrollArea className="flex-1">
-              <TabsContent value="basic" className="space-y-4 p-1">
-                <div className="grid gap-4">
+              <TabsContent value="basic" className="space-y-4 p-1 mt-4">
+                <div className="grid gap-5">
                   <div className="grid gap-2">
                     <Label htmlFor="name">Name *</Label>
                     <Input
@@ -371,37 +397,60 @@ export function TestCaseModal({
                 </div>
               </TabsContent>
 
-              <TabsContent value="conversation" className="space-y-4 p-1">
+              <TabsContent value="conversation" className="space-y-4 p-1 mt-4">
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      Conversation Flow
-                    </CardTitle>
-                    <CardDescription>
-                      Add user messages in order. The agent will respond between each message automatically.
-                    </CardDescription>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4" />
+                          Conversation Flow
+                          {inputs.length > 0 && (
+                            <Badge variant="secondary" className="ml-2">
+                              {inputs.length} {inputs.length === 1 ? 'message' : 'messages'}
+                            </Badge>
+                          )}
+                        </CardTitle>
+                        <CardDescription className="mt-1.5">
+                          Add user messages in order. The agent will run through this conversation flow and respond between each message automatically.
+                        </CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-6">
 
+                    {inputs?.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 px-4 text-center border-2 border-dashed border-muted rounded-lg">
+                        <Sparkles className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                        <h3 className="font-semibold text-lg mb-2">No messages yet</h3>
+                        <p className="text-sm text-muted-foreground max-w-sm">
+                          Start building your test conversation by adding user messages below.
+                        </p>
+                      </div>
+                    ) : (
+                      /* @ts-ignore */
+                      <Conversation className="max-h-[350px] overflow-y-auto border rounded-lg bg-muted/30 transition-all duration-300 ease-in-out">
+                        {/* @ts-ignore */}
+                        <ConversationContent className="px-6 py-4">
+                          <div className="animate-in fade-in duration-500">
+                            <MessageRenderer
+                              messages={inputs}
+                              config={{
+                                marginTopFirstMessage: 'mt-0',
+                                customAssistantClassnames: 'bg-secondary/50 rounded-lg px-3 py-1 border-l-2 border-primary/30'
+                              }}
+                              status={"ready"}
+                              showActions={false}
+                              writeAccess={false}
+                            />
+                          </div>
+                        </ConversationContent>
+                      </Conversation>
+                    )}
 
-                    {/* @ts-ignore */}
-                    <Conversation className="overflow-y-hidden">
-                      {/* @ts-ignore */}
-                      <ConversationContent className="px-6">
-                        {inputs?.length > 0 && (
-                          <MessageRenderer
-                            messages={inputs}
-                            status={"ready"}
-                            writeAccess={false}
-                          />
-                        )}
-                      </ConversationContent>
-                    </Conversation>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="currentInput">Add User Message</Label>
-                      <div className="space-y-2">
+                    <div className="space-y-3 pt-2 border-t">
+                      <Label htmlFor="currentInput" className="text-sm font-semibold">Add User Message</Label>
+                      <div className="space-y-3">
                         <Textarea
                           id="currentInput"
                           placeholder="Type the user's message..."
@@ -434,9 +483,11 @@ export function TestCaseModal({
 
                           <Button
                             type="button"
+                            variant="outline"
                             onClick={handleAddMessage}
                             disabled={loading || (!currentInput.trim() && currentFileParts.length === 0)}
                             className="ml-auto"
+                            size="default"
                           >
                             <Plus className="h-4 w-4 mr-2" />
                             Add Message
@@ -444,18 +495,26 @@ export function TestCaseModal({
                         </div>
 
                         {currentFiles && currentFiles.length > 0 && (
-                          <div className="grid grid-cols-3 gap-2">
-                            {currentFiles.map((item) => (
-                              <FileItem
-                                s3Key={item}
-                                disabled={true}
-                                active={false}
-                                onRemove={() => {
-                                  setCurrentFiles(currentFiles?.filter((i) => i !== item))
-                                }}
-                              />
-                            ))}
-                          </div>
+                          <>
+                            <div className="grid grid-cols-3 gap-2">
+                              {currentFiles.map((item) => (
+                                <FileItem
+                                  s3Key={item}
+                                  disabled={true}
+                                  active={false}
+                                  onRemove={() => {
+                                    setCurrentFiles(currentFiles?.filter((i) => i !== item))
+                                  }}
+                                />
+                              ))}
+                            </div>
+                            <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
+                              <p className="text-xs text-amber-900 dark:text-amber-200">
+                                <strong>Note:</strong> When running this test case, ensure the selected agent supports the file types you've attached here (images, documents, audio, etc.).
+                              </p>
+                            </div>
+                          </>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -466,11 +525,19 @@ export function TestCaseModal({
                 </Card>
               </TabsContent>
 
-              <TabsContent value="expected" className="space-y-4 p-1">
-                <div className="grid gap-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Expected Tools (Optional)</CardTitle>
+              <TabsContent value="expected" className="space-y-4 p-1 mt-4">
+                <div className="grid gap-5">
+                  <Card className="border-l-2 border-l-blue-500/30">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Settings2 className="h-4 w-4" />
+                        Expected Tools (Optional)
+                        {expectedTools.length > 0 && (
+                          <Badge variant="secondary" className="ml-2">
+                            {expectedTools.length}
+                          </Badge>
+                        )}
+                      </CardTitle>
                       <CardDescription>Regular tools that should be used during the conversation</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2">
@@ -481,8 +548,7 @@ export function TestCaseModal({
                             <button
                               type="button"
                               onClick={() => setExpectedTools(expectedTools.filter((_, i) => i !== index))}
-                              className="ml-2 hover:text-destructive"
-                            >
+                              className="ml-2 hover:text-destructive">
                               ×
                             </button>
                           </Badge>
@@ -490,8 +556,8 @@ export function TestCaseModal({
                       </div>
                       <div className="flex gap-2">
                         <Select value={selectedTool} onValueChange={setSelectedTool} disabled={loading}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a tool..." />
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select a tool to add..." />
                           </SelectTrigger>
                           <SelectContent>
                             {regularTools.map((tool) => (
@@ -505,16 +571,32 @@ export function TestCaseModal({
                           type="button"
                           onClick={handleAddTool}
                           disabled={loading || !selectedTool}
+                          className="gap-1.5"
+                          variant={selectedTool ? "default" : "outline"}
                         >
                           <Plus className="h-4 w-4" />
+                          <span className="hidden sm:inline">Add</span>
                         </Button>
                       </div>
+                      {!selectedTool && (
+                        <p className="text-xs text-muted-foreground/75 italic">
+                          Select a tool from the dropdown, then click Add
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Expected Knowledge Sources (Optional)</CardTitle>
+                  <Card className="border-l-2 border-l-purple-500/30">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Expected Knowledge Sources (Optional)
+                        {expectedKnowledgeSources.length > 0 && (
+                          <Badge variant="secondary" className="ml-2">
+                            {expectedKnowledgeSources.length}
+                          </Badge>
+                        )}
+                      </CardTitle>
                       <CardDescription>Context/knowledge sources that should be used</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2">
@@ -534,8 +616,8 @@ export function TestCaseModal({
                       </div>
                       <div className="flex gap-2">
                         <Select value={selectedContext} onValueChange={setSelectedContext} disabled={loading}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a knowledge source..." />
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select a knowledge source to add..." />
                           </SelectTrigger>
                           <SelectContent>
                             {knowledgeSourceTools.map((context) => (
@@ -549,16 +631,32 @@ export function TestCaseModal({
                           type="button"
                           onClick={handleAddContext}
                           disabled={loading || !selectedContext}
+                          className="gap-1.5"
+                          variant={selectedContext ? "default" : "outline"}
                         >
                           <Plus className="h-4 w-4" />
+                          <span className="hidden sm:inline">Add</span>
                         </Button>
                       </div>
+                      {!selectedContext && (
+                        <p className="text-xs text-muted-foreground/75 italic">
+                          Select a knowledge source from the dropdown, then click Add
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Expected Agent Tools (Optional)</CardTitle>
+                  <Card className="border-l-2 border-l-green-500/30">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Sparkles className="h-4 w-4" />
+                        Expected Agent Tools (Optional)
+                        {expectedAgentTools.length > 0 && (
+                          <Badge variant="secondary" className="ml-2">
+                            {expectedAgentTools.length}
+                          </Badge>
+                        )}
+                      </CardTitle>
                       <CardDescription>Agents that should be called as tools</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2">
@@ -578,8 +676,8 @@ export function TestCaseModal({
                       </div>
                       <div className="flex gap-2">
                         <Select value={selectedAgent} onValueChange={setSelectedAgent} disabled={loading}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select an agent..." />
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select an agent to add..." />
                           </SelectTrigger>
                           <SelectContent>
                             {agentTools.map((agent) => (
@@ -593,10 +691,18 @@ export function TestCaseModal({
                           type="button"
                           onClick={handleAddAgent}
                           disabled={loading || !selectedAgent}
+                          className="gap-1.5"
+                          variant={selectedAgent ? "default" : "outline"}
                         >
                           <Plus className="h-4 w-4" />
+                          <span className="hidden sm:inline">Add</span>
                         </Button>
                       </div>
+                      {!selectedAgent && (
+                        <p className="text-xs text-muted-foreground/75 italic">
+                          Select an agent from the dropdown, then click Add
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -604,7 +710,7 @@ export function TestCaseModal({
             </ScrollArea>
           </Tabs>
 
-          <DialogFooter className="mt-4">
+          <DialogFooter className="mt-4 gap-2">
             <Button
               type="button"
               variant="outline"
@@ -613,7 +719,11 @@ export function TestCaseModal({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !name.trim() || !expectedOutput.trim() || inputs.length === 0}>
+            <Button
+              type="submit"
+              disabled={loading || !name.trim() || !expectedOutput.trim() || inputs.length === 0}
+              className="shadow-sm hover:shadow-md transition-all"
+            >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Update Test Case" : "Create Test Case"}
             </Button>

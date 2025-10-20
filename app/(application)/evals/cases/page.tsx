@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { createColumns } from "./components/columns";
 import { DataTable } from "./components/data-table";
 import { UserContext } from "@/app/(application)/authenticated";
@@ -8,12 +8,17 @@ import { ArrowLeft, Brain } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { TestCase } from "@/types/models/test-case";
 
 export const dynamic = "force-dynamic";
 
 export default function TestCasesPage() {
+
   const { user } = useContext(UserContext);
-  const columns = createColumns(user);
+  const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
+  const columns = createColumns(user, (testCase) => {
+    setEditingTestCase(testCase);
+  });
   const router = useRouter();
 
   // Check if user has evals access
@@ -36,13 +41,11 @@ export default function TestCasesPage() {
     <>
       <div className="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
         <div className="flex items-center justify-between space-y-2">
-
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => router.push("/evals")}
-            >
+              onClick={() => router.push("/evals")}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
@@ -53,9 +56,7 @@ export default function TestCasesPage() {
             </div>
           </div>
         </div>
-
-        {/* Test Cases Table */}
-        <DataTable columns={columns} />
+        <DataTable columns={columns} testCase={editingTestCase || undefined} />
       </div>
     </>
   );

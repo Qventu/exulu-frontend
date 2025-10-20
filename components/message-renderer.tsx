@@ -25,6 +25,10 @@ interface MessageRendererProps {
   }>
   addToContext?: (item: any) => void
   writeAccess?: boolean
+  config?: {
+    marginTopFirstMessage?: string
+    customAssistantClassnames?: string
+  }
 }
 
 export function MessageRenderer({
@@ -36,7 +40,8 @@ export function MessageRenderer({
   onAddToolResult,
   UntypedToolPartComponent,
   addToContext,
-  writeAccess = true
+  writeAccess = true,
+  config
 }: MessageRendererProps) {
   const { toast } = useToast()
 
@@ -49,7 +54,14 @@ export function MessageRenderer({
 
         return (
           <Message
-            className={cn(isFirstMessage && 'mt-12', className)}
+            className={cn(
+              message.role === 'assistant' && (
+                config?.customAssistantClassnames ? config?.customAssistantClassnames : ''
+              ),
+              isFirstMessage && (
+                config?.marginTopFirstMessage ? config?.marginTopFirstMessage : 'mt-12'
+              ), className
+            )}
             from={message.role}
             key={message.id}
           >

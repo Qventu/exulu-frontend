@@ -31,11 +31,13 @@ import { useState } from "react";
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
   user: UserWithRole;
+  edit: () => void;
 }
 
 export function DataTableRowActions<TData>({
   row,
   user,
+  edit
 }: DataTableRowActionsProps<TData>) {
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -87,6 +89,7 @@ export function DataTableRowActions<TData>({
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
+              edit()
               // Edit is handled by the row click in data-table.tsx
             }}
           >

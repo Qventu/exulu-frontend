@@ -494,6 +494,9 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                 {messages?.length > 0 && (
                   <MessageRenderer
                     messages={messages}
+                    config={{
+                      marginTopFirstMessage: 'mt-12'
+                    }}
                     status={status}
                     onRegenerate={regenerate}
                     onAddToolResult={addToolResult}

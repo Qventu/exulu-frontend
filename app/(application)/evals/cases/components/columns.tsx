@@ -8,7 +8,7 @@ import { UserWithRole } from "@EXULU_SHARED/models/user";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 
-export const createColumns = (user: UserWithRole): ColumnDef<TestCase>[] => [
+export const createColumns = (user: UserWithRole, edit: (test: TestCase) => void): ColumnDef<TestCase>[] => [
   {
     accessorKey: "name",
     header: ({ column }) => (
@@ -55,12 +55,12 @@ export const createColumns = (user: UserWithRole): ColumnDef<TestCase>[] => [
     },
   },
   {
-    accessorKey: "expectedTools",
+    accessorKey: "expected_tools",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Expected Tools" />
     ),
     cell: ({ row }) => {
-      const tools = row.getValue("expectedTools") as string[];
+      const tools = row.getValue("expected_tools") as string[];
       if (!tools || tools.length === 0) return <span className="text-muted-foreground">—</span>;
       return (
         <Badge variant="outline">
@@ -70,12 +70,12 @@ export const createColumns = (user: UserWithRole): ColumnDef<TestCase>[] => [
     },
   },
   {
-    accessorKey: "expectedKnowledgeSources",
+    accessorKey: "expected_knowledge_sources",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Expected Contexts" />
     ),
     cell: ({ row }) => {
-      const contexts = row.getValue("expectedKnowledgeSources") as string[];
+      const contexts = row.getValue("expected_knowledge_sources") as string[];
       if (!contexts || contexts.length === 0) return <span className="text-muted-foreground">—</span>;
       return (
         <Badge variant="outline">
@@ -85,12 +85,12 @@ export const createColumns = (user: UserWithRole): ColumnDef<TestCase>[] => [
     },
   },
   {
-    accessorKey: "expectedAgentTools",
+    accessorKey: "expected_agent_tools",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Expected Agents" />
     ),
     cell: ({ row }) => {
-      const agents = row.getValue("expectedAgentTools") as string[];
+      const agents = row.getValue("expected_agent_tools") as string[];
       if (!agents || agents.length === 0) return <span className="text-muted-foreground">—</span>;
       return (
         <Badge variant="outline">
@@ -117,6 +117,9 @@ export const createColumns = (user: UserWithRole): ColumnDef<TestCase>[] => [
   },
   {
     id: "actions",
-    cell: ({ row }) => <DataTableRowActions row={row} user={user} />,
+    cell: ({ row }) => <DataTableRowActions row={row} user={user} edit={() => {
+      const testCase = row.original as TestCase;
+      edit(testCase);
+    }} />,
   },
 ];
