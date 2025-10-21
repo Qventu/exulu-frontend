@@ -79,9 +79,7 @@ export default function Login() {
         router.replace(`/login?error=${encodeURIComponent(res.error)}`);
         return;
       }
-
-      // Handle successful request (you can redirect to another page or show a success message)
-      // window.location.href = "/auth/verify-request";
+      
       if (authMode === "otp") {
         setSubmittedOTP(true);
         setSubmitting(false);
