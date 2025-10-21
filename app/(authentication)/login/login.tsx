@@ -148,7 +148,7 @@ export default function Login() {
                     <span className="size-2 animate-pulse rounded-full bg-primary-foreground" />
                   </div>
                 ) : (
-                  "Submit code"
+                  "Submit one time code"
                 )}
               </Button>
 
