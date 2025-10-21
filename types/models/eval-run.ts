@@ -1,4 +1,4 @@
-export type ScoringMethod = "mean" | "sum" | "average"
+export type ScoringMethod = "median" | "sum" | "average"
 
 export interface EvalRun {
   id: string

@@ -1631,6 +1631,50 @@ export const CREATE_EVAL_RUN = gql`
   }
 `;
 
+export const GET_QUEUE = gql`
+  query GetQueue($name: String!) {
+    queue(name: $name) {
+      name
+      concurrency
+      ratelimit
+      isMaxed
+      isPaused
+      jobs {
+        paused
+        completed
+        failed
+        waiting
+        active
+        delayed
+      }
+    }
+  }
+`;
+
+export const DELETE_JOB = gql`
+  mutation DeleteJob($queue: QueueEnum!, $id: ID!) {
+    deleteJob(queue: $queue, id: $id) {
+      success
+    }
+  }
+`;
+
+export const PAUSE_QUEUE = gql`
+  mutation PauseQueue($queue: QueueEnum!) {
+    pauseQueue(queue: $queue) {
+      success
+    }
+  }
+`;
+
+export const DRAIN_QUEUE = gql`
+  mutation DrainQueue($queue: QueueEnum!) {
+    drainQueue(queue: $queue) {
+      success
+    }
+  }
+`;
+
 export const RUN_EVAL = gql`
   mutation RunEval($id: ID!) {
     runEval(id: $id) {
