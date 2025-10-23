@@ -1,6 +1,6 @@
 {
     "name": "@exulu/frontend",
-    "version": "1.0.3",
+    "version": "1.1.0",
     "main": "server.js",
     "bin": {
       "exulu-frontend": "./dist/server.js"
