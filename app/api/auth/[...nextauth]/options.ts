@@ -27,9 +27,14 @@ export const pool = new Pool({
   port: parseInt(process.env.POSTGRES_DB_PORT || "5432", 10),
   password: process.env.POSTGRES_DB_PASSWORD,
   database: process.env.POSTGRES_DB_NAME || "exulu",
+  min: 2,
   max: 20,
+  acquireTimeoutMillis: 30000,
+  createTimeoutMillis: 30000,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  reapIntervalMillis: 1000,
+  createRetryIntervalMillis: 200,
+  connectionTimeoutMillis: 10000, // set to 10 seconds, for serverless functions cold starts can take a while
 })
 
 function gernerateOTP() {
