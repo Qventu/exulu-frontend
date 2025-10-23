@@ -1,13 +1,12 @@
-import { EXULU_JOB_STATUS } from "@/util/enums/job-status";
+import { BullMqJobData } from "./bullmq";
 
-export type Job = {
-  id: string
-  name: string
-  agent: string
-  status: EXULU_JOB_STATUS,
-  result?: string
-  type: "workflow" | "embedder"
-  finished_at?: Date
-  updatedAt: Date
-  createdAt?: Date
+export type QueueJob = {
+  name: string;
+  id: string;
+  returnvalue?: any;
+  stacktrace?: string[];
+  failedReason?: string;
+  state: string;
+  data?: BullMqJobData;
+  timestamp: number;
 };

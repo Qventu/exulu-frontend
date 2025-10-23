@@ -1,0 +1,14 @@
+{
+    "name": "@exulu/frontend",
+    "version": "1.0.3",
+    "main": "server.js",
+    "bin": {
+      "exulu-frontend": "./dist/server.js"
+    },
+    "scripts": {
+      "start": "node server.js"
+    },
+    "dependencies": {
+      "next": "^14.2.5"
+    }
+  }

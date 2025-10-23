@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,15 +11,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Clock, XCircle, Pause, AlertTriangle, Loader2, ChevronLeft, MoreVertical, Edit, Play, Square } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Loader2, ChevronLeft, MoreVertical, Edit, Play, Square } from "lucide-react";
 import { format } from "date-fns";
 import { EvalRun } from "@/types/models/eval-run";
 import { GET_TEST_CASES, RUN_EVAL } from "@/queries/queries";
+import { JobResult } from "@/types/models/job-result";
 import { EvalSet } from "@/types/models/eval-set";
 import { useQuery, useMutation } from "@apollo/client";
 import { CreateEvalRunModal } from "./create-eval-run-modal";
 import { useToast } from "@/components/ui/use-toast";
+import { EvalRunColumn } from "./eval-run-column";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { CodePreview } from "@/components/custom/code-preview";
 
 interface EvalRunsTableProps {
   evalRuns: EvalRun[];
@@ -39,37 +40,7 @@ interface EvalRunsTableProps {
   onRefetch: () => void;
 }
 
-interface JobResult {
-  id: string;
-  eval_run_id: string;
-  test_case_id: string;
-  status: "waiting" | "active" | "completed" | "failed" | "delayed" | "paused" | "stuck";
-  score?: number;
-  error?: string;
-}
-
-const statusIcons = {
-  waiting: <Clock className="h-3 w-3" />,
-  active: <Loader2 className="h-3 w-3 animate-spin" />,
-  completed: null,
-  failed: <XCircle className="h-3 w-3" />,
-  delayed: <Clock className="h-3 w-3" />,
-  paused: <Pause className="h-3 w-3" />,
-  stuck: <AlertTriangle className="h-3 w-3" />,
-};
-
-const statusColors = {
-  waiting: "text-yellow-600 bg-yellow-50 border-yellow-200",
-  active: "text-blue-600 bg-blue-50 border-blue-200",
-  completed: "",
-  failed: "text-red-600 bg-red-50 border-red-200",
-  delayed: "text-orange-600 bg-orange-50 border-orange-200",
-  paused: "text-gray-600 bg-gray-50 border-gray-200",
-  stuck: "text-red-600 bg-red-50 border-red-200",
-};
-
 export function EvalRunsTable({ evalRuns, evalSet, canWrite, onRefetch }: EvalRunsTableProps) {
-  const router = useRouter();
   const { toast } = useToast();
   const [visibleRuns, setVisibleRuns] = useState(5);
   const [selectedResult, setSelectedResult] = useState<JobResult | null>(null);
@@ -89,22 +60,7 @@ export function EvalRunsTable({ evalRuns, evalSet, canWrite, onRefetch }: EvalRu
     skip: !evalSet.id
   });
 
-  /* 
-  Get jobs per column (eval run)
-  const { data: jobsData, loading: loadingJobs, refetch: refetchJobs } = useQuery(GET_JOBS, {
-    variables: {
-      page: 1,
-      limit: 500,
-      filters: [{ eval_set_id: { eq: evalSet.id } }],
-    },
-    skip: !!evalSet.id
-  }); */
-
-  console.log("[EXULU] Test cases", testCasesData);
-
   const testCasesList = testCasesData?.test_casesPagination?.items || [];
-
-  console.log("[EXULU] Test cases list", testCasesList);
 
   const [runEval, { loading: runningEval }] = useMutation(RUN_EVAL, {
     onCompleted: (data) => {
@@ -129,29 +85,8 @@ export function EvalRunsTable({ evalRuns, evalSet, canWrite, onRefetch }: EvalRu
   const displayedRuns = sortedEvalRuns.slice(-visibleRuns);
   const hasMoreRuns = sortedEvalRuns.length > visibleRuns;
 
-  const getCellData = (test_case_id: string, eval_run_id: string): JobResult | null => {
-    return null; // todo
-  };
-
-  const getCellColor = (result: JobResult | null, run: EvalRun): string => {
-    if (!result || result.status !== "completed" || result.score === undefined) {
-      return "";
-    }
-
-    const score = result.score;
-    const threshold = run.pass_threshold;
-
-    if (score >= threshold) {
-      return "bg-green-100 border-green-300 hover:bg-green-200";
-    } else if (score >= threshold - 20) {
-      return "bg-orange-100 border-orange-300 hover:bg-orange-200";
-    } else {
-      return "bg-red-100 border-red-300 hover:bg-red-200";
-    }
-  };
-
   const handleCellClick = (result: JobResult | null) => {
-    if (result && result.status === "completed") {
+    if (result && result.state === "completed") {
       setSelectedResult(result);
       setIsSheetOpen(true);
     }
@@ -207,153 +142,104 @@ export function EvalRunsTable({ evalRuns, evalSet, canWrite, onRefetch }: EvalRu
   }
 
   return (
-    <div className="space-y-4 max-w-full">
+    <div className="w-full">
       <ScrollArea className="w-full">
-        <div className="min-w-max">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b">
-                <th className="sticky left-0 z-10 bg-background p-3 text-left font-medium text-sm min-w-[200px] border-r">
-                  Test Case
-                </th>
-                {hasMoreRuns && (
-                  <th className="text-center min-w-[20px] border-r">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleLoadMore}
-                      className="h-8 w-8 p-0"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                  </th>
-                )}
-                {displayedRuns.map((run) => (
-                  <th
-                    key={run.id}
-                    className="px-2 py-1.5 text-center font-medium text-sm min-w-[100px] border-r bg-muted/30"
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center justify-between gap-1">
-                        <div className="flex-1 text-xs font-semibold text-foreground truncate">
-                          {run.name}
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-5 w-5 p-0 hover:bg-background/80"
-                            >
-                              <MoreVertical className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditRun(run)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStartRun(run)}>
-                              <Play className="mr-2 h-4 w-4" />
-                              Start
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStopRun(run)}>
-                              <Square className="mr-2 h-4 w-4" />
-                              Stop
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      <div className="text-[10px] text-muted-foreground font-normal leading-tight">
-                        {format(new Date(run.createdAt), "MMM d, yyyy · HH:mm")}
-                      </div>
+        <div className="flex">
+          {/* Test Cases Column (Sticky) */}
+          <div className="sticky left-0 z-10 bg-background flex-shrink-0 min-w-[200px]">
+            {/* Header */}
+            <div className="p-3 border-b border-r text-left font-medium text-sm">
+              Test Case
+            </div>
+            {/* Rows */}
+            {testCasesList.map((testCase) => (
+              <div key={testCase.id} className="p-3 border-b border-r min-h-[72px] flex items-center">
+                <div>
+                  <div className="font-medium text-sm">{testCase.name}</div>
+                  {testCase.description && (
+                    <div className="text-xs text-muted-foreground mt-1 line-clamp-1 truncate max-w-[100px]">
+                      {testCase.id}
                     </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {testCasesList.map((testCase) => (
-                <tr key={testCase.id} className="border-b hover:bg-muted/50">
-                  <td className="sticky left-0 z-10 bg-background p-3 border-r">
-                    <div>
-                      <div className="font-medium text-sm">{testCase.name}</div>
-                      {testCase.description && (
-                        <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                          {testCase.description}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  {hasMoreRuns && (
-                    <td className="p-3 border-r bg-muted/20" />
                   )}
-                  {displayedRuns.map((run) => {
-                    const isIncluded = run.test_case_ids.includes(testCase.id);
-                    const result = getCellData(testCase.id, run.id);
-                    if (!isIncluded) {
-                      return (
-                        <td
-                          key={run.id}
-                          className="p-3 text-center border-r bg-muted/20"
-                        >
-                          <span className="text-xs text-muted-foreground">—</span>
-                        </td>
-                      );
-                    }
+                </div>
+              </div>
+            ))}
+          </div>
 
-                    const cellColor = getCellColor(result, run);
-                    const statusColor = result?.status ? statusColors[result.status] : "bg-transparent";
-
-                    return (
-                      <td
-                        key={run.id}
-                        className="p-3 text-center border-r"
-                      >
-                        <div
-                          onClick={() => handleCellClick(result)}
-                          className={cn(
-                            "w-full h-full min-h-[48px] rounded transition-colors flex items-center justify-center gap-2",
-                            cellColor || statusColor || "border-gray-200 bg-gray-50",
-                            result?.status === "completed" && "cursor-pointer hover:opacity-80",
-                            (!result || result.status !== "completed") && "cursor-default"
-                          )}
-                        >
-                          {result ? (
-                            <>
-                              {result.status === "completed" && result.score !== undefined ? (
-                                <span className="font-semibold text-sm hover:underline">
-                                  {result.score.toFixed(1)}
-                                </span>
-                              ) : (
-                                <div className="flex items-center gap-2">
-                                  {statusIcons[result.status]}
-                                  <span className="text-xs capitalize">
-                                    {result.status}
-                                  </span>
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          )}
-                        </div>
-                      </td>
-                    );
-                  })}
-                </tr>
+          {/* Load More Button Column */}
+          {hasMoreRuns && (
+            <div className="flex-shrink-0 min-w-[60px]">
+              <div className="text-center border-b border-r p-2 min-h-[48px] flex items-center justify-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLoadMore}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </div>
+              {testCasesList.map((testCase) => (
+                <div key={testCase.id} className="p-3 border-b border-r bg-muted/20 min-h-[72px]" />
               ))}
-            </tbody>
-          </table>
+            </div>
+          )}
+
+          {/* Eval Run Columns */}
+          {displayedRuns.map((run) => (
+            <div key={run.id} className="flex-1 min-w-[100px]">
+              {/* Column Header */}
+              <div className="px-2 py-1.5 text-center font-medium text-sm border-b border-r bg-muted/30 min-h-[48px]">
+                <div className="space-y-0.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex-1 text-xs font-semibold text-foreground truncate">
+                      {run.name}
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 w-5 p-0 hover:bg-background/80"
+                        >
+                          <MoreVertical className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEditRun(run)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleStartRun(run)}>
+                          <Play className="mr-2 h-4 w-4" />
+                          Start
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleStopRun(run)}>
+                          <Square className="mr-2 h-4 w-4" />
+                          Stop
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground font-normal leading-tight">
+                    {format(new Date(run.createdAt), "MMM d, yyyy · HH:mm")}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground font-normal leading-tight truncate max-w-[100px] text-center m-auto">
+                    {run.id}
+                  </div>
+                </div>
+              </div>
+              {/* Column Data */}
+              <EvalRunColumn
+                evalRun={run}
+                testCases={testCasesList}
+                onCellClick={handleCellClick}
+              />
+            </div>
+          ))}
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
-
-      {/* {loadingResults && (
-        <div className="text-center text-sm text-muted-foreground">
-          Loading results...
-        </div>
-      )} */}
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent>
@@ -364,19 +250,31 @@ export function EvalRunsTable({ evalRuns, evalSet, canWrite, onRefetch }: EvalRu
             {selectedResult && (
               <div className="space-y-4">
                 <div>
+                  <div className="text-sm font-medium">Job ID</div>
+                  <div className="text-sm">{selectedResult.job_id}</div>
+                </div>
+                <div>
                   <div className="text-sm font-medium">Score</div>
-                  <div className="text-2xl font-bold">{selectedResult.score?.toFixed(1)}</div>
+                  <div className="text-2xl font-bold">{selectedResult.result?.toFixed(1)}</div>
                 </div>
                 <div>
                   <div className="text-sm font-medium">Status</div>
-                  <div className="text-sm capitalize">{selectedResult.status}</div>
+                  <div className="text-sm capitalize">{selectedResult.state}</div>
                 </div>
-                {selectedResult.error && (
+                {selectedResult.error && typeof selectedResult.error === 'object' && Object.keys(selectedResult.error).length > 0 && (
                   <div>
                     <div className="text-sm font-medium">Error</div>
-                    <div className="text-sm text-red-600">{selectedResult.error}</div>
+                    <div className="text-sm text-red-600">{JSON.stringify(selectedResult.error)}</div>
                   </div>
                 )}
+                {
+                  selectedResult.metadata && (
+                    <div>
+                      <div className="text-sm font-medium">Metadata</div>
+                      <CodePreview code={JSON.stringify(selectedResult.metadata, null, 2)} />
+                    </div>
+                  )
+                }
               </div>
             )}
           </div>

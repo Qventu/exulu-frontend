@@ -375,31 +375,32 @@ export const GET_AGENT_MESSAGES = gql`
   }
 `;
 
-/**
-* Statusses takes a comma seperated string
-* of statusses to be included.
-**/
-export const GET_JOBS = gql`
-  query GetJobs(
+export const GET_JOB_RESULTS = gql`
+  query GetJobResults(
     $page: Int!
     $limit: Int!
-    $filters: [FilterJob]
+    $filters: [FilterJob_result]
     $sort: SortBy = {
       field: "createdAt",
       direction: DESC
     }
   ) {
-    jobsPagination(
+    job_resultsPagination(
       page: $page
       limit: $limit
       sort: $sort
       filters: $filters
     ) {
       items {
-        id  
-        status
-        name
+        job_id
+        state
+        error
+        label
+        result
+        metadata
         createdAt
+        updatedAt
+        id
       }
       pageInfo {
         pageCount
@@ -483,15 +484,18 @@ export const GET_USER_ROLE_BY_ID = gql`
     }
   }
 `;
-export const GET_JOB_BY_ID = gql`
-  query GetJobById($id: ID!) {
-  jobById(id: $id) {
+export const GET_JOB_RESULT_BY_ID = gql`
+  query GetJobResultById($id: ID!) {
+    job_resultById(id: $id) {
         id
-        status
-        name
-        inputs
+        job_id
+        state
+        error
+        label
         result
+        metadata
         createdAt
+        updatedAt
     }
   }
 `;
@@ -834,9 +838,9 @@ export const REMOVE_USER_BY_ID = gql`
     }
   }
 `;
-export const REMOVE_JOB_BY_ID = gql`
-  mutation RemoveJobById($id: ID!) {
-    jobsRemoveOneById(id: $id) {
+export const REMOVE_JOB_RESULT_BY_ID = gql`
+  mutation RemoveJobResultById($id: ID!) {
+    job_resultsRemoveOneById(id: $id) {
       id
     }
   }
@@ -1632,8 +1636,8 @@ export const CREATE_EVAL_RUN = gql`
 `;
 
 export const GET_QUEUE = gql`
-  query GetQueue($name: String!) {
-    queue(name: $name) {
+  query GetQueue($queue: QueueEnum!) {
+    queue(queue: $queue) {
       name
       concurrency
       ratelimit
@@ -1651,8 +1655,32 @@ export const GET_QUEUE = gql`
   }
 `;
 
+export const GET_JOBS = gql`
+  query GetJobs($queue: QueueEnum!, $statusses: [JobStateEnum!]) {
+    jobs(queue: $queue, statusses: $statusses) {
+      items {
+        name
+        id
+        returnvalue
+        stacktrace
+        failedReason
+        state
+        data
+        timestamp
+      }
+      pageInfo {
+        pageCount
+        itemCount
+        currentPage
+        hasPreviousPage
+        hasNextPage
+      }
+    }
+  }
+`;
+
 export const DELETE_JOB = gql`
-  mutation DeleteJob($queue: QueueEnum!, $id: ID!) {
+  mutation DeleteJob($queue: QueueEnum!, $id: String!) {
     deleteJob(queue: $queue, id: $id) {
       success
     }
@@ -1662,6 +1690,14 @@ export const DELETE_JOB = gql`
 export const PAUSE_QUEUE = gql`
   mutation PauseQueue($queue: QueueEnum!) {
     pauseQueue(queue: $queue) {
+      success
+    }
+  }
+`;
+
+export const RESUME_QUEUE = gql`
+  mutation ResumeQueue($queue: QueueEnum!) {
+    resumeQueue(queue: $queue) {
       success
     }
   }

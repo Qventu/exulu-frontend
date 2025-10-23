@@ -1,0 +1,2 @@
+.gradient{position:relative;background-image:repeating-linear-gradient(90deg,#63dffa,#6c47ff,#63dffa);z-index:1;background-position-x:0;background-size:200%;animation:gradimate 3s linear infinite;-webkit-background-clip:text;background-clip:text}@keyframes gradimate{0%{background-position-x:0}50%{background-position-x:100%}to{background-position-x:200%}}
+/*# sourceMappingURL=0c8b3bd55af472ec.css.map*/
