@@ -6,7 +6,7 @@
 
 **The open-source management interface for Exulu IMP**
 
-[![Node.js](https://img.shields.io/badge/Node.js-22.17.1-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-22.18.0-green.svg)](https://nodejs.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14.0.4-black.svg)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0.4-blue.svg)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -92,7 +92,7 @@ We believe that developer tools should be transparent, customizable, and communi
 
 ### Prerequisites
 
-- Node.js 22.17.1 (we recommend using [nvm](https://github.com/nvm-sh/nvm))
+- Node.js 22.18.0 (we recommend using [nvm](https://github.com/nvm-sh/nvm))
 - A running Exulu IMP backend instance
 - Properly setup environment variables
 
