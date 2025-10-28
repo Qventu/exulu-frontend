@@ -3,14 +3,14 @@
 import { useMutation, useQuery } from "@apollo/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect, useMemo } from "react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { AgentDelete } from "@/app/(application)/agents/components/agent-delete";
 import {
   REMOVE_AGENT_BY_ID, UPDATE_AGENT_BY_ID, GET_AGENT_BY_ID, CREATE_AGENT_SESSION, GET_VARIABLES,
-  GET_TOOLS,
+  GET_TOOLS, GET_TOOL_CATEGORIES,
 } from "@/queries/queries";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,7 +55,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Check, ChevronsUpDown, Wrench, Image, FileText, Volume2, Video, Info, AlertCircle, Settings, Text } from "lucide-react";
+import { Check, ChevronsUpDown, Wrench, Image, FileText, Volume2, Video, Info, AlertCircle, Settings, Text, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RBACControl } from "@/components/rbac";
 import {
@@ -222,6 +222,19 @@ export default function AgentForm({
     agent.tools ? agent.tools : []
   )
   const [sheetOpen, setSheetOpen] = useState<boolean | string>(false);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
   const [providerapikey, setProviderapikey] = useState<string>(agent.providerapikey || '')
   const [firewallEnabled, setFirewallEnabled] = useState<boolean>(agent.firewall?.enabled || false)
   const [animation_idle, setAnimation_idle] = useState<string>(agent.animation_idle || '')
@@ -242,12 +255,23 @@ export default function AgentForm({
 
   const { toast } = useToast();
 
-  const { data: toolsData } = useQuery<{
+  // Prepare query variables
+  const toolsQueryVariables = useMemo(() => ({
+    search: debouncedSearch || undefined,
+    category: selectedCategory === "all" ? undefined : selectedCategory,
+    limit: 100,
+    page: 0
+  }), [debouncedSearch, selectedCategory]);
+
+  const { data: toolsData, loading: toolsLoading } = useQuery<{
     tools: {
       items: Tool[]
+      total: number
+      page: number
+      limit: number
     }
   }>(GET_TOOLS, {
-    variables: { page: 1, limit: 100 },
+    variables: toolsQueryVariables
   });
 
   const { data: variablesData } = useQuery<{
@@ -258,7 +282,57 @@ export default function AgentForm({
     variables: { page: 1, limit: 100 },
   });
 
+  const { data: categoriesData } = useQuery<{
+    toolCategories: string[]
+  }>(GET_TOOL_CATEGORIES);
+
   const variables = variablesData?.variablesPagination?.items || [];
+
+  // Filter out agent's own tool and group by category
+  const filteredTools = useMemo(() => {
+    return toolsData?.tools?.items?.filter((tool: Tool) => tool.id !== agent.id) || [];
+  }, [toolsData?.tools?.items, agent.id]);
+
+  // Group tools by category for organized display
+  const toolsByCategory = useMemo(() => {
+    return filteredTools.reduce((acc, tool) => {
+      if (!acc[tool.category]) {
+        acc[tool.category] = [];
+      }
+      acc[tool.category].push(tool);
+      return acc;
+    }, {} as Record<string, Tool[]>);
+  }, [filteredTools]);
+
+  // Get categories from backend
+  const availableCategories = categoriesData?.toolCategories || [];
+
+  // Initialize all categories as collapsed when data loads
+  useEffect(() => {
+    if (availableCategories.length > 0) {
+      const allCategories = new Set(Object.keys(toolsByCategory));
+      setCollapsedCategories(allCategories);
+    }
+  }, [toolsByCategory]);
+
+  // Clear search function
+  const clearSearch = () => {
+    setSearchTerm("");
+    setSelectedCategory("all");
+  };
+
+  // Toggle category collapse state
+  const toggleCategoryCollapse = (categoryName: string) => {
+    setCollapsedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryName)) {
+        newSet.delete(categoryName);
+      } else {
+        newSet.add(categoryName);
+      }
+      return newSet;
+    });
+  };
 
   const copyAgentId = async () => {
     try {
@@ -274,7 +348,7 @@ export default function AgentForm({
   const [deleteAgent, deleteAgentResult] = useMutation(
     REMOVE_AGENT_BY_ID,
     {
-      onCompleted: (data) => {
+      onCompleted: () => {
         router.push(`/agents`, { scroll: false });
       },
     },
@@ -312,7 +386,7 @@ export default function AgentForm({
     mode: "onChange",
   });
 
-  const [createAgentSession, createAgentSessionResult] = useMutation(
+  const [createAgentSession] = useMutation(
     CREATE_AGENT_SESSION,
   );
 
@@ -715,7 +789,7 @@ export default function AgentForm({
                                               id="agent-idle-animation"
                                               allowedFileTypes={['.json']}
                                               selectionLimit={1}
-                                              buttonText="Upload Idle Animation"
+                                              buttonText=""
                                               dependencies={[agent.id]}
                                               onConfirm={(keys) => {
                                                 if (keys.length > 0) {
@@ -749,7 +823,7 @@ export default function AgentForm({
                                               id="agent-responding-animation"
                                               allowedFileTypes={['.json']}
                                               selectionLimit={1}
-                                              buttonText="Upload Responding Animation"
+                                              buttonText=""
                                               dependencies={[agent.id]}
                                               onConfirm={(keys) => {
                                                 if (keys.length > 0) {
@@ -948,151 +1022,433 @@ export default function AgentForm({
 
                           <Card>
                             <CardHeader>
-                              <CardTitle>Tools</CardTitle>
+                              <CardTitle className="flex items-center gap-2">
+                                Tools
+                                {toolsLoading && <Loading className="h-4 w-4" />}
+                              </CardTitle>
+                              <CardDescription>
+                                {enabledTools.length > 0 ? (
+                                  `${enabledTools.length} tool${enabledTools.length === 1 ? '' : 's'} enabled for this agent`
+                                ) : (
+                                  'No tools enabled for this agent'
+                                )}
+                              </CardDescription>
                             </CardHeader>
                             <CardContent>
                               <div className="flex flex-col space-y-4">
-                                <div className="space-y-4">
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">Tools available for this agent:</p>
-                                    {toolsData?.tools?.items?.map((tool: Tool) => {
-                                      if (tool.id === agent.id) {
-                                        return null;
-                                      }
-                                      const isEnabled = enabledTools.some(et => et.id === tool.id);
-                                      const toolConfig = enabledTools.find(et => et.id === tool.id);
-                                      const requiredConfigCount = tool.config?.length || 0;
-                                      const filledConfigCount = toolConfig?.config?.filter(c => c.variable && c.variable.trim() !== '').length || 0;
-                                      const hasEmptyConfigs = isEnabled && requiredConfigCount > 0 && filledConfigCount < requiredConfigCount;
+                                {/* Search and Filter Controls */}
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="relative flex-1">
+                                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                      <Input
+                                        placeholder="Search tools by name or description..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="pl-10 pr-10"
+                                      />
+                                      {searchTerm && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                                          onClick={() => setSearchTerm("")} 
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                                      <SelectTrigger className="w-[200px]">
+                                        <SelectValue placeholder="Filter by category" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="all">All categories</SelectItem>
+                                        {availableCategories.map((category) => (
+                                          <SelectItem key={category} value={category} className="capitalize">
+                                            {category}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    
+                                    {(searchTerm || selectedCategory !== "all") && (
+                                      <Button variant="outline" size="sm" onClick={clearSearch}>
+                                        Clear filters
+                                      </Button>
+                                    )}
+                                    
+                                    <div className="ml-auto text-sm text-muted-foreground">
+                                      {toolsData?.tools?.total || 0} tool{(toolsData?.tools?.total || 0) !== 1 ? 's' : ''} 
+                                      {debouncedSearch || selectedCategory !== "all" ? ' found' : ' available'}
+                                    </div>
+                                  </div>
+                                </div>
 
+                                <div className="space-y-6">
+                                  {/* Show tools grouped by category */}
+                                  {selectedCategory === "all" ? (
+                                    // Group view: show each category as a collapsible section
+                                    Object.entries(toolsByCategory).map(([categoryName, categoryTools]) => {
+                                      const enabledInCategory = categoryTools.filter(tool => 
+                                        enabledTools.some(et => et.id === tool.id)
+                                      ).length;
+                                      
+                                      const isCollapsed = collapsedCategories.has(categoryName);
+                                      
                                       return (
-                                        <div key={tool?.id} className="rounded-lg border p-4 mt-2">
-                                          <div className="flex items-center justify-between">
-                                            <div className="flex items-center flex-1">
-                                              <div className="flex-1">
-                                                <div className="flex items-center gap-2">
-                                                  <div className="font-medium">{tool?.name}</div>
-                                                  <div className="flex items-center gap-1">
-                                                    {
-                                                      requiredConfigCount > 0 && isEnabled && <>
-                                                        <Badge variant="secondary" className="text-xs">
-                                                          {filledConfigCount}/{requiredConfigCount}
-                                                        </Badge>
-                                                        {hasEmptyConfigs && (
-                                                          <AlertCircle className="h-4 w-4 text-destructive" />
-                                                        )}
-                                                      </>
-                                                    }
-                                                    <Badge variant={"outline"}>{tool?.type}</Badge>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                              <Sheet open={sheetOpen === tool.id} onOpenChange={() => {
-                                                if (sheetOpen === tool.id) {
-                                                  setSheetOpen(false);
-                                                } else {
-                                                  setSheetOpen(tool.id);
-                                                }
-                                              }}>
-                                                {
-                                                  (requiredConfigCount > 0 && !isEnabled) ? <SheetTrigger asChild>
-                                                    <Button variant="ghost" size="sm">
-                                                      <Settings className="h-4 w-4" />
-                                                    </Button>
-                                                  </SheetTrigger> : <Button type="button" disabled={true} variant="ghost" size="sm">
-                                                    <Settings className="h-4 w-4" />
-                                                  </Button>
-                                                }
+                                        <Collapsible key={categoryName} open={!isCollapsed} onOpenChange={() => toggleCategoryCollapse(categoryName)}>
+                                          <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                                            <CollapsibleTrigger asChild>
+                                              <Button variant="ghost" className="flex items-center gap-2 p-0 h-auto font-medium">
+                                                <ChevronsUpDown className="h-4 w-4" />
+                                                <span className="capitalize">{categoryName}</span>
+                                                <Badge variant="secondary" className="text-xs">
+                                                  {enabledInCategory}/{categoryTools.length}
+                                                </Badge>
+                                              </Button>
+                                            </CollapsibleTrigger>
+                                            
+                                            <div className="flex items-center gap-2">
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                  // Bulk enable all tools in this category
+                                                  const newlyEnabled = categoryTools
+                                                    .filter(tool => !enabledTools.some(et => et.id === tool.id))
+                                                    .map(tool => ({
+                                                      id: tool.id,
+                                                      type: tool.type,
+                                                      config: tool.config?.map(configItem => ({
+                                                        name: configItem.name,
+                                                        variable: ''
+                                                      })) || []
+                                                    }));
+                                                  setEnabledTools([...enabledTools, ...newlyEnabled]);
+                                                }}
+                                                disabled={enabledInCategory === categoryTools.length}
+                                              >
+                                                Enable All
+                                              </Button>
+                                              
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                  // Bulk disable all tools in this category
+                                                  const categoryToolIds = categoryTools.map(t => t.id);
+                                                  const filtered = enabledTools.filter(et => !categoryToolIds.includes(et.id));
+                                                  setEnabledTools(filtered);
+                                                }}
+                                                disabled={enabledInCategory === 0}
+                                              >
+                                                Disable All
+                                              </Button>
+                                            </div>
+                                          </div>
+                                          
+                                          <CollapsibleContent className="mt-2">
+                                            <div className="space-y-2 pl-4">
+                                              {categoryTools.map((tool: Tool) => {
+                                                const isEnabled = enabledTools.some(et => et.id === tool.id);
+                                                const toolConfig = enabledTools.find(et => et.id === tool.id);
+                                                const requiredConfigCount = tool.config?.length || 0;
+                                                const filledConfigCount = toolConfig?.config?.filter(c => c.variable && c.variable.trim() !== '').length || 0;
+                                                const hasEmptyConfigs = isEnabled && requiredConfigCount > 0 && filledConfigCount < requiredConfigCount;
 
-                                                <SheetTrigger asChild>
-                                                  <Button className="mr-2" variant="ghost" size="sm">
-                                                    <Info className="h-4 w-4" />
-                                                  </Button>
-                                                </SheetTrigger>
-                                                <SheetContent className="w-[400px] sm:w-[540px]">
-                                                  <SheetHeader>
-                                                    <SheetTitle>{tool?.name}</SheetTitle>
-                                                    <SheetDescription>
-                                                      {tool?.description}
-                                                    </SheetDescription>
-                                                  </SheetHeader>
-                                                  <div className="py-6">
-                                                    <div className="space-y-4">
-                                                      {/* Tool Configuration in Sheet */}
-                                                      {tool.config && tool.config.length > 0 && (
-                                                        <div className="space-y-4">
-                                                          <div className="text-md font-medium">Configuration variables:</div>
-                                                          {tool.config.map((configItem, configIndex) => {
-                                                            const currentValue = toolConfig?.config.find(c => c.name === configItem.name)?.variable || '';
-                                                            return (
-                                                              <div key={configIndex} className="space-y-2">
-                                                                {isEnabled ? (
-                                                                  <ToolConfigItem
-                                                                    configItem={configItem}
-                                                                    currentValue={currentValue}
-                                                                    variables={variables}
-                                                                    onVariableSelect={(variableName) => {
-                                                                      const updated = enabledTools.map(et => {
-                                                                        if (et.id === tool.id) {
-                                                                          return {
-                                                                            ...et,
-                                                                            config: et.config.map(c =>
-                                                                              c.name === configItem.name
-                                                                                ? { ...c, variable: variableName }
-                                                                                : c
-                                                                            )
-                                                                          };
-                                                                        }
-                                                                        return et;
-                                                                      });
-                                                                      console.log("updated", updated)
-                                                                      setEnabledTools(updated);
-                                                                    }}
-                                                                  />
-                                                                ) : (
-                                                                  <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
-                                                                    Enable this tool to configure
+                                                return (
+                                                  <div key={tool?.id} className="rounded-lg border p-4">
+                                                    <div className="flex items-center justify-between">
+                                                      <div className="flex items-center flex-1">
+                                                        <div className="flex-1">
+                                                          <div className="flex items-center gap-2">
+                                                            <div className="font-medium">{tool?.name}</div>
+                                                            <div className="flex items-center gap-1">
+                                                              {
+                                                                requiredConfigCount > 0 && isEnabled && <>
+                                                                  <Badge variant="secondary" className="text-xs">
+                                                                    {filledConfigCount}/{requiredConfigCount}
+                                                                  </Badge>
+                                                                  {hasEmptyConfigs && (
+                                                                    <AlertCircle className="h-4 w-4 text-destructive" />
+                                                                  )}
+                                                                </>
+                                                              }
+                                                              <Badge variant={"outline"}>{tool?.category}</Badge>
+                                                            </div>
+                                                          </div>
+                                                          <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                                            {tool?.description}
+                                                          </div>
+                                                        </div>
+                                                        <Sheet open={sheetOpen === tool.id} onOpenChange={() => {
+                                                          if (sheetOpen === tool.id) {
+                                                            setSheetOpen(false);
+                                                          } else {
+                                                            setSheetOpen(tool.id);
+                                                          }
+                                                        }}>
+                                                          {
+                                                            (requiredConfigCount > 0 && !isEnabled) ? <SheetTrigger asChild>
+                                                              <Button variant="ghost" size="sm">
+                                                                <Settings className="h-4 w-4" />
+                                                              </Button>
+                                                            </SheetTrigger> : <Button type="button" disabled={true} variant="ghost" size="sm">
+                                                              <Settings className="h-4 w-4" />
+                                                            </Button>
+                                                          }
+
+                                                          <SheetTrigger asChild>
+                                                            <Button className="mr-2" variant="ghost" size="sm">
+                                                              <Info className="h-4 w-4" />
+                                                            </Button>
+                                                          </SheetTrigger>
+                                                          <SheetContent className="w-[400px] sm:w-[540px]">
+                                                            <SheetHeader>
+                                                              <SheetTitle>{tool?.name}</SheetTitle>
+                                                              <SheetDescription>
+                                                                {tool?.description}
+                                                              </SheetDescription>
+                                                            </SheetHeader>
+                                                            <div className="py-6">
+                                                              <div className="space-y-4">
+                                                                {/* Tool Configuration in Sheet */}
+                                                                {tool.config && tool.config.length > 0 && (
+                                                                  <div className="space-y-4">
+                                                                    <div className="text-md font-medium">Configuration variables:</div>
+                                                                    {tool.config.map((configItem, configIndex) => {
+                                                                      const currentValue = toolConfig?.config.find(c => c.name === configItem.name)?.variable || '';
+                                                                      return (
+                                                                        <div key={configIndex} className="space-y-2">
+                                                                          {isEnabled ? (
+                                                                            <ToolConfigItem
+                                                                              configItem={configItem}
+                                                                              currentValue={currentValue}
+                                                                              variables={variables}
+                                                                              onVariableSelect={(variableName) => {
+                                                                                const updated = enabledTools.map(et => {
+                                                                                  if (et.id === tool.id) {
+                                                                                    return {
+                                                                                      ...et,
+                                                                                      config: et.config.map(c =>
+                                                                                        c.name === configItem.name
+                                                                                          ? { ...c, variable: variableName }
+                                                                                          : c
+                                                                                      )
+                                                                                    };
+                                                                                  }
+                                                                                  return et;
+                                                                                });
+                                                                                console.log("updated", updated)
+                                                                                setEnabledTools(updated);
+                                                                              }}
+                                                                            />
+                                                                          ) : (
+                                                                            <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
+                                                                              Enable this tool to configure
+                                                                            </div>
+                                                                          )}
+                                                                        </div>
+                                                                      );
+                                                                    })}
                                                                   </div>
                                                                 )}
                                                               </div>
-                                                            );
-                                                          })}
-                                                        </div>
-                                                      )}
+                                                            </div>
+                                                          </SheetContent>
+                                                        </Sheet>
+                                                      </div>
+                                                      <Switch
+                                                        checked={isEnabled}
+                                                        onCheckedChange={(value) => {
+                                                          let updated = [...enabledTools];
+                                                          if (value) {
+                                                            // Add tool with empty config initially
+                                                            const newToolConfig = {
+                                                              id: tool.id,
+                                                              type: tool.type,
+                                                              config: tool.config?.map(configItem => ({
+                                                                name: configItem.name,
+                                                                variable: ''
+                                                              })) || []
+                                                            };
+                                                            updated = [...enabledTools, newToolConfig];
+                                                            if (tool.config?.length > 0) {
+                                                              setSheetOpen(tool.id);
+                                                            }
+                                                          } else {
+                                                            updated = enabledTools.filter(t => t.id !== tool.id);
+                                                          }
+                                                          setEnabledTools(updated);
+                                                        }}
+                                                      />
                                                     </div>
                                                   </div>
-                                                </SheetContent>
-                                              </Sheet>
+                                                );
+                                              })}
                                             </div>
-                                            <Switch
-                                              checked={isEnabled}
-                                              onCheckedChange={(value) => {
-                                                let updated = [...enabledTools];
-                                                if (value) {
-                                                  // Add tool with empty config initially
-                                                  const newToolConfig = {
-                                                    id: tool.id,
-                                                    type: tool.type,
-                                                    config: tool.config?.map(configItem => ({
-                                                      name: configItem.name,
-                                                      variable: ''
-                                                    })) || []
-                                                  };
-                                                  updated = [...enabledTools, newToolConfig];
-                                                  if (tool.config?.length > 0) {
+                                          </CollapsibleContent>
+                                        </Collapsible>
+                                      );
+                                    })
+                                  ) : (
+                                    // Filtered view: show tools in selected category only
+                                    <div className="space-y-2">
+                                      {filteredTools.map((tool: Tool) => {
+                                        const isEnabled = enabledTools.some(et => et.id === tool.id);
+                                        const toolConfig = enabledTools.find(et => et.id === tool.id);
+                                        const requiredConfigCount = tool.config?.length || 0;
+                                        const filledConfigCount = toolConfig?.config?.filter(c => c.variable && c.variable.trim() !== '').length || 0;
+                                        const hasEmptyConfigs = isEnabled && requiredConfigCount > 0 && filledConfigCount < requiredConfigCount;
+
+                                        return (
+                                          <div key={tool?.id} className="rounded-lg border p-4">
+                                            <div className="flex items-center justify-between">
+                                              <div className="flex items-center flex-1">
+                                                <div className="flex-1">
+                                                  <div className="flex items-center gap-2">
+                                                    <div className="font-medium">{tool?.name}</div>
+                                                    <div className="flex items-center gap-1">
+                                                      {
+                                                        requiredConfigCount > 0 && isEnabled && <>
+                                                          <Badge variant="secondary" className="text-xs">
+                                                            {filledConfigCount}/{requiredConfigCount}
+                                                          </Badge>
+                                                          {hasEmptyConfigs && (
+                                                            <AlertCircle className="h-4 w-4 text-destructive" />
+                                                          )}
+                                                        </>
+                                                      }
+                                                      <Badge variant={"outline"}>{tool?.category}</Badge>
+                                                    </div>
+                                                  </div>
+                                                  <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                                    {tool?.description}
+                                                  </div>
+                                                </div>
+                                                <Sheet open={sheetOpen === tool.id} onOpenChange={() => {
+                                                  if (sheetOpen === tool.id) {
+                                                    setSheetOpen(false);
+                                                  } else {
                                                     setSheetOpen(tool.id);
                                                   }
-                                                } else {
-                                                  updated = enabledTools.filter(t => t.id !== tool.id);
-                                                }
-                                                setEnabledTools(updated);
-                                              }}
-                                            />
+                                                }}>
+                                                  {
+                                                    (requiredConfigCount > 0 && !isEnabled) ? <SheetTrigger asChild>
+                                                      <Button variant="ghost" size="sm">
+                                                        <Settings className="h-4 w-4" />
+                                                      </Button>
+                                                    </SheetTrigger> : <Button type="button" disabled={true} variant="ghost" size="sm">
+                                                      <Settings className="h-4 w-4" />
+                                                    </Button>
+                                                  }
+
+                                                  <SheetTrigger asChild>
+                                                    <Button className="mr-2" variant="ghost" size="sm">
+                                                      <Info className="h-4 w-4" />
+                                                    </Button>
+                                                  </SheetTrigger>
+                                                  <SheetContent className="w-[400px] sm:w-[540px]">
+                                                    <SheetHeader>
+                                                      <SheetTitle>{tool?.name}</SheetTitle>
+                                                      <SheetDescription>
+                                                        {tool?.description}
+                                                      </SheetDescription>
+                                                    </SheetHeader>
+                                                    <div className="py-6">
+                                                      <div className="space-y-4">
+                                                        {/* Tool Configuration in Sheet */}
+                                                        {tool.config && tool.config.length > 0 && (
+                                                          <div className="space-y-4">
+                                                            <div className="text-md font-medium">Configuration variables:</div>
+                                                            {tool.config.map((configItem, configIndex) => {
+                                                              const currentValue = toolConfig?.config.find(c => c.name === configItem.name)?.variable || '';
+                                                              return (
+                                                                <div key={configIndex} className="space-y-2">
+                                                                  {isEnabled ? (
+                                                                    <ToolConfigItem
+                                                                      configItem={configItem}
+                                                                      currentValue={currentValue}
+                                                                      variables={variables}
+                                                                      onVariableSelect={(variableName) => {
+                                                                        const updated = enabledTools.map(et => {
+                                                                          if (et.id === tool.id) {
+                                                                            return {
+                                                                              ...et,
+                                                                              config: et.config.map(c =>
+                                                                                c.name === configItem.name
+                                                                                  ? { ...c, variable: variableName }
+                                                                                  : c
+                                                                              )
+                                                                            };
+                                                                          }
+                                                                          return et;
+                                                                        });
+                                                                        console.log("updated", updated)
+                                                                        setEnabledTools(updated);
+                                                                      }}
+                                                                    />
+                                                                  ) : (
+                                                                    <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
+                                                                      Enable this tool to configure
+                                                                    </div>
+                                                                  )}
+                                                                </div>
+                                                              );
+                                                            })}
+                                                          </div>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  </SheetContent>
+                                                </Sheet>
+                                              </div>
+                                              <Switch
+                                                checked={isEnabled}
+                                                onCheckedChange={(value) => {
+                                                  let updated = [...enabledTools];
+                                                  if (value) {
+                                                    // Add tool with empty config initially
+                                                    const newToolConfig = {
+                                                      id: tool.id,
+                                                      type: tool.type,
+                                                      config: tool.config?.map(configItem => ({
+                                                        name: configItem.name,
+                                                        variable: ''
+                                                      })) || []
+                                                    };
+                                                    updated = [...enabledTools, newToolConfig];
+                                                    if (tool.config?.length > 0) {
+                                                      setSheetOpen(tool.id);
+                                                    }
+                                                  } else {
+                                                    updated = enabledTools.filter(t => t.id !== tool.id);
+                                                  }
+                                                  setEnabledTools(updated);
+                                                }}
+                                              />
+                                            </div>
                                           </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                  
+                                  {/* Empty state when no tools match filters */}
+                                  {filteredTools.length === 0 && (searchTerm || selectedCategory !== "all") && (
+                                    <div className="text-center py-8">
+                                      <div className="text-muted-foreground">
+                                        No tools found matching your criteria.
+                                      </div>
+                                      <Button variant="outline" size="sm" className="mt-2" onClick={clearSearch}>
+                                        Clear filters
+                                      </Button>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </CardContent>

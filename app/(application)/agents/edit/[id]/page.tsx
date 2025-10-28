@@ -36,7 +36,7 @@ export default function Page({ params }: { params: { id: string } }) {
     </Alert>
   }
 
-  if (!data) {
+  if (!data?.agentById) {
     return <Alert variant="destructive">
       <ExclamationTriangleIcon className="size-4" />
       <AlertTitle>Error</AlertTitle>
