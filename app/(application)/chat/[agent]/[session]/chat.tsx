@@ -406,47 +406,47 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
               {
                 /* Show a bar that fills up depending on the total tokens used */
                 agent.maxContextLength ? (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className={`absolute w-full ${canCreateWorkflow ? 'top-10' : 'top-0'}`}>
-                        <Progress className="w-full rounded-none" value={tokenCounts.totalTokens / agent.maxContextLength * 100} />
-                        <div className="justify-between flex felx-row">
-                          <div></div>
-                          <Context
-                            maxTokens={agent.maxContextLength || 0}
-                            usedTokens={tokenCounts.totalTokens}
-                            usage={{
-                              inputTokens: tokenCounts.inputTokens,
-                              outputTokens: tokenCounts.outputTokens,
-                              totalTokens: tokenCounts.totalTokens,
-                              cachedInputTokens: tokenCounts.cachedInputTokens,
-                              reasoningTokens: tokenCounts.reasoningTokens,
-                            }}>
-                            <ContextTrigger />
-                            <ContextContent>
-                              <ContextContentHeader />
-                              <ContextContentBody>
-                                {/* @ts-ignore */}
-                                <ContextInputUsage />
-                                {/* @ts-ignore */}
-                                <ContextOutputUsage />
-                                {/* @ts-ignore */}
-                                <ContextReasoningUsage />
-                                {/* @ts-ignore */}
-                                <ContextCacheUsage />
-                              </ContextContentBody>
-                            </ContextContent>
-                          </Context>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className={`absolute w-full ${canCreateWorkflow ? 'top-10' : 'top-0'}`}>
+                          <Progress className="w-full rounded-none" value={tokenCounts.totalTokens / agent.maxContextLength * 100} />
+                          <div className="justify-between flex felx-row">
+                            <div></div>
+                            <Context
+                              maxTokens={agent.maxContextLength || 0}
+                              usedTokens={tokenCounts.totalTokens}
+                              usage={{
+                                inputTokens: tokenCounts.inputTokens,
+                                outputTokens: tokenCounts.outputTokens,
+                                totalTokens: tokenCounts.totalTokens,
+                                cachedInputTokens: tokenCounts.cachedInputTokens,
+                                reasoningTokens: tokenCounts.reasoningTokens,
+                              }}>
+                              <ContextTrigger />
+                              <ContextContent>
+                                <ContextContentHeader />
+                                <ContextContentBody>
+                                  {/* @ts-ignore */}
+                                  <ContextInputUsage />
+                                  {/* @ts-ignore */}
+                                  <ContextOutputUsage />
+                                  {/* @ts-ignore */}
+                                  <ContextReasoningUsage />
+                                  {/* @ts-ignore */}
+                                  <ContextCacheUsage />
+                                </ContextContentBody>
+                              </ContextContent>
+                            </Context>
+                          </div>
                         </div>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{Intl.NumberFormat('en-US').format(tokenCounts.totalTokens)} / {Intl.NumberFormat('en-US').format(agent.maxContextLength)} tokens in the context window used.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ) : null}
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{Intl.NumberFormat('en-US').format(tokenCounts.totalTokens)} / {Intl.NumberFormat('en-US').format(agent.maxContextLength)} tokens in the context window used.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : null}
               {messages?.length === 0 ?
                 <div className="size-full flex justify-center items-center">
                   <div className="flex flex-col gap-4 items-center max-w-2xl w-full px-4 my-auto">
@@ -461,7 +461,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                       How can I help you today?
                     </p>
 
-                    <AgentVisual agent={agent} status={status} />
+                    <AgentVisual agent={agent} status={status} className="w-80"/>
 
                     {/* Workflow Banner for new users */}
                     <Card className="w-full mb-6">
@@ -535,20 +535,22 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                 onSubmit={onSubmit}
                 className="px-6 border-input border rounded flex mx-5 p-5 flex-col gap-2">
                 <div className="items-center flex relative gap-2 w-full">
-                  <UppyDashboard
-                    id={`chat-${session.id}`}
-                    selectionLimit={10}
-                    allowedFileTypes={[
-                      ...agent.capabilities?.audio || [],
-                      ...agent.capabilities?.video || [],
-                      ...agent.capabilities?.files || [],
-                      ...agent.capabilities?.images || [],
-                    ]}
-                    dependencies={[]}
-                    onConfirm={(items) => {
-                      setItems(items)
-                    }}
-                  />
+                  {
+                    configContext?.fileUploads?.s3endpoint && (<UppyDashboard
+                      id={`chat-${session.id}`}
+                      selectionLimit={10}
+                      allowedFileTypes={[
+                        ...agent.capabilities?.audio || [],
+                        ...agent.capabilities?.video || [],
+                        ...agent.capabilities?.files || [],
+                        ...agent.capabilities?.images || [],
+                      ]}
+                      dependencies={[]}
+                      onConfirm={(items) => {
+                        setItems(items)
+                      }}
+                    />)
+                  }
                   <TextareaAutosize
                     autoComplete="off"
                     autoFocus={true}
@@ -606,7 +608,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
               {
                 messages?.length > 0 && (
                   <div>
-                    <AgentVisual agent={agent} status={status} />
+                    <AgentVisual agent={agent} status={status} className="w-80" />
                   </div>
                 )
               }

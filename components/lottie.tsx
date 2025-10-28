@@ -4,10 +4,16 @@ import { Agent } from "@/types/models/agent";
 import * as agentIdle from "../public/agent-idle.json";
 import * as agentResponding from "../public/agent-responding.json";
 import { useLottie } from "lottie-react";
+import { useQuery } from "@tanstack/react-query";
+import { getPresignedUrl } from "./uppy-dashboard";
+import { cn } from "@/lib/utils";
 
-const AgentVisual = ({ agent, status }: { agent: Agent, status: 'submitted' | 'streaming' | 'ready' | 'error' }) => {
+const AgentVisual = ({ agent, status, className }: { agent: Agent, status: 'submitted' | 'streaming' | 'ready' | 'error', className?: string }) => {
 
-  if (!agentIdle && agent.image) {
+  // Check if agent has custom animations
+  const hasCustomAnimations = agent.animation_idle || agent.animation_responding;
+
+  if (!hasCustomAnimations && !agentIdle && agent.image) {
     return <img
       src={agent.image}
       alt={`${agent.name} agent`}
@@ -15,52 +21,72 @@ const AgentVisual = ({ agent, status }: { agent: Agent, status: 'submitted' | 's
     />
   }
 
-  if (!agentIdle) {
+  if (!hasCustomAnimations && !agentIdle) {
     return <div className="text-3xl font-bold text-primary text-center">
       {agent.name?.charAt(0).toUpperCase() || 'A'}
     </div>
   }
 
-  return <div className="text-3xl font-bold text-primary text-center">
-    {agent.name?.charAt(0).toUpperCase() || 'A'}
-  </div>
-
-  return <LottieVisual agent={agent} status={status} />
+  return <LottieVisual className={className} agent={agent} status={status} />
 
 };
 
-const LottieVisual = ({ agent, status }: { agent: Agent, status: 'submitted' | 'streaming' | 'ready' | 'error' }) => {
+const LottieVisual = ({ agent, status, className }: { agent: Agent, status: 'submitted' | 'streaming' | 'ready' | 'error', className?: string }) => {
+  // Fetch custom animation data if available
+  const { data: customIdleData } = useQuery({
+    queryKey: ['customAnimation', agent.animation_idle],
+    queryFn: async () => {
+      if (!agent.animation_idle) return null;
+      const url = await getPresignedUrl(agent.animation_idle);
+      const response = await fetch(url);
+      return response.json();
+    },
+    enabled: !!agent.animation_idle,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const { data: customRespondingData } = useQuery({
+    queryKey: ['customAnimation', agent.animation_responding],
+    queryFn: async () => {
+      if (!agent.animation_responding) return null;
+      const url = await getPresignedUrl(agent.animation_responding);
+      const response = await fetch(url);
+      return response.json();
+    },
+    enabled: !!agent.animation_responding,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   // Map status to animation configuration
   const getAnimationOptions = () => {
     switch (status) {
       case 'submitted':
         return {
-          animationData: agentIdle,
+          animationData: customIdleData || agentIdle,
           loop: true,
           autoplay: true,
         };
       case 'streaming':
         return {
-          animationData: agentResponding || agentIdle,
+          animationData: customRespondingData || customIdleData || agentResponding || agentIdle,
           loop: true,
           autoplay: true,
         };
       case 'ready':
         return {
-
-          animationData: agentIdle,
+          animationData: customIdleData || agentIdle,
           loop: true,
           autoplay: true,
         };
       case 'error':
         return {
-          animationData: agentIdle,
+          animationData: customIdleData || agentIdle,
           loop: true,
           autoplay: true,
         };
       default:
         return {
-          animationData: agentIdle,
+          animationData: customIdleData || agentIdle,
           loop: true,
           autoplay: true,
         };
@@ -72,7 +98,7 @@ const LottieVisual = ({ agent, status }: { agent: Agent, status: 'submitted' | '
   return (
     <>
       <div className="">
-        <div className="w-80">{View}</div>
+        <div className={className}>{View}</div>
       </div>
     </>
   );

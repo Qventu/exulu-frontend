@@ -48,6 +48,9 @@ export interface Agent {
         roles?: Array<{ id: string; rights: 'read' | 'write' }>;
         projects?: Array<{ id: string; rights: 'read' | 'write' }>;
     };
+    // Lottie animation fields
+    animation_idle?: string;
+    animation_responding?: string;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -56,4 +59,5 @@ export type imageTypes = '.png' | '.jpg' | '.jpeg' | '.gif' | '.webp';
 export type fileTypes = '.pdf' | '.docx' | '.xlsx' | '.xls' | '.csv' | '.pptx' | '.ppt';
 export type audioTypes = '.mp3' | '.wav' | '.m4a' | '.mp4' | '.mpeg';
 export type videoTypes = '.mp4' | '.m4a' | '.mp3' | '.mpeg' | '.wav';
-export type allFileTypes = imageTypes | fileTypes | audioTypes | videoTypes;
+export type lottieTypes = '.json';
+export type allFileTypes = imageTypes | fileTypes | audioTypes | videoTypes | lottieTypes;

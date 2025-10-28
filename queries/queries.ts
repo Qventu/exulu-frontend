@@ -63,6 +63,8 @@ instructions
 description
 active
 image
+animation_idle
+animation_responding
 tools
 providerName
 modelName
@@ -728,6 +730,8 @@ export const UPDATE_AGENT_BY_ID = gql`
     $description: String
     $instructions: String
     $rights_mode: String
+    $animation_idle: String
+    $animation_responding: String
     $category: String
     $tools: JSON
     $active: Boolean
@@ -741,6 +745,8 @@ export const UPDATE_AGENT_BY_ID = gql`
         description: $description
         category: $category
         instructions: $instructions
+        animation_idle: $animation_idle
+        animation_responding: $animation_responding
         rights_mode: $rights_mode
         active: $active
         tools: $tools
@@ -755,6 +761,8 @@ export const UPDATE_AGENT_BY_ID = gql`
           description
           instructions
           category
+          animation_idle
+          animation_responding
           rights_mode
           RBAC {
             type

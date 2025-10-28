@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery } from "@apollo/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import { useContext, useState } from "react";
 import * as React from "react";
@@ -13,7 +12,6 @@ import {
   REMOVE_AGENT_BY_ID, UPDATE_AGENT_BY_ID, GET_AGENT_BY_ID, CREATE_AGENT_SESSION, GET_VARIABLES,
   GET_TOOLS,
 } from "@/queries/queries";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -80,6 +78,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Variable } from "@/types/models/variable";
+import UppyDashboard, { FileDataCard } from "@/components/uppy-dashboard";
+import AgentVisual from "@/components/lottie";
+import { ConfigContext } from "@/components/config-context";
 
 const categories = [
   "marketing",
@@ -215,6 +216,7 @@ export default function AgentForm({
 
   const router = useRouter();
   const { user } = useContext(UserContext);
+  const configContext = useContext(ConfigContext);
   const [enabledTools, setEnabledTools] = useState<{ id: string, config: { name: string, variable: string }[] }[]>(
     // Convert legacy string[] format to new object format
     agent.tools ? agent.tools : []
@@ -222,6 +224,8 @@ export default function AgentForm({
   const [sheetOpen, setSheetOpen] = useState<boolean | string>(false);
   const [providerapikey, setProviderapikey] = useState<string>(agent.providerapikey || '')
   const [firewallEnabled, setFirewallEnabled] = useState<boolean>(agent.firewall?.enabled || false)
+  const [animation_idle, setAnimation_idle] = useState<string>(agent.animation_idle || '')
+  const [animation_responding, setAnimation_responding] = useState<string>(agent.animation_responding || '')
   const [rbac, setRbac] = useState({
     rights_mode: agent.rights_mode,
     users: agent.RBAC?.users,
@@ -330,6 +334,8 @@ export default function AgentForm({
                       category: data.category,
                       active: data.active,
                       providerapikey: providerapikey,
+                      animation_idle: animation_idle,
+                      animation_responding: animation_responding,
                       rights_mode: rbac.rights_mode,
                       RBAC: {
                         users: rbac.users || [],
@@ -616,6 +622,8 @@ export default function AgentForm({
                                       </div>
                                     </TooltipProvider>
                                   </div>
+
+
                                   <>
                                     <div className="text-sm font-medium mb-0">    You can test this agent using the Exulu
                                       UI without activating the agent if you
@@ -669,6 +677,105 @@ export default function AgentForm({
                                 </FormItem>
                               )}
                             />
+
+                            {configContext?.fileUploads?.s3endpoint && (
+                              <Card className="bg-transparent">
+                                <Collapsible>
+                                  <CardHeader className="p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex flex-col">
+                                        <p className="text-base">
+                                          Custom Animations
+                                        </p>
+                                        <p className="text-sm text-muted-foreground mb-0">
+                                          Upload custom Lottie animations for idle and responding states.
+                                        </p>
+                                      </div>
+                                      <CollapsibleTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="size-8">
+                                          <ChevronsUpDown className="size-4" />
+                                          <span className="sr-only">Toggle</span>
+                                        </Button>
+                                      </CollapsibleTrigger>
+                                    </div>
+                                  </CardHeader>
+
+                                  <CollapsibleContent className="mt-5">
+                                    <CardContent className="space-y-4">
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Idle Animation */}
+                                        <div className="space-y-2">
+                                          <div>
+                                            <div className="text-sm font-medium">Idle Animation</div>
+                                            <div className="text-xs text-muted-foreground">Animation when agent is waiting</div>
+                                          </div>
+
+                                          <FileDataCard s3key={animation_idle}>
+                                            <UppyDashboard
+                                              id="agent-idle-animation"
+                                              allowedFileTypes={['.json']}
+                                              selectionLimit={1}
+                                              buttonText="Upload Idle Animation"
+                                              dependencies={[agent.id]}
+                                              onConfirm={(keys) => {
+                                                if (keys.length > 0) {
+                                                  setAnimation_idle(keys[0]);
+                                                }
+                                              }}
+                                            />
+                                            {animation_idle && (
+                                              <div className="mt-2 p-2 border rounded bg-muted/30">
+                                                <div className="text-xs text-muted-foreground mb-1">Preview:</div>
+                                                <div className="w-12 h-12 mx-auto">
+                                                  <AgentVisual
+                                                    agent={{ ...agent, animation_idle }}
+                                                    status="ready"
+                                                  />
+                                                </div>
+                                              </div>
+                                            )}
+                                          </FileDataCard>
+                                        </div>
+
+                                        {/* Responding Animation */}
+                                        <div className="space-y-2">
+                                          <div>
+                                            <div className="text-sm font-medium">Responding Animation</div>
+                                            <div className="text-xs text-muted-foreground">Animation when agent is responding</div>
+                                          </div>
+                                          
+                                          <FileDataCard s3key={animation_responding}>
+                                            <UppyDashboard
+                                              id="agent-responding-animation"
+                                              allowedFileTypes={['.json']}
+                                              selectionLimit={1}
+                                              buttonText="Upload Responding Animation"
+                                              dependencies={[agent.id]}
+                                              onConfirm={(keys) => {
+                                                if (keys.length > 0) {
+                                                  setAnimation_responding(keys[0]);
+                                                }
+                                              }}
+                                            />
+                                            {animation_responding && (
+                                              <div className="mt-2 p-2 border rounded bg-muted/30">
+                                                <div className="text-xs text-muted-foreground mb-1">Preview:</div>
+                                                <div className="w-12 h-12 mx-auto">
+                                                  <AgentVisual
+                                                    agent={{ ...agent, animation_responding }}
+                                                    status="streaming"
+                                                  />
+                                                </div>
+                                              </div>
+                                            )}
+                                          </FileDataCard>
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              </Card>
+                            )}
 
                             <Card className="bg-transparent">
                               <Collapsible>
