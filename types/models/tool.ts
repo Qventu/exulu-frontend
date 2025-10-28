@@ -3,6 +3,7 @@ export interface Tool {
     name: string;
     description: string;
     type: string;
+    category: string;
     inputSchema: any;
     outputSchema: any;
     config: {

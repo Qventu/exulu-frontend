@@ -709,16 +709,26 @@ export const CREATE_AGENT = gql`
 `;
 
 export const GET_TOOLS = gql`
-  query GetTools {
-    tools {
+  query GetTools($search: String, $category: String, $limit: Int, $page: Int) {
+    tools(search: $search, category: $category, limit: $limit, page: $page) {
       items {
         id
         name
+        category
         description
         config
         type
       }
+      total
+      page
+      limit
     }
+  }
+`;
+
+export const GET_TOOL_CATEGORIES = gql`
+  query GetToolCategories {
+    toolCategories
   }
 `;
 
