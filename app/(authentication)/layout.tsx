@@ -1,4 +1,3 @@
-import Script from "next/script";
 import "../globals.css";
 import { fontVariables } from "@/lib/fonts";
 import * as React from "react";
@@ -8,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { TanstackQueryClientProvider } from "@/app/(application)/query-client";
 import { ConfigContextProvider } from "@/components/config-context";
 import { config as apiConfig } from "@/util/api";
+import Logo from "@/components/logo";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const config = {
@@ -53,13 +53,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </main>
               <Toaster />
               <footer className="flex items-center h-20 gap-1 px-8 font-medium border-t md:px-20">
-                <img
-                  src={config.backend + "/logo.png"}
-                  alt="Logo"
-                  className="dark:invert-0"
-                  width={64}
-                  height={32}
-                />
+                <Logo width={64} height={32} alt="Logo" />
                 <span className="text-sm ml-2">© 2025</span>
                 <nav className="flex justify-end grow sm:gap-2">
                   <a

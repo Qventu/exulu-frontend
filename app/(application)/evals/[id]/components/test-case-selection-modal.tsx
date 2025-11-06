@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GET_TEST_CASES } from "@/queries/queries";
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface TestCaseSelectionModalProps {
   open: boolean;
@@ -83,6 +84,11 @@ export function TestCaseSelectionModal({
           <DialogDescription>
             Select test cases to add to this eval set. Already added test cases are hidden.
           </DialogDescription>
+          <Alert variant="destructive" className="mt-3">
+            <AlertDescription>
+              <strong>Note:</strong> You can only add test cases that are not already in an eval set. Remove them from another eval set first if you want to add them to a new eval set.
+            </AlertDescription>
+          </Alert>
         </DialogHeader>
 
         <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
@@ -120,7 +126,7 @@ export function TestCaseSelectionModal({
                 ))
               ) : availableTestCases.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground mx-5">
-                  {search ? "No test cases found matching your search." : "No test cases available to add (note: you can only add test cases that are not already in an eval set, remove them from another eval set first if you want to add them to a new eval set)."}
+                  {search ? "No test cases found matching your search." : "No test cases available to add."}
                 </div>
               ) : (
                 availableTestCases.map((testCase: any) => (

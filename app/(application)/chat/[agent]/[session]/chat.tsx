@@ -69,7 +69,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MessageRenderer } from "@/components/message-renderer";
 import { Response } from '@/components/ai-elements/response';
 import AgentVisual from "@/components/lottie";
-
+import { useTheme } from "next-themes";
+import Logo from "@/components/logo";
 export interface ChatProps {
   chatId?: string;
   agentId?: string;
@@ -92,6 +93,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
   const [error, setError] = useState<string | null>(null);
   const configContext = React.useContext(ConfigContext);
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
   const [files, setFiles] = useState<FileUIPart[] | null>(null);
   const [items, setItems] = useState<string[] | null>(null);
   const { user } = useContext(UserContext);
@@ -450,13 +452,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
               {messages?.length === 0 ?
                 <div className="size-full flex justify-center items-center">
                   <div className="flex flex-col gap-4 items-center max-w-2xl w-full px-4 my-auto">
-                    <img
-                      src={configContext?.backend + "/logo.png"}
-                      alt="AI"
-                      width={120}
-                      height={120}
-                      className="h-30 w-40 object-contain" /*invert dark:invert-0*/
-                    />
+                    <Logo alt="Logo" width={120} height={120} className="h-30 w-40 object-contain" />
                     <p className="text-center text-lg text-muted-foreground">
                       How can I help you today?
                     </p>

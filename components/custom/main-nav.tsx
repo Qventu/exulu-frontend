@@ -25,8 +25,7 @@ import { ChevronUp, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard,
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "../ui/avatar";
-import Image from "next/image"
-import { ConfigContext } from "../config-context";
+import Logo from "../logo";
 
 interface User {
   email: string;
@@ -174,14 +173,13 @@ function NavigationItems({ items }: { items: { label: string; path: string; icon
 }
 
 export function MainNavSidebar({ sidebarDefaultOpen }: { sidebarDefaultOpen: boolean }) {
+  
   const { user } = useContext(UserContext);
   const navigationItems = buildNavigation(user, user.role);
   const router = useRouter();
   const { setTheme, theme } = useTheme();
   const params = useParams()
   const sidebar = useSidebar()
-
-  const configContext = useContext(ConfigContext)
 
   useEffect(() => {
     if (params.agent && sidebarDefaultOpen === undefined) {
@@ -194,7 +192,7 @@ export function MainNavSidebar({ sidebarDefaultOpen }: { sidebarDefaultOpen: boo
       <div className="flex items-center gap-3 border-b bg-background/80 backdrop-blur-sm p-[12px] sticky top-0 z-10">
         <SidebarTrigger />
         <div className="flex items-center gap-2">
-          <img src={configContext?.backend + "/logo.png"} height={40} width={100} alt="Logo" />
+          <Logo alt="Logo" width={100} height={40} />
         </div>
       </div>
       <SidebarContent className="px-2">

@@ -50,7 +50,7 @@ export function AgentCard({ agent, onSelect, showDetails }: AgentCardProps) {
               {agent.image ? (
                 <img
                   src={agent.image}
-                  alt={`${agent.name} agent`}
+                  alt={`${agent.name?.charAt(0).toUpperCase() || 'A'}`}
                   className="w-full h-full object-cover rounded-full"
                 />
               ) : (
@@ -59,7 +59,6 @@ export function AgentCard({ agent, onSelect, showDetails }: AgentCardProps) {
                 </div>
               )}
             </div>
-
             {/* Agent Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-2">
