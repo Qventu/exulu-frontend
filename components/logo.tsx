@@ -19,7 +19,7 @@ const Logo = ({ width = 64, height = 32, className = "", alt = "Logo" }: LogoPro
                 alt={alt}
                 width={width}
                 height={height}
-                className={className + "hidden dark:block invert"}
+                className={className + "hidden dark:block"}
             />
             <img
                 src={configContext?.backend + "/logo_light.png"}
