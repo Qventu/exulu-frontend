@@ -18,6 +18,7 @@ interface TimeSeriesChartProps {
   onUnitChange: (unit: 'tokens' | 'count') => void;
   dataTypes: string[];
   unit: 'tokens' | 'count';
+  unitOptions: { label: string, value: string }[];
 }
 
 function transformEnumToLabel(enumValue: string): string {
@@ -34,13 +35,14 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function TimeSeriesChart({ dataTypes, dateRange, selectedType, onTypeChange, onUnitChange, unit }: TimeSeriesChartProps) {
+export function TimeSeriesChart({ dataTypes, dateRange, selectedType, onTypeChange, onUnitChange, unit, unitOptions }: TimeSeriesChartProps) {
   const { data, loading, error } = useQuery(GET_TIME_SERIES_STATISTICS, {
     variables: {
       type: selectedType,
       name: unit,
       from: dateRange?.from?.toISOString(),
-      to: dateRange?.to?.toISOString()
+      to: dateRange?.to?.toISOString(),
+      names: [unit]
     },
     skip: !dateRange?.from || !dateRange?.to
   });
@@ -95,17 +97,22 @@ export function TimeSeriesChart({ dataTypes, dateRange, selectedType, onTypeChan
               </SelectContent>
             </Select>
           </div>
-          <div className="w-[150px]">
-            <Select value={unit} onValueChange={(value) => onUnitChange(value as 'tokens' | 'count')}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select unit" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="count">Count</SelectItem>
-                <SelectItem value="tokens">Tokens</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {
+            unitOptions?.length > 1 && (<div className="w-[150px]">
+              <Select value={unit} onValueChange={(value) => onUnitChange(value as 'tokens' | 'count')}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  {unitOptions?.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>)
+          }
         </div>
       </div>
 

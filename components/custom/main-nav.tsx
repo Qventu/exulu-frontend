@@ -203,6 +203,12 @@ export function MainNavSidebar({ sidebarDefaultOpen }: { sidebarDefaultOpen: boo
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="border-t bg-muted/20 p-[5px]">
+        <div className="px-2 pb-1 group-data-[collapsible=icon]:hidden">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5">
+            <Sparkles className="h-3 w-3 text-primary" />
+            <span className="text-xs font-medium text-primary">Beta</span>
+          </div>
+        </div>
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>

@@ -95,7 +95,7 @@ export function RoleForm({ initialData, onSubmit, loading, onCancel }: RoleFormP
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        
+
         if (!name.trim()) {
             return
         }
@@ -121,11 +121,16 @@ export function RoleForm({ initialData, onSubmit, loading, onCancel }: RoleFormP
                 <Input
                     id="roleName"
                     placeholder="e.g. Admin, Developer, Viewer"
+                    disabled={loading || initialData?.name === "admin" || initialData?.name === "default"}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    disabled={loading}
                     required
                 />
+                {initialData?.name === "admin" || initialData?.name === "default" ? (
+                    <p className="text-sm text-destructive">
+                        Admin and default roles names cannot be changed, these are reserved for system defaults.
+                    </p>
+                ) : null}
             </div>
 
             {/* Permissions */}
@@ -159,7 +164,7 @@ export function RoleForm({ initialData, onSubmit, loading, onCancel }: RoleFormP
                                     {PERMISSION_OPTIONS.map((option) => (
                                         <div key={option.value} className="flex items-center space-x-2">
                                             <RadioGroupItem value={option.value} id={`${area.key}-${option.value}`} />
-                                            <Label 
+                                            <Label
                                                 htmlFor={`${area.key}-${option.value}`}
                                                 className="flex-1 cursor-pointer"
                                             >

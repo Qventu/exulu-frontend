@@ -3,12 +3,13 @@
 import { DataDisplay } from "@/app/(application)/data/components/data-display";
 import * as React from "react";
 import ContextsDashboard from "../components/contexts-dashboard";
-import { ContextSettings } from "../components/context-settings";
+import { ContextEmbeddings } from "../components/embeddings";
 import { useQuery } from "@apollo/client";
 import { GET_CONTEXT_BY_ID } from "@/queries/queries";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { ContextSources } from "../components/sources";
 
 export default function DataPage({
   params,
@@ -29,16 +30,21 @@ export default function DataPage({
 
   const context = params.query[0] || null;
   const archived = params.query[1] === "archived" || false;
-  const settings = params.query[1] === "settings" || false;
+  const sources = params.query[1] === "sources" || false;
+  const embeddings = params.query[1] === "embeddings" || false;
 
-  if (settings) {
-    return <ContextSettings expand={true} actions={true} context={context} />;
+  if (sources) {
+    return <ContextSources expand={true} actions={true} context={context} />;
+  }
+
+  if (embeddings) {
+    return <ContextEmbeddings expand={true} actions={true} context={context} />;
   }
 
   let item = null;
   if (archived) {
     item = params.query[2] || null;
-  } else if (!settings) {
+  } else if (!sources && !embeddings) {
     item = params.query[1] || null;
   }
 

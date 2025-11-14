@@ -14,7 +14,7 @@ import {
     ArtifactContent,
     ArtifactHeader,
 } from '@/components/ai-elements/artifact';
-import { CopyIcon } from "lucide-react";
+import { CopyIcon, InfoIcon } from "lucide-react";
 
 export function TextPreview({
     text,
@@ -28,9 +28,16 @@ export function TextPreview({
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <p className="cursor-pointer text-sm text-base">
-                    {text?.slice(0, sliceLength ?? 200)}{(sliceLength && text.length > sliceLength) ? "..." : ""}
-                </p>
+                <button className="cursor-pointer text-sm text-left w-full hover:bg-accent/50 transition-colors rounded-md p-2 group">
+                    <span className="block">
+                        {text?.slice(0, sliceLength ?? 200)}
+                        {(sliceLength && text.length > sliceLength) ? "..." : ""}
+                    </span>
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1 group-hover:text-foreground transition-colors">
+                        <InfoIcon className="w-3 h-3" />
+                        Click to view full text
+                    </span>
+                </button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[800px] max-h-[500px] overflow-y-scroll">
                 <Artifact>

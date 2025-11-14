@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "@apollo/client";
+import { useQuery, useMutation, NetworkStatus } from "@apollo/client";
 import { GET_QUEUE, GET_JOBS, DELETE_JOB, PAUSE_QUEUE, DRAIN_QUEUE, RESUME_QUEUE } from "@/queries/queries";
 import { QueueJob } from "@/types/models/job";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,10 +26,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Trash2, Pause, Droplet, Play, RefreshCcw } from "lucide-react";
+import { Loader2, Trash2, Pause, Droplet, Play, RefreshCcw, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { TextPreview } from "@/components/custom/text-preview";
+import { DoubleArrowLeftIcon } from "@radix-ui/react-icons";
+import { JobStatus } from "@/types/models/job-result";
 
 interface QueueManagementProps {
   queueName: string;
@@ -43,16 +46,21 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<QueueJob | null>(null);
   const [jobToRetry, setJobToRetry] = useState<QueueJob | null>(null);
+  const [status, setStatus] = useState<JobStatus>("completed");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
 
   const { data: queueData, loading: loadingQueue, refetch: refetchQueue } = useQuery(GET_QUEUE, {
     variables: { queue: queueName },
     pollInterval: 5000, // Poll every 5 seconds
   });
 
-  const { data: jobsData, loading: loadingJobs, refetch: refetchJobs } = useQuery(GET_JOBS, {
+  const { data: jobsData, loading: loadingJobs, refetch: refetchJobs, networkStatus: jobsNetworkStatus } = useQuery(GET_JOBS, {
     variables: {
       queue: queueName,
-      statusses: null
+      statusses: status,
+      page: page,
+      limit: limit
     },
     pollInterval: 5000, // Poll every 5 seconds
   });
@@ -177,7 +185,25 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
   };
 
   const queue = queueData?.queue;
-  const jobs: QueueJob[] = jobsData?.jobs?.items || [];
+  const jobs: {
+    items: QueueJob[],
+    pageInfo: {
+      pageCount: number,
+      itemCount: number,
+      currentPage: number,
+      hasPreviousPage: boolean,
+      hasNextPage: boolean,
+    }
+  } = jobsData?.jobs || {
+    items: [],
+    pageInfo: {
+      pageCount: 0,
+      itemCount: 0,
+      currentPage: 1,
+      hasPreviousPage: false,
+      hasNextPage: false,
+    }
+  };
 
   const getStatusBadge = (state: string) => {
     const statusColors: Record<string, string> = {
@@ -215,9 +241,11 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Queue: {queueName}</CardTitle>
-              <CardDescription>Manage the {queueName} job queue and view all jobs</CardDescription>
+            <div className="flex items-center gap-3">
+              <div>
+                <CardTitle>Queue: {queueName}</CardTitle>
+                <CardDescription>Manage the {queueName} job queue and view all jobs.</CardDescription>
+              </div>
             </div>
             {queue && <div className="flex gap-2">
               <Button
@@ -227,7 +255,7 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                 disabled={pausingQueue || resumingQueue}
               >
                 {queue?.isPaused ? <Play className="mr-2 h-4 w-4" /> : <Pause className="mr-2 h-4 w-4" />}
-                {queue?.isPaused ? "Resume" : "Pause"}
+                {queue?.isPaused ? "Resume queue" : "Pause queue"}
               </Button>
 
               <Button
@@ -237,7 +265,7 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                 disabled={drainingQueue}
               >
                 <Droplet className="mr-2 h-4 w-4" />
-                Drain
+                Drain queue
               </Button>
             </div>}
           </div>
@@ -272,40 +300,55 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                 <div className="text-sm text-muted-foreground">Rate Limit:</div>
                 <div className="font-semibold">{queue.ratelimit || "None"}</div>
               </div>
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-1.5">
-                  <div className="text-xs text-muted-foreground">Active:</div>
-                  <div className="font-semibold text-blue-600">{queue.jobs?.active || 0}</div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="text-xs text-muted-foreground">Waiting:</div>
-                  <div className="font-semibold text-yellow-600">{queue.jobs?.waiting || 0}</div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="text-xs text-muted-foreground">Failed:</div>
-                  <div className="font-semibold text-red-600">{queue.jobs?.failed || 0}</div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="text-xs text-muted-foreground">Completed:</div>
-                  <div className="font-semibold text-green-600">{queue.jobs?.completed || 0}</div>
-                </div>
-              </div>
+              <Tabs value={status} onValueChange={(value) => setStatus(value as JobStatus)} className="w-auto">
+                <TabsList>
+                  <TabsTrigger value="active" className="gap-1.5">
+                    <span>Active</span>
+                    <Badge variant="secondary" className="ml-1 bg-blue-100 text-blue-600 border-blue-200">
+                      {queue.jobs?.active || 0}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="waiting" className="gap-1.5">
+                    <span>Waiting</span>
+                    <Badge variant="secondary" className="ml-1 bg-yellow-100 text-yellow-600 border-yellow-200">
+                      {queue.jobs?.waiting || 0}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="failed" className="gap-1.5">
+                    <span>Failed</span>
+                    <Badge variant="secondary" className="ml-1 bg-red-100 text-red-600 border-red-200">
+                      {queue.jobs?.failed || 0}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="completed" className="gap-1.5">
+                    <span>Completed</span>
+                    <Badge variant="secondary" className="ml-1 bg-green-100 text-green-600 border-green-200">
+                      {queue.jobs?.completed || 0}
+                    </Badge>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
           )}
 
           {/* Jobs Table */}
           <div>
-            <div className="mb-3">
-              <h3 className="text-sm font-semibold">Queue Jobs</h3>
-              <p className="text-xs text-muted-foreground">All jobs currently in the {queueName} queue</p>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-semibold">Queue Jobs</h3>
+                <p className="text-xs text-muted-foreground">All jobs currently in the {queueName} queue</p>
+              </div>
+              <Badge variant="outline">
+                Auto Refresh: <Loader2 className="h-4 w-4 animate-spin text-muted-foreground ml-1" />
+              </Badge>
             </div>
             <div className="border rounded-lg">
               {loadingJobs ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
-              ) : jobs.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+              ) : jobs.items?.length === 0 ? (
+                <div className="text-center pt-8 text-muted-foreground">
                   No jobs in queue
                 </div>
               ) : (
@@ -321,7 +364,7 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {jobs.map((job, index) => (
+                    {jobs.items?.map((job, index) => (
                       <TableRow key={index}>
                         <TableCell className="font-medium">
                           {nameGenerator(job)}
@@ -332,7 +375,7 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                         </TableCell>
                         <TableCell>
                           {job.data ? (
-                            <div className="text-xs max-w-xs truncate">
+                            <div className="text-xs max-w-[200px] truncate">
                               <TextPreview
                                 text={JSON.stringify(job.data)}
                               />
@@ -341,13 +384,13 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                         </TableCell>
                         <TableCell>
                           {job.failedReason ? (
-                            <div className="text-xs text-red-600 max-w-xs truncate">
+                            <div className="text-xs text-red-600 max-w-[200px] truncate">
                               <TextPreview
                                 text={"Error: " + job.failedReason}
                               />
                             </div>
                           ) : (
-                            <div className="text-xs text-muted-foreground max-w-xs truncate">
+                            <div className="text-xs text-muted-foreground max-w-[200px] truncate">
                               <TextPreview
                                 text={JSON.stringify(job.returnvalue)}
                               />
@@ -380,6 +423,55 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                   </TableBody>
                 </Table>
               )}
+
+              <div className="flex items-center justify-between px-2 pb-2">
+                <div className="flex-1 text-sm text-muted-foreground">
+                  ({jobs?.pageInfo?.itemCount || 0} total{" "}items).
+                </div>
+                <div className="flex items-center space-x-6 lg:space-x-8">
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      className="hidden size-8 p-0 lg:flex"
+                      onClick={() => {
+                        setPage(1);
+                        refetchJobs();
+                      }}
+                      disabled={!jobs?.pageInfo?.hasPreviousPage}
+                    >
+                      <span className="sr-only">Go to first page</span>
+                      <DoubleArrowLeftIcon className="size-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="size-8 p-0"
+                      onClick={() => {
+                        console.log(
+                          "itemsData.data?.pageInfo.hasPreviousPage",
+                          jobs?.pageInfo?.hasPreviousPage,
+                        );
+                        setPage(jobs?.pageInfo?.hasPreviousPage ? jobs?.pageInfo?.currentPage - 1 : 1);
+                        refetchJobs();
+                      }}
+                      disabled={!jobs?.pageInfo?.hasPreviousPage}
+                    >
+                      <span className="sr-only">Go to previous page</span>
+                      <ChevronLeftIcon className="size-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="size-8 p-0"
+                      onClick={() => {
+                        setPage(jobs?.pageInfo?.hasNextPage ? jobs?.pageInfo?.currentPage + 1 : 1);
+                        refetchJobs();
+                      }}
+                      disabled={!jobs?.pageInfo.hasNextPage}>
+                      <span className="sr-only">Go to next page</span>
+                      <ChevronRightIcon className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>

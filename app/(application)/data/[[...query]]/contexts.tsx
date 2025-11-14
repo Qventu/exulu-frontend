@@ -1,12 +1,11 @@
 "use client"
 
 import * as React from "react";
-import { Archive, Folder, Inbox, LucideIcon, Loader, Pencil, ArrowDownRight, ArrowLeft, ListChecksIcon, ArchiveX, Settings } from "lucide-react";
+import { Folder, LucideIcon, Loader, Pencil, ArrowLeft, ListChecksIcon, ArchiveX, Database, FileStack } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useContexts } from "@/hooks/contexts";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Separator } from "@/components/ui/separator";
 export type FolderFieldType = "text" | "longText" | "shortText" | "number" | "boolean" | "code" | "json";
 
 export type FolderType = {
@@ -63,12 +62,12 @@ const ContextLink = ({ index, folder, edit, indented, children }: { index: numbe
     )
 }
 
-const Contexts = ({ activeFolder, activeArchived, activeSettings }: { activeFolder: string, activeArchived: boolean, activeSettings: boolean }) => {
+const Contexts = ({ activeFolder, activeArchived, activeSources, activeEmbeddings }: { activeFolder: string, activeArchived: boolean, activeSources: boolean, activeEmbeddings: boolean }) => {
 
     const { data, loading, error } = useContexts();
 
     return (<>
-        <div key={activeFolder + activeArchived + activeSettings} className="group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2 pb-5">
+        <div key={activeFolder + activeArchived + activeSources + activeEmbeddings} className="group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2 pb-5">
 
             {
                 activeFolder ? <div className="flex items-center gap-2">
@@ -102,9 +101,9 @@ const Contexts = ({ activeFolder, activeArchived, activeSettings }: { activeFold
                                 <>
                                     <ContextLink index={index} indented={true} folder={{
                                         label: "Active data",
-                                        active: activeFolder?.toLowerCase() === `${folder.id}`.toLowerCase() && !activeArchived && !activeSettings,
+                                        active: activeFolder?.toLowerCase() === `${folder.id}`.toLowerCase() && !activeArchived && !activeSources && !activeEmbeddings,
                                         icon: ListChecksIcon,
-                                        variant: activeFolder?.toLowerCase() === `${folder.id}`.toLowerCase() && !activeArchived && !activeSettings ? "default" : "ghost",
+                                        variant: activeFolder?.toLowerCase() === `${folder.id}`.toLowerCase() && !activeArchived && !activeSources && !activeEmbeddings ? "default" : "ghost",
                                         href: `/data/${folder.id}`,
                                     }}></ContextLink>
                                     <ContextLink index={index + 1000} indented={true} folder={{
@@ -115,11 +114,18 @@ const Contexts = ({ activeFolder, activeArchived, activeSettings }: { activeFold
                                         href: `/data/${folder.id}/archived`,
                                     }} />
                                     <ContextLink index={index + 1000} indented={true} folder={{
-                                        label: `Settings`,
-                                        active: activeSettings,
-                                        icon: Settings,
-                                        variant: activeSettings ? "default" : "ghost",
-                                        href: `/data/${folder.id}/settings`,
+                                        label: `Sources`,
+                                        active: activeSources,
+                                        icon: Database,
+                                        variant: activeSources ? "default" : "ghost",
+                                        href: `/data/${folder.id}/sources`,
+                                    }} />
+                                    <ContextLink index={index + 1000} indented={true} folder={{
+                                        label: `Embeddings`,
+                                        active: activeEmbeddings,
+                                        icon: FileStack,
+                                        variant: activeEmbeddings ? "default" : "ghost",
+                                        href: `/data/${folder.id}/embeddings`,
                                     }} />
                                 </>
                             }

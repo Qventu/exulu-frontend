@@ -19,7 +19,7 @@ export default function ContextsDashboard() {
     to: new Date()
   });
 
-  const [selectedType, setSelectedType] = useState<STATISTICS_TYPE>("EMBEDDER_GENERATE");
+  const [selectedType, setSelectedType] = useState<STATISTICS_TYPE>("CONTEXT_UPSERT");
   const [groupBy, setGroupBy] = useState<string>("label");
 
   return (
@@ -52,13 +52,16 @@ export default function ContextsDashboard() {
             dateRange={dateRange}
             selectedType={selectedType}
             onTypeChange={setSelectedType}
+            unitOptions={[
+              { value: 'count', label: 'Count' }
+          ]}
             onUnitChange={setUnit}
             unit={unit}
             dataTypes={[
               STATISTICS_TYPE_ENUM.CONTEXT_RETRIEVE,
-              STATISTICS_TYPE_ENUM.EMBEDDER_UPSERT,
-              STATISTICS_TYPE_ENUM.EMBEDDER_GENERATE,
-              STATISTICS_TYPE_ENUM.EMBEDDER_DELETE,
+              // STATISTICS_TYPE_ENUM.EMBEDDER_UPSERT,
+              // STATISTICS_TYPE_ENUM.EMBEDDER_GENERATE,
+              // STATISTICS_TYPE_ENUM.EMBEDDER_DELETE,
               STATISTICS_TYPE_ENUM.CONTEXT_UPSERT
             ]}
           />
@@ -68,6 +71,7 @@ export default function ContextsDashboard() {
             groupByOptions={[]}
             dateRange={dateRange}
             selectedType={selectedType}
+            unit={unit}
             groupBy={groupBy}
             onGroupByChange={setGroupBy}
           />

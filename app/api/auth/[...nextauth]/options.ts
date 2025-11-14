@@ -49,25 +49,32 @@ const providers: Provider[] = [
       password: { label: "Password", type: "password" },
     },
     authorize: async (credentials) => {
-      if (!credentials?.email) {
-        return null;
-      }
-      if (!credentials?.password) {
-        return null;
-      }
-      const res = await pool.query('SELECT * FROM users WHERE email = $1', [credentials.email])
-      console.log("[NEXT AUTH] authorize res rows count:", res.rows.length)
-      console.log("[NEXT AUTH] Full user object:", JSON.stringify(res.rows[0], null, 2))
-      if (!res?.rows?.length) {
-        return null;
-      }
-      for (const user of res.rows) {
-        const isMatch = await bcrypt.compare(credentials.password, user.password)
-        console.log("[NEXT AUTH] isMatch", isMatch)
-        if (isMatch) {
-          await pool.query('UPDATE users SET last_used = $1 WHERE email = $2', [new Date(), user.email])
-          return user;
+
+      const client = await pool.connect();
+
+      try {
+        if (!credentials?.email) {
+          return null;
         }
+        if (!credentials?.password) {
+          return null;
+        }
+        const res = await client.query('SELECT * FROM users WHERE email = $1', [credentials.email])
+        console.log("[NEXT AUTH] authorize res rows count:", res.rows.length)
+        console.log("[NEXT AUTH] Full user object:", JSON.stringify(res.rows[0], null, 2))
+        if (!res?.rows?.length) {
+          return null;
+        }
+        for (const user of res.rows) {
+          const isMatch = await bcrypt.compare(credentials.password, user.password)
+          console.log("[NEXT AUTH] isMatch", isMatch)
+          if (isMatch) {
+            await client.query('UPDATE users SET last_used = $1 WHERE email = $2', [new Date(), user.email])
+            return user;
+          }
+        }
+      } finally {
+        client.release();
       }
     }
   })
@@ -110,10 +117,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   providers.push(GoogleProvider({
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    allowDangerousEmailAccountLinking: true,
     authorization: {
       params: {
-        prompt: "consent",
         access_type: "offline",
         response_type: "code",
         scope: [
@@ -148,83 +153,140 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
       // such as email_verified did not get recognized.
       async signIn({ account, profile, user }: any) {
 
-        let email = user.email;
+        const client = await pool.connect();
 
-        console.log("[EXULU] Sign in callback", account, profile, user)
-        if (account?.provider === "google") {
-          email = profile?.email;
-        }
+        try {
+          let email = user.email;
 
-        console.log("[EXULU] ALLOWED_EMAIL_DOMAINS", process.env.ALLOWED_EMAIL_DOMAINS)
-        if (process.env.ALLOWED_EMAIL_DOMAINS) {
-          let allowedDomains = process.env.ALLOWED_EMAIL_DOMAINS.split(",");
-          allowedDomains.push("exulu.com")
-          allowedDomains.push("qventu.com")
-          if (!allowedDomains.some(domain => email.endsWith(`@${domain}`))) {
-            return false;
+          console.log("[EXULU] Sign in callback", account, profile, user)
+
+          if (account?.provider === "google") {
+            email = profile?.email;
+            if (!email) {
+              console.error("[EXULU] Google auth failed, no email in profile.")
+              client.release();
+              return false;
+            }
           }
-        }
 
-        /* console.log("process.env.GOOGLE_SECURITY_GROUPS", process.env.GOOGLE_SECURITY_GROUPS)
-        if (
-          account?.provider === "google" &&
-          process.env.GOOGLE_SECURITY_GROUPS
-        ) {
-
-          const accessToken = account?.access_token;
-          const refreshToken = account?.refresh_token;
-
-          if (!accessToken || !refreshToken) {
-            console.error("[EXULU] Google auth failed, no access token or refresh token")
-            return false;
+          console.log("[EXULU] ALLOWED_EMAIL_DOMAINS", process.env.ALLOWED_EMAIL_DOMAINS)
+          if (process.env.ALLOWED_EMAIL_DOMAINS) {
+            let allowedDomains = process.env.ALLOWED_EMAIL_DOMAINS.split(",");
+            allowedDomains.push("exulu.com")
+            allowedDomains.push("qventu.com")
+            if (!allowedDomains.some(domain => email.endsWith(`@${domain}`))) {
+              client.release();
+              return false;
+            }
           }
-          console.log("process.env.GOOGLE_SECURITY_GROUPS", process.env.GOOGLE_SECURITY_GROUPS)
-          const allowedGroups = process.env.GOOGLE_SECURITY_GROUPS.split(",");
-          const promises = allowedGroups.map(async (group) => {
-            const res = await fetch(`https://admin.googleapis.com/admin/directory/v1/groups/${group}/members`, {
-              headers: {
-                "Authorization": `Bearer ${accessToken}`
-              }
+
+          /* console.log("process.env.GOOGLE_SECURITY_GROUPS", process.env.GOOGLE_SECURITY_GROUPS)
+          if (
+            account?.provider === "google" &&
+            process.env.GOOGLE_SECURITY_GROUPS
+          ) {
+  
+            const accessToken = account?.access_token;
+            const refreshToken = account?.refresh_token;
+  
+            if (!accessToken || !refreshToken) {
+              console.error("[EXULU] Google auth failed, no access token or refresh token")
+              return false;
+            }
+            console.log("process.env.GOOGLE_SECURITY_GROUPS", process.env.GOOGLE_SECURITY_GROUPS)
+            const allowedGroups = process.env.GOOGLE_SECURITY_GROUPS.split(",");
+            const promises = allowedGroups.map(async (group) => {
+              const res = await fetch(`https://admin.googleapis.com/admin/directory/v1/groups/${group}/members`, {
+                headers: {
+                  "Authorization": `Bearer ${accessToken}`
+                }
+              })
+              const json = await res.json();
+              console.log("[EXULU] Google auth group members", json)
+              console.log("[EXULU] Google auth group members", json?.error?.errors)
+              return json?.members;
             })
-            const json = await res.json();
-            console.log("[EXULU] Google auth group members", json)
-            console.log("[EXULU] Google auth group members", json?.error?.errors)
-            return json?.members;
-          })
-          const members = await Promise.all(promises).then(res => res.flat());
-          const isInGroup = members.some(member => member?.email === email);
-          if (!isInGroup) {
-            console.error("[EXULU] Google auth failed, user not in allowed groups")
-            return false;
+            const members = await Promise.all(promises).then(res => res.flat());
+            const isInGroup = members.some(member => member?.email === email);
+            if (!isInGroup) {
+              console.error("[EXULU] Google auth failed, user not in allowed groups")
+              return false;
+            }
+          } */
+
+          const existingUserQueryResult = await client.query('SELECT * FROM users WHERE email = $1', [email])
+          let existingUser = existingUserQueryResult?.rows[0];
+          console.log("[EXULU] Sign in callback user query result", existingUser)
+
+          if (existingUser) {
+            await client.query('UPDATE users SET last_used = $1 WHERE email = $2', [new Date(), email])
           }
-        } */
 
-        const res = await pool.query('SELECT * FROM users WHERE email = $1', [email])
-        console.log("[EXULU] Sign in callback user query result", res)
+          // If google auth, create the user if it doesn't exist.
+          if (
+            !existingUser &&
+            account?.provider === "google"
+          ) {
+            const name = profile?.given_name || "";
+            const defaultRoleQueryResult = await client.query('SELECT * FROM roles WHERE name = $1', ["default"])
+            const defaultRole = defaultRoleQueryResult?.rows[0];
+            const insertResult = await client.query('INSERT INTO users ("email", "name", "createdAt", "updatedAt", "emailVerified", "last_used", "type", "super_admin", "role") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *', [email, name, new Date(), new Date(), new Date(), new Date(), "user", false, defaultRole?.id])
+            existingUser = insertResult?.rows[0];
+            console.log("[EXULU] Sign in callback new user query result", existingUser)
+          }
 
-        if (res.rows.length > 0) {
-          await pool.query('UPDATE users SET last_used = $1 WHERE email = $2', [new Date(), email])
-          return true;
+          if (existingUser) {
+            if (account?.provider === "google") {
+
+              console.log("[EXULU] Checking for existing account (provider account id: ", account.providerAccountId)
+              const queryResult = await client.query('SELECT * FROM accounts WHERE provider = $1 AND "providerAccountId" = $2', [
+                'google',
+                account.providerAccountId
+              ])
+
+              const existingAccount = queryResult.rows[0];
+
+              console.log("[EXULU] Existing account query result", existingAccount)
+
+              if (existingAccount) {
+                await client.query('UPDATE accounts SET access_token = $1, refresh_token = $2, expires_at = $3, id_token = $4, scope = $5, session_state = $6, token_type = $7, "userId" = $8 WHERE id = $9', [
+                  account.access_token,
+                  account.refresh_token,
+                  account.expires_at,
+                  account.id_token,
+                  account.scope,
+                  account.session_state,
+                  account.token_type,
+                  existingUser.id,
+                  existingAccount.id
+                ])
+              } else {
+                await client.query('INSERT INTO accounts ("provider", "providerAccountId", "access_token", "refresh_token", "expires_at", "id_token", "scope", "session_state", "token_type", "userId", "type") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)', [
+                  'google',
+                  account.providerAccountId,
+                  account.access_token,
+                  account.refresh_token,
+                  account.expires_at,
+                  account.id_token,
+                  account.scope,
+                  account.session_state,
+                  account.token_type,
+                  existingUser.id,
+                  "oauth"
+                ])
+              }
+            }
+            client.release();
+            return true;
+          }
+
+          client.release();
+          return false;
+        } catch (error) {
+          console.error("[EXULU] Sign in callback error", error)
+          client.release();
+          return false;
         }
-
-        // If google auth, create the user if it doesn't exist.
-        if (
-          !res.rows.length &&
-          account?.provider === "google"
-        ) {
-          const name = profile?.given_name || "";
-          await pool.query('INSERT INTO users ("email", "name", "createdAt", "updatedAt", "emailVerified", "last_used", "type", "super_admin") VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [email, name, new Date(), new Date(), new Date(), new Date(), "user", false])
-          return true;
-        }
-
-        console.log("[NEXT AUTH] res.rows.length", res.rows.length)
-
-        if (res.rows.length) {
-          return true;
-        }
-
-        return false;
-
       },
       async jwt({ token, user }) {
         const newToken = token;

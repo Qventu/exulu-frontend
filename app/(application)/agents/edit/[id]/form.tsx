@@ -81,6 +81,7 @@ import { Variable } from "@/types/models/variable";
 import UppyDashboard, { FileDataCard } from "@/components/uppy-dashboard";
 import AgentVisual from "@/components/lottie";
 import { ConfigContext } from "@/components/config-context";
+import { TextPreview } from "@/components/custom/text-preview";
 
 const categories = [
   "marketing",
@@ -101,7 +102,7 @@ const ToolConfigItem = ({
   variables,
   onVariableSelect
 }: {
-  configItem: { name: string; description: string },
+  configItem: { name: string; description: string; default?: string },
   currentValue: string,
   variables: any[],
   onVariableSelect: (variableName: string) => void
@@ -112,8 +113,8 @@ const ToolConfigItem = ({
   return (
     <div className="space-y-2">
       <div className="text-sm">
-        <div className="font-medium">{configItem.name}</div>
-        <div className="text-muted-foreground text-xs">{configItem.description}</div>
+        <div className="font-medium capitalize">{configItem.name}</div>
+        <div className="text-muted-foreground text-xs capitalize">{configItem.description}</div>
       </div>
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen} modal={true}>
         <PopoverTrigger asChild>
@@ -160,6 +161,18 @@ const ToolConfigItem = ({
             </CommandList>
           </Command>
         </PopoverContent>
+        {
+          configItem.default && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-md">Default value</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TextPreview text={configItem.default} sliceLength={200} />
+              </CardContent>
+            </Card>
+          )
+        }
       </Popover>
     </div>
   );
@@ -817,7 +830,7 @@ export default function AgentForm({
                                             <div className="text-sm font-medium">Responding Animation</div>
                                             <div className="text-xs text-muted-foreground">Animation when agent is responding</div>
                                           </div>
-                                          
+
                                           <FileDataCard s3key={animation_responding}>
                                             <UppyDashboard
                                               id="agent-responding-animation"
@@ -1052,14 +1065,14 @@ export default function AgentForm({
                                           variant="ghost"
                                           size="sm"
                                           className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                                          onClick={() => setSearchTerm("")} 
+                                          onClick={() => setSearchTerm("")}
                                         >
                                           <X className="h-3 w-3" />
                                         </Button>
                                       )}
                                     </div>
                                   </div>
-                                  
+
                                   <div className="flex items-center gap-2">
                                     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                                       <SelectTrigger className="w-[200px]">
@@ -1074,15 +1087,15 @@ export default function AgentForm({
                                         ))}
                                       </SelectContent>
                                     </Select>
-                                    
+
                                     {(searchTerm || selectedCategory !== "all") && (
                                       <Button variant="outline" size="sm" onClick={clearSearch}>
                                         Clear filters
                                       </Button>
                                     )}
-                                    
+
                                     <div className="ml-auto text-sm text-muted-foreground">
-                                      {toolsData?.tools?.total || 0} tool{(toolsData?.tools?.total || 0) !== 1 ? 's' : ''} 
+                                      {toolsData?.tools?.total || 0} tool{(toolsData?.tools?.total || 0) !== 1 ? 's' : ''}
                                       {debouncedSearch || selectedCategory !== "all" ? ' found' : ' available'}
                                     </div>
                                   </div>
@@ -1093,12 +1106,12 @@ export default function AgentForm({
                                   {selectedCategory === "all" ? (
                                     // Group view: show each category as a collapsible section
                                     Object.entries(toolsByCategory).map(([categoryName, categoryTools]) => {
-                                      const enabledInCategory = categoryTools.filter(tool => 
+                                      const enabledInCategory = categoryTools.filter(tool =>
                                         enabledTools.some(et => et.id === tool.id)
                                       ).length;
-                                      
+
                                       const isCollapsed = collapsedCategories.has(categoryName);
-                                      
+
                                       return (
                                         <Collapsible key={categoryName} open={!isCollapsed} onOpenChange={() => toggleCategoryCollapse(categoryName)}>
                                           <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
@@ -1111,7 +1124,7 @@ export default function AgentForm({
                                                 </Badge>
                                               </Button>
                                             </CollapsibleTrigger>
-                                            
+
                                             <div className="flex items-center gap-2">
                                               <Button
                                                 variant="outline"
@@ -1134,7 +1147,7 @@ export default function AgentForm({
                                               >
                                                 Enable All
                                               </Button>
-                                              
+
                                               <Button
                                                 variant="outline"
                                                 size="sm"
@@ -1150,7 +1163,7 @@ export default function AgentForm({
                                               </Button>
                                             </div>
                                           </div>
-                                          
+
                                           <CollapsibleContent className="mt-2">
                                             <div className="space-y-2 pl-4">
                                               {categoryTools.map((tool: Tool) => {
@@ -1437,7 +1450,7 @@ export default function AgentForm({
                                       })}
                                     </div>
                                   )}
-                                  
+
                                   {/* Empty state when no tools match filters */}
                                   {filteredTools.length === 0 && (searchTerm || selectedCategory !== "all") && (
                                     <div className="text-center py-8">

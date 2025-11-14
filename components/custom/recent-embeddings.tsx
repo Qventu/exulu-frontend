@@ -7,6 +7,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TruncatedText } from "@/components/truncated-text";
 import { Item } from "@/types/models/item";
 import { GET_ITEMS, PAGINATION_POSTFIX } from "@/queries/queries";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export type FilterOperator = {
   eq?: string,
@@ -56,46 +67,76 @@ export function RecentEmbeddings({ contextId }: { contextId: string }) {
 
   const data = raw?.[contextId + PAGINATION_POSTFIX] as any;
 
-  return loading ? (
-    <div className="flex flex-col gap-2 pt-0">
-      <Skeleton className="w-full h-[50px] rounded-lg mb-2" />
-      <Skeleton className="w-full h-[50px] rounded-lg mb-2" />
-      <Skeleton className="w-full h-[50px] rounded-lg" />
-    </div>
-  ) : (
-    <div className="space-y-8">
-      {data?.items?.length ? (
-        data?.items?.map(
-          (
-            item: Item,
-            index: number,
-          ) => {
-            return (
-              <div key={index} className="flex items-center">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    <Link
-                      className="hover:dark:text-blue-500 hover:underline"
-                      href={"/data/" + contextId + "/" + item.id}
-                    >
-                      <TruncatedText text={item.name ?? ""} length={50} />
-                      <p className="text-sm text-muted-foreground">
-                        created at: {item.embeddings_updated_at ? formatDistanceToNow(new Date(item.embeddings_updated_at), {
-                          addSuffix: true,
-                        }) : "never"}.
-                      </p>
-                    </Link>
-                  </p>
-                </div>
-              </div>
-            );
-          },
-        )
-      ) : (
-        <div className="flex flex-col gap-2 pt-0">
-          <p className="text-sm font-medium leading-none">No recent embeddings.</p>
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="border-0 rounded-none">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div>
+              <CardTitle>Recent Embeddings</CardTitle>
+              <CardDescription>Items with embeddings updated in the last 21 days</CardDescription>
+            </div>
+            {loading && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          <Badge variant="outline" className="gap-1.5">
+            <span className="text-xs">{data?.items?.length || 0}</span>
+            <span className="text-xs text-muted-foreground">items</span>
+          </Badge>
         </div>
-      )}
-    </div>
+      </CardHeader>
+      <CardContent>
+        <div className="border rounded-lg">
+          {data?.items?.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No recent embeddings
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead className="text-right">Updated</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data?.items?.map((item: Item, index: number) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">
+                      <Link
+                        className="hover:text-blue-500 hover:underline"
+                        href={`/data/${contextId}/${item.id}`}
+                      >
+                        <TruncatedText text={item.name ?? ""} length={50} />
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground">
+                      {item.embeddings_updated_at
+                        ? formatDistanceToNow(new Date(item.embeddings_updated_at), {
+                            addSuffix: true,
+                          })
+                        : "never"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

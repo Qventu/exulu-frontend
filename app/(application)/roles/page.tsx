@@ -340,6 +340,7 @@ export default function RoleManagement() {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => setSelectedRole(role)}
+                                                                disabled={role.name === "admin" || role.name === "default"}
                                                                 className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
@@ -365,7 +366,7 @@ export default function RoleManagement() {
                                                                 <Button 
                                                                     variant="destructive" 
                                                                     onClick={handleDeleteRole}
-                                                                    disabled={deleteLoading}
+                                                                    disabled={deleteLoading || role.name === "admin" || role.name === "default"}
                                                                 >
                                                                     {deleteLoading ? (
                                                                         <>

@@ -31,4 +31,5 @@ export type BullMqJobData = {
     evaluation?: string,
     item?: string,
     context?: string,
+    source?: string,
 }

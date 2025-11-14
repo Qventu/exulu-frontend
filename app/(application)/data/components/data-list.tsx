@@ -447,7 +447,7 @@ export function DataList({
                         </div>
                         <div className="flex items-center space-x-6 lg:space-x-8">
                             <div className="flex items-center space-x-2">
-                                <Button
+                                <Button 
                                     variant="outline"
                                     className="hidden size-8 p-0 lg:flex"
                                     onClick={() => {

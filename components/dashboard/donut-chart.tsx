@@ -16,6 +16,7 @@ interface DonutChartProps {
   selectedType: STATISTICS_TYPE;
   groupBy: string;
   onGroupByChange: (groupBy: string) => void;
+  unit: "tokens" | "count";
 }
 
 const CHART_COLORS = [
@@ -32,7 +33,7 @@ const CHART_COLORS = [
 ];
 
 function transformGroupValue(value: string): string {
-  if (!value) return 'Unknown';
+  if (!value || typeof value !== 'string') return 'Unknown';
 
   // Handle various formats and make them user-friendly
   return value
@@ -42,13 +43,14 @@ function transformGroupValue(value: string): string {
     .join(' ');
 }
 
-export function DonutChart({ groupByOptions, dateRange, selectedType, groupBy, onGroupByChange }: DonutChartProps) {
+export function DonutChart({ groupByOptions, dateRange, selectedType, groupBy, onGroupByChange, unit }: DonutChartProps) {
   const { data, loading, error } = useQuery(GET_DONUT_STATISTICS, {
     variables: {
       type: selectedType,
       groupBy,
       from: dateRange?.from?.toISOString(),
-      to: dateRange?.to?.toISOString()
+      to: dateRange?.to?.toISOString(),
+      names: unit === "tokens" ? ["inputTokens", "outputTokens"] : ["count"]
     },
     skip: !dateRange?.from || !dateRange?.to
   });
@@ -58,8 +60,8 @@ export function DonutChart({ groupByOptions, dateRange, selectedType, groupBy, o
 
     const sortedData = data.trackingStatistics
       .map((item: any, index: number) => ({
-        name: transformGroupValue(item.group),
-        value: item.count,
+        name: transformGroupValue(item?.group),
+        value: item?.count,
         fill: CHART_COLORS[index % CHART_COLORS.length]
       }))
       .sort((a: any, b: any) => b.value - a.value); // Sort by count descending

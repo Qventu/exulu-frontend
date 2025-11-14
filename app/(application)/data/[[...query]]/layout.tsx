@@ -21,12 +21,13 @@ export default function DataLayout({ children, params }: { children: any, params
     const defaultLayout = [15, 20, 65];
     const navCollapsedSize = 4;
     const archived = params.query && params.query[1] === "archived";
-    const settings = params.query && params.query[1] === "settings";
+    const sources = params.query && params.query[1] === "sources";
+    const embeddings = params.query && params.query[1] === "embeddings";
     const context = params.query && params.query[0];
     let item = null;
     if (params.query && archived) {
         item = params.query[2] || null;
-    } else if (params.query && !settings) {
+    } else if (params.query && !sources && !embeddings) {
         item = params.query[1] || null;
     }
 
@@ -47,7 +48,7 @@ export default function DataLayout({ children, params }: { children: any, params
                     minSize={15}
                     maxSize={20}>
                     <Separator />
-                    <Contexts activeFolder={context} activeArchived={archived} activeSettings={settings} />
+                    <Contexts activeFolder={context} activeArchived={archived} activeSources={sources} activeEmbeddings={embeddings} />
                     <Separator />
                     <div className="p-3 opacity-50">
                         <Alert variant="default">
@@ -63,7 +64,7 @@ export default function DataLayout({ children, params }: { children: any, params
                 </ResizablePanel>
 
                 {
-                    context && !settings && <>
+                    context && !sources && !embeddings && <>
                         <ResizableHandle withHandle />
                         <ResizablePanel defaultSize={defaultLayout[1]} minSize={20}>
                             <Tabs defaultValue="all">

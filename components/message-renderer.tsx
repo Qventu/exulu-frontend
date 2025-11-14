@@ -10,6 +10,7 @@ import { RefreshCcwIcon, CopyIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { useToast } from "@/components/ui/use-toast"
+import { TodoList } from "./ai-elements/todo-list"
 
 interface MessageRendererProps {
   messages: UIMessage[]
@@ -128,6 +129,25 @@ export function MessageRenderer({
                     case 'output-error':
                       return <div key={callId}>Error: {part.errorText}</div>
                   }
+                }
+
+                if (part.type?.toLowerCase() === 'tool-todo_write' || part.type?.toLowerCase() === 'tool-todo_read') {
+                  const dynamicToolPart = part as any;
+                  const output = dynamicToolPart.output as {
+                    result: {
+                      content: string
+                      status: "pending" | "in_progress" | "completed" | "cancelled"
+                      priority: "high" | "medium" | "low"
+                      id: string
+                    }[]
+                  };
+                  if (!output?.result) {
+                    return null;
+                  }
+                  const state: "input-streaming" | "input-available" | "output-available" | "output-error" = dynamicToolPart.state;
+                  return (
+                    <TodoList todos={output.result} showPriority={true} state={state} />
+                  )
                 }
 
                 if (

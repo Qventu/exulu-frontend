@@ -12,6 +12,20 @@ const CONTEXT_FIELDS = `
     active
     fields
     configuration
+    sources {
+      id
+      name
+      description
+      config {
+        schedule
+        queue
+        retries
+        backoff {
+          type
+          delay
+        }
+      }
+    }
 `;
 
 const ITEM_FIELDS = (fields: string[]) => `
@@ -277,6 +291,18 @@ export const GENERATE_CHUNKS = (context: string) => {
       ${context}_itemsGenerateChunks(where: $where) {
         items
         jobs
+      }
+    }
+  `;
+};
+
+export const EXECUTE_SOURCE = (context: string) => {
+  return gql`
+    mutation ExecuteSource${context}($source: ID!, $inputs: JSON!) {
+      ${context}_itemsExecuteSource(source: $source, inputs: $inputs) {
+        message
+        jobs
+        items
       }
     }
   `;
@@ -1010,6 +1036,18 @@ export const GET_USER_BY_ID = gql`
   }
 `;
 
+export const GET_USERS_BY_IDS = gql`
+  query GetUsersByIds($ids: [ID!]!) {
+    userByIds(ids: $ids) {
+      id
+      name
+      firstname
+      lastname
+      email
+    }
+  }
+`;
+
 export const GET_WORKFLOW_TEMPLATES = gql`
   query GetWorkflowTemplates(
     $page: Int!
@@ -1281,12 +1319,13 @@ export const GET_TOKEN_USAGE_STATISTICS = gql`
 
 // Time Series Chart Query
 export const GET_TIME_SERIES_STATISTICS = gql`
-  query TimeSeriesStatistics($type: typeEnum!, $from: Date!, $to: Date!) {
+  query TimeSeriesStatistics($type: typeEnum!, $from: Date!, $to: Date!, $names: [String!]) {
     trackingStatistics(
       groupBy: "createdAt"
       filters: {
         type: { eq: $type }
         createdAt: { and: [{ gte: $from }, { lte: $to }] }
+        name: { in: $names }
       }
     ) {
       group
@@ -1295,13 +1334,78 @@ export const GET_TIME_SERIES_STATISTICS = gql`
   }
 `;
 
+export const GET_USER_STATISTICS = gql`
+query UserStatistics($from: Date!, $to: Date!, $names: [String!]) {
+  trackingStatistics(
+    groupBy: "user"
+    filters: {
+      type: { eq: AGENT_RUN }
+      createdAt: { and: [{ gte: $from }, { lte: $to }] }
+      name: { in: $names }
+    }
+  ) {
+    group
+    count
+  }
+}
+`;
+
+export const GET_PROJECT_STATISTICS = gql`
+query ProjectStatistics($from: Date!, $to: Date!, $names: [String!]) {
+  trackingStatistics(
+    groupBy: "project"
+    filters: {
+      type: { eq: AGENT_RUN }
+      createdAt: { and: [{ gte: $from }, { lte: $to }] }
+      name: { in: $names }
+    }
+  ) {
+    group
+    count
+  }
+}
+`;
+
+export const GET_AGENT_STATISTICS = gql`
+query AgentStatistics($from: Date!, $to: Date!, $names: [String!]) {
+  trackingStatistics(
+    groupBy: "label"
+    filters: {
+      type: { eq: AGENT_RUN }
+      name: { in: $names }
+      createdAt: { and: [{ gte: $from }, { lte: $to }] }
+    }
+  ) {
+    group
+    count
+  }
+}
+`;
+
+export const GET_USER_NAME_BY_ID = gql`
+  query GetUserNameById($id: ID!) {
+    userById(id: $id) {
+      name
+    }
+  }
+`;
+
+export const GET_PROJECT_NAME_BY_ID = gql`
+  query GetProjectNameById($id: ID!) {
+    projectById(id: $id) {
+      name
+    }
+  }
+`;
+
 // Donut Chart Query  
 export const GET_DONUT_STATISTICS = gql`
-  query DonutStatistics($type: typeEnum!, $groupBy: String!, $from: Date!, $to: Date!) {
+  query DonutStatistics($type: typeEnum!, $groupBy: String!, $from: Date!, $to: Date!, $names: [String!]) {
     trackingStatistics(
       groupBy: $groupBy
       filters: {
         type: { eq: $type }
+        name: { in: $names }
         createdAt: { and: [{ gte: $from }, { lte: $to }] }
       }
     ) {
@@ -1674,8 +1778,8 @@ export const GET_QUEUE = gql`
 `;
 
 export const GET_JOBS = gql`
-  query GetJobs($queue: QueueEnum!, $statusses: [JobStateEnum!]) {
-    jobs(queue: $queue, statusses: $statusses) {
+  query GetJobs($queue: QueueEnum!, $statusses: [JobStateEnum!], $page: Int, $limit: Int) {
+    jobs(queue: $queue, statusses: $statusses, page: $page, limit: $limit) {
       items {
         name
         id

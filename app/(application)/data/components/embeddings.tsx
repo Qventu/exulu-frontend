@@ -3,7 +3,6 @@
 import { useQuery, useMutation } from "@apollo/client";
 import {
     ArrowLeft,
-    MoreVertical,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -11,14 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { RecentEmbeddings } from "@/components/custom/recent-embeddings";
 import { DELETE_CHUNKS, GENERATE_CHUNKS, GET_CONTEXT_BY_ID } from "@/queries/queries";
 import { Context } from "@/types/models/context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -37,9 +35,11 @@ interface DataDisplayProps {
     context: string
 }
 
-export function ContextSettings(props: DataDisplayProps) {
+export function ContextEmbeddings(props: DataDisplayProps) {
 
     const [confirmationModal, setConfirmationModal] = useState<"generate" | "delete" | null>(null);
+    const [sourcesOpen, setSourcesOpen] = useState(true);
+    const [embeddingsOpen, setEmbeddingsOpen] = useState(true);
     const { toast } = useToast();
     const { data, loading, error } = useQuery<
         { contextById: Context }>(GET_CONTEXT_BY_ID, {
@@ -171,53 +171,11 @@ export function ContextSettings(props: DataDisplayProps) {
                                             <span className="block"><b>Always</b>: Vectors are calculated on both insert and update operations.</span>
                                         </div>
                                     </div>
-                                    {/* Default rights mode */}
-                                    <div>
-                                        <span className="text-sm font-medium mr-2">Default rights mode for new items in this context:</span>
-                                        <div className="mt-2 text-xs text-muted-foreground">
-                                            <span className="block"><b>Private</b>: Only the user who created the item can view it.</span>
-                                            <span className="block"><b>Users</b>: Any user with access to the context can view the item.</span>
-                                            <span className="block"><b>Roles</b>: Any user with the role assigned to the context can view the item.</span>
-                                            <span className="block"><b>Public</b>: Any user can view the item.</span>
-                                        </div>
-                                    </div>
-                                    <Separator />
                                 </div>
                             </ScrollArea>
                         </CardContent>
                     </Card>
-
-                    {/* TODO change to show recently updated or generated embeddings based on the embeddings_updated_at field on the context items */}
-                    <Card className="bg-none border-0 rounded-none">
-                        <CardHeader>
-                            <CardTitle>
-                                <div className="flex items-center justify-between ml-4 mt-3 mr-4 mb-2">
-                                    <h1 className="text-lg font-medium">Embeddings</h1>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                <MoreVertical className="h-4 w-4" />
-                                                <span className="sr-only">Open menu</span>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => setConfirmationModal("generate")}>
-                                                Generate all embeddings
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => setConfirmationModal("delete")}>
-                                                Delete all embeddings
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <RecentEmbeddings
-                                contextId={context.id}
-                            />
-                        </CardContent>
-                    </Card>
+                    <RecentEmbeddings contextId={context.id} />
                 </div>
             ) : (
                 <div className="p-8 text-center text-muted-foreground">

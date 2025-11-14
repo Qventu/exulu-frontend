@@ -1,4 +1,4 @@
-"use strict";exports.id=2270,exports.ids=[2270],exports.modules={42270:(e,t,i)=>{i.d(t,{$6:()=>ei,$W:()=>eq,A1:()=>P,Ak:()=>ep,Az:()=>M,B4:()=>eJ,B_:()=>ee,Dt:()=>E,E3:()=>T,Ep:()=>eV,Eq:()=>_,GJ:()=>m,Hk:()=>ed,JL:()=>B,JM:()=>W,Jq:()=>ex,L5:()=>z,MU:()=>C,Md:()=>s,Mh:()=>eS,Mp:()=>Z,N:()=>h,Nu:()=>eT,OP:()=>eW,P3:()=>g,Pe:()=>k,QW:()=>eF,Qf:()=>H,RV:()=>eA,S9:()=>L,Tj:()=>er,Ts:()=>ej,Ul:()=>G,W6:()=>es,W9:()=>q,Wc:()=>r,Wr:()=>eG,YH:()=>e$,Yr:()=>ef,ZX:()=>O,Zy:()=>X,_J:()=>et,as:()=>b,b2:()=>ey,bI:()=>S,ci:()=>K,d5:()=>ec,dc:()=>c,eY:()=>Q,fA:()=>eL,fB:()=>U,fG:()=>V,fM:()=>el,fV:()=>p,fc:()=>eE,fo:()=>j,hx:()=>eC,i9:()=>ew,iA:()=>eb,iC:()=>eN,j9:()=>eu,jL:()=>eg,jm:()=>eB,k9:()=>eU,kH:()=>N,kZ:()=>en,kk:()=>ea,kp:()=>eP,l1:()=>D,lU:()=>Y,lW:()=>eh,lk:()=>R,mN:()=>v,oo:()=>eO,ps:()=>f,qK:()=>F,r1:()=>A,rR:()=>x,s5:()=>ek,tK:()=>eo,tO:()=>y,ty:()=>I,ui:()=>J,uw:()=>l,vP:()=>eR,ve:()=>w,ym:()=>$});var a=i(74904);let s="_itemsPagination",r="_itemsCreateOne",n=`
+"use strict";exports.id=2270,exports.ids=[2270],exports.modules={42270:(e,t,i)=>{i.d(t,{$6:()=>es,$W:()=>eU,A1:()=>y,Ak:()=>ef,Au:()=>el,Az:()=>K,B4:()=>eL,BK:()=>ee,B_:()=>ei,CN:()=>ep,Dt:()=>E,E3:()=>Q,Ep:()=>eH,Eq:()=>_,GJ:()=>m,Hk:()=>eu,JL:()=>h,JM:()=>V,Jq:()=>eJ,L5:()=>X,MU:()=>v,Md:()=>s,Mh:()=>ej,Mp:()=>z,N:()=>C,Nu:()=>eM,OP:()=>eZ,P3:()=>p,Pe:()=>R,QW:()=>eV,Qf:()=>Z,RV:()=>eD,S9:()=>M,Tj:()=>eo,Tp:()=>N,Ts:()=>ew,Ul:()=>x,W6:()=>en,W9:()=>b,Wc:()=>r,Wr:()=>eT,YH:()=>ec,Yr:()=>ev,ZA:()=>eg,ZX:()=>O,Zy:()=>et,_J:()=>ea,as:()=>j,b2:()=>eA,bI:()=>B,ci:()=>H,d5:()=>eI,dc:()=>c,eY:()=>W,fA:()=>eY,fB:()=>U,fG:()=>L,fM:()=>eP,fV:()=>g,fc:()=>eQ,fo:()=>q,hx:()=>eq,i9:()=>eN,iA:()=>eO,iC:()=>eW,j9:()=>em,jL:()=>e_,jm:()=>ek,k9:()=>eF,kH:()=>F,kZ:()=>ed,kk:()=>er,kp:()=>eS,l1:()=>D,lU:()=>Y,lW:()=>eb,lk:()=>k,mN:()=>S,oo:()=>eE,ps:()=>f,qK:()=>J,r1:()=>A,rR:()=>G,s5:()=>ex,tK:()=>e$,tO:()=>P,ty:()=>I,ui:()=>T,uw:()=>l,vP:()=>eG,ve:()=>w,ym:()=>u});var a=i(74904);let s="_itemsPagination",r="_itemsCreateOne",n=`
     id
     name
     description
@@ -7,6 +7,20 @@
     active
     fields
     configuration
+    sources {
+      id
+      name
+      description
+      config {
+        schedule
+        queue
+        retries
+        backoff {
+          type
+          delay
+        }
+      }
+    }
 `,o=e=>`
 id
 name
@@ -44,7 +58,7 @@ anthropic_token
 type
 role
 favourite_agents
-`,u=`
+`,$=`
 id
 name
 providerapikey
@@ -52,6 +66,8 @@ instructions
 description
 active
 image
+animation_idle
+animation_responding
 tools
 providerName
 modelName
@@ -93,7 +109,7 @@ RBAC {
 }
 createdAt
 updatedAt
-`,$=(0,a.Ps)`
+`,u=(0,a.Ps)`
   query GetAgents(
     $page: Int!
     $limit: Int!
@@ -114,7 +130,7 @@ updatedAt
         hasNextPage
       }
       items {
-        ${u}
+        ${$}
       }
     }
   }
@@ -172,13 +188,13 @@ updatedAt
       }
     }
   }
-`,p=(0,a.Ps)`
+`,g=(0,a.Ps)`
   query GetContextById($id: ID!) {
     contextById(id: $id) {
       ${n}
     }
   }
-`,g=(e,t)=>{let i=e.charAt(0).toUpperCase()+e.slice(1);return(0,a.Ps)`
+`,p=(e,t)=>{let i=e.charAt(0).toUpperCase()+e.slice(1);return(0,a.Ps)`
     query ${e}Pagination($page: Int!, $limit: Int!, $filters: [Filter${i}_items], $sort: SortBy = { field: "updatedAt", direction: DESC }) {
       ${e}${s}(page: $page, limit: $limit, filters: $filters, sort: $sort) {
         pageInfo {
@@ -201,14 +217,14 @@ updatedAt
         job
       }
     }
-  `,P=(e,t,i=!1)=>(0,a.Ps)`
+  `,y=(e,t,i=!1)=>(0,a.Ps)`
     query ${e}ById($id: ID!) {
       ${e}_itemsById(id: $id) {
         ${o(t)}
         ${i?"chunks { fts_rank hybrid_score content source chunk_index chunk_id chunk_created_at chunk_updated_at embedding_size }":""}
       }
     }
-  `,y=e=>(0,a.Ps)`
+  `,P=e=>(0,a.Ps)`
     mutation CreateOne${e}($input: ${e}_itemsInput!) {
       ${e}_itemsCreateOne(input: $input) {
         item {
@@ -240,7 +256,7 @@ updatedAt
         job
       }
     }
-  `,v=(e,t)=>(0,a.Ps)`
+  `,S=(e,t)=>(0,a.Ps)`
     mutation DeleteOneById${e}($id: ID!) {
       ${e}_itemsRemoveOneById(id: $id) {
         id
@@ -259,7 +275,7 @@ updatedAt
       }
     }
   }
-`,C=(0,a.Ps)`
+`,v=(0,a.Ps)`
   mutation UpdateAgentSessionProject(
     $id: ID!
     $project: String
@@ -270,7 +286,7 @@ updatedAt
       }
     }
   }
-`,S=(0,a.Ps)`
+`,B=(0,a.Ps)`
   mutation UpdateAgentSessionTitle(
     $id: ID!
     $title: String
@@ -282,7 +298,7 @@ updatedAt
       }
     }
   }
-`,h=(0,a.Ps)`
+`,C=(0,a.Ps)`
   query GetAgentSessionMessages(
     $page: Int!
     $limit: Int!
@@ -310,7 +326,7 @@ updatedAt
       }
     }
   }
-`,B=(0,a.Ps)`
+`,h=(0,a.Ps)`
   query GetJobResults(
     $page: Int!
     $limit: Int!
@@ -369,7 +385,7 @@ updatedAt
       }
     }
   }
-`,j=(0,a.Ps)`
+`,q=(0,a.Ps)`
   query GetUsers(
     $page: Int!
     $limit: Int!
@@ -429,19 +445,19 @@ updatedAt
         updatedAt
     }
   }
-`;let b=(0,a.Ps)`
+`;let j=(0,a.Ps)`
   query GetAgentById($id: ID!) {
     agentById(id: $id) {
-      ${u}
+      ${$}
     }
   }
-`,q=(0,a.Ps)`
+`,b=(0,a.Ps)`
   query GetAgentsByIds($ids: [ID!]!) {
     agentByIds(ids: $ids) {
-      ${u}
+      ${$}
     }
   }
-`,R=(0,a.Ps)`
+`,k=(0,a.Ps)`
   query GetAgentSessionById($id: ID!) {
     agent_sessionById(id: $id) {
         createdAt
@@ -480,7 +496,7 @@ updatedAt
         id
     }
   }
-`;let k=(0,a.Ps)`
+`;let R=(0,a.Ps)`
     mutation UpdateUser(
       $email: String,
       $firstname: String,
@@ -580,7 +596,7 @@ updatedAt
       }
     }
   }
-`,x=(0,a.Ps)`
+`,G=(0,a.Ps)`
   mutation createAgent(
     $name: String!
     $description: String!
@@ -623,17 +639,25 @@ updatedAt
        }
     }
   }
-`,G=(0,a.Ps)`
-  query GetTools {
-    tools {
+`,x=(0,a.Ps)`
+  query GetTools($search: String, $category: String, $limit: Int, $page: Int) {
+    tools(search: $search, category: $category, limit: $limit, page: $page) {
       items {
         id
         name
+        category
         description
         config
         type
       }
+      total
+      page
+      limit
     }
+  }
+`,N=(0,a.Ps)`
+  query GetToolCategories {
+    toolCategories
   }
 `,E=(0,a.Ps)`
   mutation UpdateAgent(
@@ -643,6 +667,8 @@ updatedAt
     $description: String
     $instructions: String
     $rights_mode: String
+    $animation_idle: String
+    $animation_responding: String
     $category: String
     $tools: JSON
     $active: Boolean
@@ -656,6 +682,8 @@ updatedAt
         description: $description
         category: $category
         instructions: $instructions
+        animation_idle: $animation_idle
+        animation_responding: $animation_responding
         rights_mode: $rights_mode
         active: $active
         tools: $tools
@@ -670,6 +698,8 @@ updatedAt
           description
           instructions
           category
+          animation_idle
+          animation_responding
           rights_mode
           RBAC {
             type
@@ -689,7 +719,7 @@ updatedAt
         }
     }
   }
-`,N=(0,a.Ps)`
+`,F=(0,a.Ps)`
   mutation CreateUserRole($name: String!, $agents: String, $workflows: String, $variables: String, $users: String, $api: String) {
     rolesCreateOne(input: { name: $name, agents: $agents, workflows: $workflows, variables: $variables, users: $users, api: $api}) {
         item {
@@ -704,7 +734,7 @@ updatedAt
         }
     }
   }
-`,F=(0,a.Ps)`
+`,J=(0,a.Ps)`
   mutation CreateUser($email: String!, $password: String, $type: String, $emailVerified: String) {
     usersCreateOne(input: { email: $email, password: $password, type: $type, emailVerified: $emailVerified }) {
         item {
@@ -716,7 +746,7 @@ updatedAt
         }
     }
   }
-`,J=(0,a.Ps)`
+`,T=(0,a.Ps)`
   mutation ResetUserPassword($id: ID!, $password: String!) {
     usersUpdateOneById(id: $id, input: { password: $password }) {
       item {
@@ -724,7 +754,7 @@ updatedAt
       }
     }
   }
-`,T=(0,a.Ps)`
+`,Q=(0,a.Ps)`
   query GetProviders {
     providers {
       items {
@@ -737,7 +767,7 @@ updatedAt
       }
     }
   }
-`,Q=(0,a.Ps)`
+`,W=(0,a.Ps)`
   mutation RemoveUserById($id: ID!) {
     usersRemoveOneById(id: $id) {
       id
@@ -749,19 +779,19 @@ updatedAt
       id
     }
   }
-`;let W=(0,a.Ps)`
+`;let V=(0,a.Ps)`
   mutation RemoveUserRoleById($id: ID!) {
     rolesRemoveOneById(id: $id) {
       id
     }
   }
-`,V=(0,a.Ps)`
+`,L=(0,a.Ps)`
   mutation RemoveAgentById($id: ID!) {
     agentsRemoveOneById(id: $id) {
       id
     }
   }
-`,L=(0,a.Ps)`
+`,M=(0,a.Ps)`
   mutation RemoveAgentSessionById($id: ID!) {
     agent_sessionsRemoveOneById(id: $id) {
       id
@@ -775,7 +805,7 @@ updatedAt
       averageDuration
     }
   }
-`;let M=(0,a.Ps)`
+`;let K=(0,a.Ps)`
   query GetVariables(
     $page: Int!
     $limit: Int!
@@ -805,7 +835,7 @@ updatedAt
       }
     }
   }
-`,H=(0,a.Ps)`
+`,Z=(0,a.Ps)`
   query GetVariableById($id: ID!) {
     variableById(id: $id) {
       id
@@ -816,7 +846,7 @@ updatedAt
       updatedAt
     }
   }
-`,K=(0,a.Ps)`
+`,H=(0,a.Ps)`
   mutation CreateVariable(
     $name: String!
     $value: String!
@@ -862,13 +892,13 @@ updatedAt
       updatedAt
     }
   }
-`,Z=(0,a.Ps)`
+`,z=(0,a.Ps)`
   mutation RemoveVariableById($id: ID!) {
     variablesRemoveOneById(id: $id) {
       id
     }
   }
-`,z=(0,a.Ps)`
+`,X=(0,a.Ps)`
   query GetUserById($id: ID!) {
     userById(id: $id) {
       id
@@ -878,7 +908,17 @@ updatedAt
       email
     }
   }
-`,X=(0,a.Ps)`
+`,ee=(0,a.Ps)`
+  query GetUsersByIds($ids: [ID!]!) {
+    userByIds(ids: $ids) {
+      id
+      name
+      firstname
+      lastname
+      email
+    }
+  }
+`,et=(0,a.Ps)`
   query GetWorkflowTemplates(
     $page: Int!
     $limit: Int!
@@ -942,7 +982,7 @@ updatedAt
       updatedAt
     }
   }
-`;let ee=(0,a.Ps)`
+`;let ei=(0,a.Ps)`
   mutation CreateWorkflowTemplate(
     $name: String!
     $description: String
@@ -993,7 +1033,7 @@ updatedAt
       updatedAt
     }
   }
-`,et=(0,a.Ps)`
+`,ea=(0,a.Ps)`
   mutation UpdateWorkflowTemplate(
     $id: ID!
     $name: String
@@ -1043,13 +1083,13 @@ updatedAt
       updatedAt
     }
   }
-`,ei=(0,a.Ps)`
+`,es=(0,a.Ps)`
   mutation RemoveWorkflowTemplateById($id: ID!) {
     workflow_templatesRemoveOneById(id: $id) {
       id
     }
   }
-`,ea=(0,a.Ps)`
+`,er=(0,a.Ps)`
   query GetJobStatisticsEnhanced($user: Float, $agent: String, $from: String, $to: String) {
     jobStatistics(user: $user, agent: $agent, from: $from, to: $to) {
       runningCount
@@ -1059,7 +1099,7 @@ updatedAt
       averageDuration
     }
   }
-`,es=(0,a.Ps)`
+`,en=(0,a.Ps)`
   query AgentSessionsStatistics($from: Date!, $to: Date!) {
     agent_sessionsStatistics(filters: {
       createdAt: { and: [{ gte: $from }, { lte: $to }] }
@@ -1068,7 +1108,7 @@ updatedAt
       count
     }
   }
-`,er=(0,a.Ps)`
+`,eo=(0,a.Ps)`
   query WorkflowRunsStatistics($from: Date!, $to: Date!) {
     jobsStatistics(filters: {
       type: { eq: "workflow" }
@@ -1088,7 +1128,7 @@ updatedAt
       count
     }
   }
-`;let en=(0,a.Ps)`
+`;let ed=(0,a.Ps)`
   query FunctionCallsStatistics($from: Date!, $to: Date!) {
     trackingStatistics(filters: {
       type: { eq: TOOL_CALL }
@@ -1098,7 +1138,7 @@ updatedAt
       count
     }
   }
-`,eo=(0,a.Ps)`  
+`,e$=(0,a.Ps)`  
   query AgentCallsStatistics($from: Date!, $to: Date!) {
     trackingStatistics(filters: {
       type: { eq: AGENT_RUN }
@@ -1109,7 +1149,7 @@ updatedAt
       count
     }
   }
-`,ed=(0,a.Ps)`  
+`,eu=(0,a.Ps)`  
   query AgentCallsStatistics($from: Date!, $to: Date!) {
     trackingStatistics(filters: {
       name: { in: ["inputTokens", "outputTokens"] }
@@ -1119,25 +1159,81 @@ updatedAt
       count
     }
   }
-`,eu=(0,a.Ps)`
-  query TimeSeriesStatistics($type: typeEnum!, $from: Date!, $to: Date!) {
+`,em=(0,a.Ps)`
+  query TimeSeriesStatistics($type: typeEnum!, $from: Date!, $to: Date!, $names: [String!]) {
     trackingStatistics(
       groupBy: "createdAt"
       filters: {
         type: { eq: $type }
         createdAt: { and: [{ gte: $from }, { lte: $to }] }
+        name: { in: $names }
       }
     ) {
       group
       count
     }
   }
-`,e$=(0,a.Ps)`
-  query DonutStatistics($type: typeEnum!, $groupBy: String!, $from: Date!, $to: Date!) {
+`,el=(0,a.Ps)`
+query UserStatistics($from: Date!, $to: Date!, $names: [String!]) {
+  trackingStatistics(
+    groupBy: "user"
+    filters: {
+      type: { eq: AGENT_RUN }
+      createdAt: { and: [{ gte: $from }, { lte: $to }] }
+      name: { in: $names }
+    }
+  ) {
+    group
+    count
+  }
+}
+`,eg=(0,a.Ps)`
+query ProjectStatistics($from: Date!, $to: Date!, $names: [String!]) {
+  trackingStatistics(
+    groupBy: "project"
+    filters: {
+      type: { eq: AGENT_RUN }
+      createdAt: { and: [{ gte: $from }, { lte: $to }] }
+      name: { in: $names }
+    }
+  ) {
+    group
+    count
+  }
+}
+`,ep=(0,a.Ps)`
+query AgentStatistics($from: Date!, $to: Date!, $names: [String!]) {
+  trackingStatistics(
+    groupBy: "label"
+    filters: {
+      type: { eq: AGENT_RUN }
+      name: { in: $names }
+      createdAt: { and: [{ gte: $from }, { lte: $to }] }
+    }
+  ) {
+    group
+    count
+  }
+}
+`;(0,a.Ps)`
+  query GetUserNameById($id: ID!) {
+    userById(id: $id) {
+      name
+    }
+  }
+`,(0,a.Ps)`
+  query GetProjectNameById($id: ID!) {
+    projectById(id: $id) {
+      name
+    }
+  }
+`;let ec=(0,a.Ps)`
+  query DonutStatistics($type: typeEnum!, $groupBy: String!, $from: Date!, $to: Date!, $names: [String!]) {
     trackingStatistics(
       groupBy: $groupBy
       filters: {
         type: { eq: $type }
+        name: { in: $names }
         createdAt: { and: [{ gte: $from }, { lte: $to }] }
       }
     ) {
@@ -1145,7 +1241,7 @@ updatedAt
       count
     }
   }
-`,em=`
+`,ey=`
   id
   name
   description
@@ -1167,7 +1263,7 @@ updatedAt
       rights
     }
   }
-`,el=(0,a.Ps)`
+`,eP=(0,a.Ps)`
   query GetProjects(
     $page: Int!
     $limit: Int!
@@ -1188,23 +1284,23 @@ updatedAt
         hasNextPage
       }
       items {
-        ${em}
+        ${ey}
       }
     }
   }
-`,ep=(0,a.Ps)`
+`,ef=(0,a.Ps)`
   query GetProjectsByIds($ids: [ID!]!) {
     projectByIds(ids: $ids) {
-      ${em}
+      ${ey}
     }
   }
-`,eg=(0,a.Ps)`
+`,e_=(0,a.Ps)`
   query GetProjectById($id: ID!) {
     projectById(id: $id) {
-      ${em}
+      ${ey}
     }
   }
-`,ec=(0,a.Ps)`
+`,eI=(0,a.Ps)`
   mutation UpdateUserFavouriteProjects($id: ID!, $favourite_projects: JSON) {
     userUpdateById(input: { favourite_projects: $favourite_projects }, filter: { id: $id }) {
       item {
@@ -1213,30 +1309,30 @@ updatedAt
       }
     }
   }
-`,eP=(0,a.Ps)`
+`,eS=(0,a.Ps)`
   mutation CreateProject($input: projectInput!) {
     projectsCreateOne(input: $input) {
       item {
-        ${em}
+        ${ey}
       }
     }
   }
-`,ey=(0,a.Ps)`
+`,eA=(0,a.Ps)`
   mutation UpdateProject($id: ID!, $input: projectInput!) {
     projectsUpdateOneById(id: $id, input: $input) {
       item {
-        ${em}
+        ${ey}
       }
     }
   }
-`,ef=(0,a.Ps)`
+`,ev=(0,a.Ps)`
   mutation DeleteProject($id: ID!) {
     projectsRemoveOneById(id: $id) {
       id
       name
     }
   }
-`,e_=`
+`,eB=`
   id
   name
   description
@@ -1248,13 +1344,13 @@ updatedAt
   eval_set_id
   createdAt
   updatedAt
-`,eI=`
+`,eC=`
   id
   name
   description
   createdAt
   updatedAt
-`,ev=`
+`,eh=`
   id
   name
   eval_set_id
@@ -1282,7 +1378,7 @@ updatedAt
       rights
     }
   }
-`,eA=(0,a.Ps)`
+`,eD=(0,a.Ps)`
   query GetTestCases(
     $page: Int!
     $limit: Int!
@@ -1297,40 +1393,40 @@ updatedAt
         hasNextPage
       }
       items {
-        ${e_}
+        ${eB}
       }
     }
   }
 `;(0,a.Ps)`
   query GetTestCaseById($id: ID!) {
     test_caseById(id: $id) {
-      ${e_}
+      ${eB}
     }
   }
-`;let eC=(0,a.Ps)`
+`;let eq=(0,a.Ps)`
   mutation CreateTestCase($data: test_caseInput!) {
     test_casesCreateOne(input: $data) {
       item {
-        ${e_}
+        ${eB}
       }
     }
   }
-`,eS=(0,a.Ps)`
+`,ej=(0,a.Ps)`
   mutation UpdateTestCase($id: ID!, $data: test_caseInput!) {
     test_casesUpdateOneById(id: $id, input: $data) {
       item {
-        ${e_}
+        ${eB}
       }
     }
   }
-`,eh=(0,a.Ps)`
+`,eb=(0,a.Ps)`
   mutation DeleteTestCase($id: ID!) {
     test_casesRemoveOneById(id: $id) {
       id
       name
     }
   }
-`,eB=(0,a.Ps)`
+`,ek=(0,a.Ps)`
   query GetEvalSets(
     $page: Int!
     $limit: Int!
@@ -1345,11 +1441,11 @@ updatedAt
         hasNextPage
       }
       items {
-        ${eI}
+        ${eC}
       }
     }
   }
-`,eD=`
+`,eR=`
   id
   name
   description
@@ -1358,44 +1454,44 @@ updatedAt
     description
   }
   llm
-`,ej=(0,a.Ps)`
+`,ew=(0,a.Ps)`
   query GetEvals {
     evals {
       items {
-        ${eD}
+        ${eR}
       }
     }
   }
-`,eb=(0,a.Ps)`
+`,eO=(0,a.Ps)`
   query GetEvalSetById($id: ID!) {
     eval_setById(id: $id) {
-      ${eI}
+      ${eC}
     }
   }
-`,eq=(0,a.Ps)`
+`,eU=(0,a.Ps)`
   mutation CreateEvalSet($data: eval_setInput!) {
     eval_setsCreateOne(input: $data) {
       item {
-        ${eI}
+        ${eC}
       }
     }
   }
-`,eR=(0,a.Ps)`
+`,eG=(0,a.Ps)`
   mutation UpdateEvalSet($id: ID!, $data: eval_setInput!) {
     eval_setsUpdateOneById(id: $id, input: $data) {
       item {
-        ${eI}
+        ${eC}
       }
     }
   }
-`,ek=(0,a.Ps)`
+`,ex=(0,a.Ps)`
   mutation DeleteEvalSet($id: ID!) {
     eval_setsRemoveOneById(id: $id) {
       id
       name
     }
   }
-`,ew=(0,a.Ps)`
+`,eN=(0,a.Ps)`
   query GetEvalRuns(
     $page: Int!
     $limit: Int!
@@ -1410,25 +1506,25 @@ updatedAt
         hasNextPage
       }
       items {
-        ${ev}
+        ${eh}
       }
     }
   }
 `;(0,a.Ps)`
   query GetEvalRunById($id: ID!) {
     eval_runById(id: $id) {
-      ${ev}
+      ${eh}
     }
   }
-`;let eO=(0,a.Ps)`
+`;let eE=(0,a.Ps)`
   mutation CreateEvalRun($data: eval_runInput!) {
     eval_runsCreateOne(input: $data) {
       item {
-        ${ev}
+        ${eh}
       }
     }
   }
-`,eU=(0,a.Ps)`
+`,eF=(0,a.Ps)`
   query GetQueue($queue: QueueEnum!) {
     queue(queue: $queue) {
       name
@@ -1446,9 +1542,9 @@ updatedAt
       }
     }
   }
-`,ex=(0,a.Ps)`
-  query GetJobs($queue: QueueEnum!, $statusses: [JobStateEnum!]) {
-    jobs(queue: $queue, statusses: $statusses) {
+`,eJ=(0,a.Ps)`
+  query GetJobs($queue: QueueEnum!, $statusses: [JobStateEnum!], $page: Int, $limit: Int) {
+    jobs(queue: $queue, statusses: $statusses, page: $page, limit: $limit) {
       items {
         name
         id
@@ -1468,42 +1564,42 @@ updatedAt
       }
     }
   }
-`,eG=(0,a.Ps)`
+`,eT=(0,a.Ps)`
   mutation DeleteJob($queue: QueueEnum!, $id: String!) {
     deleteJob(queue: $queue, id: $id) {
       success
     }
   }
-`,eE=(0,a.Ps)`
+`,eQ=(0,a.Ps)`
   mutation PauseQueue($queue: QueueEnum!) {
     pauseQueue(queue: $queue) {
       success
     }
   }
-`,eN=(0,a.Ps)`
+`,eW=(0,a.Ps)`
   mutation ResumeQueue($queue: QueueEnum!) {
     resumeQueue(queue: $queue) {
       success
     }
   }
-`,eF=(0,a.Ps)`
+`,eV=(0,a.Ps)`
   mutation DrainQueue($queue: QueueEnum!) {
     drainQueue(queue: $queue) {
       success
     }
   }
-`,eJ=(0,a.Ps)`
+`,eL=(0,a.Ps)`
   mutation RunEval($id: ID!) {
     runEval(id: $id) {
       jobs
       count
     }
   }
-`,eT=(0,a.Ps)`
+`,eM=(0,a.Ps)`
   mutation UpdateEvalRun($id: ID!, $data: eval_runInput!) {
     eval_runsUpdateOneById(id: $id, input: $data) {
       item {
-        ${ev}
+        ${eh}
       }
     }
   }
@@ -1513,14 +1609,14 @@ updatedAt
       id
     }
   }
-`;let eQ=`
+`;let eK=`
   id
   config_key
   config_value
   description
   createdAt
   updatedAt
-`,eW=(0,a.Ps)`
+`,eZ=(0,a.Ps)`
   query GetPlatformConfigurations {
     platform_configurationsPagination {
       pageInfo {
@@ -1531,7 +1627,7 @@ updatedAt
         hasNextPage
       }
       items {
-        ${eQ}
+        ${eK}
       }
     }
   }
@@ -1546,23 +1642,23 @@ updatedAt
         hasNextPage
       }
       items {
-        ${eQ}
+        ${eK}
       }
     }
   }
-`;let eV=(0,a.Ps)`
+`;let eH=(0,a.Ps)`
   mutation CreatePlatformConfiguration($data: platform_configurationInput!) {
     platform_configurationsCreateOne(input: $data) {
       item {
-        ${eQ}
+        ${eK}
       }
     }
   }
-`,eL=(0,a.Ps)`
+`,eY=(0,a.Ps)`
   mutation UpdatePlatformConfiguration($id: ID!, $data: platform_configurationInput!) {
     platform_configurationsUpdateOneById(id: $id, input: $data) {
       item {
-        ${eQ}
+        ${eK}
       }
     }
   }
