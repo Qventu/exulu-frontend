@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "exulu-mcp-server-default-coding-agent": {
+      "type": "http",
+      "url": "https://backend.ai.open.de/mcp/76e6a87c-98be-480b-8081-264eb0bb4ecc",
+      "headers": {
+        "Authorization": "Bearer ${EXULU_TOKEN}"
+      }
+    }
+  }
+}

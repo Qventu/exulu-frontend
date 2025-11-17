@@ -1930,3 +1930,206 @@ export const DELETE_PLATFORM_CONFIGURATION = gql`
     }
   }
 `;
+
+// ============================================
+// PROMPT LIBRARY QUERIES AND MUTATIONS
+// ============================================
+
+const PROMPT_LIBRARY_FIELDS = `
+  id
+  name
+  description
+  content
+  tags
+  usage_count
+  favorite_count
+  assigned_agents
+  rights_mode
+  created_by
+  createdAt
+  updatedAt
+  RBAC {
+    type
+    users {
+      id
+      rights
+    }
+    roles {
+      id
+      rights
+    }
+    projects {
+      id
+      rights
+    }
+  }
+`;
+
+export const GET_PROMPTS = gql`
+  query GetPrompts(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterPrompt_library_item]
+    $sort: SortBy = { field: "updatedAt", direction: DESC }
+  ) {
+    prompt_libraryPagination(
+      page: $page
+      limit: $limit
+      sort: $sort
+      filters: $filters
+    ) {
+      pageInfo {
+        pageCount
+        itemCount
+        currentPage
+        hasPreviousPage
+        hasNextPage
+      }
+      items {
+        ${PROMPT_LIBRARY_FIELDS}
+      }
+    }
+  }
+`;
+
+export const GET_PROMPT_BY_ID = gql`
+  query GetPromptById($id: ID!) {
+    prompt_library_itemById(id: $id) {
+      ${PROMPT_LIBRARY_FIELDS}
+    }
+  }
+`;
+
+export const CREATE_PROMPT = gql`
+  mutation CreatePrompt(
+    $name: String!
+    $description: String
+    $content: String!
+    $tags: JSON
+    $rights_mode: String!
+    $RBAC: RBACInput
+    $assigned_agents: JSON
+  ) {
+    prompt_libraryCreateOne(
+      input: {
+        name: $name
+        description: $description
+        content: $content
+        tags: $tags
+        rights_mode: $rights_mode
+        RBAC: $RBAC
+        assigned_agents: $assigned_agents
+      }
+    ) {
+      item {
+        ${PROMPT_LIBRARY_FIELDS}
+      }
+    }
+  }
+`;
+
+export const UPDATE_PROMPT = gql`
+  mutation UpdatePrompt(
+    $id: ID!
+    $name: String
+    $description: String
+    $content: String
+    $tags: JSON
+    $rights_mode: String
+    $RBAC: RBACInput
+    $assigned_agents: JSON
+  ) {
+    prompt_libraryUpdateOneById(
+      id: $id
+      input: {
+        name: $name
+        description: $description
+        content: $content
+        tags: $tags
+        rights_mode: $rights_mode
+        RBAC: $RBAC
+        assigned_agents: $assigned_agents
+      }
+    ) {
+      item {
+        ${PROMPT_LIBRARY_FIELDS}
+      }
+    }
+  }
+`;
+
+export const DELETE_PROMPT = gql`
+  mutation DeletePrompt($id: ID!) {
+    prompt_libraryRemoveOneById(id: $id) {
+      id
+    }
+  }
+`;
+
+export const INCREMENT_PROMPT_USAGE = gql`
+  mutation IncrementPromptUsage($id: ID!, $usage_count: Float!) {
+    prompt_libraryUpdateOneById(
+      id: $id
+      input: { usage_count: $usage_count }
+    ) {
+      item {
+        id
+        usage_count
+      }
+    }
+  }
+`;
+
+export const INCREMENT_PROMPT_FAVORITES = gql`
+  mutation IncrementPromptFavorites($id: ID!, $favorite_count: Float!) {
+    prompt_libraryUpdateOneById(
+      id: $id
+      input: { favorite_count: $favorite_count }
+    ) {
+      item {
+        id
+        favorite_count
+      }
+    }
+  }
+`;
+
+// Prompt Favorites
+const PROMPT_FAVORITE_FIELDS = `
+  id
+  user_id
+  prompt_id
+  createdAt
+`;
+
+export const GET_USER_PROMPT_FAVORITES = gql`
+  query GetUserPromptFavorites($user_id: Float!) {
+    prompt_favoritesPagination(
+      filters: [{ user_id: { eq: $user_id } }]
+    ) {
+      items {
+        ${PROMPT_FAVORITE_FIELDS}
+      }
+    }
+  }
+`;
+
+export const CREATE_PROMPT_FAVORITE = gql`
+  mutation CreatePromptFavorite($user_id: Float!, $prompt_id: String!) {
+    prompt_favoritesCreateOne(
+      input: { user_id: $user_id, prompt_id: $prompt_id }
+    ) {
+      item {
+        ${PROMPT_FAVORITE_FIELDS}
+      }
+    }
+  }
+`;
+
+export const DELETE_PROMPT_FAVORITE = gql`
+  mutation DeletePromptFavorite($id: ID!) {
+    prompt_favoritesRemoveOneById(id: $id) {
+      id
+    }
+  }
+`;

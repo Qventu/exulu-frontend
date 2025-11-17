@@ -183,9 +183,9 @@ export default function ConfigurationPage() {
     <div className="h-full flex-1 flex-col space-y-8 p-8">
       <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">IMP Configurations</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Platform theme</h2>
           <p className="text-muted-foreground">
-            Manage platform-wide theme variables and styling.
+            Import custom styles to personalize your IMP.
           </p>
         </div>
         <div className="flex gap-2">

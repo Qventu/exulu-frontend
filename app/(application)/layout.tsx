@@ -1,5 +1,4 @@
 import "../globals.css";
-import Script from "next/script";
 import { fontVariables } from "@/lib/fonts";
 import * as React from "react";
 import { cn } from "@/lib/utils";
@@ -45,6 +44,10 @@ export default async function RootLayout({
     return (
         <html lang="en" suppressHydrationWarning>
             <head>
+                <link rel="icon" href={process.env.BACKEND + "/icon_16x16.png"} type="image/png" sizes="16x16" />
+                <link rel="icon" href={process.env.BACKEND + "/icon_32x32.png"} type="image/png" sizes="32x32" />
+                <link rel="icon" href={process.env.BACKEND + "/icon_48x48.png"} type="image/png" sizes="48x48" />
+                <link rel="icon" href={process.env.BACKEND + "/icon_512x512.png"} type="image/png" sizes="512x512" />
                 <style
                     dangerouslySetInnerHTML={{
                         __html: `
@@ -64,7 +67,7 @@ export default async function RootLayout({
             </head>
             <body
                 className={cn(
-                    `min-h-screen flex flex-col bg-background font-sans antialiased h-[100vh]`,
+                    `flex flex-col bg-background font-sans antialiased`,
                     fontVariables,
                 )}
             >

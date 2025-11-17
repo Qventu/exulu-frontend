@@ -287,7 +287,7 @@ export function ContextSources(props: DataDisplayProps) {
                                     </div>
                                 </TooltipProvider>
                             ) : (
-                                <div className="text-center text-muted-foreground py-8">
+                                <div className="text-center text-muted-foreground p-5 border rounded-md">
                                     No sources found.
                                 </div>
                             )}

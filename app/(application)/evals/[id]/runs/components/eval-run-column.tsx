@@ -1,17 +1,23 @@
 "use client";
 
-import { useQuery } from "@apollo/client";
+import { NetworkStatus, useQuery } from "@apollo/client";
 import { GET_JOB_RESULTS } from "@/queries/queries";
 import { JobResult } from "@/types/models/job-result";
 import { EvalRun } from "@/types/models/eval-run";
 import { TestCase } from "@/types/models/test-case";
-import { Clock, XCircle, Pause, AlertTriangle, Loader2 } from "lucide-react";
+import { Clock, XCircle, Pause, AlertTriangle, Loader2, MoreVertical, Edit, Play, Square, Copy, RefreshCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Loading } from "@/components/ui/loading";
 
 interface EvalRunColumnProps {
   evalRun: EvalRun;
   testCases: TestCase[];
   onCellClick: (result: JobResult | null) => void;
+  handleEditRun: (run: EvalRun) => void;
+  handleCopyRun: (run: EvalRun) => void;
+  handleStartRun: (run: EvalRun) => void;
+  handleStopRun: (run: EvalRun) => void;
 }
 
 const statusIcons = {
@@ -34,8 +40,9 @@ const statusColors = {
   stuck: "text-red-600 bg-red-50 border-red-200",
 };
 
-export function EvalRunColumn({ evalRun, testCases, onCellClick }: EvalRunColumnProps) {
-  const { data: jobResultsData, loading: loadingJobResults } = useQuery(GET_JOB_RESULTS, {
+export function EvalRunColumn({ evalRun, testCases, onCellClick, handleEditRun, handleCopyRun, handleStartRun, handleStopRun }: EvalRunColumnProps) {
+
+  const { data: jobResultsData, loading: loadingJobResults, refetch: refetchJobResults, networkStatus: jobsNetworkStatus } = useQuery(GET_JOB_RESULTS, {
     variables: {
       page: 1,
       limit: 500,
@@ -51,7 +58,7 @@ export function EvalRunColumn({ evalRun, testCases, onCellClick }: EvalRunColumn
       jr.label?.includes(test_case_id) && jr.label?.includes(evalRun.id)
     );
 
-    if (!result) return null;
+    if (result === null || result === undefined) return null;
 
     return result;
   };
@@ -75,68 +82,133 @@ export function EvalRunColumn({ evalRun, testCases, onCellClick }: EvalRunColumn
   };
 
   return (
-    <div className="flex-shrink-0 min-w-[100px]">
-      {testCases.map((testCase) => {
-        const isIncluded = evalRun.test_case_ids.includes(testCase.id);
-        const result = getCellData(testCase.id);
+    <>
+      <div className="flex-shrink-0">
+        <div
+          className="p-3 text-center border-r bg-muted/20 h-[60px] flex items-center justify-center border-b border-r">
+          <span className="text-xs text-muted-foreground space-x-2 flex items-center justify-center">
+            {/* Refetch action */}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={
+                loadingJobResults ||
+                jobsNetworkStatus === NetworkStatus.refetch ||
+                jobsNetworkStatus === NetworkStatus.fetchMore ||
+                jobsNetworkStatus === NetworkStatus.loading
+              }
+              onClick={() => {
+                refetchJobResults()
+              }}>
+              {
+                loadingJobResults && <Loading />
+              }
+              <RefreshCcw className="h-3 w-3" />
+            </Button>
+            {/* Copy, edit, start buttons */}
 
-        if (!isIncluded) {
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                handleCopyRun(evalRun)
+              }}>
+              <Copy className="h-3 w-3" />
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                handleEditRun(evalRun)
+              }}>
+              <Edit className="h-3 w-3" />
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                handleStartRun(evalRun)
+              }}>
+              <Play className="h-3 w-3" />
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                handleStopRun(evalRun)
+              }}>
+              <Square className="h-3 w-3" />
+            </Button>
+
+          </span>
+        </div>
+      </div>
+      <div className="flex-shrink-0">
+        {testCases.map((testCase) => {
+          const isIncluded = evalRun.test_case_ids.includes(testCase.id);
+          const result = getCellData(testCase.id);
+
+          if (!isIncluded) {
+            return (
+              <div
+                key={testCase.id}
+                className="p-3 text-center border-r bg-muted/20 h-[60px] flex items-center justify-center border-b border-r"
+              >
+                <span className="text-xs text-muted-foreground">—</span>
+              </div>
+            );
+          }
+
+          const cellColor = getCellColor(result);
+          const statusColor = result?.state ? statusColors[result.state] : "bg-transparent";
+
           return (
             <div
               key={testCase.id}
-              className="p-3 text-center border-r bg-muted/20 min-h-[72px] flex items-center justify-center"
+              className="p-3 text-center border-b border-r h-[60px] flex items-center justify-center"
             >
-              <span className="text-xs text-muted-foreground">—</span>
+              <div
+                onClick={() => onCellClick(result)}
+                className={cn(
+                  "w-full h-full min-h-[48px] rounded transition-colors flex items-center justify-center gap-2",
+                  cellColor || statusColor || "border-gray-200 bg-gray-50",
+                  result?.state === "completed" && "cursor-pointer hover:opacity-80",
+                  (!result || result.state !== "completed") && "cursor-default"
+                )}
+              >
+                {loadingJobResults ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : result ? (
+                  <>
+                    {result.state === "completed" && result.result !== undefined ? (
+                      <span className="font-semibold text-sm hover:underline">
+                        {result.result.toFixed(1)}
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {statusIcons[result.state]}
+                        <span className="text-xs capitalize">
+                          {result.state}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {statusIcons["waiting"]}
+                    <span className="text-xs capitalize">
+                      Not started
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           );
-        }
-
-        const cellColor = getCellColor(result);
-        const statusColor = result?.state ? statusColors[result.state] : "bg-transparent";
-
-        return (
-          <div
-            key={testCase.id}
-            className="p-3 text-center border-r min-h-[72px] flex items-center justify-center"
-          >
-            <div
-              onClick={() => onCellClick(result)}
-              className={cn(
-                "w-full h-full min-h-[48px] rounded transition-colors flex items-center justify-center gap-2",
-                cellColor || statusColor || "border-gray-200 bg-gray-50",
-                result?.state === "completed" && "cursor-pointer hover:opacity-80",
-                (!result || result.state !== "completed") && "cursor-default"
-              )}
-            >
-              {loadingJobResults ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : result ? (
-                <>
-                  {result.state === "completed" && result.result !== undefined ? (
-                    <span className="font-semibold text-sm hover:underline">
-                      {result.result.toFixed(1)}
-                    </span>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      {statusIcons[result.state]}
-                      <span className="text-xs capitalize">
-                        {result.state}
-                      </span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex items-center gap-2">
-                {statusIcons["waiting"]}
-                <span className="text-xs capitalize">
-                  Not started
-                </span>
-              </div>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
+        })}
+      </div>
+    </>
   );
 }

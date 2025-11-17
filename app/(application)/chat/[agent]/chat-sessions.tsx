@@ -281,7 +281,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
                       </div>
 
                       {writeAccess && (
-                        <DropdownMenu>
+                        <DropdownMenu modal={false}>
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="ghost"

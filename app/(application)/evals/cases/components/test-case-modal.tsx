@@ -339,7 +339,7 @@ export function TestCaseModal({
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">
           <Tabs defaultValue="basic" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="basic" className="gap-2">
                 <Info className="h-4 w-4" />
                 Basic Info
@@ -348,10 +348,10 @@ export function TestCaseModal({
                 <MessageSquare className="h-4 w-4" />
                 Conversation
               </TabsTrigger>
-              <TabsTrigger value="expected" className="gap-2">
+              {/* <TabsTrigger value="expected" className="gap-2">
                 <Settings2 className="h-4 w-4" />
                 Expected Tools
-              </TabsTrigger>
+              </TabsTrigger> */}
             </TabsList>
 
             <ScrollArea className="flex-1">
@@ -525,7 +525,7 @@ export function TestCaseModal({
                 </Card>
               </TabsContent>
 
-              <TabsContent value="expected" className="space-y-4 p-1 mt-4">
+              {/* <TabsContent value="expected" className="space-y-4 p-1 mt-4">
                 <div className="grid gap-5">
                   <Card className="border-l-2 border-l-blue-500/30">
                     <CardHeader className="pb-3">
@@ -706,7 +706,7 @@ export function TestCaseModal({
                     </CardContent>
                   </Card>
                 </div>
-              </TabsContent>
+              </TabsContent> */}
             </ScrollArea>
           </Tabs>
 

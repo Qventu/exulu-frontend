@@ -21,7 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/models/user-role";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { ChevronUp, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard, Database, ListTodo, Bot, Route, Variable, FileCheck, Sparkles, Settings, LogOut, FileText, FolderOpen, Brain } from "lucide-react";
+import { ChevronUp, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard, Database, ListTodo, Bot, Route, Variable, FileCheck, Sparkles, Settings, LogOut, FileText, FolderOpen, Brain, Album } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "../ui/avatar";
@@ -45,15 +45,9 @@ const buildNavigation = (user: User, role: UserRole) => {
   }
 
   navigationItems.push({
-    label: "Contexts",
+    label: "Knowledge",
     path: "data",
     icon: <Database />,
-  });
-
-  navigationItems.push({
-    label: "Jobs",
-    path: "jobs",
-    icon: <ListTodo />,
   });
 
   if (user.super_admin || role.agents === "write") {
@@ -76,6 +70,12 @@ const buildNavigation = (user: User, role: UserRole) => {
     icon: <MessageCircle />,
   });
 
+  navigationItems.push({
+    label: "Prompts",
+    path: "prompts",
+    icon: <Album />,
+  });
+
   if (user.super_admin || role.evals === "read" || role.evals === "write") {
     navigationItems.push({
       label: "Evals",
@@ -84,13 +84,13 @@ const buildNavigation = (user: User, role: UserRole) => {
     });
   }
 
-  if (user.super_admin || role.workflows === "write") {
+  /* if (user.super_admin || role.workflows === "write") {
     navigationItems.push({
       label: "Workflows",
       path: "workflows",
       icon: <Route />,
     });
-  }
+  } */
 
   if (user.super_admin || role.users === "write") {
     navigationItems.push({
@@ -126,7 +126,7 @@ const buildNavigation = (user: User, role: UserRole) => {
 
   if (user.super_admin) {
     navigationItems.push({
-      label: "Configurations",
+      label: "Theme",
       path: "configuration",
       icon: <Settings />,
     });
@@ -173,7 +173,7 @@ function NavigationItems({ items }: { items: { label: string; path: string; icon
 }
 
 export function MainNavSidebar({ sidebarDefaultOpen }: { sidebarDefaultOpen: boolean }) {
-  
+
   const { user } = useContext(UserContext);
   const navigationItems = buildNavigation(user, user.role);
   const router = useRouter();
@@ -211,7 +211,7 @@ export function MainNavSidebar({ sidebarDefaultOpen }: { sidebarDefaultOpen: boo
         </div>
         <SidebarMenu>
           <SidebarMenuItem>
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton className="h-12 hover:bg-accent/50">
                   <Avatar className="h-5 w-5">
@@ -264,7 +264,7 @@ export function MainNavProvider({ children, sidebarDefaultOpen }: { children: Re
   console.log("sidebarDefaultOpen", sidebarDefaultOpen)
   return (
     <SidebarProvider defaultOpen={sidebarDefaultOpen}>
-      <div className="flex h-screen w-full bg-background overflow-hidden">
+      <div className="flex w-full bg-background overflow-hidden">
         <MainNavSidebar sidebarDefaultOpen={sidebarDefaultOpen} />
         <main className="flex-1 overflow-auto">
           {children}

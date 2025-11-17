@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import { Loader2, Info, Plus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -33,6 +32,7 @@ import { Eval } from "@/types/models/eval";
 import { EvalRun, ScoringMethod } from "@/types/models/eval-run";
 
 interface CreateEvalRunModalProps {
+  modalKey: string;
   eval_set_id: string;
   onCreateSuccess?: () => void;
   existingRun?: EvalRun | null;
@@ -41,6 +41,7 @@ interface CreateEvalRunModalProps {
 }
 
 export function CreateEvalRunModal({
+  modalKey,
   eval_set_id,
   onCreateSuccess,
   existingRun = null,
@@ -48,7 +49,7 @@ export function CreateEvalRunModal({
   onOpenChange,
 }: CreateEvalRunModalProps) {
   const { toast } = useToast();
-  const isEditing = !!existingRun;
+  const isEditing = !!existingRun && !!existingRun.id;
 
   const [evalRun, setEvalRun] = useState<EvalRun>({
     id: "",
@@ -96,7 +97,7 @@ export function CreateEvalRunModal({
   const { data: evalFunctionsData } = useQuery(GET_EVAL_FUNCTIONS, {
     skip: !eval_set_id,
   });
-  
+
   // Fetch test cases
   const { data: testCasesData } = useQuery(GET_TEST_CASES, {
     variables: {
@@ -169,12 +170,12 @@ export function CreateEvalRunModal({
     }))
   };
 
-  const handleToggleEvalFunction = (evalFunction: { id: string; config: Record<string, any> }) => {
+  const handleToggleEvalFunction = (evalFunction: { id: string; name: string }) => {
     setEvalRun(prev => ({
       ...prev,
       eval_functions: prev.eval_functions.some(ef => ef.id === evalFunction.id)
         ? prev.eval_functions.filter(ef => ef.id !== evalFunction.id)
-        : [...prev.eval_functions, evalFunction]
+        : [...prev.eval_functions, { ...evalFunction, config: {} }]
     }))
   };
 
@@ -229,7 +230,11 @@ export function CreateEvalRunModal({
       pass_threshold: evalRun.pass_threshold,
       timeout_in_seconds: evalRun.timeout_in_seconds,
       rights_mode: evalRun.rights_mode,
-      RBAC: evalRun.RBAC,
+      RBAC: {
+        users: evalRun.RBAC?.users,
+        roles: evalRun.RBAC?.roles,
+        projects: evalRun.RBAC?.projects,
+      },
     };
 
     if (isEditing) {
@@ -245,11 +250,12 @@ export function CreateEvalRunModal({
           data,
         },
       });
+
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog key={modalKey} open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Eval Run" : "Create Eval Run"}</DialogTitle>
@@ -317,9 +323,15 @@ export function CreateEvalRunModal({
                     onClick={(e) => {
                       e.stopPropagation();
                       if (evalRun.eval_functions.length === evalFunctionsData?.evals?.items?.length) {
-                        setEvalRun(prev => ({ ...prev, eval_functions: [] }));
+                        setEvalRun(prev => ({
+                          ...prev,
+                          eval_functions: []
+                        }));
                       } else {
-                        setEvalRun(prev => ({ ...prev, eval_functions: evalFunctionsData?.evals?.items?.map((e: Eval) => ({ id: e.id, config: e.config })) || [] }));
+                        setEvalRun(prev => ({
+                          ...prev,
+                          eval_functions: evalFunctionsData?.evals?.items?.map((e: Eval) => ({ id: e.id, name: e.name, config: {} })) || []
+                        }));
                       }
                     }}
                   >
@@ -337,7 +349,7 @@ export function CreateEvalRunModal({
                         <Checkbox
                           id={`eval-${_eval.id}`}
                           checked={evalRun.eval_functions.some(ef => ef.id === _eval.id)}
-                          onCheckedChange={() => handleToggleEvalFunction({ id: _eval.id, config: _eval.config })}
+                          onCheckedChange={() => handleToggleEvalFunction({ id: _eval.id, name: _eval.name })}
                           className="mt-0.5"
                         />
                         <div className="flex-1 min-w-0">
@@ -443,9 +455,7 @@ export function CreateEvalRunModal({
                   </ScrollArea>
                 </div>
               </div>
-
               <Separator />
-
               {/* Scoring Configuration */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -459,8 +469,7 @@ export function CreateEvalRunModal({
                     <Label htmlFor="scoringMethod" className="text-xs font-semibold">Scoring Method</Label>
                     <Select
                       value={evalRun.scoring_method}
-                      onValueChange={(value: any) => setEvalRun(prev => ({ ...prev, scoring_method: value as ScoringMethod }))}
-                    >
+                      onValueChange={(value: any) => setEvalRun(prev => ({ ...prev, scoring_method: value as ScoringMethod }))}>
                       <SelectTrigger id="scoringMethod" className="h-10">
                         <SelectValue />
                       </SelectTrigger>
@@ -474,7 +483,6 @@ export function CreateEvalRunModal({
                       How to combine multiple eval function scores
                     </p>
                   </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="passThreshold" className="text-xs font-semibold">Pass Threshold</Label>
                     <Input
@@ -490,7 +498,6 @@ export function CreateEvalRunModal({
                       Minimum score (0-100) to pass
                     </p>
                   </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="timeoutInSeconds" className="text-xs font-semibold">Timeout (seconds)</Label>
                     <Input
@@ -509,15 +516,12 @@ export function CreateEvalRunModal({
               </div>
             </div>
           </ScrollArea>
-
           <Separator className="my-4" />
-
           <DialogFooter className="shrink-0">
             <Button
               type="submit"
               disabled={loading || !evalRun.name || !evalRun.agent_id || evalRun.test_case_ids.length === 0 || evalRun.eval_functions.length === 0}
-              className="w-full h-11"
-            >
+              className="w-full h-11">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Update Eval Run" : "Create Eval Run"}
             </Button>

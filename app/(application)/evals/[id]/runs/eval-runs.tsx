@@ -1,11 +1,10 @@
 "use client";
 
 import { useContext, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@apollo/client";
 import { UserContext } from "@/app/(application)/authenticated";
 import { ConfigContext } from "@/components/config-context";
-import { Brain, ArrowLeft, Plus, AlertTriangle } from "lucide-react";
+import { Brain, Plus, AlertTriangle, ListChecks, RefreshCcw, Loader2, ChevronsUpDown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,15 +17,13 @@ import { EvalSet } from "@/types/models/eval-set";
 import { EvalRun } from "@/types/models/eval-run";
 import { useToast } from "@/components/ui/use-toast";
 import { QueueJob } from "@/types/models/job";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
+import { ListBulletIcon } from "@radix-ui/react-icons";
 
-export const dynamic = "force-dynamic";
-
-export default function EvalRunsPage() {
-  const params = useParams();
-  const router = useRouter();
+export default function EvalRuns({ id }: { id: string }) {
   const { user } = useContext(UserContext);
   const config = useContext(ConfigContext);
-  const eval_set_id = params.id as string;
+  const eval_set_id = id;
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const { toast } = useToast();
 
@@ -34,7 +31,7 @@ export default function EvalRunsPage() {
   const hasEvalsAccess = user.super_admin || user.role?.evals === "read" || user.role?.evals === "write";
   const canWrite = user.super_admin || user.role?.evals === "write";
 
-  const [runEval, { loading: runningEval }] = useMutation(RUN_EVAL, {
+  const [runEval] = useMutation(RUN_EVAL, {
     onCompleted: (data) => {
       toast({
         title: "Eval run started",
@@ -57,7 +54,7 @@ export default function EvalRunsPage() {
   });
 
   // Fetch eval runs
-  const { loading: loadingRuns, data: runsData, refetch } = useQuery(GET_EVAL_RUNS, {
+  const { loading: loadingRuns, data: runsData, refetch: refetchRuns } = useQuery(GET_EVAL_RUNS, {
     variables: {
       page: 1,
       limit: 100,
@@ -93,31 +90,7 @@ export default function EvalRunsPage() {
   const evalRuns: EvalRun[] = runsData?.eval_runsPagination?.items || [];
 
   return (
-    <div className="flex h-full flex-1 flex-col p-6 lg:p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push(`/evals/${eval_set_id}`)}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Eval Runs for {evalSet?.name}</h2>
-            <p className="text-muted-foreground text-sm mt-1">
-              View and manage evaluation runs for the eval set "{evalSet?.name}".
-            </p>
-          </div>
-        </div>
-        {canWrite && config?.workers?.enabled && config?.workers?.redisHost && (
-          <Button onClick={() => setCreateModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Eval Run
-          </Button>
-        )}
-      </div>
+    <div className="flex h-full flex-1 flex-col pb-8">
 
       {/* Workers Warning */}
       {(!config?.workers?.enabled || !config?.workers?.redisHost) && (
@@ -134,13 +107,30 @@ export default function EvalRunsPage() {
       <div className="space-y-6">
         {/* Eval Runs Matrix */}
         <Card>
-          <CardHeader className="pb-4">
-            <CardTitle>Evaluation Run Results</CardTitle>
-            <CardDescription>
-              Matrix view of test case scores across eval runs. Click on a completed cell to view detailed results.
-            </CardDescription>
+          <CardHeader className="border-b bg-accent/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <ListChecks className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <CardTitle>Evaluation runs</CardTitle>
+                  <CardDescription>
+                    Matrix view of test case scores across eval runs. Click on a completed cell to view detailed results.{" "}
+                  </CardDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {canWrite && config?.workers?.enabled && config?.workers?.redisHost && (
+                  <Button size="sm" onClick={() => setCreateModalOpen(true)}>
+                    <Plus className="mr-2 h-3 w-3" />
+                    New Eval Run
+                  </Button>
+                )}
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {loadingRuns ? (
               <div className="space-y-2">
                 {Array.from({ length: 3 }).map((_, i) => (
@@ -156,7 +146,7 @@ export default function EvalRunsPage() {
                 evalRuns={evalRuns}
                 evalSet={evalSet}
                 canWrite={canWrite}
-                onRefetch={refetch}
+                onRefetch={refetchRuns}
               />
             )}
           </CardContent>
@@ -164,32 +154,62 @@ export default function EvalRunsPage() {
 
         {/* Queue Management */}
         {config?.workers?.enabled && config?.workers?.redisHost && evalRuns.length > 0 && (
-          <QueueManagement
-            queueName="eval_runs"
-            nameGenerator={(job) => {
-              return `Eval Run ${job.data?.eval_run_name || job.data?.eval_run_id} - Test Case ${job.data?.test_case_name || job.data?.test_case_id}`;
-            }}
-            retryJob={(job: QueueJob) => {
-              if (!job.data?.test_case_id || !job.data?.eval_run_id) {
-                return;
-              }
-              runEval({
-                variables: {
-                  id: job.data?.eval_run_id,
-                  test_case_ids: [job.data?.test_case_id]
-                }
-              });
-            }}
-          />
+          <Card className="shadow-lg">
+            <Collapsible>
+              <CardHeader className="border-b bg-accent/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <ListBulletIcon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle>Queue management</CardTitle>
+                      <CardDescription>
+                        Manage the queue of eval runs.{" "}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="icon" className="size-8">
+                        <ChevronsUpDown className="size-4" />
+                        <span className="sr-only">Toggle</span>
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
+                </div>
+              </CardHeader>
+              <CollapsibleContent>
+                <QueueManagement
+                  queueName="eval_runs"
+                  nameGenerator={(job) => {
+                    return `Eval Run ${job.data?.eval_run_name || job.data?.eval_run_id} - Test Case ${job.data?.test_case_name || job.data?.test_case_id}`;
+                  }}
+                  retryJob={(job: QueueJob) => {
+                    if (!job.data?.test_case_id || !job.data?.eval_run_id) {
+                      return;
+                    }
+                    runEval({
+                      variables: {
+                        id: job.data?.eval_run_id,
+                        test_case_ids: [job.data?.test_case_id]
+                      }
+                    });
+                  }}
+                />
+              </CollapsibleContent>
+            </Collapsible>
+          </Card>
         )}
       </div>
 
       <CreateEvalRunModal
+        modalKey={`create-eval-run-modal-${eval_set_id}`}
         eval_set_id={eval_set_id}
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
         onCreateSuccess={() => {
-          refetch();
+          refetchRuns();
         }}
       />
     </div>

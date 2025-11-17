@@ -26,7 +26,7 @@ import { getToken } from "@/util/api"
 import { Agent } from "@EXULU_SHARED/models/agent";
 import Image from "next/image";
 import { ConfigContext } from "@/components/config-context";
-import { Workflow, Plus, ArrowUp, ChevronsUpDown } from "lucide-react";
+import { Workflow, Plus, ArrowUp, ChevronsUpDown, FileText } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast"
 import { SaveWorkflowModal } from "@/components/save-workflow-modal";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,11 @@ import { Response } from '@/components/ai-elements/response';
 import AgentVisual from "@/components/lottie";
 import { useTheme } from "next-themes";
 import Logo from "@/components/logo";
+import { PromptSelectorModal } from "./components/prompt-selector-modal";
+import { PromptVariableForm } from "./components/prompt-variable-form";
+import { PromptLibrary } from "@/types/models/prompt-library";
+import { extractVariables, fillPromptVariables } from "@/lib/prompts";
+import { useIncrementPromptUsage } from "@/hooks/use-prompts";
 export interface ChatProps {
   chatId?: string;
   agentId?: string;
@@ -103,6 +108,12 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
   const [disabledTools, setDisabledTools] = useState<string[]>([]);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast()
+
+  // Prompt selector state
+  const [promptSelectorOpen, setPromptSelectorOpen] = useState(false);
+  const [promptVariableFormOpen, setPromptVariableFormOpen] = useState(false);
+  const [selectedPrompt, setSelectedPrompt] = useState<PromptLibrary | null>(null);
+  const [incrementPromptUsage] = useIncrementPromptUsage();
 
   const [rbac, setRbac] = useState({
     rights_mode: session?.rights_mode || 'private',
@@ -260,6 +271,54 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
     return userMessages.length >= 1 && assistantMessages.length >= 1;
   }, [messages]);
 
+  // Prompt selector handlers
+  const handleSelectPrompt = (prompt: PromptLibrary) => {
+    const variables = extractVariables(prompt.content);
+
+    if (variables.length > 0) {
+      // Prompt has variables, show form
+      setSelectedPrompt(prompt);
+      setPromptVariableFormOpen(true);
+    } else {
+      // No variables, insert directly
+      insertPromptIntoChat(prompt.content);
+
+      // Increment usage count
+      incrementPromptUsage({
+        variables: {
+          id: prompt.id,
+          usage_count: (prompt.usage_count || 0) + 1,
+        },
+      });
+    }
+  };
+
+  const handleSubmitVariables = (values: Record<string, string>) => {
+    if (!selectedPrompt) return;
+
+    const filledPrompt = fillPromptVariables(selectedPrompt.content, values);
+    insertPromptIntoChat(filledPrompt);
+
+    // Increment usage count
+    incrementPromptUsage({
+      variables: {
+        id: selectedPrompt.id,
+        usage_count: (selectedPrompt.usage_count || 0) + 1,
+      },
+    });
+
+    setPromptVariableFormOpen(false);
+    setSelectedPrompt(null);
+  };
+
+  const insertPromptIntoChat = (promptText: string) => {
+    // Append to existing input or replace if empty
+    setInput((prev) => (prev ? `${prev}\n\n${promptText}` : promptText));
+
+    // Focus the input
+    inputRef.current?.focus();
+  };
+
   const convertTableToCSV = (tableElement: HTMLTableElement): string => {
     const rows = Array.from(tableElement.querySelectorAll('tr'));
     const csvRows: string[] = [];
@@ -389,7 +448,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
             {/* @ts-ignore */}
             <Conversation className="overflow-y-hidden">
               {/* Save as Workflow button - appears when conversation has content */}
-              {canCreateWorkflow ? (
+              {/* {canCreateWorkflow ? (
                 <div className="flex justify-between absolute top-0 left-0 right-0 items-center px-4 py-2 border-b z-10 dark:bg-black bg-white">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Workflow className="w-4 h-4" />
@@ -404,14 +463,14 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                     Save as Workflow
                   </Button>
                 </div>
-              ) : null}
+              ) : null} */}
               {
                 /* Show a bar that fills up depending on the total tokens used */
                 agent.maxContextLength ? (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className={`absolute w-full ${canCreateWorkflow ? 'top-10' : 'top-0'}`}>
+                        <div className={`absolute w-full ${canCreateWorkflow ? 'top-0' /* top-10 */ : 'top-0'}`}>
                           <Progress className="w-full rounded-none" value={tokenCounts.totalTokens / agent.maxContextLength * 100} />
                           <div className="justify-between flex felx-row">
                             <div></div>
@@ -460,7 +519,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                     <AgentVisual agent={agent} status={status} className="w-80"/>
 
                     {/* Workflow Banner for new users */}
-                    <Card className="w-full mb-6">
+                    {/* <Card className="w-full mb-6">
                       <CardHeader className="text-center">
                         <CardTitle className="flex items-center justify-center gap-2">
                           <Workflow className="w-5 h-5" />
@@ -482,7 +541,7 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                           <span className="ml-2 text-xs">(Available after chatting)</span>
                         </Button>
                       </CardContent>
-                    </Card>
+                    </Card> */}
                   </div>
                 </div> : null}
               {/* @ts-ignore */}
@@ -547,6 +606,24 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
                       }}
                     />)
                   }
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0"
+                          onClick={() => setPromptSelectorOpen(true)}
+                        >
+                          <FileText className="h-5 w-5 text-muted-foreground" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Insert prompt from library</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <TextareaAutosize
                     autoComplete="off"
                     autoFocus={true}
@@ -596,6 +673,25 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
               messages={messages || []}
               sessionTitle={session.title}
             />
+
+            {/* Prompt Selector Modal */}
+            <PromptSelectorModal
+              open={promptSelectorOpen}
+              onOpenChange={setPromptSelectorOpen}
+              onSelectPrompt={handleSelectPrompt}
+              agentId={agent.id}
+            />
+
+            {/* Prompt Variable Form */}
+            {selectedPrompt && (
+              <PromptVariableForm
+                open={promptVariableFormOpen}
+                onOpenChange={setPromptVariableFormOpen}
+                variables={extractVariables(selectedPrompt.content)}
+                promptName={selectedPrompt.name}
+                onSubmit={handleSubmitVariables}
+              />
+            )}
           </div>
 
           {/* Agent Details Sidebar */}

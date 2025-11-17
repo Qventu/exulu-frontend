@@ -33,7 +33,7 @@ export const createColumns = (user: UserWithRole, edit: (test: TestCase) => void
       const description = row.getValue("description") as string;
       return (
         <div className="flex space-x-2">
-          <span className="max-w-[300px] truncate text-muted-foreground">
+          <span className="max-w-[500px] truncate text-muted-foreground">
             {description || "—"}
           </span>
         </div>
@@ -54,7 +54,7 @@ export const createColumns = (user: UserWithRole, edit: (test: TestCase) => void
       );
     },
   },
-  {
+  /* {
     accessorKey: "expected_tools",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Expected Tools" />
@@ -98,7 +98,7 @@ export const createColumns = (user: UserWithRole, edit: (test: TestCase) => void
         </Badge>
       );
     },
-  },
+  }, */
   {
     accessorKey: "updatedAt",
     header: ({ column }) => (

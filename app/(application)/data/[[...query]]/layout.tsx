@@ -49,18 +49,6 @@ export default function DataLayout({ children, params }: { children: any, params
                     maxSize={20}>
                     <Separator />
                     <Contexts activeFolder={context} activeArchived={archived} activeSources={sources} activeEmbeddings={embeddings} />
-                    <Separator />
-                    <div className="p-3 opacity-50">
-                        <Alert variant="default">
-                            <Badge className="mb-2" variant={"secondary"}>
-                                coming soon
-                            </Badge>
-                            <AlertTitle>Custom views</AlertTitle>
-                            <AlertDescription>
-                                Will enable you to store filter settings.
-                            </AlertDescription>
-                        </Alert>
-                    </div>
                 </ResizablePanel>
 
                 {

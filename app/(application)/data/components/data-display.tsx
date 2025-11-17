@@ -1163,7 +1163,7 @@ export function DataDisplay(props: DataDisplayProps) {
                 <div className="mt-4 border border p-3 pb-5 rounded">
                   <div className="flex items-center justify-between ml-4 mt-3 mr-4 mb-2">
                     <h1 className="text-lg font-medium">Embeddings</h1>
-                    <DropdownMenu>
+                    <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <MoreVertical className="h-4 w-4" />

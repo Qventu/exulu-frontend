@@ -48,12 +48,14 @@ type Modes = 'private' | 'users' | 'roles' | 'public' | 'projects'
 export function RBACControl({
   allowedModes,
   initialRightsMode,
+  modalMode = false,
   initialUsers,
   initialRoles,
   initialProjects,
   onChange
 }: {
   allowedModes?: Modes[],
+  modalMode?: boolean,
   initialRightsMode: 'private' | 'users' | 'roles' | 'public' | 'projects' | undefined,
   initialUsers: { id: number, rights: 'read' | 'write' }[] | undefined,
   initialRoles: { id: string, rights: 'read' | 'write' }[] | undefined,
@@ -162,7 +164,7 @@ export function RBACControl({
     <>
       <div className="space-y-2">
         <Label className="text-sm font-medium">Visibility & sharing</Label>
-        <Popover open={visibilitySelectorOpen} onOpenChange={setVisibilitySelectorOpen}>
+        <Popover modal={modalMode || false} open={visibilitySelectorOpen} onOpenChange={setVisibilitySelectorOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"

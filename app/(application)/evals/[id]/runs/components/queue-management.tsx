@@ -366,7 +366,7 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                   <TableBody>
                     {jobs.items?.map((job, index) => (
                       <TableRow key={index}>
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium max-w-[200px] truncate">
                           {nameGenerator(job)}
                         </TableCell>
                         <TableCell>{getStatusBadge(job.state)}</TableCell>

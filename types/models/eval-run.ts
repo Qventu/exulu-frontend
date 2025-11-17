@@ -1,15 +1,18 @@
 export type ScoringMethod = "median" | "sum" | "average"
 
+export interface EvalRunEvalFunction {
+  id: string
+  name: string,
+  config: Record<string, any>
+}
+
 export interface EvalRun {
   id: string
   name: string
   eval_set_id: string
   agent_id: string
   timeout_in_seconds: number
-  eval_functions: {
-    id: string
-    config: Record<string, any>
-  }[]
+  eval_functions: EvalRunEvalFunction[]
   config?: Record<string, any> // Optional config for eval functions
   scoring_method: ScoringMethod
   pass_threshold: number // 0-100 percentage

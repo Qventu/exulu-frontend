@@ -55,7 +55,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Check, ChevronsUpDown, Wrench, Image, FileText, Volume2, Video, Info, AlertCircle, Settings, Text, Search, X } from "lucide-react";
+import { Check, ChevronsUpDown, Wrench, Image, FileText, Volume2, Video, Info, AlertCircle, Settings, Text, Search, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RBACControl } from "@/components/rbac";
 import {
@@ -82,6 +82,9 @@ import UppyDashboard, { FileDataCard } from "@/components/uppy-dashboard";
 import AgentVisual from "@/components/lottie";
 import { ConfigContext } from "@/components/config-context";
 import { TextPreview } from "@/components/custom/text-preview";
+import { PromptCard } from "@/app/(application)/prompts/components/prompt-card";
+import { PromptEditorModal } from "@/app/(application)/prompts/components/prompt-editor-modal";
+import { usePrompts } from "@/hooks/use-prompts";
 
 const categories = [
   "marketing",
@@ -239,6 +242,7 @@ export default function AgentForm({
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
 
   // Debounce search term
   useEffect(() => {
@@ -300,6 +304,19 @@ export default function AgentForm({
   }>(GET_TOOL_CATEGORIES);
 
   const variables = variablesData?.variablesPagination?.items || [];
+
+  // Fetch prompts assigned to this agent using server-side filtering
+  const { data: promptsData, loading: promptsLoading, refetch: refetchPrompts } = usePrompts({
+    page: 1,
+    limit: 100,
+    filters: [{
+      assigned_agents: {
+        contains: agent.id
+      }
+    }],
+  });
+
+  const agentPrompts = promptsData?.prompt_libraryPagination?.items || [];
 
   // Filter out agent's own tool and group by category
   const filteredTools = useMemo(() => {
@@ -505,6 +522,8 @@ export default function AgentForm({
                                   </div>
                                 </CardHeader>
                                 <CardContent className="grid gap-4">
+
+
                                   <FormField
                                     control={agentForm.control}
                                     name={`name`}
@@ -523,135 +542,7 @@ export default function AgentForm({
                                     )}
                                   />
 
-                                  <FormField
-                                    control={agentForm.control}
-                                    name={`category`}
-                                    render={({ field }: any) => {
-                                      if (!field.value) {
-                                        field.value = "";
-                                      }
-                                      return (
-                                        <FormItem>
-                                          <FormLabel>Category</FormLabel>
-                                          <FormControl>
-                                            <Select onValueChange={(value) => {
-                                              field.onChange(value);
-                                            }}>
-                                              <SelectTrigger>
-                                                <SelectValue className="capitalize" placeholder={field.value || `Select a category`} />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                {
-                                                  categories.map((category) => (
-                                                    <SelectItem className="capitalize" key={category} value={category}>
-                                                      {category}
-                                                    </SelectItem>
-                                                  ))
-                                                }
-                                              </SelectContent>
-                                            </Select>
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      );
-                                    }}
-                                  />
 
-                                  <FormField
-                                    control={agentForm.control}
-                                    name={`description`}
-                                    render={({ field }: any) => {
-                                      if (!field.value) {
-                                        field.value = "";
-                                      }
-                                      return (
-                                        <FormItem>
-                                          <FormLabel>Description</FormLabel>
-                                          <FormControl>
-                                            <Textarea
-                                              rows={10}
-                                              className="resize-none"
-                                              {...field}
-                                              value={field.value ?? ""}
-                                            />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      );
-                                    }}
-                                  />
-                                  <FormField
-                                    control={agentForm.control}
-                                    name={`instructions`}
-                                    render={({ field }: any) => {
-                                      if (!field.value) {
-                                        field.value = "";
-                                      }
-                                      return (
-                                        <FormItem>
-                                          <FormLabel>Instructions</FormLabel>
-                                          <FormControl>
-                                            <Textarea
-                                              rows={10}
-                                              className="resize-none"
-                                              {...field}
-                                              value={field.value ?? ""}
-                                            />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      );
-                                    }}
-                                  />
-                                  <div className="space-y-2">
-                                    <div className="text-sm">
-                                      <div className="font-medium">Provider API Key</div>
-                                      <div className="text-muted-foreground text-xs">Select a variable containing the API key for the provider</div>
-                                    </div>
-                                    <Popover>
-                                      <PopoverTrigger asChild>
-                                        <Button
-                                          variant="outline"
-                                          role="combobox"
-                                          className="w-full justify-between text-sm"
-                                        >
-                                          {variables.find((v: any) => v.name === providerapikey)?.name || "Select variable..."}
-                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-full p-0 z-[9999]">
-                                        <Command>
-                                          <CommandInput placeholder="Search variables..." />
-                                          <CommandList>
-                                            <CommandEmpty>No variables found.</CommandEmpty>
-                                            <CommandGroup>
-                                              {variables.map((variable: any) => (
-                                                <CommandItem
-                                                  key={variable.id}
-                                                  onSelect={() => {
-                                                    setProviderapikey(variable.name);
-                                                  }}
-                                                >
-                                                  <Check
-                                                    className={cn(
-                                                      "mr-2 h-4 w-4",
-                                                      providerapikey === variable.name ? "opacity-100" : "opacity-0"
-                                                    )}
-                                                  />
-                                                  <div className="flex flex-col">
-                                                    <span>{variable.name}</span>
-                                                    {variable.encrypted && (
-                                                      <span className="text-xs text-muted-foreground">🔒 Encrypted</span>
-                                                    )}
-                                                  </div>
-                                                </CommandItem>
-                                              ))}
-                                            </CommandGroup>
-                                          </CommandList>
-                                        </Command>
-                                      </PopoverContent>
-                                    </Popover>
-                                  </div>
                                   <div>
                                     <div className="text-sm font-medium mb-2">Modalities</div>
                                     <p className="text-sm text-muted-foreground mb-2">
@@ -711,6 +602,235 @@ export default function AgentForm({
                                   </div>
 
 
+                                  <FormField
+                                    control={agentForm.control}
+                                    name={`category`}
+                                    render={({ field }: any) => {
+                                      if (!field.value) {
+                                        field.value = "";
+                                      }
+                                      return (
+                                        <FormItem>
+                                          <FormLabel>Category</FormLabel>
+                                          <FormControl>
+                                            <Select onValueChange={(value) => {
+                                              field.onChange(value);
+                                            }}>
+                                              <SelectTrigger>
+                                                <SelectValue className="capitalize" placeholder={field.value || `Select a category`} />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {
+                                                  categories.map((category) => (
+                                                    <SelectItem className="capitalize" key={category} value={category}>
+                                                      {category}
+                                                    </SelectItem>
+                                                  ))
+                                                }
+                                              </SelectContent>
+                                            </Select>
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      );
+                                    }}
+                                  />
+
+                                  <FormField
+                                    control={agentForm.control}
+                                    name={`description`}
+                                    render={({ field }: any) => {
+                                      if (!field.value) {
+                                        field.value = "";
+                                      }
+                                      return (
+                                        <FormItem>
+                                          <FormLabel>Description</FormLabel>
+                                          <FormControl>
+                                            <Textarea
+                                              rows={2}
+                                              className="resize-none"
+                                              {...field}
+                                              value={field.value ?? ""}
+                                            />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      );
+                                    }}
+                                  />
+                                  <FormField
+                                    control={agentForm.control}
+                                    name={`instructions`}
+                                    render={({ field }: any) => {
+                                      if (!field.value) {
+                                        field.value = "";
+                                      }
+                                      return (
+                                        <FormItem>
+                                          <FormLabel>Instructions</FormLabel>
+                                          <FormControl>
+                                            <Textarea
+                                              rows={5}
+                                              className="resize-none"
+                                              {...field}
+                                              value={field.value ?? ""}
+                                            />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      );
+                                    }}
+                                  />
+                                  <div className="space-y-2">
+                                    <div className="text-sm">
+                                      <div className="font-medium">Provider API Key</div>
+                                      <div className="text-muted-foreground text-xs">Select a variable containing the API key for the provider</div>
+                                    </div>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          role="combobox"
+                                          className="w-full justify-between text-sm"
+                                        >
+                                          {variables.find((v: any) => v.name === providerapikey)?.name || "Select variable..."}
+                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-full p-0 z-[9999]">
+                                        <Command>
+                                          <CommandInput placeholder="Search variables..." />
+                                          <CommandList>
+                                            <CommandEmpty>No variables found.</CommandEmpty>
+                                            <CommandGroup>
+                                              {variables.map((variable: any) => (
+                                                <CommandItem
+                                                  key={variable.id}
+                                                  onSelect={() => {
+                                                    setProviderapikey(variable.name);
+                                                  }}
+                                                >
+                                                  <Check
+                                                    className={cn(
+                                                      "mr-2 h-4 w-4",
+                                                      providerapikey === variable.name ? "opacity-100" : "opacity-0"
+                                                    )}
+                                                  />
+                                                  <div className="flex flex-col">
+                                                    <span>{variable.name}</span>
+                                                    {variable.encrypted && (
+                                                      <span className="text-xs text-muted-foreground">🔒 Encrypted</span>
+                                                    )}
+                                                  </div>
+                                                </CommandItem>
+                                              ))}
+                                            </CommandGroup>
+                                          </CommandList>
+                                        </Command>
+                                      </PopoverContent>
+                                    </Popover>
+                                  </div>
+
+                                  {configContext?.fileUploads?.s3endpoint && (
+                                    <Card className="bg-transparent">
+                                      <Collapsible>
+                                        <CardHeader className="p-4">
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex flex-col">
+                                              <p className="text-base">
+                                                Custom visualizations
+                                              </p>
+                                              <p className="text-sm text-muted-foreground mb-0">
+                                                Upload custom Lottie animations for idle and responding states.
+                                              </p>
+                                            </div>
+                                            <CollapsibleTrigger asChild>
+                                              <Button variant="ghost" size="icon" className="size-8">
+                                                <ChevronsUpDown className="size-4" />
+                                                <span className="sr-only">Toggle</span>
+                                              </Button>
+                                            </CollapsibleTrigger>
+                                          </div>
+                                        </CardHeader>
+
+                                        <CollapsibleContent className="mt-5">
+                                          <CardContent className="space-y-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                              {/* Idle Animation */}
+                                              <div className="space-y-2">
+                                                <div>
+                                                  <div className="text-sm font-medium">Idle Animation</div>
+                                                  <div className="text-xs text-muted-foreground">Animation when agent is waiting</div>
+                                                </div>
+
+                                                <FileDataCard s3key={animation_idle}>
+                                                  <UppyDashboard
+                                                    id="agent-idle-animation"
+                                                    allowedFileTypes={['.json']}
+                                                    selectionLimit={1}
+                                                    buttonText=""
+                                                    dependencies={[agent.id]}
+                                                    onConfirm={(keys) => {
+                                                      if (keys.length > 0) {
+                                                        setAnimation_idle(keys[0]);
+                                                      }
+                                                    }}
+                                                  />
+                                                  {animation_idle && (
+                                                    <div className="mt-2 p-2 border rounded bg-muted/30">
+                                                      <div className="text-xs text-muted-foreground mb-1">Preview:</div>
+                                                      <div className="w-12 h-12 mx-auto">
+                                                        <AgentVisual
+                                                          agent={{ ...agent, animation_idle }}
+                                                          status="ready"
+                                                        />
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                </FileDataCard>
+                                              </div>
+
+                                              {/* Responding Animation */}
+                                              <div className="space-y-2">
+                                                <div>
+                                                  <div className="text-sm font-medium">Responding Animation</div>
+                                                  <div className="text-xs text-muted-foreground">Animation when agent is responding</div>
+                                                </div>
+
+                                                <FileDataCard s3key={animation_responding}>
+                                                  <UppyDashboard
+                                                    id="agent-responding-animation"
+                                                    allowedFileTypes={['.json']}
+                                                    selectionLimit={1}
+                                                    buttonText=""
+                                                    dependencies={[agent.id]}
+                                                    onConfirm={(keys) => {
+                                                      if (keys.length > 0) {
+                                                        setAnimation_responding(keys[0]);
+                                                      }
+                                                    }}
+                                                  />
+                                                  {animation_responding && (
+                                                    <div className="mt-2 p-2 border rounded bg-muted/30">
+                                                      <div className="text-xs text-muted-foreground mb-1">Preview:</div>
+                                                      <div className="w-12 h-12 mx-auto">
+                                                        <AgentVisual
+                                                          agent={{ ...agent, animation_responding }}
+                                                          status="streaming"
+                                                        />
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                </FileDataCard>
+                                              </div>
+                                            </div>
+                                          </CardContent>
+                                        </CollapsibleContent>
+                                      </Collapsible>
+                                    </Card>
+                                  )}
+
                                   <>
                                     <div className="text-sm font-medium mb-0">    You can test this agent using the Exulu
                                       UI without activating the agent if you
@@ -740,7 +860,10 @@ export default function AgentForm({
                                 </CardContent>
                               </Card>
                             </div>
-
+                          </div>
+                        </div>
+                        <div className="col">
+                          <div className="flex flex-col space-y-4">
                             <FormField
                               control={agentForm.control}
                               name="active"
@@ -764,105 +887,6 @@ export default function AgentForm({
                                 </FormItem>
                               )}
                             />
-
-                            {configContext?.fileUploads?.s3endpoint && (
-                              <Card className="bg-transparent">
-                                <Collapsible>
-                                  <CardHeader className="p-4">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex flex-col">
-                                        <p className="text-base">
-                                          Custom Animations
-                                        </p>
-                                        <p className="text-sm text-muted-foreground mb-0">
-                                          Upload custom Lottie animations for idle and responding states.
-                                        </p>
-                                      </div>
-                                      <CollapsibleTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="size-8">
-                                          <ChevronsUpDown className="size-4" />
-                                          <span className="sr-only">Toggle</span>
-                                        </Button>
-                                      </CollapsibleTrigger>
-                                    </div>
-                                  </CardHeader>
-
-                                  <CollapsibleContent className="mt-5">
-                                    <CardContent className="space-y-4">
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {/* Idle Animation */}
-                                        <div className="space-y-2">
-                                          <div>
-                                            <div className="text-sm font-medium">Idle Animation</div>
-                                            <div className="text-xs text-muted-foreground">Animation when agent is waiting</div>
-                                          </div>
-
-                                          <FileDataCard s3key={animation_idle}>
-                                            <UppyDashboard
-                                              id="agent-idle-animation"
-                                              allowedFileTypes={['.json']}
-                                              selectionLimit={1}
-                                              buttonText=""
-                                              dependencies={[agent.id]}
-                                              onConfirm={(keys) => {
-                                                if (keys.length > 0) {
-                                                  setAnimation_idle(keys[0]);
-                                                }
-                                              }}
-                                            />
-                                            {animation_idle && (
-                                              <div className="mt-2 p-2 border rounded bg-muted/30">
-                                                <div className="text-xs text-muted-foreground mb-1">Preview:</div>
-                                                <div className="w-12 h-12 mx-auto">
-                                                  <AgentVisual
-                                                    agent={{ ...agent, animation_idle }}
-                                                    status="ready"
-                                                  />
-                                                </div>
-                                              </div>
-                                            )}
-                                          </FileDataCard>
-                                        </div>
-
-                                        {/* Responding Animation */}
-                                        <div className="space-y-2">
-                                          <div>
-                                            <div className="text-sm font-medium">Responding Animation</div>
-                                            <div className="text-xs text-muted-foreground">Animation when agent is responding</div>
-                                          </div>
-
-                                          <FileDataCard s3key={animation_responding}>
-                                            <UppyDashboard
-                                              id="agent-responding-animation"
-                                              allowedFileTypes={['.json']}
-                                              selectionLimit={1}
-                                              buttonText=""
-                                              dependencies={[agent.id]}
-                                              onConfirm={(keys) => {
-                                                if (keys.length > 0) {
-                                                  setAnimation_responding(keys[0]);
-                                                }
-                                              }}
-                                            />
-                                            {animation_responding && (
-                                              <div className="mt-2 p-2 border rounded bg-muted/30">
-                                                <div className="text-xs text-muted-foreground mb-1">Preview:</div>
-                                                <div className="w-12 h-12 mx-auto">
-                                                  <AgentVisual
-                                                    agent={{ ...agent, animation_responding }}
-                                                    status="streaming"
-                                                  />
-                                                </div>
-                                              </div>
-                                            )}
-                                          </FileDataCard>
-                                        </div>
-                                      </div>
-                                    </CardContent>
-                                  </CollapsibleContent>
-                                </Collapsible>
-                              </Card>
-                            )}
 
                             <Card className="bg-transparent">
                               <Collapsible>
@@ -905,7 +929,78 @@ export default function AgentForm({
                                 </CollapsibleContent>
                               </Collapsible>
                             </Card>
-                            <FormField
+
+                            <Card className="bg-transparent">
+                              <Collapsible>
+                                <CardHeader className="p-4">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                      <p className="text-base">
+                                        Prompt Templates
+                                      </p>
+                                      <p className="text-sm text-muted-foreground mb-0">
+                                        Manage prompt templates assigned to this agent ({agentPrompts.length})
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setIsPromptModalOpen(true)}
+                                      >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        New Prompt
+                                      </Button>
+                                      <CollapsibleTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="size-8">
+                                          <ChevronsUpDown className="size-4" />
+                                          <span className="sr-only">Toggle</span>
+                                        </Button>
+                                      </CollapsibleTrigger>
+                                    </div>
+                                  </div>
+                                </CardHeader>
+
+                                <CollapsibleContent className="mt-5">
+                                  <CardContent className="space-y-4">
+                                    {promptsLoading ? (
+                                      <div className="text-sm text-muted-foreground">
+                                        Loading prompts...
+                                      </div>
+                                    ) : agentPrompts.length === 0 ? (
+                                      <div className="text-center py-6 border-2 border-dashed rounded-lg">
+                                        <p className="text-sm text-muted-foreground mb-2">
+                                          No prompts assigned to this agent yet
+                                        </p>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => setIsPromptModalOpen(true)}
+                                        >
+                                          <Plus className="h-4 w-4 mr-2" />
+                                          Create First Prompt
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <div className="grid gap-4">
+                                        {agentPrompts.map((prompt: any) => (
+                                          <PromptCard
+                                            key={prompt.id}
+                                            prompt={prompt}
+                                            user={user}
+                                            onUpdate={refetchPrompts}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
+                                  </CardContent>
+                                </CollapsibleContent>
+                              </Collapsible>
+                            </Card>
+
+                            {/* <FormField
                               control={agentForm.control}
                               name="firewall.enabled"
                               render={({ field }) => (
@@ -1026,446 +1121,454 @@ export default function AgentForm({
                                   </div>
                                 </CardContent>
                               </Card>
-                            )}
+                            )} */}
+                            <Card >
+                              <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                  Tools
+                                  {toolsLoading && <Loading className="h-4 w-4" />}
+                                </CardTitle>
+                                <CardDescription>
+                                  {enabledTools.length > 0 ? (
+                                    `${enabledTools.length} tool${enabledTools.length === 1 ? '' : 's'} enabled for this agent`
+                                  ) : (
+                                    'No tools enabled for this agent'
+                                  )}
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="flex flex-col space-y-4">
+                                  {/* Search and Filter Controls */}
+                                  <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                      <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                          placeholder="Search tools by name or description..."
+                                          value={searchTerm}
+                                          onChange={(e) => setSearchTerm(e.target.value)}
+                                          className="pl-10 pr-10"
+                                        />
+                                        {searchTerm && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                                            onClick={() => setSearchTerm("")}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
 
+                                    <div className="flex items-center gap-2">
+                                      <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                                        <SelectTrigger className="w-[200px]">
+                                          <SelectValue placeholder="Filter by category" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="all">All categories</SelectItem>
+                                          {availableCategories.map((category) => (
+                                            <SelectItem key={category} value={category} className="capitalize">
+                                              {category}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
 
-                          </div>
-                        </div>
-                        <div className="col">
-
-                          <Card>
-                            <CardHeader>
-                              <CardTitle className="flex items-center gap-2">
-                                Tools
-                                {toolsLoading && <Loading className="h-4 w-4" />}
-                              </CardTitle>
-                              <CardDescription>
-                                {enabledTools.length > 0 ? (
-                                  `${enabledTools.length} tool${enabledTools.length === 1 ? '' : 's'} enabled for this agent`
-                                ) : (
-                                  'No tools enabled for this agent'
-                                )}
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="flex flex-col space-y-4">
-                                {/* Search and Filter Controls */}
-                                <div className="space-y-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="relative flex-1">
-                                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                      <Input
-                                        placeholder="Search tools by name or description..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-10 pr-10"
-                                      />
-                                      {searchTerm && (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                                          onClick={() => setSearchTerm("")}
-                                        >
-                                          <X className="h-3 w-3" />
+                                      {(searchTerm || selectedCategory !== "all") && (
+                                        <Button variant="outline" onClick={clearSearch}>
+                                          <X className="h-4 w-4" />
+                                          <span className="sr-only">Clear filters</span>
                                         </Button>
                                       )}
-                                    </div>
-                                  </div>
 
-                                  <div className="flex items-center gap-2">
-                                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                                      <SelectTrigger className="w-[200px]">
-                                        <SelectValue placeholder="Filter by category" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="all">All categories</SelectItem>
-                                        {availableCategories.map((category) => (
-                                          <SelectItem key={category} value={category} className="capitalize">
-                                            {category}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                                      {/* Collapse / expand all */}
 
-                                    {(searchTerm || selectedCategory !== "all") && (
-                                      <Button variant="outline" size="sm" onClick={clearSearch}>
-                                        Clear filters
+                                      <Button type={"button"} variant="outline" onClick={() => {
+                                        setCollapsedCategories(new Set());
+                                      }}>
+                                        Expand all
                                       </Button>
-                                    )}
-
+                                      <Button type={"button"} variant="outline" onClick={() => {
+                                        setCollapsedCategories(new Set(Object.keys(toolsByCategory)));
+                                      }}>
+                                        Collapse all
+                                      </Button>
+                                    </div>
                                     <div className="ml-auto text-sm text-muted-foreground">
                                       {toolsData?.tools?.total || 0} tool{(toolsData?.tools?.total || 0) !== 1 ? 's' : ''}
-                                      {debouncedSearch || selectedCategory !== "all" ? ' found' : ' available'}
+                                      {debouncedSearch || selectedCategory !== "all" ? ' found' : ' available'}.
                                     </div>
                                   </div>
-                                </div>
 
-                                <div className="space-y-6">
-                                  {/* Show tools grouped by category */}
-                                  {selectedCategory === "all" ? (
-                                    // Group view: show each category as a collapsible section
-                                    Object.entries(toolsByCategory).map(([categoryName, categoryTools]) => {
-                                      const enabledInCategory = categoryTools.filter(tool =>
-                                        enabledTools.some(et => et.id === tool.id)
-                                      ).length;
+                                  <div className="space-y-6">
+                                    {/* Show tools grouped by category */}
+                                    {selectedCategory === "all" ? (
+                                      // Group view: show each category as a collapsible section
+                                      Object.entries(toolsByCategory).map(([categoryName, categoryTools]) => {
+                                        const enabledInCategory = categoryTools.filter(tool =>
+                                          enabledTools.some(et => et.id === tool.id)
+                                        ).length;
 
-                                      const isCollapsed = collapsedCategories.has(categoryName);
-
-                                      return (
-                                        <Collapsible key={categoryName} open={!isCollapsed} onOpenChange={() => toggleCategoryCollapse(categoryName)}>
-                                          <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
-                                            <CollapsibleTrigger asChild>
-                                              <Button variant="ghost" className="flex items-center gap-2 p-0 h-auto font-medium">
-                                                <ChevronsUpDown className="h-4 w-4" />
-                                                <span className="capitalize">{categoryName}</span>
-                                                <Badge variant="secondary" className="text-xs">
-                                                  {enabledInCategory}/{categoryTools.length}
-                                                </Badge>
-                                              </Button>
-                                            </CollapsibleTrigger>
-
-                                            <div className="flex items-center gap-2">
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => {
-                                                  // Bulk enable all tools in this category
-                                                  const newlyEnabled = categoryTools
-                                                    .filter(tool => !enabledTools.some(et => et.id === tool.id))
-                                                    .map(tool => ({
-                                                      id: tool.id,
-                                                      type: tool.type,
-                                                      config: tool.config?.map(configItem => ({
-                                                        name: configItem.name,
-                                                        variable: ''
-                                                      })) || []
-                                                    }));
-                                                  setEnabledTools([...enabledTools, ...newlyEnabled]);
-                                                }}
-                                                disabled={enabledInCategory === categoryTools.length}
-                                              >
-                                                Enable All
-                                              </Button>
-
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => {
-                                                  // Bulk disable all tools in this category
-                                                  const categoryToolIds = categoryTools.map(t => t.id);
-                                                  const filtered = enabledTools.filter(et => !categoryToolIds.includes(et.id));
-                                                  setEnabledTools(filtered);
-                                                }}
-                                                disabled={enabledInCategory === 0}
-                                              >
-                                                Disable All
-                                              </Button>
-                                            </div>
-                                          </div>
-
-                                          <CollapsibleContent className="mt-2">
-                                            <div className="space-y-2 pl-4">
-                                              {categoryTools.map((tool: Tool) => {
-                                                const isEnabled = enabledTools.some(et => et.id === tool.id);
-                                                const toolConfig = enabledTools.find(et => et.id === tool.id);
-                                                const requiredConfigCount = tool.config?.length || 0;
-                                                const filledConfigCount = toolConfig?.config?.filter(c => c.variable && c.variable.trim() !== '').length || 0;
-                                                const hasEmptyConfigs = isEnabled && requiredConfigCount > 0 && filledConfigCount < requiredConfigCount;
-
-                                                return (
-                                                  <div key={tool?.id} className="rounded-lg border p-4">
-                                                    <div className="flex items-center justify-between">
-                                                      <div className="flex items-center flex-1">
-                                                        <div className="flex-1">
-                                                          <div className="flex items-center gap-2">
-                                                            <div className="font-medium">{tool?.name}</div>
-                                                            <div className="flex items-center gap-1">
-                                                              {
-                                                                requiredConfigCount > 0 && isEnabled && <>
-                                                                  <Badge variant="secondary" className="text-xs">
-                                                                    {filledConfigCount}/{requiredConfigCount}
-                                                                  </Badge>
-                                                                  {hasEmptyConfigs && (
-                                                                    <AlertCircle className="h-4 w-4 text-destructive" />
-                                                                  )}
-                                                                </>
-                                                              }
-                                                              <Badge variant={"outline"}>{tool?.category}</Badge>
-                                                            </div>
-                                                          </div>
-                                                          <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                                            {tool?.description}
-                                                          </div>
-                                                        </div>
-                                                        <Sheet open={sheetOpen === tool.id} onOpenChange={() => {
-                                                          if (sheetOpen === tool.id) {
-                                                            setSheetOpen(false);
-                                                          } else {
-                                                            setSheetOpen(tool.id);
-                                                          }
-                                                        }}>
-                                                          {
-                                                            (requiredConfigCount > 0 && !isEnabled) ? <SheetTrigger asChild>
-                                                              <Button variant="ghost" size="sm">
-                                                                <Settings className="h-4 w-4" />
-                                                              </Button>
-                                                            </SheetTrigger> : <Button type="button" disabled={true} variant="ghost" size="sm">
-                                                              <Settings className="h-4 w-4" />
-                                                            </Button>
-                                                          }
-
-                                                          <SheetTrigger asChild>
-                                                            <Button className="mr-2" variant="ghost" size="sm">
-                                                              <Info className="h-4 w-4" />
-                                                            </Button>
-                                                          </SheetTrigger>
-                                                          <SheetContent className="w-[400px] sm:w-[540px]">
-                                                            <SheetHeader>
-                                                              <SheetTitle>{tool?.name}</SheetTitle>
-                                                              <SheetDescription>
-                                                                {tool?.description}
-                                                              </SheetDescription>
-                                                            </SheetHeader>
-                                                            <div className="py-6">
-                                                              <div className="space-y-4">
-                                                                {/* Tool Configuration in Sheet */}
-                                                                {tool.config && tool.config.length > 0 && (
-                                                                  <div className="space-y-4">
-                                                                    <div className="text-md font-medium">Configuration variables:</div>
-                                                                    {tool.config.map((configItem, configIndex) => {
-                                                                      const currentValue = toolConfig?.config.find(c => c.name === configItem.name)?.variable || '';
-                                                                      return (
-                                                                        <div key={configIndex} className="space-y-2">
-                                                                          {isEnabled ? (
-                                                                            <ToolConfigItem
-                                                                              configItem={configItem}
-                                                                              currentValue={currentValue}
-                                                                              variables={variables}
-                                                                              onVariableSelect={(variableName) => {
-                                                                                const updated = enabledTools.map(et => {
-                                                                                  if (et.id === tool.id) {
-                                                                                    return {
-                                                                                      ...et,
-                                                                                      config: et.config.map(c =>
-                                                                                        c.name === configItem.name
-                                                                                          ? { ...c, variable: variableName }
-                                                                                          : c
-                                                                                      )
-                                                                                    };
-                                                                                  }
-                                                                                  return et;
-                                                                                });
-                                                                                console.log("updated", updated)
-                                                                                setEnabledTools(updated);
-                                                                              }}
-                                                                            />
-                                                                          ) : (
-                                                                            <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
-                                                                              Enable this tool to configure
-                                                                            </div>
-                                                                          )}
-                                                                        </div>
-                                                                      );
-                                                                    })}
-                                                                  </div>
-                                                                )}
-                                                              </div>
-                                                            </div>
-                                                          </SheetContent>
-                                                        </Sheet>
-                                                      </div>
-                                                      <Switch
-                                                        checked={isEnabled}
-                                                        onCheckedChange={(value) => {
-                                                          let updated = [...enabledTools];
-                                                          if (value) {
-                                                            // Add tool with empty config initially
-                                                            const newToolConfig = {
-                                                              id: tool.id,
-                                                              type: tool.type,
-                                                              config: tool.config?.map(configItem => ({
-                                                                name: configItem.name,
-                                                                variable: ''
-                                                              })) || []
-                                                            };
-                                                            updated = [...enabledTools, newToolConfig];
-                                                            if (tool.config?.length > 0) {
-                                                              setSheetOpen(tool.id);
-                                                            }
-                                                          } else {
-                                                            updated = enabledTools.filter(t => t.id !== tool.id);
-                                                          }
-                                                          setEnabledTools(updated);
-                                                        }}
-                                                      />
-                                                    </div>
-                                                  </div>
-                                                );
-                                              })}
-                                            </div>
-                                          </CollapsibleContent>
-                                        </Collapsible>
-                                      );
-                                    })
-                                  ) : (
-                                    // Filtered view: show tools in selected category only
-                                    <div className="space-y-2">
-                                      {filteredTools.map((tool: Tool) => {
-                                        const isEnabled = enabledTools.some(et => et.id === tool.id);
-                                        const toolConfig = enabledTools.find(et => et.id === tool.id);
-                                        const requiredConfigCount = tool.config?.length || 0;
-                                        const filledConfigCount = toolConfig?.config?.filter(c => c.variable && c.variable.trim() !== '').length || 0;
-                                        const hasEmptyConfigs = isEnabled && requiredConfigCount > 0 && filledConfigCount < requiredConfigCount;
+                                        const isCollapsed = collapsedCategories.has(categoryName);
 
                                         return (
-                                          <div key={tool?.id} className="rounded-lg border p-4">
-                                            <div className="flex items-center justify-between">
-                                              <div className="flex items-center flex-1">
-                                                <div className="flex-1">
-                                                  <div className="flex items-center gap-2">
-                                                    <div className="font-medium">{tool?.name}</div>
-                                                    <div className="flex items-center gap-1">
-                                                      {
-                                                        requiredConfigCount > 0 && isEnabled && <>
-                                                          <Badge variant="secondary" className="text-xs">
-                                                            {filledConfigCount}/{requiredConfigCount}
-                                                          </Badge>
-                                                          {hasEmptyConfigs && (
-                                                            <AlertCircle className="h-4 w-4 text-destructive" />
-                                                          )}
-                                                        </>
-                                                      }
-                                                      <Badge variant={"outline"}>{tool?.category}</Badge>
-                                                    </div>
-                                                  </div>
-                                                  <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                                    {tool?.description}
-                                                  </div>
-                                                </div>
-                                                <Sheet open={sheetOpen === tool.id} onOpenChange={() => {
-                                                  if (sheetOpen === tool.id) {
-                                                    setSheetOpen(false);
-                                                  } else {
-                                                    setSheetOpen(tool.id);
-                                                  }
-                                                }}>
-                                                  {
-                                                    (requiredConfigCount > 0 && !isEnabled) ? <SheetTrigger asChild>
-                                                      <Button variant="ghost" size="sm">
-                                                        <Settings className="h-4 w-4" />
-                                                      </Button>
-                                                    </SheetTrigger> : <Button type="button" disabled={true} variant="ghost" size="sm">
-                                                      <Settings className="h-4 w-4" />
-                                                    </Button>
-                                                  }
+                                          <Collapsible key={categoryName} open={!isCollapsed} onOpenChange={() => toggleCategoryCollapse(categoryName)}>
+                                            <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                                              <CollapsibleTrigger asChild>
+                                                <Button variant="ghost" className="flex items-center gap-2 p-0 h-auto font-medium">
+                                                  <ChevronsUpDown className="h-4 w-4" />
+                                                  <span className="capitalize">{categoryName}</span>
+                                                  <Badge variant="secondary" className="text-xs">
+                                                    {enabledInCategory}/{categoryTools.length}
+                                                  </Badge>
+                                                </Button>
+                                              </CollapsibleTrigger>
 
-                                                  <SheetTrigger asChild>
-                                                    <Button className="mr-2" variant="ghost" size="sm">
-                                                      <Info className="h-4 w-4" />
-                                                    </Button>
-                                                  </SheetTrigger>
-                                                  <SheetContent className="w-[400px] sm:w-[540px]">
-                                                    <SheetHeader>
-                                                      <SheetTitle>{tool?.name}</SheetTitle>
-                                                      <SheetDescription>
-                                                        {tool?.description}
-                                                      </SheetDescription>
-                                                    </SheetHeader>
-                                                    <div className="py-6">
-                                                      <div className="space-y-4">
-                                                        {/* Tool Configuration in Sheet */}
-                                                        {tool.config && tool.config.length > 0 && (
-                                                          <div className="space-y-4">
-                                                            <div className="text-md font-medium">Configuration variables:</div>
-                                                            {tool.config.map((configItem, configIndex) => {
-                                                              const currentValue = toolConfig?.config.find(c => c.name === configItem.name)?.variable || '';
-                                                              return (
-                                                                <div key={configIndex} className="space-y-2">
-                                                                  {isEnabled ? (
-                                                                    <ToolConfigItem
-                                                                      configItem={configItem}
-                                                                      currentValue={currentValue}
-                                                                      variables={variables}
-                                                                      onVariableSelect={(variableName) => {
-                                                                        const updated = enabledTools.map(et => {
-                                                                          if (et.id === tool.id) {
-                                                                            return {
-                                                                              ...et,
-                                                                              config: et.config.map(c =>
-                                                                                c.name === configItem.name
-                                                                                  ? { ...c, variable: variableName }
-                                                                                  : c
-                                                                              )
-                                                                            };
-                                                                          }
-                                                                          return et;
-                                                                        });
-                                                                        console.log("updated", updated)
-                                                                        setEnabledTools(updated);
-                                                                      }}
-                                                                    />
-                                                                  ) : (
-                                                                    <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
-                                                                      Enable this tool to configure
+                                              <div className="flex items-center gap-2">
+                                                <Button
+                                                  variant="outline"
+                                                  size="sm"
+                                                  onClick={() => {
+                                                    // Bulk enable all tools in this category
+                                                    const newlyEnabled = categoryTools
+                                                      .filter(tool => !enabledTools.some(et => et.id === tool.id))
+                                                      .map(tool => ({
+                                                        id: tool.id,
+                                                        type: tool.type,
+                                                        config: tool.config?.map(configItem => ({
+                                                          name: configItem.name,
+                                                          variable: ''
+                                                        })) || []
+                                                      }));
+                                                    setEnabledTools([...enabledTools, ...newlyEnabled]);
+                                                  }}
+                                                  disabled={enabledInCategory === categoryTools.length}
+                                                >
+                                                  Enable All
+                                                </Button>
+
+                                                <Button
+                                                  variant="outline"
+                                                  size="sm"
+                                                  onClick={() => {
+                                                    // Bulk disable all tools in this category
+                                                    const categoryToolIds = categoryTools.map(t => t.id);
+                                                    const filtered = enabledTools.filter(et => !categoryToolIds.includes(et.id));
+                                                    setEnabledTools(filtered);
+                                                  }}
+                                                  disabled={enabledInCategory === 0}
+                                                >
+                                                  Disable All
+                                                </Button>
+                                              </div>
+                                            </div>
+
+                                            <CollapsibleContent className="mt-2">
+                                              <div className="space-y-2 pl-4">
+                                                {categoryTools.map((tool: Tool) => {
+                                                  const isEnabled = enabledTools.some(et => et.id === tool.id);
+                                                  const toolConfig = enabledTools.find(et => et.id === tool.id);
+                                                  const requiredConfigCount = tool.config?.length || 0;
+                                                  const filledConfigCount = toolConfig?.config?.filter(c => c.variable && c.variable.trim() !== '').length || 0;
+                                                  const hasEmptyConfigs = isEnabled && requiredConfigCount > 0 && filledConfigCount < requiredConfigCount;
+
+                                                  return (
+                                                    <div key={tool?.id} className="rounded-lg border p-4">
+                                                      <div className="flex items-center justify-between">
+                                                        <div className="flex items-center flex-1">
+                                                          <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                              <div className="font-medium">{tool?.name}</div>
+                                                              <div className="flex items-center gap-1">
+                                                                {
+                                                                  requiredConfigCount > 0 && isEnabled && <>
+                                                                    <Badge variant="secondary" className="text-xs">
+                                                                      {filledConfigCount}/{requiredConfigCount}
+                                                                    </Badge>
+                                                                    {hasEmptyConfigs && (
+                                                                      <AlertCircle className="h-4 w-4 text-destructive" />
+                                                                    )}
+                                                                  </>
+                                                                }
+                                                                <Badge variant={"outline"}>{tool?.category}</Badge>
+                                                              </div>
+                                                            </div>
+                                                            <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                                              {tool?.description}
+                                                            </div>
+                                                          </div>
+                                                          <Sheet open={sheetOpen === tool.id} onOpenChange={() => {
+                                                            if (sheetOpen === tool.id) {
+                                                              setSheetOpen(false);
+                                                            } else {
+                                                              setSheetOpen(tool.id);
+                                                            }
+                                                          }}>
+                                                            {
+                                                              (requiredConfigCount > 0 && !isEnabled) ? <SheetTrigger asChild>
+                                                                <Button variant="ghost" size="sm">
+                                                                  <Settings className="h-4 w-4" />
+                                                                </Button>
+                                                              </SheetTrigger> : <Button type="button" disabled={true} variant="ghost" size="sm">
+                                                                <Settings className="h-4 w-4" />
+                                                              </Button>
+                                                            }
+
+                                                            <SheetTrigger asChild>
+                                                              <Button className="mr-2" variant="ghost" size="sm">
+                                                                <Info className="h-4 w-4" />
+                                                              </Button>
+                                                            </SheetTrigger>
+                                                            <SheetContent className="w-[400px] sm:w-[540px]">
+                                                              <SheetHeader>
+                                                                <SheetTitle>{tool?.name}</SheetTitle>
+                                                                <SheetDescription>
+                                                                  {tool?.description}
+                                                                </SheetDescription>
+                                                              </SheetHeader>
+                                                              <div className="py-6">
+                                                                <div className="space-y-4">
+                                                                  {/* Tool Configuration in Sheet */}
+                                                                  {tool.config && tool.config.length > 0 && (
+                                                                    <div className="space-y-4">
+                                                                      <div className="text-md font-medium">Configuration variables:</div>
+                                                                      {tool.config.map((configItem, configIndex) => {
+                                                                        const currentValue = toolConfig?.config.find(c => c.name === configItem.name)?.variable || '';
+                                                                        return (
+                                                                          <div key={configIndex} className="space-y-2">
+                                                                            {isEnabled ? (
+                                                                              <ToolConfigItem
+                                                                                configItem={configItem}
+                                                                                currentValue={currentValue}
+                                                                                variables={variables}
+                                                                                onVariableSelect={(variableName) => {
+                                                                                  const updated = enabledTools.map(et => {
+                                                                                    if (et.id === tool.id) {
+                                                                                      return {
+                                                                                        ...et,
+                                                                                        config: et.config.map(c =>
+                                                                                          c.name === configItem.name
+                                                                                            ? { ...c, variable: variableName }
+                                                                                            : c
+                                                                                        )
+                                                                                      };
+                                                                                    }
+                                                                                    return et;
+                                                                                  });
+                                                                                  console.log("updated", updated)
+                                                                                  setEnabledTools(updated);
+                                                                                }}
+                                                                              />
+                                                                            ) : (
+                                                                              <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
+                                                                                Enable this tool to configure
+                                                                              </div>
+                                                                            )}
+                                                                          </div>
+                                                                        );
+                                                                      })}
                                                                     </div>
                                                                   )}
                                                                 </div>
-                                                              );
-                                                            })}
-                                                          </div>
-                                                        )}
+                                                              </div>
+                                                            </SheetContent>
+                                                          </Sheet>
+                                                        </div>
+                                                        <Switch
+                                                          checked={isEnabled}
+                                                          onCheckedChange={(value) => {
+                                                            let updated = [...enabledTools];
+                                                            if (value) {
+                                                              // Add tool with empty config initially
+                                                              const newToolConfig = {
+                                                                id: tool.id,
+                                                                type: tool.type,
+                                                                config: tool.config?.map(configItem => ({
+                                                                  name: configItem.name,
+                                                                  variable: ''
+                                                                })) || []
+                                                              };
+                                                              updated = [...enabledTools, newToolConfig];
+                                                              if (tool.config?.length > 0) {
+                                                                setSheetOpen(tool.id);
+                                                              }
+                                                            } else {
+                                                              updated = enabledTools.filter(t => t.id !== tool.id);
+                                                            }
+                                                            setEnabledTools(updated);
+                                                          }}
+                                                        />
                                                       </div>
                                                     </div>
-                                                  </SheetContent>
-                                                </Sheet>
+                                                  );
+                                                })}
                                               </div>
-                                              <Switch
-                                                checked={isEnabled}
-                                                onCheckedChange={(value) => {
-                                                  let updated = [...enabledTools];
-                                                  if (value) {
-                                                    // Add tool with empty config initially
-                                                    const newToolConfig = {
-                                                      id: tool.id,
-                                                      type: tool.type,
-                                                      config: tool.config?.map(configItem => ({
-                                                        name: configItem.name,
-                                                        variable: ''
-                                                      })) || []
-                                                    };
-                                                    updated = [...enabledTools, newToolConfig];
-                                                    if (tool.config?.length > 0) {
+                                            </CollapsibleContent>
+                                          </Collapsible>
+                                        );
+                                      })
+                                    ) : (
+                                      // Filtered view: show tools in selected category only
+                                      <div className="space-y-2">
+                                        {filteredTools.map((tool: Tool) => {
+                                          const isEnabled = enabledTools.some(et => et.id === tool.id);
+                                          const toolConfig = enabledTools.find(et => et.id === tool.id);
+                                          const requiredConfigCount = tool.config?.length || 0;
+                                          const filledConfigCount = toolConfig?.config?.filter(c => c.variable && c.variable.trim() !== '').length || 0;
+                                          const hasEmptyConfigs = isEnabled && requiredConfigCount > 0 && filledConfigCount < requiredConfigCount;
+
+                                          return (
+                                            <div key={tool?.id} className="rounded-lg border p-4">
+                                              <div className="flex items-center justify-between">
+                                                <div className="flex items-center flex-1">
+                                                  <div className="flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                      <div className="font-medium">{tool?.name}</div>
+                                                      <div className="flex items-center gap-1">
+                                                        {
+                                                          requiredConfigCount > 0 && isEnabled && <>
+                                                            <Badge variant="secondary" className="text-xs">
+                                                              {filledConfigCount}/{requiredConfigCount}
+                                                            </Badge>
+                                                            {hasEmptyConfigs && (
+                                                              <AlertCircle className="h-4 w-4 text-destructive" />
+                                                            )}
+                                                          </>
+                                                        }
+                                                        <Badge variant={"outline"}>{tool?.category}</Badge>
+                                                      </div>
+                                                    </div>
+                                                    <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                                      {tool?.description}
+                                                    </div>
+                                                  </div>
+                                                  <Sheet open={sheetOpen === tool.id} onOpenChange={() => {
+                                                    if (sheetOpen === tool.id) {
+                                                      setSheetOpen(false);
+                                                    } else {
                                                       setSheetOpen(tool.id);
                                                     }
-                                                  } else {
-                                                    updated = enabledTools.filter(t => t.id !== tool.id);
-                                                  }
-                                                  setEnabledTools(updated);
-                                                }}
-                                              />
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
+                                                  }}>
+                                                    {
+                                                      (requiredConfigCount > 0 && !isEnabled) ? <SheetTrigger asChild>
+                                                        <Button variant="ghost" size="sm">
+                                                          <Settings className="h-4 w-4" />
+                                                        </Button>
+                                                      </SheetTrigger> : <Button type="button" disabled={true} variant="ghost" size="sm">
+                                                        <Settings className="h-4 w-4" />
+                                                      </Button>
+                                                    }
 
-                                  {/* Empty state when no tools match filters */}
-                                  {filteredTools.length === 0 && (searchTerm || selectedCategory !== "all") && (
-                                    <div className="text-center py-8">
-                                      <div className="text-muted-foreground">
-                                        No tools found matching your criteria.
+                                                    <SheetTrigger asChild>
+                                                      <Button className="mr-2" variant="ghost" size="sm">
+                                                        <Info className="h-4 w-4" />
+                                                      </Button>
+                                                    </SheetTrigger>
+                                                    <SheetContent className="w-[400px] sm:w-[540px]">
+                                                      <SheetHeader>
+                                                        <SheetTitle>{tool?.name}</SheetTitle>
+                                                        <SheetDescription>
+                                                          {tool?.description}
+                                                        </SheetDescription>
+                                                      </SheetHeader>
+                                                      <div className="py-6">
+                                                        <div className="space-y-4">
+                                                          {/* Tool Configuration in Sheet */}
+                                                          {tool.config && tool.config.length > 0 && (
+                                                            <div className="space-y-4">
+                                                              <div className="text-md font-medium">Configuration variables:</div>
+                                                              {tool.config.map((configItem, configIndex) => {
+                                                                const currentValue = toolConfig?.config.find(c => c.name === configItem.name)?.variable || '';
+                                                                return (
+                                                                  <div key={configIndex} className="space-y-2">
+                                                                    {isEnabled ? (
+                                                                      <ToolConfigItem
+                                                                        configItem={configItem}
+                                                                        currentValue={currentValue}
+                                                                        variables={variables}
+                                                                        onVariableSelect={(variableName) => {
+                                                                          const updated = enabledTools.map(et => {
+                                                                            if (et.id === tool.id) {
+                                                                              return {
+                                                                                ...et,
+                                                                                config: et.config.map(c =>
+                                                                                  c.name === configItem.name
+                                                                                    ? { ...c, variable: variableName }
+                                                                                    : c
+                                                                                )
+                                                                              };
+                                                                            }
+                                                                            return et;
+                                                                          });
+                                                                          console.log("updated", updated)
+                                                                          setEnabledTools(updated);
+                                                                        }}
+                                                                      />
+                                                                    ) : (
+                                                                      <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
+                                                                        Enable this tool to configure
+                                                                      </div>
+                                                                    )}
+                                                                  </div>
+                                                                );
+                                                              })}
+                                                            </div>
+                                                          )}
+                                                        </div>
+                                                      </div>
+                                                    </SheetContent>
+                                                  </Sheet>
+                                                </div>
+                                                <Switch
+                                                  checked={isEnabled}
+                                                  onCheckedChange={(value) => {
+                                                    let updated = [...enabledTools];
+                                                    if (value) {
+                                                      // Add tool with empty config initially
+                                                      const newToolConfig = {
+                                                        id: tool.id,
+                                                        type: tool.type,
+                                                        config: tool.config?.map(configItem => ({
+                                                          name: configItem.name,
+                                                          variable: ''
+                                                        })) || []
+                                                      };
+                                                      updated = [...enabledTools, newToolConfig];
+                                                      if (tool.config?.length > 0) {
+                                                        setSheetOpen(tool.id);
+                                                      }
+                                                    } else {
+                                                      updated = enabledTools.filter(t => t.id !== tool.id);
+                                                    }
+                                                    setEnabledTools(updated);
+                                                  }}
+                                                />
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
                                       </div>
-                                      <Button variant="outline" size="sm" className="mt-2" onClick={clearSearch}>
-                                        Clear filters
-                                      </Button>
-                                    </div>
-                                  )}
+                                    )}
+
+                                    {/* Empty state when no tools match filters */}
+                                    {filteredTools.length === 0 && (searchTerm || selectedCategory !== "all") && (
+                                      <div className="text-center py-8">
+                                        <div className="text-muted-foreground">
+                                          No tools found matching your criteria.
+                                        </div>
+                                        <Button variant="outline" size="sm" className="mt-2" onClick={clearSearch}>
+                                          Clear filters
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            </CardContent>
-                          </Card>
+                              </CardContent>
+                            </Card>
+                          </div>
                         </div>
                       </div>
                     </form>
@@ -1476,6 +1579,15 @@ export default function AgentForm({
           </div>
         </div>
       </Tabs>
+
+      {/* Prompt Editor Modal */}
+      <PromptEditorModal
+        open={isPromptModalOpen}
+        onOpenChange={setIsPromptModalOpen}
+        onSuccess={refetchPrompts}
+        user={user}
+        defaultAssignedAgents={[agent.id]}
+      />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useContext, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@apollo/client";
 import { UserContext } from "@/app/(application)/authenticated";
-import { Brain, ArrowLeft, Plus, Save, Loader2, Play, FileText, ListChecks, Sparkles, Edit2, X } from "lucide-react";
+import { Brain, ArrowLeft, Plus, Save, Loader2, Play, FileText, ListChecks, Sparkles, Edit2, X, ChevronsUpDown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,9 @@ import { GET_EVAL_SET_BY_ID, UPDATE_EVAL_SET, GET_TEST_CASES, UPDATE_TEST_CASE }
 import { TestCaseSelectionModal } from "./components/test-case-selection-modal";
 import { TestCaseModal } from "../cases/components/test-case-modal";
 import { TestCase } from "@/types/models/test-case";
+import EvalRuns from "./runs/eval-runs";
+import { ListBulletIcon } from "@radix-ui/react-icons";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
 
 export const dynamic = "force-dynamic";
 
@@ -209,25 +212,13 @@ export default function EvalSetEditorPage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary">
-                <Sparkles className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight">Edit Eval Set</h2>
-                <p className="text-muted-foreground">
-                  Configure test cases for this evaluation set.
-                </p>
-              </div>
+              <h2 className="text-2xl font-bold tracking-tight">Edit Eval Set</h2>
+              <p className="text-muted-foreground">
+                Configure test cases for this evaluation set.
+              </p>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/evals/${evalSetId}/runs`)}
-            >
-              <Play className="mr-2 h-4 w-4" />
-              View Runs
-            </Button>
             {canWrite && (
               <Button onClick={handleSave} disabled={updating}>
                 {updating ? (
@@ -244,147 +235,173 @@ export default function EvalSetEditorPage() {
 
       {/* Basic Info */}
       <Card className="shadow-lg">
-        <CardHeader className="border-b bg-accent/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <FileText className="h-4 w-4 text-primary" />
+        <Collapsible>
+          <CardHeader className="border-b bg-accent/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <FileText className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <CardTitle>Basic Information</CardTitle>
+                  <CardDescription>
+                    Edit the name and description of this eval set.
+                  </CardDescription>
+                </div>
+              </div>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-8">
+                  <ChevronsUpDown className="size-4" />
+                  <span className="sr-only">Toggle</span>
+                </Button>
+              </CollapsibleTrigger>
             </div>
-            <div>
-              <CardTitle>Basic Information</CardTitle>
-              <CardDescription>
-                Edit the name and description of this eval set.
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          <div className="grid gap-2">
-            <Label htmlFor="name" className="text-sm font-semibold">Name *</Label>
-            <Input
-              id="name"
-              placeholder="Eval set name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={!canWrite}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="description" className="text-sm font-semibold">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Describe what this eval set tests..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={!canWrite}
-              rows={3}
-            />
-          </div>
-        </CardContent>
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent className="space-y-4 pt-6">
+              <div className="grid gap-2">
+                <Label htmlFor="name" className="text-sm font-semibold">Name *</Label>
+                <Input
+                  id="name"
+                  placeholder="Eval set name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={!canWrite}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="description" className="text-sm font-semibold">Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe what this eval set tests..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  disabled={!canWrite}
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
 
       {/* Test Cases */}
       <Card className="shadow-lg">
-        <CardHeader className="border-b bg-accent/50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <ListChecks className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <CardTitle>Test Cases</CardTitle>
-                <CardDescription>
-                  Add up to 500 test cases to this eval set.{" "}
-                  <Badge variant="secondary" className="ml-1">
-                    {testCasesList.length}/500
-                  </Badge>
-                </CardDescription>
-              </div>
-            </div>
-            {canWrite && (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCreateModal(true)}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create New
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setShowSelectionModal(true)}
-                  disabled={testCases.length >= 500}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Existing
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          {testCasesList.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="p-4 rounded-full bg-primary/10 mb-4">
-                <ListChecks className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">No test cases yet</h3>
-              <p className="text-muted-foreground max-w-sm">
-                Click "Create New" or "Add Existing" to start building your evaluation set.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {testCasesList.map((testCase: any) => (
-                <div
-                  key={testCase.id}
-                  className="group relative flex items-center justify-between p-4 border rounded-lg transition-all hover:shadow-md hover:border-primary/50 hover:scale-[1.01] hover:bg-accent/30"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded bg-primary/10">
-                        <FileText className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <span className="font-semibold">{testCase.name}</span>
-                    </div>
-                    {testCase.description && (
-                      <p className="text-sm text-muted-foreground mt-2 ml-8">
-                        {testCase.description}
-                      </p>
-                    )}
-                  </div>
-                  {canWrite && (
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setEditingTestCase(testCase);
-                          setShowCreateModal(true);
-                        }}
-                        className="hover:bg-primary/10"
-                      >
-                        <Edit2 className="mr-1 h-3.5 w-3.5" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveTestCase(testCase.id)}
-                        className="hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <X className="mr-1 h-3.5 w-3.5" />
-                        Remove
-                      </Button>
-                    </div>
-                  )}
+        <Collapsible>
+          <CardHeader className="border-b bg-accent/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <ListBulletIcon className="h-4 w-4 text-primary" />
                 </div>
-              ))}
+                <div>
+                  <CardTitle>Test Cases</CardTitle>
+                  <CardDescription>
+                    Add up to 500 test cases to this eval set.{" "}
+                    <Badge variant="secondary" className="ml-1">
+                      {testCasesList.length}/500
+                    </Badge>
+                  </CardDescription>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {canWrite && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCreateModal(true)}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create New
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setShowSelectionModal(true)}
+                      disabled={testCases.length >= 500}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Existing
+                    </Button>
+                  </>
+                )}
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="icon" className="size-8">
+                    <ChevronsUpDown className="size-4" />
+                    <span className="sr-only">Toggle</span>
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
             </div>
-          )}
-        </CardContent>
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent className="pt-6">
+              {testCasesList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="p-4 rounded-full bg-primary/10 mb-4">
+                    <ListChecks className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">No test cases yet</h3>
+                  <p className="text-muted-foreground max-w-sm">
+                    Click "Create New" or "Add Existing" to start building your evaluation set.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {testCasesList.map((testCase: any) => (
+                    <div
+                      key={testCase.id}
+                      className="group relative flex items-center justify-between p-4 border rounded-lg transition-all hover:shadow-md hover:border-primary/50 hover:scale-[1.01] hover:bg-accent/30"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded bg-primary/10">
+                            <FileText className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                          <span className="font-semibold">{testCase.name}</span>
+                        </div>
+                        {testCase.description && (
+                          <p className="text-sm text-muted-foreground mt-2 ml-8">
+                            {testCase.description}
+                          </p>
+                        )}
+                      </div>
+                      {canWrite && (
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditingTestCase(testCase);
+                              setShowCreateModal(true);
+                            }}
+                            className="hover:bg-primary/10"
+                          >
+                            <Edit2 className="mr-1 h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveTestCase(testCase.id)}
+                            className="hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <X className="mr-1 h-3.5 w-3.5" />
+                            Remove
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
+
+      <EvalRuns id={evalSetId} />
 
       {/* Modals */}
       <TestCaseSelectionModal
@@ -422,6 +439,6 @@ export default function EvalSetEditorPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </div >
   );
 }

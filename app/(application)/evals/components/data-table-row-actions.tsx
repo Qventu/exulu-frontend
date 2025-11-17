@@ -74,7 +74,7 @@ export function DataTableRowActions<TData>({
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
@@ -98,7 +98,7 @@ export function DataTableRowActions<TData>({
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
-              router.push(`/evals/${evalSet.id}/runs`);
+              router.push(`/evals/${evalSet.id}`);
             }}
           >
             <Play className="mr-2 h-4 w-4" />
