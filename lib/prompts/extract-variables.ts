@@ -18,7 +18,7 @@ export function extractVariables(content: string): string[] {
   const matches = content.matchAll(regex);
   const variables = new Set<string>();
 
-  for (const match of matches) {
+  for (const match of Array.from(matches)) {
     variables.add(match[1]);
   }
 
