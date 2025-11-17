@@ -39,7 +39,7 @@ export function validatePromptVariables(content: string): {
   const matches = content.matchAll(regex);
   const invalidVariables: string[] = [];
 
-  for (const match of matches) {
+  for (const match of Array.from(matches)) {
     const variableName = match[1];
     if (!validateVariableName(variableName)) {
       invalidVariables.push(variableName);
