@@ -245,12 +245,12 @@ export function MainNavSidebar({ sidebarDefaultOpen }: { sidebarDefaultOpen: boo
                     <span>Logout</span>
                   </div>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.open("https://www.exulu.com/toc", "_blank")}>
+                {/* <DropdownMenuItem onClick={() => window.open("https://www.exulu.com/toc", "_blank")}>
                   <div className="flex items-center gap-2 w-full">
                     <FileText className="h-4 w-4" />
                     <span>Terms</span>
                   </div>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>

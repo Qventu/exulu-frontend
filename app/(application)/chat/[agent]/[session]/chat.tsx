@@ -21,6 +21,7 @@ import {
   GET_AGENT_MESSAGES,
   GET_USER_BY_ID,
   UPDATE_AGENT_SESSION_RBAC,
+  GET_PROMPT_BY_ID,
 } from "@/queries/queries";
 import { getToken } from "@/util/api"
 import { Agent } from "@EXULU_SHARED/models/agent";
@@ -93,7 +94,15 @@ export interface ChatProps {
   stop?: () => void;
 }
 
-export function ChatLayout({ session, agent }: { session: AgentSession, agent: Agent }) {
+export function ChatLayout({
+  session,
+  agent,
+  initialPromptId
+}: {
+  session: AgentSession;
+  agent: Agent;
+  initialPromptId?: string;
+}) {
 
   const [error, setError] = useState<string | null>(null);
   const configContext = React.useContext(ConfigContext);
@@ -127,6 +136,16 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
     skip: !session.created_by
   })
 
+  // Fetch initial prompt if provided
+  const { data: initialPromptData } = useQuery<{
+    prompt_library_itemById: PromptLibrary;
+  }>(GET_PROMPT_BY_ID, {
+    variables: { id: initialPromptId },
+    skip: !initialPromptId,
+  });
+
+  // Track if we've already processed the initial prompt
+  const [initialPromptProcessed, setInitialPromptProcessed] = useState(false);
 
   const [updateAgentSessionRbac, updateAgentSessionRbacResult] = useMutation(UPDATE_AGENT_SESSION_RBAC);
   const [tokenCounts, setTokenCounts] = useState<MessageMetadata>({
@@ -318,6 +337,15 @@ export function ChatLayout({ session, agent }: { session: AgentSession, agent: A
     // Focus the input
     inputRef.current?.focus();
   };
+
+  // Handle initial prompt auto-fill when navigating from empty state
+  useEffect(() => {
+    if (initialPromptData?.prompt_library_itemById && !initialPromptProcessed) {
+      const prompt = initialPromptData.prompt_library_itemById;
+      setInitialPromptProcessed(true);
+      handleSelectPrompt(prompt);
+    }
+  }, [initialPromptData, initialPromptProcessed]);
 
   const convertTableToCSV = (tableElement: HTMLTableElement): string => {
     const rows = Array.from(tableElement.querySelectorAll('tr'));

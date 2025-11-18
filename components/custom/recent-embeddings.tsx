@@ -120,7 +120,7 @@ export function RecentEmbeddings({ contextId }: { contextId: string }) {
                         className="hover:text-blue-500 hover:underline"
                         href={`/data/${contextId}/${item.id}`}
                       >
-                        <TruncatedText text={item.name ?? ""} length={50} />
+                        <TruncatedText text={item.name || item.id || ""} length={50} />
                       </Link>
                     </TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">

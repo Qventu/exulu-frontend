@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RecentEmbeddings } from "@/components/custom/recent-embeddings";
-import { DELETE_CHUNKS, GENERATE_CHUNKS, GET_CONTEXT_BY_ID } from "@/queries/queries";
+import { CREATE_EMBEDDER_CONFIG, DELETE_CHUNKS, GENERATE_CHUNKS, GET_CONTEXT_BY_ID, GET_EMBEDDER_CONFIGS, GET_VARIABLES, UPDATE_EMBEDDER_CONFIG } from "@/queries/queries";
 import { Context } from "@/types/models/context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +28,11 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { FormDescription } from "@/components/ui/form";
+import { Variable } from "@/types/models/variable";
+import { VariableSelectionElement } from "../../agents/edit/[id]/form";
 
 interface DataDisplayProps {
     expand: boolean;
@@ -51,6 +56,81 @@ export function ContextEmbeddings(props: DataDisplayProps) {
     const context = data?.contextById;
     const router = useRouter();
 
+    const [updateEmbedderConfigs, updateEmbedderConfigsResult] = useMutation<{
+        embedder_settingsUpdateOneById: {
+            item: {
+                id: string;
+            }
+        }
+    }>(UPDATE_EMBEDDER_CONFIG, {
+        onCompleted: (output) => {
+            refetchEmbedderConfigs();
+            toast({
+                title: "Embedder configs updated",
+                description: "Embedder configs updated successfully.",
+            })
+        },
+        onError: (error) => {
+            refetchEmbedderConfigs();
+            toast({
+                title: "Error updating embedder configs",
+                description: error.message,
+            })
+        }
+    });
+
+    const [createEmbedderConfig, createEmbedderConfigResult] = useMutation<{
+        embedder_settingsCreateOne: {
+            item: {
+                id: string;
+            }
+        }
+    }>(CREATE_EMBEDDER_CONFIG, {
+        onCompleted: (output) => {
+            refetchEmbedderConfigs();
+            toast({
+                title: "Embedder configs created",
+                description: "Embedder configs created successfully.",
+            })
+        },
+        onError: (error) => {
+            refetchEmbedderConfigs();
+            toast({
+                title: "Error creating embedder configs",
+                description: error.message,
+            })
+        }
+    });
+
+    const { data: embedderConfigsData, loading: loadingEmbedderConfigsData, refetch: refetchEmbedderConfigs } = useQuery<{
+        embedder_settingsPagination: {
+            items: {
+                id: string;
+                name: string;
+                value: string;
+                updatedAt: string;
+                createdAt: string;
+            }[]
+        }
+    }>(GET_EMBEDDER_CONFIGS, {
+        skip: !context?.embedder?.id,
+        variables: {
+            context: props.context,
+            embedder: context?.embedder?.id
+        }
+    });
+
+    const embedderConfigs = embedderConfigsData?.embedder_settingsPagination?.items || [];
+
+    const { data: variablesData } = useQuery<{
+        variablesPagination: {
+            items: Variable[]
+        }
+    }>(GET_VARIABLES, {
+        variables: { page: 1, limit: 100 },
+    });
+
+    const variables = variablesData?.variablesPagination?.items || [];
 
     const [generateChunksMutation, generateChunksMutationResult] = useMutation<{
         [key: string]: {
@@ -154,7 +234,7 @@ export function ContextEmbeddings(props: DataDisplayProps) {
                                         <p className="text-muted-foreground mt-1">{context.description}</p>
                                         <div className="mt-3 flex items-center">
                                             <span className="text-sm font-medium mr-2">Embedder:</span>
-                                            <Badge variant="outline">{context.embedder || "None"}</Badge>
+                                            <Badge variant="outline">{context.embedder?.name || "None"} ({context.embedder?.id})</Badge>
                                         </div>
                                     </div>
                                     <div>
@@ -169,6 +249,49 @@ export function ContextEmbeddings(props: DataDisplayProps) {
                                             <span className="block"><b>On Update</b>: Vectors are recalculated whenever an item is updated.</span>
                                             <span className="block"><b>On Insert</b>: Vectors are calculated when a new item is inserted.</span>
                                             <span className="block"><b>Always</b>: Vectors are calculated on both insert and update operations.</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm font-medium mr-2">Embedder Configs:</span>
+                                        <div className="mt-2 text-xs text-muted-foreground">
+                                            {variables?.length && context?.embedder?.config?.map((config) => {
+
+                                                const currentValue = embedderConfigs?.find(x => x.name === config.name);
+                                                console.log("currentValue", currentValue);
+                                                console.log("embedderConfigs", embedderConfigs);
+                                                console.log("config", config);
+                                                return (<div key={config.name} className="space-y-2">
+                                                    <VariableSelectionElement
+                                                        configItem={config}
+                                                        currentValue={currentValue?.value || ""}
+                                                        variables={variables}
+                                                        onVariableSelect={(variableName) => {
+                                                            console.log("variableName", variableName);
+                                                            if (currentValue) {
+                                                                updateEmbedderConfigs({
+                                                                    variables: {
+                                                                        id: currentValue.id,
+                                                                        name: config.name,
+                                                                        value: variableName,
+                                                                    }
+                                                                });
+                                                            } else {
+                                                                createEmbedderConfig({
+                                                                    variables: {
+                                                                        name: config.name,
+                                                                        value: variableName,
+                                                                        context: props.context,
+                                                                        embedder: context?.embedder?.id
+                                                                    }
+                                                                });
+                                                            }
+
+                                                        }} />
+                                                    <span>
+                                                        {config.description}
+                                                    </span>
+                                                </div>)
+                                            })}
                                         </div>
                                     </div>
                                 </div>

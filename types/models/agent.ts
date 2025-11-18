@@ -32,6 +32,7 @@ export interface Agent {
         description: string;
     }[];
     maxContextLength?: number;
+    authenticationInformation?: string;
     provider?: string;
     capabilities?: {
         text: boolean;

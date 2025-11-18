@@ -7,7 +7,15 @@ const CONTEXT_FIELDS = `
     id
     name
     description
-    embedder
+    embedder {
+      name
+      id
+      config {
+        name
+        description
+        default
+      }
+    }
     slug
     active
     fields
@@ -84,6 +92,7 @@ providerName
 modelName
 maxContextLength
 provider
+authenticationInformation
 slug
 category
 rateLimit {
@@ -991,6 +1000,51 @@ export const CREATE_VARIABLE = gql`
   }
 `;
 
+export const CREATE_EMBEDDER_CONFIG = gql`
+  mutation CreateEmbedderConfig($name: String!, $value: String, $context: String!, $embedder: String!) {
+    embedder_settingsCreateOne(input: { name: $name, value: $value, context: $context, embedder: $embedder }) {
+      item {
+        id
+        name
+        value
+        context
+        embedder
+      }
+    }
+  }
+`;
+
+export const GET_EMBEDDER_CONFIGS = gql`
+  query GetEmbedderConfigs($context: String, $embedder: String) {
+    embedder_settingsPagination(page: 1, limit: 100, filters: {
+      context: {
+        eq: $context
+      },
+      embedder: {
+        eq: $embedder
+      }
+    }) {
+      items {
+        id
+        name
+        value
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+export const UPDATE_EMBEDDER_CONFIG = gql`
+  mutation UpdateEmbedderConfig($id: ID!, $name: String, $value: String) {
+    embedder_settingsUpdateOneById(id: $id, input: { name: $name, value: $value }) {
+      item {
+        id
+      }
+    }
+  }
+`;
+
 export const UPDATE_VARIABLE = gql`
   mutation UpdateVariable(
     $id: ID!
@@ -1006,12 +1060,14 @@ export const UPDATE_VARIABLE = gql`
         encrypted: $encrypted
       }
     ) {
-      id
-      name
-      value
-      encrypted
-      createdAt
-      updatedAt
+      item {
+        id
+        name
+        value
+        encrypted
+        createdAt
+        updatedAt
+      }
     }
   }
 `;

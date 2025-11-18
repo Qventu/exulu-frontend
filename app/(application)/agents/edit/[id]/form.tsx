@@ -99,7 +99,7 @@ const categories = [
 ]
 
 // Component for handling individual tool configuration items
-const ToolConfigItem = ({
+export const VariableSelectionElement = ({
   configItem,
   currentValue,
   variables,
@@ -686,6 +686,13 @@ export default function AgentForm({
                                     <div className="text-sm">
                                       <div className="font-medium">Provider API Key</div>
                                       <div className="text-muted-foreground text-xs">Select a variable containing the API key for the provider</div>
+                                      {
+                                        agent.authenticationInformation && (
+                                          <div className="text-muted-foreground text-xs">
+                                            {agent.authenticationInformation}
+                                          </div>
+                                        )
+                                      }
                                     </div>
                                     <Popover>
                                       <PopoverTrigger asChild>
@@ -1340,7 +1347,7 @@ export default function AgentForm({
                                                                         return (
                                                                           <div key={configIndex} className="space-y-2">
                                                                             {isEnabled ? (
-                                                                              <ToolConfigItem
+                                                                              <VariableSelectionElement
                                                                                 configItem={configItem}
                                                                                 currentValue={currentValue}
                                                                                 variables={variables}
@@ -1485,7 +1492,7 @@ export default function AgentForm({
                                                                 return (
                                                                   <div key={configIndex} className="space-y-2">
                                                                     {isEnabled ? (
-                                                                      <ToolConfigItem
+                                                                      <VariableSelectionElement
                                                                         configItem={configItem}
                                                                         currentValue={currentValue}
                                                                         variables={variables}

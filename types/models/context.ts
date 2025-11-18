@@ -5,7 +5,15 @@ export interface Context {
   id: string
   name: string
   description: string
-  embedder: string
+  embedder?: {
+    name: string,
+    id: string,
+    config?: {
+      name: string,
+      description: string,
+      default: string
+    }[]
+  }
   active: boolean
   slug: string
   configuration: {

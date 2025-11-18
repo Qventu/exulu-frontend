@@ -38,6 +38,9 @@ export function CodePreview({
     const [code, setCode] = useState<string | null>(null);
 
     const format = async (code, language) => {
+        if (typeof code !== "string") {
+            code = JSON.stringify(code, null, 2);
+        }
         const formattedCode = await prettier.format(code, {
             parser: language,
             plugins: [babel, estree],
@@ -69,7 +72,7 @@ export function CodePreview({
                         language={language ? language : "plaintext"}
                         style={dracula}
                     >
-                        {`${code?.slice(0, slice || 200)} ${inputCode?.length > (slice || 200) ? "..." : ""}`}
+                        {`${code?.slice(0, slice || 200)} ${code?.length > (slice || 200) ? "..." : ""}`}
                     </SyntaxHighlighter>
                 )}
             </DialogTrigger>

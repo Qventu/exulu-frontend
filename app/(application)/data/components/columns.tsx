@@ -47,7 +47,7 @@ export const columns: ColumnDef<any>[] = [
           <span className="max-w-[500px] truncate font-medium w-full">
             {row.original.name
               ? row.original.name
-              : row.original.text.slice(0, 200) || "Untitled"}
+              : row.original.text?.slice(0, 200) || "Untitled"}
           </span>
           <small className="mt-1">
             {format(new Date(row.original.createdAt), "PP")}

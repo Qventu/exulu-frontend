@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { ChatLayout } from "@/app/(application)/chat/[agent]/[session]/chat";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
@@ -17,6 +18,8 @@ export default function SessionsPage({
 }: {
   params: { session: string, agent: string };
 }) {
+  const searchParams = useSearchParams();
+  const promptId = searchParams.get("promptId");
 
   const { data: agentData, loading: agentLoading, error: agentError } = useQuery<{
     agentById: Agent
@@ -63,5 +66,9 @@ export default function SessionsPage({
     </Alert>
   }
 
-  return <ChatLayout session={sessionData?.agent_sessionById} agent={agentData.agentById} />;
+  return <ChatLayout
+    session={sessionData?.agent_sessionById}
+    agent={agentData.agentById}
+    initialPromptId={promptId || undefined}
+  />;
 }

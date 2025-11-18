@@ -874,6 +874,7 @@ export function DataDisplay(props: DataDisplayProps) {
                                             {contextField.type === "json" && (
                                               <CodePreview
                                                 code={data[contextField.name]}
+                                                language="json"
                                               />
                                             )}
                                             {contextField.type === "shortText" && (
