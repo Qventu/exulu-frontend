@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
     Collapsible,
     CollapsibleContent,
@@ -60,7 +62,13 @@ export function ContextSources(props: DataDisplayProps) {
 
     const [sourcesOpen, setSourcesOpen] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [selectedSource, setSelectedSource] = useState<{ id: string; name: string; queue?: string } | null>(null);
+    const [selectedSource, setSelectedSource] = useState<{
+        id: string;
+        name: string;
+        queue?: string;
+        params?: { name: string; description: string; default: string }[]
+    } | null>(null);
+    const [paramValues, setParamValues] = useState<Record<string, string>>({});
 
     const { data, loading, error } = useQuery<
         { contextById: Context }>(GET_CONTEXT_BY_ID, {
@@ -79,6 +87,7 @@ export function ContextSources(props: DataDisplayProps) {
                 const result = data[`${props.context}_itemsExecuteSource`];
                 setDialogOpen(false);
                 setSelectedSource(null);
+                setParamValues({});
 
                 toast.success(result.message || "Source executed successfully", {
                     description: result.jobs?.length
@@ -96,8 +105,23 @@ export function ContextSources(props: DataDisplayProps) {
         }
     );
 
-    const handleTriggerSource = (sourceId: string, sourceName: string, queueName?: string) => {
-        setSelectedSource({ id: sourceId, name: sourceName, queue: queueName });
+    const handleTriggerSource = (
+        sourceId: string,
+        sourceName: string,
+        queueName?: string,
+        params?: { name: string; description: string; default: string }[]
+    ) => {
+        setSelectedSource({ id: sourceId, name: sourceName, queue: queueName, params });
+
+        // Initialize param values with defaults
+        if (params) {
+            const initialValues: Record<string, string> = {};
+            params.forEach(param => {
+                initialValues[param.name] = param.default || '';
+            });
+            setParamValues(initialValues);
+        }
+
         setDialogOpen(true);
     };
 
@@ -107,7 +131,7 @@ export function ContextSources(props: DataDisplayProps) {
         executeSource({
             variables: {
                 source: selectedSource.id,
-                inputs: {}
+                inputs: paramValues
             }
         });
     };
@@ -222,7 +246,7 @@ export function ContextSources(props: DataDisplayProps) {
                                                                 {hasQueueConfig ? (
                                                                     <Tooltip>
                                                                         <TooltipTrigger asChild>
-                                                                        <div className="cursor-help">
+                                                                            <div className="cursor-help">
                                                                                 {source.config.queue ? (
                                                                                     <Badge variant="outline" className="cursor-help">
                                                                                         {source.config.queue}
@@ -273,7 +297,12 @@ export function ContextSources(props: DataDisplayProps) {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
-                                                                    onClick={() => handleTriggerSource(source.id, source.name, source.config.queue)}
+                                                                    onClick={() => handleTriggerSource(
+                                                                        source.id,
+                                                                        source.name,
+                                                                        source.config.queue,
+                                                                        source.config.params
+                                                                    )}
                                                                     title="Manually trigger source"
                                                                 >
                                                                     <Play className="h-4 w-4" />
@@ -342,7 +371,13 @@ export function ContextSources(props: DataDisplayProps) {
                 </div>
             )}
 
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+                setDialogOpen(open);
+                if (!open) {
+                    setParamValues({});
+                    setSelectedSource(null);
+                }
+            }}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Trigger Source</DialogTitle>
@@ -364,6 +399,37 @@ export function ContextSources(props: DataDisplayProps) {
                             )}
                         </DialogDescription>
                     </DialogHeader>
+
+                    {selectedSource?.params && selectedSource.params.length > 0 && (
+                        <div className="space-y-4 py-4">
+                            <div className="text-sm font-medium">Parameters</div>
+                            {selectedSource.params.map((param) => (
+                                <div key={param.name} className="space-y-2">
+                                    <Label htmlFor={param.name}>
+                                        {param.name}
+                                        {param.description && (
+                                            <span className="ml-2 text-xs text-muted-foreground font-normal">
+                                                {param.description}
+                                            </span>
+                                        )}
+                                    </Label>
+                                    <Input
+                                        id={param.name}
+                                        value={paramValues[param.name] || ''}
+                                        onChange={(e) => {
+                                            setParamValues(prev => ({
+                                                ...prev,
+                                                [param.name]: e.target.value
+                                            }));
+                                        }}
+                                        placeholder={param.default || ''}
+                                        disabled={executingSource}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     <DialogFooter>
                         <Button
                             variant="outline"

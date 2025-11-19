@@ -85,6 +85,7 @@ import { TextPreview } from "@/components/custom/text-preview";
 import { PromptCard } from "@/app/(application)/prompts/components/prompt-card";
 import { PromptEditorModal } from "@/app/(application)/prompts/components/prompt-editor-modal";
 import { usePrompts } from "@/hooks/use-prompts";
+import { Response } from '@/components/ai-elements/response';
 
 const categories = [
   "marketing",
@@ -682,14 +683,14 @@ export default function AgentForm({
                                       );
                                     }}
                                   />
-                                  <div className="space-y-2">
+                                  <div className="space-y-2 w-full overflow-x-hidden">
                                     <div className="text-sm">
                                       <div className="font-medium">Provider API Key</div>
                                       <div className="text-muted-foreground text-xs">Select a variable containing the API key for the provider</div>
                                       {
                                         agent.authenticationInformation && (
                                           <div className="text-muted-foreground text-xs">
-                                            {agent.authenticationInformation}
+                                            <Response>{agent.authenticationInformation}</Response>
                                           </div>
                                         )
                                       }

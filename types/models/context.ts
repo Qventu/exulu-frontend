@@ -28,6 +28,11 @@ export interface Context {
       schedule?: string
       queue?: string
       retries?: number
+      params?: {
+        name: string,
+        description: string,
+        default: string
+      }[]
       backoff?: {
         type: 'exponential' | 'linear'
         delay: number

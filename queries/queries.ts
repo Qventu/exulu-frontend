@@ -25,6 +25,11 @@ const CONTEXT_FIELDS = `
       name
       description
       config {
+        params {
+          name
+          description
+          default
+        }
         schedule
         queue
         retries
