@@ -1,9 +1,20 @@
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
-import { useQuery } from "@apollo/client";
+import { useQuery, useMutation } from "@apollo/client";
 import { useRef } from "react";
 import Link from "next/link";
 import * as React from "react";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { GENERATE_CHUNKS, DELETE_CHUNKS } from "@/queries/queries";
 import { TruncatedText } from "@/components/truncated-text";
 import { Item } from "@/types/models/item";
 import { GET_ITEMS, PAGINATION_POSTFIX } from "@/queries/queries";
@@ -18,6 +29,15 @@ import {
 } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { DotsHorizontalIcon } from "@radix-ui/react-icons";
+import { Button } from "@/components/ui/button";
 
 export type FilterOperator = {
   eq?: string,
@@ -31,7 +51,8 @@ export type ItemsFilters = {
 }
 
 export function RecentEmbeddings({ contextId }: { contextId: string }) {
-
+  const [confirmationModal, setConfirmationModal] = useState<"generate" | "delete" | null>(null);
+  const [embeddingsOpen, setEmbeddingsOpen] = useState(true);
   // Make stable ref of date
   const twentyOneDaysAgoRef = useRef(new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString());
   let { loading, data: raw, refetch, previousData: prev, error } = useQuery<{
@@ -65,6 +86,46 @@ export function RecentEmbeddings({ contextId }: { contextId: string }) {
     },
   });
 
+  const [generateChunksMutation, generateChunksMutationResult] = useMutation<{
+    [key: string]: {
+      jobs: string[];
+      items: number;
+    }
+  }>(GENERATE_CHUNKS(contextId), {
+    onCompleted: (output) => {
+      const data = output[contextId + "_itemsGenerateChunks"];
+      if (data.jobs?.length > 0) {
+        toast.success("Chunks generation started", {
+          description: "Jobs have been started in the background, depending on the size of the item this may take a while.",
+        })
+        return;
+      }
+      toast.success("Chunks generated", {
+        description: "Chunks generated successfully.",
+      })
+    },
+  });
+
+  const [deleteChunksMutation, deleteChunksMutationResult] = useMutation<{
+    [key: string]: {
+      jobs: string[];
+      items: number;
+    }
+  }>(DELETE_CHUNKS(contextId), {
+    onCompleted: (output) => {
+      const data = output[contextId + "_itemsDeleteChunks"];
+      if (data.jobs?.length > 0) {
+        toast.success("Chunks deletion started", {
+          description: "Jobs have been started in the background, depending on the size of the item this may take a while.",
+        })
+        return;
+      }
+      toast.success("Chunks deleted", {
+        description: "Chunks deleted successfully.",
+      })
+    },
+  });
+
   const data = raw?.[contextId + PAGINATION_POSTFIX] as any;
 
   if (loading) {
@@ -88,14 +149,36 @@ export function RecentEmbeddings({ contextId }: { contextId: string }) {
               <CardTitle>Recent Embeddings</CardTitle>
               <CardDescription>Items with embeddings updated in the last 21 days</CardDescription>
             </div>
+
             {loading && (
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             )}
           </div>
-          <Badge variant="outline" className="gap-1.5">
-            <span className="text-xs">{data?.items?.length || 0}</span>
-            <span className="text-xs text-muted-foreground">items</span>
-          </Badge>
+          <div>
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="flex size-8 p-0 data-[state=open]:bg-muted"
+                >
+                  <DotsHorizontalIcon className="size-4" />
+                  <span className="sr-only">Open menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setConfirmationModal("generate")}>
+                  Generate all embeddings
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setConfirmationModal("delete");
+                  }}
+                >
+                  Delete all embeddings
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -120,14 +203,14 @@ export function RecentEmbeddings({ contextId }: { contextId: string }) {
                         className="hover:text-blue-500 hover:underline"
                         href={`/data/${contextId}/${item.id}`}
                       >
-                        <TruncatedText text={item.name || item.id || ""} length={50} />
+                        <TruncatedText text={item.name || item.id || ""} length={100} />
                       </Link>
                     </TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">
                       {item.embeddings_updated_at
                         ? formatDistanceToNow(new Date(item.embeddings_updated_at), {
-                            addSuffix: true,
-                          })
+                          addSuffix: true,
+                        })
                         : "never"}
                     </TableCell>
                   </TableRow>
@@ -137,6 +220,69 @@ export function RecentEmbeddings({ contextId }: { contextId: string }) {
           )}
         </div>
       </CardContent>
+
+      <AlertDialog open={confirmationModal === "generate"} onOpenChange={(open) => !open && setConfirmationModal(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Generate Embeddings</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to generate embeddings for this context? This
+              will create new embedding vectors for every item in the context, this
+              can take a long time, might cost money if you are using a paid service
+              as your embedder, or require a lot of computational resources if your
+              embedder is self hosted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={generateChunksMutationResult.loading}
+              onClick={() => {
+                // TODO: Add API call to generate embeddings
+                setConfirmationModal(null);
+                generateChunksMutation();
+                toast.info("Generating embeddings...", {
+                  description: "Embeddings are being generated in the background, depending on the size of the item this may take a while.",
+                });
+              }}
+            >
+              Generate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmationModal === "delete"} onOpenChange={(open) => !open && setConfirmationModal(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Embeddings</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete all embeddings for this context? This action cannot be undone.
+              Embeddings are used to search and filter items, deleting them will remove
+              this functionality from the context, regenerating embeddings might take a
+              long time, might cost money if you are using a paid service as your embedder,
+              or require a lot of computational resources if your embedder is self hosted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteChunksMutationResult.loading}
+              onClick={async () => {
+                setConfirmationModal(null);
+                deleteChunksMutation();
+                toast.success("Embeddings deleted", {
+                  description: "All embeddings for this item have been deleted.",
+                });
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </Card>
   );
 }

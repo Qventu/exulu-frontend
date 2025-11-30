@@ -12,7 +12,13 @@ import { Provider } from "next-auth/providers";
 
 const generateJWT = async (payload) => {
   const secret = process.env.NEXTAUTH_SECRET;
-  const jwk = await importJWK({ k: secret, alg: 'HS256', kty: 'oct' });
+  if (!secret) {
+    throw new Error("NEXTAUTH_SECRET is not defined");
+  }
+  // Convert the secret to base64url format as required by jose
+  const secretBuffer = Buffer.from(secret, 'utf-8');
+  const base64Secret = secretBuffer.toString('base64url');
+  const jwk = await importJWK({ k: base64Secret, alg: 'HS256', kty: 'oct' });
   const jwt = await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -21,7 +27,13 @@ const generateJWT = async (payload) => {
   return jwt;
 };
 
-export const pool = new Pool({
+// Declare a global type for the pool to prevent TypeScript errors
+declare global {
+  var __db_pool: Pool | undefined;
+}
+
+// Use a singleton pattern to prevent creating multiple pools in dev mode (HMR)
+export const pool = global.__db_pool || new Pool({
   host: process.env.POSTGRES_DB_HOST,
   user: process.env.POSTGRES_DB_USER,
   port: parseInt(process.env.POSTGRES_DB_PORT || "5432", 10),
@@ -35,7 +47,12 @@ export const pool = new Pool({
   reapIntervalMillis: 1000,
   createRetryIntervalMillis: 200,
   connectionTimeoutMillis: 10000, // set to 10 seconds, for serverless functions cold starts can take a while
-})
+});
+
+// Store the pool in global to reuse across HMR reloads in development
+if (process.env.NODE_ENV !== 'production') {
+  global.__db_pool = pool;
+}
 
 function gernerateOTP() {
   return randomInt(100000, 999999);
@@ -164,7 +181,6 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
             email = profile?.email;
             if (!email) {
               console.error("[EXULU] Google auth failed, no email in profile.")
-              client.release();
               return false;
             }
           }
@@ -175,7 +191,6 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
             allowedDomains.push("exulu.com")
             allowedDomains.push("qventu.com")
             if (!allowedDomains.some(domain => email.endsWith(`@${domain}`))) {
-              client.release();
               return false;
             }
           }
@@ -185,10 +200,10 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
             account?.provider === "google" &&
             process.env.GOOGLE_SECURITY_GROUPS
           ) {
-  
+
             const accessToken = account?.access_token;
             const refreshToken = account?.refresh_token;
-  
+
             if (!accessToken || !refreshToken) {
               console.error("[EXULU] Google auth failed, no access token or refresh token")
               return false;
@@ -276,16 +291,15 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
                 ])
               }
             }
-            client.release();
             return true;
           }
 
-          client.release();
           return false;
         } catch (error) {
           console.error("[EXULU] Sign in callback error", error)
-          client.release();
           return false;
+        } finally {
+          client.release();
         }
       },
       async jwt({ token, user }) {

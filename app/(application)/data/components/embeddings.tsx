@@ -1,9 +1,6 @@
 "use client"
 
 import { useQuery, useMutation } from "@apollo/client";
-import {
-    ArrowLeft,
-} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -12,27 +9,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RecentEmbeddings } from "@/components/custom/recent-embeddings";
-import { CREATE_EMBEDDER_CONFIG, DELETE_CHUNKS, GENERATE_CHUNKS, GET_CONTEXT_BY_ID, GET_EMBEDDER_CONFIGS, GET_VARIABLES, UPDATE_EMBEDDER_CONFIG } from "@/queries/queries";
+import { CREATE_EMBEDDER_CONFIG, GET_CONTEXT_BY_ID, GET_EMBEDDER_CONFIGS, GET_VARIABLES, UPDATE_EMBEDDER_CONFIG } from "@/queries/queries";
 import { Context } from "@/types/models/context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { FormDescription } from "@/components/ui/form";
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { Variable } from "@/types/models/variable";
 import { VariableSelectionElement } from "../../agents/edit/[id]/form";
+import {
+    ArrowLeft,
+    ChevronDown,
+} from "lucide-react";
+import { QueueManagement } from "../../evals/[id]/runs/components/queue-management";
+import { QueueJob } from "@/types/models/job";
 
 interface DataDisplayProps {
     expand: boolean;
@@ -42,9 +37,8 @@ interface DataDisplayProps {
 
 export function ContextEmbeddings(props: DataDisplayProps) {
 
-    const [confirmationModal, setConfirmationModal] = useState<"generate" | "delete" | null>(null);
+
     const [sourcesOpen, setSourcesOpen] = useState(true);
-    const [embeddingsOpen, setEmbeddingsOpen] = useState(true);
     const { toast } = useToast();
     const { data, loading, error } = useQuery<
         { contextById: Context }>(GET_CONTEXT_BY_ID, {
@@ -131,51 +125,6 @@ export function ContextEmbeddings(props: DataDisplayProps) {
     });
 
     const variables = variablesData?.variablesPagination?.items || [];
-
-    const [generateChunksMutation, generateChunksMutationResult] = useMutation<{
-        [key: string]: {
-            jobs: string[];
-            items: number;
-        }
-    }>(GENERATE_CHUNKS(props.context), {
-        onCompleted: (output) => {
-            const data = output[props.context + "_itemsGenerateChunks"];
-            if (data.jobs?.length > 0) {
-                toast({
-                    title: "Chunks generation started",
-                    description: "Jobs have been started in the background, depending on the size of the item this may take a while.",
-                })
-                return;
-            }
-            toast({
-                title: "Chunks generated",
-                description: "Chunks generated successfully.",
-            })
-        },
-    });
-
-
-    const [deleteChunksMutation, deleteChunksMutationResult] = useMutation<{
-        [key: string]: {
-            jobs: string[];
-            items: number;
-        }
-    }>(DELETE_CHUNKS(props.context), {
-        onCompleted: (output) => {
-            const data = output[props.context + "_itemsDeleteChunks"];
-            if (data.jobs?.length > 0) {
-                toast({
-                    title: "Chunks deletion started",
-                    description: "Jobs have been started in the background, depending on the size of the item this may take a while.",
-                })
-                return;
-            }
-            toast({
-                title: "Chunks deleted",
-                description: "Chunks deleted successfully.",
-            })
-        },
-    });
 
     if (loading) {
         return (
@@ -298,7 +247,48 @@ export function ContextEmbeddings(props: DataDisplayProps) {
                             </ScrollArea>
                         </CardContent>
                     </Card>
+
                     <RecentEmbeddings contextId={context.id} />
+
+                    <Collapsible open={sourcesOpen} onOpenChange={setSourcesOpen}>
+                        <Card className="bg-none border-0 rounded-none">
+                            <CardHeader>
+                                <CollapsibleTrigger asChild>
+                                    <div className="flex items-center justify-between cursor-pointer">
+                                        <CardTitle>Queues</CardTitle>
+                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                            <ChevronDown className={`h-4 w-4 transition-transform ${sourcesOpen ? "" : "-rotate-90"}`} />
+                                            <span className="sr-only">Toggle sources</span>
+                                        </Button>
+                                    </div>
+                                </CollapsibleTrigger>
+                            </CardHeader>
+                            <CollapsibleContent>
+                                <CardContent>
+                                    {
+                                        context.embedder?.queue ? (
+                                            <div className="space-y-4">
+                                                <div key={context.embedder?.queue}>
+                                                    <QueueManagement
+                                                        queueName={context.embedder?.queue}
+                                                        nameGenerator={(job) => {
+                                                            return `Source update`;
+                                                        }}
+                                                        retryJob={(job: QueueJob) => {
+                                                            if (!job.data?.source || !job.data?.context) {
+                                                                return;
+                                                            }
+                                                            // todo trigger job
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : <div className="text-center text-muted-foreground p-5 border rounded-md">No queues found.</div>
+                                    }
+                                </CardContent>
+                            </CollapsibleContent>
+                        </Card>
+                    </Collapsible>
                 </div>
             ) : (
                 <div className="p-8 text-center text-muted-foreground">
@@ -306,69 +296,7 @@ export function ContextEmbeddings(props: DataDisplayProps) {
                 </div>
             )}
 
-            <AlertDialog open={confirmationModal === "generate"} onOpenChange={(open) => !open && setConfirmationModal(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Generate Embeddings</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to generate embeddings for this context? This
-                            will create new embedding vectors for every item in the context, this
-                            can take a long time, might cost money if you are using a paid service
-                            as your embedder, or require a lot of computational resources if your
-                            embedder is self hosted.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            disabled={generateChunksMutationResult.loading}
-                            onClick={() => {
-                                // TODO: Add API call to generate embeddings
-                                setConfirmationModal(null);
-                                generateChunksMutation();
-                                toast({
-                                    title: "Generating embeddings...",
-                                    description: "Embeddings are being generated in the background, depending on the size of the item this may take a while.",
-                                });
-                            }}
-                        >
-                            Generate
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
 
-            <AlertDialog open={confirmationModal === "delete"} onOpenChange={(open) => !open && setConfirmationModal(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Embeddings</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to delete all embeddings for this context? This action cannot be undone.
-                            Embeddings are used to search and filter items, deleting them will remove
-                            this functionality from the context, regenerating embeddings might take a
-                            long time, might cost money if you are using a paid service as your embedder,
-                            or require a lot of computational resources if your embedder is self hosted.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            disabled={deleteChunksMutationResult.loading}
-                            onClick={async () => {
-                                setConfirmationModal(null);
-                                deleteChunksMutation();
-                                toast({
-                                    title: "Embeddings deleted",
-                                    description: "All embeddings for this item have been deleted.",
-                                });
-                            }}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                            Delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </div>
     );
 }

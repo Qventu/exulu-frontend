@@ -25,14 +25,13 @@ import {
 } from "@/queries/queries";
 import { getToken } from "@/util/api"
 import { Agent } from "@EXULU_SHARED/models/agent";
-import Image from "next/image";
 import { ConfigContext } from "@/components/config-context";
-import { Workflow, Plus, ArrowUp, ChevronsUpDown, FileText } from "lucide-react";
+import { ArrowUp, ChevronsUpDown, FileText } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast"
 import { SaveWorkflowModal } from "@/components/save-workflow-modal";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader } from "@/components/ui/card";
 import { Conversation, ConversationContent } from "@/components/ai-elements/conversation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { RBACControl } from "@/components/rbac";
@@ -77,6 +76,7 @@ import { PromptVariableForm } from "./components/prompt-variable-form";
 import { PromptLibrary } from "@/types/models/prompt-library";
 import { extractVariables, fillPromptVariables } from "@/lib/prompts";
 import { useIncrementPromptUsage } from "@/hooks/use-prompts";
+
 export interface ChatProps {
   chatId?: string;
   agentId?: string;
@@ -109,7 +109,7 @@ export function ChatLayout({
   const isMobile = useIsMobile();
   const { theme } = useTheme();
   const [files, setFiles] = useState<FileUIPart[] | null>(null);
-  const [items, setItems] = useState<string[] | null>(null);
+  const [fileItems, setFileItems] = useState<string[] | null>(null);
   const { user } = useContext(UserContext);
   const [copyingTableId, setCopyingTableId] = useState<string | null>(null);
   const [showSaveWorkflowModal, setShowSaveWorkflowModal] = useState(false);
@@ -408,6 +408,8 @@ export function ChatLayout({
       },
     });
     setInput('');
+    setFiles(null);
+    setFileItems(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -456,21 +458,21 @@ export function ChatLayout({
   }
 
   useEffect(() => {
-    if (!items) {
+    if (!fileItems) {
       setFiles(null)
       return;
     }
-    updateMessageFiles(items.map(item => ({
+    updateMessageFiles(fileItems.map(item => ({
       s3key: item,
       name: item,
       type: "file"
     })))
-  }, [items])
+  }, [fileItems])
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col w-full mx-auto relative size-full">
       <div className="mx-auto relative size-full">
-        <div className="flex h-full w-full">
+        <div className="flex h-full w-full max-h-[calc(100vh)] overflow-y-auto overflow-x-hidden">
           {/* Main conversation area */}
           <div className="flex flex-col flex-1 pb-6">
             {/* @ts-ignore */}
@@ -544,7 +546,7 @@ export function ChatLayout({
                       How can I help you today?
                     </p>
 
-                    <AgentVisual agent={agent} status={status} className="w-80"/>
+                    <AgentVisual agent={agent} status={status} className="w-80" />
 
                     {/* Workflow Banner for new users */}
                     {/* <Card className="w-full mb-6">
@@ -585,7 +587,7 @@ export function ChatLayout({
                     onAddToolResult={addToolResult}
                     UntypedToolPartComponent={UntypedToolPart}
                     addToContext={(item) => {
-                      setItems([...(items || []), item])
+                      setFileItems([...(fileItems || []), item])
                     }}
                     writeAccess={writeAccess}
                   />
@@ -630,7 +632,7 @@ export function ChatLayout({
                       ]}
                       dependencies={[]}
                       onConfirm={(items) => {
-                        setItems(items)
+                        setFileItems(items)
                       }}
                     />)
                   }
@@ -686,9 +688,9 @@ export function ChatLayout({
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                   {/* Show  selected files */}
-                  {items?.map((item) => (
+                  {fileItems?.map((item) => (
                     <FileItem s3Key={item} disabled={true} active={false} onRemove={() => {
-                      setItems(items?.filter((i) => i !== item))
+                      setFileItems(fileItems?.filter((i) => i !== item))
                     }} />
                   ))}
                 </div>
@@ -868,25 +870,18 @@ const UntypedToolPart = ({ untypedToolPart, callId, addToContext }: { untypedToo
     <ToolHeader className="capitalize" type={styleToolName as `tool-${string}`} state={untypedToolPart.state} />
     <ToolContent>
       <ToolInput input={untypedToolPart.input} />
-      {
-        output?.items?.length ? <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 px-4 pb-4">
-          {output.items.map((item) => <FileItem addToContext={(item) => {
-            addToContext(item)
-          }} s3Key={item} disabled={true} active={false} />)}
-        </div> :
-          <ToolOutput
-            output={
-              output ?
-                <Response>
-                  {typeof output === 'string' ?
-                    output : JSON.stringify(output, null, 2)
-                  }
-                </Response>
-                : !untypedToolPart.errorText && <Skeleton className="h-4 w-full" />
-            }
-            errorText={untypedToolPart.errorText}
-          />
-      }
+      <ToolOutput
+        output={
+          output ?
+            <Response>
+              {typeof output === 'string' ?
+                output : JSON.stringify(output, null, 2)
+              }
+            </Response>
+            : !untypedToolPart.errorText && <Skeleton className="h-4 w-full" />
+        }
+        errorText={untypedToolPart.errorText}
+      />
     </ToolContent>
-  </Tool>
+  </Tool >
 }

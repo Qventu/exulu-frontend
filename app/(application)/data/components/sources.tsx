@@ -349,10 +349,27 @@ export function ContextSources(props: DataDisplayProps) {
                                                                 return `Source update`;
                                                             }}
                                                             retryJob={(job: QueueJob) => {
+                                                                console.log("[EXULU] Retrying job: ", job);
                                                                 if (!job.data?.source || !job.data?.context) {
                                                                     return;
                                                                 }
-                                                                // todo trigger job
+
+                                                                const source = context?.sources.find(s => s.id === job.data?.source);
+                                                                if (!source) {
+                                                                    toast.error("Source not found for job: " + job.data?.source, {
+                                                                        description: "The source was not found for the job. This might mean the source no longer exists."
+                                                                    });
+                                                                    return;
+                                                                }
+
+                                                                const config = source.config;
+
+                                                                handleTriggerSource(
+                                                                    source.id,
+                                                                    source.name,
+                                                                    source.config.queue,
+                                                                    config.params
+                                                                )
                                                             }}
                                                         />
                                                     </div>
@@ -371,7 +388,7 @@ export function ContextSources(props: DataDisplayProps) {
                 </div>
             )}
 
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
+            <Dialog modal={false} open={dialogOpen} onOpenChange={(open) => {
                 setDialogOpen(open);
                 if (!open) {
                     setParamValues({});
@@ -387,7 +404,7 @@ export function ContextSources(props: DataDisplayProps) {
                                     Are you sure you want to trigger <strong>{selectedSource.name}</strong>?
                                     <br />
                                     <br />
-                                    A job will be scheduled and visible in the <Badge variant="outline" className="mx-1">{selectedSource.queue}</Badge> queue.
+                                    A job will be scheduled and visible in the <span className="font-semibold">{selectedSource.queue}</span> queue.
                                 </>
                             ) : (
                                 <>

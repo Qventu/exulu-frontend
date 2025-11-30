@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { useToast } from "@/components/ui/use-toast"
 import { TodoList } from "./ai-elements/todo-list"
+import { FileItem, getPresignedUrl } from "./uppy-dashboard"
+import { useState, useEffect } from "react"
 
 interface MessageRendererProps {
   messages: UIMessage[]
@@ -51,8 +53,23 @@ export function MessageRenderer({
       {messages?.map((message, messageIndex) => {
         const isFirstMessage = messageIndex === 0
         const messageMetadata = message.metadata as any
-        const isLastMessage = messageIndex === messages.length - 1
-
+        // iterate through all parts and find the ones that have a type of 'text' and contain '<file name="', if so
+        // extract the filename and content, and return an array of objects with the filename and content
+        // Remove the <file name="...">...</file> from the text and return the text without the file parts
+        const files: { s3Key: string, content: string }[] = message.parts.filter(
+          (part) => part.type === 'text' &&
+            part.text?.includes('<file name="')
+        )?.flatMap((part) => {
+          const fileParts = (part as any).text.match(/<file name="([^"]+)">([^<]+)<\/file>/g);
+          return fileParts?.map((filePart) => {
+            console.log("filePart", filePart);
+            const s3Key = filePart.match(/<file name="([^"]+)">/)?.[1] ?? '';
+            console.log("s3Key", s3Key);
+            const content = filePart.match(/<file name="([^"]+)">([^<]+)<\/file>/)?.[2] ?? '';
+            return { s3Key, content } as { s3Key: string, content: string };
+          }) ?? []
+        }) ?? [];
+        console.log("files", files);
         return (
           <Message
             className={cn(
@@ -73,13 +90,10 @@ export function MessageRenderer({
                 }
 
                 if (part.type === 'text') {
-                  return (
-                    <div key={`${message.id}-${i}`}>
-                      <Response className="chat-response-container">
-                        {part.text}
-                      </Response>
-                    </div>
-                  )
+                  let text = part.text.replace(/<file name="([^"]+)">([^<]+)<\/file>/g, '');
+                  return <Response className="chat-response-container" key={`${message.id}-${i}` + "_response"}>
+                    {text}
+                  </Response>
                 }
 
                 if (part.type === 'tool-askForConfirmation' && onAddToolResult) {
@@ -129,6 +143,19 @@ export function MessageRenderer({
                     case 'output-error':
                       return <div key={callId}>Error: {part.errorText}</div>
                   }
+                }
+
+                if (part.type?.toLowerCase().includes('preview_pdf') || part.type?.toLowerCase().includes('pdf_file_in_a_web_view')) {
+                  const dynamicToolPart = part as any;
+                  const output = JSON.parse(dynamicToolPart.output?.result ?? '{}') as {
+                    url: string
+                    page: number
+                  };
+                  if (!output?.url) {
+                    return <div>No URL provided for PDF preview {JSON.stringify(output)}</div>;
+                  }
+                  const pdfUrl = `${output.url}#page=${output.page ?? 1}`;
+                  return <iframe src={pdfUrl} style={{ width: '100%', height: '100vh' }} title="PDF viewer" />
                 }
 
                 if (part.type?.toLowerCase() === 'tool-todo_write' || part.type?.toLowerCase() === 'tool-todo_read') {
@@ -222,6 +249,14 @@ export function MessageRenderer({
 
                 return null
               })}
+
+              {files.length > 0 && (
+                <div className="grid grid-cols-6 min-w-[500px] gap-2 mt-3 mb-3">
+                  {files.map((file) => (
+                    <FileItem key={file.s3Key + "_file_item_" + message.id} s3Key={file.s3Key} onRemove={() => { }} active={false} disabled={false} />
+                  ))}
+                </div>
+              )}
 
               {showActions && message.role === 'assistant' && (
                 <Actions className="mt-2">

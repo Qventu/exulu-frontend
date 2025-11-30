@@ -166,7 +166,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: string, type: st
   return (
     <div
       key={agent + type}
-      className="relative hidden flex-col items-start md:flex h-100 overflow-y-scroll border-r"
+      className="relative hidden flex-col items-start md:flex border-r"
       x-chunk="dashboard-03-chunk-0">
       <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">Sessions</h2>
 

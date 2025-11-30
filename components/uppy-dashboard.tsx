@@ -53,9 +53,24 @@ export function FileDataCard({ s3key, children }: { s3key: string, children?: Re
     </Card>;
   }
 
+  // also filter out [bucket:name] from the key if [bucket:name] is present
+  let name = s3key;
+  let bucket = "";
+  if (s3key.includes("[bucket:")) {
+    bucket = s3key.split("[bucket:")[1]?.split("]")[0] || "";
+    name = s3key.split("[bucket:")[1]?.split("]")[0] || "";
+    if (name?.length) {
+      name = s3key.split("]")[1] || "";
+    }
+  }
+  // Get the part after _EXULU_
+  name = name.split("_EXULU_").pop() || "";
+
   return <Card>
     <CardHeader className="pb-3">
-      <CardTitle className="text-sm truncate">{s3key.split("_EXULU_").pop()}</CardTitle>
+      <CardTitle className="text-sm max-w-[500px] truncate">
+        {name}
+      </CardTitle>
     </CardHeader>
     <CardContent className="pt-0">
       {
@@ -69,7 +84,10 @@ export function FileDataCard({ s3key, children }: { s3key: string, children?: Re
       {!isLoading && data && (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="capitalize">{data?.ContentType.split("/").pop()}</span>
+            <span className="capitalize">
+              {data?.ContentType.split("/").pop()}
+              {bucket && ` [Bucket: ${bucket}]`}
+            </span>
             <span>{(data?.ContentLength / 1024 / 1024).toFixed(2)} MB</span>
           </div>
           <div className="flex items-center justify-between text-xs text-muted-foreground">

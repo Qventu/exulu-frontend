@@ -124,7 +124,7 @@ export function AgentNav() {
 
   return (
     <>
-      <div className="pb-12 w-[250px]">
+      <div className="pb-12 w-[250px] max-h-[calc(100vh)] overflow-y-auto overflow-x-hidden">
         <div className="space-y-4 py-4">
           <div>
             <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">Agents</h2>

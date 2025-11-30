@@ -241,7 +241,7 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
     const userSteps = steps.filter(s => s.type === 'user')
     return userSteps.every(step => {
       const content = step.content || ''
-      const withoutVariables = content.replace(/\{[^}]+\}/g, '')
+      const withoutVariables = content?.replace(/\{[^}]+\}/g, '')
       return withoutVariables.trim().length > 0
     })
   }, [workflowName, steps, rbac])

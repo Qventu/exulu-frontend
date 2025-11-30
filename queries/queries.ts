@@ -10,6 +10,7 @@ const CONTEXT_FIELDS = `
     embedder {
       name
       id
+      queue
       config {
         name
         description

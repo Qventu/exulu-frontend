@@ -6,6 +6,7 @@ import { GET_QUEUE, GET_JOBS, DELETE_JOB, PAUSE_QUEUE, DRAIN_QUEUE, RESUME_QUEUE
 import { QueueJob } from "@/types/models/job";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -44,11 +45,12 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
   const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
   const [drainDialogOpen, setDrainDialogOpen] = useState(false);
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
-  const [jobToDelete, setJobToDelete] = useState<QueueJob | null>(null);
+  const [jobsToDelete, setJobsToDelete] = useState<QueueJob[]>([]);
   const [jobToRetry, setJobToRetry] = useState<QueueJob | null>(null);
   const [status, setStatus] = useState<JobStatus>("completed");
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(5);
+  const [limit, setLimit] = useState(20);
+  const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
 
   const { data: queueData, loading: loadingQueue, refetch: refetchQueue } = useQuery(GET_QUEUE, {
     variables: { queue: queueName },
@@ -66,15 +68,6 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
   });
 
   const [deleteJob, { loading: deletingJob }] = useMutation(DELETE_JOB, {
-    onCompleted: () => {
-      toast({
-        title: "Job deleted",
-        description: "The job has been successfully deleted.",
-      });
-      refetchJobs();
-      refetchQueue();
-      setJobToDelete(null);
-    },
     onError: (error) => {
       toast({
         title: "Failed to delete job",
@@ -140,29 +133,73 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
   });
 
   const handleDeleteJob = (job: QueueJob) => {
-    setJobToDelete(job);
+    setJobsToDelete([job]);
+  };
+
+  const handleBulkDelete = () => {
+    const jobsToDeleteArray = jobs.items.filter(job => selectedJobs.has(job.id));
+    setJobsToDelete(jobsToDeleteArray);
   };
 
   const handleRetryJob = (job: QueueJob) => {
     setJobToRetry(job);
   };
 
-  const confirmDeleteJob = () => {
-    if (!jobToDelete?.id) {
+  const toggleJobSelection = (jobId: string) => {
+    const newSelection = new Set(selectedJobs);
+    if (newSelection.has(jobId)) {
+      newSelection.delete(jobId);
+    } else {
+      newSelection.add(jobId);
+    }
+    setSelectedJobs(newSelection);
+  };
+
+  const toggleAllJobs = () => {
+    // Filter out active jobs since they can't be deleted
+    const selectableJobs = jobs.items.filter(job => job.state !== "active");
+    if (selectedJobs.size === selectableJobs.length && selectableJobs.length > 0) {
+      setSelectedJobs(new Set());
+    } else {
+      setSelectedJobs(new Set(selectableJobs.map(job => job.id)));
+    }
+  };
+
+  const confirmDeleteJobs = async () => {
+    const jobsWithoutId = jobsToDelete.filter(job => !job.id);
+    if (jobsWithoutId.length > 0) {
       toast({
-        title: "Failed to delete job",
-        description: "The job has no ID.",
+        title: "Failed to delete jobs",
+        description: "Some jobs have no ID.",
         variant: "destructive",
       });
       return;
     }
-    if (jobToDelete) {
-      deleteJob({
-        variables: {
-          queue: queueName,
-          id: jobToDelete.id,
-        },
+
+    try {
+      // Delete all jobs in parallel
+      await Promise.all(
+        jobsToDelete.map(job =>
+          deleteJob({
+            variables: {
+              queue: queueName,
+              id: job.id,
+            },
+          })
+        )
+      );
+
+      toast({
+        title: jobsToDelete.length === 1 ? "Job deleted" : "Jobs deleted",
+        description: `Successfully deleted ${jobsToDelete.length} job${jobsToDelete.length === 1 ? '' : 's'}.`,
       });
+
+      refetchJobs();
+      refetchQueue();
+      setJobsToDelete([]);
+      setSelectedJobs(new Set());
+    } catch (error) {
+      // Error toast already handled by mutation onError
     }
   };
 
@@ -338,9 +375,22 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                 <h3 className="text-sm font-semibold">Queue Jobs</h3>
                 <p className="text-xs text-muted-foreground">All jobs currently in the {queueName} queue</p>
               </div>
-              <Badge variant="outline">
-                Auto Refresh: <Loader2 className="h-4 w-4 animate-spin text-muted-foreground ml-1" />
-              </Badge>
+              <div className="flex items-center gap-2">
+                {selectedJobs.size > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={deletingJob}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete {selectedJobs.size} job{selectedJobs.size === 1 ? '' : 's'}
+                  </Button>
+                )}
+                <Badge variant="outline">
+                  Auto Refresh: <Loader2 className="h-4 w-4 animate-spin text-muted-foreground ml-1" />
+                </Badge>
+              </div>
             </div>
             <div className="border rounded-lg">
               {loadingJobs ? (
@@ -355,6 +405,16 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={
+                            jobs.items.filter(job => job.state !== "active").length > 0 &&
+                            selectedJobs.size === jobs.items.filter(job => job.state !== "active").length
+                          }
+                          onCheckedChange={toggleAllJobs}
+                          aria-label="Select all jobs"
+                        />
+                      </TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>State</TableHead>
                       <TableHead>Timestamp</TableHead>
@@ -366,6 +426,14 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                   <TableBody>
                     {jobs.items?.map((job, index) => (
                       <TableRow key={index}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedJobs.has(job.id)}
+                            onCheckedChange={() => toggleJobSelection(job.id)}
+                            disabled={job.state === "active"}
+                            aria-label={`Select job ${nameGenerator(job)}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium max-w-[200px] truncate">
                           {nameGenerator(job)}
                         </TableCell>
@@ -477,18 +545,23 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
         </CardContent>
       </Card>
 
-      {/* Delete Job Confirmation Dialog */}
-      <AlertDialog open={!!jobToDelete} onOpenChange={(open) => !open && setJobToDelete(null)}>
+      {/* Delete Job(s) Confirmation Dialog */}
+      <AlertDialog open={jobsToDelete.length > 0} onOpenChange={(open) => !open && setJobsToDelete([])}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Job?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {jobsToDelete.length === 1 ? "Delete Job?" : `Delete ${jobsToDelete.length} Jobs?`}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the job "{jobToDelete?.name}"? This action cannot be undone.
+              {jobsToDelete.length === 1
+                ? `Are you sure you want to delete the job "${jobsToDelete[0]?.name}"? This action cannot be undone.`
+                : `Are you sure you want to delete ${jobsToDelete.length} jobs? This action cannot be undone.`
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteJob} disabled={deletingJob}>
+            <AlertDialogAction onClick={confirmDeleteJobs} disabled={deletingJob}>
               {deletingJob && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
             </AlertDialogAction>
