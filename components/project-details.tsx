@@ -204,7 +204,7 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
           const id = item.split("/")[1];
           if (!context || !id) return;
           const { data } = await apolloClient.mutate({
-            mutation: DELETE_ITEM(context, context === "files_default_context" ? ["s3key"] : []),
+            mutation: DELETE_ITEM(context, []),
             variables: { id },
           });
 
@@ -439,7 +439,7 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                                 </div>
                               )
                             }
-                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
                               {projectItems?.map((gid) => (
                                 <ProjectItem key={gid} gid={gid} onRemove={(gid) => {
                                   const update = projectItems.filter((g) => g !== gid)
@@ -823,29 +823,90 @@ function ProjectItem({ gid, onRemove }: { gid: string, onRemove: (gid: string) =
   const { data, loading } = useQuery<
     {
       [key: string]: Item
-    }>(GET_ITEM_BY_ID(context, context === "files_default_context" ? [
-      "s3key"
-    ] : []), {
+    }>(GET_ITEM_BY_ID(context, []), {
       variables: {
         id
       }
     });
 
-  console.log("data", data);
+  if (loading) {
+    return (
+      <Card className="group relative overflow-hidden">
+        <CardContent className="p-4">
+          <Skeleton className="h-4 w-3/4 mb-2" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-2/3 mt-1" />
+        </CardContent>
+      </Card>
+    );
+  }
 
-  if (loading) return null;
   const item = data?.[context + "_itemsById"];
+
   if (!item) return null;
-  const fields = Object.values(item || {})
-  const files = fields.filter(x => x === "_s3key");
 
-  if (!files.length) return null;
+  // Format date to be more readable
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
-  return <>
-    {files.map(file => (
-      <FileItem s3Key={file} onRemove={() => {
-        onRemove(gid)
-      }} active={false} disabled={false} />
-    ))}
-  </>
+  return (
+    <Card className="group relative overflow-hidden hover:shadow-md transition-all duration-200 hover:border-primary/50">
+      <CardContent className="p-4">
+        {/* Icon and Remove Button */}
+        <div className="flex items-start justify-between mb-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(gid);
+            }}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+
+        {/* Item Name */}
+        <div className="mb-2">
+          <h4 className="font-medium text-sm line-clamp-2 min-h-[2.5rem]">
+            {item.name || "Untitled"}
+          </h4>
+        </div>
+
+        {/* Item Description */}
+        {item.description && (
+          <p className="text-xs text-muted-foreground line-clamp-2 mb-3 min-h-[2.5rem]">
+            {item.description}
+          </p>
+        )}
+
+        {/* Metadata Section */}
+        <div className="space-y-2 pt-2 border-t">
+          {/* Context Type */}
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="truncate">{context.replace(/_/g, ' ')}</span>
+            {item.updatedAt && (
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {formatDate(item.updatedAt)}
+              </span>
+            )}
+          </div>
+
+          {/* Text Length Indicator */}
+          {item.textlength && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span>{item.textlength.toLocaleString()} chars</span>
+              {item.chunks && item.chunks.length > 0 && (
+                <span className="text-xs">• {item.chunks.length} chunks</span>
+              )}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }

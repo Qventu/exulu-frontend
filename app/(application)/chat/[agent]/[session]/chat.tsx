@@ -22,6 +22,7 @@ import {
   GET_USER_BY_ID,
   UPDATE_AGENT_SESSION_RBAC,
   GET_PROMPT_BY_ID,
+  GET_PROJECT_BY_ID,
 } from "@/queries/queries";
 import { getToken } from "@/util/api"
 import { Agent } from "@EXULU_SHARED/models/agent";
@@ -76,6 +77,8 @@ import { PromptVariableForm } from "./components/prompt-variable-form";
 import { PromptLibrary } from "@/types/models/prompt-library";
 import { extractVariables, fillPromptVariables } from "@/lib/prompts";
 import { useIncrementPromptUsage } from "@/hooks/use-prompts";
+import { Project } from "@/types/models/project";
+import Link from "next/link";
 
 export interface ChatProps {
   chatId?: string;
@@ -134,6 +137,13 @@ export function ChatLayout({
   const creatorQuery = useQuery(GET_USER_BY_ID, {
     variables: { id: session.created_by },
     skip: !session.created_by
+  })
+
+  const projectQuery = useQuery<{
+    projectById: Project;
+  }>(GET_PROJECT_BY_ID, {
+    variables: { id: session.project },
+    skip: !session.project
   })
 
   // Fetch initial prompt if provided
@@ -763,6 +773,36 @@ export function ChatLayout({
                   )}
                 </div>
               </div>
+              {session.project && (
+                <div className="mt-1">
+                  <div className="border rounded">
+                    {
+                      projectQuery.loading && (
+                        <div className="flex flex-row justify-between p-3">
+                          <p className="text-sm font-medium">This chat is part of a project:</p>
+                          <Loading className="ml-2" />
+                        </div>
+                      )
+                    }
+                    {projectQuery.data?.projectById && !projectQuery.loading && (
+                      <div className="flex flex-col p-3 gap-2">
+                        <p className="text-sm font-medium">Project</p>
+                        <Link
+                          href={`/projects/${session.project}`}
+                          className="text-sm text-primary hover:underline"
+                        >
+                          {projectQuery.data.projectById.name}
+                        </Link>
+                        {projectQuery.data.projectById.description && (
+                          <p className="text-xs text-muted-foreground">
+                            {projectQuery.data.projectById.description}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               <div>
                 <p className="text-xs font-medium text-muted-foreground pt-2">
                   You can disable tools for individual messages in this session by clicking the switch:</p>

@@ -18,16 +18,9 @@ export default function SessionsPage({
 }: {
   params: { session: string, agent: string };
 }) {
+
   const searchParams = useSearchParams();
   const promptId = searchParams.get("promptId");
-
-  const { data: agentData, loading: agentLoading, error: agentError } = useQuery<{
-    agentById: Agent
-  }>(GET_AGENT_BY_ID, {
-    variables: {
-      id: params.agent,
-    },
-  });
 
   const { data: sessionData, loading: sessionLoading, error: sessionError } = useQuery<{
     agent_sessionById: AgentSession;
@@ -37,6 +30,20 @@ export default function SessionsPage({
     nextFetchPolicy: "network-only",
     variables: {
       id: params.session
+    },
+  });
+
+  // Wait for the session to be loaded before loading 
+  // the agent. Because then we know if the session has
+  // a project associated with it, which the backend
+  // uses to ingest a project retrieval tool.
+  const { data: agentData, loading: agentLoading, error: agentError } = useQuery<{
+    agentById: Agent
+  }>(GET_AGENT_BY_ID, {
+    skip: !sessionData?.agent_sessionById,
+    variables: {
+      id: params.agent,
+      project: sessionData?.agent_sessionById?.project || undefined
     },
   });
 

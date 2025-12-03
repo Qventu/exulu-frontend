@@ -11,8 +11,7 @@ import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { useToast } from "@/components/ui/use-toast"
 import { TodoList } from "./ai-elements/todo-list"
-import { FileItem, getPresignedUrl } from "./uppy-dashboard"
-import { useState, useEffect } from "react"
+import { FileItem } from "./uppy-dashboard"
 
 interface MessageRendererProps {
   messages: UIMessage[]

@@ -4,6 +4,7 @@ export interface AgentSession {
     id: string;
     metadata: any;
     agent: string;
+    project: string;
     title: string;
     created_by: string;
     rights_mode: ExuluRightsMode

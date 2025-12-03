@@ -40,10 +40,10 @@ const VISIBILITY_OPTIONS = [
   { value: 'users', label: 'Shared with Users', description: 'Share with specific users', icon: Users },
   { value: 'roles', label: 'Shared with Roles', description: 'Share with specific roles', icon: Settings },
   { value: 'public', label: 'Public', description: 'Anyone can see this agent', icon: Globe },
-  { value: 'projects', label: 'Projects', description: 'Share with specific projects', icon: Folder }
+  /* { value: 'projects', label: 'Projects', description: 'Share with specific projects', icon: Folder } */
 ]
 
-type Modes = 'private' | 'users' | 'roles' | 'public' | 'projects'
+type Modes = 'private' | 'users' | 'roles' | 'public' /* | 'projects' */
 
 export function RBACControl({
   allowedModes,
@@ -56,7 +56,7 @@ export function RBACControl({
 }: {
   allowedModes?: Modes[],
   modalMode?: boolean,
-  initialRightsMode: 'private' | 'users' | 'roles' | 'public' | 'projects' | undefined,
+  initialRightsMode: 'private' | 'users' | 'roles' | 'public' /* | 'projects' */ | undefined,
   initialUsers: { id: number, rights: 'read' | 'write' }[] | undefined,
   initialRoles: { id: string, rights: 'read' | 'write' }[] | undefined,
   initialProjects: { id: string, rights: 'read' | 'write' }[] | undefined,

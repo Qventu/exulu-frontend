@@ -49,7 +49,7 @@ export interface Context {
     processor?: {
       description: string,
       config: {
-        trigger: "manual" | "onUpdate" | "onCreate" | "always"
+        trigger: "manual" | "onUpdate" | "onInsert" | "always"
         queue: {
           name: string
           ratelimit: number

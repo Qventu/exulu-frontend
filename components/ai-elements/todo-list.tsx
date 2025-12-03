@@ -86,9 +86,9 @@ export const TodoList = ({
       {...props}
     >
       {todos.map((todo, index) => {
-        const StatusIcon = statusConfig[todo.status].icon;
-        const statusClass = statusConfig[todo.status].className;
-        const priorityClass = priorityConfig[todo.priority].className;
+        const StatusIcon = statusConfig[todo.status] ? statusConfig[todo.status].icon : statusConfig.pending.icon;
+        const statusClass = statusConfig[todo.status] ? statusConfig[todo.status].className : statusConfig.pending.className;
+        const priorityClass = priorityConfig[todo.priority] ? priorityConfig[todo.priority].className : priorityConfig.medium.className;
         const isLastInProgress = todo.status === 'in_progress' &&
           index === todos.findIndex(t => t.status === 'in_progress');
 

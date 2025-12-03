@@ -190,6 +190,7 @@ export const GET_AGENT_SESSIONS = gql`
           user
           title
           agent
+          project
           rights_mode
           RBAC {
             type
@@ -543,8 +544,8 @@ export const GET_JOB_RESULT_BY_ID = gql`
   }
 `;
 export const GET_AGENT_BY_ID = gql`
-  query GetAgentById($id: ID!) {
-    agentById(id: $id) {
+  query GetAgentById($id: ID!, $project: ID) {
+    agentById(id: $id, project: $project) {
       ${AGENT_FIELDS}
     }
   }
@@ -566,6 +567,7 @@ export const GET_AGENT_SESSION_BY_ID = gql`
         agent
         created_by
         rights_mode
+        project
         RBAC {
           type
           users {
@@ -589,6 +591,7 @@ export const GET_AGENT_SESSION = gql`
   query GetAgentSession($filters: [FilterAgent_session]) {
     agent_sessionOne(filters: $filters) {
         createdAt
+        project
         updatedAt
         user
         title
@@ -696,7 +699,7 @@ export const CREATE_AGENT_SESSION = gql`
     $RBAC: RBACInput
   ) {
     agent_sessionsCreateOne(
-      input: { agent: $agent, user: $user, title: $title, project: $project, rights_mode: $rights_mode, RBAC: $RBAC }
+      input: { agent: $agent, user: $user, project: $project, title: $title, rights_mode: $rights_mode, RBAC: $RBAC }
     ) {
       item {
         id
