@@ -233,7 +233,7 @@ export function CreateEvalRunModal({
       RBAC: {
         users: evalRun.RBAC?.users,
         roles: evalRun.RBAC?.roles,
-        projects: evalRun.RBAC?.projects,
+        // projects: evalRun.RBAC?.projects,
       },
     };
 

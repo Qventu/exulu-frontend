@@ -107,10 +107,10 @@ export function DataDisplay(props: DataDisplayProps) {
   const router = useRouter();
 
   const [rbac, setRbac] = useState<{
-    rights_mode?: 'private' | 'users' | 'roles' | 'public' | 'projects';
+    rights_mode?: 'private' | 'users' | 'roles' | 'public' /* | 'projects' */;
     users?: Array<{ id: number; rights: 'read' | 'write' }>;
     roles?: Array<{ id: string; rights: 'read' | 'write' }>;
-    projects?: Array<{ id: string; rights: 'read' | 'write' }>;
+    // projects?: Array<{ id: string; rights: 'read' | 'write' }>;
   }>()
 
   const context = props.context;
@@ -140,7 +140,7 @@ export function DataDisplay(props: DataDisplayProps) {
         rights_mode: item.rights_mode,
         users: item.RBAC?.users,
         roles: item.RBAC?.roles,
-        projects: item.RBAC?.projects
+        // projects: item.RBAC?.projects
       })
     }
   });
@@ -492,7 +492,7 @@ export function DataDisplay(props: DataDisplayProps) {
                                     RBAC: {
                                       users: rbac?.users || [],
                                       roles: rbac?.roles || [],
-                                      projects: rbac?.projects || []
+                                      // projects: rbac?.projects || []
                                     },
                                     ...(context?.fields?.reduce((acc, field) => ({
                                       ...acc,
@@ -1145,13 +1145,13 @@ export function DataDisplay(props: DataDisplayProps) {
                           initialRightsMode={data.rights_mode}
                           initialUsers={data.RBAC?.users}
                           initialRoles={data.RBAC?.roles}
-                          initialProjects={data.RBAC?.projects}
-                          onChange={(rights_mode, users, roles, projects) => {
+                          // initialProjects={data.RBAC?.projects}
+                          onChange={(rights_mode, users, roles) => {
                             setRbac({
                               rights_mode,
                               users,
                               roles,
-                              projects
+                              // projects
                             })
                           }}
                         />

@@ -61,7 +61,7 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
     rights_mode: project.rights_mode,
     users: project.RBAC?.users,
     roles: project.RBAC?.roles,
-    projects: project.RBAC?.projects
+    // projects: project.RBAC?.projects
   })
 
   const [projectItems, setProjectItems] = useState<string[]>(project.project_items || []);
@@ -165,10 +165,10 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
           title: `New session with ${agent.name}`,
           agent: agent.id,
           project: project.id,
-          rights_mode: "projects",
-          RBAC: {
+          rights_mode: "private",
+          /* RBAC: {
             projects: [{ id: project.id, rights: "read" }]
-          }
+          } */
         },
       });
 
@@ -582,13 +582,13 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                       initialRightsMode={project.rights_mode || 'private'}
                       initialUsers={project.RBAC?.users}
                       initialRoles={project.RBAC?.roles}
-                      initialProjects={project.RBAC?.projects}
-                      onChange={(rights_mode, users, roles, projects) => {
+                      // initialProjects={project.RBAC?.projects}
+                      onChange={(rights_mode, users, roles) => {
                         setRbac({
                           rights_mode,
                           users,
                           roles,
-                          projects
+                          // projects
                         })
                       }}
                     />
@@ -603,7 +603,7 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                             RBAC: {
                               users: rbac.users,
                               roles: rbac.roles,
-                              projects: rbac.projects
+                              // projects: rbac.projects
                             }
                           }
                         }

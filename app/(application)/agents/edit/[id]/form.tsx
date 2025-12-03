@@ -261,7 +261,7 @@ export default function AgentForm({
     rights_mode: agent.rights_mode,
     users: agent.RBAC?.users,
     roles: agent.RBAC?.roles,
-    projects: agent.RBAC?.projects
+    // projects: agent.RBAC?.projects
   })
   const [firewallScanners, setFirewallScanners] = useState({
     promptGuard: agent.firewall?.scanners?.promptGuard || false,
@@ -445,7 +445,7 @@ export default function AgentForm({
                       RBAC: {
                         users: rbac.users || [],
                         roles: rbac.roles || [],
-                        projects: rbac.projects || []
+                        // projects: rbac.projects || []
                       },
                       firewall: JSON.stringify({
                         enabled: firewallEnabled,
@@ -923,13 +923,13 @@ export default function AgentForm({
                                       initialRightsMode={agent.rights_mode}
                                       initialUsers={agent.RBAC?.users}
                                       initialRoles={agent.RBAC?.roles}
-                                      initialProjects={agent.RBAC?.projects}
-                                      onChange={(rights_mode, users, roles, projects) => {
+                                      // initialProjects={agent.RBAC?.projects}
+                                      onChange={(rights_mode, users, roles) => {
                                         setRbac({
                                           rights_mode,
                                           users,
                                           roles,
-                                          projects
+                                          // projects
                                         })
                                       }}
                                     />

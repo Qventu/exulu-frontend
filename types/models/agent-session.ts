@@ -12,10 +12,10 @@ export interface AgentSession {
         type?: string;
         users?: Array<{ id: number; rights: 'read' | 'write' }>;
         roles?: Array<{ id: string; rights: 'read' | 'write' }>;
-        projects?: Array<{ id: string; rights: 'read' | 'write' }>;
+        // projects?: Array<{ id: string; rights: 'read' | 'write' }>;
     };
 }
-export type ExuluRightsMode = "private" | "users" | "roles" | "public" | "projects"
+export type ExuluRightsMode = "private" | "users" | "roles" | "public"/*  | "projects" */
 
 export interface AgentMessage {
     id: string;

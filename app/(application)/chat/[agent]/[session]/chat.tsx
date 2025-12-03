@@ -131,7 +131,7 @@ export function ChatLayout({
     rights_mode: session?.rights_mode || 'private',
     users: session?.RBAC?.users || [],
     roles: session?.RBAC?.roles || [],
-    projects: session?.RBAC?.projects || []
+    // projects: session?.RBAC?.projects || []
   })
 
   const creatorQuery = useQuery(GET_USER_BY_ID, {
@@ -856,17 +856,17 @@ export function ChatLayout({
                   <CollapsibleContent>
                     <CardContent className="space-y-4 p-3">
                       <RBACControl
-                        allowedModes={['private', 'users', 'roles', 'projects']}
+                        allowedModes={['private', 'users', 'roles']}
                         initialRightsMode={session.rights_mode}
                         initialUsers={session.RBAC?.users}
                         initialRoles={session.RBAC?.roles}
-                        initialProjects={session.RBAC?.projects}
-                        onChange={(rights_mode, users, roles, projects) => {
+                        // initialProjects={session.RBAC?.projects}
+                        onChange={(rights_mode, users, roles) => {
                           setRbac({
                             rights_mode,
                             users,
                             roles,
-                            projects
+                            // projects
                           })
                         }}
                       />
@@ -878,7 +878,7 @@ export function ChatLayout({
                             RBAC: {
                               users: rbac.users,
                               roles: rbac.roles,
-                              projects: rbac.projects
+                              // projects: rbac.projects
                             }
                           }
                         })

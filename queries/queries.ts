@@ -42,6 +42,15 @@ const CONTEXT_FIELDS = `
     }
 `;
 
+
+/* 
+Removed
+ projects {
+    id
+    rights
+  }
+  From RBAC below
+*/
 const ITEM_FIELDS = (fields: string[]) => `
 id
 name
@@ -59,10 +68,6 @@ RBAC {
     rights
   }
   roles {
-    id
-    rights
-  }
-  projects {
     id
     rights
   }
@@ -125,10 +130,6 @@ RBAC {
         rights
       }
       roles {
-        id
-        rights
-      }
-      projects {
         id
         rights
       }
@@ -199,10 +200,6 @@ export const GET_AGENT_SESSIONS = gql`
               rights
             }
             roles {
-              id
-              rights
-            }
-            projects {
               id
               rights
             }
@@ -578,10 +575,6 @@ export const GET_AGENT_SESSION_BY_ID = gql`
             id
             rights
           }
-          projects {
-            id
-            rights
-          }
         }
         id
     }
@@ -741,10 +734,6 @@ export const CREATE_AGENT = gql`
             id
             rights
           }
-          projects {
-            id
-            rights
-          }
         }
         createdAt
        }
@@ -825,10 +814,6 @@ export const UPDATE_AGENT_BY_ID = gql`
               rights
             }
             roles {
-              id
-              rights
-            }
-            projects {
               id
               rights
             }
@@ -1154,10 +1139,6 @@ export const GET_WORKFLOW_TEMPLATES = gql`
             id
             rights
           }
-          projects {
-            id
-            rights
-          }
         }
       }
     }
@@ -1269,10 +1250,6 @@ export const UPDATE_WORKFLOW_TEMPLATE = gql`
           rights
         }
         roles {
-          id
-          rights
-        }
-        projects {
           id
           rights
         }
@@ -1633,10 +1610,6 @@ const EVAL_RUN_FIELDS = `
       rights
     }
     roles {
-      id
-      rights
-    }
-    projects {
       id
       rights
     }
@@ -2020,10 +1993,6 @@ const PROMPT_LIBRARY_FIELDS = `
       rights
     }
     roles {
-      id
-      rights
-    }
-    projects {
       id
       rights
     }

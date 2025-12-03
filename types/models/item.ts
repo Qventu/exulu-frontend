@@ -18,12 +18,12 @@ export interface Item {
         chunk_created_at: string;
         chunk_updated_at: string;
     }[];
-    rights_mode?: 'private' | 'users' | 'roles' | 'public' | 'projects';
+    rights_mode?: 'private' | 'users' | 'roles' | 'public' /* | 'projects' */;
     RBAC?: {
         type?: string;
         users?: Array<{ id: number; rights: 'read' | 'write' }>;
         roles?: Array<{ id: string; rights: 'read' | 'write' }>;
-        projects?: Array<{ id: string; rights: 'read' | 'write' }>;
+        // projects?: Array<{ id: string; rights: 'read' | 'write' }>;
     };
     [key: string]: any;
 }

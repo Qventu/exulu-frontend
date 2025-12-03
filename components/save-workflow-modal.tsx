@@ -38,11 +38,11 @@ interface WorkflowTemplate {
   id: string
   name: string
   description?: string
-  rights_mode?: 'private' | 'users' | 'roles' | 'public' | 'projects'
+  rights_mode?: 'private' | 'users' | 'roles' | 'public' /* | 'projects' */
   RBAC?: {
     users?: Array<{ id: number; rights: 'read' | 'write' }>
     roles?: Array<{ id: string; rights: 'read' | 'write' }>
-    projects?: Array<{ id: string; rights: 'read' | 'write' }>
+    // projects?: Array<{ id: string; rights: 'read' | 'write' }>
   }
   variables?: WorkflowVariable[]
   steps_json?: WorkflowStep[]
@@ -64,7 +64,7 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
     rights_mode: existingWorkflow?.rights_mode || 'private',
     users: existingWorkflow?.RBAC?.users || [],
     roles: existingWorkflow?.RBAC?.roles || [],
-    projects: existingWorkflow?.RBAC?.projects || []
+    // projects: existingWorkflow?.RBAC?.projects || []
   })
   const isEditing = Boolean(existingWorkflow)
 
@@ -235,7 +235,7 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
     if (steps.length === 0) return false
     if (rbac.rights_mode === 'users' && rbac.users?.length === 0) return false
     if (rbac.rights_mode === 'roles' && rbac.roles?.length === 0) return false
-    if (rbac.rights_mode === 'projects' && rbac.projects?.length === 0) return false
+    // if (rbac.rights_mode === 'projects' && rbac.projects?.length === 0) return false
 
     // Check that all user steps have non-empty content after variable replacement
     const userSteps = steps.filter(s => s.type === 'user')
@@ -272,7 +272,7 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
             RBAC: {
               users: rbac.users,
               roles: rbac.roles,
-              projects: rbac.projects
+              // projects: rbac.projects
             },
             variables,
             steps_json: stepsJson
@@ -293,7 +293,7 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
             RBAC: {
               users: rbac.users,
               roles: rbac.roles,
-              projects: rbac.projects
+              // projects: rbac.projects
             },
             variables,
             steps_json: stepsJson
@@ -408,13 +408,13 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
                         initialRightsMode={existingWorkflow?.rights_mode}
                         initialUsers={existingWorkflow?.RBAC?.users}
                         initialRoles={existingWorkflow?.RBAC?.roles}
-                        initialProjects={existingWorkflow?.RBAC?.projects}
-                        onChange={(rights_mode, users, roles, projects) => {
+                        // initialProjects={existingWorkflow?.RBAC?.projects}
+                        onChange={(rights_mode, users, roles) => {
                           setRbac({
                             rights_mode,
                             users,
                             roles,
-                            projects
+                            // projects
                           })
                         }}
                       />

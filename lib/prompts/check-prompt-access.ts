@@ -107,11 +107,11 @@ export function checkPromptReadAccess(
   }
 
   // By projects: would need project context to check
-  if (prompt.rights_mode === "projects") {
+  /* if (prompt.rights_mode === "projects") {
     // This would require project context - for now return false
     // Can be enhanced when project context is available
     return false;
-  }
+  } */
 
   return false;
 }

@@ -67,7 +67,7 @@ export function PromptEditorModal({
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
   const [rightsMode, setRightsMode] = useState<
-    "private" | "users" | "roles" | "public" | "projects"
+    "private" | "users" | "roles" | "public"/*  | "projects" */
   >("private");
   const [rbacUsers, setRbacUsers] = useState<
     { id: number; rights: "read" | "write" }[]
@@ -75,9 +75,9 @@ export function PromptEditorModal({
   const [rbacRoles, setRbacRoles] = useState<
     { id: string; rights: "read" | "write" }[]
   >([]);
-  const [rbacProjects, setRbacProjects] = useState<
+  /* const [rbacProjects, setRbacProjects] = useState<
     { id: string; rights: "read" | "write" }[]
-  >([]);
+  >([]); */
   const [rbacOpen, setRbacOpen] = useState(false);
   const [assignedAgents, setAssignedAgents] = useState<string[]>([]);
   const [agentSelectorOpen, setAgentSelectorOpen] = useState(false);
@@ -104,7 +104,7 @@ export function PromptEditorModal({
       setRightsMode(prompt.rights_mode);
       setRbacUsers(prompt.RBAC?.users || []);
       setRbacRoles(prompt.RBAC?.roles || []);
-      setRbacProjects(prompt.RBAC?.projects || []);
+      // setRbacProjects(prompt.RBAC?.projects || []);
       setAssignedAgents(prompt.assigned_agents || []);
     } else {
       resetForm();
@@ -123,7 +123,7 @@ export function PromptEditorModal({
     setRightsMode("private");
     setRbacUsers([]);
     setRbacRoles([]);
-    setRbacProjects([]);
+    // setRbacProjects([]);
     setRbacOpen(false);
     setAssignedAgents([]);
   };
@@ -156,7 +156,7 @@ export function PromptEditorModal({
             ? {
                 users: rbacUsers.length > 0 ? rbacUsers : undefined,
                 roles: rbacRoles.length > 0 ? rbacRoles : undefined,
-                projects: rbacProjects.length > 0 ? rbacProjects : undefined,
+                // projects: rbacProjects.length > 0 ? rbacProjects : undefined,
               }
             : undefined,
         assigned_agents: assignedAgents.length > 0 ? assignedAgents : undefined,
@@ -361,7 +361,7 @@ export function PromptEditorModal({
                     {rightsMode === "public" && "Public"}
                     {rightsMode === "users" && `${rbacUsers.length} users`}
                     {rightsMode === "roles" && `${rbacRoles.length} roles`}
-                    {rightsMode === "projects" && `${rbacProjects.length} projects`}
+                    {/* {rightsMode === "projects" && `${rbacProjects.length} projects`} */}
                   </span>
                 </Button>
               </CollapsibleTrigger>
@@ -371,12 +371,12 @@ export function PromptEditorModal({
                   initialUsers={rbacUsers}
                   initialRoles={rbacRoles}
                   modalMode={true}
-                  initialProjects={rbacProjects}
-                  onChange={(mode, users, roles, projects) => {
+                  // initialProjects={rbacProjects}
+                  onChange={(mode, users, roles) => {
                     setRightsMode(mode);
                     setRbacUsers(users);
                     setRbacRoles(roles);
-                    setRbacProjects(projects);
+                    // setRbacProjects(projects);
                   }}
                 />
               </CollapsibleContent>

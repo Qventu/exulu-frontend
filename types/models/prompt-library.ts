@@ -11,7 +11,7 @@ export interface PromptLibrary {
     type?: string;
     users?: Array<{ id: number; rights: "read" | "write" }>;
     roles?: Array<{ id: string; rights: "read" | "write" }>;
-    projects?: Array<{ id: string; rights: "read" | "write" }>;
+    // projects?: Array<{ id: string; rights: "read" | "write" }>;
   };
   created_by: string;
   createdAt: string;
@@ -38,7 +38,7 @@ export interface CreatePromptInput {
   RBAC?: {
     users?: Array<{ id: number; rights: "read" | "write" }>;
     roles?: Array<{ id: string; rights: "read" | "write" }>;
-    projects?: Array<{ id: string; rights: "read" | "write" }>;
+    // projects?: Array<{ id: string; rights: "read" | "write" }>;
   };
   assigned_agents?: string[];
 }
@@ -52,7 +52,7 @@ export interface UpdatePromptInput {
   RBAC?: {
     users?: Array<{ id: number; rights: "read" | "write" }>;
     roles?: Array<{ id: string; rights: "read" | "write" }>;
-    projects?: Array<{ id: string; rights: "read" | "write" }>;
+    // projects?: Array<{ id: string; rights: "read" | "write" }>;
   };
   assigned_agents?: string[];
 }

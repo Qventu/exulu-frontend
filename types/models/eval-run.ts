@@ -17,12 +17,12 @@ export interface EvalRun {
   scoring_method: ScoringMethod
   pass_threshold: number // 0-100 percentage
   test_case_ids: string[] // Subset of test cases from the eval set
-  rights_mode: "private" | "users" | "roles" | "projects" | "public"
+  rights_mode: "private" | "users" | "roles" |/*  "projects" | */ "public"
   RBAC?: {
     type?: string
     users?: Array<{ id: number; rights: "read" | "write" }>
     roles?: Array<{ id: string; rights: "read" | "write" }>
-    projects?: Array<{ id: string; rights: "read" | "write" }>
+    // projects?: Array<{ id: string; rights: "read" | "write" }>
   }
   createdAt: string
   updatedAt: string

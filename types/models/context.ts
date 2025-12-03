@@ -19,7 +19,7 @@ export interface Context {
   slug: string
   configuration: {
     calculateVectors: string
-    defaultRightsMode: "private" | "users" | "roles" | "public" | "projects"
+    defaultRightsMode: "private" | "users" | "roles" | "public"/*  | "projects" */
   }
   sources: {
     id
