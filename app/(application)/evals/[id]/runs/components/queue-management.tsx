@@ -331,7 +331,9 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
               </div>
               <div className="flex items-center gap-2">
                 <div className="text-sm text-muted-foreground">Concurrency:</div>
-                <div className="font-semibold">{queue.concurrency}</div>
+                <div className="font-semibold">Per queue global concurrency: {queue.concurrency?.queue || "None"}
+                  Per worker concurrency: {queue.concurrency?.worker || "None"}.
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="text-sm text-muted-foreground">Rate Limit:</div>
@@ -416,6 +418,7 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                         />
                       </TableHead>
                       <TableHead>Name</TableHead>
+                      <TableHead>ID</TableHead>
                       <TableHead>State</TableHead>
                       <TableHead>Timestamp</TableHead>
                       <TableHead>Inputs</TableHead>
@@ -437,6 +440,7 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                         <TableCell className="font-medium max-w-[200px] truncate">
                           {nameGenerator(job)}
                         </TableCell>
+                        <TableCell>{job.id}</TableCell>
                         <TableCell>{getStatusBadge(job.state)}</TableCell>
                         <TableCell>
                           {job.timestamp ? format(new Date(job.timestamp), "MMM d, yyyy HH:mm:ss") : "N/A"}

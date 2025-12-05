@@ -2,8 +2,6 @@
 
 import * as React from "react";
 import { DataList } from "@/app/(application)/data/components/data-list";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import {
     ResizableHandle,
     ResizablePanel,
@@ -23,6 +21,7 @@ export default function DataLayout({ children, params }: { children: any, params
     const archived = params.query && params.query[1] === "archived";
     const sources = params.query && params.query[1] === "sources";
     const embeddings = params.query && params.query[1] === "embeddings";
+    const processors = params.query && params.query[1] === "processors";
     const context = params.query && params.query[0];
     let item = null;
     if (params.query && archived) {
@@ -48,11 +47,11 @@ export default function DataLayout({ children, params }: { children: any, params
                     minSize={15}
                     maxSize={20}>
                     <Separator />
-                    <Contexts activeFolder={context} activeArchived={archived} activeSources={sources} activeEmbeddings={embeddings} />
+                    <Contexts activeFolder={context} activeArchived={archived} activeSources={sources} activeEmbeddings={embeddings} activeProcessors={processors} />
                 </ResizablePanel>
 
                 {
-                    context && !sources && !embeddings && <>
+                    context && !sources && !embeddings && !processors && <>
                         <ResizableHandle withHandle />
                         <ResizablePanel defaultSize={defaultLayout[1]} minSize={20}>
                             <Tabs defaultValue="all">

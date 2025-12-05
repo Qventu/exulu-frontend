@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react";
-import { Folder, LucideIcon, Loader, Pencil, ArrowLeft, ListChecksIcon, ArchiveX, Database, FileStack } from "lucide-react";
+import { Folder, LucideIcon, Loader, Pencil, ArrowLeft, ListChecksIcon, ArchiveX, Database, FileStack, StepForward } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useContexts } from "@/hooks/contexts";
 import Link from "next/link";
@@ -62,12 +62,12 @@ const ContextLink = ({ index, folder, edit, indented, children }: { index: numbe
     )
 }
 
-const Contexts = ({ activeFolder, activeArchived, activeSources, activeEmbeddings }: { activeFolder: string, activeArchived: boolean, activeSources: boolean, activeEmbeddings: boolean }) => {
+const Contexts = ({ activeFolder, activeArchived, activeSources, activeEmbeddings, activeProcessors }: { activeFolder: string, activeArchived: boolean, activeSources: boolean, activeEmbeddings: boolean, activeProcessors: boolean }) => {
 
     const { data, loading, error } = useContexts();
 
     return (<>
-        <div key={activeFolder + activeArchived + activeSources + activeEmbeddings} className="group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2 pb-5">
+        <div key={activeFolder + activeArchived + activeSources + activeEmbeddings + activeProcessors} className="group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2 pb-5">
 
             {
                 activeFolder ? <div className="flex items-center gap-2">
@@ -101,9 +101,9 @@ const Contexts = ({ activeFolder, activeArchived, activeSources, activeEmbedding
                                 <>
                                     <ContextLink index={index} indented={true} folder={{
                                         label: "Active data",
-                                        active: activeFolder?.toLowerCase() === `${folder.id}`.toLowerCase() && !activeArchived && !activeSources && !activeEmbeddings,
+                                        active: activeFolder?.toLowerCase() === `${folder.id}`.toLowerCase() && !activeArchived && !activeSources && !activeEmbeddings && !activeProcessors,
                                         icon: ListChecksIcon,
-                                        variant: activeFolder?.toLowerCase() === `${folder.id}`.toLowerCase() && !activeArchived && !activeSources && !activeEmbeddings ? "default" : "ghost",
+                                        variant: activeFolder?.toLowerCase() === `${folder.id}`.toLowerCase() && !activeArchived && !activeSources && !activeEmbeddings && !activeProcessors ? "default" : "ghost",
                                         href: `/data/${folder.id}`,
                                     }}></ContextLink>
                                     <ContextLink index={index + 1000} indented={true} folder={{
@@ -119,6 +119,13 @@ const Contexts = ({ activeFolder, activeArchived, activeSources, activeEmbedding
                                         icon: Database,
                                         variant: activeSources ? "default" : "ghost",
                                         href: `/data/${folder.id}/sources`,
+                                    }} />
+                                    <ContextLink index={index + 1000} indented={true} folder={{
+                                        label: `Processors`,
+                                        active: activeProcessors,
+                                        icon: StepForward,
+                                        variant: activeProcessors ? "default" : "ghost",
+                                        href: `/data/${folder.id}/processors`,
                                     }} />
                                     <ContextLink index={index + 1000} indented={true} folder={{
                                         label: `Embeddings`,

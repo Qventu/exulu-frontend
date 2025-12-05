@@ -53,16 +53,9 @@ export function FileDataCard({ s3key, children }: { s3key: string, children?: Re
     </Card>;
   }
 
-  // also filter out [bucket:name] from the key if [bucket:name] is present
   let name = s3key;
-  let bucket = "";
-  if (s3key.includes("[bucket:")) {
-    bucket = s3key.split("[bucket:")[1]?.split("]")[0] || "";
-    name = s3key.split("[bucket:")[1]?.split("]")[0] || "";
-    if (name?.length) {
-      name = s3key.split("]")[1] || "";
-    }
-  }
+  let bucket = s3key.split("/")[0];
+  name = s3key.split("/").slice(1).join("/");
   // Get the part after _EXULU_
   name = name.split("_EXULU_").pop() || "";
 
@@ -86,7 +79,7 @@ export function FileDataCard({ s3key, children }: { s3key: string, children?: Re
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span className="capitalize">
               {data?.ContentType.split("/").pop()}
-              {bucket && ` [Bucket: ${bucket}]`}
+              {bucket && ` Bucket: ${bucket}`}
             </span>
             <span>{(data?.ContentLength / 1024 / 1024).toFixed(2)} MB</span>
           </div>

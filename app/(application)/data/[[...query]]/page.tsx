@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { ContextSources } from "../components/sources";
+import { ContextProcessors } from "../components/processors";
 
 export default function DataPage({
   params,
@@ -32,13 +33,16 @@ export default function DataPage({
   const archived = params.query[1] === "archived" || false;
   const sources = params.query[1] === "sources" || false;
   const embeddings = params.query[1] === "embeddings" || false;
+  const processors = params.query[1] === "processors" || false;
 
   if (sources) {
     return <ContextSources expand={true} actions={true} context={context} />;
   }
-
   if (embeddings) {
     return <ContextEmbeddings expand={true} actions={true} context={context} />;
+  }
+  if (processors) {
+    return <ContextProcessors expand={true} actions={true} context={context} />;
   }
 
   let item = null;

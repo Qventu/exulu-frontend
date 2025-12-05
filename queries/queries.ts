@@ -21,6 +21,14 @@ const CONTEXT_FIELDS = `
     active
     fields
     configuration
+    processors {
+      field
+      description
+      queue
+      trigger
+      timeoutInSeconds
+      generateEmbeddings
+    }
     sources {
       id
       name
@@ -1799,7 +1807,10 @@ export const GET_QUEUE = gql`
   query GetQueue($queue: QueueEnum!) {
     queue(queue: $queue) {
       name
-      concurrency
+      concurrency {
+        worker
+        queue
+      }
       ratelimit
       isMaxed
       isPaused

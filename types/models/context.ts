@@ -21,6 +21,14 @@ export interface Context {
     calculateVectors: string
     defaultRightsMode: "private" | "users" | "roles" | "public"/*  | "projects" */
   }
+  processors: {
+    field: string
+    description: string
+    queue: string
+    trigger: string
+    timeoutInSeconds: number
+    generateEmbeddings: boolean
+  }[]
   sources: {
     id
     name

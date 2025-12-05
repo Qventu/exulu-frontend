@@ -184,6 +184,16 @@ export const files = {
         });
         return response.json();
     },
+    // Key is the base s3 key of the file
+    // if only the key is provided only the
+    // user that uploaded the file, a super
+    // admin or api user can access and 
+    // download the file. If an item ID is
+    // provided, the RBAC rights associated
+    // with the item are checked and used.
+    // The item must be provided as a GID
+    // with the context id as the prefix before
+    // the first slash.
     download: async (key: string) => {
 
         const uris = await getUris();
