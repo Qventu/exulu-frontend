@@ -9,7 +9,7 @@ import { useContext, useEffect, useState, useMemo } from "react";
 import { UserContext } from "@/app/(application)/authenticated";
 import { StopIcon } from "@radix-ui/react-icons";
 import { AgentSession } from "@EXULU_SHARED/models/agent-session";
-import { ChatAddToolApproveResponseFunction } from 'ai';
+import { ChatAddToolApproveResponseFunction, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
 import TextareaAutosize from "react-textarea-autosize";
 import {
   Tooltip,
@@ -689,7 +689,7 @@ export function ChatLayout({
         {/* @ts-ignore */}
         <Conversation>
           {messages?.length === 0 ?
-            <div className="size-full flex justify-center items-center">
+            <div className="size-full flex justify-center items-center overflow-y-hidden">
               <div className="flex flex-col gap-4 items-center max-w-2xl w-full px-4 my-auto">
                 <Logo alt="Logo" width={120} height={120} className="h-30 w-40 object-contain" />
                 {
@@ -784,7 +784,7 @@ export function ChatLayout({
                     onChange={(e) => setInput(e.target.value)}
                     name="message"
                     placeholder={`Ask me anything...`}
-                    className="border max-h-40 px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full items-center h-28 resize-none overflow-hidden dark:bg-card/35"
+                    className="border max-h-40 px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full items-center h-28 resize-none overflow-hidden bg-card/35"
                     aria-label="Chat message input"
                     aria-describedby={input.length > MAX_INPUT_LENGTH * 0.9 ? "input-length-warning" : undefined}
                   />

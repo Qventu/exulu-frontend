@@ -99,6 +99,7 @@ export const ToolCallApproval = ({
                                     });
                                     return;
                                 }
+                                console.log("[EXULU] Adding tool approval response", part.approval!.id);
                                 addToolApprovalResponse({
                                     id: part.approval!.id as string,
                                     approved: true,
@@ -120,11 +121,13 @@ export const ToolCallApproval = ({
                             variant="outline"
                             size="default"
                             className="flex-1 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                            onClick={() =>
+                            onClick={() => {
+                                console.log("[EXULU] Adding tool approval response", part.approval!.id);
                                 addToolApprovalResponse({
                                     id: part.approval!.id as string,
                                     approved: true,
                                 })
+                            }
                             }
                         >
                             Allow once
@@ -133,11 +136,13 @@ export const ToolCallApproval = ({
                             variant="default"
                             size="default"
                             className="bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black"
-                            onClick={() =>
+                            onClick={() => {
+                                console.log("[EXULU] Adding tool approval response", part.approval!.id);
                                 addToolApprovalResponse({
                                     id: part.approval!.id as string,
                                     approved: false,
                                 })
+                            }
                             }
                         >
                             Deny
