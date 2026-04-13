@@ -18,10 +18,11 @@ import {
   SidebarTrigger,
   useSidebar
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/models/user-role";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { ChevronUp, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard, Database, ListTodo, Bot, Route, Variable, FileCheck, Sparkles, Settings, LogOut, FileText, FolderOpen, Brain, Album, BookCheck, TextSelect, ClipboardType, BarChart2, BarChart, BarChart4, Workflow, Form, FileAudio, Languages, MessageSquare, ThumbsUp, Palette } from "lucide-react";
+import { ChevronUp, ChevronDown, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard, Database, ListTodo, Bot, Route, Variable, FileCheck, Sparkles, Settings, LogOut, FileText, FolderOpen, Brain, Album, BookCheck, TextSelect, ClipboardType, BarChart2, BarChart, BarChart4, Workflow, Form, FileAudio, Languages, MessageSquare, ThumbsUp, Palette, Gamepad2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "../ui/avatar";
@@ -103,27 +104,24 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
   const mainNavigationItems: { label: string; path: string; icon: React.ReactNode }[] = [];
   const bottomNavigationItems: { label: string; path: string; icon: React.ReactNode }[] = [];
 
-  if (user.super_admin) {
-    mainNavigationItems.push({
-      label: t('navigation.dashboard'),
-      path: "dashboard",
-      icon: <BarChart4 className="h-4 w-4" strokeWidth={1.5} />,
-    });
-  }
+
+  mainNavigationItems.push({
+    label: t('navigation.chat'),
+    path: "chat",
+    icon: <MessageCircle className="h-4 w-4" strokeWidth={1.5} />,
+  });
+
+  mainNavigationItems.push({
+    label: t('navigation.agents'),
+    path: "agents",
+    icon: <Bot className="h-4 w-4" strokeWidth={1.5} />,
+  });  
 
   mainNavigationItems.push({
     label: t('navigation.knowledge'),
     path: "data",
     icon: <Brain className="h-4 w-4" strokeWidth={1.5} />,
   });
-
-  if (user.super_admin || role.agents === "write") {
-    mainNavigationItems.push({
-      label: t('navigation.agents'),
-      path: "agents",
-      icon: <Bot className="h-4 w-4" strokeWidth={1.5} />,
-    });
-  }
 
   mainNavigationItems.push({
     label: t('navigation.prompts'),
@@ -135,12 +133,6 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     label: t('navigation.projects'),
     path: "projects",
     icon: <FolderOpen className="h-4 w-4" strokeWidth={1.5} />,
-  });
-
-  mainNavigationItems.push({
-    label: t('navigation.chat'),
-    path: "chat",
-    icon: <MessageCircle className="h-4 w-4" strokeWidth={1.5} />,
   });
 
   if (user.super_admin || role.workflows === "write") {
@@ -179,10 +171,26 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
   }
 
   if (user.super_admin || role.users === "write") {
-    mainNavigationItems.push({
+    bottomNavigationItems.push({
       label: t('navigation.users'),
       path: "users",
       icon: <Users className="h-4 w-4" strokeWidth={1.5} />,
+    });
+  }
+
+  if (user.super_admin) {
+    bottomNavigationItems.push({
+      label: t('navigation.analytics'),
+      path: "analytics",
+      icon: <BarChart4 className="h-4 w-4" strokeWidth={1.5} />,
+    });
+  }
+
+  if (user.super_admin && process.env.NEXT_PUBLIC_AGENT_VISUALIZATION === "true") {
+    bottomNavigationItems.push({
+      label: "Agent World",
+      path: "agent-world",
+      icon: <Gamepad2 className="h-4 w-4" strokeWidth={1.5} />,
     });
   }
 
@@ -263,6 +271,116 @@ function NavigationItems({ items }: { items: { label: string; path: string; icon
         );
       })}
     </SidebarMenu>
+  );
+}
+
+function AdminNavigationSection({
+  items,
+  label
+}: {
+  items: { label: string; path: string; icon: React.ReactNode }[];
+  label: string;
+}) {
+  const pathname = usePathname();
+  const { state } = useSidebar();
+
+  // Check if any admin item is currently active
+  const isAnyAdminPageActive = items.some(item => pathname.includes(item.path));
+
+  // Auto-expand if on admin page, otherwise collapse
+  const [isOpen, setIsOpen] = useState(isAnyAdminPageActive);
+
+  // Update open state when pathname changes
+  useEffect(() => {
+    setIsOpen(isAnyAdminPageActive);
+  }, [isAnyAdminPageActive]);
+
+  // Handle empty items gracefully
+  if (!items || items.length === 0) {
+    return null;
+  }
+
+  // When sidebar is collapsed (icon only), show as regular nav item with tooltip
+  if (state === "collapsed") {
+    return (
+      <SidebarMenu className="space-y-0">
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            tooltip={label}
+            isActive={isAnyAdminPageActive}
+            onClick={() => setIsOpen(!isOpen)}
+            className={cn(
+              "h-9 transition-all duration-200",
+              !isAnyAdminPageActive && "opacity-60 hover:opacity-100"
+            )}
+          >
+            <Settings className="h-4 w-4" strokeWidth={1.5} />
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="group/collapsible">
+      <CollapsibleContent className="transition-all duration-200 ease-in-out overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+        <SidebarMenu className="space-y-0 mb-0">
+          {items.map((navItem) => {
+            const isActive = pathname.includes(navItem.path);
+            return (
+              <SidebarMenuItem key={navItem.path}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  tooltip={navItem.label}
+                  className={cn(
+                    "h-9 transition-all duration-200",
+                    !isActive && "opacity-60 hover:opacity-100"
+                  )}
+                >
+                  <Link
+                    href={`/${navItem.path}`}
+                    className="flex items-center gap-3 min-w-0"
+                  >
+                    <span className="flex-shrink-0">
+                      {navItem.icon}
+                    </span>
+                    <span className="font-medium transition-colors truncate">
+                      {navItem.label}
+                    </span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </CollapsibleContent>
+
+      <SidebarMenu className="space-y-0">
+        <SidebarMenuItem>
+          <CollapsibleTrigger asChild>
+            <SidebarMenuButton
+              tooltip={label}
+              className={cn(
+                "h-9 transition-all duration-200 w-full",
+                !isAnyAdminPageActive && "opacity-60 hover:opacity-100"
+              )}
+              isActive={isAnyAdminPageActive}
+            >
+              <Settings className="h-4 w-4 flex-shrink-0" strokeWidth={1.5} />
+              <span className="font-medium truncate">{label}</span>
+              <ChevronUp
+                className={cn(
+                  "ml-auto h-4 w-4 flex-shrink-0 transition-transform duration-200",
+                  isOpen && "rotate-180"
+                )}
+                strokeWidth={1.5}
+              />
+            </SidebarMenuButton>
+          </CollapsibleTrigger>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    </Collapsible>
   );
 }
 
@@ -378,7 +496,7 @@ export function MainNavSidebar({ sidebarDefaultOpen, config }: { sidebarDefaultO
         {bottomNavigationItems.length > 0 && (
           <SidebarGroup className="mt-auto">
             <SidebarGroupContent>
-              <NavigationItems items={bottomNavigationItems} />
+              <AdminNavigationSection items={bottomNavigationItems} label={t('navigation.admin')} />
             </SidebarGroupContent>
           </SidebarGroup>
         )}

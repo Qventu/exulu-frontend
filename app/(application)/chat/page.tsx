@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { Agent } from "@/types/models/agent";
 
 export default async function ChatEmptyPage() {
 
@@ -38,6 +39,12 @@ export default async function ChatEmptyPage() {
         // If only one agent available redirect to chat with that agent
         if (agents?.agentsPagination?.items?.length === 1) {
             redirect(`/chat/${agents?.agentsPagination?.items?.[0]?.id}`);
+        }
+
+        // find default agent where defaultagent is true
+        const defaultAgent = agents?.agentsPagination?.items?.find((agent: Agent) => agent.defaultagent);
+        if (defaultAgent) {
+            redirect(`/chat/${defaultAgent?.id}`);
         }
 
         return <div className="h-full p-10">

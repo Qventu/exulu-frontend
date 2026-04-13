@@ -117,6 +117,7 @@ feedback
 memory
 instructions
 welcomemessage
+defaultagent
 description
 active
 image
@@ -979,6 +980,7 @@ export const UPDATE_AGENT_BY_ID = gql`
     $provider: String
     $description: String
     $welcomemessage: String
+    $defaultagent: Boolean
     $memory: String
     $instructions: String
     $rights_mode: String
@@ -997,6 +999,7 @@ export const UPDATE_AGENT_BY_ID = gql`
         provider: $provider
         description: $description
         welcomemessage: $welcomemessage
+        defaultagent: $defaultagent
         memory: $memory
         category: $category
         instructions: $instructions
@@ -1016,6 +1019,7 @@ export const UPDATE_AGENT_BY_ID = gql`
           description
           feedback
           welcomemessage
+          defaultagent
           instructions
           memory
           category
@@ -2412,5 +2416,17 @@ export const DELETE_PROMPT_FAVORITE = gql`
 export const GET_UNIQUE_PROMPT_TAGS = gql`
   query GetUniquePromptTags {
     getUniquePromptTags
+  }
+`;
+export const AGENT_WORLD_AGENTS = gql`
+  query AgentWorldAgents {
+    agentWorldAgents {
+      sessionId
+      agentId
+      agentName
+      agentImage
+      currentTask
+      lastActivityAt
+    }
   }
 `;

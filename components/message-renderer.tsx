@@ -451,6 +451,7 @@ export function MessageRenderer({
 
                     }
                   }
+
                   console.log("output", output);
                   console.log("output.result", output?.result);
 
@@ -494,15 +495,17 @@ export function MessageRenderer({
                   }
                   return (
                     <>
+                      <ReasoningVisualisation
+                        reasoning={reasoning}
+                        streaming={status !== "ready" && status !== "error" && isLastMessage && message.role === 'assistant'}
+                      />
                       <ContextSearchResults
                         key={`${message.id}-${i}`}
-                        part={dynamicToolPart}
                         input={dynamicToolPart.input}
                         state={dynamicToolPart.state}
                         contextNames={contextNames}
                         streaming={status !== "ready" && status !== "error" && isLastMessage && message.role === 'assistant'}
                         items={Array.from(itemsMap.values())}
-                        reasoning={reasoning}
                         totalChunks={chunks?.length ?? 0}
                       />
                     </>
@@ -518,15 +521,48 @@ export function MessageRenderer({
                 ) {
                   const untypedToolPart = part as DynamicToolUIPart
                   const callId = untypedToolPart.toolCallId
+                  let output = untypedToolPart.output as {
+                    result: KnowledgeSourceSearchResultChunk[] | AgenticKnowledgeSourceSearchResults
+                  };
+
+                  if (typeof output === "string") {
+                    output = JSON.parse(output)
+                  }
+                  if (typeof output?.result === "string") {
+                    try {
+                      output.result = JSON.parse(output?.result)
+                    } catch (error) {
+                      // Means the output is not a valid JSON, so treating it as text
+                      return null;
+
+                    }
+                  }
+
+                  const reasoning: {
+                    text: string;
+                    tools: {
+                      name: string;
+                      id: string;
+                      input: any;
+                      output: any;
+                    }[]
+                  }[] = !Array.isArray(output?.result) ? output?.result?.reasoning : [];
                   return (
-                    <UntypedToolPartComponent
-                      key={callId}
-                      agent={agent}
-                      addToolApprovalResponse={addToolApprovalResponse}
-                      untypedToolPart={untypedToolPart}
-                      callId={callId}
-                      addToContext={addToContext}
-                    />
+                    
+                    <>
+                      <ReasoningVisualisation
+                        reasoning={reasoning}
+                        streaming={status !== "ready" && status !== "error" && isLastMessage && message.role === 'assistant'}
+                      />
+                      <UntypedToolPartComponent
+                        key={callId}
+                        agent={agent}
+                        addToolApprovalResponse={addToolApprovalResponse}
+                        untypedToolPart={untypedToolPart}
+                        callId={callId}
+                        addToContext={addToContext}
+                      />
+                    </>
                   )
                 }
 
@@ -742,15 +778,9 @@ export function MessageRenderer({
   )
 }
 
-const ContextSearchResults = ({
+const ReasoningVisualisation = ({
   reasoning,
-  streaming,
-  contextNames,
-  input,
-  items,
-  state,
-  totalChunks,
-  part,
+  streaming
 }: {
   streaming: boolean;
   reasoning: {
@@ -762,19 +792,9 @@ const ContextSearchResults = ({
       output: any;
     }[]
   }[];
-  contextNames: string;
-  input: Record<string, any>;
-  items: ItemWithChunks[];
-  totalChunks: number;
-  part: DynamicToolUIPart
-  state: "input-streaming" | "input-available" | "output-available" | "output-error" | "approval-requested" | "approval-responded"
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [showAllItems, setShowAllItems] = useState(false);
-  const [showAllReasoning, setShowAllReasoning] = useState(false);
 
-  const uniqueContexts = new Set(items.map(item => item.context.name));
-  const displayItems = showAllItems ? items : items.slice(0, 3);
+  const [showAllReasoning, setShowAllReasoning] = useState(false);
 
   // Render a single reasoning step
   const renderReasoningStep = (step: {
@@ -857,64 +877,90 @@ const ContextSearchResults = ({
     </div>
   );
 
+  return (<>
+    {/* Sequential Reasoning Steps Visualization */}
+    {reasoning && reasoning.length > 0 && (
+      <div className="mt-3 space-y-3">
+        {streaming ? (
+          // Show latest 5 steps while streaming with animations
+          <>
+            {reasoning.length > 5 && !showAllReasoning && (
+              <button
+                onClick={() => setShowAllReasoning(true)}
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors group w-full"
+              >
+                <div className="flex-1 border-t border-dashed border-muted-foreground/30 group-hover:border-foreground/30 transition-colors" />
+                <span className="shrink-0">{reasoning.length - 5} more reasoning {reasoning.length - 5 === 1 ? 'step' : 'steps'} - show all</span>
+                <div className="flex-1 border-t border-dashed border-muted-foreground/30 group-hover:border-foreground/30 transition-colors" />
+              </button>
+            )}
+            {showAllReasoning
+              ? reasoning.map((step, index) => renderReasoningStep(step, index, true))
+              : reasoning.slice(-5).map((step, index) => {
+                const actualIndex = reasoning.length - 5 + index;
+                return renderReasoningStep(step, actualIndex >= 0 ? actualIndex : index, true);
+              })
+            }
+          </>
+        ) : (
+          // Show collapsed view when not streaming
+          <>
+            {!showAllReasoning && reasoning.length > 1 && (
+              <button
+                onClick={() => setShowAllReasoning(true)}
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors group w-full"
+              >
+                <div className="flex-1 border-t border-dashed border-muted-foreground/30 group-hover:border-foreground/30 transition-colors" />
+                <span className="shrink-0">{reasoning.length} reasoning {reasoning.length === 1 ? 'step' : 'steps'} - show details</span>
+                <div className="flex-1 border-t border-dashed border-muted-foreground/30 group-hover:border-foreground/30 transition-colors" />
+              </button>
+            )}
+
+            {showAllReasoning && (
+              // Show all steps without animation when expanded
+              <>
+                {reasoning.map((step, index) => renderReasoningStep(step, index, false))}
+                {reasoning.length > 1 && (
+                  <button
+                    onClick={() => setShowAllReasoning(false)}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-7"
+                  >
+                    Show less
+                  </button>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </div>
+    )}
+  </>)
+}
+
+const ContextSearchResults = ({
+  streaming,
+  contextNames,
+  input,
+  items,
+  state,
+  totalChunks,
+}: {
+  streaming: boolean;
+  contextNames: string;
+  input: Record<string, any>;
+  items: ItemWithChunks[];
+  totalChunks: number;
+  state: "input-streaming" | "input-available" | "output-available" | "output-error" | "approval-requested" | "approval-responded"
+}) => {
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [showAllItems, setShowAllItems] = useState(false);
+  const uniqueContexts = new Set(items.map(item => item.context.name));
+  const displayItems = showAllItems ? items : items.slice(0, 3);
+
   return (
     <>
-      {/* Sequential Reasoning Steps Visualization */}
-      {reasoning && reasoning.length > 0 && (
-        <div className="mt-3 space-y-3">
-          {streaming ? (
-            // Show latest 5 steps while streaming with animations
-            <>
-              {reasoning.length > 5 && !showAllReasoning && (
-                <button
-                  onClick={() => setShowAllReasoning(true)}
-                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors group w-full"
-                >
-                  <div className="flex-1 border-t border-dashed border-muted-foreground/30 group-hover:border-foreground/30 transition-colors" />
-                  <span className="shrink-0">{reasoning.length - 5} more reasoning {reasoning.length - 5 === 1 ? 'step' : 'steps'} - show all</span>
-                  <div className="flex-1 border-t border-dashed border-muted-foreground/30 group-hover:border-foreground/30 transition-colors" />
-                </button>
-              )}
-              {showAllReasoning
-                ? reasoning.map((step, index) => renderReasoningStep(step, index, true))
-                : reasoning.slice(-5).map((step, index) => {
-                  const actualIndex = reasoning.length - 5 + index;
-                  return renderReasoningStep(step, actualIndex >= 0 ? actualIndex : index, true);
-                })
-              }
-            </>
-          ) : (
-            // Show collapsed view when not streaming
-            <>
-              {!showAllReasoning && reasoning.length > 1 && (
-                <button
-                  onClick={() => setShowAllReasoning(true)}
-                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors group w-full"
-                >
-                  <div className="flex-1 border-t border-dashed border-muted-foreground/30 group-hover:border-foreground/30 transition-colors" />
-                  <span className="shrink-0">{reasoning.length} reasoning {reasoning.length === 1 ? 'step' : 'steps'} - show details</span>
-                  <div className="flex-1 border-t border-dashed border-muted-foreground/30 group-hover:border-foreground/30 transition-colors" />
-                </button>
-              )}
 
-              {showAllReasoning && (
-                // Show all steps without animation when expanded
-                <>
-                  {reasoning.map((step, index) => renderReasoningStep(step, index, false))}
-                  {reasoning.length > 1 && (
-                    <button
-                      onClick={() => setShowAllReasoning(false)}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-7"
-                    >
-                      Show less
-                    </button>
-                  )}
-                </>
-              )}
-            </>
-          )}
-        </div>
-      )}
       {
         state === "output-available" && items?.length > 0 && !streaming && (
           <div className="my-3 border rounded-lg overflow-hidden bg-card">

@@ -11,6 +11,8 @@
     "templates": "Templates",
     "evals": "Evals",
     "automation": "Automation",
+    "admin": "Admin",
+    "analytics": "Analytics",
     "users": "Users",
     "keys": "Keys",
     "variables": "Variables",

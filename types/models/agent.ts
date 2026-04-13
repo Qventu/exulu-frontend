@@ -15,6 +15,7 @@ export interface Agent {
     modelName?: string;
     providerName?: string;
     welcomemessage?: string;
+    defaultagent?: boolean;
     type: "agent";
     name: string;
     image?: string;

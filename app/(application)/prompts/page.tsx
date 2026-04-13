@@ -136,7 +136,7 @@ export default function PromptsPage() {
             <span className="text-primary">Library</span>
           </h1>
           <p className="text-base sm:text-lg lg:text-xl text-muted-foreground max-w-xl">
-            Craft, organize, and deploy production-grade prompts across your AI infrastructure.
+            Craft, organize, and deploy prompts across your AI infrastructure.
           </p>
         </div>
         <div className="w-full sm:w-auto animate-in fade-in slide-in-from-right-8 duration-700">

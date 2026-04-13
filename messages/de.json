@@ -11,6 +11,8 @@
     "templates": "Vorlagen",
     "evals": "Evaluationen",
     "automation": "Automatisierung",
+    "admin": "Administration",
+    "analytics": "Analytik",
     "users": "Benutzer",
     "keys": "Schlüssel",
     "variables": "Variablen",

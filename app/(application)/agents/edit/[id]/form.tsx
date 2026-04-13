@@ -187,6 +187,7 @@ export const VariableSelectionElement = ({
 const agentFormSchema = z.object({
   provider: z.string(),
   welcomemessage: z.string().optional(),
+  defaultagent: z.boolean().optional(),
   feedback: z.boolean().optional(),
   name: z
     .string()
@@ -433,6 +434,7 @@ export default function AgentForm({
       provider: undefined,
       name: "New agent",
       welcomemessage: "",
+      defaultagent: false,
       instructions: "",
       steps: [],
       firewall: {
@@ -469,6 +471,7 @@ export default function AgentForm({
                       description: data.description,
                       instructions: data.instructions,
                       welcomemessage: data.welcomemessage,
+                      defaultagent: data.defaultagent,
                       category: data.category,
                       active: data.active,
                       memory: memory || null,
@@ -750,6 +753,29 @@ export default function AgentForm({
                                     <FormDescription>
                                       When active this agent will be available via the UI
                                       and API endpoint.
+                                    </FormDescription>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={agentForm.control}
+                              name="defaultagent"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                  <div className="space-y-0.5">
+                                    <FormLabel className="text-base">
+                                      Set as default agent
+                                    </FormLabel>
+                                    <FormDescription>
+                                      When enabled, this agent will be shown as the default agent on the homepage.
                                     </FormDescription>
                                   </div>
                                   <FormControl>

@@ -6,22 +6,27 @@ import { useContext, useState, useMemo } from "react";
 import { UserContext } from "@/app/(application)/authenticated";
 import { AgentCard } from "@/app/(application)/agents/components/agent-card";
 import { CreateNewAgentCard } from "@/app/(application)/agents/components/create-new-agent-card";
-import { CREATE_AGENT, GET_AGENTS } from "@/queries/queries";
+import { CREATE_AGENT, CREATE_AGENT_SESSION, GET_AGENTS } from "@/queries/queries";
 import { Agent } from "@EXULU_SHARED//models/agent";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { AgentDetailsSheet } from "./components/agent-details-sheet";
 import { useTranslations } from "next-intl";
+import { useToast } from "@/components/ui/use-toast";
 
 export const dynamic = "force-dynamic";
 
 export default function AgentsPage() {
   const t = useTranslations();
   const router = useRouter();
+  const { toast } = useToast();
   const { user } = useContext(UserContext);
   const company = user.company;
   const [searchQuery, setSearchQuery] = useState("");
   const [showDetails, setShowDetails] = useState<Agent | null>(null);
+
+  // Check if user has edit permissions for agents
+  const canEditAgents = user.super_admin || user.role?.agents === "write";
 
   const { data, loading: isLoading, error } = useQuery<{
     agentsPagination: {
@@ -60,8 +65,40 @@ export default function AgentsPage() {
     },
   );
 
-  const handleAgentSelect = (agent: Agent) => {
+  const [createAgentSession] = useMutation(CREATE_AGENT_SESSION);
+
+  const handleAgentEdit = (agent: Agent) => {
     router.push(`/agents/edit/${agent.id}`, { scroll: false });
+  };
+
+  const handleAgentChat = async (agent: Agent) => {
+    try {
+      const result = await createAgentSession({
+        variables: {
+          title: t('agentSelection.newSession', { agentName: agent.name }),
+          agent: agent.id,
+          rights_mode: "private",
+        },
+      });
+
+      const sessionId = result.data?.agent_sessionsCreateOne?.item?.id;
+
+      if (sessionId) {
+        toast({
+          title: t('common.success'),
+          description: t('agentSelection.sessionCreated'),
+        });
+
+        router.push(`/chat/${agent.id}/${sessionId}`, { scroll: false });
+      }
+    } catch (error: any) {
+      console.error("Error creating session:", error);
+      toast({
+        title: t('common.error'),
+        description: error.message || t('agentSelection.sessionError'),
+        variant: "destructive",
+      });
+    }
   };
 
 
@@ -105,19 +142,22 @@ export default function AgentsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {/* Create new agent card */}
-          <CreateNewAgentCard
-            createAgent={createAgent}
-            createAgentResult={createAgentResult}
-            company={company}
-          />
+          {/* Create new agent card - only show if user has edit permissions */}
+          {canEditAgents && (
+            <CreateNewAgentCard
+              createAgent={createAgent}
+              createAgentResult={createAgentResult}
+              company={company}
+            />
+          )}
 
           {/* Agent cards */}
           {filteredAgents.map((agent: Agent) => (
             <AgentCard
               key={agent.id}
               agent={agent}
-              onSelect={handleAgentSelect}
+              onEdit={canEditAgents ? handleAgentEdit : undefined}
+              onChat={handleAgentChat}
               showDetails={setShowDetails}
             />
           ))}
