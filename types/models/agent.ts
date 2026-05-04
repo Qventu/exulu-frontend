@@ -41,6 +41,7 @@ export interface Agent {
     instructions?: string;
     slug?: string;
     tools?: AgentTool[];
+    skills?: { id: string; name: string }[];
     maxContextLength?: number;
     authenticationInformation?: string;
     systemInstructions?: string;

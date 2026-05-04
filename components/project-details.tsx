@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, MessageSquare, Settings2, Files, AlertTriangle, Shield, Pencil, PackageMinus, X } from "lucide-react";
+import { Trash2, Plus, MessageSquare, Settings2, Files, AlertTriangle, Shield, Pencil, PackageMinus, X, Database, FileText } from "lucide-react";
 import { RBACControl } from "@/components/rbac";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
@@ -694,20 +694,53 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
 }
 
 export function ProjectItem({ gid, onRemove }: { gid: string, onRemove: (gid: string) => void }) {
+  const slashIdx = gid.indexOf("/");
+  const context = slashIdx !== -1 ? gid.slice(0, slashIdx) : gid;
+  const id = slashIdx !== -1 ? gid.slice(slashIdx + 1) : undefined;
 
-  const context = gid.split("/")[0];
-  const id = gid.split("/")[1];
+  const { data, loading } = useQuery<{ [key: string]: Item }>(
+    GET_ITEM_BY_ID(context, []),
+    { variables: { id: id ?? "" }, skip: !id },
+  );
+
   if (!context) return null;
-  if (!id) return null;
 
-  const { data, loading } = useQuery<
-    {
-      [key: string]: Item
-    }>(GET_ITEM_BY_ID(context, []), {
-      variables: {
-        id
-      }
-    });
+  // Format date to be more readable
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const removeButton = (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-muted"
+      onClick={(e) => { e.stopPropagation(); onRemove(gid); }}
+    >
+      <X className="h-4 w-4 text-muted-foreground" />
+    </Button>
+  );
+
+  // Full-context entry — no item to fetch, just show the context name
+  if (!id) {
+    return (
+      <Card className="group relative overflow-hidden hover:shadow-md transition-all duration-200 hover:border-primary/50">
+        <CardContent className="p-4">
+          {removeButton}
+          <div className="mb-2 pr-8">
+            <h4 className="font-medium text-sm capitalize">
+              {context.replace(/_/g, ' ')}
+            </h4>
+          </div>
+          <div className="pt-2 border-t">
+            <span className="text-xs text-muted-foreground">Full context</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (loading) {
     return (
@@ -725,28 +758,10 @@ export function ProjectItem({ gid, onRemove }: { gid: string, onRemove: (gid: st
 
   if (!item) return null;
 
-  // Format date to be more readable
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return null;
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
   return (
     <Card className="group relative overflow-hidden hover:shadow-md transition-all duration-200 hover:border-primary/50">
       <CardContent className="p-4">
-        {/* Remove Button - Positioned absolutely in top-right corner */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-muted"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove(gid);
-          }}
-        >
-          <X className="h-4 w-4 text-muted-foreground" />
-        </Button>
+        {removeButton}
 
         {/* Item Name */}
         <div className="mb-2 pr-8">
@@ -764,7 +779,6 @@ export function ProjectItem({ gid, onRemove }: { gid: string, onRemove: (gid: st
 
         {/* Metadata Section */}
         <div className="space-y-2 pt-2 border-t">
-          {/* Context Type */}
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span className="truncate capitalize">{context.replace(/_/g, ' ')}</span>
             {item.updatedAt && (
@@ -773,8 +787,6 @@ export function ProjectItem({ gid, onRemove }: { gid: string, onRemove: (gid: st
               </span>
             )}
           </div>
-
-          {/* Text Length Indicator */}
           {item.textlength && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <span>{item.textlength.toLocaleString()} chars</span>
@@ -790,3 +802,37 @@ export function ProjectItem({ gid, onRemove }: { gid: string, onRemove: (gid: st
 }
 
 export const SessionItem = ProjectItem;
+
+/** Compact badge variant of SessionItem for use in the chat input toolbar. */
+export function SessionItemBadge({ gid, onRemove }: { gid: string; onRemove: (gid: string) => void }) {
+  const slashIdx = gid.indexOf("/");
+  const context = slashIdx !== -1 ? gid.slice(0, slashIdx) : gid;
+  const id = slashIdx !== -1 ? gid.slice(slashIdx + 1) : undefined;
+
+  const { data } = useQuery<{ [key: string]: Item }>(
+    GET_ITEM_BY_ID(context, []),
+    { variables: { id: id ?? "" }, skip: !id },
+  );
+
+  const label = id
+    ? (data?.[context + "_itemsById"]?.name ?? "…")
+    : context.replace(/_/g, " ");
+
+  return (
+    <span className="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300 rounded-full px-2.5 py-1 max-w-[200px]">
+      {id
+        ? <FileText className="w-3 h-3 shrink-0" />
+        : <Database className="w-3 h-3 shrink-0" />
+      }
+      <span className="capitalize truncate">{label}</span>
+      <button
+        type="button"
+        onClick={() => onRemove(gid)}
+        className="ml-0.5 rounded-full hover:bg-amber-200 dark:hover:bg-amber-800 p-0.5 transition-colors"
+        aria-label={`Remove ${label}`}
+      >
+        <X className="w-2.5 h-2.5" />
+      </button>
+    </span>
+  );
+}

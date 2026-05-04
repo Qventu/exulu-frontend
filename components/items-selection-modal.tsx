@@ -1,15 +1,9 @@
 import { Context } from "@/types/models/context";
 import { useContexts } from "@/hooks/contexts";
 import { useState, useEffect } from "react"
-import { Brain, Folder, FolderOpen, File, ChevronRight, X, Check, Plus, Loader2 } from "lucide-react"
+import { Brain, Folder, FolderOpen, File, ChevronRight, X, Check, Plus, Loader2, LayersPlus, FilePlusCorner } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useQuery, useMutation } from "@apollo/client";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
     Command,
     CommandInput,
@@ -37,11 +31,12 @@ type SelectedItem = {
     context: Context;
 };
 
-export const ItemsSelectionModal = ({ onConfirm, buttonText, className }: {
+export const ItemsSelectionModal = ({ onConfirm, onSelectContext, buttonText, className }: {
     onConfirm: (data: {
         item: Item,
         context: Context
     }[]) => void
+    onSelectContext?: (context: Context) => void | Promise<void>
     buttonText?: string
     tooltipText?: string
     className?: string
@@ -51,6 +46,11 @@ export const ItemsSelectionModal = ({ onConfirm, buttonText, className }: {
     const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
     const [open, setOpen] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const reset = () => {
+        setSelectedItems([]);
+        setSelectedContext(undefined);
+    };
 
     const toggleItemSelection = (item: Item, context: Context) => {
         setSelectedItems(prev => {
@@ -75,15 +75,20 @@ export const ItemsSelectionModal = ({ onConfirm, buttonText, className }: {
         if (selectedItems.length > 0) {
             onConfirm(selectedItems);
             setOpen(false);
-            setSelectedItems([]);
-            setSelectedContext(undefined);
+            reset();
         }
+    };
+
+    const handleSelectAll = () => {
+        if (!selectedContext || !onSelectContext) return;
+        onSelectContext(selectedContext);
+        setOpen(false);
+        reset();
     };
 
     const handleCancel = () => {
         setOpen(false);
-        setSelectedItems([]);
-        setSelectedContext(undefined);
+        reset();
     };
 
     return (
@@ -161,7 +166,7 @@ export const ItemsSelectionModal = ({ onConfirm, buttonText, className }: {
                                         <NewItemDialog context={selectedContext} onItemCreated={(newItem) => {
                                             toggleItemSelection(newItem, selectedContext);
                                             setRefreshTrigger(prev => prev + 1);
-                                        }} />
+                                        }} onSelectAll={onSelectContext ? handleSelectAll : undefined} />
                                     </div>
                                 </div>
 
@@ -451,10 +456,11 @@ const LoadingStates = ({ hasProcessor }: { hasProcessor: boolean }) => {
     );
 };
 
-export const NewItemDialog = ({ context, onItemCreated, fieldsToReturn }: {
+export const NewItemDialog = ({ context, onItemCreated, fieldsToReturn, onSelectAll }: {
     context: Context;
     onItemCreated: (item: Item) => void;
-    fieldsToReturn?: string[]
+    fieldsToReturn?: string[];
+    onSelectAll?: () => void;
 }) => {
     const [open, setOpen] = useState(false);
     const [formData, setFormData] = useState<Partial<Item>>({
@@ -529,12 +535,20 @@ export const NewItemDialog = ({ context, onItemCreated, fieldsToReturn }: {
                     setOpen(newOpen);
                 }
             }}>
-                <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Item
-                    </Button>
-                </DialogTrigger>
+                <div className="flex items-center gap-2">
+                    {onSelectAll && (
+                        <Button onClick={onSelectAll} variant="outline" size="sm">
+                            <LayersPlus className="h-4 w-4 mr-2" />
+                            Select all
+                        </Button>
+                    )}
+                    <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                            <FilePlusCorner className="h-4 w-4 mr-2" />
+                            New Item
+                        </Button>
+                    </DialogTrigger>
+                </div>
                 {loading ? (
                     <LoadingStates hasProcessor={!!context.processor} />
                 ) : (

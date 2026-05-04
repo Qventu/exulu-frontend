@@ -6,7 +6,8 @@ import { GET_AGENT_BY_ID } from "@/queries/queries";
 import { ExuluTool } from "@EXULU_SHARED/models/tool";
 import { AgentToolCard } from "./agent-tool-card";
 import { Badge } from "@/components/ui/badge";
-import { Network, Layers } from "lucide-react";
+import { Network, Layers, BookOpen } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
   TooltipContent,
@@ -23,6 +24,9 @@ interface AgentHierarchyViewProps {
   setSheetOpen: (open: boolean | string) => void;
   variables: any[];
   renderConfigElement: (tool: ExuluTool, config: any[], update: (value: any, name: string) => void) => React.ReactNode;
+  skills?: { id: string; name: string; description?: string }[];
+  enabledSkills?: { id: string; name: string }[];
+  onSkillToggle?: (skill: { id: string; name: string; description?: string }, enabled: boolean) => void;
 }
 
 /**
@@ -38,6 +42,9 @@ export function AgentHierarchyView({
   setSheetOpen,
   variables,
   renderConfigElement,
+  skills = [],
+  enabledSkills = [],
+  onSkillToggle,
 }: AgentHierarchyViewProps) {
   // Separate agents from regular tools
   const { agentTools, regularTools } = useMemo(() => {
@@ -45,6 +52,9 @@ export function AgentHierarchyView({
     const regular: ExuluTool[] = [];
 
     tools.forEach(tool => {
+      if (tool.id === "agentic_context_search") {
+        return;
+      }
       if (tool.category === "agents") {
         agents.push(tool);
       } else {
@@ -147,6 +157,51 @@ export function AgentHierarchyView({
                   variables={variables}
                   renderConfigElement={renderConfigElement}
                 />
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Skills Section */}
+      {skills.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 pb-2 border-b">
+            <div className="p-1.5 rounded-md bg-muted">
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium">Skills</h3>
+              <p className="text-xs text-muted-foreground">
+                Instruction sets that guide agent behavior for specific tasks
+              </p>
+            </div>
+            <Badge variant="outline" className="ml-auto">
+              {enabledSkills.length}/{skills.length} enabled
+            </Badge>
+          </div>
+
+          <div className="space-y-2">
+            {skills.map((skill) => {
+              const isEnabled = enabledSkills.some(es => es.id === skill.id);
+              return (
+                <div
+                  key={skill.id}
+                  className="flex items-center justify-between rounded-lg border p-3 border-l-4 border-l-purple-900"
+                >
+                  <div className="flex flex-col gap-0.5 min-w-0 mr-3">
+                    <span className="text-sm font-medium truncate">{skill.name}</span>
+                    {skill.description && (
+                      <span className="text-xs text-muted-foreground line-clamp-1">
+                        {skill.description}
+                      </span>
+                    )}
+                  </div>
+                  <Switch
+                    checked={isEnabled}
+                    onCheckedChange={(enabled) => onSkillToggle?.(skill, enabled)}
+                  />
+                </div>
               );
             })}
           </div>

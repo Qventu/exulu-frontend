@@ -241,3 +241,107 @@ export const files = {
         });
     }
 }
+
+// ─── Skills File Management API ───────────────────────────────────────────────
+
+const skillsRequest = async (path: string, method: string, body?: object) => {
+    const uris = await getUris();
+    const token = await getToken();
+    if (!token) throw new Error("No valid session token available.");
+    const res = await fetch(`${uris.base}${path}`, {
+        method,
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    if (!res.ok) {
+        const detail = await res.json().then((j) => j.detail ?? res.statusText).catch(() => res.statusText);
+        throw new Error(detail);
+    }
+    return res.json();
+};
+
+export const skillsApi = {
+    /** Create SKILL.md and initialise S3 folder after skillsCreateOne. */
+    init: async (skillId: string, name: string, description: string) =>
+        skillsRequest(`/skills/${skillId}/init`, "POST", { name, description }),
+
+    /** Fetch the virtual file tree for a skill version. */
+    files: async (skillId: string, version?: number) => {
+        const uris = await getUris();
+        const token = await getToken();
+        if (!token) throw new Error("No valid session token available.");
+        const params = version != null ? `?version=${version}` : "";
+        const res = await fetch(`${uris.base}/skills/${skillId}/files${params}`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return res.json();
+    },
+
+    /** Get a presigned PUT URL for uploading a file at an exact path. */
+    sign: async (skillId: string, filePath: string, contentType: string) =>
+        skillsRequest(`/skills/${skillId}/sign`, "POST", { filePath, contentType }),
+
+    /** Get a presigned GET URL (+ optional inline content) for reading a file. */
+    file: async (skillId: string, key: string) => {
+        const uris = await getUris();
+        const token = await getToken();
+        if (!token) throw new Error("No valid session token available.");
+        const res = await fetch(
+            `${uris.base}/skills/${skillId}/file?key=${encodeURIComponent(key)}`,
+            { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!res.ok) throw new Error(await res.text());
+        return res.json() as Promise<{ url: string; content?: string; key: string }>;
+    },
+
+    /** Delete a single file (key) or an entire folder (prefix). */
+    deleteFile: async (skillId: string, params: { key?: string; prefix?: string }) => {
+        const uris = await getUris();
+        const token = await getToken();
+        if (!token) throw new Error("No valid session token available.");
+        const qs = params.key
+            ? `?key=${encodeURIComponent(params.key)}`
+            : `?prefix=${encodeURIComponent(params.prefix ?? "")}`;
+        const res = await fetch(`${uris.base}/skills/${skillId}/file${qs}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return res.json() as Promise<{ deleted: number }>;
+    },
+
+    /** Snapshot the current version into the next version slot. */
+    saveVersion: async (skillId: string, label?: string) =>
+        skillsRequest(`/skills/${skillId}/version`, "POST", { label }),
+
+    /** Rename/move a file within the current version. */
+    rename: async (skillId: string, sourceKey: string, destPath: string) =>
+        skillsRequest(`/skills/${skillId}/rename`, "POST", { sourceKey, destPath }),
+
+    /** Compare two versions, returns per-file diffs. */
+    diff: async (skillId: string, fromVersion: number, toVersion: number) => {
+        const uris = await getUris();
+        const token = await getToken();
+        if (!token) throw new Error("No valid session token available.");
+        const res = await fetch(
+            `${uris.base}/skills/${skillId}/diff?fromVersion=${fromVersion}&toVersion=${toVersion}`,
+            { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!res.ok) throw new Error(await res.text());
+        return res.json();
+    },
+
+    /** Upload file content directly to S3 via a presigned URL. */
+    uploadContent: async (presignedUrl: string, content: string, contentType: string) => {
+        const res = await fetch(presignedUrl, {
+            method: "PUT",
+            headers: { "Content-Type": contentType },
+            body: content,
+        });
+        if (!res.ok) throw new Error(`S3 upload failed: ${res.status}`);
+    },
+};

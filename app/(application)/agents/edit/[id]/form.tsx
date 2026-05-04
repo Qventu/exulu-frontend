@@ -11,7 +11,7 @@ import { AgentDelete } from "@/app/(application)/agents/components/agent-delete"
 import {
   REMOVE_AGENT_BY_ID, UPDATE_AGENT_BY_ID, GET_AGENT_BY_ID, GET_VARIABLES,
   GET_TOOLS, GET_TOOL_CATEGORIES, GET_CONTEXTS,
-  COPY_AGENT_BY_ID,
+  COPY_AGENT_BY_ID, GET_SKILLS,
 } from "@/queries/queries";
 import { Button } from "@/components/ui/button";
 import {
@@ -243,6 +243,9 @@ export default function AgentForm({
     // Convert legacy string[] format to new object format
     agent.tools ? agent.tools : []
   )
+  const [enabledSkills, setEnabledSkills] = useState<{ id: string; name: string }[]>(
+    agent.skills ? agent.skills : []
+  )
   const [sheetOpen, setSheetOpen] = useState<boolean | string>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -315,6 +318,14 @@ export default function AgentForm({
   const { data: categoriesData } = useQuery<{
     toolCategories: string[]
   }>(GET_TOOL_CATEGORIES);
+
+  const { data: skillsData } = useQuery<{
+    skillsPagination: {
+      items: { id: string; name: string; description?: string }[]
+    }
+  }>(GET_SKILLS, {
+    variables: { page: 1, limit: 100 },
+  });
 
   const variables = variablesData?.variablesPagination?.items || [];
   const contexts = contextsData?.contexts?.items || [];
@@ -489,7 +500,8 @@ export default function AgentForm({
                         enabled: firewallEnabled,
                         scanners: firewallScanners
                       }),
-                      tools: JSON.stringify(enabledTools)
+                      tools: JSON.stringify(enabledTools),
+                      skills: JSON.stringify(enabledSkills)
                     },
                   });
                 },
@@ -1645,6 +1657,15 @@ export default function AgentForm({
                                           update={update}
                                         />
                                       )}
+                                      skills={skillsData?.skillsPagination?.items || []}
+                                      enabledSkills={enabledSkills}
+                                      onSkillToggle={(skill, enabled) => {
+                                        if (enabled) {
+                                          setEnabledSkills(prev => [...prev, { id: skill.id, name: skill.name }]);
+                                        } else {
+                                          setEnabledSkills(prev => prev.filter(s => s.id !== skill.id));
+                                        }
+                                      }}
                                     />
 
                                     {/* Empty state when no tools match filters */}

@@ -78,7 +78,7 @@ export function AgentToolCard({
   const hasEmptyConfigs = isEnabled && requiredConfigCount > 0 && filledConfigCount < requiredConfigCount;
 
   // Color scheme based on type
-  const borderColor = isAgent ? "border-l-primary" : "border-l-transparent";
+  const borderColor = isAgent ? "border-l-primary" : "border-l-secondary";
   const iconBg = isAgent ? "bg-primary/10" : "bg-muted";
   const iconColor = isAgent ? "text-primary" : "text-muted-foreground";
 

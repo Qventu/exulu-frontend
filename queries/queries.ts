@@ -124,6 +124,7 @@ image
 animation_idle
 animation_responding
 tools
+skills
 providerName
 modelName
 maxContextLength
@@ -988,6 +989,7 @@ export const UPDATE_AGENT_BY_ID = gql`
     $animation_responding: String
     $category: String
     $tools: JSON
+    $skills: JSON
     $active: Boolean
     $providerapikey: String
     $RBAC: RBACInput
@@ -1008,6 +1010,7 @@ export const UPDATE_AGENT_BY_ID = gql`
         rights_mode: $rights_mode
         active: $active
         tools: $tools
+        skills: $skills
         providerapikey: $providerapikey
         RBAC: $RBAC
       }
@@ -2427,6 +2430,134 @@ export const AGENT_WORLD_AGENTS = gql`
       agentImage
       currentTask
       lastActivityAt
+    }
+  }
+`;
+
+// ============================================
+// SKILLS QUERIES AND MUTATIONS
+// ============================================
+
+const SKILL_FIELDS = `
+  id
+  name
+  description
+  s3folder
+  tags
+  usage_count
+  favorite_count
+  current_version
+  history
+  rights_mode
+  created_by
+  createdAt
+  updatedAt
+  RBAC {
+    type
+    users {
+      id
+      rights
+    }
+    roles {
+      id
+      rights
+    }
+  }
+`;
+
+export const GET_SKILLS = gql`
+  query GetSkills(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterSkill]
+    $sort: SortBy = { field: "updatedAt", direction: DESC }
+  ) {
+    skillsPagination(
+      page: $page
+      limit: $limit
+      sort: $sort
+      filters: $filters
+    ) {
+      pageInfo {
+        pageCount
+        itemCount
+        currentPage
+        hasPreviousPage
+        hasNextPage
+      }
+      items {
+        ${SKILL_FIELDS}
+      }
+    }
+  }
+`;
+
+export const GET_SKILL_BY_ID = gql`
+  query GetSkillById($id: ID!) {
+    skillById(id: $id) {
+      ${SKILL_FIELDS}
+    }
+  }
+`;
+
+export const CREATE_SKILL = gql`
+  mutation CreateSkill(
+    $name: String!
+    $description: String
+    $tags: JSON
+    $rights_mode: String!
+    $RBAC: RBACInput
+  ) {
+    skillsCreateOne(
+      input: {
+        name: $name
+        description: $description
+        tags: $tags
+        rights_mode: $rights_mode
+        RBAC: $RBAC
+      }
+    ) {
+      item {
+        ${SKILL_FIELDS}
+      }
+    }
+  }
+`;
+
+export const UPDATE_SKILL = gql`
+  mutation UpdateSkill(
+    $id: ID!
+    $name: String
+    $description: String
+    $tags: JSON
+    $rights_mode: String
+    $RBAC: RBACInput
+    $history: JSON
+    $current_version: Float
+  ) {
+    skillsUpdateOneById(
+      id: $id
+      input: {
+        name: $name
+        description: $description
+        tags: $tags
+        rights_mode: $rights_mode
+        RBAC: $RBAC
+        history: $history
+        current_version: $current_version
+      }
+    ) {
+      item {
+        ${SKILL_FIELDS}
+      }
+    }
+  }
+`;
+
+export const DELETE_SKILL = gql`
+  mutation DeleteSkill($id: ID!) {
+    skillsRemoveOneById(id: $id) {
+      id
     }
   }
 `;

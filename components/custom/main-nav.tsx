@@ -130,6 +130,12 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
   });
 
   mainNavigationItems.push({
+    label: t('navigation.skills'),
+    path: "skills",
+    icon: <Sparkles className="h-4 w-4" strokeWidth={1.5} />,
+  });
+
+  mainNavigationItems.push({
     label: t('navigation.projects'),
     path: "projects",
     icon: <FolderOpen className="h-4 w-4" strokeWidth={1.5} />,

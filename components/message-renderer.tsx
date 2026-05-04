@@ -25,15 +25,9 @@ import { GradientText } from "./ui/shadcn-io/gradient-text"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea";
 import { CheckIcon, XIcon } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
 import { ToolCallApproval } from "./tool-call-approval"
 import { Agent } from "@/types/models/agent"
-import {
-  Tool,
-  ToolContent,
-  ToolHeader,
-  ToolOutput,
-  ToolInput,
-} from '@/components/ai-elements/tool';
 
 interface ItemWithChunks {
   id: string,
@@ -88,6 +82,7 @@ interface MessageRendererProps {
   addToContext?: (item: any) => void
   writeAccess?: boolean
   AgentVisualComponent?: React.ComponentType<any>
+  onQuestionAnswer?: (questionId: string, answerId: string, answerText: string) => void
   config?: {
     marginTopFirstMessage?: string
     customAssistantClassnames?: string
@@ -109,6 +104,7 @@ export function MessageRenderer({
   addToContext,
   writeAccess = true,
   AgentVisualComponent,
+  onQuestionAnswer,
   config,
   addToolApprovalResponse,
   handleFeedback
@@ -267,6 +263,33 @@ export function MessageRenderer({
 
                   let text = part.text.replace(/<file name="([^"]+)">([^<]+)<\/file>/g, '');
 
+                  // Render structured answer responses from the question_ask tool
+                  const answerMatch = text.match(/^\[answer:(.+)\]$/s);
+                  if (answerMatch) {
+                    const cleanLabel = (raw: string) =>
+                      camelCaseToLabel(raw.replace(/_/g, ' ').trim());
+                    const answers = answerMatch[1]
+                      .split(',')
+                      .map((s) => cleanLabel(s.trim()))
+                      .filter(Boolean);
+                    return (
+                      <div
+                        key={`${message.id}-${i}`}
+                        className="flex flex-wrap gap-1.5 py-1"
+                      >
+                        {answers.map((answer) => (
+                          <span
+                            key={answer}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm bg-primary/10 text-primary font-medium"
+                          >
+                            <CheckIcon className="h-3 w-3 shrink-0" />
+                            {answer}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  }
+
                   // Check if text contains JSON citations
                   // Create a more robust regex that matches all field orders
                   const flexibleCitationRegex = /\{[^}]*?item_name\s*:\s*[^,}]+[^}]*?\}/g;
@@ -417,6 +440,58 @@ export function MessageRenderer({
                   )
                 }
 
+                if (part.type?.toLowerCase() === 'tool-question_ask') {
+                  const dynamicToolPart = part as any;
+                  let rawOutput = dynamicToolPart.output;
+                  if (typeof rawOutput === "string") {
+                    try { rawOutput = JSON.parse(rawOutput); } catch { return null; }
+                  }
+                  let result = rawOutput?.result;
+                  if (typeof result === "string") {
+                    try { result = JSON.parse(result); } catch { return null; }
+                  }
+                  if (!result) return null;
+
+                  const questionData = result as {
+                    questionId: string;
+                    question: string;
+                    answerOptions: { id: string; text: string }[];
+                    status: string;
+                  };
+
+                  const laterMessages = messagesToRender.slice(messageIndex + 1);
+                  const nextUserMessage = laterMessages.find((m) => m.role === "user");
+                  const isAnswered = !!nextUserMessage;
+
+                  const answeredText = nextUserMessage?.parts
+                    ?.find((p) => p.type === "text")
+                    ?.text ?? undefined;
+
+                  if (isAnswered) {
+                    return undefined;
+                  }
+
+                  return (
+                    <QuestionAsk
+                      key={`${message.id}-${i}`}
+                      questionId={questionData.questionId}
+                      question={questionData.question}
+                      answerOptions={questionData.answerOptions}
+                      isAnswered={isAnswered}
+                      answeredText={answeredText}
+                      onAnswer={(answerId, answerText) =>
+                        onQuestionAnswer?.(questionData.questionId, answerId, answerText)
+                      }
+                      disabled={
+                        !onQuestionAnswer ||
+                        status === "submitted" ||
+                        status === "streaming" ||
+                        isAnswered
+                      }
+                    />
+                  );
+                }
+
                 if (part.type?.toLowerCase() === 'tool-todo_read') {
                   return null;
                 }
@@ -451,9 +526,6 @@ export function MessageRenderer({
 
                     }
                   }
-
-                  console.log("output", output);
-                  console.log("output.result", output?.result);
 
                   const chunks = Array.isArray(output?.result) ? output?.result : output?.result?.chunks;
                   const reasoning: {
@@ -548,7 +620,7 @@ export function MessageRenderer({
                     }[]
                   }[] = !Array.isArray(output?.result) ? output?.result?.reasoning : [];
                   return (
-                    
+
                     <>
                       <ReasoningVisualisation
                         reasoning={reasoning}
@@ -1109,3 +1181,125 @@ const SearchResultItem = ({ item }: { item: ItemWithChunks }) => {
     </CardContent>
   </Card>)
 }
+
+const QuestionAsk = ({
+  questionId: _questionId,
+  question,
+  answerOptions,
+  isAnswered,
+  answeredText,
+  onAnswer,
+  disabled,
+}: {
+  questionId: string;
+  question: string;
+  answerOptions: { id: string; text: string }[];
+  isAnswered: boolean;
+  answeredText?: string;
+  onAnswer: (answerId: string, answerText: string) => void;
+  disabled: boolean;
+}) => {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [submitted, setSubmitted] = useState(false);
+
+  const toggle = (id: string) => {
+    if (disabled || submitted) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSubmit = () => {
+    if (selectedIds.size === 0 || submitted) return;
+    const selected = answerOptions.filter((o) => selectedIds.has(o.id));
+    setSubmitted(true);
+    onAnswer(
+      Array.from(selectedIds).join(","),
+      selected.map((o) => o.text).join(", "),
+    );
+  };
+
+  // Collapsed view after local submission or when a later user message exists (page refresh)
+  if (submitted || isAnswered) {
+    const selectedOptions = answerOptions.filter((o) => selectedIds.has(o.id));
+    return (
+      <div className="my-3 border rounded-lg bg-card px-4 py-3 flex items-start gap-3">
+        <div className="p-1.5 rounded-md bg-primary/10 shrink-0 mt-0.5">
+          <CheckIcon className="h-3.5 w-3.5 text-primary" />
+        </div>
+        <div className="min-w-0">
+          <div className="text-xs text-muted-foreground mb-1.5">{question}</div>
+          {(() => {
+            const answers = selectedOptions.length > 0
+              ? selectedOptions.map((o) => o.text)
+              : answeredText
+                ? answeredText.split(", ").map((t) => t.trim()).filter(Boolean)
+                : [];
+            return answers.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {answers.map((text) => (
+                  <span
+                    key={text}
+                    className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-primary/10 text-primary font-medium"
+                  >
+                    {text}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground italic">Answered</div>
+            );
+          })()}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="my-3 border rounded-lg overflow-hidden bg-card">
+      <div className="p-4 border-b bg-muted/30">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-md bg-primary/10">
+            <ListChecks className="h-4 w-4 text-primary" />
+          </div>
+          <div className="font-medium text-sm">{question}</div>
+        </div>
+      </div>
+      <div className="p-3 flex flex-col gap-2">
+        {answerOptions.map((option) => (
+          <label
+            key={option.id}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-md border cursor-pointer transition-colors select-none",
+              selectedIds.has(option.id)
+                ? "border-primary/50 bg-primary/5"
+                : "border-border hover:bg-muted/40 hover:border-primary/30",
+              disabled && "opacity-50 cursor-not-allowed",
+            )}
+          >
+            <Checkbox
+              checked={selectedIds.has(option.id)}
+              onCheckedChange={() => toggle(option.id)}
+              disabled={disabled}
+              className="shrink-0"
+            />
+            <span className="text-sm">{option.text}</span>
+          </label>
+        ))}
+      </div>
+      <div className="px-3 pb-3">
+        <Button
+          size="sm"
+          onClick={handleSubmit}
+          disabled={selectedIds.size === 0 || disabled}
+          className="w-full">
+          Confirm selection
+        </Button>
+      </div>
+    </div>
+  );
+};
+

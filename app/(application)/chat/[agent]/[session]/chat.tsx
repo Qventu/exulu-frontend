@@ -30,19 +30,21 @@ import {
 import { getToken } from "@/util/api"
 import { Agent } from "@EXULU_SHARED/models/agent";
 import { ConfigContext } from "@/components/config-context";
-import { ArrowUp, ChevronsUpDown, FileText, Form, Plus } from "lucide-react";
+import { ArrowUp, Database, FileText, Form, Plus, Share2, Copy, Check, Sparkles } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SaveWorkflowModal } from "@/components/save-workflow-modal";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { CardContent, CardHeader } from "@/components/ui/card";
 import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation";
 import { RBACControl } from "@/components/rbac";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Loading } from "@/components/ui/loading";
 import { Badge } from "@/components/ui/badge";
 import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
@@ -74,16 +76,14 @@ import { Response } from '@/components/ai-elements/response';
 import AgentVisual from "@/components/lottie";
 import Logo from "@/components/logo";
 import { PromptSelectorModal } from "./components/prompt-selector-modal";
-import { PromptVariableForm } from "./components/prompt-variable-form";
 import { PromptLibrary } from "@/types/models/prompt-library";
-import { extractVariables, fillPromptVariables } from "@/lib/prompts";
 import { useIncrementPromptUsage } from "@/hooks/use-prompts";
 import { Project } from "@/types/models/project";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ToolCallApproval } from "@/components/tool-call-approval";
 import { ItemsSelectionModal } from "@/components/items-selection-modal";
-import { SessionItem } from "@/components/project-details";
+import { SessionItemBadge } from "@/components/project-details";
 import {
   Sheet,
   SheetContent,
@@ -91,6 +91,11 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Wrench } from "lucide-react";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import {
@@ -155,6 +160,12 @@ export function ChatLayout({
     }
   }, [session, user]);
 
+  const managedContextEnabled = useMemo(() => {
+    return agent.tools?.find((tool) => tool.id === "agentic_context_search")?.config.find((c) => c.name === "managed_context")?.variable === "true" ||
+      // @ts-ignore
+      agent.tools?.find((tool) => tool.id === "agentic_context_search")?.config.find((c) => c.name === "managed_context")?.variable === true;
+  }, [agent.tools]);
+
   const searchParams = useSearchParams();
   const initialPromptId = searchParams.get("promptId");
 
@@ -166,19 +177,16 @@ export function ChatLayout({
     score: number;
   } | null>(null);
   const [feedbackDescription, setFeedbackDescription] = useState("");
-  const [promptVariableFormOpen, setPromptVariableFormOpen] = useState(false);
-  const [selectedPrompt, setSelectedPrompt] = useState<PromptLibrary | null>(null);
   const [incrementPromptUsage] = useIncrementPromptUsage();
-
   const [writeAccess, setWriteAccess] = useState<boolean>(currentSession ? checkChatSessionWriteAccess(currentSession, user) : true);
-  const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
-
   const [rbac, setRbac] = useState({
     rights_mode: currentSession?.rights_mode || 'private',
     users: currentSession?.RBAC?.users || [],
     roles: currentSession?.RBAC?.roles || [],
     // projects: currentSession?.RBAC?.projects || []
   })
+  const [sharePopoverOpen, setSharePopoverOpen] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
 
   const creatorQuery = useQuery(GET_USER_BY_ID, {
     variables: { id: currentSession?.created_by },
@@ -216,12 +224,8 @@ export function ChatLayout({
         if (feedbackModal) {
           setFeedbackModal(null);
           setFeedbackDescription("");
-        } else if (promptVariableFormOpen) {
-          setPromptVariableFormOpen(false);
         } else if (promptSelectorOpen) {
           setPromptSelectorOpen(false);
-        } else if (toolsSheetOpen) {
-          setToolsSheetOpen(false);
         } else if (showSaveWorkflowModal) {
           setShowSaveWorkflowModal(false);
         }
@@ -230,8 +234,7 @@ export function ChatLayout({
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [feedbackModal, promptVariableFormOpen, promptSelectorOpen, toolsSheetOpen, showSaveWorkflowModal]);
-
+  }, [feedbackModal, promptSelectorOpen, showSaveWorkflowModal]);
 
   const [tokenCounts, setTokenCounts] = useState<MessageMetadata>({
     totalTokens: 0,
@@ -362,25 +365,14 @@ export function ChatLayout({
   }, [messages]);
 
   // Prompt selector handlers
-  const handleSelectPrompt = (prompt: PromptLibrary) => {
-    const variables = extractVariables(prompt.content);
-
-    if (variables.length > 0) {
-      // Prompt has variables, show form
-      setSelectedPrompt(prompt);
-      setPromptVariableFormOpen(true);
-    } else {
-      // No variables, insert directly
-      insertPromptIntoChat(prompt.content);
-
-      // Increment usage count
-      incrementPromptUsage({
-        variables: {
-          id: prompt.id,
-          usage_count: (prompt.usage_count || 0) + 1,
-        },
-      });
-    }
+  const handleSelectPrompt = (prompt: PromptLibrary, filledContent: string) => {
+    insertPromptIntoChat(filledContent);
+    incrementPromptUsage({
+      variables: {
+        id: prompt.id,
+        usage_count: (prompt.usage_count || 0) + 1,
+      },
+    });
   };
 
   const createSession = async () => {
@@ -427,24 +419,6 @@ export function ChatLayout({
     }
   }
 
-  const handleSubmitVariables = (values: Record<string, string>) => {
-    if (!selectedPrompt) return;
-
-    const filledPrompt = fillPromptVariables(selectedPrompt.content, values);
-    insertPromptIntoChat(filledPrompt);
-
-    // Increment usage count
-    incrementPromptUsage({
-      variables: {
-        id: selectedPrompt.id,
-        usage_count: (selectedPrompt.usage_count || 0) + 1,
-      },
-    });
-
-    setPromptVariableFormOpen(false);
-    setSelectedPrompt(null);
-  };
-
   const insertPromptIntoChat = (promptText: string) => {
     // Append to existing input or replace if empty
     setInput((prev) => (prev ? `${prev}\n\n${promptText}` : promptText));
@@ -458,7 +432,7 @@ export function ChatLayout({
     if (initialPromptData?.prompt_library_itemById && !initialPromptProcessed) {
       const prompt = initialPromptData.prompt_library_itemById;
       setInitialPromptProcessed(true);
-      handleSelectPrompt(prompt);
+      handleSelectPrompt(prompt, prompt.content);
     }
   }, [initialPromptData, initialPromptProcessed]);
 
@@ -567,10 +541,6 @@ export function ChatLayout({
     }
   };
 
-  // Calculate number of active tools
-  const activeToolsCount = useMemo(() => {
-    return (agent.tools?.length || 0) - disabledTools.length;
-  }, [agent.tools, disabledTools]);
 
   const updateMessageFiles = async (items: Item[]) => {
     const files = await Promise.all(items.map(async (item) => {
@@ -634,15 +604,81 @@ export function ChatLayout({
               Turn this conversation into a reusable template
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!canCreateWorkflow}
-            onClick={() => setShowSaveWorkflowModal(true)}
-            aria-label="Save conversation as reusable template">
-            <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
-            Save as Template
-          </Button>
+          <div className="flex items-center gap-2">
+            {writeAccess && currentSession && (
+              <Popover open={sharePopoverOpen} onOpenChange={setSharePopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" aria-label="Share this session">
+                    <Share2 className="w-4 h-4 mr-2" aria-hidden="true" />
+                    Share
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-96 p-4 space-y-4" align="end">
+                  <div>
+                    <p className="text-sm font-medium mb-1.5">Session link</p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        readOnly
+                        value={typeof window !== "undefined" ? window.location.href : ""}
+                        className="flex-1 text-xs bg-muted rounded px-2.5 py-1.5 border border-border text-muted-foreground truncate outline-none"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0"
+                        onClick={() => {
+                          navigator.clipboard.writeText(window.location.href);
+                          setUrlCopied(true);
+                          setTimeout(() => setUrlCopied(false), 2000);
+                        }}
+                      >
+                        {urlCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="border-t pt-4 space-y-3">
+                    <p className="text-sm font-medium">Access control</p>
+                    <RBACControl
+                      allowedModes={['private', 'users', 'roles']}
+                      initialRightsMode={currentSession.rights_mode}
+                      initialUsers={currentSession.RBAC?.users}
+                      initialRoles={currentSession.RBAC?.roles}
+                      onChange={(rights_mode, users, roles) => {
+                        setRbac({ rights_mode, users, roles });
+                      }}
+                    />
+                    <Button
+                      className="w-full"
+                      disabled={updateAgentSessionRbacResult.loading}
+                      onClick={() => {
+                        updateAgentSessionRbac({
+                          variables: {
+                            id: currentSession.id,
+                            rights_mode: rbac.rights_mode,
+                            RBAC: {
+                              users: rbac.users,
+                              roles: rbac.roles,
+                            },
+                          },
+                        });
+                      }}
+                    >
+                      Save access rights {updateAgentSessionRbacResult.loading && <Loading className="ml-2" />}
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!canCreateWorkflow}
+              onClick={() => setShowSaveWorkflowModal(true)}
+              aria-label="Save conversation as reusable template">
+              <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
+              Save as Template
+            </Button>
+          </div>
         </div>
 
         {agent.maxContextLength ? (
@@ -743,6 +779,13 @@ export function ChatLayout({
                   setFileItems([...(fileItems || []), item])
                 }}
                 writeAccess={writeAccess}
+                onQuestionAnswer={(_questionId, _answerId, answerText) => {
+                  const approvedTools = localStorage.getItem(`pre-approved-tool-calls-${currentSession?.id}`) || [];
+                  sendMessage(
+                    { text: "[answer:" + answerText + "]", files: [] },
+                    { body: { disabledTools, approvedTools } },
+                  );
+                }}
               />
             ) : null}
           </ConversationContent>
@@ -756,7 +799,7 @@ export function ChatLayout({
           )
         }
         {error && (
-          <div className="mx-5">
+          <div className="w-[850px] mx-auto">
             <Alert className="mb-3" variant="destructive">
               <ExclamationTriangleIcon className="size-4" />
               <AlertTitle>Error</AlertTitle>
@@ -772,45 +815,198 @@ export function ChatLayout({
               onSubmit={onSubmit}
               className="px-6 border-input flex mx-5 p-5 flex-col gap-2 mb-2">
               <div className="items-center flex flex-col relative gap-2 w-full">
-                <div className="flex relative gap-2 w-[850px]">
-                  <TextareaAutosize
-                    autoComplete="off"
-                    autoFocus={true}
-                    minRows={1}
-                    maxLength={MAX_INPUT_LENGTH}
-                    value={input}
-                    ref={inputRef}
-                    onKeyDown={handleKeyPress}
-                    onChange={(e) => setInput(e.target.value)}
-                    name="message"
-                    placeholder={`Ask me anything...`}
-                    className="border max-h-40 px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full items-center h-28 resize-none overflow-hidden bg-card/35"
-                    aria-label="Chat message input"
-                    aria-describedby={input.length > MAX_INPUT_LENGTH * 0.9 ? "input-length-warning" : undefined}
-                  />
-                  {status !== "streaming" ? (
-                    <Button
-                      className="shrink-0"
-                      variant="secondary"
-                      size="icon"
-                      type="submit"
-                      disabled={status === "submitted" || !input?.trim()}
-                      aria-label="Send message"
-                    >
-                      <ArrowUp className=" size-6 text-muted-foreground" />
-                    </Button>
-                  ) : (
-                    <Button
-                      className="shrink-0"
-                      variant="secondary"
-                      size="icon"
-                      type="button"
-                      onClick={stop}
-                      aria-label="Stop generating response"
-                    >
-                      <StopIcon className="size-6 text-muted-foreground" />
-                    </Button>
+                <div className="relative gap-2 w-[850px] bg-card/35 p-3 rounded-lg border border-border">
+                  <div className="flex relative gap-2 w-full">
+                    <TextareaAutosize
+                      autoComplete="off"
+                      autoFocus={true}
+                      minRows={1}
+                      maxLength={MAX_INPUT_LENGTH}
+                      value={input}
+                      ref={inputRef}
+                      onKeyDown={handleKeyPress}
+                      onChange={(e) => setInput(e.target.value)}
+                      name="message"
+                      placeholder={`Ask me anything...`}
+                      className="max-h-40 px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full items-center h-28 resize-none overflow-hidden bg-card/35 mb-3"
+                      aria-label="Chat message input"
+                      aria-describedby={input.length > MAX_INPUT_LENGTH * 0.9 ? "input-length-warning" : undefined}
+                    />
+                    {status !== "streaming" ? (
+                      <Button
+                        className="shrink-0"
+                        variant="secondary"
+                        size="icon"
+                        type="submit"
+                        disabled={status === "submitted" || !input?.trim()}
+                        aria-label="Send message"
+                      >
+                        <ArrowUp className=" size-6 text-muted-foreground" />
+                      </Button>
+                    ) : (
+                      <Button
+                        className="shrink-0"
+                        variant="secondary"
+                        size="icon"
+                        type="button"
+                        onClick={stop}
+                        aria-label="Stop generating response"
+                      >
+                        <StopIcon className="size-6 text-muted-foreground" />
+                      </Button>
+                    )}
+                  </div>
+                  {/* ── Badges row: pinned scope + tool toggles ───────────── */}
+                  {((sessionItems && sessionItems.length > 0) || (agent.tools && agent.tools.length > 0) || (agent.skills && agent.skills.length > 0)) && (
+                    <div className="flex flex-wrap items-center gap-1.5 w-full">
+                      <Button type="button" variant="ghost" className="shrink-0 h-7 text-left" onClick={() => setPromptSelectorOpen(true)} aria-label="Insert prompt from library">
+                        <FileText className="h-3.5 w-3.5 mr-2" /> Prompts
+                      </Button>
+
+                      <span className="w-px h-4 bg-border mx-0.5" aria-hidden="true" />
+
+                      {/* Tool toggles — blue when enabled, muted when disabled */}
+
+                      {agent.skills?.map((agentSkill) => {
+                        const isEnabled = !disabledTools.includes(agentSkill.id);
+                        return (
+                          <TooltipProvider key={agentSkill.id}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleTool(agentSkill.id)}
+                                  className={`inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 transition-colors ${isEnabled
+                                    ? "bg-purple-50 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950"
+                                    : "bg-muted/50 text-muted-foreground opacity-50 hover:opacity-75"
+                                    }`}
+                                  aria-pressed={isEnabled}
+                                  aria-label={`${isEnabled ? "Disable" : "Enable"} ${agentSkill.name}`}
+                                >
+                                  <Sparkles className="w-3 h-3 shrink-0" />
+                                  <span className="capitalize">{agentSkill.name.replace(/_/g, " ")}</span>
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{isEnabled ? "Click to disable '" + agentSkill.name + "' skill." : "Click to enable '" + agentSkill.name + "' skill."}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        );
+                      })}
+
+                      {/* Visual separator between scope and tools (only when both are present) */}
+                      {agent.skills && agent.skills.length > 0 && agent.tools && agent.tools.length > 0 && (
+                        <span className="w-px h-4 bg-border mx-0.5" aria-hidden="true" />
+                      )}
+
+                      {agent.tools?.map((agentTool) => {
+                        const isEnabled = !disabledTools.includes(agentTool.id);
+                        return (
+                          <TooltipProvider key={agentTool.id}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleTool(agentTool.id)}
+                                  className={`inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 transition-colors ${isEnabled
+                                    ? "bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950"
+                                    : "bg-muted/50 text-muted-foreground opacity-50 hover:opacity-75"
+                                    }`}
+                                  aria-pressed={isEnabled}
+                                  aria-label={`${isEnabled ? "Disable" : "Enable"} ${agentTool.name}`}
+                                >
+                                  <Wrench className="w-3 h-3 shrink-0" />
+                                  <span className="capitalize">{agentTool.name.replace(/_/g, " ")}</span>
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{isEnabled ? "Click to disable '" + agentTool.name + "' tool." : "Click to enable '" + agentTool.name + "' tool."}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        );
+                      })}
+
+                      {/* Visual separator between scope and tools (only when both are present) */}
+                      {sessionItems && sessionItems.length > 0 && agent.tools && agent.tools.length > 0 && (
+                        <span className="w-px h-4 bg-border mx-0.5" aria-hidden="true" />
+                      )}
+
+                      {/* Pinned contexts / items — amber */}
+                      {sessionItems?.map((gid) => (
+                        <SessionItemBadge
+                          key={gid}
+                          gid={gid}
+                          onRemove={async (removedGid) => {
+                            const update = sessionItems.filter((i) => i !== removedGid);
+                            let sessionToUse = currentSession;
+                            if (currentSession?.id === "new" || !currentSession) {
+                              const createdSession = await createSession();
+                              if (!createdSession) {
+                                toast({ title: "Error", description: "Failed to create session. Please try again.", variant: "destructive" });
+                                return;
+                              }
+                              sessionToUse = createdSession;
+                            }
+                            updateAgentSessionItems({ variables: { id: sessionToUse?.id, session_items: update } });
+                            setSessionItems(update);
+                          }}
+                        />
+                      ))}
+
+
+                      {/* Add specific items */}
+                      <ItemsSelectionModal
+                        onConfirm={async (data) => {
+                          let sessionToUse = currentSession;
+                          if (currentSession?.id === "new" || !currentSession) {
+                            const createdSession = await createSession();
+                            if (!createdSession) {
+                              toast({ title: "Error", description: "Failed to create session. Please try again.", variant: "destructive" });
+                              return;
+                            }
+                            sessionToUse = createdSession;
+                          }
+                          const update = [...(sessionItems || []), ...data.map((x) => `${x.context.id}/${x.item.id}`)];
+                          updateAgentSessionItems({ variables: { id: sessionToUse?.id, session_items: update } });
+                          setSessionItems(update);
+                        }}
+                        onSelectContext={async (context) => {
+                          let sessionToUse = currentSession;
+                          if (currentSession?.id === "new" || !currentSession) {
+                            const createdSession = await createSession();
+                            if (!createdSession) {
+                              toast({ title: "Error", description: "Failed to create session. Please try again.", variant: "destructive" });
+                              return;
+                            }
+                            sessionToUse = createdSession;
+                          }
+                          const gid = context.id;
+                          if (sessionItems?.includes(gid)) return;
+                          const update = [...(sessionItems || []), gid];
+                          updateAgentSessionItems({ variables: { id: sessionToUse?.id, session_items: update } });
+                          setSessionItems(update);
+                        }}
+                        buttonText="Add context"
+                        tooltipText="Add specific knowledge contexts or items to this chat."
+                        className="h-7 rounded-full"
+                      />
+                    </div>
                   )}
+
+
+                  {/* Managed context notice */}
+                  {managedContextEnabled && (
+                    <div className="flex items-center gap-3 w-[850px] mx-auto rounded-md px-3 py-2 text-sm">
+                      <span className="w-2 h-2 rounded-full bg-gray-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-gray-900 dark:text-gray-300">Managed context</span>
+                        <span className="text-gray-700 dark:text-gray-400 ml-1.5">— agent will only search contexts and items you add to this session.</span>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
                 {/* Character count warning when approaching limit */}
                 {input.length > MAX_INPUT_LENGTH * 0.9 && (
@@ -821,134 +1017,19 @@ export function ChatLayout({
                     )}
                   </div>
                 )}
-                <div className="items-center flex relative gap-2 w-[850px]">
-                  {/* {
-                  configContext?.fileUploads?.s3endpoint && (<UppyDashboard
-                    id={`chat-${currentSession?.id || 'new'}`}
-                    selectionLimit={10}
-                    allowedFileTypes={[
-                      ...agent.capabilities?.audio || [],
-                      ...agent.capabilities?.video || [],
-                      ...agent.capabilities?.files || [],
-                      ...agent.capabilities?.images || [],
-                    ]}
-                    dependencies={[]}
-                    onConfirm={(items) => {
-                      setFileItems(items)
-                    }}
-                  />)
-                } */}
+              </div>
 
-                  {/* Select or add items to knowledge bases */}
-                   <ItemsSelectionModal onConfirm={async (data) => {
-                    console.log("data", data)
-                    let sessionToUse = currentSession;
-                    // Call update session mutation to add the item to the session
-                    if (currentSession?.id === "new" || !currentSession) {
-                      // Create the session first
-                      const createdSession = await createSession();
-                      if (!createdSession) {
-                        toast({
-                          title: "Error",
-                          description: "Failed to create session. Please try again.",
-                          variant: "destructive",
-                        });
-                        return;
-                      }
-                      sessionToUse = createdSession;
-                    }
-                    const update = [...(sessionItems || []), ...data.map((x) => `${x.context.id}/${x.item.id}`)];
-                    updateAgentSessionItems({
-                      variables: {
-                        id: sessionToUse?.id,
-                        session_items: update
-                      }
-                    })
-                    setSessionItems(update);
-                  }} buttonText="" tooltipText="Select or create items from/for knowledge sources to add to the chat." />
 
-                  {/* Tools button */}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="shrink-0 relative"
-                          onClick={() => setToolsSheetOpen(true)}
-                          aria-label={`Configure tools (${activeToolsCount} active)`}
-                        >
-                          <Wrench className="h-4 w-4" />
-                          {activeToolsCount > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center" aria-hidden="true">
-                              {activeToolsCount}
-                            </span>
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{activeToolsCount} {activeToolsCount === 1 ? 'tool' : 'tools'} active</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="shrink-0"
-                          onClick={() => setPromptSelectorOpen(true)}
-                          aria-label="Insert prompt from library"
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Insert prompt from library</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+              {/* Attached files (in-progress upload attachments) */}
+              {fileItems && fileItems.length > 0 && (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 w-[850px] mx-auto">
+                  {fileItems.map((item) => (
+                    <FileItem key={item} s3Key={item} disabled={true} active={false} onRemove={() => {
+                      setFileItems(fileItems.filter((i) => i !== item));
+                    }} />
+                  ))}
                 </div>
-              </div>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 w-[850px] mx-auto">
-                {/* Show  selected files */}
-                {fileItems?.map((item) => (
-                  <FileItem s3Key={item} disabled={true} active={false} onRemove={() => {
-                    setFileItems(fileItems?.filter((i) => i !== item))
-                  }} />
-                ))}
-                {sessionItems?.map((item) => (
-                  <SessionItem gid={item} onRemove={async () => {
-                    const update = sessionItems?.filter((i) => i !== item);
-
-                    let sessionToUse = currentSession;
-                    if (currentSession?.id === "new" || !currentSession) {
-                      const createdSession = await createSession();
-                      if (!createdSession) {
-                        toast({
-                          title: "Error",
-                          description: "Failed to create session. Please try again.",
-                          variant: "destructive",
-                        });
-                        return;
-                      }
-                      sessionToUse = createdSession;
-                    }
-
-                    updateAgentSessionItems({
-                      variables: {
-                        id: sessionToUse?.id,
-                        session_items: update
-                      }
-                    })
-                    setSessionItems(update)
-                  }} />
-                ))}
-              </div>
+              )}
             </form>
             {/* Disclaimer text */}
             <p className="text-xs text-center text-muted-foreground mb-5">
@@ -973,16 +1054,6 @@ export function ChatLayout({
           agentId={agent.id}
         />
 
-        {/* Prompt Variable Form */}
-        {selectedPrompt && (
-          <PromptVariableForm
-            open={promptVariableFormOpen}
-            onOpenChange={setPromptVariableFormOpen}
-            variables={extractVariables(selectedPrompt.content)}
-            promptName={selectedPrompt.name}
-            onSubmit={handleSubmitVariables}
-          />
-        )}
         {/* Feedback Modal */}
         <Dialog open={!!feedbackModal} onOpenChange={(open) => {
           if (!open) {
@@ -1026,179 +1097,8 @@ export function ChatLayout({
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        {/* Agent Details Sheet */}
-        {writeAccess && (
-          <Sheet open={toolsSheetOpen} onOpenChange={setToolsSheetOpen}>
-            <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>{agent.name}</SheetTitle>
-                {agent.description && (
-                  <SheetDescription>
-                    {agent.description?.length > 100 ? agent.description?.substring(0, 100) + "..." : agent.description}
-                  </SheetDescription>
-                )}
-              </SheetHeader>
-
-              <div className="mt-6 space-y-4">
-                {
-                  messages?.length > 0 && (
-                    <div>
-                      <AgentVisual agent={agent} status={status} className="w-full" />
-                    </div>
-                  )
-                }
-
-                {currentSession && (
-                  <div>
-                    <div className="border rounded">
-                      {
-                        creatorQuery.loading && (
-                          <div className="flex flex-row justify-between p-3">
-                            <p className="text-sm font-medium">Session created by</p>
-                            <Loading className="ml-2" />
-                          </div>
-                        )
-                      }
-                      {creatorQuery.data?.userById && !creatorQuery.loading && (
-                        <div className="flex flex-row justify-between p-3">
-                          <p className="text-sm font-medium">Session created by</p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {creatorQuery.data.userById.name ? <p className="text-sm font-medium capitalize">
-                              {creatorQuery.data.userById.name}
-                            </p> : <p className="text-sm font-medium">{creatorQuery.data.userById.email}</p>}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {currentSession?.project && (
-                  <div>
-                    <div className="border rounded">
-                      {
-                        projectQuery.loading && (
-                          <div className="flex flex-row justify-between p-3">
-                            <p className="text-sm font-medium">This chat is part of a project:</p>
-                            <Loading className="ml-2" />
-                          </div>
-                        )
-                      }
-                      {projectQuery.data?.projectById && !projectQuery.loading && (
-                        <div className="flex flex-col p-3 gap-2">
-                          <p className="text-sm font-medium">Project</p>
-                          <Link
-                            href={`/projects/${currentSession.project}`}
-                            className="text-sm text-primary hover:underline"
-                          >
-                            {projectQuery.data.projectById.name}
-                          </Link>
-                          {projectQuery.data.projectById.description && (
-                            <p className="text-xs text-muted-foreground">
-                              {projectQuery.data.projectById.description}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground pb-2">
-                    You can disable tools for individual messages in this session by clicking the switch:
-                  </p>
-                  <TooltipProvider>
-                    <div className="space-y-1">
-                      {agent.tools && agent.tools.length > 0 ? (
-                        agent.tools.map((tool, index) => {
-                          const isEnabled = !disabledTools.includes(tool.id);
-                          return (
-                            <Tooltip key={tool.name + "_" + index}>
-                              <TooltipTrigger asChild>
-                                <div className="p-2 rounded-md border text-xs bg-background flex items-center justify-between">
-                                  <p className="font-medium flex items-center gap-2 capitalize">
-                                    {tool.name.replace(/_/g, " ")}
-                                  </p>
-                                  <Switch
-                                    checked={isEnabled}
-                                    onCheckedChange={() => toggleTool(tool.id)}
-                                  />
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="max-w-[200px] text-wrap">{tool.description}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          );
-                        })
-                      ) : (
-                        <p className="text-xs text-muted-foreground">No tools enabled.</p>
-                      )}
-                    </div>
-                  </TooltipProvider>
-                </div>
-
-                {currentSession && (
-                  <div>
-                    <Collapsible className="border rounded">
-                      <CardHeader className="px-3 py-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex flex-col">
-                            <p className="text-sm font-medium">
-                              Access control ({currentSession.rights_mode || "private"})
-                            </p>
-                          </div>
-                          <CollapsibleTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8">
-                              <ChevronsUpDown className="size-4" />
-                              <span className="sr-only">Toggle</span>
-                            </Button>
-                          </CollapsibleTrigger>
-                        </div>
-                      </CardHeader>
-                      <CollapsibleContent>
-                        <CardContent className="space-y-4 p-3">
-                          <RBACControl
-                            allowedModes={['private', 'users', 'roles']}
-                            initialRightsMode={currentSession.rights_mode}
-                            initialUsers={currentSession.RBAC?.users}
-                            initialRoles={currentSession.RBAC?.roles}
-                            // initialProjects={currentSession.RBAC?.projects}
-                            onChange={(rights_mode, users, roles) => {
-                              setRbac({
-                                rights_mode,
-                                users,
-                                roles,
-                                // projects
-                              })
-                            }}
-                          />
-                          <Button disabled={updateAgentSessionRbacResult.loading} onClick={() => {
-                            updateAgentSessionRbac({
-                              variables: {
-                                id: currentSession.id,
-                                rights_mode: rbac.rights_mode,
-                                RBAC: {
-                                  users: rbac.users,
-                                  roles: rbac.roles,
-                                  // projects: rbac.projects
-                                }
-                              }
-                            })
-                          }}>Save access rights {updateAgentSessionRbacResult.loading && <Loading className="ml-2" />} </Button>
-                        </CardContent>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </div>
-                )}
-              </div>
-            </SheetContent>
-          </Sheet>
-        )}
       </div>
-    </div>
+    </div >
   );
 }
 
