@@ -285,6 +285,29 @@ export const skillsApi = {
     sign: async (skillId: string, filePath: string, contentType: string) =>
         skillsRequest(`/skills/${skillId}/sign`, "POST", { filePath, contentType }),
 
+    /**
+     * Get a presigned PUT URL for uploading a skill bundle (zip or single
+     * SKILL.md) to a per-user staging area. After Uppy finishes the upload,
+     * call `initFromUpload(skillId, stagingKey, isZip)` to extract.
+     */
+    uploadSign: async (
+        skillId: string,
+        extension: ".zip" | ".md",
+        contentType: string,
+    ): Promise<{ uploadUrl: string; stagingKey: string }> =>
+        skillsRequest(`/skills/${skillId}/upload-sign`, "POST", { extension, contentType }),
+
+    /**
+     * Extract a previously-staged skill bundle into skills/<skillId>/v1/.
+     * Triggered after Uppy reports the staging upload succeeded.
+     */
+    initFromUpload: async (
+        skillId: string,
+        stagingKey: string,
+        isZip: boolean,
+    ): Promise<{ version: number; filesCount: number }> =>
+        skillsRequest(`/skills/${skillId}/init-from-upload`, "POST", { stagingKey, isZip }),
+
     /** Get a presigned GET URL (+ optional inline content) for reading a file. */
     file: async (skillId: string, key: string) => {
         const uris = await getUris();

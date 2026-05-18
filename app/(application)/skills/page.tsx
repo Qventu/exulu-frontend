@@ -44,6 +44,8 @@ import {
   Pencil,
   Check,
   X,
+  Upload,
+  FileArchive,
 } from "lucide-react";
 import { useSkills, useCreateSkill, useUpdateSkill } from "@/hooks/use-skills";
 import { SkillListItem } from "./components/skill-list-item";
@@ -65,11 +67,14 @@ export default function SkillsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Create form state
+  const [createMode, setCreateMode] = useState<"blank" | "upload">("blank");
   const [createName, setCreateName] = useState("");
   const [createDescription, setCreateDescription] = useState("");
   const [createTags, setCreateTags] = useState("");
   const [createRightsMode, setCreateRightsMode] = useState<string>("private");
   const [isCreating, setIsCreating] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const filters: any[] = [];
   if (searchQuery) filters.push({ name: { contains: searchQuery } });
@@ -106,11 +111,26 @@ export default function SkillsPage() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  const resetCreateForm = () => {
+    setCreateName("");
+    setCreateDescription("");
+    setCreateTags("");
+    setCreateRightsMode("private");
+    setCreateMode("blank");
+    setUploadFile(null);
+    setIsDragging(false);
+  };
+
   const handleCreate = async () => {
     if (!createName.trim()) {
       toast.error("Name is required");
       return;
     }
+    if (createMode === "upload" && !uploadFile) {
+      toast.error("Please choose a .zip or .md file to upload");
+      return;
+    }
+
     setIsCreating(true);
     try {
       const tags = createTags
@@ -130,15 +150,38 @@ export default function SkillsPage() {
       const newSkill = result.data?.skillsCreateOne?.item;
       if (!newSkill) throw new Error("No skill returned");
 
-      // Initialise S3 folder and SKILL.md
-      await skillsApi.init(newSkill.id, newSkill.name, newSkill.description ?? "");
+      if (createMode === "blank") {
+        // Existing blank-create flow: seed an empty SKILL.md from a template.
+        await skillsApi.init(newSkill.id, newSkill.name, newSkill.description ?? "");
+      } else if (uploadFile) {
+        // Upload flow: stage the bundle, then ask the backend to extract it
+        // into skills/<id>/v1/. If anything fails after skillsCreateOne, the
+        // empty skill row stays in place; the user can retry from the editor.
+        const isZip = uploadFile.name.toLowerCase().endsWith(".zip");
+        const ext = isZip ? ".zip" : ".md";
+        const contentType = uploadFile.type || (isZip ? "application/zip" : "text/markdown");
+
+        const { uploadUrl, stagingKey } = await skillsApi.uploadSign(
+          newSkill.id,
+          ext,
+          contentType,
+        );
+
+        const putRes = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": contentType },
+          body: uploadFile,
+        });
+        if (!putRes.ok) {
+          throw new Error(`S3 upload failed: ${putRes.status} ${putRes.statusText}`);
+        }
+
+        await skillsApi.initFromUpload(newSkill.id, stagingKey, isZip);
+      }
 
       toast.success(`Skill "${newSkill.name}" created`);
       setIsCreateModalOpen(false);
-      setCreateName("");
-      setCreateDescription("");
-      setCreateTags("");
-      setCreateRightsMode("private");
+      resetCreateForm();
 
       // Navigate to editor
       router.push(`/skills/${newSkill.id}`);
@@ -147,6 +190,19 @@ export default function SkillsPage() {
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const handleFilePicked = (file: File | null) => {
+    if (!file) {
+      setUploadFile(null);
+      return;
+    }
+    const lower = file.name.toLowerCase();
+    if (!lower.endsWith(".zip") && !lower.endsWith(".md")) {
+      toast.error("Only .zip and .md files are supported");
+      return;
+    }
+    setUploadFile(file);
   };
 
   return (
@@ -275,7 +331,13 @@ export default function SkillsPage() {
       )}
 
       {/* Create Modal */}
-      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+      <Dialog
+        open={isCreateModalOpen}
+        onOpenChange={(open) => {
+          setIsCreateModalOpen(open);
+          if (!open) resetCreateForm();
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -288,7 +350,106 @@ export default function SkillsPage() {
             </DialogDescription>
           </DialogHeader>
 
+          {/* Mode toggle: Create blank vs Create from upload */}
+          <div className="grid grid-cols-2 gap-2 rounded-md bg-muted p-1">
+            <button
+              type="button"
+              onClick={() => setCreateMode("blank")}
+              className={`flex items-center justify-center gap-1.5 rounded-sm px-3 py-1.5 text-sm font-medium transition-colors ${createMode === "blank"
+                  ? "bg-background shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+                }`}
+            >
+              <Plus className="h-4 w-4" />
+              Create blank
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreateMode("upload")}
+              className={`flex items-center justify-center gap-1.5 rounded-sm px-3 py-1.5 text-sm font-medium transition-colors ${createMode === "upload"
+                  ? "bg-background shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+                }`}
+            >
+              <Upload className="h-4 w-4" />
+              Create from upload
+            </button>
+          </div>
+
           <div className="space-y-4 py-2">
+            {createMode === "upload" && (
+              <div className="space-y-1.5">
+                <Label>Skill bundle</Label>
+                <label
+                  htmlFor="skill-upload"
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    handleFilePicked(e.dataTransfer.files?.[0] ?? null);
+                  }}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 text-center cursor-pointer transition-colors ${isDragging
+                      ? "border-primary bg-primary/5"
+                      : uploadFile
+                        ? "border-primary/50 bg-primary/5"
+                        : "border-border hover:border-primary/40 hover:bg-muted/30"
+                    }`}
+                >
+                  <input
+                    id="skill-upload"
+                    type="file"
+                    accept=".zip,.md"
+                    className="sr-only"
+                    onChange={(e) => handleFilePicked(e.target.files?.[0] ?? null)}
+                  />
+                  {uploadFile ? (
+                    <>
+                      <FileArchive className="h-7 w-7 text-primary" />
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium">{uploadFile.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(uploadFile.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setUploadFile(null);
+                        }}
+                        className="text-xs text-muted-foreground hover:text-foreground underline"
+                      >
+                        Choose a different file
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-7 w-7 text-muted-foreground" />
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium">
+                          Drag &amp; drop or click to choose
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          .zip (full skill folder) or single .md file
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </label>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label htmlFor="skill-name">Name *</Label>
               <Input
@@ -341,16 +502,23 @@ export default function SkillsPage() {
             <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreate} disabled={isCreating || !createName.trim()}>
+            <Button
+              onClick={handleCreate}
+              disabled={
+                isCreating ||
+                !createName.trim() ||
+                (createMode === "upload" && !uploadFile)
+              }
+            >
               {isCreating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
+                  {createMode === "upload" ? "Uploading..." : "Creating..."}
                 </>
               ) : (
                 <>
                   <Plus className="mr-2 h-4 w-4" />
-                  Create & Open
+                  Create &amp; Open
                 </>
               )}
             </Button>
