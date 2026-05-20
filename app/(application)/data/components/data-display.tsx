@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loading } from "@/components/ui/loading";
+import { LoadingStates, type LoadingStatesVariant } from "@/components/loading-states";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -339,8 +340,16 @@ export function DataDisplay(props: DataDisplayProps) {
     )
   }
 
+  const overlayVariant: LoadingStatesVariant | null =
+    updateItemMutationResult.loading      ? "save"
+    : processItemMutationResult.loading   ? "process"
+    : deleteItemMutationResult.loading    ? "delete"
+    : generateChunksMutationResult.loading ? "generate-chunks"
+    : deleteChunksMutationResult.loading  ? "delete-chunks"
+    : null;
+
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
 
       {data ? (
         <>
@@ -1315,6 +1324,13 @@ export function DataDisplay(props: DataDisplayProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {overlayVariant && (
+        <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm">
+          <div className="sticky top-0 flex h-screen items-center justify-center">
+            <LoadingStates variant={overlayVariant} />
+          </div>
+        </div>
+      )}
     </div >
   );
 }

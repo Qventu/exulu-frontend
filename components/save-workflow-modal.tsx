@@ -203,7 +203,7 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
       <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-lg">
-            {isEditing ? (isReadOnly ? 'View Template' : 'Edit Template') : 'Save as Template'}
+            {isEditing ? (isReadOnly ? 'View Routine' : 'Edit Routine') : 'Save as Routine'}
           </DialogTitle>
           <DialogDescription className="text-sm">
             {isEditing
@@ -211,7 +211,7 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
                 ? 'View template details and configuration.'
                 : 'Modify this template. Edit your messages and use {variable_name} syntax to create variables.'
               )
-              : 'Convert this conversation into a reusable template. Edit your messages and use {variable_name} syntax to create variables.'
+              : 'Convert this conversation into a reusable routine. Edit your messages and use {variable_name} syntax to create variables.'
             }
           </DialogDescription>
         </DialogHeader>

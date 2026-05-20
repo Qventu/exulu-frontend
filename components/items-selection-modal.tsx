@@ -1,9 +1,9 @@
 import { Context } from "@/types/models/context";
 import { useContexts } from "@/hooks/contexts";
-import { useState, useEffect } from "react"
-import { Brain, Folder, FolderOpen, File, ChevronRight, X, Check, Plus, Loader2, LayersPlus, FilePlusCorner } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { Brain, Folder, FolderOpen, File, ChevronRight, X, Check, Plus, Loader2, LayersPlus, FilePlusCorner, Bookmark, Search, Database, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useQuery, useMutation } from "@apollo/client";
+import { useQuery, useMutation, useApolloClient } from "@apollo/client";
 import {
     Command,
     CommandInput,
@@ -19,37 +19,103 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog"
 import { Item } from "@/types/models/item";
-import { GET_ITEMS, PAGINATION_POSTFIX, CREATE_ITEM } from "@/queries/queries";
+import { GET_ITEMS, PAGINATION_POSTFIX, CREATE_ITEM, GET_CONTEXT_PRESETS, INCREMENT_PRESET_USAGE } from "@/queries/queries";
 import { Loading } from "./ui/loading";
+import { LoadingStates } from "@/components/loading-states";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ItemFormFields } from "@/components/item-form-fields";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { parsePresetItemsForDisplay, validatePresetItems, type PresetValidationResult } from "@/lib/validate-preset-items";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type SelectedItem = {
     item: Item;
     context: Context;
 };
 
-export const ItemsSelectionModal = ({ onConfirm, onSelectContext, buttonText, className }: {
+interface ContextPreset {
+    id: string
+    name: string
+    description?: string
+    preset_items: string[]
+    tags?: string[]
+    usage_count: number
+    created_by: number
+    createdAt: string
+}
+
+export const ItemsSelectionModal = ({
+    onConfirm,
+    onSelectContext,
+    onApplyPreset,
+    buttonText,
+    buttonType,
+    buttonVariant,
+    buttonSize,
+    buttonClassName,
+    iconClassName
+}: {
     onConfirm: (data: {
         item: Item,
         context: Context
     }[]) => void
     onSelectContext?: (context: Context) => void | Promise<void>
+    onApplyPreset?: (items: string[], preset: ContextPreset) => void | Promise<void>
     buttonText?: string
     tooltipText?: string
-    className?: string
+    buttonType?: "button" | "submit" | "reset"
+    buttonVariant?: "default" | "outline" | "ghost" | "link"
+    buttonSize?: "default" | "sm" | "lg" | "icon"
+    buttonClassName?: string
+    iconClassName?: string
 }) => {
+    const apolloClient = useApolloClient();
     const { data, loading } = useContexts();
     const [selectedContext, setSelectedContext] = useState<Context | undefined>(undefined);
     const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
     const [open, setOpen] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [activeTab, setActiveTab] = useState<"browse" | "presets">("browse");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedPreset, setSelectedPreset] = useState<ContextPreset | null>(null);
+    const [validationResult, setValidationResult] = useState<PresetValidationResult | null>(null);
+    const [isValidating, setIsValidating] = useState(false);
+
+    // Preset queries
+    const { data: presetsData, loading: presetsLoading } = useQuery(GET_CONTEXT_PRESETS, {
+        variables: {
+            page: 1,
+            limit: 100,
+            sort: { field: "updatedAt", direction: "DESC" }
+        },
+        skip: !open || activeTab !== "presets",
+    });
+
+    const [incrementUsage] = useMutation(INCREMENT_PRESET_USAGE);
+
+    const presets: ContextPreset[] = presetsData?.context_presetsPagination?.items || [];
+
+    // Filter presets by search query
+    const filteredPresets = useMemo(() => {
+        if (!searchQuery.trim()) return presets;
+        const query = searchQuery.toLowerCase();
+        return presets.filter(preset =>
+            preset.name.toLowerCase().includes(query) ||
+            preset.description?.toLowerCase().includes(query) ||
+            preset.tags?.some(tag => tag.toLowerCase().includes(query))
+        );
+    }, [presets, searchQuery]);
 
     const reset = () => {
         setSelectedItems([]);
         setSelectedContext(undefined);
+        setActiveTab("browse");
+        setSearchQuery("");
+        setSelectedPreset(null);
+        setValidationResult(null);
     };
 
     const toggleItemSelection = (item: Item, context: Context) => {
@@ -71,8 +137,58 @@ export const ItemsSelectionModal = ({ onConfirm, onSelectContext, buttonText, cl
         return selectedItems.some(s => s.item.id === itemId);
     };
 
+    // Validate selected preset
+    const handleSelectPreset = async (preset: ContextPreset) => {
+        setSelectedPreset(preset);
+        setIsValidating(true);
+        setValidationResult(null);
+
+        try {
+            const result = await validatePresetItems(preset.preset_items, apolloClient);
+            setValidationResult(result);
+        } catch (error) {
+            console.error('Error validating preset:', error);
+            toast.error("Validation error", {
+                description: "Failed to validate preset items. Please try again.",
+            });
+        } finally {
+            setIsValidating(false);
+        }
+    };
+
+    const handleApplyPreset = async () => {
+        if (!selectedPreset || !validationResult || !onApplyPreset) return;
+
+        try {
+            await incrementUsage({
+                variables: {
+                    id: selectedPreset.id,
+                    usage_count: selectedPreset.usage_count + 1
+                }
+            });
+
+            await onApplyPreset(validationResult.validItems, selectedPreset);
+
+            toast.success("Preset applied", {
+                description: validationResult.isValid
+                    ? `${validationResult.validCount} items added successfully.`
+                    : `${validationResult.validCount} items added. ${validationResult.invalidItems.length} invalid items were skipped.`
+            });
+
+            setOpen(false);
+            reset();
+        } catch (error) {
+            console.error('Error applying preset:', error);
+            toast.error("Error applying preset", {
+                description: error instanceof Error ? error.message : "Failed to apply preset. Please try again.",
+            });
+        }
+    };
+
     const handleConfirm = () => {
-        if (selectedItems.length > 0) {
+        if (activeTab === "presets") {
+            handleApplyPreset();
+        } else if (selectedItems.length > 0) {
             onConfirm(selectedItems);
             setOpen(false);
             reset();
@@ -100,151 +216,333 @@ export const ItemsSelectionModal = ({ onConfirm, onSelectContext, buttonText, cl
             }
         }}>
             <DialogTrigger asChild>
-                <Button className={`${className}`} variant="outline" type="button">
-                    <Brain className={`h-4 w-4 ${buttonText ? "mr-2" : ""}`} />
+                <Button type={buttonType} variant={buttonVariant} size={buttonSize} className={buttonClassName}>
+                    <Brain className={`${iconClassName || "h-4 w-4"} ${buttonText ? "mr-2" : ""}`} />
                     {buttonText}
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[1200px] h-[700px] flex flex-col p-0">
                 <DialogHeader className="px-6 pt-6 pb-4">
-                    <DialogTitle>Browse Items</DialogTitle>
+                    <DialogTitle>Add Context & Items</DialogTitle>
                     <DialogDescription>
-                        Select items from folders and add them to your selection
+                        Browse contexts and items, or load a saved preset
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex flex-1 overflow-hidden border-t min-h-0">
-                    {/* Left sidebar - Folder tree */}
-                    <div className="flex-shrink-0 flex-grow-0 basis-64 border-r bg-muted/10 flex flex-col min-w-0">
-                        <div className="h-full">
-                            <div className="p-4 space-y-1">
-                                <div className="text-xs font-semibold text-muted-foreground px-3 py-2">
-                                    FOLDERS
-                                </div>
-                                {loading ? (
-                                    <div className="px-3 py-2">
-                                        <Loading />
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "browse" | "presets")} className="flex flex-col flex-1 overflow-hidden">
+                    <div className="px-6 border-b">
+                        <TabsList className="grid w-full max-w-md grid-cols-2 rounded-to-lg">
+                            <TabsTrigger value="browse">Browse</TabsTrigger>
+                            <TabsTrigger value="presets">Presets</TabsTrigger>
+                        </TabsList>
+                    </div>
+
+                    <TabsContent value="browse" className="flex-1 overflow-hidden m-0">
+                        <div className="flex h-full overflow-hidden min-h-0">
+                            {/* Left sidebar - Folder tree */}
+                            <div className="flex-shrink-0 flex-grow-0 basis-64 border-r bg-muted/10 flex flex-col min-w-0">
+                                <div className="h-full">
+                                    <div className="p-4 space-y-1">
+                                        <div className="text-xs font-semibold text-muted-foreground px-3 py-2">
+                                            FOLDERS
+                                        </div>
+                                        {loading ? (
+                                            <div className="px-3 py-2">
+                                                <Loading />
+                                            </div>
+                                        ) : (
+                                            data?.contexts?.items.map((context: Context) => (
+                                                <button
+                                                    key={context.id}
+                                                    onClick={() => setSelectedContext(context)}
+                                                    className={cn(
+                                                        "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                                                        "hover:bg-accent hover:text-accent-foreground",
+                                                        selectedContext?.id === context.id
+                                                            ? "bg-accent text-accent-foreground font-medium"
+                                                            : "text-foreground"
+                                                    )}
+                                                >
+                                                    {selectedContext?.id === context.id ? (
+                                                        <FolderOpen className="h-4 w-4 shrink-0" />
+                                                    ) : (
+                                                        <Folder className="h-4 w-4 shrink-0" />
+                                                    )}
+                                                    <span className="truncate">{context.name}</span>
+                                                </button>
+                                            ))
+                                        )}
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Middle panel - Items list */}
+                            <div className="flex-1 flex flex-col min-w-0">
+                                {selectedContext ? (
+                                    <>
+                                        {/* Breadcrumb */}
+                                        <div className="px-6 py-3 border-b bg-muted/5 flex-shrink-0">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                    <Folder className="h-4 w-4" />
+                                                    <ChevronRight className="h-3 w-3" />
+                                                    <span className="font-medium text-foreground">{selectedContext.name}</span>
+                                                </div>
+                                                <NewItemDialog context={selectedContext} onItemCreated={(newItem) => {
+                                                    toggleItemSelection(newItem, selectedContext);
+                                                    setRefreshTrigger(prev => prev + 1);
+                                                }} onSelectAll={onSelectContext ? handleSelectAll : undefined} />
+                                            </div>
+                                        </div>
+
+                                        {/* Items list */}
+                                        <div className="flex-1 overflow-hidden min-h-0">
+                                            <ItemsList
+                                                context={selectedContext}
+                                                onToggleItem={toggleItemSelection}
+                                                isItemSelected={isItemSelected}
+                                                refreshTrigger={refreshTrigger}
+                                                key={selectedContext.id}
+                                            />
+                                        </div>
+                                    </>
                                 ) : (
-                                    data?.contexts?.items.map((context: Context) => (
-                                        <button
-                                            key={context.id}
-                                            onClick={() => setSelectedContext(context)}
-                                            className={cn(
-                                                "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
-                                                "hover:bg-accent hover:text-accent-foreground",
-                                                selectedContext?.id === context.id
-                                                    ? "bg-accent text-accent-foreground font-medium"
-                                                    : "text-foreground"
-                                            )}
-                                        >
-                                            {selectedContext?.id === context.id ? (
-                                                <FolderOpen className="h-4 w-4 shrink-0" />
-                                            ) : (
-                                                <Folder className="h-4 w-4 shrink-0" />
-                                            )}
-                                            <span className="truncate">{context.name}</span>
-                                        </button>
-                                    ))
+                                    <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                                        <div className="text-center space-y-2">
+                                            <Folder className="h-12 w-12 mx-auto opacity-20" />
+                                            <p className="text-sm">Select a folder to view its items</p>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Middle panel - Items list */}
-                    <div className="flex-1 flex flex-col min-w-0">
-                        {selectedContext ? (
-                            <>
-                                {/* Breadcrumb */}
-                                <div className="px-6 py-3 border-b bg-muted/5 flex-shrink-0">
+                            {/* Right sidebar - Selected items */}
+                            <div className="flex-shrink-0 flex-grow-0 basis-80 border-l bg-muted/5 flex flex-col min-w-0">
+                                <div className="px-4 py-3 border-b flex-shrink-0">
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <Folder className="h-4 w-4" />
-                                            <ChevronRight className="h-3 w-3" />
-                                            <span className="font-medium text-foreground">{selectedContext.name}</span>
-                                        </div>
-                                        <NewItemDialog context={selectedContext} onItemCreated={(newItem) => {
-                                            toggleItemSelection(newItem, selectedContext);
-                                            setRefreshTrigger(prev => prev + 1);
-                                        }} onSelectAll={onSelectContext ? handleSelectAll : undefined} />
+                                        <h3 className="text-sm font-semibold">Selected Items</h3>
+                                        <Badge variant="secondary">{selectedItems.length}</Badge>
                                     </div>
                                 </div>
 
-                                {/* Items list */}
-                                <div className="flex-1 overflow-hidden min-h-0">
-                                    <ItemsList
-                                        context={selectedContext}
-                                        onToggleItem={toggleItemSelection}
-                                        isItemSelected={isItemSelected}
-                                        refreshTrigger={refreshTrigger}
-                                        key={selectedContext.id}
-                                    />
-                                </div>
-                            </>
-                        ) : (
-                            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                                <div className="text-center space-y-2">
-                                    <Folder className="h-12 w-12 mx-auto opacity-20" />
-                                    <p className="text-sm">Select a folder to view its items</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Right sidebar - Selected items */}
-                    <div className="flex-shrink-0 flex-grow-0 basis-80 border-l bg-muted/5 flex flex-col min-w-0">
-                        <div className="px-4 py-3 border-b flex-shrink-0">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-sm font-semibold">Selected Items</h3>
-                                <Badge variant="secondary">{selectedItems.length}</Badge>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 min-h-0 min-w-0">
-                            {selectedItems.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6">
-                                    <File className="h-10 w-10 mb-2 opacity-20" />
-                                    <p className="text-xs text-center">No items selected yet</p>
-                                    <p className="text-xs text-center mt-1">Click items to add them</p>
-                                </div>
-                            ) : (
-                                <div className="p-3 space-y-2">
-                                    {selectedItems.map(({ item, context }) => (
-                                        <div
-                                            key={item.id}
-                                            className="flex items-start gap-2 p-2 rounded-md bg-background border group hover:border-foreground/20 transition-colors"
-                                        >
-                                            <File className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium truncate">{item.name}</p>
-                                                <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                                                    <Folder className="h-3 w-3" />
-                                                    {context.name}
-                                                </p>
-                                            </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                onClick={() => removeSelectedItem(item.id)}
-                                            >
-                                                <X className="h-3 w-3" />
-                                            </Button>
+                                <div className="flex-1 min-h-0 min-w-0">
+                                    {selectedItems.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6">
+                                            <File className="h-10 w-10 mb-2 opacity-20" />
+                                            <p className="text-xs text-center">No items selected yet</p>
+                                            <p className="text-xs text-center mt-1">Click items to add them</p>
                                         </div>
-                                    ))}
+                                    ) : (
+                                        <div className="p-3 space-y-2">
+                                            {selectedItems.map(({ item, context }) => (
+                                                <div
+                                                    key={item.id}
+                                                    className="flex items-start gap-2 p-2 rounded-md bg-background border group hover:border-foreground/20 transition-colors"
+                                                >
+                                                    <File className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium truncate">{item.name}</p>
+                                                        <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                                                            <Folder className="h-3 w-3" />
+                                                            {context.name}
+                                                        </p>
+                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        onClick={() => removeSelectedItem(item.id)}
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    </TabsContent>
+
+                    <TabsContent value="presets" className="flex-1 overflow-hidden m-0">
+                        <div className="flex h-full overflow-hidden min-h-0">
+                            {/* Preset list */}
+                            <div className="flex-1 flex flex-col border-r">
+                                {/* Search */}
+                                <div className="px-4 py-3 border-b flex-shrink-0">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder="Search presets..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="pl-9"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* List */}
+                                <div className="flex-1 overflow-y-auto">
+                                    {presetsLoading ? (
+                                        <div className="flex items-center justify-center h-full">
+                                            <Loading />
+                                        </div>
+                                    ) : filteredPresets.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6">
+                                            <Bookmark className="h-12 w-12 mb-2 opacity-20" />
+                                            <p className="text-sm text-center">
+                                                {searchQuery ? "No presets match your search" : "No presets available"}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="p-3 space-y-2">
+                                            {filteredPresets.map((preset) => {
+                                                const stats = parsePresetItemsForDisplay(preset.preset_items);
+                                                const isSelected = selectedPreset?.id === preset.id;
+
+                                                return (
+                                                    <button
+                                                        key={preset.id}
+                                                        onClick={() => handleSelectPreset(preset)}
+                                                        className={cn(
+                                                            "w-full text-left p-3 rounded-lg border transition-all",
+                                                            "hover:border-primary/50 hover:bg-accent/50",
+                                                            isSelected && "border-primary bg-accent"
+                                                        )}
+                                                    >
+                                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                                            <h4 className="font-medium text-sm line-clamp-1">{preset.name}</h4>
+                                                            {isSelected && (
+                                                                <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                                                            )}
+                                                        </div>
+
+                                                        {preset.description && (
+                                                            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                                                                {preset.description}
+                                                            </p>
+                                                        )}
+
+                                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                            <Database className="h-3 w-3" />
+                                                            <span>
+                                                                {stats.contextCount} {stats.contextCount === 1 ? 'context' : 'contexts'}
+                                                            </span>
+                                                            {stats.itemCount > 0 && (
+                                                                <>
+                                                                    <span>•</span>
+                                                                    <span>{stats.itemCount} {stats.itemCount === 1 ? 'item' : 'items'}</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+
+                                                        {preset.tags && preset.tags.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                                {preset.tags.slice(0, 3).map((tag) => (
+                                                                    <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
+                                                                        {tag}
+                                                                    </Badge>
+                                                                ))}
+                                                                {preset.tags.length > 3 && (
+                                                                    <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                                                                        +{preset.tags.length - 3}
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Preview */}
+                            <div className="flex-shrink-0 flex-grow-0 basis-80 bg-muted/5 flex flex-col">
+                                <div className="px-4 py-3 border-b flex-shrink-0">
+                                    <h3 className="text-sm font-semibold">Preview</h3>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-4">
+                                    {!selectedPreset ? (
+                                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                                            <Bookmark className="h-10 w-10 mb-2 opacity-20" />
+                                            <p className="text-xs text-center">Select a preset to preview</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div>
+                                                <h4 className="text-sm font-semibold mb-2">{selectedPreset.name}</h4>
+                                                {selectedPreset.description && (
+                                                    <p className="text-xs text-muted-foreground">{selectedPreset.description}</p>
+                                                )}
+                                            </div>
+
+                                            {isValidating ? (
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    <span>Validating items...</span>
+                                                </div>
+                                            ) : validationResult ? (
+                                                <div className="space-y-3">
+                                                    {!validationResult.isValid && (
+                                                        <Alert variant="destructive">
+                                                            <AlertCircle className="h-4 w-4" />
+                                                            <AlertDescription className="text-xs">
+                                                                {validationResult.invalidItems.length} {validationResult.invalidItems.length === 1 ? 'item' : 'items'} no longer exist and will be skipped.
+                                                            </AlertDescription>
+                                                        </Alert>
+                                                    )}
+
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center justify-between text-xs">
+                                                            <span className="text-muted-foreground">Total items</span>
+                                                            <Badge variant="secondary">{validationResult.totalCount}</Badge>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-xs">
+                                                            <span className="text-muted-foreground">Valid items</span>
+                                                            <Badge variant="default" className="bg-green-500">
+                                                                {validationResult.validCount}
+                                                            </Badge>
+                                                        </div>
+                                                        {validationResult.invalidItems.length > 0 && (
+                                                            <div className="flex items-center justify-between text-xs">
+                                                                <span className="text-muted-foreground">Invalid items</span>
+                                                                <Badge variant="destructive">
+                                                                    {validationResult.invalidItems.length}
+                                                                </Badge>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </TabsContent>
+                </Tabs>
 
                 <DialogFooter className="px-6 py-4 border-t">
                     <Button variant="outline" onClick={handleCancel}>
                         Cancel
                     </Button>
-                    <Button onClick={handleConfirm} disabled={selectedItems.length === 0}>
+                    <Button
+                        onClick={handleConfirm}
+                        disabled={
+                            activeTab === "browse"
+                                ? selectedItems.length === 0
+                                : !selectedPreset || isValidating || !validationResult || validationResult.validCount === 0
+                        }
+                    >
                         <Check className="h-4 w-4 mr-2" />
-                        Add {selectedItems.length > 0 && `(${selectedItems.length})`} Item{selectedItems.length !== 1 ? 's' : ''}
+                        {activeTab === "browse" ? (
+                            <>Add {selectedItems.length > 0 && `(${selectedItems.length})`} Item{selectedItems.length !== 1 ? 's' : ''}</>
+                        ) : (
+                            <>Add {validationResult?.validCount ? `(${validationResult.validCount})` : ''} Items</>
+                        )}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -406,56 +704,6 @@ const ItemsList = ({
     )
 }
 
-const LoadingStates = ({ hasProcessor }: { hasProcessor: boolean }) => {
-    const states = hasProcessor
-        ? ["Creating item...", "Processing fields...", "Preparing for AI...", "Almost done..."]
-        : ["Creating item...", "Saving data...", "Almost done..."];
-
-    const [currentStateIndex, setCurrentStateIndex] = useState(0);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentStateIndex((prev) => (prev + 1) % states.length);
-        }, 1500);
-
-        return () => clearInterval(interval);
-    }, [states.length]);
-
-    return (
-        <DialogContent
-            className="sm:max-w-md border-none shadow-2xl bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95"
-            onPointerDownOutside={(e) => e.preventDefault()}
-            onEscapeKeyDown={(e) => e.preventDefault()}
-            onInteractOutside={(e) => e.preventDefault()}
-        >
-            <div className="flex flex-col items-center space-y-6 py-6">
-                <Loader2 className="h-16 w-16 animate-spin text-primary" />
-                <div className="space-y-3 text-center">
-                    <h3 className="text-xl font-semibold">{states[currentStateIndex]}</h3>
-                    <p className="text-sm text-muted-foreground px-4">
-                        {hasProcessor
-                            ? "Your item is being processed. This may take a moment."
-                            : "Saving your new item..."}
-                    </p>
-                </div>
-                <div className="flex space-x-2 pt-2">
-                    {states.map((_, index) => (
-                        <div
-                            key={index}
-                            className={cn(
-                                "h-2 rounded-full transition-all duration-300",
-                                index === currentStateIndex
-                                    ? "bg-primary w-8"
-                                    : "bg-muted-foreground/30 w-2"
-                            )}
-                        />
-                    ))}
-                </div>
-            </div>
-        </DialogContent>
-    );
-};
-
 export const NewItemDialog = ({ context, onItemCreated, fieldsToReturn, onSelectAll }: {
     context: Context;
     onItemCreated: (item: Item) => void;
@@ -550,7 +798,14 @@ export const NewItemDialog = ({ context, onItemCreated, fieldsToReturn, onSelect
                     </DialogTrigger>
                 </div>
                 {loading ? (
-                    <LoadingStates hasProcessor={!!context.processor} />
+                    <DialogContent
+                        className="sm:max-w-md border-none shadow-2xl bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95"
+                        onPointerDownOutside={(e) => e.preventDefault()}
+                        onEscapeKeyDown={(e) => e.preventDefault()}
+                        onInteractOutside={(e) => e.preventDefault()}
+                    >
+                        <LoadingStates variant={context.processor ? "create-with-processor" : "create"} />
+                    </DialogContent>
                 ) : (
                     <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col p-0">
                         <DialogHeader className="px-6 pt-6 pb-4">

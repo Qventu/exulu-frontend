@@ -143,7 +143,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
 
   if (user.super_admin || role.workflows === "write") {
     mainNavigationItems.push({
-      label: t('navigation.templates'),
+      label: t('navigation.routines'),
       path: "workflows",
       icon: <Form className="h-4 w-4" strokeWidth={1.5} />,
     });

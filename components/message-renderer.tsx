@@ -5,7 +5,7 @@ import { Message, MessageContent } from '@/components/ai-elements/message'
 import { Response } from '@/components/ai-elements/response'
 import { Reasoning, ReasoningTrigger, ReasoningContent } from "@/components/ai-elements/reasoning"
 import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/source"
-import { RefreshCcwIcon, CopyIcon, ChevronDown, ChevronRight, Search, FileText, Database, ListChecks, LayoutList, EditIcon, Trash2Icon, DownloadIcon, ThumbsUp, ThumbsDown } from "lucide-react"
+import { RefreshCcwIcon, CopyIcon, ChevronDown, ChevronRight, Search, FileText, Database, ListChecks, LayoutList, EditIcon, Trash2Icon, DownloadIcon, ThumbsUp, ThumbsDown, Terminal, FileEdit, HelpCircle, Wrench, Globe, List, FolderOpen, GitBranch, Code2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { useToast } from "@/components/ui/use-toast"
@@ -850,6 +850,142 @@ export function MessageRenderer({
   )
 }
 
+const getToolIcon = (name: string) => {
+  const lower = (name || '').toLowerCase();
+  if (lower.includes('readfile') || lower === 'read_file' || lower === 'read') return FileText;
+  if (lower.includes('writefile') || lower === 'write_file' || lower === 'write') return FileEdit;
+  if (lower === 'edit' || lower.includes('replace') || lower.includes('update')) return EditIcon;
+  if (lower === 'bash' || lower === 'shell' || lower === 'exec' || lower.includes('command') || lower.includes('terminal')) return Terminal;
+  if (lower.includes('question') || lower.includes('ask')) return HelpCircle;
+  if (lower.includes('search') || lower.includes('grep') || lower.includes('find')) return Search;
+  if (lower.includes('listdir') || lower === 'ls' || lower === 'list_files' || lower === 'list') return List;
+  if (lower.includes('folder') || lower.includes('directory') || lower.includes('dir_')) return FolderOpen;
+  if (lower.includes('todo')) return ListChecks;
+  if (lower.includes('web') || lower.includes('fetch') || lower.includes('url') || lower.includes('http')) return Globe;
+  if (lower.includes('delete') || lower.includes('remove') || lower.includes('rm_') || lower === 'rm') return Trash2Icon;
+  if (lower.includes('git')) return GitBranch;
+  if (lower.includes('code') || lower.includes('script')) return Code2;
+  if (lower.includes('context') || lower.includes('knowledge')) return Database;
+  return Wrench;
+};
+
+const getToolPreview = (input: any): string | null => {
+  if (!input || typeof input !== 'object') return null;
+  if (typeof input.path === 'string') return input.path;
+  if (typeof input.file_path === 'string') return input.file_path;
+  if (typeof input.filename === 'string') return input.filename;
+  if (typeof input.command === 'string') return input.command;
+  if (typeof input.query === 'string') return input.query;
+  if (typeof input.url === 'string') return input.url;
+  if (typeof input.question === 'string') return input.question;
+  if (typeof input.prompt === 'string') return input.prompt;
+  if (typeof input.text === 'string') return input.text;
+  const firstStringValue = Object.values(input).find(
+    (v) => typeof v === 'string' && v.length > 0 && v.length < 300
+  );
+  return typeof firstStringValue === 'string' ? firstStringValue : null;
+};
+
+const parseToolOutput = (output: any): any => {
+  if (output == null) return null;
+  if (typeof output === 'string') {
+    try { return JSON.parse(output); } catch { return output; }
+  }
+  if (typeof output === 'object' && 'result' in output) {
+    const result = (output as any).result;
+    if (typeof result === 'string') {
+      try { return JSON.parse(result); } catch { return result; }
+    }
+    return result;
+  }
+  if (typeof output === 'object' && 'content' in output && Object.keys(output).length === 1) {
+    return (output as any).content;
+  }
+  return output;
+};
+
+const formatOutputForDisplay = (output: any): string => {
+  if (output == null) return '';
+  if (typeof output === 'string') return output;
+  try {
+    return JSON.stringify(output, null, 2);
+  } catch {
+    return String(output);
+  }
+};
+
+const ToolCallChip = ({ tool }: { tool: { name: string; id: string; input: any; output: any } }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const Icon = getToolIcon(tool.name);
+  const preview = getToolPreview(tool.input);
+  const parsedOutput = parseToolOutput(tool.output);
+  const hasInput = tool.input && typeof tool.input === 'object' && Object.keys(tool.input).length > 0;
+  const hasOutput = parsedOutput != null && parsedOutput !== '';
+  const expandable = hasInput || hasOutput;
+
+  return (
+    <div className="border rounded-md bg-card/50 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => expandable && setIsOpen((v) => !v)}
+        disabled={!expandable}
+        className={cn(
+          "w-full flex items-center gap-2 px-2 py-1.5 text-left transition-colors",
+          expandable && "hover:bg-accent/40 cursor-pointer",
+          !expandable && "cursor-default"
+        )}
+      >
+        <div className="p-1 rounded bg-primary/10 shrink-0">
+          <Icon className="h-3 w-3 text-primary" strokeWidth={1.5} />
+        </div>
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <span className="text-xs font-medium text-foreground shrink-0">
+            {camelCaseToLabel(tool.name)}
+          </span>
+          {preview && (
+            <span className="text-[11px] text-muted-foreground truncate font-mono">
+              {preview}
+            </span>
+          )}
+        </div>
+        {expandable && (
+          <ChevronDown
+            className={cn(
+              "h-3 w-3 text-muted-foreground shrink-0 transition-transform duration-200",
+              isOpen && "rotate-180"
+            )}
+            strokeWidth={1.5}
+          />
+        )}
+      </button>
+      {expandable && isOpen && (
+        <div className="border-t px-2.5 py-2 space-y-2 bg-muted/20 animate-in fade-in slide-in-from-top-1 duration-200">
+          {hasInput && (
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                Input
+              </div>
+              <pre className="text-[11px] font-mono bg-background/60 rounded p-2 whitespace-pre-wrap break-all max-h-48 overflow-auto border">
+                {JSON.stringify(tool.input, null, 2)}
+              </pre>
+            </div>
+          )}
+          {hasOutput && (
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                Output
+              </div>
+              <pre className="text-[11px] font-mono bg-background/60 rounded p-2 whitespace-pre-wrap break-all max-h-48 overflow-auto border">
+                {formatOutputForDisplay(parsedOutput)}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ReasoningVisualisation = ({
   reasoning,
   streaming
@@ -874,15 +1010,7 @@ const ReasoningVisualisation = ({
       name: string;
       id: string;
       input: any;
-      output: {
-        chunk_index: number;
-        item_name: string;
-        item_id: string;
-        context: {
-          name: string;
-          id: string;
-        }
-      }[]
+      output: any;
     }[]
   }, index: number, animate: boolean = true) => (
     <div
@@ -902,48 +1030,24 @@ const ReasoningVisualisation = ({
       >
         {index + 1}
       </div>
-      <div className="text-muted-foreground text-xs leading-relaxed flex-1">
-        <span>{step.text}</span>
+      <div className="flex-1 min-w-0 space-y-1.5">
+        {step.text && (
+          <div className="text-muted-foreground text-xs leading-relaxed">
+            {step.text}
+          </div>
+        )}
         {step.tools.length > 0 && (
-          <span
+          <div
             className={cn(
-              "ml-1",
+              "space-y-1",
               animate && "animate-in fade-in duration-300"
             )}
             style={animate ? { animationDelay: `${index * 100 + 400}ms`, animationFillMode: 'backwards' } : undefined}
           >
-            (using{' '}
-            {step.tools.map((tool, toolIndex) => (
-              <TooltipProvider key={tool.id}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="font-semibold text-foreground cursor-help underline decoration-dotted">
-                      {tool.name}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-md max-h-96 overflow-auto">
-                    <pre className="text-xs whitespace-pre-wrap">
-                      {JSON.stringify(tool.input, null, 2)}
-                    </pre>
-                    {tool.output?.length > 0 && (
-                      <div className="mt-2 space-y-1">
-                        <span className="font-semibold text-foreground">Output:</span>
-                        {tool.output.map((chunk) => (
-                          <div key={chunk.item_id + chunk.chunk_index}>
-                            <span className="font-semibold text-foreground">Item:</span>
-                            <span className="text-muted-foreground">{chunk.item_name}</span>
-                            <span className="font-semibold text-foreground">Chunk:</span>
-                            <span className="text-muted-foreground">{chunk.chunk_index}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )).reduce((prev, curr, i) => [prev, i === step.tools.length - 1 ? '' : ', ', curr] as any)}
-            )
-          </span>
+            {step.tools.map((tool) => (
+              <ToolCallChip key={tool.id} tool={tool} />
+            ))}
+          </div>
         )}
       </div>
     </div>

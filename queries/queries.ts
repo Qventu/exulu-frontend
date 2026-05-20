@@ -2435,6 +2435,154 @@ export const AGENT_WORLD_AGENTS = gql`
 `;
 
 // ============================================
+// CONTEXT PRESETS QUERIES AND MUTATIONS
+// ============================================
+
+const CONTEXT_PRESET_FIELDS = `
+  id
+  name
+  description
+  preset_items
+  tags
+  usage_count
+  favorite_count
+  rights_mode
+  created_by
+  createdAt
+  updatedAt
+  RBAC {
+    type
+    users {
+      id
+      rights
+    }
+    roles {
+      id
+      rights
+    }
+  }
+`;
+
+export const GET_CONTEXT_PRESETS = gql`
+  query GetContextPresets(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterContext_preset]
+    $sort: SortBy = { field: "updatedAt", direction: DESC }
+  ) {
+    context_presetsPagination(
+      page: $page
+      limit: $limit
+      sort: $sort
+      filters: $filters
+    ) {
+      pageInfo {
+        pageCount
+        itemCount
+        currentPage
+        hasPreviousPage
+        hasNextPage
+      }
+      items {
+        ${CONTEXT_PRESET_FIELDS}
+      }
+    }
+  }
+`;
+
+export const GET_CONTEXT_PRESET_BY_ID = gql`
+  query GetContextPresetById($id: ID!) {
+    context_presetById(id: $id) {
+      ${CONTEXT_PRESET_FIELDS}
+    }
+  }
+`;
+
+export const GET_CONTEXT_PRESETS_BY_IDS = gql`
+  query GetContextPresetsByIds($ids: [ID!]!) {
+    context_presetByIds(ids: $ids) {
+      ${CONTEXT_PRESET_FIELDS}
+    }
+  }
+`;
+
+export const CREATE_CONTEXT_PRESET = gql`
+  mutation CreateContextPreset(
+    $name: String!
+    $description: String
+    $preset_items: JSON!
+    $tags: JSON
+    $rights_mode: String!
+    $RBAC: RBACInput
+  ) {
+    context_presetsCreateOne(
+      input: {
+        name: $name
+        description: $description
+        preset_items: $preset_items
+        tags: $tags
+        rights_mode: $rights_mode
+        RBAC: $RBAC
+      }
+    ) {
+      item {
+        ${CONTEXT_PRESET_FIELDS}
+      }
+    }
+  }
+`;
+
+export const UPDATE_CONTEXT_PRESET = gql`
+  mutation UpdateContextPreset(
+    $id: ID!
+    $name: String
+    $description: String
+    $preset_items: JSON
+    $tags: JSON
+    $rights_mode: String
+    $RBAC: RBACInput
+  ) {
+    context_presetsUpdateOneById(
+      id: $id
+      input: {
+        name: $name
+        description: $description
+        preset_items: $preset_items
+        tags: $tags
+        rights_mode: $rights_mode
+        RBAC: $RBAC
+      }
+    ) {
+      item {
+        ${CONTEXT_PRESET_FIELDS}
+      }
+    }
+  }
+`;
+
+export const DELETE_CONTEXT_PRESET = gql`
+  mutation DeleteContextPreset($id: ID!) {
+    context_presetsRemoveOneById(id: $id) {
+      id
+    }
+  }
+`;
+
+export const INCREMENT_PRESET_USAGE = gql`
+  mutation IncrementPresetUsage($id: ID!, $usage_count: Float!) {
+    context_presetsUpdateOneById(
+      id: $id
+      input: { usage_count: $usage_count }
+    ) {
+      item {
+        id
+        usage_count
+      }
+    }
+  }
+`;
+
+// ============================================
 // SKILLS QUERIES AND MUTATIONS
 // ============================================
 
