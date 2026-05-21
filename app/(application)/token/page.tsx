@@ -11,6 +11,60 @@ import { Copy, CheckCircle, AlertCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 
+function ContinueConfig({ backendUrl, token }: { backendUrl: string; token: string | null }) {
+  const [copied, setCopied] = useState(false)
+  const { toast } = useToast()
+
+  const yaml = `name: Local Config
+version: 1.0.0
+schema: v1
+models:
+  - name: EXULU
+    provider: openai
+    apiBase: ${backendUrl || "<backend-url>"}/gateway/open-ai/v1
+    apiKey: ${token ?? "<your-token>"}
+    model: AUTODETECT
+    roles:
+      - chat
+      - edit
+      - apply
+    capabilities:
+      - tool_use
+      - image_input`
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(yaml)
+      setCopied(true)
+      toast({ title: "Konfiguration kopiert!" })
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast({ title: "Kopieren fehlgeschlagen", variant: "destructive" })
+    }
+  }
+
+  return (
+    <div className="space-y-3 pt-1">
+      <p className="text-sm text-muted-foreground">
+        Füge folgende Konfiguration in deine{" "}
+        <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">~/.continue/config.yaml</code> ein,
+        um Exulu als KI-Anbieter in continue.dev zu verwenden.
+      </p>
+      <div className="relative">
+        <pre className="rounded-md bg-muted p-4 text-xs font-mono overflow-x-auto whitespace-pre">{yaml}</pre>
+        <Button
+          onClick={copy}
+          variant="ghost"
+          size="sm"
+          className="absolute top-2 right-2 h-7 w-7 p-0"
+          aria-label="Konfiguration kopieren"
+        >
+          {copied ? <CheckCircle className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+        </Button>
+      </div>
+    </div>
+  )
+}
 export default function TokenPage() {
   const { data: session, status } = useSession()
   const [token, setToken] = useState<string | null>(null)
@@ -175,27 +229,7 @@ export default function TokenPage() {
               continue.dev Konfiguration
             </AccordionTrigger>
             <AccordionContent>
-              <div className="space-y-3 pt-1">
-                <p className="text-sm text-muted-foreground">
-                  Füge folgende Konfiguration in deine <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">~/.continue/config.json</code> ein, um Exulu als KI-Anbieter in continue.dev zu verwenden.
-                </p>
-                <pre className="rounded-md bg-muted p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">
-{JSON.stringify({
-  models: [
-    {
-      title: "Exulu",
-      provider: "openai",
-      model: "<project>/<agent>",
-      apiBase: `${backendUrl || "<backend-url>"}/gateway/open-ai/v1/`,
-      apiKey: token ?? "<your-token>",
-    },
-  ],
-}, null, 2)}
-                </pre>
-                <p className="text-sm text-muted-foreground">
-                  Ersetze <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">&lt;project&gt;/&lt;agent&gt;</code> mit dem Namen deines Projekts und Agenten, z.&nbsp;B. <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">my-project/my-agent</code>.
-                </p>
-              </div>
+              <ContinueConfig backendUrl={backendUrl} token={token} />
             </AccordionContent>
           </AccordionItem>
         </Accordion>
