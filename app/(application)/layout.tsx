@@ -40,6 +40,17 @@ export default async function RootLayout({
     const messages = (await import(`../../messages/${locale}.json`)).default;
 
     const config = {
+        feedback: {
+            enabled: process.env.FEEDBACK_ENABLED === "true",
+            backend: process.env.FEEDBACK_BACKEND || "",
+            token: process.env.FEEDBACK_TOKEN || "",
+
+            featureAgentSlug: process.env.FEATURE_AGENT_SLUG || "",
+            featureAgentId: process.env.FEATURE_AGENT_ID || "",
+
+            bugAgentSlug: process.env.BUG_AGENT_SLUG || "",
+            bugAgentId: process.env.BUG_AGENT_ID || "",
+        },
         backend: process.env.BACKEND || "",
         google_client_id: process.env.GOOGLE_CLIENT_ID || "",
         auth_mode: process.env.AUTH_MODE || "",

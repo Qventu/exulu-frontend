@@ -146,6 +146,7 @@ rateLimit {
     limit
   }
 }
+rate_limits
 streaming
 capabilities {
   text
@@ -691,6 +692,8 @@ export const GET_USERS = gql`
         emailVerified
         anthropic_token
         super_admin
+        scope_mode
+        agent_ids
         role
       }
     }
@@ -748,6 +751,17 @@ export const GET_AGENTS_BY_IDS = gql`
   query GetAgentsByIds($ids: [ID!]!) {
     agentByIds(ids: $ids) {
       ${AGENT_FIELDS}
+    }
+  }
+`;
+export const AGENT_RATE_LIMIT_USAGE = gql`
+  query AgentRateLimitUsage($agentId: ID!) {
+    agentRateLimitUsage(agentId: $agentId) {
+      callerId
+      callerLabel
+      requests
+      inputTokens
+      outputTokens
     }
   }
 `;
@@ -824,14 +838,20 @@ export const CREATE_API_USER = gql`
       $type: String,
       $apikey: String,
       $email: String,
-      $role: String
+      $role: String,
+      $super_admin: Boolean,
+      $scope_mode: String,
+      $agent_ids: JSON
      ) {
       usersCreateOne(input: {
             firstname: $firstname,
             type: $type,
             apikey: $apikey,
             email: $email,
-            role: $role
+            role: $role,
+            super_admin: $super_admin,
+            scope_mode: $scope_mode,
+            agent_ids: $agent_ids
         }) {
             item {
               id
@@ -993,6 +1013,7 @@ export const UPDATE_AGENT_BY_ID = gql`
     $active: Boolean
     $providerapikey: String
     $RBAC: RBACInput
+    $rate_limits: JSON
   ) {
     agentsUpdateOneById(
       input: {
@@ -1013,6 +1034,7 @@ export const UPDATE_AGENT_BY_ID = gql`
         skills: $skills
         providerapikey: $providerapikey
         RBAC: $RBAC
+        rate_limits: $rate_limits
       }
       id: $id
     ) {
@@ -1029,6 +1051,7 @@ export const UPDATE_AGENT_BY_ID = gql`
           animation_idle
           animation_responding
           rights_mode
+          rate_limits
           RBAC {
             type
             users {

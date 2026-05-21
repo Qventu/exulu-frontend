@@ -28,6 +28,7 @@ import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { useLanguage } from "@/components/language-provider";
 import { useTranslations } from "next-intl";
+import { FeedbackButton } from "@/components/feedback/feedback-button";
 
 interface User {
   email: string;
@@ -509,6 +510,7 @@ export function MainNavSidebar({ sidebarDefaultOpen, config }: { sidebarDefaultO
       </SidebarContent>
       <SidebarFooter className="border-t p-1.5 mt-2">
         <SidebarMenu>
+          <FeedbackButton />
           <SidebarMenuItem>
             <DropdownMenu
               modal={false}

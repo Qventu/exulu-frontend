@@ -33,6 +33,7 @@ interface RoleSelectorProps {
   onChange: (roleId: string) => void
   placeholder?: string
   className?: string
+  disabled?: boolean
 }
 
 export function RoleSelector({
@@ -40,6 +41,7 @@ export function RoleSelector({
   onChange,
   placeholder = "Select role...",
   className,
+  disabled,
 }: RoleSelectorProps) {
   const [open, setOpen] = useState(false)
 
@@ -102,7 +104,7 @@ export function RoleSelector({
           role="combobox"
           aria-expanded={open}
           className={cn("w-full justify-between", className)}
-          disabled={loading}
+          disabled={loading || disabled}
         >
           {loading ? (
             <>

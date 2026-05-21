@@ -179,5 +179,27 @@
         "role": "Role"
       }
     }
+  },
+  "feedback": {
+    "label": "Feedback",
+    "openButton": "Open feedback",
+    "title": "Send feedback",
+    "bugTitle": "Bug report",
+    "featureTitle": "Feature request",
+    "choiceFeature": {
+      "title": "Feature request",
+      "desc": "Suggest a new feature or improvement"
+    },
+    "choiceBug": {
+      "title": "Bug report",
+      "desc": "Report something that's not working"
+    },
+    "back": "Back",
+    "placeholderBug": "Describe the bug...",
+    "placeholderFeature": "Describe the feature...",
+    "emptyStateBug": "Tell me about the bug you'd like to report.",
+    "emptyStateFeature": "Tell me about the feature you'd like to suggest.",
+    "send": "Send",
+    "stop": "Stop"
   }
 }

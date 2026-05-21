@@ -40,6 +40,17 @@ export type BackendConfigType = {
         redisHost: string;
         enabled: boolean;
     }
+    entitlements?: Record<string, boolean>;
+}
+
+export type FeedbackConfig = {
+    enabled: true;
+    backend: string;
+    token: string;
+    featureAgentSlug: string;
+    featureAgentId: string;
+    bugAgentSlug: string;
+    bugAgentId: string;
 }
 
 export type ThemeConfig = {

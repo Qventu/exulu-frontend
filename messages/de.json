@@ -179,5 +179,27 @@
         "role": "Rolle"
       }
     }
+  },
+  "feedback": {
+    "label": "Feedback",
+    "openButton": "Feedback öffnen",
+    "title": "Feedback senden",
+    "bugTitle": "Fehlerbericht",
+    "featureTitle": "Feature-Wunsch",
+    "choiceFeature": {
+      "title": "Feature-Wunsch",
+      "desc": "Eine neue Funktion oder Verbesserung vorschlagen"
+    },
+    "choiceBug": {
+      "title": "Fehlerbericht",
+      "desc": "Etwas melden, das nicht funktioniert"
+    },
+    "back": "Zurück",
+    "placeholderBug": "Beschreiben Sie den Fehler...",
+    "placeholderFeature": "Beschreiben Sie die Funktion...",
+    "emptyStateBug": "Erzählen Sie mir von dem Fehler, den Sie melden möchten.",
+    "emptyStateFeature": "Erzählen Sie mir von der Funktion, die Sie vorschlagen möchten.",
+    "send": "Senden",
+    "stop": "Stopp"
   }
 }

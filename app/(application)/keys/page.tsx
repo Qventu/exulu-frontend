@@ -1,6 +1,6 @@
 "use client"
 import { useState } from "react"
-import { Copy, Key, Loader2, Plus, Trash2 } from "lucide-react"
+import { Copy, Key, Loader2, Plus, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { format } from "date-fns"
@@ -19,8 +19,23 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/components/ui/use-toast"
 import { RoleSelector } from "@/components/ui/role-selector"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import {useMutation, useQuery} from "@apollo/client";
-import {CREATE_API_USER, GET_USERS, REMOVE_USER_BY_ID, UPDATE_USER_BY_ID} from "@/queries/queries";
+import {CREATE_API_USER, GET_AGENTS, GET_USERS, REMOVE_USER_BY_ID, UPDATE_USER_BY_ID} from "@/queries/queries";
 import bcrypt from "bcryptjs";
 const SALT_ROUNDS = 12;
 // we dont decrypt, as we only show the key once to the user
@@ -38,9 +53,18 @@ export default function ApiKeyManagement() {
 
     const [newKeyName, setNewKeyName] = useState("")
     const [selectedRole, setSelectedRole] = useState<string>("")
+    const [scopeMode, setScopeMode] = useState<"admin" | "agents">("admin")
+    const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([])
     const [isGenerating, setIsGenerating] = useState(false)
     const [newlyGeneratedKey, setNewlyGeneratedKey] = useState<ApiKey | null>(null)
     const [deleteKeyId, setDeleteKeyId] = useState<string | null>(null)
+
+    const { data: agentsData } = useQuery(GET_AGENTS, {
+        fetchPolicy: "cache-first",
+        variables: { page: 1, limit: 500 },
+    })
+    const agentList: Array<{ id: string; name: string }> =
+        agentsData?.agentsPagination?.items ?? []
 
     const { loading, error, data, refetch, previousData } = useQuery(GET_USERS, {
         fetchPolicy: "cache-first",
@@ -70,6 +94,16 @@ export default function ApiKeyManagement() {
 
         setIsGenerating(true)
 
+        if (scopeMode === "agents" && selectedAgentIds.length === 0) {
+            toast({
+                title: "Error",
+                description: "Select at least one agent for an agents-scoped key.",
+                variant: "destructive",
+            })
+            setIsGenerating(false)
+            return
+        }
+
         const plainKey = `sk_${Math.random().toString(36).substring(2, 15)}_${Math.random().toString(36).substring(2, 15)}`;
         const postFix = `/${newKeyName.toLowerCase().trim().replaceAll(" ", "_")}`
         const encryptedKey = await bcrypt.hash(plainKey, SALT_ROUNDS);
@@ -79,7 +113,10 @@ export default function ApiKeyManagement() {
                 type: "api",
                 apikey: `${encryptedKey}${postFix}`,
                 email: `${encryptedKey}@exulu-api-user.com`,
-                role: selectedRole || undefined
+                role: scopeMode === "admin" ? (selectedRole || undefined) : undefined,
+                super_admin: scopeMode === "admin",
+                scope_mode: scopeMode,
+                agent_ids: scopeMode === "agents" ? selectedAgentIds : undefined,
             }
         })
 
@@ -92,6 +129,8 @@ export default function ApiKeyManagement() {
         })
         setNewKeyName("")
         setSelectedRole("")
+        setScopeMode("admin")
+        setSelectedAgentIds([])
         setIsGenerating(false)
     }
 
@@ -192,12 +231,98 @@ export default function ApiKeyManagement() {
                                     value={selectedRole}
                                     onChange={setSelectedRole}
                                     placeholder="Select role"
+                                    disabled={scopeMode === "agents"}
                                 />
+                                {scopeMode === "agents" && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Role is ignored for agents-scoped keys.
+                                    </p>
+                                )}
                             </div>
                         </div>
+
+                        <div className="flex flex-col gap-2">
+                            <Label className="text-sm font-medium">Scope</Label>
+                            <RadioGroup
+                                value={scopeMode}
+                                onValueChange={(v) => setScopeMode(v as "admin" | "agents")}
+                                className="flex gap-6"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <RadioGroupItem value="admin" id="scope-admin" />
+                                    <Label htmlFor="scope-admin" className="font-normal cursor-pointer">
+                                        Admin (full access)
+                                    </Label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <RadioGroupItem value="agents" id="scope-agents" />
+                                    <Label htmlFor="scope-agents" className="font-normal cursor-pointer">
+                                        Agents (allowlist, read-only)
+                                    </Label>
+                                </div>
+                            </RadioGroup>
+                        </div>
+
+                        {scopeMode === "agents" && (
+                            <div className="flex flex-col gap-2">
+                                <Label className="text-sm font-medium">Allowed agents</Label>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {selectedAgentIds.map((id) => {
+                                        const a = agentList.find((x) => x.id === id)
+                                        return (
+                                            <Badge
+                                                key={id}
+                                                variant="secondary"
+                                                className="gap-1 pl-2 pr-1 py-1"
+                                            >
+                                                {a?.name ?? id}
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setSelectedAgentIds(
+                                                            selectedAgentIds.filter((x) => x !== id)
+                                                        )
+                                                    }
+                                                    aria-label={`Remove ${a?.name ?? id}`}
+                                                    className="ml-1 rounded-sm hover:bg-muted-foreground/20 p-0.5"
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </button>
+                                            </Badge>
+                                        )
+                                    })}
+                                    <Select
+                                        value=""
+                                        onValueChange={(v) => {
+                                            if (v && !selectedAgentIds.includes(v)) {
+                                                setSelectedAgentIds([...selectedAgentIds, v])
+                                            }
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-56 h-8">
+                                            <SelectValue placeholder="+ Add agent" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {agentList
+                                                .filter((a) => !selectedAgentIds.includes(a.id))
+                                                .map((a) => (
+                                                    <SelectItem key={a.id} value={a.id}>
+                                                        {a.name}
+                                                    </SelectItem>
+                                                ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        )}
+
                         <Button
                             onClick={generateApiKey}
-                            disabled={isGenerating || !newKeyName.trim()}
+                            disabled={
+                                isGenerating ||
+                                !newKeyName.trim() ||
+                                (scopeMode === "agents" && selectedAgentIds.length === 0)
+                            }
                             className="whitespace-nowrap self-start"
                         >
                             {isGenerating ? (
@@ -270,6 +395,7 @@ export default function ApiKeyManagement() {
                                     <TableRow>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Key</TableHead>
+                                        <TableHead>Scope</TableHead>
                                         <TableHead>Role</TableHead>
                                         <TableHead>Created</TableHead>
                                         <TableHead>Last Used</TableHead>
@@ -277,7 +403,15 @@ export default function ApiKeyManagement() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {data?.usersPagination?.items?.map((user: any) => (
+                                    {data?.usersPagination?.items?.map((user: any) => {
+                                        const isAgentsScoped = user.scope_mode === "agents"
+                                        const scopedAgentIds: string[] = Array.isArray(user.agent_ids)
+                                            ? user.agent_ids
+                                            : []
+                                        const scopedNames = scopedAgentIds
+                                            .map((id) => agentList.find((a) => a.id === id)?.name ?? id)
+                                            .join(", ")
+                                        return (
                                         <TableRow key={user.id}>
                                             <TableCell className="font-medium">{user.name || user.firstname}</TableCell>
                                             <TableCell>
@@ -286,11 +420,30 @@ export default function ApiKeyManagement() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
+                                                {isAgentsScoped ? (
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Badge variant="secondary" className="cursor-help">
+                                                                    agents ({scopedAgentIds.length})
+                                                                </Badge>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                {scopedNames || "no agents"}
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                ) : (
+                                                    <Badge>admin</Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
                                                 <div className="w-48">
                                                     <RoleSelector
                                                         value={user.role}
                                                         onChange={(roleId) => updateApiKeyRole(user.id, roleId)}
-                                                        placeholder="No role assigned"
+                                                        placeholder={isAgentsScoped ? "Not used" : "No role assigned"}
+                                                        disabled={isAgentsScoped}
                                                     />
                                                 </div>
                                             </TableCell>
@@ -338,7 +491,8 @@ export default function ApiKeyManagement() {
                                                 </Dialog>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                        )
+                                    })}
                                 </TableBody>
                             </Table>
                         </div>
