@@ -66,6 +66,8 @@ export interface Agent {
     animation_responding?: string;
     // Native memory context
     memory?: string;
+    price_input_token?: number;
+    price_output_token?: number;
     createdAt?: string;
     updatedAt?: string;
 }

@@ -22,6 +22,7 @@ import {
     GET_PROJECTS_BY_IDS
 } from "@/queries/queries";
 import { Users, Layers, Bot } from "lucide-react";
+import { ProjectCostChart } from "@/components/dashboard/project-cost-chart";
 import { useTranslations } from "next-intl";
 
 export default function DashboardComponent() {
@@ -141,6 +142,17 @@ export default function DashboardComponent() {
                         nameFilter={leaderboardView === "count" ? ["count"] : ["inputTokens", "outputTokens"]}
                     />
                 </div>
+            </div>
+
+            {/* Project Cost Analytics */}
+            <div className="mb-8">
+                <div className="mb-4">
+                    <h3 className="text-2xl font-bold">Project Cost Analytics</h3>
+                    <p className="text-muted-foreground text-sm mt-1">
+                        Token usage and estimated cost over time for a selected project.
+                    </p>
+                </div>
+                <ProjectCostChart initialDateRange={dateRange} />
             </div>
 
             {/* Charts Grid - Improved layout and spacing */}
