@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Copy, CheckCircle, AlertCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 
 function ContinueConfig({ backendUrl, token }: { backendUrl: string; token: string | null }) {
   const [copied, setCopied] = useState(false)
@@ -36,19 +35,19 @@ models:
     try {
       await navigator.clipboard.writeText(yaml)
       setCopied(true)
-      toast({ title: "Konfiguration kopiert!" })
+      toast({ title: "Configuration copied!" })
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast({ title: "Kopieren fehlgeschlagen", variant: "destructive" })
+      toast({ title: "Failed to copy", variant: "destructive" })
     }
   }
 
   return (
     <div className="space-y-3 pt-1">
       <p className="text-sm text-muted-foreground">
-        Füge folgende Konfiguration in deine{" "}
-        <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">~/.continue/config.yaml</code> ein,
-        um Exulu als KI-Anbieter in continue.dev zu verwenden.
+        Add the following configuration to your{" "}
+        <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">~/.continue/config.yaml</code>{" "}
+        to use Exulu as an AI provider in continue.dev.
       </p>
       <div className="relative">
         <pre className="rounded-md bg-muted p-4 text-xs font-mono overflow-x-auto whitespace-pre">{yaml}</pre>
@@ -57,7 +56,7 @@ models:
           variant="ghost"
           size="sm"
           className="absolute top-2 right-2 h-7 w-7 p-0"
-          aria-label="Konfiguration kopieren"
+          aria-label="Copy configuration"
         >
           {copied ? <CheckCircle className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
         </Button>
@@ -220,19 +219,12 @@ export default function TokenPage() {
                 </p>
               </div>
             )}
+            <div className="border-t pt-4">
+              <p className="text-base font-semibold mb-3">Use with continue.dev</p>
+              <ContinueConfig backendUrl={backendUrl} token={token} />
+            </div>
           </CardContent>
         </Card>
-
-        <Accordion type="single" collapsible className="mt-4">
-          <AccordionItem value="continue-dev">
-            <AccordionTrigger className="text-base font-medium">
-              continue.dev Konfiguration
-            </AccordionTrigger>
-            <AccordionContent>
-              <ContinueConfig backendUrl={backendUrl} token={token} />
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
       </div>
     </div>
   )
