@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Copy, CheckCircle, AlertCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 
 export default function TokenPage() {
   const { data: session, status } = useSession()
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [backendUrl, setBackendUrl] = useState<string>("")
   const { toast } = useToast()
 
   useEffect(() => {
@@ -31,7 +33,18 @@ export default function TokenPage() {
       setLoading(false)
     }
 
+    const fetchBackendUrl = async () => {
+      try {
+        const res = await fetch("/api/config")
+        const data = await res.json()
+        if (data.backend) setBackendUrl(data.backend)
+      } catch {
+        // ignore
+      }
+    }
+
     fetchToken()
+    fetchBackendUrl()
   }, [status])
 
   const copyToClipboard = async () => {
@@ -138,7 +151,7 @@ export default function TokenPage() {
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="text-sm text-muted-foreground space-y-2">
                   <p>
                     <strong>Security:</strong> This token provides access to your account. Keep it private and secure.
@@ -155,6 +168,37 @@ export default function TokenPage() {
             )}
           </CardContent>
         </Card>
+
+        <Accordion type="single" collapsible className="mt-4">
+          <AccordionItem value="continue-dev">
+            <AccordionTrigger className="text-base font-medium">
+              continue.dev Konfiguration
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-3 pt-1">
+                <p className="text-sm text-muted-foreground">
+                  Füge folgende Konfiguration in deine <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">~/.continue/config.json</code> ein, um Exulu als KI-Anbieter in continue.dev zu verwenden.
+                </p>
+                <pre className="rounded-md bg-muted p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">
+{JSON.stringify({
+  models: [
+    {
+      title: "Exulu",
+      provider: "openai",
+      model: "<project>/<agent>",
+      apiBase: `${backendUrl || "<backend-url>"}/gateway/open-ai/v1/`,
+      apiKey: token ?? "<your-token>",
+    },
+  ],
+}, null, 2)}
+                </pre>
+                <p className="text-sm text-muted-foreground">
+                  Ersetze <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">&lt;project&gt;/&lt;agent&gt;</code> mit dem Namen deines Projekts und Agenten, z.&nbsp;B. <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">my-project/my-agent</code>.
+                </p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
     </div>
   )
