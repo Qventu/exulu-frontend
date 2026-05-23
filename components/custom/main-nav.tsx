@@ -22,7 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/models/user-role";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { ChevronUp, ChevronDown, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard, Database, ListTodo, Bot, Route, Variable, FileCheck, Sparkles, Settings, LogOut, FileText, FolderOpen, Brain, Album, BookCheck, TextSelect, ClipboardType, BarChart2, BarChart, BarChart4, Workflow, Form, FileAudio, Languages, MessageSquare, ThumbsUp, Palette, Gamepad2 } from "lucide-react";
+import { ChevronUp, ChevronDown, Moon, Sun, Code, MessageCircle, Users, Key, LayoutDashboard, Database, ListTodo, Bot, Route, Variable, FileCheck, Sparkles, Settings, LogOut, FileText, FolderOpen, Brain, Album, BookCheck, TextSelect, ClipboardType, BarChart2, BarChart, BarChart4, Workflow, Form, FileAudio, Languages, MessageSquare, ThumbsUp, Palette, Gamepad2, Cpu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "../ui/avatar";
@@ -231,6 +231,14 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
       label: t('navigation.systemVariables'),
       path: "variables",
       icon: <Variable className="h-4 w-4" strokeWidth={1.5} />,
+    });
+  }
+
+  if (user.super_admin || role.agents === "write") {
+    bottomNavigationItems.push({
+      label: "Models",
+      path: "models",
+      icon: <Cpu className="h-4 w-4" strokeWidth={1.5} />,
     });
   }
 

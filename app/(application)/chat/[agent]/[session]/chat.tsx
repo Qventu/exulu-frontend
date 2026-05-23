@@ -26,7 +26,15 @@ import {
   GET_AGENT_SESSIONS,
   UPDATE_AGENT_SESSION_ITEMS,
   CREATE_FEEDBACK,
+  GET_MODELS_LITE,
 } from "@/queries/queries";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getToken } from "@/util/api"
 import { Agent } from "@EXULU_SHARED/models/agent";
 import { ConfigContext } from "@/components/config-context";
@@ -116,6 +124,13 @@ export function ChatLayout({
   const [showSavePresetModal, setShowSavePresetModal] = useState(false);
   const [input, setInput] = useState('');
   const [disabledTools, setDisabledTools] = useState<string[]>([]);
+  // Per-request model override. When set (and different from agent.model),
+  // the chat client sends X-Exulu-Model-Override on each request.
+  const [modelOverride, setModelOverride] = useState<string | null>(null);
+  const modelOverrideRef = React.useRef<string | null>(null);
+  useEffect(() => {
+    modelOverrideRef.current = modelOverride;
+  }, [modelOverride]);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   // Calculate max input length as 80% of agent's context window (rough char estimate: 1 token ≈ 4 chars)
   const MAX_INPUT_LENGTH = agent.maxContextLength ? Math.floor((agent.maxContextLength * 0.8) * 4) : 50000;
@@ -221,6 +236,14 @@ export function ChatLayout({
     skip: !currentSession?.created_by
   })
 
+  // Load models the current user has access to, for the per-request override dropdown.
+  const modelsQuery = useQuery(GET_MODELS_LITE, {
+    variables: { page: 1, limit: 100 },
+    fetchPolicy: "cache-and-network",
+  });
+  const availableModels: { id: string; name: string; provider: string; active: boolean }[] =
+    modelsQuery.data?.modelsPagination?.items ?? [];
+
   const projectQuery = useQuery<{
     projectById: Project;
   }>(GET_PROJECT_BY_ID, {
@@ -318,6 +341,7 @@ export function ChatLayout({
         if (!session) {
           throw new Error("No session available.")
         }
+        const override = modelOverrideRef.current;
         return {
           body: {
             ...body,
@@ -328,7 +352,10 @@ export function ChatLayout({
             User: user.id,
             Session: session.id,
             Authorization: `Bearer ${token}`,
-            Stream: "true"
+            Stream: "true",
+            ...(override && override !== agent.model
+              ? { "X-Exulu-Model-Override": override }
+              : {}),
           }
         };
       },
@@ -627,9 +654,44 @@ export function ChatLayout({
             {/* Context/token counter - moved outside Conversation to prevent scroll interference */}
             <div className={`flex justify-between absolute left-0 right-0 items-center px-4 py-2 border-b z-10 dark:bg-black bg-white ${agent.maxContextLength ? 'top-4' : 'top-0'}`}>
               <div className="flex items-center gap-4">
-                <Badge variant="secondary" className="text-xs">
-                  {agent.modelName}
-                </Badge>
+                <Select
+                  value={modelOverride ?? agent.model ?? ""}
+                  onValueChange={(v) => {
+                    setModelOverride(!v || v === agent.model ? null : v);
+                  }}
+                  disabled={availableModels.length === 0}
+                >
+                  <SelectTrigger className="h-7 w-auto min-w-[160px] text-xs">
+                    <SelectValue
+                      placeholder={agent.modelName || "Select model"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableModels.length === 0 ? (
+                      <SelectItem value="__none" disabled>
+                        No models available
+                      </SelectItem>
+                    ) : (
+                      availableModels
+                        .filter((m) => m.active)
+                        .map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-[10px] text-muted-foreground">
+                                {m.provider}
+                              </span>
+                              <span>{m.name}</span>
+                              {m.id === agent.model && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  (default)
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))
+                    )}
+                  </SelectContent>
+                </Select>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Form className="w-4 h-4" />
                   Turn this conversation into a reusable template

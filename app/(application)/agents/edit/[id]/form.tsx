@@ -89,7 +89,7 @@ import { PromptBrowserSheet } from "./components/prompt-browser-sheet";
 import { usePrompts } from "@/hooks/use-prompts";
 import { Response } from '@/components/ai-elements/response';
 import { PromptCard } from "@/app/(application)/prompts/components/prompt-card";
-import { AgentProviderSelector } from "../../components/agent-provider-selector";
+import { AgentModelSelector } from "../../components/agent-model-selector";
 import { RerankerSelector } from "@/components/reranker-selector";
 import { AgentHierarchyView } from "./components/agent-hierarchy-view";
 
@@ -187,7 +187,7 @@ export const VariableSelectionElement = ({
 };
 
 const agentFormSchema = z.object({
-  provider: z.string(),
+  model: z.string().optional(),
   welcomemessage: z.string().optional(),
   defaultagent: z.boolean().optional(),
   feedback: z.boolean().optional(),
@@ -218,7 +218,6 @@ const agentFormSchema = z.object({
     .optional(),
   id: z.string().or(z.number()).nullable().optional(),
   active: z.any(),
-  providerapikey: z.string().nullable().optional(),
   firewall: z.object({
     enabled: z.boolean().optional(),
     scanners: z.object({
@@ -263,7 +262,7 @@ export default function AgentForm({
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
-  const [providerapikey, setProviderapikey] = useState<string>(agent.providerapikey || '')
+  const [selectedModel, setSelectedModel] = useState<string>(agent.model || '')
   const [firewallEnabled, setFirewallEnabled] = useState<boolean>(agent.firewall?.enabled || false)
   const [animation_idle, setAnimation_idle] = useState<string>(agent.animation_idle || '')
   const [animation_responding, setAnimation_responding] = useState<string>(agent.animation_responding || '')
@@ -492,7 +491,7 @@ export default function AgentForm({
                       active: data.active,
                       memory: memory || null,
                       feedback: data.feedback,
-                      providerapikey: providerapikey,
+                      model: selectedModel || null,
                       animation_idle: animation_idle,
                       animation_responding: animation_responding,
                       rights_mode: rbac.rights_mode,
@@ -957,10 +956,11 @@ export default function AgentForm({
                                         </Tooltip>
                                       </div>
                                     </TooltipProvider>
-                                    <AgentProviderSelector
-                                      value={agent.provider}
+                                    <AgentModelSelector
+                                      value={selectedModel}
                                       onSelect={(id) => {
-                                        agentForm.setValue("provider", id);
+                                        setSelectedModel(id);
+                                        agentForm.setValue("model", id);
                                       }}
                                     />
                                   </CardContent>
@@ -1031,97 +1031,33 @@ export default function AgentForm({
                             </Card>
 
                             <Card className="bg-transparent">
-                              <Collapsible>
-                                <CardHeader className="p-4">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex flex-col">
-                                      <p className="text-base">
-                                        Provider Authentication
-                                      </p>
-                                      <p className="text-sm text-muted-foreground mb-0">
-                                        Configure authentication for the language model provider assigned to this agent.
-                                      </p>
-                                    </div>
-                                    <CollapsibleTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="size-8">
-                                        <ChevronsUpDown className="size-4" />
-                                        <span className="sr-only">Toggle</span>
-                                      </Button>
-                                    </CollapsibleTrigger>
-                                  </div>
-                                </CardHeader>
-                                <CollapsibleContent className="mt-5">
-                                  <CardContent className="space-y-4">
-                                    <div className="space-y-2 w-full overflow-x-hidden">
-                                      <div className="text-sm">
-                                        <div className="font-medium">Provider API Key</div>
-                                        <div className="text-muted-foreground text-xs">Select a variable containing the API key for the provider</div>
-                                      </div>
-                                      <Popover>
-                                        <PopoverTrigger asChild>
-                                          <Button
-                                            variant="outline"
-                                            role="combobox"
-                                            className="w-full justify-between text-sm"
-                                          >
-                                            {variables.find((v: any) => v.name === providerapikey)?.name || "Select variable..."}
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                          </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-full p-0 z-[9999]">
-                                          <Command>
-                                            <CommandInput placeholder="Search variables..." />
-                                            <CommandList>
-                                              <CommandEmpty>No variables found.</CommandEmpty>
-                                              <CommandGroup>
-                                                {variables.map((variable: any) => (
-                                                  <CommandItem
-                                                    key={variable.id}
-                                                    onSelect={() => {
-                                                      setProviderapikey(variable.name);
-                                                    }}
-                                                  >
-                                                    <Check
-                                                      className={cn(
-                                                        "mr-2 h-4 w-4",
-                                                        providerapikey === variable.name ? "opacity-100" : "opacity-0"
-                                                      )}
-                                                    />
-                                                    <div className="flex flex-col">
-                                                      <span>{variable.name}</span>
-                                                      {variable.encrypted && (
-                                                        <span className="text-xs text-muted-foreground">🔒 Encrypted</span>
-                                                      )}
-                                                    </div>
-                                                  </CommandItem>
-                                                ))}
-                                              </CommandGroup>
-                                            </CommandList>
-                                          </Command>
-                                        </PopoverContent>
-                                      </Popover>
-                                      {agent.authenticationInformation && (
-                                        <Collapsible>
-                                          <div className="flex items-center justify-between mt-2">
-                                            <CollapsibleTrigger asChild>
-                                              <Button variant="ghost" size="sm" className="text-xs h-auto p-1">
-                                                <Info className="h-3 w-3 mr-1" />
-                                                Authentication Information
-                                                <ChevronsUpDown className="ml-1 h-3 w-3" />
-                                              </Button>
-                                            </CollapsibleTrigger>
-                                          </div>
-                                          <CollapsibleContent className="mt-2">
-                                            <div className="text-muted-foreground text-xs p-3 border rounded-lg bg-muted/30">
-                                              <Response>{agent.authenticationInformation}</Response>
-                                            </div>
-                                          </CollapsibleContent>
-                                        </Collapsible>
-                                      )}
-                                    </div>
-                                  </CardContent>
-                                </CollapsibleContent>
-                              </Collapsible>
+                              <CardHeader className="p-4">
+                                <div className="flex flex-col">
+                                  <p className="text-base">Authentication</p>
+                                  <p className="text-sm text-muted-foreground mb-0">
+                                    Authentication is configured on the Model selected above. To change the API
+                                    key or budget for this agent's model, edit the model itself.
+                                  </p>
+                                </div>
+                              </CardHeader>
+                              <CardContent>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (selectedModel) {
+                                      window.open(`/models/edit/${selectedModel}`, "_blank");
+                                    } else {
+                                      window.open(`/models`, "_blank");
+                                    }
+                                  }}
+                                  disabled={!selectedModel}
+                                >
+                                  <Info className="h-4 w-4 mr-2" />
+                                  {selectedModel ? "Edit this model" : "Manage models"}
+                                </Button>
+                              </CardContent>
                             </Card>
 
                             {/* Native memory configuration */}

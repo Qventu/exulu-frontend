@@ -112,7 +112,7 @@ createdAt
 const AGENT_FIELDS = `
 id
 name
-providerapikey
+model
 feedback
 memory
 instructions
@@ -128,7 +128,6 @@ skills
 providerName
 modelName
 maxContextLength
-provider
 authenticationInformation
 systemInstructions
 slug
@@ -155,7 +154,6 @@ capabilities {
   audio
   video
 }
-provider
 rights_mode
 RBAC {
       type
@@ -923,7 +921,7 @@ export const CREATE_AGENT = gql`
     $name: String!
     $description: String!
     $rights_mode: String!
-    $provider: String!
+    $model: String
     $image: String
     $RBAC: RBACInput
   ) {
@@ -932,7 +930,7 @@ export const CREATE_AGENT = gql`
         name: $name
         description: $description
         rights_mode: $rights_mode
-        provider: $provider
+        model: $model
         image: $image
         RBAC: $RBAC
       }
@@ -998,7 +996,7 @@ export const UPDATE_AGENT_BY_ID = gql`
     $id: ID!
     $name: String
     $feedback: Boolean
-    $provider: String
+    $model: String
     $description: String
     $welcomemessage: String
     $defaultagent: Boolean
@@ -1011,7 +1009,6 @@ export const UPDATE_AGENT_BY_ID = gql`
     $tools: JSON
     $skills: JSON
     $active: Boolean
-    $providerapikey: String
     $RBAC: RBACInput
     $rate_limits: JSON
   ) {
@@ -1019,7 +1016,7 @@ export const UPDATE_AGENT_BY_ID = gql`
       input: {
         name: $name
         feedback: $feedback
-        provider: $provider
+        model: $model
         description: $description
         welcomemessage: $welcomemessage
         defaultagent: $defaultagent
@@ -1032,7 +1029,6 @@ export const UPDATE_AGENT_BY_ID = gql`
         active: $active
         tools: $tools
         skills: $skills
-        providerapikey: $providerapikey
         RBAC: $RBAC
         rate_limits: $rate_limits
       }
@@ -1118,7 +1114,185 @@ export const GET_PROVIDERS = gql`
         provider
         modelName
         providerName
+        authenticationInformation
+        maxContextLength
+        capabilities
       }
+    }
+  }
+`;
+
+export const GET_MODELS = gql`
+  query GetModels(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterModel]
+    $sort: SortBy = { field: "updatedAt", direction: DESC }
+  ) {
+    modelsPagination(
+      page: $page
+      limit: $limit
+      sort: $sort
+      filters: $filters
+    ) {
+      pageInfo {
+        pageCount
+        itemCount
+        currentPage
+        hasPreviousPage
+        hasNextPage
+      }
+      items {
+        id
+        name
+        description
+        provider
+        authvariable
+        active
+        requests_per_window
+        window_seconds
+        token_budget
+        cost_budget_usd
+        budget_window
+        rights_mode
+        created_by
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+export const GET_MODEL_BY_ID = gql`
+  query GetModelById($id: ID!) {
+    modelById(id: $id) {
+      id
+      name
+      description
+      provider
+      authvariable
+      active
+      requests_per_window
+      window_seconds
+      token_budget
+      cost_budget_usd
+      budget_window
+      rights_mode
+      created_by
+      RBAC {
+        type
+        users {
+          id
+          rights
+        }
+        roles {
+          id
+          rights
+        }
+      }
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const GET_MODELS_LITE = gql`
+  query GetModelsLite($page: Int!, $limit: Int!) {
+    modelsPagination(page: $page, limit: $limit, sort: { field: "name", direction: ASC }) {
+      items {
+        id
+        name
+        description
+        provider
+        active
+      }
+    }
+  }
+`;
+
+export const CREATE_MODEL = gql`
+  mutation CreateModel(
+    $name: String!
+    $description: String
+    $provider: String!
+    $authvariable: String
+    $active: Boolean
+    $requests_per_window: Float
+    $window_seconds: Float
+    $token_budget: Float
+    $cost_budget_usd: Float
+    $budget_window: String
+    $rights_mode: String
+    $RBAC: RBACInput
+  ) {
+    modelsCreateOne(
+      input: {
+        name: $name
+        description: $description
+        provider: $provider
+        authvariable: $authvariable
+        active: $active
+        requests_per_window: $requests_per_window
+        window_seconds: $window_seconds
+        token_budget: $token_budget
+        cost_budget_usd: $cost_budget_usd
+        budget_window: $budget_window
+        rights_mode: $rights_mode
+        RBAC: $RBAC
+      }
+    ) {
+      item {
+        id
+        name
+      }
+    }
+  }
+`;
+
+export const UPDATE_MODEL = gql`
+  mutation UpdateModel(
+    $id: ID!
+    $name: String
+    $description: String
+    $provider: String
+    $authvariable: String
+    $active: Boolean
+    $requests_per_window: Float
+    $window_seconds: Float
+    $token_budget: Float
+    $cost_budget_usd: Float
+    $budget_window: String
+    $rights_mode: String
+    $RBAC: RBACInput
+  ) {
+    modelsUpdateOneById(
+      id: $id
+      input: {
+        name: $name
+        description: $description
+        provider: $provider
+        authvariable: $authvariable
+        active: $active
+        requests_per_window: $requests_per_window
+        window_seconds: $window_seconds
+        token_budget: $token_budget
+        cost_budget_usd: $cost_budget_usd
+        budget_window: $budget_window
+        rights_mode: $rights_mode
+        RBAC: $RBAC
+      }
+    ) {
+      item {
+        id
+      }
+    }
+  }
+`;
+
+export const REMOVE_MODEL_BY_ID = gql`
+  mutation RemoveModelById($id: ID!) {
+    modelsRemoveOneById(id: $id) {
+      id
     }
   }
 `;

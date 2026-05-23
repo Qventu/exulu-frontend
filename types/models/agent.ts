@@ -19,7 +19,8 @@ export interface Agent {
     type: "agent";
     name: string;
     image?: string;
-    providerapikey?: string;
+    /** FK to models.id — replaces legacy provider + providerapikey columns. */
+    model?: string;
     workflows?: {
         enabled: boolean;
         queue?: {
@@ -45,6 +46,7 @@ export interface Agent {
     maxContextLength?: number;
     authenticationInformation?: string;
     systemInstructions?: string;
+    /** @deprecated Hydrated for read compatibility; underlying column was removed. */
     provider?: string;
     capabilities?: {
         text: boolean;

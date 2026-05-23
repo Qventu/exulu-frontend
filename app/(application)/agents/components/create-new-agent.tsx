@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loading } from "@/components/ui/loading";
-import { AgentProviderSelector } from "@/app/(application)/agents/components/agent-provider-selector";
+import { AgentModelSelector } from "@/app/(application)/agents/components/agent-model-selector";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,7 +27,7 @@ export function CreateNewAgent({ createAgent, createAgentResult, company, childr
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [provider, setProvider] = useState("");
+  const [model, setModel] = useState("");
   const [generateImage, setGenerateImage] = useState(true);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -161,9 +161,9 @@ export function CreateNewAgent({ createAgent, createAgentResult, company, childr
                   />
                 </div>
                 <div className="grid gap-2 mt-3">
-                  <Label htmlFor="provider">{t('common.backend')}</Label>
-                  <AgentProviderSelector onSelect={(id) => {
-                    setProvider(id)
+                  <Label htmlFor="model">{t('common.backend')}</Label>
+                  <AgentModelSelector value={model} onSelect={(id) => {
+                    setModel(id)
                   }} />
                 </div>
                 <div className="flex items-center space-x-2 mt-2">
@@ -215,7 +215,7 @@ export function CreateNewAgent({ createAgent, createAgentResult, company, childr
                       name,
                       description,
                       rights_mode: "private",
-                      provider,
+                      model,
                       image: selectedImage
                     },
                   });
@@ -235,7 +235,7 @@ export function CreateNewAgent({ createAgent, createAgentResult, company, childr
                       name,
                       description,
                       rights_mode: "private",
-                      provider
+                      model
                     },
                   });
                   return;
