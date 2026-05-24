@@ -12,6 +12,7 @@ export interface AgentTool {
 export interface Agent {
     id: string;
     feedback?: boolean;
+    suggestions_enabled?: boolean;
     modelName?: string;
     providerName?: string;
     welcomemessage?: string;

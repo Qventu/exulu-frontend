@@ -135,6 +135,8 @@ export function ChatLayout({
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   // Calculate max input length as 80% of agent's context window (rough char estimate: 1 token ≈ 4 chars)
   const MAX_INPUT_LENGTH = agent.maxContextLength ? Math.floor((agent.maxContextLength * 0.8) * 4) : 50000;
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const suggestionAbortRef = React.useRef<AbortController | null>(null);
   const [currentSession, setCurrentSession] = useState<AgentSession | null>(session);
   const [createAgentSession] = useMutation(CREATE_AGENT_SESSION, {
     refetchQueries: [
@@ -421,6 +423,59 @@ export function ChatLayout({
     })
   }, [messages])
 
+  // Follow-up message suggestions: after each assistant reply, fetch up to 3 short prompts
+  // the user might want to send next. Toggle is gated entirely client-side — if disabled,
+  // no request is fired and the effect short-circuits on its first line.
+  // Dedicated /agents/suggestions/:agentId endpoint — no session header, no session state.
+  useEffect(() => {
+    if (!agent.suggestions_enabled) return;
+    if (status === "streaming" || status === "submitted") return;
+    if (!messages || messages.length === 0) return;
+    const lastAssistant = messages[messages.length - 1];
+    if (!lastAssistant || lastAssistant.role !== "assistant") return;
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    if (!lastUser) return;
+
+    suggestionAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    suggestionAbortRef.current = ctrl;
+
+    (async () => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+
+        const res = await fetch(`${configContext?.backend}/agents/suggestions/${agent.id}`, {
+          method: "POST",
+          signal: ctrl.signal,
+          headers: {
+            "Content-Type": "application/json",
+            User: user.id,
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            messages: [lastUser, lastAssistant],
+          }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const arr = Array.isArray(data?.suggestions) ? data.suggestions : [];
+        setSuggestions(arr.slice(0, 3).map(String));
+      } catch {
+        // Aborted or network error — silently drop. Suggestions are non-essential.
+      }
+    })();
+
+    return () => ctrl.abort();
+  }, [
+    status,
+    messages.length,
+    agent.suggestions_enabled,
+    agent.id,
+    configContext?.backend,
+    user.id,
+  ]);
+
   // Check if conversation has enough content for a workflow
   const canCreateWorkflow = useMemo(() => {
     const userMessages = messages?.filter(m => m.role === 'user') || [];
@@ -531,6 +586,8 @@ export function ChatLayout({
       console.log("[EXULU] Approved tools", approvedTools);
     }
 
+    suggestionAbortRef.current?.abort();
+    setSuggestions([]);
     sendMessage({
       text: input,
       files: files || []
@@ -698,9 +755,6 @@ export function ChatLayout({
                         .map((m) => (
                           <SelectItem key={m.id} value={m.id}>
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-[10px] text-muted-foreground">
-                                {m.provider}
-                              </span>
                               <span>{m.name}</span>
                               {m.id === agent.model && (
                                 <span className="text-[10px] text-muted-foreground">
@@ -898,6 +952,8 @@ export function ChatLayout({
                     writeAccess={writeAccess}
                     onQuestionAnswer={(_questionId, _answerId, answerText) => {
                       const approvedTools = localStorage.getItem(`pre-approved-tool-calls-${currentSession?.id}`) || [];
+                      suggestionAbortRef.current?.abort();
+                      setSuggestions([]);
                       sendMessage(
                         { text: "[answer:" + answerText + "]", files: [] },
                         { body: { disabledTools, approvedTools } },
@@ -928,6 +984,25 @@ export function ChatLayout({
             )}
             {writeAccess && (
               <>
+                {suggestions.length > 0 && status !== "streaming" && status !== "submitted" && (
+                  <div className="w-[850px] mx-auto flex flex-wrap gap-2 mb-2 px-1">
+                    {suggestions.map((s, i) => (
+                      <Button
+                        key={i}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-auto py-1.5 px-3 text-xs text-left whitespace-normal"
+                        onClick={() => {
+                          setInput(s);
+                          inputRef.current?.focus();
+                        }}
+                      >
+                        {s}
+                      </Button>
+                    ))}
+                  </div>
+                )}
                 <form
                   onSubmit={onSubmit}
                   className="px-6 border-input flex mx-5 p-5 flex-col gap-2 mb-2">

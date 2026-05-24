@@ -114,6 +114,7 @@ id
 name
 model
 feedback
+suggestions_enabled
 memory
 instructions
 welcomemessage
@@ -996,6 +997,7 @@ export const UPDATE_AGENT_BY_ID = gql`
     $id: ID!
     $name: String
     $feedback: Boolean
+    $suggestions_enabled: Boolean
     $model: String
     $description: String
     $welcomemessage: String
@@ -1016,6 +1018,7 @@ export const UPDATE_AGENT_BY_ID = gql`
       input: {
         name: $name
         feedback: $feedback
+        suggestions_enabled: $suggestions_enabled
         model: $model
         description: $description
         welcomemessage: $welcomemessage
@@ -1039,6 +1042,7 @@ export const UPDATE_AGENT_BY_ID = gql`
           name
           description
           feedback
+          suggestions_enabled
           welcomemessage
           defaultagent
           instructions

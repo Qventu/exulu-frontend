@@ -191,6 +191,7 @@ const agentFormSchema = z.object({
   welcomemessage: z.string().optional(),
   defaultagent: z.boolean().optional(),
   feedback: z.boolean().optional(),
+  suggestions_enabled: z.boolean().optional(),
   name: z
     .string()
     .min(2, {
@@ -491,6 +492,7 @@ export default function AgentForm({
                       active: data.active,
                       memory: memory || null,
                       feedback: data.feedback,
+                      suggestions_enabled: data.suggestions_enabled ?? false,
                       model: selectedModel || null,
                       animation_idle: animation_idle,
                       animation_responding: animation_responding,
@@ -1175,6 +1177,32 @@ export default function AgentForm({
                                     </FormLabel>
                                     <FormDescription>
                                       When enabled, feedback can be collected from users during chat.
+                                    </FormDescription>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+
+                            {/* Follow-up message suggestions */}
+                            <FormField
+                              control={agentForm.control}
+                              name="suggestions_enabled"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                  <div className="space-y-0.5">
+                                    <FormLabel className="text-base">
+                                      Enable follow-up suggestions?
+                                    </FormLabel>
+                                    <FormDescription>
+                                      When enabled, after each assistant reply the chat suggests up to 3 follow-up
+                                      messages the user might want to send. Uses the agent&apos;s model. Suggestion
+                                      tokens count toward this agent&apos;s rate limits and statistics.
                                     </FormDescription>
                                   </div>
                                   <FormControl>
