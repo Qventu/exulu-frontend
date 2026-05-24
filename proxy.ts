@@ -1,5 +1,3 @@
-// middleware.ts
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -7,24 +5,117 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 const defaultLocale = 'en';
 const locales = ['en', 'de'];
 
+const isDev = process.env.NODE_ENV !== 'production';
+
+function backendOrigin(): string {
+    try {
+        return process.env.BACKEND ? new URL(process.env.BACKEND).origin : '';
+    } catch {
+        return '';
+    }
+}
+
+function s3Origin(): string {
+    try {
+        return process.env.COMPANION_S3_ENDPOINT ? new URL(process.env.COMPANION_S3_ENDPOINT).origin : '';
+    } catch {
+        return '';
+    }
+}
+
+function redisOrigin(): string {
+    try {
+        return process.env.REDIS_HOST ? new URL(process.env.REDIS_HOST).origin : '';
+    } catch {
+        return '';
+    }
+}
+
+function feedbackOrigin(): string {
+    try {
+        return process.env.FEEDBACK_BACKEND ? new URL(process.env.FEEDBACK_BACKEND).origin : '';
+    } catch {
+        return '';
+    }
+}
+
+function buildCsp(): string {
+    const backend = backendOrigin();
+    const s3 = s3Origin();
+    const redis = redisOrigin();
+    const feedback = feedbackOrigin();
+
+    const scriptSrc = [
+        "'self'",
+        "'unsafe-inline'",
+        isDev && "'unsafe-eval'",
+        'https://cdn.jsdelivr.net',
+        'https://accounts.google.com',
+        'https://apis.google.com',
+    ].filter(Boolean).join(' ');
+
+    const styleSrc = "'self' 'unsafe-inline' https://fonts.googleapis.com";
+
+    const imgSrc = [
+        "'self'",
+        'data:',
+        'blob:',
+        'https://*.googleusercontent.com',
+        backend,
+        redis,
+        s3,
+        feedback,
+    ].filter(Boolean).join(' ');
+
+    const connectSrc = [
+        "'self'",
+        'https://accounts.google.com',
+        'https://www.googleapis.com',
+        'https://admin.googleapis.com',
+        backend,
+        redis,
+        s3,
+        feedback,
+        isDev && 'ws:',
+        isDev && 'wss:',
+    ].filter(Boolean).join(' ');
+
+    const frameSrc = "'self' https://accounts.google.com";
+    const fontSrc = "'self' data: https://fonts.gstatic.com";
+
+    return [
+        "default-src 'self'",
+        `script-src ${scriptSrc}`,
+        `style-src ${styleSrc}`,
+        `img-src ${imgSrc}`,
+        `font-src ${fontSrc}`,
+        `connect-src ${connectSrc}`,
+        `frame-src ${frameSrc}`,
+        "frame-ancestors 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "object-src 'none'",
+        'upgrade-insecure-requests',
+    ].join('; ');
+}
+
 export default function proxy(request: NextRequest) {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-next-pathname', encodeURIComponent(request.nextUrl.pathname));
 
-    // Get locale from cookie or use default
     const locale = request.cookies.get(LOCALE_COOKIE)?.value || defaultLocale;
-
-    // Validate locale
     const validLocale = locales.includes(locale) ? locale : defaultLocale;
-
-    // Set locale header for server components
     requestHeaders.set('x-locale', validLocale);
 
-    return NextResponse.next({
+    const response = NextResponse.next({
         request: {
             headers: requestHeaders,
         },
     });
+
+    response.headers.set('Content-Security-Policy', buildCsp());
+
+    return response;
 }
 
 export const config = {
