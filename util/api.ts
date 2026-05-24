@@ -41,6 +41,9 @@ export type BackendConfigType = {
         enabled: boolean;
     }
     entitlements?: Record<string, boolean>;
+    liteLLM?: {
+        enabled: boolean;
+    }
 }
 
 export type FeedbackConfig = {

@@ -27,6 +27,7 @@ import {
   UPDATE_AGENT_SESSION_ITEMS,
   CREATE_FEEDBACK,
   GET_MODELS_LITE,
+  GET_LITELLM_CATALOG,
 } from "@/queries/queries";
 import {
   Select,
@@ -236,13 +237,33 @@ export function ChatLayout({
     skip: !currentSession?.created_by
   })
 
-  // Load models the current user has access to, for the per-request override dropdown.
+  // Load models the current user has access to, for the per-request override
+  // dropdown. Switches data source based on whether LiteLLM is enabled —
+  // catalog branch hits the DB Models table, LiteLLM branch hits LiteLLM's
+  // /model/info via the litellmCatalog GraphQL resolver.
+  const litellmEnabled = configContext?.liteLLM?.enabled === true;
   const modelsQuery = useQuery(GET_MODELS_LITE, {
     variables: { page: 1, limit: 100 },
     fetchPolicy: "cache-and-network",
+    skip: litellmEnabled,
   });
-  const availableModels: { id: string; name: string; provider: string; active: boolean }[] =
-    modelsQuery.data?.modelsPagination?.items ?? [];
+  const litellmCatalogQuery = useQuery(GET_LITELLM_CATALOG, {
+    fetchPolicy: "cache-and-network",
+    skip: !litellmEnabled,
+  });
+  const availableModels: {
+    id: string;
+    name: string;
+    provider: string;
+    active: boolean;
+  }[] = litellmEnabled
+    ? (litellmCatalogQuery.data?.litellmCatalog ?? []).map((m: any) => ({
+        id: m.model_name,
+        name: m.model_name,
+        provider: m.upstream_model ?? "",
+        active: true,
+      }))
+    : modelsQuery.data?.modelsPagination?.items ?? [];
 
   const projectQuery = useQuery<{
     projectById: Project;

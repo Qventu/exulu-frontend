@@ -1297,6 +1297,23 @@ export const REMOVE_MODEL_BY_ID = gql`
   }
 `;
 
+export const GET_LITELLM_CATALOG = gql`
+  query GetLiteLLMCatalog {
+    litellmCatalog {
+      model_name
+      upstream_model
+      tags
+      max_tokens
+      max_input_tokens
+      max_output_tokens
+      supports_vision
+      supports_function_calling
+      supports_pdf_input
+      supports_audio_input
+    }
+  }
+`;
+
 export const DELETE_EVAL_RUN_BY_ID = gql`
   mutation DeleteEvalRunById($id: ID!) {
     eval_runsRemoveOneById(id: $id) {
