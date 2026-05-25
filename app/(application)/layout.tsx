@@ -58,6 +58,18 @@ export default async function RootLayout({
             enabled: typeof process.env.N8N_URL === "string" && process.env.N8N_URL !== "",
             url: typeof process.env.N8N_URL === "string" ? process.env.N8N_URL : undefined,
         },
+        transcription: {
+            enabled:
+                typeof process.env.TRANSCRIPTION_MODEL === "string" &&
+                process.env.TRANSCRIPTION_MODEL !== "" &&
+                process.env.EXULU_USE_LITELLM === "true",
+        },
+        tts: {
+            enabled:
+                typeof process.env.TTS_MODEL === "string" &&
+                process.env.TTS_MODEL !== "" &&
+                process.env.EXULU_USE_LITELLM === "true",
+        },
         ...json
     }
 

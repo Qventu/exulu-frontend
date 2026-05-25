@@ -39,7 +39,7 @@ import {
 import { getToken } from "@/util/api"
 import { Agent } from "@EXULU_SHARED/models/agent";
 import { ConfigContext } from "@/components/config-context";
-import { ArrowUp, FileText, Form, Plus, Share2, Copy, Check, Sparkles, FolderOpen } from "lucide-react";
+import { ArrowUp, FileText, Form, Plus, Share2, Copy, Check, Sparkles, FolderOpen, Mic, Square } from "lucide-react";
 import { SessionFilesPanel } from "@/components/session-files/session-files-panel";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { SaveWorkflowModal } from "@/components/save-workflow-modal";
@@ -103,6 +103,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { useLanguage } from "@/components/language-provider";
 
 export function ChatLayout({
   session,
@@ -133,6 +134,14 @@ export function ChatLayout({
     modelOverrideRef.current = modelOverride;
   }, [modelOverride]);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
+  // Speech-to-text. Feature is hidden entirely unless both EXULU_USE_LITELLM
+  // and TRANSCRIPTION_MODEL are set in the shared .env (see layout.tsx).
+  const transcriptionEnabled = configContext?.transcription?.enabled === true;
+  const { locale } = useLanguage();
+  const [recordingState, setRecordingState] = useState<"idle" | "recording" | "transcribing">("idle");
+  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const audioChunksRef = React.useRef<Blob[]>([]);
+  const streamRef = React.useRef<MediaStream | null>(null);
   // Calculate max input length as 80% of agent's context window (rough char estimate: 1 token ≈ 4 chars)
   const MAX_INPUT_LENGTH = agent.maxContextLength ? Math.floor((agent.maxContextLength * 0.8) * 4) : 50000;
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -602,6 +611,129 @@ export function ChatLayout({
     setFileItems(null);
   };
 
+  // Speech-to-text handlers. Record audio in-browser via MediaRecorder, then on
+  // stop POST the blob to /transcribe and append the returned text to the
+  // input. No auto-send. See docs/superpowers/specs/2026-05-24-speech-to-text-
+  // transcription-design.md.
+  const handleRecordingStop = async () => {
+    const mimeType = mediaRecorderRef.current?.mimeType ?? "audio/webm";
+    const ext = mimeType.includes("mp4") ? "m4a" : "webm";
+    const blob = new Blob(audioChunksRef.current, { type: mimeType });
+
+    // Silently discard empty recordings (clicked stop before audio captured).
+    if (blob.size < 1024) {
+      setRecordingState("idle");
+      mediaRecorderRef.current = null;
+      audioChunksRef.current = [];
+      return;
+    }
+
+    setRecordingState("transcribing");
+    const formData = new FormData();
+    formData.append("file", blob, `recording.${ext}`);
+    // Pass the user's UI locale as a Whisper language hint — without it,
+    // auto-detection often flips short non-English clips to English.
+    if (locale) formData.append("language", locale);
+
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("No valid session token available.");
+      const res = await fetch(`${configContext?.backend}/transcribe`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, User: user.id },
+        body: formData,
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({ detail: "Transcription failed." }));
+        throw new Error(errBody.detail || "Transcription failed.");
+      }
+      const { text } = (await res.json()) as { text?: string };
+      if (text) {
+        setInput((prev) => (prev ? `${prev} ${text}` : text));
+        inputRef.current?.focus();
+      }
+    } catch (err) {
+      toast({
+        title: "Transcription failed",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRecordingState("idle");
+      mediaRecorderRef.current = null;
+      audioChunksRef.current = [];
+    }
+  };
+
+  const startRecording = async () => {
+    // getUserMedia is only available in secure contexts. On http:// (anything
+    // other than localhost/127.0.0.1) navigator.mediaDevices is undefined and
+    // the browser will not prompt for permission — fail loudly with a clear
+    // message instead of a generic "denied".
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      toast({
+        title: "Microphone unavailable",
+        description: `Recording requires HTTPS or localhost. Current origin: ${window.location.origin}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast({
+        title: "Microphone unavailable",
+        description: "This browser doesn't expose getUserMedia. Try a recent Chrome, Firefox, or Safari over HTTPS.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      audioChunksRef.current = [];
+      const mr = new MediaRecorder(stream);
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      mr.onstop = handleRecordingStop;
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setRecordingState("recording");
+    } catch (err) {
+      const name = (err as { name?: string })?.name ?? "Error";
+      const message = err instanceof Error ? err.message : String(err);
+      let description = `${name}: ${message}`;
+      if (name === "NotAllowedError") {
+        description =
+          "Microphone permission was denied. Click the lock/permissions icon next to the URL and allow microphone access for this site.";
+      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+        description = "No microphone was found on this device.";
+      } else if (name === "NotReadableError") {
+        description = "The microphone is in use by another application.";
+      } else if (name === "SecurityError") {
+        description = "Microphone access blocked by the page's permissions policy.";
+      }
+      toast({
+        title: "Microphone unavailable",
+        description,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+  };
+
+  // Clean up any active recorder/stream on unmount so we don't leak the mic.
+  useEffect(() => () => {
+    if (mediaRecorderRef.current?.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+  }, []);
+
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -1024,13 +1156,42 @@ export function ChatLayout({
                           aria-label="Chat message input"
                           aria-describedby={input.length > MAX_INPUT_LENGTH * 0.9 ? "input-length-warning" : undefined}
                         />
+                        {transcriptionEnabled && (
+                          <Button
+                            className="shrink-0"
+                            variant="secondary"
+                            size="icon"
+                            type="button"
+                            disabled={
+                              recordingState === "transcribing" ||
+                              status === "submitted" ||
+                              status === "streaming"
+                            }
+                            onClick={recordingState === "recording" ? stopRecording : startRecording}
+                            aria-label={
+                              recordingState === "recording"
+                                ? "Stop recording"
+                                : recordingState === "transcribing"
+                                  ? "Transcribing"
+                                  : "Start recording"
+                            }
+                          >
+                            {recordingState === "idle" && (
+                              <Mic className="size-6 text-muted-foreground" />
+                            )}
+                            {recordingState === "recording" && (
+                              <Square className="size-6 text-red-500 animate-pulse" />
+                            )}
+                            {recordingState === "transcribing" && <Loading className="size-6" />}
+                          </Button>
+                        )}
                         {status !== "streaming" ? (
                           <Button
                             className="shrink-0"
                             variant="secondary"
                             size="icon"
                             type="submit"
-                            disabled={status === "submitted" || !input?.trim()}
+                            disabled={status === "submitted" || !input?.trim() || recordingState !== "idle"}
                             aria-label="Send message"
                           >
                             <ArrowUp className=" size-6 text-muted-foreground" />
@@ -1453,10 +1614,7 @@ export const UntypedToolPart = ({
   addToContext: (item: string) => void,
   addToolApprovalResponse: ChatAddToolApproveResponseFunction
 }) => {
-
-  if (process.env.NODE_ENV === 'development') {
-    console.log("Tool Call -", "type:", untypedToolPart.type, "state:", untypedToolPart.state);
-  }
+  
   const output = untypedToolPart.output as any;
   // Replace - and _, replace 'tool-' prefix
   let styleToolName = untypedToolPart.type?.replace(/ /g, "-")

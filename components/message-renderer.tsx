@@ -5,7 +5,7 @@ import { Message, MessageContent } from '@/components/ai-elements/message'
 import { Response } from '@/components/ai-elements/response'
 import { Reasoning, ReasoningTrigger, ReasoningContent } from "@/components/ai-elements/reasoning"
 import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/source"
-import { RefreshCcwIcon, CopyIcon, ChevronDown, ChevronRight, Search, FileText, Database, ListChecks, LayoutList, EditIcon, Trash2Icon, DownloadIcon, ThumbsUp, ThumbsDown, Terminal, FileEdit, HelpCircle, Wrench, Globe, List, FolderOpen, GitBranch, Code2 } from "lucide-react"
+import { RefreshCcwIcon, CopyIcon, ChevronDown, ChevronRight, Search, FileText, Database, ListChecks, LayoutList, EditIcon, Trash2Icon, DownloadIcon, ThumbsUp, ThumbsDown, Terminal, FileEdit, HelpCircle, Wrench, Globe, List, FolderOpen, GitBranch, Code2, Volume2, Pause, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { useToast } from "@/components/ui/use-toast"
@@ -17,7 +17,11 @@ import { AgenticKnowledgeSourceSearchResults, KnowledgeSourceSearchResultChunk }
 import { Badge } from "@/components/ui/badge"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useContext, useRef } from "react"
+import { ConfigContext } from "@/components/config-context"
+import { UserContext } from "@/app/(application)/authenticated"
+import { getToken } from "@/util/api"
+import { preprocessForTTS, chunkForTTS, TTS_MAX_CONCURRENT } from "@/lib/tts-text"
 import { MessageActions, MessageAction } from '@/components/ai-elements/message'
 import { Skeleton } from "./ui/skeleton"
 import { ChatAddToolApproveResponseFunction } from "ai"
@@ -112,6 +116,257 @@ export function MessageRenderer({
   const { toast } = useToast()
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [editedText, setEditedText] = useState<string>("")
+
+  // Text-to-speech. Sentence-chunked streaming playback: text is split into
+  // ~300-char chunks, up to TTS_MAX_CONCURRENT chunks are fetched in parallel,
+  // and a single shared HTMLAudioElement plays them sequentially as they
+  // arrive. Pause/resume is delegated to the audio element; switching to a
+  // different message aborts the current playback. Per-message cache stores
+  // each chunk's Blob so replays skip the network entirely.
+  //
+  // Design doc: docs/superpowers/specs/2026-05-25-text-to-speech-design.md
+  const configContext = useContext(ConfigContext)
+  const userContext = useContext(UserContext)
+  const ttsEnabled = configContext?.tts?.enabled === true
+  type TTSState = "idle" | "loading" | "playing" | "paused"
+  const [ttsStateByMessage, setTtsStateByMessage] = useState<Record<string, TTSState>>({})
+  // Per-message cache: sparse array of Blobs indexed by chunk number. Filled
+  // as fetches resolve; persists across pauses and replays.
+  const ttsCacheRef = useRef<Map<string, Array<Blob | undefined>>>(new Map())
+  const audioElRef = useRef<HTMLAudioElement | null>(null)
+  const playingMessageIdRef = useRef<string | null>(null)
+  // AbortController for the in-flight playback session. Aborted when the user
+  // switches messages or unmounts. Cancels both pending fetches and the player
+  // loop's wait for the next chunk.
+  const playbackAbortRef = useRef<AbortController | null>(null)
+
+  const fetchChunkBlob = async (chunkText: string, signal: AbortSignal): Promise<Blob> => {
+    const token = await getToken()
+    if (!token) throw new Error("No valid session token available.")
+    const res = await fetch(`${configContext?.backend}/speech`, {
+      method: "POST",
+      signal,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        User: userContext?.user?.id ?? "",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text: chunkText }),
+    })
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({ detail: "Speech generation failed." }))
+      throw new Error(errBody.detail || "Speech generation failed.")
+    }
+    return res.blob()
+  }
+
+  // Plays one chunk on the shared audio element and resolves when the chunk
+  // ends. Pause/resume on the audio element is transparent — pausing keeps
+  // this awaiting `ended`; resuming continues from the same position.
+  const playOneChunk = (audio: HTMLAudioElement, blob: Blob, signal: AbortSignal): Promise<void> =>
+    new Promise((resolve, reject) => {
+      const onEnded = () => { cleanup(); resolve() }
+      const onError = () => {
+        const e = audio.error
+        const codeNames: Record<number, string> = {
+          1: "ABORTED",
+          2: "NETWORK",
+          3: "DECODE",
+          4: "SRC_NOT_SUPPORTED",
+        }
+        const detail = e
+          ? `${codeNames[e.code] ?? `code ${e.code}`}${e.message ? `: ${e.message}` : ""}`
+          : "unknown"
+        console.error("[TTS] audio.error", { code: e?.code, message: e?.message, blobType: blob.type, blobSize: blob.size })
+        cleanup()
+        reject(new Error(`Audio playback error (${detail})`))
+      }
+      const onAbort = () => { cleanup(); try { audio.pause() } catch { /* ignore */ }; reject(new Error("aborted")) }
+      const cleanup = () => {
+        audio.removeEventListener("ended", onEnded)
+        audio.removeEventListener("error", onError)
+        signal.removeEventListener("abort", onAbort)
+      }
+      audio.addEventListener("ended", onEnded, { once: true })
+      audio.addEventListener("error", onError, { once: true })
+      signal.addEventListener("abort", onAbort, { once: true })
+      if (audio.src.startsWith("blob:")) URL.revokeObjectURL(audio.src)
+      audio.src = URL.createObjectURL(blob)
+      audio.play().catch((err) => {
+        // play() rejection (AbortError, NotAllowedError, NotSupportedError).
+        // The error event handler above may also fire — first-to-reject wins.
+        reject(err instanceof Error ? err : new Error(String(err)))
+      })
+    })
+
+  const handleTtsClick = async (message: UIMessage) => {
+    // Lazy-init the shared audio element.
+    if (!audioElRef.current) {
+      audioElRef.current = new Audio()
+    }
+    const audio = audioElRef.current
+    const currentState = ttsStateByMessage[message.id] ?? "idle"
+
+    // Pause/resume on the currently playing message.
+    if (currentState === "playing") {
+      audio.pause()
+      setTtsStateByMessage((s) => ({ ...s, [message.id]: "paused" }))
+      return
+    }
+    if (currentState === "paused" && playingMessageIdRef.current === message.id) {
+      try {
+        await audio.play()
+        setTtsStateByMessage((s) => ({ ...s, [message.id]: "playing" }))
+      } catch (err) {
+        console.error("[TTS] resume failed", err)
+      }
+      return
+    }
+
+    // Fresh play. Abort any existing playback session (cancels in-flight
+    // fetches and the player loop) and reset prior message's state.
+    if (playbackAbortRef.current) {
+      playbackAbortRef.current.abort()
+      playbackAbortRef.current = null
+    }
+    if (playingMessageIdRef.current && playingMessageIdRef.current !== message.id) {
+      const prevId = playingMessageIdRef.current
+      setTtsStateByMessage((s) => ({ ...s, [prevId]: "idle" }))
+    }
+    try { audio.pause() } catch { /* ignore */ }
+
+    // Preprocess + chunk.
+    const raw = message.parts?.map((p: any) => p?.text ?? "").join("\n") ?? ""
+    const { text, truncated } = preprocessForTTS(raw)
+    if (!text) {
+      toast({ title: "Nothing to read", description: "Message has no readable text.", variant: "destructive" })
+      return
+    }
+    if (truncated) {
+      toast({ title: "Long message truncated", description: "Only the first 4000 characters will be read." })
+    }
+    const chunks = chunkForTTS(text)
+    const cached = ttsCacheRef.current.get(message.id) ?? new Array<Blob | undefined>(chunks.length)
+    // Resize cache if chunk count changed (shouldn't happen — text is stable —
+    // but defensive in case the message edited).
+    if (cached.length !== chunks.length) {
+      cached.length = chunks.length
+    }
+    ttsCacheRef.current.set(message.id, cached)
+
+    const abortController = new AbortController()
+    playbackAbortRef.current = abortController
+    playingMessageIdRef.current = message.id
+    setTtsStateByMessage((s) => ({ ...s, [message.id]: "loading" }))
+
+    // Per-chunk deferred promises. Player awaits slots[i]; fetcher resolves
+    // them in completion order (which may differ from chunk order). When the
+    // consumer errors out and aborts the controller, in-flight producer tasks
+    // will reject the remaining slots with AbortError — slots after the
+    // consumer's exit point have no awaiter, so we attach a no-op `.catch` to
+    // suppress unhandled-rejection warnings without losing real errors (the
+    // consumer still gets the rejection if it does await the slot).
+    const slots: Array<{
+      promise: Promise<Blob>
+      resolve: (b: Blob) => void
+      reject: (e: Error) => void
+    }> = chunks.map(() => {
+      let resolve!: (b: Blob) => void
+      let reject!: (e: Error) => void
+      const promise = new Promise<Blob>((res, rej) => { resolve = res; reject = rej })
+      promise.catch(() => { /* suppress unhandled rejection for un-awaited slots */ })
+      return { promise, resolve, reject }
+    })
+
+    // Pre-resolve slots for any already-cached chunks.
+    cached.forEach((blob, i) => {
+      if (blob) slots[i].resolve(blob)
+    })
+
+    // Producer: bounded-concurrency fetcher.
+    const producer = (async () => {
+      const inflight = new Set<Promise<void>>()
+      for (let i = 0; i < chunks.length; i++) {
+        if (abortController.signal.aborted) break
+        if (cached[i]) continue
+        while (inflight.size >= TTS_MAX_CONCURRENT) {
+          await Promise.race(inflight)
+          if (abortController.signal.aborted) return
+        }
+        const idx = i
+        const task = fetchChunkBlob(chunks[idx], abortController.signal)
+          .then((blob) => {
+            cached[idx] = blob
+            slots[idx].resolve(blob)
+          })
+          .catch((err) => {
+            slots[idx].reject(err instanceof Error ? err : new Error(String(err)))
+          })
+          .finally(() => { inflight.delete(task) })
+        inflight.add(task)
+      }
+      await Promise.allSettled(inflight)
+    })()
+
+    // Consumer: sequential playback loop.
+    const consumer = (async () => {
+      for (let i = 0; i < chunks.length; i++) {
+        if (abortController.signal.aborted) return
+        let blob: Blob
+        try {
+          blob = await slots[i].promise
+        } catch (err) {
+          if (abortController.signal.aborted) return
+          throw err
+        }
+        if (abortController.signal.aborted) return
+        if (i === 0) {
+          setTtsStateByMessage((s) => ({ ...s, [message.id]: "playing" }))
+        }
+        try {
+          await playOneChunk(audio, blob, abortController.signal)
+        } catch (err) {
+          if (abortController.signal.aborted) return
+          throw err
+        }
+      }
+    })()
+
+    consumer
+      .then(() => {
+        if (!abortController.signal.aborted) {
+          setTtsStateByMessage((s) => ({ ...s, [message.id]: "idle" }))
+          playingMessageIdRef.current = null
+        }
+      })
+      .catch((err) => {
+        console.error("[TTS] playback failed", err)
+        toast({
+          title: "Couldn't play message",
+          description: err instanceof Error ? err.message : "Audio playback failed.",
+          variant: "destructive",
+        })
+        setTtsStateByMessage((s) => ({ ...s, [message.id]: "idle" }))
+        playingMessageIdRef.current = null
+        abortController.abort()
+      })
+      .finally(() => {
+        // Leave the producer to wind down on its own (its tasks check the
+        // signal). No need to await it here.
+        void producer
+      })
+  }
+
+  // Cleanup on unmount: abort any active playback, pause audio, revoke blob URL.
+  useEffect(() => () => {
+    playbackAbortRef.current?.abort()
+    audioElRef.current?.pause()
+    if (audioElRef.current?.src.startsWith("blob:")) {
+      URL.revokeObjectURL(audioElRef.current.src)
+    }
+    audioElRef.current = null
+    ttsCacheRef.current.clear()
+  }, [])
 
   const handleStartEdit = (messageId: string, currentText: string) => {
     setEditingMessageId(messageId)
@@ -237,7 +492,6 @@ export function MessageRenderer({
             return { s3Key, content } as { s3Key: string, content: string };
           }) ?? []
         }) ?? [];
-        console.log("files", files);
 
         const messageElement = (
           <Message
@@ -746,6 +1000,23 @@ export function MessageRenderer({
                         label="Copy"
                       >
                         <CopyIcon className="size-3" />
+                      </MessageAction>
+                    )}
+                    {ttsEnabled && showActions && message.role === 'assistant' && (
+                      <MessageAction
+                        className="mr-1"
+                        onClick={() => handleTtsClick(message)}
+                        label={
+                          (ttsStateByMessage[message.id] ?? "idle") === "playing"
+                            ? "Pause"
+                            : (ttsStateByMessage[message.id] ?? "idle") === "paused"
+                              ? "Resume"
+                              : "Read aloud"
+                        }
+                      >
+                        {ttsStateByMessage[message.id] === "loading" && <Loader2 className="size-3 animate-spin" />}
+                        {ttsStateByMessage[message.id] === "playing" && <Pause className="size-3" />}
+                        {(!ttsStateByMessage[message.id] || ttsStateByMessage[message.id] === "idle" || ttsStateByMessage[message.id] === "paused") && <Volume2 className="size-3" />}
                       </MessageAction>
                     )}
                     {showActions && message.role === 'assistant' && (

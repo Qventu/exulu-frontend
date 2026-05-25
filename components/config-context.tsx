@@ -7,6 +7,12 @@ export type ConfigContextType = {
     google_client_id: string;
     auth_mode: string;
     feedback?: FeedbackConfig;
+    transcription?: {
+        enabled: boolean;
+    };
+    tts?: {
+        enabled: boolean;
+    };
 } & BackendConfigType;
 
 export const ConfigContext = createContext<ConfigContextType | null>(null);

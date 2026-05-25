@@ -91,6 +91,10 @@ function buildCsp(): string {
         `font-src ${fontSrc}`,
         `connect-src ${connectSrc}`,
         `frame-src ${frameSrc}`,
+        // Allow blob: URLs for <audio>/<video> so the TTS feature can play
+        // generated MP3s via URL.createObjectURL(). Without this Chrome rejects
+        // the load with "Media load rejected by URL safety check".
+        "media-src 'self' blob:",
         "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",
