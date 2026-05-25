@@ -95,7 +95,7 @@ export function LiteLLMCatalogView() {
             <TableHeader>
               <TableRow>
                 <TableHead>Model name</TableHead>
-                <TableHead>Upstream model</TableHead>
+                {/* <TableHead>Upstream model</TableHead> */}
                 <TableHead>Context (in / out)</TableHead>
                 <TableHead>Modalities</TableHead>
                 <TableHead>Tags</TableHead>
@@ -115,9 +115,9 @@ export function LiteLLMCatalogView() {
                     <TableCell className="font-medium">
                       {m.model_name}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    {/* <TableCell className="font-mono text-xs">
                       {m.upstream_model ?? "—"}
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell className="text-xs">
                       {formatTokens(m.max_input_tokens)} /{" "}
                       {formatTokens(m.max_output_tokens)}

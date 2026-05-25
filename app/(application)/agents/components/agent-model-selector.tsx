@@ -147,12 +147,12 @@ export function AgentModelSelector({
               disabled={m.stale}
             >
               <div className="flex items-center gap-2">
-                {m.provider && (
+                {/* {m.provider && (
                   <span className="font-mono text-xs text-muted-foreground">
                     {m.provider}
                   </span>
-                )}
-                <span className={m.stale ? "text-red-600" : undefined}>
+                )} */}
+                <span className={m.stale ? "text-red-600" : undefined + " uppercase"}>
                   {m.label}
                 </span>
                 {m.active === false && !m.stale && (

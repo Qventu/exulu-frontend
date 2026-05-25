@@ -794,7 +794,7 @@ export default function AgentForm({
                                       Set as default agent
                                     </FormLabel>
                                     <FormDescription>
-                                      When enabled, this agent will be shown as the default agent on the homepage.
+                                      When enabled, this agent will be loaded as the default agent on the chat page.
                                     </FormDescription>
                                   </div>
                                   <FormControl>
