@@ -266,6 +266,7 @@ export function ChatLayout({
   const availableModels: {
     id: string;
     name: string;
+    type: string | null;
     provider: string;
     active: boolean;
     brand?: string | null;
@@ -274,11 +275,12 @@ export function ChatLayout({
       ? (litellmCatalogQuery.data?.litellmCatalog ?? []).map((m: any) => ({
         id: m.model_name,
         name: m.model_name,
+        type: m.type ?? null,
         provider: m.upstream_model ?? "",
         active: true,
         brand: m.brand ?? null,
         region: m.region ?? null,
-      }))
+      })).filter((m: any) => m.type !== "speech_to_text" && m.type !== "text_to_speech")
       : modelsQuery.data?.modelsPagination?.items ?? [];
 
   const projectQuery = useQuery<{
@@ -907,8 +909,8 @@ export function ChatLayout({
                       availableModels
                         .filter((m) => m.active)
                         .map((m) => (
-                          <SelectItem key={m.id} value={m.id}>
-                            <div className="flex items-center gap-2">
+                          <SelectItem disabled={!m.active} key={m.id} value={m.id}>
+                            <div className={`flex items-center gap-2 ${!m.active ? 'opacity-50 cursor-not-allowed' : ''}`}>
                               <ProviderLogo brand={m.brand} region={m.region} size={14} />
                               <span>{m.name}</span>
                               {m.id === agent.model && (

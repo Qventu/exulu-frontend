@@ -29,6 +29,7 @@ type LiteLLMCatalogEntry = {
   max_tokens: number | null;
   supports_vision: boolean | null;
   supports_function_calling: boolean | null;
+  active: boolean | null;
   supports_pdf_input: boolean | null;
   supports_audio_input: boolean | null;
 };
@@ -101,6 +102,7 @@ export function LiteLLMCatalogView() {
                 {/* <TableHead>Upstream model</TableHead> */}
                 <TableHead>Context (in / out)</TableHead>
                 <TableHead>Modalities</TableHead>
+                <TableHead>Active</TableHead>
                 <TableHead>Tags</TableHead>
               </TableRow>
             </TableHeader>
@@ -143,6 +145,9 @@ export function LiteLLMCatalogView() {
                           <Badge variant="outline">tools</Badge>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {m.active ? <Badge variant="outline">Active</Badge> : <Badge variant="outline">Inactive</Badge>}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">

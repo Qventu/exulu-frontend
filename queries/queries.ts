@@ -1305,7 +1305,9 @@ export const GET_LITELLM_CATALOG = gql`
   query GetLiteLLMCatalog {
     litellmCatalog {
       model_name
+      active
       upstream_model
+      type
       tags
       brand
       region
