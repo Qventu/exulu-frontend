@@ -8,6 +8,7 @@ import { ConfigContext } from "@/components/config-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/loading";
+import { ProviderLogo } from "@/components/provider-logo";
 import {
   Table,
   TableBody,
@@ -21,6 +22,8 @@ type LiteLLMCatalogEntry = {
   model_name: string;
   upstream_model: string | null;
   tags: string[] | null;
+  brand: string | null;
+  region: string | null;
   max_input_tokens: number | null;
   max_output_tokens: number | null;
   max_tokens: number | null;
@@ -113,7 +116,10 @@ export function LiteLLMCatalogView() {
                 items.map((m) => (
                   <TableRow key={m.model_name}>
                     <TableCell className="font-medium">
-                      {m.model_name}
+                      <span className="flex items-center gap-2">
+                        <ProviderLogo brand={m.brand} region={m.region} size={20} />
+                        {m.model_name}
+                      </span>
                     </TableCell>
                     {/* <TableCell className="font-mono text-xs">
                       {m.upstream_model ?? "—"}

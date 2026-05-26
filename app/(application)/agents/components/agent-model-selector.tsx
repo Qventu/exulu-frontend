@@ -13,6 +13,7 @@ import { useQuery } from "@apollo/client";
 import { GET_LITELLM_CATALOG, GET_MODELS_LITE } from "@/queries/queries";
 import { Input } from "@/components/ui/input";
 import { ConfigContext } from "@/components/config-context";
+import { ProviderLogo } from "@/components/provider-logo";
 
 type ModelOption = {
   id: string;
@@ -23,6 +24,8 @@ type ModelOption = {
   provider?: string;
   description?: string;
   active?: boolean;
+  brand?: string | null;
+  region?: string | null;
 };
 
 export function AgentModelSelector({
@@ -59,6 +62,8 @@ export function AgentModelSelector({
         provider: m.upstream_model ?? "",
         description: m.upstream_model ?? "",
         active: true,
+        brand: m.brand ?? null,
+        region: m.region ?? null,
       }));
     }
     const items = modelsQuery.data?.modelsPagination?.items ?? [];
@@ -114,7 +119,16 @@ export function AgentModelSelector({
       <SelectTrigger
         className={selected?.stale ? "border-red-500 text-red-600" : undefined}
       >
-        <SelectValue placeholder={selected?.label ?? "Select a model"} />
+        <SelectValue placeholder={selected?.label ?? "Select a model"}>
+          {selected ? (
+            <span className="flex items-center gap-2">
+              <ProviderLogo brand={selected.brand} region={selected.region} />
+              <span className={selected.stale ? "text-red-600" : undefined}>
+                {selected.label}
+              </span>
+            </span>
+          ) : null}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         <div className="p-2">
@@ -147,11 +161,7 @@ export function AgentModelSelector({
               disabled={m.stale}
             >
               <div className="flex items-center gap-2">
-                {/* {m.provider && (
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {m.provider}
-                  </span>
-                )} */}
+                <ProviderLogo brand={m.brand} region={m.region} />
                 <span className={m.stale ? "text-red-600" : undefined + " uppercase"}>
                   {m.label}
                 </span>

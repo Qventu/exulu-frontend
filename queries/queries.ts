@@ -1307,6 +1307,8 @@ export const GET_LITELLM_CATALOG = gql`
       model_name
       upstream_model
       tags
+      brand
+      region
       max_tokens
       max_input_tokens
       max_output_tokens

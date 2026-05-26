@@ -77,6 +77,7 @@ import { MessageRenderer } from "@/components/message-renderer";
 import { Response } from '@/components/ai-elements/response';
 import AgentVisual from "@/components/lottie";
 import Logo from "@/components/logo";
+import { ProviderLogo } from "@/components/provider-logo";
 import { PromptSelectorModal } from "./components/prompt-selector-modal";
 import { PromptLibrary } from "@/types/models/prompt-library";
 import { useIncrementPromptUsage } from "@/hooks/use-prompts";
@@ -267,14 +268,18 @@ export function ChatLayout({
     name: string;
     provider: string;
     active: boolean;
+    brand?: string | null;
+    region?: string | null;
   }[] = litellmEnabled
-    ? (litellmCatalogQuery.data?.litellmCatalog ?? []).map((m: any) => ({
+      ? (litellmCatalogQuery.data?.litellmCatalog ?? []).map((m: any) => ({
         id: m.model_name,
         name: m.model_name,
         provider: m.upstream_model ?? "",
         active: true,
+        brand: m.brand ?? null,
+        region: m.region ?? null,
       }))
-    : modelsQuery.data?.modelsPagination?.items ?? [];
+      : modelsQuery.data?.modelsPagination?.items ?? [];
 
   const projectQuery = useQuery<{
     projectById: Project;
@@ -872,9 +877,26 @@ export function ChatLayout({
                   disabled={availableModels.length === 0}
                 >
                   <SelectTrigger className="h-7 w-auto min-w-[160px] text-xs">
-                    <SelectValue
-                      placeholder={agent.modelName || "Select model"}
-                    />
+                    <SelectValue placeholder={agent.modelName || "Select model"}>
+                      {(() => {
+                        const current = availableModels.find(
+                          (m) => m.id === (modelOverride ?? agent.model),
+                        );
+                        if (!current) {
+                          return (<span className="flex items-center gap-2">
+                            <ProviderLogo brand={undefined} region={undefined} size={14} />
+                            <span>{agent.modelName || "Select model"}</span>
+                          </span>)
+                        }
+
+                        return (
+                          <span className="flex items-center gap-2">
+                            <ProviderLogo brand={current.brand} region={current.region} size={14} />
+                            <span>{current.name}</span>
+                          </span>
+                        );
+                      })()}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {availableModels.length === 0 ? (
@@ -887,6 +909,7 @@ export function ChatLayout({
                         .map((m) => (
                           <SelectItem key={m.id} value={m.id}>
                             <div className="flex items-center gap-2">
+                              <ProviderLogo brand={m.brand} region={m.region} size={14} />
                               <span>{m.name}</span>
                               {m.id === agent.model && (
                                 <span className="text-[10px] text-muted-foreground">
@@ -1355,7 +1378,7 @@ export function ChatLayout({
                             Save context preset
                           </Button>
                         )}
-                        
+
                       </div>
 
                       {/* Managed context notice */}
@@ -1572,13 +1595,12 @@ const CapabilityPopover = ({
               >
                 <span className="flex items-center gap-2 min-w-0">
                   <span
-                    className={`inline-flex items-center justify-center h-5 w-5 rounded-full shrink-0 ${
-                      isEnabled
-                        ? kind === "skill"
-                          ? "bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300"
-                          : "bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300"
-                        : "bg-muted text-muted-foreground"
-                    }`}
+                    className={`inline-flex items-center justify-center h-5 w-5 rounded-full shrink-0 ${isEnabled
+                      ? kind === "skill"
+                        ? "bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300"
+                        : "bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300"
+                      : "bg-muted text-muted-foreground"
+                      }`}
                   >
                     <Icon className="w-3 h-3" />
                   </span>
@@ -1614,7 +1636,7 @@ export const UntypedToolPart = ({
   addToContext: (item: string) => void,
   addToolApprovalResponse: ChatAddToolApproveResponseFunction
 }) => {
-  
+
   const output = untypedToolPart.output as any;
   // Replace - and _, replace 'tool-' prefix
   let styleToolName = untypedToolPart.type?.replace(/ /g, "-")
