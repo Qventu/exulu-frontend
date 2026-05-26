@@ -363,7 +363,6 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                       <ItemsSelectionModal
                         buttonText="Select items from knowledge sources to add to the chat."
                         tooltipText="Select or create items from/for knowledge sources to add to the project context."
-                        className="w-full"
                         onConfirm={(data) => {
                         const update = [...projectItems, ...data.map((x) => `${x.context.id}/${x.item.id}`)];
                         console.log("update", update);

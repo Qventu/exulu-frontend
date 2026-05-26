@@ -47,7 +47,7 @@ export type BackendConfigType = {
 }
 
 export type FeedbackConfig = {
-    enabled: true;
+    enabled: boolean;
     backend: string;
     token: string;
     featureAgentSlug: string;
