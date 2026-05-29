@@ -166,6 +166,13 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     });
   }
 
+
+  mainNavigationItems.push({
+    label: t('navigation.transcriptions'),
+    path: "transcriptions",
+    icon: <FileAudio className="h-4 w-4" strokeWidth={1.5} />,
+  });
+
   if (
     (user.super_admin || role.workflows === "write")
     && config.n8n?.enabled
