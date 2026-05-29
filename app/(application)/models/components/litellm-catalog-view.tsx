@@ -76,12 +76,12 @@ export function LiteLLMCatalogView() {
             Admin UI for runtime keys, budgets, and access groups.
           </p>
         </div>
-        <Button asChild variant="outline" size="sm">
+        {/* <Button asChild variant="outline" size="sm">
           <a href={adminUiUrl} target="_blank" rel="noreferrer">
             <ExternalLink className="h-4 w-4 mr-2" />
             Open LiteLLM Admin UI
           </a>
-        </Button>
+        </Button> */}
       </div>
 
       {loading && items.length === 0 ? (

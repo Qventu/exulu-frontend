@@ -24,7 +24,7 @@ export default function ModelsPage() {
             <h2 className="text-2xl font-bold tracking-tight">Models</h2>
             <p className="text-muted-foreground">
               {litellmEnabled
-                ? "LiteLLM is enabled for this instance. Models are configured in LiteLLM directly — this page is a read-only view of LiteLLM's catalog."
+                ? "This page is a read-only view of configured language models for this instance."
                 : "Manage the language models available to your agents. Each model pairs a code-defined provider with an encrypted authentication variable and optional rate / budget limits."}
             </p>
           </div>
