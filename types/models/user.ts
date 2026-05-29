@@ -6,6 +6,7 @@ export type User = {
   super_admin?: boolean;
   favourite_agents?: string[];
   favourite_projects?: string[];
+  personal_system_prompt?: string;
   role: string;
 };
 

@@ -93,6 +93,7 @@ email
 super_admin
 apikey
 anthropic_token
+personal_system_prompt
 type
 role
 favourite_agents
@@ -810,6 +811,7 @@ export const UPDATE_USER_BY_ID = gql`
       $email: String,
       $firstname: String,
       $anthropic_token: String,
+      $personal_system_prompt: String,
       $super_admin: Boolean,
       $lastname: String,
       $role: String,
@@ -820,6 +822,7 @@ export const UPDATE_USER_BY_ID = gql`
             email: $email,
             firstname: $firstname,
             anthropic_token: $anthropic_token,
+            personal_system_prompt: $personal_system_prompt,
             super_admin: $super_admin,
             lastname: $lastname,
             role: $role,
