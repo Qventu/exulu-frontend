@@ -90,9 +90,9 @@ export default function WorkflowsPage() {
       <div className="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
         <div className="flex items-center justify-between space-y-2">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Templates</h2>
+            <h2 className="text-2xl font-bold tracking-tight">Routines</h2>
             <p className="text-muted-foreground">
-              Manage your templates and monitor running jobs.
+              Manage your routines and monitor running jobs.
             </p>
           </div>
         </div>
@@ -100,11 +100,11 @@ export default function WorkflowsPage() {
         {/* Info Alert */}
         <Alert className="border-blue-500/50 bg-blue-50/50 dark:bg-blue-950/20">
           <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          <AlertTitle className="text-blue-900 dark:text-blue-100">How to create a new conversation template</AlertTitle>
+          <AlertTitle className="text-blue-900 dark:text-blue-100">How to create a new conversation routine</AlertTitle>
           <AlertDescription className="text-blue-800 dark:text-blue-200">
-            Start a new chat with an agent, then save your conversation as a template.
-            You can run saved templates on-demand or schedule them to run automatically using CRON expressions
-            if a queue is configured for the agent running the template and you have setup workers to process the queue.
+            Start a new chat with an agent, then save your conversation as a routine.
+            You can run saved routines on-demand or schedule them to run automatically using CRON expressions
+            if a queue is configured for the agent running the routine and you have setup workers to process the queue.
           </AlertDescription>
         </Alert>
 
@@ -142,14 +142,14 @@ export default function WorkflowsPage() {
                   <AlertDescription className="text-sm">
                     {dialogOpen?.queue ? (
                       <>
-                        This template will be queued for execution in the{" "}
+                        This routine will be queued for execution in the{" "}
                         <span className="font-semibold text-blue-700 dark:text-blue-300">{dialogOpen.queue}</span> queue.
                         Jobs are processed asynchronously based on queue priority and availability.
                       </>
                     ) : (
                       <>
-                        This template will execute immediately without queuing.
-                        No queue is configured for the agent running this template.
+                        This routine will execute immediately without queuing.
+                        No queue is configured for the agent running this routine.
                       </>
                     )}
                   </AlertDescription>
@@ -195,7 +195,7 @@ export default function WorkflowsPage() {
             {/* No Variables Message */}
             {(!dialogOpen?.variables || dialogOpen.variables.length === 0) && (
               <div className="text-center py-6 text-sm text-muted-foreground border rounded-lg bg-muted/30">
-                No input variables required for this template
+                No input variables required for this routine
               </div>
             )}
           </div>
@@ -250,12 +250,12 @@ export default function WorkflowsPage() {
                   {dialogOpen?.queue ? (
                     <>
                       <Clock className="mr-2 h-4 w-4" />
-                      Schedule Template
+                      Schedule Routine
                     </>
                   ) : (
                     <>
                       <Zap className="mr-2 h-4 w-4" />
-                      Run Template
+                      Run Routine
                     </>
                   )}
                 </>
@@ -275,7 +275,7 @@ export default function WorkflowsPage() {
                 <DialogTitle>Queue Management</DialogTitle>
               </DialogHeader>
               <QueueManagement queueName={queueManagementModalOpen} nameGenerator={(job: QueueJob) => {
-                return `Template Run: ${job.data?.workflow}`;
+                return `Routine Run: ${job.data?.workflow}`;
               }} retryJob={(job: QueueJob) => {
                 setDialogOpen({
                   id: job.data?.workflow || "",
