@@ -200,14 +200,6 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     });
   }
 
-  if (user.super_admin && process.env.NEXT_PUBLIC_AGENT_VISUALIZATION === "true") {
-    bottomNavigationItems.push({
-      label: "Agent World",
-      path: "agent-world",
-      icon: <Gamepad2 className="h-4 w-4" strokeWidth={1.5} />,
-    });
-  }
-
   // Bottom navigation items
   if (user.super_admin || role.api === "write") {
     bottomNavigationItems.push({

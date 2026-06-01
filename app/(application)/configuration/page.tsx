@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,48 +16,14 @@ import {
   UPDATE_PLATFORM_CONFIGURATION,
 } from "@/queries/queries";
 
-const AGENT_VISUALIZATION_ENABLED = process.env.NEXT_PUBLIC_AGENT_VISUALIZATION === "true";
-
-const CHARACTER_STYLES = [
-  { index: 0, label: "Style 1" },
-  { index: 1, label: "Style 2" },
-  { index: 2, label: "Style 3" },
-  { index: 3, label: "Style 4" },
-  { index: 4, label: "Style 5" },
-];
-
-function CharacterStylePreview({ spriteIndex }: { spriteIndex: number }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const img = new Image();
-    img.src = `/agent-world/characters/char_${spriteIndex}.png`;
-    img.onload = () => {
-      ctx.imageSmoothingEnabled = false;
-      // Draw walking-down frame 1 (16×32) at 3× zoom
-      ctx.clearRect(0, 0, 48, 96);
-      ctx.drawImage(img, 16, 0, 16, 32, 0, 0, 48, 96);
-    };
-  }, [spriteIndex]);
-
-  return <canvas ref={canvasRef} width={48} height={96} style={{ imageRendering: "pixelated" }} />;
-}
-
 export default function ConfigurationPage() {
   const [lightTheme, setLightTheme] = useState({});
   const [darkTheme, setDarkTheme] = useState({});
   const [cssInput, setCssInput] = useState("");
   const [lightOpen, setLightOpen] = useState(false);
   const [darkOpen, setDarkOpen] = useState(false);
-  const [agentWorldOpen, setAgentWorldOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [configId, setConfigId] = useState<string | null>(null);
-  const [agentWorldConfigId, setAgentWorldConfigId] = useState<string | null>(null);
   const [characterStyle, setCharacterStyle] = useState(0);
   const { toast } = useToast();
 
@@ -80,16 +46,6 @@ export default function ConfigurationPage() {
         }
         if (themeConfig.config_value?.dark) {
           setDarkTheme({ ...darkTheme, ...themeConfig.config_value.dark });
-        }
-      }
-
-      const agentWorldConfig = data.platform_configurationsPagination.items.find(
-        (config: any) => config.config_key === "agent_world_config"
-      );
-      if (agentWorldConfig) {
-        setAgentWorldConfigId(agentWorldConfig.id);
-        if (typeof agentWorldConfig.config_value?.characterStyle === "number") {
-          setCharacterStyle(agentWorldConfig.config_value.characterStyle);
         }
       }
     }
@@ -162,26 +118,6 @@ export default function ConfigurationPage() {
         duration: 3000,
       });
     }, 500);
-  };
-
-  const handleSaveAgentWorld = async () => {
-    try {
-      const configData = {
-        config_key: "agent_world_config",
-        config_value: { characterStyle },
-        description: "Agent world visualization configuration",
-      };
-      if (agentWorldConfigId) {
-        await updateConfig({ variables: { id: agentWorldConfigId, data: configData } });
-      } else {
-        const result = await createConfig({ variables: { data: configData } });
-        setAgentWorldConfigId(result.data?.platform_configurationsCreateOne?.item?.id);
-      }
-      await refetch();
-      toast({ title: "Agent World settings saved", duration: 3000 });
-    } catch {
-      toast({ title: "Error saving", variant: "destructive", duration: 3000 });
-    }
   };
 
   const handleReset = () => {
@@ -373,55 +309,6 @@ export default function ConfigurationPage() {
           </Card>
         </Collapsible>
       </div>
-
-      {AGENT_VISUALIZATION_ENABLED && (
-        <Collapsible open={agentWorldOpen} onOpenChange={setAgentWorldOpen}>
-          <Card>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Agent World</CardTitle>
-                    <CardDescription>
-                      Configure the agent world visualization dashboard
-                    </CardDescription>
-                  </div>
-                  <ChevronDown className={`h-5 w-5 transition-transform ${agentWorldOpen ? "rotate-180" : ""}`} />
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="space-y-6 pt-0">
-                <div>
-                  <Label className="text-sm font-medium">Default Character Style</Label>
-                  <p className="text-xs text-muted-foreground mt-1 mb-4">
-                    Character style assigned to new agents in the Agent World visualization
-                  </p>
-                  <div className="flex gap-4 flex-wrap">
-                    {CHARACTER_STYLES.map(({ index, label }) => (
-                      <button
-                        key={index}
-                        onClick={() => setCharacterStyle(index)}
-                        className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all hover:border-primary ${
-                          characterStyle === index
-                            ? "border-primary bg-primary/5"
-                            : "border-border"
-                        }`}
-                      >
-                        <CharacterStylePreview spriteIndex={index} />
-                        <span className="text-xs font-medium">{label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <Button onClick={handleSaveAgentWorld} size="sm">
-                  Save Agent World Settings
-                </Button>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
     </div>
   );
 }

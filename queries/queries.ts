@@ -2719,18 +2719,6 @@ export const GET_UNIQUE_PROMPT_TAGS = gql`
     getUniquePromptTags
   }
 `;
-export const AGENT_WORLD_AGENTS = gql`
-  query AgentWorldAgents {
-    agentWorldAgents {
-      sessionId
-      agentId
-      agentName
-      agentImage
-      currentTask
-      lastActivityAt
-    }
-  }
-`;
 
 // ============================================
 // CONTEXT PRESETS QUERIES AND MUTATIONS
