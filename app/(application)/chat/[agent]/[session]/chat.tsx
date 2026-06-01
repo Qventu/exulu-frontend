@@ -1009,47 +1009,6 @@ export function ChatLayout({
               </div>
             </div>
 
-            {agent.maxContextLength ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className={`absolute w-full top-0 z-10`}>
-                      <div className="justify-between flex felx-row">
-                        <div></div>
-                        <Context
-                          maxTokens={agent.maxContextLength || 0}
-                          usedTokens={tokenCounts.totalTokens}
-                          usage={{
-                            inputTokens: tokenCounts.inputTokens,
-                            outputTokens: tokenCounts.outputTokens,
-                            totalTokens: tokenCounts.totalTokens,
-                            cachedInputTokens: tokenCounts.cachedInputTokens,
-                            reasoningTokens: tokenCounts.reasoningTokens,
-                          }}>
-                          <ContextTrigger />
-                          <ContextContent>
-                            <ContextContentHeader />
-                            <ContextContentBody>
-                              {/* @ts-ignore */}
-                              <ContextInputUsage />
-                              {/* @ts-ignore */}
-                              <ContextOutputUsage />
-                              {/* @ts-ignore */}
-                              <ContextReasoningUsage />
-                              {/* @ts-ignore */}
-                              <ContextCacheUsage />
-                            </ContextContentBody>
-                          </ContextContent>
-                        </Context>
-                      </div>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{Intl.NumberFormat('en-US').format(tokenCounts.totalTokens)} / {Intl.NumberFormat('en-US').format(agent.maxContextLength)} tokens in the context window used.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ) : null}
             {/* @ts-ignore */}
             <Conversation>
               {messages?.length === 0 ?
@@ -1103,6 +1062,7 @@ export function ChatLayout({
                     UntypedToolPartComponent={UntypedToolPart}
                     AgentVisualComponent={AgentVisual}
                     agent={agent}
+                    setMessages={setMessages}
                     addToContext={(item) => {
                       setFileItems([...(fileItems || []), item])
                     }}

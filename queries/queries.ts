@@ -2439,6 +2439,78 @@ export const DELETE_PLATFORM_CONFIGURATION = gql`
   }
 `;
 
+// Image generation style queries — image styles are platform_configurations
+// rows keyed `image_generation_style:<slug>`. They carry RBAC so we fetch
+// the visibility fields needed by the picker (created_by, rights_mode, the
+// resolved RBAC object) alongside config_value (markdown + name) and
+// description.
+const IMAGE_STYLE_FIELDS = `
+  id
+  config_key
+  config_value
+  description
+  rights_mode
+  created_by
+  RBAC {
+    type
+    users {
+      id
+      rights
+    }
+    roles {
+      id
+      rights
+    }
+  }
+  createdAt
+  updatedAt
+`;
+
+export const GET_IMAGE_GENERATION_STYLES = gql`
+  query GetImageGenerationStyles {
+    platform_configurationsPagination(
+      page: 1
+      limit: 200
+      filters: { config_key: { like: "image_generation_style:%" } }
+    ) {
+      pageInfo {
+        itemCount
+      }
+      items {
+        ${IMAGE_STYLE_FIELDS}
+      }
+    }
+  }
+`;
+
+export const CREATE_IMAGE_GENERATION_STYLE = gql`
+  mutation CreateImageGenerationStyle($data: platform_configurationInput!) {
+    platform_configurationsCreateOne(input: $data) {
+      item {
+        ${IMAGE_STYLE_FIELDS}
+      }
+    }
+  }
+`;
+
+export const UPDATE_IMAGE_GENERATION_STYLE = gql`
+  mutation UpdateImageGenerationStyle($id: ID!, $data: platform_configurationInput!) {
+    platform_configurationsUpdateOneById(id: $id, input: $data) {
+      item {
+        ${IMAGE_STYLE_FIELDS}
+      }
+    }
+  }
+`;
+
+export const DELETE_IMAGE_GENERATION_STYLE = gql`
+  mutation DeleteImageGenerationStyle($id: ID!) {
+    platform_configurationsRemoveOneById(id: $id) {
+      id
+    }
+  }
+`;
+
 // ============================================
 // PROMPT LIBRARY QUERIES AND MUTATIONS
 // ============================================

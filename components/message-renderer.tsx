@@ -32,6 +32,7 @@ import { CheckIcon, XIcon } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ToolCallApproval } from "./tool-call-approval"
 import { Agent } from "@/types/models/agent"
+import { ImageGenerationWidget, type ImageGenerationWidgetConfig } from "./image-generation/image-generation-widget"
 
 interface ItemWithChunks {
   id: string,
@@ -87,6 +88,11 @@ interface MessageRendererProps {
   writeAccess?: boolean
   AgentVisualComponent?: React.ComponentType<any>
   onQuestionAnswer?: (questionId: string, answerId: string, answerText: string) => void
+  // The image_generation widget needs to inject a system message into the
+  // live chat after the user selects images, so the assistant sees it on
+  // its next turn without requiring a refetch. Optional — passed by chat
+  // pages that own a useChat() instance.
+  setMessages?: (updater: (prev: UIMessage[]) => UIMessage[]) => void
   config?: {
     marginTopFirstMessage?: string
     customAssistantClassnames?: string
@@ -111,6 +117,7 @@ export function MessageRenderer({
   onQuestionAnswer,
   config,
   addToolApprovalResponse,
+  setMessages,
   handleFeedback
 }: MessageRendererProps) {
   const { toast } = useToast()
@@ -836,6 +843,53 @@ export function MessageRenderer({
                       />
                     </>
                   )
+                }
+
+                if (part.type.startsWith('tool-') || part.type === 'dynamic-tool') {
+                  // Image generation tool results carry one of two shapes:
+                  //  - { type: 'image_generation_widget', ... }: open the
+                  //    interactive widget (current image_generation tool).
+                  //  - { type: 'image_generation', url, ... }: render the
+                  //    inline result rendered by the older per-model tool.
+                  //    Kept so historical messages still render.
+                  const dynamicToolPart = part as any;
+                  let imageOutput: any = dynamicToolPart.output;
+                  if (typeof imageOutput === "string") {
+                    try { imageOutput = JSON.parse(imageOutput); } catch { /* not JSON */ }
+                  }
+                  let imageResult: any = imageOutput?.result;
+                  if (typeof imageResult === "string") {
+                    try { imageResult = JSON.parse(imageResult); } catch { /* not JSON */ }
+                  }
+                  if (
+                    imageResult &&
+                    typeof imageResult === 'object' &&
+                    imageResult.type === 'image_generation_widget'
+                  ) {
+                    return (
+                      <ImageGenerationWidget
+                        key={`${message.id}-${i}`}
+                        config={imageResult as ImageGenerationWidgetConfig}
+                        setMessages={setMessages}
+                      />
+                    );
+                  }
+                  if (
+                    imageResult &&
+                    typeof imageResult === 'object' &&
+                    imageResult.type === 'image_generation' &&
+                    typeof imageResult.url === 'string'
+                  ) {
+                    return (
+                      <ImageGenerationResult
+                        key={`${message.id}-${i}`}
+                        url={imageResult.url}
+                        prompt={imageResult.prompt}
+                        revisedPrompt={imageResult.revised_prompt}
+                        model={imageResult.model}
+                      />
+                    );
+                  }
                 }
 
                 if (
@@ -1674,6 +1728,52 @@ const QuestionAsk = ({
           Confirm selection
         </Button>
       </div>
+    </div>
+  );
+};
+
+const ImageGenerationResult = ({
+  url,
+  prompt,
+  revisedPrompt,
+  model,
+}: {
+  url: string;
+  prompt?: string;
+  revisedPrompt?: string;
+  model?: string;
+}) => {
+  return (
+    <div className="my-3 border rounded-lg overflow-hidden bg-card">
+      <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+        <img
+          src={url}
+          alt={prompt ?? "Generated image"}
+          className="w-full max-w-[640px] h-auto block"
+        />
+      </a>
+      {(prompt || revisedPrompt || model) && (
+        <div className="p-3 space-y-1.5 text-xs text-muted-foreground border-t bg-muted/20">
+          {model && (
+            <div className="flex items-center gap-1.5">
+              <span className="font-medium text-foreground">Model:</span>
+              <span>{model}</span>
+            </div>
+          )}
+          {prompt && (
+            <div>
+              <span className="font-medium text-foreground">Prompt:</span>{" "}
+              <span>{prompt}</span>
+            </div>
+          )}
+          {revisedPrompt && revisedPrompt !== prompt && (
+            <div>
+              <span className="font-medium text-foreground">Revised prompt:</span>{" "}
+              <span>{revisedPrompt}</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
