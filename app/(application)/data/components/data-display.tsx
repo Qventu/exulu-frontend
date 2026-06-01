@@ -341,12 +341,12 @@ export function DataDisplay(props: DataDisplayProps) {
   }
 
   const overlayVariant: LoadingStatesVariant | null =
-    updateItemMutationResult.loading      ? "save"
-    : processItemMutationResult.loading   ? "process"
-    : deleteItemMutationResult.loading    ? "delete"
-    : generateChunksMutationResult.loading ? "generate-chunks"
-    : deleteChunksMutationResult.loading  ? "delete-chunks"
-    : null;
+    updateItemMutationResult.loading ? "save"
+      : processItemMutationResult.loading ? "process"
+        : deleteItemMutationResult.loading ? "delete"
+          : generateChunksMutationResult.loading ? "generate-chunks"
+            : deleteChunksMutationResult.loading ? "delete-chunks"
+              : null;
 
   return (
     <div className="relative flex h-full flex-col">
@@ -853,142 +853,195 @@ export function DataDisplay(props: DataDisplayProps) {
                             </TableCell>
                           </TableRow>
 
-                          {
-                            context.processor ? (
-                              <TableRow key={"processor"}>
-                                <TableCell className="font-medium capitalize">
-                                  Last processed at
-                                </TableCell>
-                                <TableCell>
-                                  {data.last_processed_at}
-                                </TableCell>
-                              </TableRow>
-                            ) : null
-                          }
-
                           {/* todo: add fixed  fields for "file" which can be a pdf, image, word doc etc...*/}
 
                           {context?.fields?.length ?
-                            context.fields.map(
-                              (
-                                contextField,
-                                index: number,
-                              ) => {
-                                return (
-                                  <TableRow key={index}>
-                                    <TableCell className="font-medium capitalize flex flex-col">
-                                      {contextField.label}
-                                      {
-                                        contextField.calculated && (
-                                          <span className="text-sm text-muted-foreground">Calculated</span>
-                                        )
-                                      }
-                                    </TableCell>
-                                    {!editing ? (
-                                      <TableCell>
-                                        {
-                                          <span>
-                                            {contextField.type === "code" && (
-                                              <CodePreview
-                                                code={data[contextField.name]}
-                                              />
-                                            )}
-                                            {contextField.type === "json" && (
-                                              <CodePreview
-                                                code={data[contextField.name]}
-                                                language="json"
-                                              />
-                                            )}
-                                            {contextField.type === "shortText" && (
-                                              <p
-                                                className="cursor-copy"
-                                                onClick={async () => {
-                                                  await navigator.clipboard.writeText(
-                                                    data[contextField.name],
-                                                  );
-                                                  toast.success("Copied to clipboard");
-                                                }}>
-                                                {data[contextField.name]}
-                                              </p>
-                                            )}
-                                            {contextField.type === "longText" && (
-                                              <TextPreview
-                                                text={data[contextField.name]}
-                                              />
-                                            )}
-
-                                            {contextField.type === "file" && (
-                                              <FileDataCard s3key={data[contextField.name]} />
-                                            )}
-
-                                            {contextField.type === "markdown" && (
-                                              <TextPreview
-                                                text={data[contextField.name]}
-                                              />
-                                            )}
-                                            {!contextField.type && (
-                                              <TextPreview
-                                                text={data[contextField.name]}
-                                              />
-                                            )}
-                                            {contextField.type === "text" && (
-                                              <TextPreview
-                                                text={data[contextField.name]}
-                                              />
-                                            )}
-                                            {contextField.type === "number" && (
-                                              <p
-                                                className="cursor-copy"
-                                                onClick={async () => {
-                                                  await navigator.clipboard.writeText(
-                                                    data[contextField.name],
-                                                  );
-                                                  toast.success("Copied to clipboard");
-                                                }}
-                                              >
-                                                {data[contextField.name]}
-                                              </p>
-                                            )}
-                                            {contextField.type === "boolean" && (
-                                              <p
-                                                className="cursor-copy"
-                                                onClick={async () => {
-                                                  await navigator.clipboard.writeText(
-                                                    data[contextField.name],
-                                                  );
-                                                  toast.success("Copied to clipboard");
-                                                }}
-                                              >
-                                                {data[contextField.name] ?? ""}
-                                              </p>
-                                            )}
-                                          </span>
-                                        }
+                            <>
+                              {context.fields.filter(f => !f.calculated).map(
+                                (
+                                  contextField,
+                                  index: number,
+                                ) => {
+                                  return (
+                                    <TableRow key={index}>
+                                      <TableCell className="font-medium capitalize flex flex-col">
+                                        {contextField.label}
                                       </TableCell>
-                                    ) : (
-                                      <>
+                                      {!editing ? (
                                         <TableCell>
-                                          {contextField.type === "code" ||
-                                            contextField.type === "json" ||
-                                            contextField.type === "text" ||
-                                            contextField.type === "longText" ||
-                                            contextField.type === "markdown" ||
-                                            contextField.type === "shortText" ? (
-                                            <FormField
-                                              control={form.control}
-                                              name={contextField.name as keyof ItemFormValues}
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormControl>
-                                                    <div className="relative">
-                                                      <Textarea
+                                          {
+                                            <span>
+                                              {contextField.type === "code" && (
+                                                <CodePreview
+                                                  code={data[contextField.name]}
+                                                />
+                                              )}
+                                              {contextField.type === "json" && (
+                                                <CodePreview
+                                                  code={data[contextField.name]}
+                                                  language="json"
+                                                />
+                                              )}
+                                              {contextField.type === "shortText" && (
+                                                <p
+                                                  className="cursor-copy"
+                                                  onClick={async () => {
+                                                    await navigator.clipboard.writeText(
+                                                      data[contextField.name],
+                                                    );
+                                                    toast.success("Copied to clipboard");
+                                                  }}>
+                                                  {data[contextField.name]}
+                                                </p>
+                                              )}
+                                              {contextField.type === "longText" && (
+                                                <TextPreview
+                                                  text={data[contextField.name]}
+                                                />
+                                              )}
+
+                                              {contextField.type === "file" && (
+                                                <FileDataCard s3key={data[contextField.name]} />
+                                              )}
+
+                                              {contextField.type === "markdown" && (
+                                                <TextPreview
+                                                  text={data[contextField.name]}
+                                                />
+                                              )}
+                                              {!contextField.type && (
+                                                <TextPreview
+                                                  text={data[contextField.name]}
+                                                />
+                                              )}
+                                              {contextField.type === "text" && (
+                                                <TextPreview
+                                                  text={data[contextField.name]}
+                                                />
+                                              )}
+                                              {contextField.type === "number" && (
+                                                <p
+                                                  className="cursor-copy"
+                                                  onClick={async () => {
+                                                    await navigator.clipboard.writeText(
+                                                      data[contextField.name],
+                                                    );
+                                                    toast.success("Copied to clipboard");
+                                                  }}
+                                                >
+                                                  {data[contextField.name]}
+                                                </p>
+                                              )}
+                                              {contextField.type === "boolean" && (
+                                                <p
+                                                  className="cursor-copy"
+                                                  onClick={async () => {
+                                                    await navigator.clipboard.writeText(
+                                                      data[contextField.name],
+                                                    );
+                                                    toast.success("Copied to clipboard");
+                                                  }}
+                                                >
+                                                  {data[contextField.name] ?? ""}
+                                                </p>
+                                              )}
+                                            </span>
+                                          }
+                                        </TableCell>
+                                      ) : (
+                                        <>
+                                          <TableCell>
+                                            {contextField.type === "code" ||
+                                              contextField.type === "json" ||
+                                              contextField.type === "text" ||
+                                              contextField.type === "longText" ||
+                                              contextField.type === "markdown" ||
+                                              contextField.type === "shortText" ? (
+                                              <FormField
+                                                control={form.control}
+                                                name={contextField.name as keyof ItemFormValues}
+                                                render={({ field }) => (
+                                                  <FormItem>
+                                                    <FormControl>
+                                                      <div className="relative">
+                                                        <Textarea
+                                                          id={contextField.name}
+                                                          rows={
+                                                            contextField.type ===
+                                                              "shortText"
+                                                              ? 2
+                                                              : 7
+                                                          }
+                                                          onChange={(e) => {
+                                                            setData({
+                                                              ...data,
+                                                              [contextField.name]: e.target.value,
+                                                            });
+                                                          }}
+                                                          value={
+                                                            data[contextField.name] ?? ""
+                                                          }
+                                                        />
+                                                        <Dialog>
+                                                          <DialogTrigger asChild>
+                                                            <Button
+                                                              type="button"
+                                                              variant="ghost"
+                                                              size="sm"
+                                                              className="absolute top-2 right-2 h-6 w-6 p-0"
+                                                              onClick={() => setExpandedField({
+                                                                name: contextField.name,
+                                                                disabled: false,
+                                                                value: data[contextField.name] ?? ""
+                                                              })}
+                                                            >
+                                                              <Expand className="h-3 w-3" />
+                                                              <span className="sr-only">Expand</span>
+                                                            </Button>
+                                                          </DialogTrigger>
+                                                          <DialogContent className="max-w-4xl max-h-[80vh]">
+                                                            <DialogHeader>
+                                                              <DialogTitle>Edit {contextField.name}</DialogTitle>
+                                                            </DialogHeader>
+                                                            <div className="mt-4">
+                                                              <Textarea
+                                                                rows={20}
+                                                                className="min-h-[400px] resize-none"
+                                                                value={expandedField?.name === contextField.name ? expandedField.value : data[contextField.name] ?? ""}
+                                                                onChange={(e) => {
+                                                                  const newValue = e.target.value;
+                                                                  setExpandedField(prev =>
+                                                                    prev?.name === contextField.name
+                                                                      ? { ...prev, value: newValue }
+                                                                      : prev
+                                                                  );
+                                                                  setData({
+                                                                    ...data,
+                                                                    [contextField.name]: newValue,
+                                                                  });
+                                                                }}
+                                                              />
+                                                            </div>
+                                                          </DialogContent>
+                                                        </Dialog>
+                                                      </div>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                  </FormItem>
+                                                )}
+                                              />
+                                            ) : null}
+
+                                            {contextField.type === "number" ? (
+                                              <FormField
+                                                control={form.control}
+                                                name={contextField.name as keyof ItemFormValues}
+                                                render={({ field }) => (
+                                                  <FormItem>
+                                                    <FormControl>
+                                                      <Input
                                                         id={contextField.name}
-                                                        rows={
-                                                          contextField.type ===
-                                                            "shortText"
-                                                            ? 2
-                                                            : 7
-                                                        }
+                                                        type="number"
                                                         onChange={(e) => {
                                                           setData({
                                                             ...data,
@@ -999,135 +1052,67 @@ export function DataDisplay(props: DataDisplayProps) {
                                                           data[contextField.name] ?? ""
                                                         }
                                                       />
-                                                      <Dialog>
-                                                        <DialogTrigger asChild>
-                                                          <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="absolute top-2 right-2 h-6 w-6 p-0"
-                                                            onClick={() => setExpandedField({
-                                                              name: contextField.name,
-                                                              disabled: false,
-                                                              value: data[contextField.name] ?? ""
-                                                            })}
-                                                          >
-                                                            <Expand className="h-3 w-3" />
-                                                            <span className="sr-only">Expand</span>
-                                                          </Button>
-                                                        </DialogTrigger>
-                                                        <DialogContent className="max-w-4xl max-h-[80vh]">
-                                                          <DialogHeader>
-                                                            <DialogTitle>Edit {contextField.name}</DialogTitle>
-                                                          </DialogHeader>
-                                                          <div className="mt-4">
-                                                            <Textarea
-                                                              rows={20}
-                                                              className="min-h-[400px] resize-none"
-                                                              value={expandedField?.name === contextField.name ? expandedField.value : data[contextField.name] ?? ""}
-                                                              onChange={(e) => {
-                                                                const newValue = e.target.value;
-                                                                setExpandedField(prev =>
-                                                                  prev?.name === contextField.name
-                                                                    ? { ...prev, value: newValue }
-                                                                    : prev
-                                                                );
-                                                                setData({
-                                                                  ...data,
-                                                                  [contextField.name]: newValue,
-                                                                });
-                                                              }}
-                                                            />
-                                                          </div>
-                                                        </DialogContent>
-                                                      </Dialog>
-                                                    </div>
-                                                  </FormControl>
-                                                  <FormMessage />
-                                                </FormItem>
-                                              )}
-                                            />
-                                          ) : null}
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                  </FormItem>
+                                                )}
+                                              />
+                                            ) : null}
 
-                                          {contextField.type === "number" ? (
-                                            <FormField
-                                              control={form.control}
-                                              name={contextField.name as keyof ItemFormValues}
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormControl>
-                                                    <Input
-                                                      id={contextField.name}
-                                                      type="number"
-                                                      onChange={(e) => {
-                                                        setData({
-                                                          ...data,
-                                                          [contextField.name]: e.target.value,
-                                                        });
-                                                      }}
-                                                      value={
-                                                        data[contextField.name] ?? ""
-                                                      }
-                                                    />
-                                                  </FormControl>
-                                                  <FormMessage />
-                                                </FormItem>
-                                              )}
-                                            />
-                                          ) : null}
+                                            {contextField.type === "boolean" ? (
+                                              <FormField
+                                                control={form.control}
+                                                name={contextField.name as keyof ItemFormValues}
+                                                render={({ field }) => (
+                                                  <FormItem>
+                                                    <FormControl>
+                                                      <Switch
+                                                        checked={!!field.value}
+                                                        onCheckedChange={(
+                                                          value,
+                                                        ) => {
+                                                          setData({
+                                                            ...data,
+                                                            [contextField.name]: value,
+                                                          });
+                                                        }}
+                                                      />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                  </FormItem>
+                                                )}
+                                              />
+                                            ) : null}
 
-                                          {contextField.type === "boolean" ? (
-                                            <FormField
-                                              control={form.control}
-                                              name={contextField.name as keyof ItemFormValues}
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormControl>
-                                                    <Switch
-                                                      checked={!!field.value}
-                                                      onCheckedChange={(
-                                                        value,
-                                                      ) => {
-                                                        setData({
-                                                          ...data,
-                                                          [contextField.name]: value,
-                                                        });
-                                                      }}
-                                                    />
-                                                  </FormControl>
-                                                  <FormMessage />
-                                                </FormItem>
-                                              )}
-                                            />
-                                          ) : null}
-
-                                          {contextField.type === "file" && (
-                                            <div>
-                                              <FileDataCard s3key={data[contextField.name]}>
-                                                <UppyDashboard
-                                                  id={`item-${data.id}`}
-                                                  buttonText="Select File"
-                                                  allowedFileTypes={contextField.allowedFileTypes}
-                                                  dependencies={[]}
-                                                  selectionLimit={1}
-                                                  onConfirm={(keys) => {
-                                                    console.log("keys", keys)
-                                                    setData({
-                                                      ...data,
-                                                      [contextField.name]: keys[0],
-                                                    });
-                                                  }}
-                                                />
-                                              </FileDataCard>
-                                            </div>
-                                          )}
-                                        </TableCell>
-                                      </>
-                                    )}
-                                  </TableRow>
-                                );
-                              },
-                            ) : null}
+                                            {contextField.type === "file" && (
+                                              <div>
+                                                <FileDataCard s3key={data[contextField.name]}>
+                                                  <UppyDashboard
+                                                    id={`item-${data.id}`}
+                                                    buttonText="Select File"
+                                                    allowedFileTypes={contextField.allowedFileTypes}
+                                                    dependencies={[]}
+                                                    selectionLimit={1}
+                                                    onConfirm={(keys) => {
+                                                      console.log("keys", keys)
+                                                      setData({
+                                                        ...data,
+                                                        [contextField.name]: keys[0],
+                                                      });
+                                                    }}
+                                                  />
+                                                </FileDataCard>
+                                              </div>
+                                            )}
+                                          </TableCell>
+                                        </>
+                                      )}
+                                    </TableRow>
+                                  );
+                                },
+                              )}
+                            </>
+                            : null}
                         </TableBody>
                       </Table>
 
@@ -1135,6 +1120,122 @@ export function DataDisplay(props: DataDisplayProps) {
                     </div>
                   </form>
                 </Form>
+
+                {context?.fields?.some(f => f.calculated) && (
+                  <Card className="bg-transparent mb-4">
+                    <Collapsible>
+                      <CardHeader className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col">
+                            <p className="text-base">
+                              Calculated Fields
+                            </p>
+                            <p className="text-sm text-muted-foreground mb-0">
+                              Read-only fields derived from this item.
+                            </p>
+                          </div>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="icon" className="size-8">
+                              <ChevronsUpDown className="size-4" />
+                              <span className="sr-only">Toggle</span>
+                            </Button>
+                          </CollapsibleTrigger>
+                        </div>
+                      </CardHeader>
+                      <CollapsibleContent>
+                        <CardContent className="p-0">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Value</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {
+                                context.processor ? (
+                                  <TableRow key={"processor"}>
+                                    <TableCell className="font-medium capitalize">
+                                      Last processed at
+                                    </TableCell>
+                                    <TableCell>
+                                      {data.last_processed_at}
+                                    </TableCell>
+                                  </TableRow>
+                                ) : null
+                              }
+                              {context.fields.filter(f => f.calculated).map((contextField, index) => (
+                                <TableRow key={`calc-${index}`}>
+                                  <TableCell className="font-medium capitalize">
+                                    {contextField.label}
+                                  </TableCell>
+                                  <TableCell>
+                                    <span>
+                                      {contextField.type === "code" && (
+                                        <CodePreview code={data[contextField.name]} />
+                                      )}
+                                      {contextField.type === "json" && (
+                                        <CodePreview code={data[contextField.name]} language="json" />
+                                      )}
+                                      {contextField.type === "shortText" && (
+                                        <p
+                                          className="cursor-copy"
+                                          onClick={async () => {
+                                            await navigator.clipboard.writeText(data[contextField.name]);
+                                            toast.success("Copied to clipboard");
+                                          }}>
+                                          {data[contextField.name]}
+                                        </p>
+                                      )}
+                                      {contextField.type === "longText" && (
+                                        <TextPreview text={data[contextField.name]} />
+                                      )}
+                                      {contextField.type === "file" && (
+                                        <FileDataCard s3key={data[contextField.name]} />
+                                      )}
+                                      {contextField.type === "markdown" && (
+                                        <TextPreview text={data[contextField.name]} />
+                                      )}
+                                      {!contextField.type && (
+                                        <TextPreview text={data[contextField.name]} />
+                                      )}
+                                      {contextField.type === "text" && (
+                                        <TextPreview text={data[contextField.name]} />
+                                      )}
+                                      {contextField.type === "number" && (
+                                        <p
+                                          className="cursor-copy"
+                                          onClick={async () => {
+                                            await navigator.clipboard.writeText(data[contextField.name]);
+                                            toast.success("Copied to clipboard");
+                                          }}
+                                        >
+                                          {data[contextField.name]}
+                                        </p>
+                                      )}
+                                      {contextField.type === "boolean" && (
+                                        <p
+                                          className="cursor-copy"
+                                          onClick={async () => {
+                                            await navigator.clipboard.writeText(data[contextField.name]);
+                                            toast.success("Copied to clipboard");
+                                          }}
+                                        >
+                                          {data[contextField.name] ?? ""}
+                                        </p>
+                                      )}
+                                    </span>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </CardContent>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </Card>
+                )}
+
                 <Card className="bg-transparent">
                   <Collapsible>
                     <CardHeader className="p-4">
