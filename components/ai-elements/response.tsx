@@ -13,12 +13,13 @@ import 'katex/dist/katex.min.css';
 import hardenReactMarkdown from 'harden-react-markdown';
 import { BundledLanguage } from 'shiki';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DocumentNode, useQuery } from '@apollo/client';
-import { GET_CHUNK_BY_ID } from '@/queries/queries';
+import { DocumentNode, useMutation, useQuery } from '@apollo/client';
+import { GET_CHUNK_BY_ID, UPDATE_ITEM } from '@/queries/queries';
 import { getPresignedUrl } from '../uppy-dashboard';
 import Link from 'next/link';
-import { LinkIcon, CopyIcon } from 'lucide-react';
+import { AlertTriangle, LinkIcon, CopyIcon } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 /**
@@ -330,6 +331,7 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
   context: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
 
   if (!context) {
     return null;
@@ -351,6 +353,27 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
       console.error('Error fetching chunk:', error);
     }
   });
+
+  const [deactivated, setDeactivated] = useState(false);
+  const [updateItem, { loading: deactivating }] = useMutation(UPDATE_ITEM(context));
+
+  const handleDeactivate = async () => {
+    if (!itemId) return;
+    try {
+      await updateItem({ variables: { id: itemId, input: { archived: true } } });
+      setDeactivated(true);
+      toast({
+        title: 'Source deactivated',
+        description: `${itemName} has been archived globally.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Failed to deactivate source',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const chunk: {
     item_name: string;
@@ -536,6 +559,26 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
 
         {!context && (
           <div className="text-sm text-muted-foreground">Context {context} not available.</div>
+        )}
+
+        {itemId && (
+          <div className="border-t pt-4 mt-2 space-y-3">
+            <div className="flex items-start gap-2 text-xs text-muted-foreground">
+              <AlertTriangle className="size-4 shrink-0 mt-0.5 text-amber-600" />
+              <span>
+                Deactivating archives this item globally — it will no longer appear in any
+                user&apos;s chat or search results.
+              </span>
+            </div>
+            <Button
+              variant={deactivated ? 'outline' : 'destructive'}
+              size="sm"
+              onClick={handleDeactivate}
+              disabled={deactivating || deactivated}
+            >
+              {deactivated ? 'Deactivated' : deactivating ? 'Deactivating…' : 'Deactivate this source'}
+            </Button>
+          </div>
         )}
       </DialogContent>
     </Dialog>

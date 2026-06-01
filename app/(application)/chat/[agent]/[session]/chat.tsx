@@ -28,6 +28,7 @@ import {
   CREATE_FEEDBACK,
   GET_MODELS_LITE,
   GET_LITELLM_CATALOG,
+  UPDATE_ITEM,
 } from "@/queries/queries";
 import {
   Select,
@@ -39,7 +40,7 @@ import {
 import { getToken } from "@/util/api"
 import { Agent } from "@EXULU_SHARED/models/agent";
 import { ConfigContext } from "@/components/config-context";
-import { ArrowUp, FileText, Form, Plus, Share2, Copy, Check, Sparkles, FolderOpen, Mic, Square } from "lucide-react";
+import { ArrowUp, FileText, Form, Plus, Share2, Copy, Check, Sparkles, FolderOpen, Mic, Square, AlertTriangle } from "lucide-react";
 import { SessionFilesPanel } from "@/components/session-files/session-files-panel";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { SaveWorkflowModal } from "@/components/save-workflow-modal";
@@ -191,6 +192,7 @@ export function ChatLayout({
     session: string;
     agent: string;
     score: number;
+    referencedItems: ReferencedItem[];
   } | null>(null);
   const [feedbackDescription, setFeedbackDescription] = useState("");
   const [incrementPromptUsage] = useIncrementPromptUsage();
@@ -887,14 +889,14 @@ export function ChatLayout({
                         if (!current) {
                           return (<span className="flex items-center gap-2">
                             <ProviderLogo brand={undefined} region={undefined} size={14} />
-                            <span>{agent.modelName || "Select model"}</span>
+                            <span className="truncate max-w-[150px]">{agent.modelName || "Select model"}</span>
                           </span>)
                         }
 
                         return (
                           <span className="flex items-center gap-2">
                             <ProviderLogo brand={current.brand} region={current.region} size={14} />
-                            <span>{current.name}</span>
+                            <span className="truncate max-w-[150px]">{current.name}</span>
                           </span>
                         );
                       })()}
@@ -1045,10 +1047,15 @@ export function ChatLayout({
                       if (process.env.NODE_ENV === 'development') {
                         console.log("Feedback submitted -", "messageId:", messageId, "feedback:", feedback);
                       }
+                      const message = messages?.find((m) => m.id === messageId);
+                      const referencedItems = feedback === 'negative' && message
+                        ? extractReferencedItems(message)
+                        : [];
                       setFeedbackModal({
                         session: currentSession?.id || '',
                         agent: agent.id,
                         score: feedback === 'positive' ? 1 : 0,
+                        referencedItems,
                       })
                     }}
                     addToolApprovalResponse={addToolApprovalResponse}
@@ -1425,6 +1432,30 @@ export function ChatLayout({
                   onChange={(e) => setFeedbackDescription(e.target.value)}
                   className="min-h-[100px]"
                 />
+                {feedbackModal?.score === 0 && feedbackModal.referencedItems.length > 0 && (
+                  <div className="border-t pt-4 space-y-3">
+                    <div>
+                      <p className="text-sm font-medium">Sources referenced in this response</p>
+                      <div className="flex items-start gap-2 mt-1.5 text-xs text-muted-foreground">
+                        <AlertTriangle className="size-3.5 shrink-0 mt-0.5 text-amber-600" />
+                        <span>
+                          Deactivating archives the item globally — it will no longer appear in any
+                          user&apos;s chat or search results.
+                        </span>
+                      </div>
+                    </div>
+                    <div className="max-h-56 overflow-y-auto space-y-1.5">
+                      {feedbackModal.referencedItems.map((item) => (
+                        <ReferencedSourceRow
+                          key={`${item.context}/${item.itemId}`}
+                          itemId={item.itemId}
+                          itemName={item.itemName}
+                          context={item.context}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <DialogFooter>
                   <Button
                     variant="outline"
@@ -1584,6 +1615,102 @@ const CapabilityPopover = ({
   );
 };
 
+
+type ReferencedItem = {
+  itemId: string;
+  itemName: string;
+  context: string;
+};
+
+// Pull cited sources out of an assistant message. Citations live in the raw
+// text as `{item_name: …, item_id: …, context: …, …}` blobs (same shape the
+// MessageRenderer transforms into <cite-marker-knowledge-source> elements).
+// We need item_id + context to drive the per-context UPDATE_ITEM mutation,
+// so anything missing either is skipped. Deduped by `${context}/${itemId}`.
+function extractReferencedItems(message: UIMessage): ReferencedItem[] {
+  const seen = new Map<string, ReferencedItem>();
+  const blobRegex = /\{[^}]*?item_name\s*:\s*[^,}]+[^}]*?\}/g;
+  const fieldRegex = /(\w+)\s*:\s*([^,}]+?)(?:,|$)/g;
+
+  for (const part of message.parts || []) {
+    if (part.type !== 'text') continue;
+    const text = (part as any).text as string;
+    if (!text) continue;
+    const blobs = text.match(blobRegex);
+    if (!blobs) continue;
+    for (const blob of blobs) {
+      const inner = blob.slice(1, -1);
+      const fields: Record<string, string> = {};
+      let m: RegExpExecArray | null;
+      fieldRegex.lastIndex = 0;
+      while ((m = fieldRegex.exec(inner)) !== null) {
+        fields[m[1].trim()] = m[2].trim();
+      }
+      const itemId = fields.item_id;
+      const itemName = fields.item_name;
+      const context = fields.context;
+      if (!itemId || !itemName || !context) continue;
+      const key = `${context}/${itemId}`;
+      if (seen.has(key)) continue;
+      seen.set(key, {
+        itemId,
+        itemName: itemName.split('/').pop() || itemName,
+        context,
+      });
+    }
+  }
+
+  return Array.from(seen.values());
+}
+
+const ReferencedSourceRow = ({
+  itemId,
+  itemName,
+  context,
+}: ReferencedItem) => {
+  const { toast } = useToast();
+  const [deactivated, setDeactivated] = useState(false);
+  const [updateItem, { loading }] = useMutation(UPDATE_ITEM(context));
+
+  const handleDeactivate = async () => {
+    try {
+      await updateItem({ variables: { id: itemId, input: { archived: true } } });
+      setDeactivated(true);
+      toast({
+        title: 'Source deactivated',
+        description: `${itemName} has been archived globally.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Failed to deactivate source',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-border">
+      <div className="min-w-0 flex items-center gap-2">
+        <FileText className="size-3.5 shrink-0 text-muted-foreground" />
+        <div className="min-w-0">
+          <div className="text-sm truncate max-w-[250px]">{itemName}</div>
+          <div className="text-xs text-muted-foreground capitalize truncate">
+            {context.replaceAll('_', ' ')}
+          </div>
+        </div>
+      </div>
+      <Button
+        variant={deactivated ? 'outline' : 'destructive'}
+        size="sm"
+        onClick={handleDeactivate}
+        disabled={loading || deactivated}
+      >
+        {deactivated ? 'Deactivated' : loading ? '…' : 'Deactivate'}
+      </Button>
+    </div>
+  );
+};
 
 export const UntypedToolPart = ({
   agent,
