@@ -1,3 +1,4 @@
+
 import { gql } from "@apollo/client";
 
 export const PAGINATION_POSTFIX = "_itemsPagination";
@@ -2471,7 +2472,7 @@ export const GET_IMAGE_GENERATION_STYLES = gql`
     platform_configurationsPagination(
       page: 1
       limit: 200
-      filters: { config_key: { like: "image_generation_style:%" } }
+      filters: { config_key: { contains: "image_generation_style:" } }
     ) {
       pageInfo {
         itemCount

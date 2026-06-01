@@ -104,7 +104,6 @@ export function EditStyleDialog({
       description: description.trim(),
       rights_mode: rightsMode,
       RBAC: {
-        type: rightsMode,
         users,
         roles,
       },
