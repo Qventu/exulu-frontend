@@ -80,7 +80,11 @@ function buildCsp(): string {
         isDev && 'wss:',
     ].filter(Boolean).join(' ');
 
-    const frameSrc = "'self' https://accounts.google.com";
+    const frameSrc = [
+        "'self'",
+        'https://accounts.google.com',
+        s3,
+    ].filter(Boolean).join(' ');
     const fontSrc = "'self' data: https://fonts.gstatic.com";
 
     return [
