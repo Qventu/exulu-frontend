@@ -14,12 +14,16 @@ import { GET_LITELLM_CATALOG, GET_MODELS_LITE } from "@/queries/queries";
 import { Input } from "@/components/ui/input";
 import { ConfigContext } from "@/components/config-context";
 import { ProviderLogo } from "@/components/provider-logo";
+import { Badge } from "@/components/ui/badge";
 
 type ModelOption = {
   id: string;
   label: string;
-  // True for the synthetic "stale" entry rendered when `value` doesn't match
-  // any catalog entry (e.g., agent.model is a UUID after toggling LiteLLM on).
+  tags?: string[];
+  // True for the synthetic "stale" entry 
+  // rendered when `value` doesn't match
+  // any catalog entry (e.g., agent.model 
+  // is a UUID after toggling LiteLLM on).
   stale?: boolean;
   provider?: string;
   description?: string;
@@ -35,17 +39,19 @@ export function AgentModelSelector({
   value?: string;
   onSelect: (id: string) => void;
 }) {
+
   const [searchTerm, setSearchTerm] = React.useState("");
   const searchInputRef = React.useRef<HTMLInputElement>(null);
-
   const configContext = useContext(ConfigContext);
   const litellmEnabled = configContext?.liteLLM?.enabled === true;
 
-  // Source the dropdown from either the LiteLLM catalog or our DB Models table.
+  // Source the dropdown from either the 
+  // LiteLLM catalog or our DB Models table.
   const litellmQuery = useQuery(GET_LITELLM_CATALOG, {
     fetchPolicy: "cache-and-network",
     skip: !litellmEnabled,
   });
+
   const modelsQuery = useQuery(GET_MODELS_LITE, {
     fetchPolicy: "no-cache",
     nextFetchPolicy: "network-only",
@@ -62,6 +68,7 @@ export function AgentModelSelector({
         provider: m.upstream_model ?? "",
         description: m.upstream_model ?? "",
         active: true,
+        tags: m.tags ?? [],
         brand: m.brand ?? null,
         region: m.region ?? null,
       }));
@@ -73,6 +80,7 @@ export function AgentModelSelector({
       provider: m.provider,
       description: m.description,
       active: m.active,
+      tags: m.tags,
     }));
   }, [litellmEnabled, litellmQuery.data, modelsQuery.data]);
 
@@ -163,8 +171,14 @@ export function AgentModelSelector({
               <div className="flex items-center gap-2">
                 <ProviderLogo brand={m.brand} region={m.region} />
                 <span className={m.stale ? "text-red-600" : undefined + " uppercase"}>
-                  {m.label}
+                  {m.label} 
                 </span>
+                {/* Show a badge for each tag */}
+                {m.tags?.map((t) => (
+                  <Badge key={t} variant="secondary">
+                    {t}
+                  </Badge>
+                ))}
                 {m.active === false && !m.stale && (
                   <span className="text-xs text-amber-600">(inactive)</span>
                 )}

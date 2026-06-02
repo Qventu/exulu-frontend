@@ -29,6 +29,8 @@ type LiteLLMCatalogEntry = {
   max_tokens: number | null;
   supports_vision: boolean | null;
   supports_function_calling: boolean | null;
+  input_cost_per_million_tokens: number | null;
+  output_cost_per_million_tokens: number | null;
   active: boolean | null;
   supports_pdf_input: boolean | null;
   supports_audio_input: boolean | null;
@@ -50,11 +52,10 @@ export function LiteLLMCatalogView() {
       // LiteLLM Admin UI lives on the LiteLLM port (default 4000), on the same
       // host as the backend. If the dev is using a non-standard layout they
       // can override via env, but we don't expose that here.
-      url.port = "4000";
-      url.pathname = "/ui";
+      url.pathname = "/litellm-admin/ui";
       return url.toString();
     } catch {
-      return `${backend.replace(/\/$/, "")}:4000/ui`;
+      return `${backend.replace(/\/$/, "")}/litellm-admin/ui`;
     }
   })();
 
@@ -76,12 +77,12 @@ export function LiteLLMCatalogView() {
             Admin UI for runtime keys, budgets, and access groups.
           </p>
         </div>
-        {/* <Button asChild variant="outline" size="sm">
+        <Button asChild variant="outline" size="sm">
           <a href={adminUiUrl} target="_blank" rel="noreferrer">
             <ExternalLink className="h-4 w-4 mr-2" />
             Open LiteLLM Admin UI
           </a>
-        </Button> */}
+        </Button>
       </div>
 
       {loading && items.length === 0 ? (
@@ -102,6 +103,7 @@ export function LiteLLMCatalogView() {
                 {/* <TableHead>Upstream model</TableHead> */}
                 <TableHead>Context (in / out)</TableHead>
                 <TableHead>Modalities</TableHead>
+                <TableHead>Cost (in / out)</TableHead>
                 <TableHead>Active</TableHead>
                 <TableHead>Tags</TableHead>
               </TableRow>
@@ -115,8 +117,8 @@ export function LiteLLMCatalogView() {
                   </TableCell>
                 </TableRow>
               ) : (
-                items.map((m) => (
-                  <TableRow key={m.model_name}>
+                items.map((m, index) => (
+                  <TableRow key={`model-${m.model_name}-${index}-${(m.tags ?? []).join("-")}`}>
                     <TableCell className="font-medium">
                       <span className="flex items-center gap-2">
                         <ProviderLogo brand={m.brand} region={m.region} size={20} />
@@ -147,12 +149,20 @@ export function LiteLLMCatalogView() {
                       </div>
                     </TableCell>
                     <TableCell>
+                      {m.input_cost_per_million_tokens && (
+                        <Badge variant="outline">${(m.input_cost_per_million_tokens).toFixed(2)}/M</Badge>
+                      )}
+                      {m.output_cost_per_million_tokens && (
+                        <Badge variant="outline">${(m.output_cost_per_million_tokens).toFixed(2)}/M</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       {m.active ? <Badge variant="outline">Active</Badge> : <Badge variant="outline">Inactive</Badge>}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {(m.tags ?? []).map((t) => (
-                          <Badge key={t} variant="secondary">
+                        {(m.tags ?? []).map((t, index) => (
+                          <Badge key={`tag-${index}`} variant="secondary">
                             {t}
                           </Badge>
                         ))}
