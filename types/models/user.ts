@@ -8,6 +8,7 @@ export type User = {
   favourite_projects?: string[];
   personal_system_prompt?: string;
   role: string;
+  team?: string;
 };
 
 export type UserWithRole = User & {

@@ -27,7 +27,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FileAudio, Loader2, Trash2, X } from "lucide-react";
 import Link from "next/link";
 
-type Mode = "private" | "users" | "roles" | "public";
+type Mode = "private" | "users" | "roles" | "teams" | "public";
 
 // Rough multiplier for processing time vs. realtime audio length.
 // WhisperX `large-v3` with diarization on:

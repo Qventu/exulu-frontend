@@ -2,10 +2,11 @@ export interface WorkflowTemplate {
   id: string
   name: string
   description?: string
-  rights_mode: 'private' | 'users' | 'roles' | 'public'
+  rights_mode: 'private' | 'users' | 'roles' | 'teams' | 'public'
   RBAC: {
     users?: Array<{ id: number; rights: 'read' | 'write' }>
     roles?: Array<{ id: string; rights: 'read' | 'write' }>
+    teams?: Array<{ id: string; rights: 'read' | 'write' }>
   }
   variables?: Array<string>
   steps_json: Array<{

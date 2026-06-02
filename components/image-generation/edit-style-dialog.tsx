@@ -36,9 +36,10 @@ export type StyleEditTarget = {
   name?: string;
   description?: string;
   markdown?: string;
-  rights_mode?: "private" | "users" | "roles" | "public";
+  rights_mode?: "private" | "users" | "roles" | "teams" | "public";
   users?: { id: number; rights: "read" | "write" }[];
   roles?: { id: string; rights: "read" | "write" }[];
+  teams?: { id: string; rights: "read" | "write" }[];
 };
 
 const toSlug = (name: string): string =>
@@ -67,7 +68,7 @@ export function EditStyleDialog({
   const [description, setDescription] = useState(initialStyle?.description ?? "");
   const [markdown, setMarkdown] = useState(initialStyle?.markdown ?? "");
   const [rightsMode, setRightsMode] = useState<
-    "private" | "users" | "roles" | "public"
+    "private" | "users" | "roles" | "teams" | "public"
   >(initialStyle?.rights_mode ?? "private");
   const [users, setUsers] = useState(initialStyle?.users ?? []);
   const [roles, setRoles] = useState(initialStyle?.roles ?? []);

@@ -11,16 +11,25 @@ export const dynamic = "force-dynamic";
 
 export default function UsersPage() {
   const { user: currentUser } = useContext(UserContext);
-  const columns = createColumns(currentUser, (user, role) => {
-    console.log("user", user);
-    console.log("role", role);
-    updateUser({
-      variables: {
-        id: user.id,
-        role,
-      },
-    });
-  });
+  const columns = createColumns(
+    currentUser,
+    (user, role) => {
+      updateUser({
+        variables: {
+          id: user.id,
+          role,
+        },
+      });
+    },
+    (user, team) => {
+      updateUser({
+        variables: {
+          id: user.id,
+          team,
+        },
+      });
+    },
+  );
 
   const [updateUser, updateUserResult] = useMutation(UPDATE_USER_BY_ID, {
     refetchQueries: [

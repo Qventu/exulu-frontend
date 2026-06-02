@@ -696,7 +696,41 @@ export const GET_USERS = gql`
         scope_mode
         agent_ids
         role
+        team
       }
+    }
+  }
+`;
+
+export const GET_TEAMS = gql`
+  query GetTeams($page: Int!, $limit: Int!) {
+    teamsPagination(page: $page, limit: $limit) {
+      pageInfo {
+        pageCount
+        itemCount
+        currentPage
+        hasPreviousPage
+        hasNextPage
+      }
+      items {
+        id
+        createdAt
+        updatedAt
+        name
+        description
+      }
+    }
+  }
+`;
+
+export const GET_TEAM_BY_ID = gql`
+  query GetTeamById($id: ID!) {
+    teamById(id: $id) {
+      id
+      name
+      description
+      createdAt
+      updatedAt
     }
   }
 `;
@@ -816,6 +850,7 @@ export const UPDATE_USER_BY_ID = gql`
       $super_admin: Boolean,
       $lastname: String,
       $role: String,
+      $team: String,
       $favourite_agents: JSON,
       $id: ID!
      ) {
@@ -827,6 +862,7 @@ export const UPDATE_USER_BY_ID = gql`
             super_admin: $super_admin,
             lastname: $lastname,
             role: $role,
+            team: $team,
             favourite_agents: $favourite_agents
         }) {
           item {
@@ -1088,6 +1124,42 @@ export const CREATE_USER_ROLE = gql`
   }
 `;
 
+export const CREATE_TEAM = gql`
+  mutation CreateTeam($name: String!, $description: String) {
+    teamsCreateOne(input: { name: $name, description: $description }) {
+      item {
+        id
+        createdAt
+        updatedAt
+        name
+        description
+      }
+    }
+  }
+`;
+
+export const UPDATE_TEAM_BY_ID = gql`
+  mutation UpdateTeam($id: ID!, $name: String, $description: String) {
+    teamsUpdateOneById(id: $id, input: { name: $name, description: $description }) {
+      item {
+        id
+        createdAt
+        updatedAt
+        name
+        description
+      }
+    }
+  }
+`;
+
+export const REMOVE_TEAM_BY_ID = gql`
+  mutation RemoveTeamById($id: ID!) {
+    teamsRemoveOneById(id: $id) {
+      id
+    }
+  }
+`;
+
 export const CREATE_USER = gql`
   mutation CreateUser($email: String!, $password: String, $type: String, $emailVerified: String) {
     usersCreateOne(input: { email: $email, password: $password, type: $type, emailVerified: $emailVerified }) {
@@ -1322,6 +1394,8 @@ export const GET_LITELLM_CATALOG = gql`
       supports_function_calling
       supports_pdf_input
       supports_audio_input
+      input_cost_per_million_tokens
+      output_cost_per_million_tokens
     }
   }
 `;

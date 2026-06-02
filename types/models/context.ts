@@ -19,7 +19,7 @@ export interface Context {
   slug: string
   configuration: {
     calculateVectors: string
-    defaultRightsMode: "private" | "users" | "roles" | "public"/*  | "projects" */
+    defaultRightsMode: "private" | "users" | "roles" | "teams" | "public"/*  | "projects" */
   }
   processor: {
     name: string,
@@ -55,5 +55,6 @@ export interface Context {
     type: ExuluFieldTypes
     label: string
     allowedFileTypes?: allFileTypes[]
+    enumValues?: string[]
   }[]
 }

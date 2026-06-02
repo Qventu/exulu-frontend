@@ -22,10 +22,11 @@ interface ContextPreset {
   description?: string
   preset_items: string[]
   tags?: string[]
-  rights_mode?: 'private' | 'users' | 'roles' | 'public'
+  rights_mode?: 'private' | 'users' | 'roles' | 'teams' | 'public'
   RBAC?: {
     users?: Array<{ id: number; rights: 'read' | 'write' }>
     roles?: Array<{ id: string; rights: 'read' | 'write' }>
+    teams?: Array<{ id: string; rights: 'read' | 'write' }>
   }
 }
 
@@ -54,10 +55,16 @@ export function SavePresetModal({
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>(existingPreset?.tags || [])
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const [rbac, setRbac] = useState({
+  const [rbac, setRbac] = useState<{
+    rights_mode: 'private' | 'users' | 'roles' | 'teams' | 'public';
+    users: Array<{ id: number; rights: 'read' | 'write' }>;
+    roles: Array<{ id: string; rights: 'read' | 'write' }>;
+    teams: Array<{ id: string; rights: 'read' | 'write' }>;
+  }>({
     rights_mode: existingPreset?.rights_mode || 'private',
     users: existingPreset?.RBAC?.users || [],
     roles: existingPreset?.RBAC?.roles || [],
+    teams: existingPreset?.RBAC?.teams || [],
   })
 
   const [createPreset, { loading: creating }] = useMutation(CREATE_CONTEXT_PRESET, {
@@ -289,12 +296,13 @@ export function SavePresetModal({
             </div>
             {showAdvanced ? (
               <RBACControl
-                allowedModes={['private', 'users', 'roles']}
+                allowedModes={['private', 'users', 'roles', 'teams']}
                 initialRightsMode={existingPreset?.rights_mode}
                 initialUsers={existingPreset?.RBAC?.users}
                 initialRoles={existingPreset?.RBAC?.roles}
-                onChange={(rights_mode, users, roles) => {
-                  setRbac({ rights_mode, users, roles })
+                initialTeams={existingPreset?.RBAC?.teams}
+                onChange={(rights_mode, users, roles, teams) => {
+                  setRbac({ rights_mode, users, roles, teams })
                 }}
               />
             ) : (

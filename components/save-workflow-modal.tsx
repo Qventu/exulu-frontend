@@ -23,10 +23,11 @@ interface WorkflowTemplate {
   id: string
   name: string
   description?: string
-  rights_mode?: 'private' | 'users' | 'roles' | 'public' /* | 'projects' */
+  rights_mode?: 'private' | 'users' | 'roles' | 'teams' | 'public' /* | 'projects' */
   RBAC?: {
     users?: Array<{ id: number; rights: 'read' | 'write' }>
     roles?: Array<{ id: string; rights: 'read' | 'write' }>
+    teams?: Array<{ id: string; rights: 'read' | 'write' }>
     // projects?: Array<{ id: string; rights: 'read' | 'write' }>
   }
   steps_json?: Message[]
@@ -45,10 +46,16 @@ interface SaveWorkflowModalProps {
 export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, existingWorkflow, isReadOnly = false, agentId }: SaveWorkflowModalProps) {
   const { user } = useContext(UserContext)
   const { toast } = useToast()
-  const [rbac, setRbac] = useState({
+  const [rbac, setRbac] = useState<{
+    rights_mode: 'private' | 'users' | 'roles' | 'teams' | 'public';
+    users: Array<{ id: number; rights: 'read' | 'write' }>;
+    roles: Array<{ id: string; rights: 'read' | 'write' }>;
+    teams: Array<{ id: string; rights: 'read' | 'write' }>;
+  }>({
     rights_mode: existingWorkflow?.rights_mode || 'private',
     users: existingWorkflow?.RBAC?.users || [],
     roles: existingWorkflow?.RBAC?.roles || [],
+    teams: existingWorkflow?.RBAC?.teams || [],
     // projects: existingWorkflow?.RBAC?.projects || []
   })
 
@@ -285,12 +292,14 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
                         initialRightsMode={existingWorkflow?.rights_mode}
                         initialUsers={existingWorkflow?.RBAC?.users}
                         initialRoles={existingWorkflow?.RBAC?.roles}
+                        initialTeams={existingWorkflow?.RBAC?.teams}
                         // initialProjects={existingWorkflow?.RBAC?.projects}
-                        onChange={(rights_mode, users, roles) => {
+                        onChange={(rights_mode, users, roles, teams) => {
                           setRbac({
                             rights_mode,
                             users,
                             roles,
+                            teams,
                             // projects
                           })
                         }}

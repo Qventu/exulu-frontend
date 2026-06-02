@@ -1,6 +1,7 @@
 
 import {
   GET_USER_ROLES,
+  GET_TEAMS,
   GET_USERS,
   GET_USER_BY_ID
 } from "@/queries/queries";
@@ -8,7 +9,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useApolloClient, useQuery } from "@apollo/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { User } from "@/types/models/user";
-import { Check, ChevronsUpDown, Users, Lock, Globe, Settings, Trash2, Loader2, Folder } from "lucide-react";
+import { Check, ChevronsUpDown, Users, Lock, Globe, Settings, Trash2, Loader2, Folder, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -39,11 +40,12 @@ const VISIBILITY_OPTIONS = [
   { value: 'private', label: 'Private', description: 'Only you can see this agent', icon: Lock },
   { value: 'users', label: 'Shared with Users', description: 'Share with specific users', icon: Users },
   { value: 'roles', label: 'Shared with Roles', description: 'Share with specific roles', icon: Settings },
+  { value: 'teams', label: 'Shared with Teams', description: 'Share with specific teams', icon: Building2 },
   { value: 'public', label: 'Public', description: 'Anyone can see this agent', icon: Globe },
   /* { value: 'projects', label: 'Projects', description: 'Share with specific projects', icon: Folder } */
 ]
 
-type Modes = 'private' | 'users' | 'roles' | 'public' /* | 'projects' */
+type Modes = 'private' | 'users' | 'roles' | 'teams' | 'public' /* | 'projects' */
 
 export function RBACControl({
   allowedModes,
@@ -51,20 +53,23 @@ export function RBACControl({
   modalMode = false,
   initialUsers,
   initialRoles,
+  initialTeams,
   // initialProjects,
   onChange
 }: {
   allowedModes?: Modes[],
   modalMode?: boolean,
-  initialRightsMode: 'private' | 'users' | 'roles' | 'public' /* | 'projects' */ | undefined,
+  initialRightsMode: 'private' | 'users' | 'roles' | 'teams' | 'public' /* | 'projects' */ | undefined,
   initialUsers: { id: number, rights: 'read' | 'write' }[] | undefined,
   initialRoles: { id: string, rights: 'read' | 'write' }[] | undefined,
+  initialTeams?: { id: string, rights: 'read' | 'write' }[] | undefined,
   // initialProjects: { id: string, rights: 'read' | 'write' }[] | undefined,
-  onChange: (rights_mode: Modes, users: { id: number, rights: 'read' | 'write' }[], roles: { id: string, rights: 'read' | 'write' }[]/* , projects: { id: string, rights: 'read' | 'write' }[] */) => void
+  onChange: (rights_mode: Modes, users: { id: number, rights: 'read' | 'write' }[], roles: { id: string, rights: 'read' | 'write' }[], teams: { id: string, rights: 'read' | 'write' }[]/* , projects: { id: string, rights: 'read' | 'write' }[] */) => void
 }) {
   const [visibility, setVisibility] = useState<Modes | undefined>(initialRightsMode)
   const [selectedUsers, setSelectedUsers] = useState<{ id: number, rights: 'read' | 'write' }[]>(initialUsers || [])
   const [selectedRoles, setSelectedRoles] = useState<{ id: string, rights: 'read' | 'write' }[]>(initialRoles || [])
+  const [selectedTeams, setSelectedTeams] = useState<{ id: string, rights: 'read' | 'write' }[]>(initialTeams || [])
   const [hydratedUsers, setHydratedUsers] = useState<User[]>([])
   const [visibilitySelectorOpen, setVisibilitySelectorOpen] = useState(false)
   const [userFilters, setUserFilters] = useState<any[]>([])
@@ -92,6 +97,15 @@ export function RBACControl({
           }
         }
       ]
+    },
+  });
+
+  const teams = useQuery(GET_TEAMS, {
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "network-only",
+    variables: {
+      page: 1,
+      limit: 100,
     },
   });
 
@@ -148,10 +162,8 @@ export function RBACControl({
   }, [])
 
   useEffect(() => {
-    console.log("selectedUsers", selectedUsers)
-    console.log("hydratedUsers", hydratedUsers)
-    onChange(visibility as 'private' | 'users' | 'roles' | 'public', selectedUsers, selectedRoles)
-  }, [visibility, selectedUsers, selectedRoles])
+    onChange(visibility as Modes, selectedUsers, selectedRoles, selectedTeams)
+  }, [visibility, selectedUsers, selectedRoles, selectedTeams])
 
   const filteredUsers = hydratedUsers?.slice(0, 5).filter(user => !!user?.id)
 
@@ -191,6 +203,9 @@ export function RBACControl({
                         }
                         if (option.value !== "roles") {
                           setSelectedRoles([])
+                        }
+                        if (option.value !== "teams") {
+                          setSelectedTeams([])
                         }
                         setVisibility(option.value)
                         setVisibilitySelectorOpen(false)
@@ -418,6 +433,97 @@ export function RBACControl({
                           className="h-5 w-5 p-0 hover:bg-blue-100"
                           onClick={() => {
                             setSelectedRoles(prev => prev.filter(selected => selected.id !== selectedRole.id))
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Teams sharing section */}
+      {visibility === 'teams' && (
+        <div className="space-y-3">
+          <div>
+            <Label className="text-sm font-medium">Share with teams ({selectedTeams?.length || 0})</Label>
+
+            {/* Available teams list */}
+            <div className="mt-2">
+              <div className="text-xs text-muted-foreground mb-1">Available Teams</div>
+              {teams.loading && (
+                <div className="flex items-center justify-center py-4 border rounded-lg">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span className="text-sm text-muted-foreground">Loading teams...</span>
+                </div>
+              )}
+              {!teams.loading && teams.data && (
+                <div className="max-h-24 overflow-y-auto border rounded-lg">
+                  {teams.data.teamsPagination.items.map((team: any) => (
+                    <label key={team.id} className="flex items-center space-x-2 p-2 hover:bg-muted/50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedTeams.some(selected => selected.id === team.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedTeams(prev => [...prev, { id: team.id, rights: 'read' }])
+                          } else {
+                            setSelectedTeams(prev => prev.filter(selected => selected.id !== team.id))
+                          }
+                        }}
+                      />
+                      <span className="text-sm capitalize">{team.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Selected teams list */}
+            {selectedTeams.length > 0 && teams.data && (
+              <div className="mt-2">
+                <div className="text-xs text-muted-foreground mb-1">Selected Teams:</div>
+                <div className="space-y-1">
+                  {selectedTeams.map((selectedTeam: any) => {
+                    const team = teams.data.teamsPagination.items.find((t: any) => t.id === selectedTeam.id)
+                    return (
+                      <div key={selectedTeam.id} className="flex items-center gap-2 border p-2 rounded-lg text-sm">
+                        <span className="flex-1 pl-2 capitalize">{team?.name}</span>
+                        <Select
+                          value={selectedTeam.rights}
+                          onValueChange={(value: 'read' | 'write') => {
+                            setSelectedTeams(prev =>
+                              prev.map(selected =>
+                                selected.id === selectedTeam.id
+                                  ? { ...selected, rights: value }
+                                  : selected
+                              )
+                            )
+                          }}
+                        >
+                          <SelectTrigger className="h-6 text-xs w-20 border-none">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="read">
+                              <span className="pr-7">Read</span>
+                            </SelectItem>
+                            <SelectItem value="write">
+                              <span className="pr-7">Write</span>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 w-5 p-0 hover:bg-blue-100"
+                          onClick={() => {
+                            setSelectedTeams(prev => prev.filter(selected => selected.id !== selectedTeam.id))
                           }}
                         >
                           <Trash2 className="w-3 h-3" />

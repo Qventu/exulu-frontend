@@ -72,7 +72,7 @@ export function PromptEditorModal({
   const [content, setContent] = useState("");
   const [tags, setTags] = useState<string[]>(defaultTags || []);
   const [rightsMode, setRightsMode] = useState<
-    "private" | "users" | "roles" | "public"/*  | "projects" */
+    "private" | "users" | "roles" | "teams" | "public"/*  | "projects" */
   >("private");
   const [rbacUsers, setRbacUsers] = useState<
     { id: number; rights: "read" | "write" }[]

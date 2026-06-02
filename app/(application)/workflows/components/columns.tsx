@@ -55,10 +55,11 @@ export type Workflow = {
   description?: string;
   agent: string;
   created_by: number;
-  rights_mode: "private" | "users" | "roles" | "public"/*  | "projects" */;
+  rights_mode: "private" | "users" | "roles" | "teams" | "public"/*  | "projects" */;
   RBAC: {
     users: Array<{ id: number; rights: "read" | "write" }>;
     roles: Array<{ id: string; rights: "read" | "write" }>;
+    teams: Array<{ id: string; rights: "read" | "write" }>;
     // projects: Array<{ id: string; rights: "read" | "write" }>;
   };
   variables?: any[];

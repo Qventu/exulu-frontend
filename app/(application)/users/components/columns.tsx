@@ -8,8 +8,13 @@ import { DataTableColumnHeader } from "./data-table-column-header";
 import { DataTableRowActions } from "./data-table-row-actions";
 import { SuperAdminToggle } from "./super-admin-toggle";
 import { RoleSelector } from "@/components/ui/role-selector";
+import { TeamSelector } from "@/components/ui/team-selector";
 
-export const createColumns = (currentUser: any, roleChange: (user: User, role: string) => void): ColumnDef<User>[] => [
+export const createColumns = (
+  currentUser: any,
+  roleChange: (user: User, role: string) => void,
+  teamChange: (user: User, team: string) => void,
+): ColumnDef<User>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -68,6 +73,28 @@ export const createColumns = (currentUser: any, roleChange: (user: User, role: s
                   return;
                 }
                 roleChange(row.original, role);
+              }} />
+        </div>
+      );
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id));
+    },
+  },
+  {
+    accessorKey: "team",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Team" />
+    ),
+    cell: ({ row }) => {
+      return (
+        <div className="gap-x-2 flex">
+          <TeamSelector value={row.original.team} onChange={(team) => {
+                const confirm = window.confirm("Are you sure you want to update the team for this user?");
+                if (!confirm) {
+                  return;
+                }
+                teamChange(row.original, team);
               }} />
         </div>
       );

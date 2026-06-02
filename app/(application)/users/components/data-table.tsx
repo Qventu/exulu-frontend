@@ -205,6 +205,15 @@ export function DataTable<TData, TValue>({
             Manage roles
           </Button>
 
+          <Button
+            variant="outline"
+            onClick={() => {
+              router.push("/teams");
+            }}
+          >
+            Manage teams
+          </Button>
+
           {user?.super_admin && (
             <Button
               onClick={() => setIsAddUserModalOpen(true)}

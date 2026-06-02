@@ -42,13 +42,15 @@ export function ModelForm({ modelId }: ModelFormProps) {
   const [authvariable, setAuthvariable] = React.useState("");
   const [active, setActive] = React.useState(true);
   const [rbac, setRbac] = React.useState<{
-    rights_mode: "private" | "users" | "roles" | "public";
+    rights_mode: "private" | "users" | "roles" | "teams" | "public";
     users: { id: number; rights: "read" | "write" }[];
     roles: { id: string; rights: "read" | "write" }[];
+    teams?: { id: string; rights: "read" | "write" }[];
   }>({
     rights_mode: "private",
     users: [],
     roles: [],
+    teams: [],
   });
   const [requestsPerWindow, setRequestsPerWindow] = React.useState<string>("");
   const [windowSeconds, setWindowSeconds] = React.useState<string>("");
@@ -79,9 +81,11 @@ export function ModelForm({ modelId }: ModelFormProps) {
         | "private"
         | "users"
         | "roles"
+        | "teams"
         | "public",
       users: m.RBAC?.users ?? [],
       roles: m.RBAC?.roles ?? [],
+      teams: m.RBAC?.teams ?? [],
     });
     setRequestsPerWindow(m.requests_per_window?.toString() ?? "");
     setWindowSeconds(m.window_seconds?.toString() ?? "");
@@ -263,8 +267,9 @@ export function ModelForm({ modelId }: ModelFormProps) {
           initialRightsMode={rbac.rights_mode}
           initialUsers={rbac.users}
           initialRoles={rbac.roles}
-          onChange={(rights_mode, users, roles) => {
-            setRbac({ rights_mode, users, roles });
+          initialTeams={rbac.teams}
+          onChange={(rights_mode, users, roles, teams) => {
+            setRbac({ rights_mode, users, roles, teams });
           }}
         />
       </div>

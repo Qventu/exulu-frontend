@@ -36,6 +36,13 @@ import { LoadingStates, type LoadingStatesVariant } from "@/components/loading-s
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCaption,
@@ -45,6 +52,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import {
   Tooltip,
   TooltipContent,
@@ -106,9 +114,10 @@ export function DataDisplay(props: DataDisplayProps) {
   const router = useRouter();
 
   const [rbac, setRbac] = useState<{
-    rights_mode?: 'private' | 'users' | 'roles' | 'public' /* | 'projects' */;
+    rights_mode?: 'private' | 'users' | 'roles' | 'teams' | 'public' /* | 'projects' */;
     users?: Array<{ id: number; rights: 'read' | 'write' }>;
     roles?: Array<{ id: string; rights: 'read' | 'write' }>;
+    teams?: Array<{ id: string; rights: 'read' | 'write' }>;
     // projects?: Array<{ id: string; rights: 'read' | 'write' }>;
   }>()
 
@@ -945,17 +954,91 @@ export function DataDisplay(props: DataDisplayProps) {
                                                   {data[contextField.name] ?? ""}
                                                 </p>
                                               )}
+                                              {contextField.type === "enum" && (
+                                                data[contextField.name] ? (
+                                                  <Badge variant="secondary">
+                                                    {data[contextField.name]}
+                                                  </Badge>
+                                                ) : null
+                                              )}
                                             </span>
                                           }
                                         </TableCell>
                                       ) : (
                                         <>
                                           <TableCell>
+                                            {contextField.type === "markdown" ? (
+                                              <FormField
+                                                control={form.control}
+                                                name={contextField.name as keyof ItemFormValues}
+                                                render={({ field }) => (
+                                                  <FormItem>
+                                                    <FormControl>
+                                                      <div className="relative">
+                                                        <MarkdownEditor
+                                                          value={data[contextField.name] ?? ""}
+                                                          onChange={(val) => {
+                                                            setData({
+                                                              ...data,
+                                                              [contextField.name]: val,
+                                                            });
+                                                          }}
+                                                          height={250}
+                                                          preview="edit"
+                                                        />
+                                                        <Dialog>
+                                                          <DialogTrigger asChild>
+                                                            <Button
+                                                              type="button"
+                                                              variant="ghost"
+                                                              size="sm"
+                                                              className="absolute top-2 right-2 h-6 w-6 p-0 z-10"
+                                                              onClick={() => setExpandedField({
+                                                                name: contextField.name,
+                                                                disabled: false,
+                                                                value: data[contextField.name] ?? ""
+                                                              })}
+                                                            >
+                                                              <Expand className="h-3 w-3" />
+                                                              <span className="sr-only">Expand</span>
+                                                            </Button>
+                                                          </DialogTrigger>
+                                                          <DialogContent className="max-w-4xl max-h-[80vh]">
+                                                            <DialogHeader>
+                                                              <DialogTitle>Edit {contextField.name}</DialogTitle>
+                                                            </DialogHeader>
+                                                            <div className="mt-4">
+                                                              <MarkdownEditor
+                                                                value={expandedField?.name === contextField.name ? expandedField.value : data[contextField.name] ?? ""}
+                                                                onChange={(val) => {
+                                                                  setExpandedField(prev =>
+                                                                    prev?.name === contextField.name
+                                                                      ? { ...prev, value: val }
+                                                                      : prev
+                                                                  );
+                                                                  setData({
+                                                                    ...data,
+                                                                    [contextField.name]: val,
+                                                                  });
+                                                                }}
+                                                                height={500}
+                                                                preview="live"
+                                                              />
+                                                            </div>
+                                                          </DialogContent>
+                                                        </Dialog>
+                                                      </div>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                  </FormItem>
+                                                )}
+                                              />
+                                            ) : null}
+
                                             {contextField.type === "code" ||
                                               contextField.type === "json" ||
                                               contextField.type === "text" ||
                                               contextField.type === "longText" ||
-                                              contextField.type === "markdown" ||
                                               contextField.type === "shortText" ? (
                                               <FormField
                                                 control={form.control}
@@ -1077,6 +1160,40 @@ export function DataDisplay(props: DataDisplayProps) {
                                                           });
                                                         }}
                                                       />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                  </FormItem>
+                                                )}
+                                              />
+                                            ) : null}
+
+                                            {contextField.type === "enum" ? (
+                                              <FormField
+                                                control={form.control}
+                                                name={contextField.name as keyof ItemFormValues}
+                                                render={({ field }) => (
+                                                  <FormItem>
+                                                    <FormControl>
+                                                      <Select
+                                                        value={data[contextField.name] ?? ""}
+                                                        onValueChange={(value) => {
+                                                          setData({
+                                                            ...data,
+                                                            [contextField.name]: value.toUpperCase(),
+                                                          });
+                                                        }}
+                                                      >
+                                                        <SelectTrigger>
+                                                          <SelectValue placeholder="Select a value" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                          {contextField.enumValues?.map((option) => (
+                                                            <SelectItem key={option} value={option.toUpperCase()}>
+                                                              {option}
+                                                            </SelectItem>
+                                                          ))}
+                                                        </SelectContent>
+                                                      </Select>
                                                     </FormControl>
                                                     <FormMessage />
                                                   </FormItem>
@@ -1223,6 +1340,13 @@ export function DataDisplay(props: DataDisplayProps) {
                                         >
                                           {data[contextField.name] ?? ""}
                                         </p>
+                                      )}
+                                      {contextField.type === "enum" && (
+                                        data[contextField.name] ? (
+                                          <Badge variant="secondary">
+                                            {data[contextField.name]}
+                                          </Badge>
+                                        ) : null
                                       )}
                                     </span>
                                   </TableCell>
