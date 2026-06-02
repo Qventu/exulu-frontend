@@ -314,27 +314,6 @@ function AdminNavigationSection({
     return null;
   }
 
-  // When sidebar is collapsed (icon only), show as regular nav item with tooltip
-  if (state === "collapsed") {
-    return (
-      <SidebarMenu className="space-y-0">
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            tooltip={label}
-            isActive={isAnyAdminPageActive}
-            onClick={() => setIsOpen(!isOpen)}
-            className={cn(
-              "h-9 transition-all duration-200",
-              !isAnyAdminPageActive && "opacity-60 hover:opacity-100"
-            )}
-          >
-            <Settings className="h-4 w-4" strokeWidth={1.5} />
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-    );
-  }
-
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="group/collapsible">
       <CollapsibleContent className="transition-all duration-200 ease-in-out overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
@@ -379,7 +358,6 @@ function AdminNavigationSection({
                 "h-9 transition-all duration-200 w-full",
                 !isAnyAdminPageActive && "opacity-60 hover:opacity-100"
               )}
-              isActive={isAnyAdminPageActive}
             >
               <Settings className="h-4 w-4 flex-shrink-0" strokeWidth={1.5} />
               <span className="font-medium truncate">{label}</span>
