@@ -76,7 +76,7 @@ const providers: Provider[] = [
         if (!credentials?.password) {
           return null;
         }
-        const res = await client.query('SELECT * FROM users WHERE email = $1', [credentials.email])
+        const res = await client.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [credentials.email])
         console.log("[NEXT AUTH] authorize res rows count:", res.rows.length)
         console.log("[NEXT AUTH] Full user object:", JSON.stringify(res.rows[0], null, 2))
         if (!res?.rows?.length) {
@@ -185,6 +185,10 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
             }
           }
 
+          if (email) {
+            email = String(email).trim().toLowerCase();
+          }
+
           console.log("[EXULU] ALLOWED_EMAIL_DOMAINS", process.env.ALLOWED_EMAIL_DOMAINS)
           if (process.env.ALLOWED_EMAIL_DOMAINS) {
             let allowedDomains = process.env.ALLOWED_EMAIL_DOMAINS.split(",");
@@ -229,16 +233,16 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
             }
           } */
 
-          const existingUserQueryResult = await client.query('SELECT * FROM users WHERE email = $1', [email])
+          const existingUserQueryResult = await client.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email])
           let existingUser = existingUserQueryResult?.rows[0];
           console.log("[EXULU] Sign in callback user query result", existingUser)
 
           if (existingUser) {
-            await client.query('UPDATE users SET last_used = $1 WHERE email = $2', [new Date(), email])
+            await client.query('UPDATE users SET last_used = $1 WHERE LOWER(email) = LOWER($2)', [new Date(), email])
           }
 
           if (existingUser && !existingUser.email_verified) {
-            await client.query('UPDATE users SET "emailVerified" = $1 WHERE email = $2', [new Date(), email])
+            await client.query('UPDATE users SET "emailVerified" = $1 WHERE LOWER(email) = LOWER($2)', [new Date(), email])
           }
 
           // If google auth, create the user if it doesn't exist.
