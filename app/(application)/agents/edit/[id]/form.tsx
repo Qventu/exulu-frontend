@@ -59,8 +59,6 @@ import {
 import { Check, ChevronsUpDown, Wrench, Image, FileText, Volume2, Video, Info, AlertCircle, Settings, Text, Search, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RBACControl } from "@/components/rbac";
-import { RateLimitsControl, type AgentRateLimitsValue } from "./components/rate-limits-control";
-import { RateLimitsUsage } from "./components/rate-limits-usage";
 import {
   Collapsible,
   CollapsibleContent,
@@ -281,10 +279,6 @@ export default function AgentForm({
     piiDetection: agent.firewall?.scanners?.piiDetection || false,
   })
   const [memory, setMemory] = useState<string>(agent.memory || '')
-  const [rateLimits, setRateLimits] = useState<AgentRateLimitsValue | null>(
-    (agent as any).rate_limits ?? null
-  )
-
   const { toast } = useToast();
 
   // Prepare query variables
@@ -507,8 +501,7 @@ export default function AgentForm({
                         scanners: firewallScanners
                       }),
                       tools: JSON.stringify(enabledTools),
-                      skills: JSON.stringify(enabledSkills),
-                      rate_limits: rateLimits ?? null,
+                      skills: JSON.stringify(enabledSkills)
                     },
                   });
                 },
@@ -844,38 +837,6 @@ export default function AgentForm({
                                         })
                                       }}
                                     />
-                                  </CardContent>
-                                </CollapsibleContent>
-                              </Collapsible>
-                            </Card>
-
-                            <Card className="bg-transparent">
-                              <Collapsible>
-                                <CardHeader className="p-4">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex flex-col">
-                                      <p className="text-base">Rate limits</p>
-                                      <p className="text-sm text-muted-foreground mb-0">
-                                        Cap requests and token usage per caller for this agent. Empty = unlimited.
-                                      </p>
-                                    </div>
-                                    <CollapsibleTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="size-8">
-                                        <ChevronsUpDown className="size-4" />
-                                        <span className="sr-only">Toggle</span>
-                                      </Button>
-                                    </CollapsibleTrigger>
-                                  </div>
-                                </CardHeader>
-                                <CollapsibleContent className="mt-5">
-                                  <CardContent className="space-y-6">
-                                    <RateLimitsControl value={rateLimits} onChange={setRateLimits} />
-                                    {rateLimits && (
-                                      <div className="border-t pt-4">
-                                        <p className="text-sm font-medium mb-2">Current usage</p>
-                                        <RateLimitsUsage agentId={agent.id} limits={rateLimits} />
-                                      </div>
-                                    )}
                                   </CardContent>
                                 </CollapsibleContent>
                               </Collapsible>

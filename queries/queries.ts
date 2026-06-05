@@ -141,14 +141,6 @@ workflows {
     name
   }
 }
-rateLimit {
-  name
-  rate_limit {
-    time
-    limit
-  }
-}
-rate_limits
 streaming
 capabilities {
   text
@@ -789,17 +781,6 @@ export const GET_AGENTS_BY_IDS = gql`
     }
   }
 `;
-export const AGENT_RATE_LIMIT_USAGE = gql`
-  query AgentRateLimitUsage($agentId: ID!) {
-    agentRateLimitUsage(agentId: $agentId) {
-      callerId
-      callerLabel
-      requests
-      inputTokens
-      outputTokens
-    }
-  }
-`;
 export const GET_AGENT_SESSION_BY_ID = gql`
   query GetAgentSessionById($id: ID!) {
     agent_sessionById(id: $id) {
@@ -1052,7 +1033,6 @@ export const UPDATE_AGENT_BY_ID = gql`
     $skills: JSON
     $active: Boolean
     $RBAC: RBACInput
-    $rate_limits: JSON
   ) {
     agentsUpdateOneById(
       input: {
@@ -1073,7 +1053,6 @@ export const UPDATE_AGENT_BY_ID = gql`
         tools: $tools
         skills: $skills
         RBAC: $RBAC
-        rate_limits: $rate_limits
       }
       id: $id
     ) {
@@ -1091,7 +1070,6 @@ export const UPDATE_AGENT_BY_ID = gql`
           animation_idle
           animation_responding
           rights_mode
-          rate_limits
           RBAC {
             type
             users {
