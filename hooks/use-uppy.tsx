@@ -14,8 +14,9 @@ interface InitializeOptions {
     callbacks?: {
         uploadSuccess?: (response: {
             file: any | null;
-            url: string
-            key: string
+            url: string;
+            key: string;
+            s3Key?: string;
         }) => void;
     };
     fileKey?: string;
@@ -26,6 +27,23 @@ interface InitializeOptions {
         allowedFileTypes: string[];
     };
     useName?: boolean;
+}
+
+function extractS3KeyFromUrl(uploadURL: string): string {
+    try {
+        const url = new URL(uploadURL);
+        const hostname = url.hostname;
+        if (hostname.includes(".s3.") || hostname.includes(".s3-")) {
+            const parts = hostname.split(/\.s3[.-]/);
+            const bucket = parts[0];
+            const keyPath = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+            return `${bucket}/${keyPath}`;
+        }
+        return url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+    } catch (e) {
+        console.error("Failed to parse S3 upload URL:", e);
+        return uploadURL.split("/").pop() || "";
+    }
 }
 
 export const initializeUppy = async (options: InitializeOptions): Promise<Uppy> => {
@@ -76,6 +94,7 @@ export const initializeUppy = async (options: InitializeOptions): Promise<Uppy> 
                 uploadSuccess({
                     file: file,
                     key: response.uploadURL.split("/").pop() || "",
+                    s3Key: extractS3KeyFromUrl(response.uploadURL),
                     url: response.uploadURL,
                 });
             }

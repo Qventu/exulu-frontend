@@ -207,6 +207,7 @@ export const FileGalleryAndUpload = ({
   const [currentContinuationToken, setCurrentContinuationToken] = useState<string | undefined>(undefined)
   const configContext = useContext(ConfigContext);
   const [selected, setSelected] = useState<string[]>([])
+  const [newlyUploadedFiles, setNewlyUploadedFiles] = useState<S3FileListOutput["Contents"]>([])
 
   const addSelected = (key: string) => {
     if (selected.includes(key)) {
@@ -257,15 +258,30 @@ export const FileGalleryAndUpload = ({
       callbacks: {
         uploadSuccess: async (data) => {
           console.log("data", data)
-          /* 
-          We no longer create items automatically for files uploaded via uppy.
-          const item = {
-            name: data.file.name,
-            type: data.file.type,
-            rights_mode: "private",
-            s3key: `${user?.id}/${data.key}`
+          const fullKey = data.s3Key || data.key;
+
+          // Add the newly uploaded file to our state
+          const newFileItem = {
+            Key: fullKey,
+            LastModified: new Date().toISOString(),
+            ETag: "",
+            Size: data.file?.size || 0,
+          };
+          setNewlyUploadedFiles((prev) => [newFileItem, ...prev]);
+
+          // Automatically select the file
+          if (selectionLimit === 1) {
+            setSelected([fullKey]);
+          } else {
+            setSelected((prev) => {
+              if (prev.includes(fullKey)) return prev;
+              if (prev.length >= selectionLimit) return prev;
+              return [...prev, fullKey];
+            });
           }
-          await createItemMutation({ variables: { input: item } }) */
+
+          // Refetch the query
+          refetch();
         },
       },
       maxNumberOfFiles: 10,
@@ -276,6 +292,17 @@ export const FileGalleryAndUpload = ({
   useEffect(() => {
     refetch();
   }, [search, currentContinuationToken]);
+
+  const filteredNewlyUploaded = newlyUploadedFiles.filter(item => {
+    if (!search) return true;
+    const fileName = item.Key.split("_EXULU_").pop() || "";
+    return fileName.toLowerCase().includes(search.toLowerCase());
+  });
+
+  const displayContents = [
+    ...filteredNewlyUploaded,
+    ...(data?.Contents || []).filter(item => !newlyUploadedFiles.some(newFile => newFile.Key === item.Key))
+  ];
 
   // Loading state
   if (!uppy) {
@@ -315,7 +342,7 @@ export const FileGalleryAndUpload = ({
           )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {
-              !loading && !data?.Contents?.length && (
+              !loading && !displayContents.length && (
                 <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
                   <FileWarning className="h-12 w-12 text-muted-foreground/50 mb-3" />
                   <p className="text-sm font-medium text-muted-foreground">Nothing to see here... yet!</p>
@@ -323,12 +350,14 @@ export const FileGalleryAndUpload = ({
                 </div>
               )
             }
-            {data?.Contents?.map((item: S3FileListOutput["Contents"][0]) => {
+            {displayContents.map((item: S3FileListOutput["Contents"][0]) => {
               return (
                 <FileItem s3Key={item.Key} onSelect={addSelected} active={selected.some((s) => s === item.Key)} onRemove={() => {
                   deleteFile.mutate({
                     key: item.Key
                   })
+                  setNewlyUploadedFiles((prev) => prev.filter((f) => f.Key !== item.Key));
+                  setSelected((prev) => prev.filter((s) => s !== item.Key));
                 }} disabled={!allowedFileTypes ? false : !allowedFileTypes?.some((type) => item.Key.endsWith(type))} />
               )
             })}
