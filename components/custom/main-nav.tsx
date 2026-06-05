@@ -559,6 +559,12 @@ export function MainNavSidebar({ sidebarDefaultOpen, config }: { sidebarDefaultO
                     <span className="truncate">{t('navigation.settings')}</span>
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/token" className="flex items-center gap-2 w-full min-w-0">
+                    <Settings className="h-4 w-4 flex-shrink-0" strokeWidth={1.5} />
+                    <span className="truncate">Token</span>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignout}>
                   <div className="flex items-center gap-2 w-full min-w-0">
                     <LogOut className="h-4 w-4 flex-shrink-0" strokeWidth={1.5} />
