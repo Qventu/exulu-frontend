@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Loader2, Shield, Users, Workflow, Variable, Bot, CodeSquare, Brain } from "lucide-react"
+import { Loader2, Shield, Users, Workflow, Variable, Bot, CodeSquare, Brain, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -58,6 +58,12 @@ const PERMISSION_AREAS = [
         label: "Evals",
         icon: Brain,
         description: "Evaluation sets, test cases, and eval runs"
+    },
+    {
+        key: "budget_management" as const,
+        label: "Budgets",
+        icon: Wallet,
+        description: "Spend budgets for users, roles, teams, projects, and agents"
     }
 ]
 
@@ -70,6 +76,7 @@ export function RoleForm({ initialData, onSubmit, loading, onCancel }: RoleFormP
         variables: initialData?.variables || "",
         users: initialData?.users || "",
         evals: initialData?.evals || "",
+        budget_management: initialData?.budget_management || "",
     })
 
     useEffect(() => {
@@ -81,7 +88,8 @@ export function RoleForm({ initialData, onSubmit, loading, onCancel }: RoleFormP
                 workflows: initialData.workflows || "",
                 variables: initialData.variables || "",
                 users: initialData.users || "",
-                evals: initialData.evals || ""
+                evals: initialData.evals || "",
+                budget_management: initialData.budget_management || ""
             })
         }
     }, [initialData])
@@ -107,7 +115,8 @@ export function RoleForm({ initialData, onSubmit, loading, onCancel }: RoleFormP
             workflows: permissions.workflows || null,
             variables: permissions.variables || null,
             users: permissions.users || null,
-            evals: permissions.evals || null
+            evals: permissions.evals || null,
+            budget_management: permissions.budget_management || null
         }
 
         await onSubmit(roleData)

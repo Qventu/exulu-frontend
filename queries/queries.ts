@@ -652,6 +652,8 @@ export const GET_USER_ROLES = gql`
         api
         variables
         users
+        evals
+        budget_management
         name
       }
     }
@@ -888,6 +890,8 @@ export const UPDATE_USER_ROLE_BY_ID = gql`
     $api: String
     $variables: String
     $users: String
+    $evals: String
+    $budget_management: String
   ) {
     rolesUpdateOneById(
       id: $id
@@ -898,6 +902,8 @@ export const UPDATE_USER_ROLE_BY_ID = gql`
         api: $api
         variables: $variables
         users: $users
+        evals: $evals
+        budget_management: $budget_management
       }
     ) {
         item {
@@ -908,6 +914,8 @@ export const UPDATE_USER_ROLE_BY_ID = gql`
           workflows
           variables
           users
+          evals
+          budget_management
         }
     }
   }
@@ -1086,8 +1094,8 @@ export const UPDATE_AGENT_BY_ID = gql`
   }
 `;
 export const CREATE_USER_ROLE = gql`
-  mutation CreateUserRole($name: String!, $agents: String, $workflows: String, $variables: String, $users: String, $api: String) {
-    rolesCreateOne(input: { name: $name, agents: $agents, workflows: $workflows, variables: $variables, users: $users, api: $api}) {
+  mutation CreateUserRole($name: String!, $agents: String, $workflows: String, $variables: String, $users: String, $api: String, $evals: String, $budget_management: String) {
+    rolesCreateOne(input: { name: $name, agents: $agents, workflows: $workflows, variables: $variables, users: $users, api: $api, evals: $evals, budget_management: $budget_management}) {
         item {
           id
           createdAt
@@ -1096,6 +1104,8 @@ export const CREATE_USER_ROLE = gql`
           workflows
           variables
           users
+          evals
+          budget_management
           name
         }
     }
@@ -3124,6 +3134,90 @@ export const REMOVE_TRANSCRIPTION_JOB = gql`
   mutation RemoveTranscriptionJob($id: ID!) {
     transcription_jobsRemoveOneById(id: $id) {
       id
+    }
+  }
+`;
+
+// ─── Budget overview queries ────────────────────────────────────────────────
+// Minimal per-entity lists with the computed `budget` field (resolved from
+// LiteLLM server-side). Kept separate from the shared list queries so only the
+// budgets page pays for the budget lookup.
+
+const BUDGET_PAGE_INFO = `
+  pageInfo {
+    pageCount
+    itemCount
+    currentPage
+    hasPreviousPage
+    hasNextPage
+  }
+`;
+
+export const GET_USERS_WITH_BUDGETS = gql`
+  query GetUsersWithBudgets($page: Int!, $limit: Int!, $filters: [FilterUser]) {
+    usersPagination(page: $page, limit: $limit, filters: $filters) {
+      ${BUDGET_PAGE_INFO}
+      items {
+        id
+        name
+        firstname
+        type
+        lastname
+        email
+        budget
+      }
+    }
+  }
+`;
+
+export const GET_ROLES_WITH_BUDGETS = gql`
+  query GetRolesWithBudgets($page: Int!, $limit: Int!, $filters: [FilterRole]) {
+    rolesPagination(page: $page, limit: $limit, filters: $filters) {
+      ${BUDGET_PAGE_INFO}
+      items {
+        id
+        name
+        budget
+      }
+    }
+  }
+`;
+
+export const GET_TEAMS_WITH_BUDGETS = gql`
+  query GetTeamsWithBudgets($page: Int!, $limit: Int!, $filters: [FilterTeam]) {
+    teamsPagination(page: $page, limit: $limit, filters: $filters) {
+      ${BUDGET_PAGE_INFO}
+      items {
+        id
+        name
+        budget
+      }
+    }
+  }
+`;
+
+export const GET_PROJECTS_WITH_BUDGETS = gql`
+  query GetProjectsWithBudgets($page: Int!, $limit: Int!, $filters: [FilterProject]) {
+    projectsPagination(page: $page, limit: $limit, filters: $filters) {
+      ${BUDGET_PAGE_INFO}
+      items {
+        id
+        name
+        budget
+      }
+    }
+  }
+`;
+
+export const GET_AGENTS_WITH_BUDGETS = gql`
+  query GetAgentsWithBudgets($page: Int!, $limit: Int!, $filters: [FilterAgent]) {
+    agentsPagination(page: $page, limit: $limit, filters: $filters) {
+      ${BUDGET_PAGE_INFO}
+      items {
+        id
+        name
+        budget
+      }
     }
   }
 `;

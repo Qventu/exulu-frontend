@@ -7,6 +7,7 @@ export type UserRole = {
   users?: "read" | "write" | null;
   api?: "read" | "write" | null;
   evals?: "read" | "write" | null;
+  budget_management?: "read" | "write" | null;
   createdAt?: string;
   updatedAt?: string;
 };

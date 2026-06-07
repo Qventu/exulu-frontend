@@ -7,6 +7,8 @@ import { useChat } from '@ai-sdk/react';
 import * as React from "react";
 import { useContext, useEffect, useState, useMemo } from "react";
 import { UserContext } from "@/app/(application)/authenticated";
+import { BudgetBar } from "@/components/budget-bar";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { StopIcon } from "@radix-ui/react-icons";
 import { AgentSession } from "@EXULU_SHARED/models/agent-session";
 import { ChatAddToolApproveResponseFunction, lastAssistantMessageIsCompleteWithApprovalResponses } from 'ai';
@@ -40,7 +42,7 @@ import {
 import { getToken } from "@/util/api"
 import { Agent } from "@EXULU_SHARED/models/agent";
 import { ConfigContext } from "@/components/config-context";
-import { ArrowUp, FileText, Form, Plus, Share2, Copy, Check, Sparkles, FolderOpen, Mic, Square, AlertTriangle } from "lucide-react";
+import { ArrowUp, FileText, Form, Plus, Share2, Copy, Check, Sparkles, FolderOpen, Mic, Square, AlertTriangle, Wallet } from "lucide-react";
 import { SessionFilesPanel } from "@/components/session-files/session-files-panel";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { SaveWorkflowModal } from "@/components/save-workflow-modal";
@@ -124,6 +126,13 @@ export function ChatLayout({
   const { toast } = useToast();
   const [sessionItems, setSessionItems] = useState<string[] | null>(session?.session_items || null);
   const { user } = useContext(UserContext);
+  // Budget cap reached → block sending. Only when a budget is set and shown.
+  const budgetExceeded = !!(
+    user?.budget &&
+    user.budget.max_budget != null &&
+    user.budget.max_budget > 0 &&
+    user.budget.spend >= user.budget.max_budget
+  );
   const [showSaveWorkflowModal, setShowSaveWorkflowModal] = useState(false);
   const [showSavePresetModal, setShowSavePresetModal] = useState(false);
   const [input, setInput] = useState('');
@@ -578,6 +587,15 @@ export function ChatLayout({
     options?: ChatRequestOptions,
   ) => {
     e.preventDefault();
+
+    if (budgetExceeded) {
+      toast({
+        title: "Budget reached",
+        description: "You've used your full budget for this period. Messaging is paused until it resets.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     let sessionToUse = currentSession;
 
@@ -1143,7 +1161,8 @@ export function ChatLayout({
                           onKeyDown={handleKeyPress}
                           onChange={(e) => setInput(e.target.value)}
                           name="message"
-                          placeholder={`Ask me anything...`}
+                          disabled={budgetExceeded}
+                          placeholder={budgetExceeded ? "Budget reached — messaging is paused." : `Ask me anything...`}
                           className="max-h-40 px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full items-center h-28 resize-none overflow-hidden bg-card/35 mb-3"
                           aria-label="Chat message input"
                           aria-describedby={input.length > MAX_INPUT_LENGTH * 0.9 ? "input-length-warning" : undefined}
@@ -1183,7 +1202,7 @@ export function ChatLayout({
                             variant="secondary"
                             size="icon"
                             type="submit"
-                            disabled={status === "submitted" || !input?.trim() || recordingState !== "idle"}
+                            disabled={status === "submitted" || !input?.trim() || recordingState !== "idle" || budgetExceeded}
                             aria-label="Send message"
                           >
                             <ArrowUp className=" size-6 text-muted-foreground" />
@@ -1348,6 +1367,34 @@ export function ChatLayout({
                           </Button>
                         )}
 
+                        {/* Budget indicator — same style as the capability buttons,
+                            with the bar + label revealed on hover. */}
+                        {user?.budget && (
+                          <HoverCard openDelay={80} closeDelay={80}>
+                            <HoverCardTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className={`shrink-0 h-7 text-left ml-auto ${budgetExceeded ? "text-destructive" : ""}`}
+                                aria-label="Your personal budget"
+                              >
+                                <Wallet className="h-3.5 w-3.5 mr-2" aria-hidden="true" />
+                                Budget
+                              </Button>
+                            </HoverCardTrigger>
+                            <HoverCardContent align="end" className="w-72 space-y-2">
+                              <div className="text-sm font-medium">Your budget</div>
+                              <BudgetBar budget={user.budget} />
+                              {budgetExceeded && (
+                                <p className="text-xs text-destructive">
+                                  Budget reached — new messages are paused until it resets.
+                                </p>
+                              )}
+                            </HoverCardContent>
+                          </HoverCard>
+                        )}
+
                       </div>
 
                       {/* Managed context notice */}
@@ -1362,6 +1409,13 @@ export function ChatLayout({
                       )}
 
                     </div>
+                    {/* Budget-reached notice */}
+                    {budgetExceeded && (
+                      <div className="flex items-center gap-2 w-[850px] mx-auto text-xs text-destructive" role="status" aria-live="polite">
+                        <Wallet className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        You've reached your budget for this period. Messaging is paused until it resets.
+                      </div>
+                    )}
                     {/* Character count warning when approaching limit */}
                     {input.length > MAX_INPUT_LENGTH * 0.9 && (
                       <div id="input-length-warning" className="text-xs text-muted-foreground w-[850px] flex justify-end" role="status" aria-live="polite">

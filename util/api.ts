@@ -1,4 +1,5 @@
 import { getSession } from "next-auth/react";
+import type { BudgetEntityType, BudgetInfo, BudgetDuration } from "@/lib/budget";
 
 export type ImageStyle = "origami" | "anime" | "japanese_anime" | "vaporwave" | "lego" | "paper_cut" | "felt_puppet" | "3d" | "app_icon" | "pixel_art" | "isometric";
 
@@ -505,5 +506,98 @@ export const sessionFilesApi = {
         if (!res.ok) {
             throw new Error(`S3 upload failed: ${res.status} ${res.statusText}`);
         }
+    },
+};
+
+// ─── Tag Budgets API ──────────────────────────────────────────────────────────
+
+export type BudgetSettings = {
+    global_user_budget: {
+        enabled: boolean;
+        max_budget: number;
+        budget_duration: BudgetDuration | string;
+    };
+    show_user_budget_in_chat: boolean;
+};
+
+export type BulkBudgetResult = {
+    entityId: string;
+    ok: boolean;
+    error?: string;
+};
+
+const budgetsRequest = async (path: string, method: string, body?: object) => {
+    const uris = await getUris();
+    const token = await getToken();
+    if (!token) throw new Error("No valid session token available.");
+    const res = await fetch(`${uris.base}${path}`, {
+        method,
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    if (!res.ok) {
+        const detail = await res
+            .json()
+            .then((j) => j.detail ?? res.statusText)
+            .catch(() => res.statusText);
+        throw new Error(detail);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+};
+
+export const budgetsApi = {
+    /** Create or update a single entity's budget. */
+    upsert: async (
+        entityType: BudgetEntityType,
+        entityId: string,
+        input: { max_budget: number; budget_duration: BudgetDuration | string },
+    ): Promise<BudgetInfo | null> => {
+        const json = await budgetsRequest(
+            `/admin/budgets/${entityType}/${encodeURIComponent(entityId)}`,
+            "PUT",
+            input,
+        );
+        return json.budget ?? null;
+    },
+
+    /** Apply the same budget value to many entities (each gets its own budget). */
+    bulkUpsert: async (
+        entityType: BudgetEntityType,
+        entityIds: string[],
+        input: { max_budget: number; budget_duration: BudgetDuration | string },
+    ): Promise<BulkBudgetResult[]> => {
+        const json = await budgetsRequest(
+            `/admin/budgets/${entityType}/bulk`,
+            "PUT",
+            { entityIds, ...input },
+        );
+        return json.results ?? [];
+    },
+
+    /** Remove a single entity's budget. */
+    remove: async (
+        entityType: BudgetEntityType,
+        entityId: string,
+    ): Promise<void> => {
+        await budgetsRequest(
+            `/admin/budgets/${entityType}/${encodeURIComponent(entityId)}`,
+            "DELETE",
+        );
+    },
+
+    /** Read the platform budget settings (global default + show-in-chat). */
+    getSettings: async (): Promise<BudgetSettings> => {
+        const json = await budgetsRequest(`/admin/budgets/settings`, "GET");
+        return json.settings;
+    },
+
+    /** Write the platform budget settings. */
+    saveSettings: async (settings: BudgetSettings): Promise<BudgetSettings> => {
+        const json = await budgetsRequest(`/admin/budgets/settings`, "PUT", settings);
+        return json.settings;
     },
 };

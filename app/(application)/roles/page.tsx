@@ -115,6 +115,8 @@ export default function RoleManagement() {
                     workflows: roleData.workflows,
                     variables: roleData.variables,
                     users: roleData.users,
+                    evals: roleData.evals,
+                    budget_management: roleData.budget_management,
                 }
             })
             setCreateDialogOpen(false)
@@ -144,6 +146,8 @@ export default function RoleManagement() {
                     workflows: roleData.workflows,
                     variables: roleData.variables,
                     users: roleData.users,
+                    evals: roleData.evals,
+                    budget_management: roleData.budget_management,
                 }
             })
             setEditDialogOpen(false)
