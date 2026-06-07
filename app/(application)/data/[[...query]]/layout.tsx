@@ -14,12 +14,13 @@ export default async function DataLayout({ children, params }: {
     const sources = query && query[1] === "sources";
     const embeddings = query && query[1] === "embeddings";
     const processors = query && query[1] === "processors";
+    const entityTypes = query && query[1] === "entity-types";
     const context: string | null | undefined = query && query[0];
 
     let item: string | null = null;
     if (query && archived) {
         item = query[2] || null;
-    } else if (query && !sources && !embeddings) {
+    } else if (query && !sources && !embeddings && !processors && !entityTypes) {
         item = query[1] || null;
     }
 
@@ -32,9 +33,10 @@ export default async function DataLayout({ children, params }: {
                     activeSources={sources}
                     activeEmbeddings={embeddings}
                     activeProcessors={processors}
+                    activeEntityTypes={entityTypes}
                 />
                 {
-                    context && !sources && !embeddings && !processors && <div className="flex flex-col h-full border-r">
+                    context && !sources && !embeddings && !processors && !entityTypes && <div className="flex flex-col h-full border-r">
                         <DataList
                             activeFolder={context}
                             activeItem={item ?? undefined}

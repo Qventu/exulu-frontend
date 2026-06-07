@@ -1548,6 +1548,79 @@ export const UPDATE_EMBEDDER_CONFIG = gql`
   }
 `;
 
+// ───────────────────────── entity types (graph retrieval) ─────────────────────────
+
+export const GET_ENTITY_TYPES = gql`
+  query GetEntityTypes($context: String!) {
+    entity_type_settingsPagination(page: 1, limit: 200, filters: { context: { eq: $context } }) {
+      items {
+        id
+        name
+        description
+        active
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+export const CREATE_ENTITY_TYPE = gql`
+  mutation CreateEntityType($name: String!, $description: String, $context: String!, $active: Boolean) {
+    entity_type_settingsCreateOne(
+      input: { name: $name, description: $description, context: $context, active: $active }
+    ) {
+      item {
+        id
+      }
+    }
+  }
+`;
+
+export const UPDATE_ENTITY_TYPE = gql`
+  mutation UpdateEntityType($id: ID!, $name: String, $description: String, $active: Boolean) {
+    entity_type_settingsUpdateOneById(
+      id: $id
+      input: { name: $name, description: $description, active: $active }
+    ) {
+      item {
+        id
+      }
+    }
+  }
+`;
+
+export const DELETE_ENTITY_TYPE = gql`
+  mutation DeleteEntityType($id: ID!) {
+    entity_type_settingsRemoveOneById(id: $id) {
+      id
+    }
+  }
+`;
+
+export const GET_STALE_ENTITY_COUNT = (context: string) => gql`
+  query StaleEntityCount${context} {
+    ${context}_itemsStaleEntityCount
+  }
+`;
+
+export const BACKFILL_ENTITIES = (context: string) => gql`
+  mutation BackfillEntities${context}($onlyStale: Boolean, $limit: Int) {
+    ${context}_itemsBackfillEntities(onlyStale: $onlyStale, limit: $limit) {
+      processed
+      skipped
+    }
+  }
+`;
+
+export const PURGE_ENTITY_TYPE = (context: string) => gql`
+  mutation PurgeEntityType${context}($type: String!) {
+    ${context}_itemsPurgeEntityType(type: $type) {
+      removed
+    }
+  }
+`;
+
 export const UPDATE_VARIABLE = gql`
   mutation UpdateVariable(
     $id: ID!

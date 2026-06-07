@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react";
-import { Folder, LucideIcon, Loader, Pencil, ArrowLeft, ListChecksIcon, ArchiveX, Database, FileStack, StepForward } from "lucide-react";
+import { Folder, LucideIcon, Loader, Pencil, ArrowLeft, ListChecksIcon, ArchiveX, Database, FileStack, StepForward, Network } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useContexts } from "@/hooks/contexts";
 import Link from "next/link";
@@ -67,13 +67,15 @@ const Contexts = ({
     activeArchived,
     activeSources,
     activeEmbeddings,
-    activeProcessors
+    activeProcessors,
+    activeEntityTypes
 }: {
     activeFolder?: string | null,
     activeArchived?: boolean | null,
     activeSources?: boolean | null,
     activeEmbeddings?: boolean | null,
-    activeProcessors?: boolean | null
+    activeProcessors?: boolean | null,
+    activeEntityTypes?: boolean | null
 }) => {
 
     const { data, loading, error } = useContexts();
@@ -112,9 +114,9 @@ const Contexts = ({
                                 <>
                                     <ContextLink index={index} indented={true} folder={{
                                         label: "Active data",
-                                        active: activeFolder?.toLowerCase() === `${folder.id}`.toLowerCase() && !activeArchived && !activeSources && !activeEmbeddings && !activeProcessors,
+                                        active: activeFolder?.toLowerCase() === `${folder.id}`.toLowerCase() && !activeArchived && !activeSources && !activeEmbeddings && !activeProcessors && !activeEntityTypes,
                                         icon: ListChecksIcon,
-                                        variant: activeFolder?.toLowerCase() === `${folder.id}`.toLowerCase() && !activeArchived && !activeSources && !activeEmbeddings && !activeProcessors ? "default" : "ghost",
+                                        variant: activeFolder?.toLowerCase() === `${folder.id}`.toLowerCase() && !activeArchived && !activeSources && !activeEmbeddings && !activeProcessors && !activeEntityTypes ? "default" : "ghost",
                                         href: `/data/${folder.id}`,
                                     }}></ContextLink>
                                     <ContextLink index={index + 1000} indented={true} folder={{
@@ -144,6 +146,13 @@ const Contexts = ({
                                         icon: FileStack,
                                         variant: activeEmbeddings ? "default" : "ghost",
                                         href: `/data/${folder.id}/embeddings`,
+                                    }} />
+                                    <ContextLink index={index + 1000} indented={true} folder={{
+                                        label: `Entity Types`,
+                                        active: activeEntityTypes || false,
+                                        icon: Network,
+                                        variant: activeEntityTypes ? "default" : "ghost",
+                                        href: `/data/${folder.id}/entity-types`,
                                     }} />
                                 </>
                             }

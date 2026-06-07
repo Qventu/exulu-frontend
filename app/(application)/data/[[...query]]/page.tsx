@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { ContextSources } from "../components/sources";
 import { ContextProcessors } from "../components/processors";
+import { ContextEntityTypes } from "../components/entity-types";
 import { fetchGraphQLServerSide } from "@/util/fetch-graphql-server-side";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -34,6 +35,7 @@ export default async function DataPage({
     const sources = query[1] === "sources" || false;
     const embeddings = query[1] === "embeddings" || false;
     const processors = query[1] === "processors" || false;
+    const entityTypes = query[1] === "entity-types" || false;
 
     if (sources) {
       return <ContextSources expand={true} actions={true} context={context} />;
@@ -44,11 +46,14 @@ export default async function DataPage({
     if (processors) {
       return <ContextProcessors expand={true} actions={true} context={context} />;
     }
+    if (entityTypes) {
+      return <ContextEntityTypes expand={true} actions={true} context={context} />;
+    }
 
     let item = null;
     if (archived) {
       item = query[2] || null;
-    } else if (!sources && !embeddings) {
+    } else if (!sources && !embeddings && !processors && !entityTypes) {
       item = query[1] || null;
     }
 
