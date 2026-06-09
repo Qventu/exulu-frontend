@@ -35,7 +35,7 @@ type Mode = "private" | "users" | "roles" | "teams" | "public";
 //   - CUDA consumer GPU: ~0.5–2× realtime
 // We use 10 as a deliberately-conservative default; tune via NEXT_PUBLIC_TRANSCRIPTION_FACTOR.
 const PROCESSING_FACTOR = Number(
-  process.env.NEXT_PUBLIC_TRANSCRIPTION_FACTOR ?? "10",
+  process.env.NEXT_PUBLIC_TRANSCRIPTION_FACTOR ?? "2",
 );
 
 type Job = {

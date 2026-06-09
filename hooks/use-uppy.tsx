@@ -33,13 +33,18 @@ function extractS3KeyFromUrl(uploadURL: string): string {
     try {
         const url = new URL(uploadURL);
         const hostname = url.hostname;
+        // url.pathname is percent-encoded (spaces → %20, "–" → %E2%80%93, etc.).
+        // Decode it so the stored s3Key is the raw object key — otherwise the
+        // backend re-encodes it when presigning (%20 → %2520) and S3 404s on a
+        // key that doesn't exist.
+        const rawPath = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+        const keyPath = decodeURIComponent(rawPath);
         if (hostname.includes(".s3.") || hostname.includes(".s3-")) {
             const parts = hostname.split(/\.s3[.-]/);
             const bucket = parts[0];
-            const keyPath = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
             return `${bucket}/${keyPath}`;
         }
-        return url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+        return keyPath;
     } catch (e) {
         console.error("Failed to parse S3 upload URL:", e);
         return uploadURL.split("/").pop() || "";
