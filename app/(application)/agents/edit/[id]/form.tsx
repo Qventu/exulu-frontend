@@ -1294,7 +1294,6 @@ export default function AgentForm({
                                               ) : <Badge variant="outline" className="ml-2">
                                                 disabled
                                               </Badge>
-
                                             }
                                           </p>
                                           <p className="text-sm text-muted-foreground mb-0">
@@ -1316,7 +1315,6 @@ export default function AgentForm({
 
                                         <div className="text-sm text-muted-foreground mb-0">
                                           Configure the agentic retrieval tool. This tool is used to search and retrieve relevant information across any number of knowledge contexts.
-
                                         </div>
 
                                         <Switch
