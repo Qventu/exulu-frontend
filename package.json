@@ -15,6 +15,7 @@
     "build-package": "NEXT_PRIVATE_STANDALONE=1 next build && rm -rf package/dist && cp -r .next/standalone package/dist && cp -r .next/static package/dist/.next/static && node scripts/add-shebang-to-server.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "test": "vitest run",
     "check-messages": "node scripts/check-messages.js",
     "prettier": "prettier --check \"**/*.{js,jsx,ts,tsx}\"",
     "prettier:fix": "prettier --write \"**/*.{js,jsx,ts,tsx}\"",
@@ -157,7 +158,8 @@
     "eslint-plugin-import": "^2.29.0",
     "eslint-plugin-tailwindcss": "^3.13.0",
     "husky": "^9.1.7",
-    "semantic-release": "^24.2.7"
+    "semantic-release": "^24.2.7",
+    "vitest": "^4.1.8"
   },
   "overrides": {
     "@types/react": "19.2.7",

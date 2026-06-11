@@ -42,7 +42,12 @@ export type Requirement =
   | "elevated"
   | { area: RightArea; level: RightLevel };
 
-const RIGHT_AREAS: RightArea[] = [
+/**
+ * The role areas that make an account "elevated" (navigation.md §1.2).
+ * Exported for consumers that need to iterate the rights matrix (tests,
+ * Home's RBAC widgets).
+ */
+export const RIGHT_AREAS: readonly RightArea[] = [
   "agents",
   "workflows",
   "variables",

@@ -25,6 +25,9 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      - name: Test
+        run: npm test
+
       - name: i18n message parity (en/de)
         run: node scripts/check-messages.js
 
