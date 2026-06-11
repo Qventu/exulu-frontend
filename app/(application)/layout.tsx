@@ -1,5 +1,6 @@
 import "../globals.css";
 import { fontVariables } from "@/lib/fonts";
+import type { Viewport } from "next";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { cookies } from "next/headers"
@@ -13,6 +14,15 @@ import { ConfigContextProvider } from "@/components/shell/config-context";
 import { configApi, BackendConfigType } from "@/lib/api/config";
 import { LanguageProvider } from "@/components/shell/language-provider";
 import { LOCALE_COOKIE, Locale, defaultLocale } from "@/i18n/config";
+
+// viewport-fit=cover so env(safe-area-inset-*) resolves on notched devices —
+// the shell's mobile top bar and drawer pad themselves with it
+// (navigation.md §5.6).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export default async function RootLayout({
     children,
@@ -110,9 +120,11 @@ export default async function RootLayout({
                             defaultTheme="system"
                             enableSystem
                             disableTransitionOnChange>
+                            {/* The ONE <main> landmark (a11y fix M11) — every
+                                inner content wrapper below this is a div. */}
                             <main className="grow flex min-w-0 w-full">
                                 <div className="grow flex flex-col min-w-0 w-full">
-                                    <Authenticated sidebarDefaultOpen={defaultOpen} user={user} config={config}>
+                                    <Authenticated sidebarDefaultOpen={defaultOpen} user={user}>
                                         {children}
                                     </Authenticated>
                                 </div>

@@ -50,13 +50,7 @@
       "title": "Navigation error",
       "description": "Something went wrong loading the navigation. Please refresh the page.",
       "refresh": "Refresh page"
-    },
-    "theme": "Theme",
-    "admin": "Admin",
-    "users": "Users",
-    "apiPlayground": "Playground",
-    "systemVariables": "Vault",
-    "themeSettings": "Theme"
+    }
   },
   "language": {
     "switchTo": "Switch to {language}",

@@ -221,10 +221,7 @@ const config = [
   },
   {
     name: "exulu/legacy-baseline-html-link",
-    files: toGlobs([
-      "app/(application)/prompts/[id]/page.tsx",
-      "components/shell/navigation.tsx",
-    ]),
+    files: toGlobs(["app/(application)/prompts/[id]/page.tsx"]),
     rules: { "@next/next/no-html-link-for-pages": "warn" },
   },
 

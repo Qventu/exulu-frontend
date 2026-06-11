@@ -50,13 +50,7 @@
       "title": "Navigationsfehler",
       "description": "Beim Laden der Navigation ist ein Fehler aufgetreten. Bitte laden Sie die Seite neu.",
       "refresh": "Seite neu laden"
-    },
-    "theme": "Design",
-    "admin": "Administration",
-    "users": "Benutzer",
-    "apiPlayground": "API Playground",
-    "systemVariables": "Systemvariablen",
-    "themeSettings": "Design"
+    }
   },
   "language": {
     "switchTo": "Wechseln zu {language}",

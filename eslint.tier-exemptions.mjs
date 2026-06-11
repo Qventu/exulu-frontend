@@ -24,8 +24,8 @@ export const tierBoundaryExemptions = {
     "components/widgets/role-selector.tsx",
     "components/widgets/team-selector.tsx",
   ],
-  // Imports UserContext from app/(application)/authenticated.tsx.
-  "components/shell": ["components/shell/main-nav.tsx"],
+  // components/shell/ — clean (main-nav.tsx deleted in Phase 1).
+  "components/shell": [],
   // Still reads from the legacy queries/queries.ts monolith.
   lib: ["lib/validate-preset-items.ts"],
   // Cross-feature imports awaiting their Wave-2 promotions
@@ -50,9 +50,6 @@ export const tierBoundaryExemptions = {
  */
 export const jsxLiteralExemptions = [
   "components/primitives/rating.tsx",
-  "components/shell/main-nav.tsx",
-  "components/shell/mode-toggle.tsx",
-  "components/shell/navigation.tsx",
   "components/widgets/role-selector.tsx",
   "components/widgets/team-selector.tsx",
 ];
