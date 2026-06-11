@@ -37,7 +37,7 @@ export function LanguageProvider({
   }, []);
 
   const loadMessages = async (newLocale: Locale) => {
-    const newMessages = await import(`../messages/${newLocale}.json`);
+    const newMessages = await import(`../../messages/${newLocale}.json`);
     setMessages(newMessages.default);
   };
 
