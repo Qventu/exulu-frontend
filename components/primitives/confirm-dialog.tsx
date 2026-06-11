@@ -17,6 +17,10 @@
  *   (agents / workflows). The confirm action stays disabled until the input matches.
  * - `options`: cascade checkboxes ("also delete …") — selected ids are passed to
  *   `onConfirm` (projects / evals / knowledge).
+ * - `warning`: contextual amber blast-radius summary rendered below the options
+ *   (codebase-structure §2.1 / projects.md §4 propose the
+ *   `ConfirmDialog({ options?, warning? })` shape). Pass a render function to
+ *   react to the currently selected option ids (projects ladder row 40).
  * - `errors`: per-item bulk-operation failure report (access U4) rendered as an
  *   inline destructive list, announced via `role="alert"`.
  * - `children`: generic extension slot rendered between description and options.
@@ -33,7 +37,7 @@
  * async-pending semantics as this component.
  */
 
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
@@ -78,6 +82,12 @@ export interface ConfirmDialogProps {
   /** Cascade checkboxes; selected ids are passed to `onConfirm`. */
   options?: ConfirmDialogOption[];
   /**
+   * Contextual (amber) warning below the options. A render function receives
+   * the currently selected option ids so the copy can summarize the chosen
+   * blast radius; return null to hide it. Plain nodes render statically.
+   */
+  warning?: React.ReactNode | ((selectedOptionIds: string[]) => React.ReactNode);
+  /**
    * Resolve to close the dialog; reject to keep it open (pending state is
    * handled internally either way).
    */
@@ -101,6 +111,7 @@ export function ConfirmDialog({
   confirmLabel,
   typeToConfirm,
   options,
+  warning,
   onConfirm,
   errors,
   children,
@@ -151,9 +162,13 @@ export function ConfirmDialog({
     confirmLabel ??
     (variant === "destructive" ? t("common.delete") : t("common.confirm"));
 
+  const warningContent =
+    typeof warning === "function" ? warning(selectedIds) : warning;
+
   const hasBody =
     Boolean(children) ||
     (options?.length ?? 0) > 0 ||
+    Boolean(warningContent) ||
     Boolean(typeToConfirm) ||
     (errors?.length ?? 0) > 0;
 
@@ -202,6 +217,22 @@ export function ConfirmDialog({
                     </div>
                   );
                 })}
+              </div>
+            ) : null}
+
+            {warningContent ? (
+              // Amber = warning semantics (philosophy §4); dark-mode values
+              // mirror SessionItemBadge's amber treatment. role="status" so
+              // selection-driven copy changes are announced politely.
+              <div
+                role="status"
+                className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/20 dark:bg-amber-950/50 dark:text-amber-300"
+              >
+                <AlertTriangle
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                />
+                <p>{warningContent}</p>
               </div>
             ) : null}
 

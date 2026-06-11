@@ -21,6 +21,10 @@ import { cn } from "@/lib/utils";
  * - `density="compact"`: for full-bleed work surfaces (explorer, skills editor,
  *   n8n, chat) — smaller title, tighter rhythm.
  * - `meta`: quiet inline summary (e.g. budgets default-policy line).
+ * - `leading`: generic visual slot rendered before the title block (entity
+ *   avatar / initial on detail pages — projects, agents). Additive, generic
+ *   prop per the primitives contract (components/primitives/README.md §5);
+ *   purely decorative content — pass `aria-hidden` nodes.
  *
  * Responsive (responsive.md T3, header rule): rows stack on phones — title row
  * first, primary action full-width beneath; never a non-wrapping
@@ -38,6 +42,14 @@ export interface PageHeaderProps
   density?: "default" | "compact";
   /** Quiet inline summary line under the description. */
   meta?: React.ReactNode;
+  /** Decorative slot before the title block (entity avatar / initial). */
+  leading?: React.ReactNode;
+  /**
+   * Clamp the description to one line (always true for `compact`). For
+   * detail headers whose page doc specifies a one-line purpose with the full
+   * text available deeper (e.g. projects detail → Settings tab).
+   */
+  truncateDescription?: boolean;
 }
 
 const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
@@ -49,6 +61,8 @@ const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
       breadcrumb,
       density = "default",
       meta,
+      leading,
+      truncateDescription = false,
       className,
       ...props
     },
@@ -78,28 +92,31 @@ const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
           </Breadcrumb>
         )}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <div className={cn("min-w-0", compact ? "space-y-0.5" : "space-y-1")}>
-            <h1
-              className={cn(
-                "font-semibold tracking-tight",
-                compact ? "text-lg" : "text-2xl",
-              )}
-            >
-              {title}
-            </h1>
-            {description && (
-              <p
+          <div className={cn("flex min-w-0 items-start", compact ? "gap-2" : "gap-3")}>
+            {leading && <div className="shrink-0 pt-0.5">{leading}</div>}
+            <div className={cn("min-w-0", compact ? "space-y-0.5" : "space-y-1")}>
+              <h1
                 className={cn(
-                  "text-sm text-muted-foreground",
-                  compact && "truncate",
+                  "font-semibold tracking-tight",
+                  compact ? "text-lg" : "text-2xl",
                 )}
               >
-                {description}
-              </p>
-            )}
-            {meta && (
-              <div className="text-sm text-muted-foreground">{meta}</div>
-            )}
+                {title}
+              </h1>
+              {description && (
+                <p
+                  className={cn(
+                    "text-sm text-muted-foreground",
+                    (compact || truncateDescription) && "truncate",
+                  )}
+                >
+                  {description}
+                </p>
+              )}
+              {meta && (
+                <div className="text-sm text-muted-foreground">{meta}</div>
+              )}
+            </div>
           </div>
           {action && (
             <div className="flex w-full shrink-0 flex-col gap-2 [&>*]:w-full sm:w-auto sm:flex-row sm:items-center sm:[&>*]:w-auto">
