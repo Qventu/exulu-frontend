@@ -196,7 +196,10 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col">
+      {/* T5 responsive pass (design/responsive.md): full-screen sheet below sm
+          (h-dvh, no radius), centered dialog with dvh cap from sm up. Public
+          API and contents are frozen — sizing only. */}
+      <DialogContent className="flex h-dvh max-h-dvh w-full max-w-full flex-col rounded-none p-4 sm:h-auto sm:max-h-[85dvh] sm:max-w-4xl sm:rounded-lg sm:p-6">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-lg">
             {isEditing ? (isReadOnly ? 'View Routine' : 'Edit Routine') : 'Save as Routine'}
@@ -212,7 +215,9 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1">
+        {/* T5: the body is the single scroll region so the footer stays reachable
+            with the on-screen keyboard open (V2/V4). */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="setup" className="data-[state=active]:bg-background">
@@ -437,7 +442,7 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
           </Tabs>
         </div>
 
-        <div className="border-t p-4 bg-background">
+        <div className="shrink-0 border-t p-4 bg-background pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4">
           <DialogFooter>
             <Button variant="outline" onClick={onClose}>
               {isReadOnly ? 'Close' : 'Cancel'}

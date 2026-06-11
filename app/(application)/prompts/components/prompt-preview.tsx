@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import { useQuery } from "@apollo/client";
 import { GET_AGENTS_BY_IDS, GET_USER_BY_ID } from "@/queries/queries";
 import { formatDistanceToNow } from "date-fns";
-import { PromptVariableForm } from "@/app/(application)/chat/[agent]/[session]/components/prompt-variable-form";
+import { PromptVariableForm } from "@/app/(application)/chat/components/prompt-variable-form";
 import { VersionHistoryPanel } from "./version-history-panel";
 import { UserContext } from "../../authenticated";
 

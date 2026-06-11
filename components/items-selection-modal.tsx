@@ -1,7 +1,8 @@
 import { Context } from "@/types/models/context";
 import { useContexts } from "@/hooks/contexts";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect, useMemo } from "react"
-import { Brain, Folder, FolderOpen, File, ChevronRight, X, Check, Plus, Loader2, LayersPlus, FilePlusCorner, Bookmark, Search, Database, AlertCircle } from "lucide-react"
+import { ArrowLeft, Brain, Folder, FolderOpen, File, ChevronRight, X, Check, Plus, Loader2, LayersPlus, FilePlusCorner, Bookmark, Search, Database, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useQuery, useMutation, useApolloClient } from "@apollo/client";
 import {
@@ -51,6 +52,8 @@ export const ItemsSelectionModal = ({
     onConfirm,
     onSelectContext,
     onApplyPreset,
+    open: controlledOpen,
+    onOpenChange,
     buttonText,
     buttonType,
     buttonVariant,
@@ -64,6 +67,12 @@ export const ItemsSelectionModal = ({
     }[]) => void
     onSelectContext?: (context: Context) => void | Promise<void>
     onApplyPreset?: (items: string[], preset: ContextPreset) => void | Promise<void>
+    /** Optional controlled mode (additive): when `open` is provided the
+     *  built-in trigger button is not rendered and open state is owned by
+     *  the caller (used by the chat composer's AttachMenu). Existing
+     *  trigger-based consumers (project-details) are unaffected. */
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
     buttonText?: string
     tooltipText?: string
     buttonType?: "button" | "submit" | "reset"
@@ -73,10 +82,20 @@ export const ItemsSelectionModal = ({
     iconClassName?: string
 }) => {
     const apolloClient = useApolloClient();
+    const isMobile = useIsMobile();
     const { data, loading } = useContexts();
     const [selectedContext, setSelectedContext] = useState<Context | undefined>(undefined);
     const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
-    const [open, setOpen] = useState(false);
+    const [internalOpen, setInternalOpen] = useState(false);
+    const isControlled = controlledOpen !== undefined;
+    const open = isControlled ? controlledOpen : internalOpen;
+    const setOpen = (value: boolean) => {
+        if (isControlled) {
+            onOpenChange?.(value);
+        } else {
+            setInternalOpen(value);
+        }
+    };
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [activeTab, setActiveTab] = useState<"browse" | "presets">("browse");
     const [searchQuery, setSearchQuery] = useState("");
@@ -215,13 +234,16 @@ export const ItemsSelectionModal = ({
                 setOpen(value);
             }
         }}>
-            <DialogTrigger asChild>
-                <Button type={buttonType} variant={buttonVariant} size={buttonSize} className={buttonClassName}>
-                    <Brain className={`${iconClassName || "h-4 w-4"} ${buttonText ? "mr-2" : ""}`} />
-                    {buttonText}
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[1200px] h-[700px] flex flex-col p-0">
+            {!isControlled && (
+                <DialogTrigger asChild>
+                    <Button type={buttonType} variant={buttonVariant} size={buttonSize} className={buttonClassName}>
+                        <Brain className={`${iconClassName || "h-4 w-4"} ${buttonText ? "mr-2" : ""}`} />
+                        {buttonText}
+                    </Button>
+                </DialogTrigger>
+            )}
+            {/* T5: full-screen below sm, bounded by dvh above (no fixed 1200×700). */}
+            <DialogContent className="flex h-dvh max-h-dvh flex-col p-0 sm:h-[min(700px,85dvh)] sm:max-h-[85dvh] sm:max-w-[90vw] xl:max-w-6xl">
                 <DialogHeader className="px-6 pt-6 pb-4">
                     <DialogTitle>Add Context & Items</DialogTitle>
                     <DialogDescription>
@@ -239,54 +261,74 @@ export const ItemsSelectionModal = ({
 
                     <TabsContent value="browse" className="flex-1 overflow-hidden m-0">
                         <div className="flex h-full overflow-hidden min-h-0">
-                            {/* Left sidebar - Folder tree */}
-                            <div className="flex-shrink-0 flex-grow-0 basis-64 border-r bg-muted/10 flex flex-col min-w-0">
-                                <div className="h-full">
-                                    <div className="p-4 space-y-1">
-                                        <div className="text-xs font-semibold text-muted-foreground px-3 py-2">
-                                            FOLDERS
-                                        </div>
-                                        {loading ? (
-                                            <div className="px-3 py-2">
-                                                <Loading />
+                            {/* Left sidebar - Folder tree. Below md this is step 1 of the
+                                stepped flow (T5): full width, hidden once a context is open. */}
+                            {(!isMobile || !selectedContext) && (
+                                <div className={cn(
+                                    isMobile
+                                        ? "flex w-full flex-col min-w-0 overflow-y-auto"
+                                        : "flex-shrink-0 flex-grow-0 basis-64 border-r bg-muted/10 flex flex-col min-w-0"
+                                )}>
+                                    <div className="h-full">
+                                        <div className="p-4 space-y-1">
+                                            <div className="text-xs font-semibold text-muted-foreground px-3 py-2">
+                                                FOLDERS
                                             </div>
-                                        ) : (
-                                            data?.contexts?.items.map((context: Context) => (
-                                                <button
-                                                    key={context.id}
-                                                    onClick={() => setSelectedContext(context)}
-                                                    className={cn(
-                                                        "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
-                                                        "hover:bg-accent hover:text-accent-foreground",
-                                                        selectedContext?.id === context.id
-                                                            ? "bg-accent text-accent-foreground font-medium"
-                                                            : "text-foreground"
-                                                    )}
-                                                >
-                                                    {selectedContext?.id === context.id ? (
-                                                        <FolderOpen className="h-4 w-4 shrink-0" />
-                                                    ) : (
-                                                        <Folder className="h-4 w-4 shrink-0" />
-                                                    )}
-                                                    <span className="truncate">{context.name}</span>
-                                                </button>
-                                            ))
-                                        )}
+                                            {loading ? (
+                                                <div className="px-3 py-2">
+                                                    <Loading />
+                                                </div>
+                                            ) : (
+                                                data?.contexts?.items.map((context: Context) => (
+                                                    <button
+                                                        key={context.id}
+                                                        onClick={() => setSelectedContext(context)}
+                                                        className={cn(
+                                                            "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                                                            "hover:bg-accent hover:text-accent-foreground",
+                                                            "min-h-[44px] md:min-h-0",
+                                                            selectedContext?.id === context.id
+                                                                ? "bg-accent text-accent-foreground font-medium"
+                                                                : "text-foreground"
+                                                        )}
+                                                    >
+                                                        {selectedContext?.id === context.id ? (
+                                                            <FolderOpen className="h-4 w-4 shrink-0" />
+                                                        ) : (
+                                                            <Folder className="h-4 w-4 shrink-0" />
+                                                        )}
+                                                        <span className="truncate">{context.name}</span>
+                                                        {isMobile && <ChevronRight className="h-4 w-4 ml-auto shrink-0 text-muted-foreground" />}
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
 
-                            {/* Middle panel - Items list */}
+                            {/* Middle panel - Items list. Below md this is step 2 with a back affordance. */}
+                            {(!isMobile || selectedContext) && (
                             <div className="flex-1 flex flex-col min-w-0">
                                 {selectedContext ? (
                                     <>
                                         {/* Breadcrumb */}
-                                        <div className="px-6 py-3 border-b bg-muted/5 flex-shrink-0">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                    <Folder className="h-4 w-4" />
-                                                    <ChevronRight className="h-3 w-3" />
-                                                    <span className="font-medium text-foreground">{selectedContext.name}</span>
+                                        <div className="px-4 md:px-6 py-2 md:py-3 border-b bg-muted/5 flex-shrink-0">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                                                    {isMobile && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedContext(undefined)}
+                                                            aria-label="Back"
+                                                            className="-ml-2 flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                                        >
+                                                            <ArrowLeft className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+                                                    <Folder className="h-4 w-4 shrink-0" />
+                                                    <ChevronRight className="h-3 w-3 shrink-0" />
+                                                    <span className="font-medium text-foreground truncate">{selectedContext.name}</span>
                                                 </div>
                                                 <NewItemDialog context={selectedContext} onItemCreated={(newItem) => {
                                                     toggleItemSelection(newItem, selectedContext);
@@ -315,9 +357,11 @@ export const ItemsSelectionModal = ({
                                     </div>
                                 )}
                             </div>
+                            )}
 
-                            {/* Right sidebar - Selected items */}
-                            <div className="flex-shrink-0 flex-grow-0 basis-80 border-l bg-muted/5 flex flex-col min-w-0">
+                            {/* Right sidebar - Selected items (desktop only; the footer
+                                count carries the selection below md, T5 bottom-bar) */}
+                            <div className="flex-shrink-0 flex-grow-0 basis-80 border-l bg-muted/5 hidden md:flex flex-col min-w-0">
                                 <div className="px-4 py-3 border-b flex-shrink-0">
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-sm font-semibold">Selected Items</h3>
@@ -350,7 +394,8 @@ export const ItemsSelectionModal = ({
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        aria-label={`Remove ${item.name}`}
+                                                        className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                                                         onClick={() => removeSelectedItem(item.id)}
                                                     >
                                                         <X className="h-3 w-3" />
@@ -366,8 +411,10 @@ export const ItemsSelectionModal = ({
 
                     <TabsContent value="presets" className="flex-1 overflow-hidden m-0">
                         <div className="flex h-full overflow-hidden min-h-0">
-                            {/* Preset list */}
-                            <div className="flex-1 flex flex-col border-r">
+                            {/* Preset list. Below md this is step 1 (T5); selecting a preset
+                                moves to the preview step. */}
+                            {(!isMobile || !selectedPreset) && (
+                            <div className="flex-1 flex flex-col md:border-r">
                                 {/* Search */}
                                 <div className="px-4 py-3 border-b flex-shrink-0">
                                     <div className="relative">
@@ -457,10 +504,29 @@ export const ItemsSelectionModal = ({
                                     )}
                                 </div>
                             </div>
+                            )}
 
-                            {/* Preview */}
-                            <div className="flex-shrink-0 flex-grow-0 basis-80 bg-muted/5 flex flex-col">
-                                <div className="px-4 py-3 border-b flex-shrink-0">
+                            {/* Preview. Below md this is step 2 with a back affordance. */}
+                            {(!isMobile || selectedPreset) && (
+                            <div className={cn(
+                                isMobile
+                                    ? "flex w-full flex-col min-w-0 bg-muted/5"
+                                    : "flex-shrink-0 flex-grow-0 basis-80 bg-muted/5 flex flex-col"
+                            )}>
+                                <div className="px-4 py-2 md:py-3 border-b flex-shrink-0 flex items-center gap-2">
+                                    {isMobile && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedPreset(null);
+                                                setValidationResult(null);
+                                            }}
+                                            aria-label="Back"
+                                            className="-ml-2 flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        >
+                                            <ArrowLeft className="h-4 w-4" />
+                                        </button>
+                                    )}
                                     <h3 className="text-sm font-semibold">Preview</h3>
                                 </div>
 
@@ -521,11 +587,12 @@ export const ItemsSelectionModal = ({
                                     )}
                                 </div>
                             </div>
+                            )}
                         </div>
                     </TabsContent>
                 </Tabs>
 
-                <DialogFooter className="px-6 py-4 border-t">
+                <DialogFooter className="px-4 md:px-6 py-3 md:py-4 border-t gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                     <Button variant="outline" onClick={handleCancel}>
                         Cancel
                     </Button>

@@ -21,6 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
+  ChevronDown,
   Loader2,
   Plus,
   Minus,
@@ -37,6 +38,7 @@ import {
   Users,
   Settings,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   EditStyleDialog,
@@ -108,11 +110,18 @@ const ownerIcon = (owner: "user" | "shared") =>
   );
 
 const visibilityIcon = (mode: string) => {
-  if (mode === "public") return <Globe className="h-3 w-3 text-emerald-500" />;
+  if (mode === "public") return <Globe className="h-3 w-3 text-success" />;
   if (mode === "users" || mode === "roles")
-    return <Users className="h-3 w-3 text-blue-500" />;
+    return <Users className="h-3 w-3 text-info" />;
   return <Lock className="h-3 w-3 text-muted-foreground" />;
 };
+
+/**
+ * Hover-reveal becomes an enhancement only (responsive.md T7): hidden until
+ * hover/focus on hover-capable fine pointers, always visible on touch.
+ */
+const HOVER_REVEAL_CLASSES =
+  "transition-opacity duration-150 motion-reduce:transition-none [@media(hover:hover)_and_(pointer:fine)]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-focus-within:opacity-100";
 
 export function ImageGenerationWidget({
   config,
@@ -124,6 +133,11 @@ export function ImageGenerationWidget({
   const configContext = useContext(ConfigContext);
   const userContext = useContext(UserContext);
   const backend = configContext?.backend;
+  const t = useTranslations("chat");
+
+  // Item 85: below `sm` the model/style/size/quality/count settings collapse
+  // behind a single "Settings" disclosure; from `sm` up they are always open.
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [selectedModel, setSelectedModel] = useState(config.defaults.model);
   const currentModel = config.models.find((m) => m.name === selectedModel) ?? config.models[0];
@@ -375,15 +389,15 @@ export function ImageGenerationWidget({
     const allImages = selectedRows.flatMap((r) => r.images);
     return (
       <div className="my-3 border rounded-lg p-3 bg-card">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between gap-2 mb-2">
           <div className="text-sm font-medium flex items-center gap-2">
-            <Check className="h-4 w-4 text-emerald-500" /> Final selection
+            <Check className="h-4 w-4 text-success" aria-hidden="true" /> Final selection
           </div>
-          <Button size="sm" variant="ghost" onClick={() => setForceExpanded(true)}>
-            <Edit3 className="h-3 w-3 mr-1" /> Edit again
+          <Button size="sm" variant="ghost" className="h-11 sm:h-9" onClick={() => setForceExpanded(true)}>
+            <Edit3 className="h-3 w-3 mr-1" aria-hidden="true" /> Edit again
           </Button>
         </div>
-        <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
           {allImages.map((img) => (
             <a key={img.key} href={img.presignedUrl} target="_blank" rel="noopener noreferrer">
               <img src={img.presignedUrl} alt="" className="w-full aspect-square object-cover rounded border" />
@@ -396,8 +410,35 @@ export function ImageGenerationWidget({
 
   return (
     <div className="my-3 border rounded-lg bg-card overflow-hidden">
+      {/* Item 85: <sm the settings (model/style + size/quality/count) sit
+          behind one "Settings" disclosure; sm+ renders them inline. */}
+      <button
+        type="button"
+        onClick={() => setSettingsOpen((v) => !v)}
+        aria-expanded={settingsOpen}
+        className="flex min-h-11 w-full items-center justify-between gap-2 border-b bg-muted/30 px-3 py-2 text-sm font-medium sm:hidden"
+      >
+        <span className="flex items-center gap-2">
+          <Settings className="size-4 text-muted-foreground" aria-hidden="true" />
+          {t("imageGen.settings")}
+        </span>
+        <span className="flex min-w-0 items-center gap-2 text-xs font-normal text-muted-foreground">
+          <span className="truncate">{selectedModel} · {size} · {quality} · ×{n}</span>
+          <ChevronDown
+            className={cn(
+              "size-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none",
+              settingsOpen && "rotate-180",
+            )}
+            aria-hidden="true"
+          />
+        </span>
+      </button>
+
       {/* Header: model + style picker */}
-      <div className="p-3 border-b bg-muted/30 grid grid-cols-1 md:grid-cols-2 gap-2">
+      <div className={cn(
+        "p-3 border-b bg-muted/30 gap-2 grid-cols-1 md:grid-cols-2",
+        settingsOpen ? "grid" : "hidden sm:grid",
+      )}>
         <div className="space-y-1">
           <Label className="text-xs">Model</Label>
           <Select value={selectedModel} onValueChange={setSelectedModel}>
@@ -448,8 +489,9 @@ export function ImageGenerationWidget({
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9 shrink-0"
+                className="h-11 w-11 shrink-0 sm:h-9 sm:w-9"
                 title="Edit style"
+                aria-label={t("imageGen.editStyle")}
                 onClick={() => {
                   const style = stylesQuery.data?.platform_configurationsPagination?.items?.find(
                     (s: any) => s.id === selectedStyleId,
@@ -477,8 +519,9 @@ export function ImageGenerationWidget({
             <Button
               variant="outline"
               size="icon"
-              className="h-9 w-9 shrink-0"
+              className="h-11 w-11 shrink-0 sm:h-9 sm:w-9"
               title="New style"
+              aria-label={t("imageGen.newStyle")}
               onClick={() => {
                 setStyleDialogTarget(undefined);
                 setStyleDialogOpen(true);
@@ -500,7 +543,7 @@ export function ImageGenerationWidget({
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           rows={3}
-          className="resize-y"
+          className="resize-y text-base md:text-sm"
         />
       </div>
 
@@ -528,26 +571,33 @@ export function ImageGenerationWidget({
           />
         </div>
         {referenceImages.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             {referenceImages.map((ref) => (
               <div key={ref.key} className="relative group">
                 {ref.url ? (
                   <img
                     src={ref.url}
                     alt=""
-                    className="h-16 w-16 object-cover rounded border"
+                    className="h-20 w-20 md:h-16 md:w-16 object-cover rounded border"
                   />
                 ) : (
-                  <div className="h-16 w-16 rounded border bg-muted flex items-center justify-center">
-                    <ImagePlus className="h-4 w-4 text-muted-foreground" />
+                  <div className="h-20 w-20 md:h-16 md:w-16 rounded border bg-muted flex items-center justify-center">
+                    <ImagePlus className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                   </div>
                 )}
+                {/* Always visible on touch (fixes U6); the visible chip is
+                    28px with a ::before hit-area extension to ~44px. */}
                 <button
                   type="button"
-                  className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition"
+                  aria-label={t("imageGen.removeReference")}
+                  className={cn(
+                    "absolute -top-2 -right-2 flex h-7 w-7 md:h-5 md:w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground",
+                    "before:absolute before:-inset-2 before:content-[''] focus-visible:opacity-100",
+                    HOVER_REVEAL_CLASSES,
+                  )}
                   onClick={() => setReferenceImages((prev) => prev.filter((p) => p.key !== ref.key))}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" aria-hidden="true" />
                 </button>
               </div>
             ))}
@@ -561,7 +611,10 @@ export function ImageGenerationWidget({
       </div>
 
       {/* Controls: size / quality / n */}
-      <div className="p-3 border-b grid grid-cols-3 gap-2">
+      <div className={cn(
+        "p-3 border-b gap-2 grid-cols-2 sm:grid-cols-3",
+        settingsOpen ? "grid" : "hidden sm:grid",
+      )}>
         <div className="space-y-1">
           <Label className="text-xs">Size</Label>
           <Select value={size} onValueChange={setSize}>
@@ -598,21 +651,23 @@ export function ImageGenerationWidget({
             <Button
               variant="outline"
               size="icon"
-              className="h-9 w-9"
+              className="h-11 w-11 sm:h-9 sm:w-9"
               disabled={n <= 1}
+              aria-label={t("imageGen.decreaseCount")}
               onClick={() => setN((v) => Math.max(1, v - 1))}
             >
-              <Minus className="h-3 w-3" />
+              <Minus className="h-3 w-3" aria-hidden="true" />
             </Button>
             <span className="text-sm font-medium w-8 text-center">{n}</span>
             <Button
               variant="outline"
               size="icon"
-              className="h-9 w-9"
+              className="h-11 w-11 sm:h-9 sm:w-9"
               disabled={!currentModel || n >= currentModel.maxN}
+              aria-label={t("imageGen.increaseCount")}
               onClick={() => setN((v) => Math.min(currentModel?.maxN ?? 1, v + 1))}
             >
-              <Plus className="h-3 w-3" />
+              <Plus className="h-3 w-3" aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -621,20 +676,20 @@ export function ImageGenerationWidget({
       {/* Generate / abort */}
       <div className="p-3 border-b">
         {isGenerating ? (
-          <Button variant="outline" className="w-full" onClick={handleAbort}>
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          <Button variant="outline" className="w-full h-11 sm:h-10" onClick={handleAbort}>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
             Generating… (click to cancel)
-            <StopCircle className="h-4 w-4 ml-2" />
+            <StopCircle className="h-4 w-4 ml-2" aria-hidden="true" />
           </Button>
         ) : (
-          <Button className="w-full" onClick={handleGenerate}>
+          <Button className="w-full h-11 sm:h-10" onClick={handleGenerate}>
             {mode === "edit" ? (
               <>
-                <Edit3 className="h-4 w-4 mr-2" /> Edit image
+                <Edit3 className="h-4 w-4 mr-2" aria-hidden="true" /> Edit image
               </>
             ) : (
               <>
-                <Wand2 className="h-4 w-4 mr-2" /> Generate
+                <Wand2 className="h-4 w-4 mr-2" aria-hidden="true" /> Generate
               </>
             )}
           </Button>
@@ -644,7 +699,7 @@ export function ImageGenerationWidget({
 
       {/* History */}
       {history.length > 0 && (
-        <div className="p-3 border-b space-y-3 max-h-[600px] overflow-y-auto">
+        <div className="p-3 border-b space-y-3 max-h-[60dvh] overflow-y-auto">
           <Label className="text-xs">History</Label>
           {[...history].reverse().map((row) => (
             <div key={row.generationId} className="border rounded p-2 bg-background">
@@ -661,7 +716,7 @@ export function ImageGenerationWidget({
                   {row.prompt}
                 </div>
               </div>
-              <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                 {row.images.map((img) => {
                   const isSel = selectedImages.some((s) => s.imageKey === img.key);
                   return (
@@ -670,7 +725,7 @@ export function ImageGenerationWidget({
                         type="button"
                         onClick={() => toggleSelection(row.generationId, img.key)}
                         className={cn(
-                          "block w-full rounded border-2 overflow-hidden transition",
+                          "block w-full rounded border-2 overflow-hidden transition-colors duration-150 motion-reduce:transition-none",
                           isSel ? "border-primary" : "border-transparent hover:border-muted-foreground/40",
                         )}
                       >
@@ -682,26 +737,31 @@ export function ImageGenerationWidget({
                       </button>
                       {isSel && (
                         <div className="absolute top-1 right-1 bg-primary text-primary-foreground rounded-full p-0.5">
-                          <Check className="h-3 w-3" />
+                          <Check className="h-3 w-3" aria-hidden="true" />
                         </div>
                       )}
-                      <div className="absolute bottom-1 left-1 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                      {/* Item 89 / U6: image actions always visible on touch,
+                          ≥44px targets below md; hover-reveal only on
+                          hover-capable pointers. */}
+                      <div className={cn("absolute bottom-1 left-1 flex gap-1", HOVER_REVEAL_CLASSES)}>
                         <button
                           type="button"
-                          className="bg-background/80 backdrop-blur rounded p-1"
+                          className="flex h-11 w-11 md:h-7 md:w-7 items-center justify-center rounded bg-background/80 backdrop-blur"
                           title="Download"
+                          aria-label={t("imageGen.download")}
                           onClick={() => downloadImage(img.presignedUrl)}
                         >
-                          <Download className="h-3 w-3" />
+                          <Download className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                         {currentModel?.supportsEdit && (
                           <button
                             type="button"
-                            className="bg-background/80 backdrop-blur rounded p-1"
+                            className="flex h-11 w-11 md:h-7 md:w-7 items-center justify-center rounded bg-background/80 backdrop-blur"
                             title="Use as reference"
+                            aria-label={t("imageGen.useAsReference")}
                             onClick={() => useAsReference(img.presignedUrl, img.key)}
                           >
-                            <ImagePlus className="h-3 w-3" />
+                            <ImagePlus className="h-3.5 w-3.5" aria-hidden="true" />
                           </button>
                         )}
                       </div>
@@ -715,7 +775,7 @@ export function ImageGenerationWidget({
       )}
 
       {/* Selection footer */}
-      <div className="p-3 flex items-center justify-between bg-muted/20">
+      <div className="p-3 flex flex-col gap-2 bg-muted/20 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-xs text-muted-foreground">
           {selectedImages.length === 0
             ? "Select one or more images, then send them to the assistant."
@@ -723,10 +783,11 @@ export function ImageGenerationWidget({
         </div>
         <Button
           size="sm"
+          className="h-11 w-full sm:h-9 sm:w-auto"
           disabled={selectedImages.length === 0}
           onClick={handleUseSelected}
         >
-          <Check className="h-3 w-3 mr-1" />
+          <Check className="h-3 w-3 mr-1" aria-hidden="true" />
           Use these
         </Button>
       </div>

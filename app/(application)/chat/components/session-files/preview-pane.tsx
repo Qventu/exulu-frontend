@@ -1,11 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+/**
+ * Session-file preview (chat.md item 82). Route-local rework of
+ * components/session-files/preview-pane.tsx — content behavior unchanged
+ * (text/code inline ≤200 KB, images, PDFs via iframe, Office via the
+ * backend LibreOffice→PDF preview, unknown → download only). Sizing
+ * switches from `h-[calc(100vh-220px)]` to `h-full` (V1), and the header
+ * controls meet ≥44px touch targets below `md`.
+ */
+
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
-import { sessionFilesApi, type SessionFile } from "@/lib/api/session-files";
-import { TextPreview } from "@/components/custom/text-preview";
+import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
+
 import { CodePreview } from "@/components/custom/code-preview";
+import { TextPreview } from "@/components/custom/text-preview";
+import { Button } from "@/components/ui/button";
+import { sessionFilesApi, type SessionFile } from "@/lib/api/session-files";
+
 import { formatBytes, getPreviewCategory } from "./utils";
 
 const INLINE_TEXT_MAX_BYTES = 200 * 1024;
@@ -45,18 +57,15 @@ function languageFromFilename(name: string): string | undefined {
     }
 }
 
-/**
- * Routes the preview UI by file extension:
- *   - text/code → fetch the file body and render via TextPreview/CodePreview
- *   - image    → <img> with the presigned URL
- *   - pdf      → <iframe> with the presigned URL
- *   - office   → <iframe> with the auth'd PDF preview URL (LibreOffice on backend)
- *   - unknown  → metadata + Download button only
- *
- * Files larger than 200 KB skip the inline render and show a "too big to
- * preview, download instead" notice for text/code; binary previews stream
- * from S3 directly via the iframe/img regardless of size.
- */
+function CenteredSpinner({ label }: { label: string }) {
+    return (
+        <div className="flex items-center justify-center py-12 text-muted-foreground">
+            <Loader2 className="mr-2 size-5 animate-spin" aria-hidden="true" />
+            <span className="text-sm">{label}</span>
+        </div>
+    );
+}
+
 export function PreviewPane({
     sessionId,
     file,
@@ -66,6 +75,7 @@ export function PreviewPane({
     file: SessionFile;
     onBack: () => void;
 }) {
+    const t = useTranslations("chat");
     const category = getPreviewCategory(file.name);
     const [textBody, setTextBody] = useState<string | null>(null);
     const [textError, setTextError] = useState<string | null>(null);
@@ -77,7 +87,7 @@ export function PreviewPane({
         if (file.size > INLINE_TEXT_MAX_BYTES) {
             setTextBody(null);
             setTextError(
-                `File is ${formatBytes(file.size)} — too large to preview inline. Use Download to view.`,
+                t("files.tooLargeToPreview", { size: formatBytes(file.size) }),
             );
             return;
         }
@@ -91,15 +101,20 @@ export function PreviewPane({
                 const body = await res.text();
                 if (!cancelled) setTextBody(body);
             } catch (err: any) {
-                if (!cancelled) setTextError(`Could not load preview: ${err.message}`);
+                if (!cancelled)
+                    setTextError(
+                        t("files.previewFailed", { message: err.message }),
+                    );
             }
         })();
         return () => {
             cancelled = true;
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [file.presignedUrl, file.size, category]);
 
-    // Resolve the LibreOffice-rendered preview URL for Office binaries.
+    // Resolve the LibreOffice-rendered preview URL for Office binaries
+    // (unchanged transport: sessionFilesApi.previewPdfUrl).
     useEffect(() => {
         if (category !== "office") return;
         let cancelled = false;
@@ -118,37 +133,46 @@ export function PreviewPane({
     }, [sessionId, file.key, category]);
 
     return (
-        <div className="flex flex-col h-full">
-            <div className="flex items-center gap-2 px-3 py-2 border-b">
+        <div className="flex h-full min-h-0 flex-col">
+            <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="h-11 w-11 md:h-8 md:w-8"
                     onClick={onBack}
-                    title="Back to files"
+                    aria-label={t("files.backToFiles")}
                 >
-                    <ArrowLeft className="h-4 w-4" />
+                    <ArrowLeft className="size-4" aria-hidden="true" />
                 </Button>
-                <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{file.name}</div>
+                <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{file.name}</div>
                     <div className="text-xs text-muted-foreground">
                         {formatBytes(file.size)}
                     </div>
                 </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7" asChild title="Download">
-                    <a href={file.presignedUrl} download={file.name}>
-                        <Download className="h-3.5 w-3.5" />
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-11 w-11 md:h-8 md:w-8"
+                    asChild
+                >
+                    <a
+                        href={file.presignedUrl}
+                        download={file.name}
+                        aria-label={t("files.download")}
+                    >
+                        <Download className="size-4" aria-hidden="true" />
                     </a>
                 </Button>
             </div>
 
-            <div className="flex-1 overflow-auto p-3">
+            <div className="min-h-0 flex-1 overflow-auto p-3">
                 {category === "image" && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                         src={file.presignedUrl}
                         alt={file.name}
-                        className="max-w-full h-auto rounded-md border"
+                        className="h-auto max-w-full rounded-md border"
                     />
                 )}
 
@@ -156,7 +180,7 @@ export function PreviewPane({
                     <iframe
                         src={file.presignedUrl}
                         title={file.name}
-                        className="w-full h-[calc(100vh-220px)] rounded-md border"
+                        className="h-full min-h-[320px] w-full rounded-md border"
                     />
                 )}
 
@@ -165,23 +189,17 @@ export function PreviewPane({
                         <iframe
                             src={pdfUrl}
                             title={file.name}
-                            className="w-full h-[calc(100vh-220px)] rounded-md border"
+                            className="h-full min-h-[320px] w-full rounded-md border"
                         />
                     ) : (
-                        <div className="flex items-center justify-center py-12 text-muted-foreground">
-                            <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                            <span className="text-sm">Rendering preview…</span>
-                        </div>
+                        <CenteredSpinner label={t("files.renderingPreview")} />
                     ))}
 
                 {category === "text" &&
                     (textError ? (
                         <p className="text-sm text-muted-foreground">{textError}</p>
                     ) : textBody === null ? (
-                        <div className="flex items-center justify-center py-12 text-muted-foreground">
-                            <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                            <span className="text-sm">Loading preview…</span>
-                        </div>
+                        <CenteredSpinner label={t("files.loadingPreview")} />
                     ) : (
                         <TextPreview text={textBody} sliceLength={textBody.length} />
                     ))}
@@ -190,10 +208,7 @@ export function PreviewPane({
                     (textError ? (
                         <p className="text-sm text-muted-foreground">{textError}</p>
                     ) : textBody === null ? (
-                        <div className="flex items-center justify-center py-12 text-muted-foreground">
-                            <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                            <span className="text-sm">Loading preview…</span>
-                        </div>
+                        <CenteredSpinner label={t("files.loadingPreview")} />
                     ) : (
                         <CodePreview
                             code={textBody}
@@ -203,15 +218,15 @@ export function PreviewPane({
                     ))}
 
                 {category === "unknown" && (
-                    <div className="text-sm text-muted-foreground space-y-2">
-                        <p>No inline preview available for this file type.</p>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>{t("files.noInlinePreview")}</p>
                         <p>
                             <a
                                 href={file.presignedUrl}
                                 download={file.name}
                                 className="text-primary hover:underline"
                             >
-                                Download {file.name}
+                                {t("files.downloadNamed", { name: file.name })}
                             </a>
                         </p>
                     </div>

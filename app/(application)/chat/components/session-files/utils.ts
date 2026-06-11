@@ -1,7 +1,12 @@
 /**
  * File-extension → renderer category for the session files preview pane.
- * Keeps the routing logic out of the preview pane component so it can be
- * tested independently and reused for the file row's icon.
+ * Route-local relocation of components/session-files/utils.ts (single
+ * importer = chat). Keeps the routing logic out of the preview pane
+ * component so it can be tested independently and reused for the file
+ * row's icon.
+ *
+ * `formatRelativeTime` was dropped in the relocation — rows now use the
+ * shared RelativeTime primitive (locale-aware, absolute tooltip).
  */
 export type PreviewCategory =
     | "text"
@@ -60,21 +65,6 @@ export function formatBytes(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-export function formatRelativeTime(iso: string): string {
-    const date = new Date(iso);
-    const now = Date.now();
-    const diffMs = now - date.getTime();
-    const diffSec = Math.round(diffMs / 1000);
-    if (diffSec < 60) return "just now";
-    const diffMin = Math.round(diffSec / 60);
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffHr = Math.round(diffMin / 60);
-    if (diffHr < 24) return `${diffHr}h ago`;
-    const diffDay = Math.round(diffHr / 24);
-    if (diffDay < 30) return `${diffDay}d ago`;
-    return date.toLocaleDateString();
 }
 
 /**

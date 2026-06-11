@@ -1,0 +1,1018 @@
+"use client";
+
+/**
+ * The single chat hooks home (work item 2.3, owner: orchestration).
+ *
+ * - useChatSession   — the ChatSessionController: AI-SDK transport, lazy
+ *                      session creation, token accounting, model override,
+ *                      capability toggles, pre-approvals, pinned knowledge
+ *                      scope, next-message attachments, suggestions, files
+ *                      panel state, budget block. Decomposed 1:1 from the
+ *                      legacy app/(application)/chat/[agent]/[session]/chat.tsx
+ *                      monolith — every transport invariant is preserved
+ *                      verbatim (see design/pages/chat.md §4 risks).
+ * - useChatSessions  — the session list (history rail + search page data).
+ * - useSessionMutations — named create / rename / delete / bulk delete.
+ * - useAvailableModels  — LiteLLM-catalog vs Models-table switch.
+ *
+ * STABLE localStorage keys (regression contract — byte-identical to legacy):
+ *   `pre-approved-tool-calls-${sessionId}`  (JSON string[] of tool ids)
+ *   "chat.sessionFilesPanel.open"           ("true" | "false")
+ */
+
+import { useMutation, useQuery } from "@apollo/client";
+import { useChat } from "@ai-sdk/react";
+import {
+  ChatAddToolApproveResponseFunction,
+  DefaultChatTransport,
+  FileUIPart,
+  UIMessage,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
+} from "ai";
+import { useTranslations } from "next-intl";
+import * as React from "react";
+import { toast } from "sonner";
+
+import { UserContext } from "@/app/(application)/authenticated";
+import { ConfigContext } from "@/components/shell/config-context";
+import { getPresignedUrl } from "@/components/uppy-dashboard";
+import { getToken } from "@/lib/api/client";
+import { sessionFilesApi } from "@/lib/api/session-files";
+import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
+import type { Agent } from "@/types/models/agent";
+import type { AgentSession } from "@/types/models/agent-session";
+import type { Item } from "@/types/models/item";
+
+import {
+  CREATE_AGENT_SESSION,
+  GET_AGENT_SESSIONS,
+  GET_LITELLM_CATALOG,
+  GET_MODELS_LITE,
+  GET_USER_BY_ID,
+  REMOVE_AGENT_SESSION_BY_ID,
+  UPDATE_AGENT_SESSION_ITEMS,
+  UPDATE_AGENT_SESSION_TITLE,
+} from "./queries";
+
+// ---------------------------------------------------------------------------
+// Shared types (binding contracts)
+// ---------------------------------------------------------------------------
+
+export type ChatStatus = "submitted" | "streaming" | "ready" | "error";
+
+export interface TokenCounts {
+  totalTokens: number;
+  reasoningTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens: number;
+}
+
+export interface UseChatSessionArgs {
+  agent: Agent;
+  initialSession: AgentSession | null; // null on /new
+  initialMessages: UIMessage[];
+}
+
+/**
+ * The decomposed chat.tsx monolith state. Instantiated EXACTLY ONCE in
+ * session-screen.tsx and passed down by prop. No sibling may duplicate any
+ * of this state.
+ */
+export interface ChatSessionController {
+  // identity & access
+  agent: Agent;
+  session: AgentSession | null;
+  writeAccess: boolean;
+  creatorEmail?: string;
+  // transport (AI SDK passthrough)
+  messages: UIMessage[];
+  status: ChatStatus;
+  sendUserMessage: (text: string) => Promise<void>;
+  sendQuestionAnswer: (answerText: string) => void;
+  stop: () => void;
+  regenerate: () => void;
+  setMessages: (m: UIMessage[] | ((prev: UIMessage[]) => UIMessage[])) => void;
+  addToolApprovalResponse: ChatAddToolApproveResponseFunction;
+  ensureSession: () => Promise<AgentSession | null>;
+  error: string | null;
+  errorRaw: string | null;
+  clearError: () => void;
+  // token accounting (items 27/38)
+  tokenCounts: TokenCounts;
+  maxInputLength: number;
+  // per-request model override (item 26)
+  modelOverride: string | null;
+  setModelOverride: (modelId: string | null) => void;
+  // capability toggles (items 69–71)
+  disabledTools: string[];
+  toggleTool: (id: string) => void;
+  enableAll: (ids: string[]) => void;
+  disableAll: (ids: string[]) => void;
+  // tool pre-approvals (item 50)
+  preApprovedTools: string[];
+  approveToolForChat: (toolId: string) => void;
+  revokePreApprovedTool: (toolId: string) => void;
+  // pinned knowledge scope (items 66/67) — gids are "ctx" or "ctx/item"
+  sessionItems: string[] | null;
+  addSessionItems: (gids: string[]) => Promise<void>;
+  removeSessionItem: (gid: string) => Promise<void>;
+  // next-message attachments (items 74/75)
+  fileItems: string[] | null;
+  addFileItem: (s3Key: string) => void;
+  removeFileItem: (s3Key: string) => void;
+  // follow-up suggestions (item 63)
+  suggestions: string[];
+  // session files panel (items 64/79)
+  filesPanelOpen: boolean;
+  setFilesPanelOpen: (open: boolean) => Promise<void>;
+  sessionFilesCount: number | null;
+  // budget (item 73)
+  budgetExceeded: boolean;
+  // managed context (item 72)
+  managedContextEnabled: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// useChatSession
+// ---------------------------------------------------------------------------
+
+/** Raw read, byte-identical to the legacy onSubmit: the body value sent as
+ *  `approvedTools` is either the raw JSON string or an empty array. */
+function readApprovedToolsRaw(sessionId: string | undefined): string | never[] {
+  try {
+    return (
+      window.localStorage.getItem(`pre-approved-tool-calls-${sessionId}`) || []
+    );
+  } catch {
+    return [];
+  }
+}
+
+function readPreApprovedList(sessionId: string | undefined): string[] {
+  if (!sessionId) return [];
+  try {
+    const raw = window.localStorage.getItem(
+      `pre-approved-tool-calls-${sessionId}`,
+    );
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export function useChatSession({
+  agent,
+  initialSession,
+  initialMessages,
+}: UseChatSessionArgs): ChatSessionController {
+  const t = useTranslations("chat");
+  const configContext = React.useContext(ConfigContext);
+  const { user } = React.useContext(UserContext);
+
+  // --- errors ---------------------------------------------------------------
+  const [error, setError] = React.useState<string | null>(null);
+  const [errorRaw, setErrorRaw] = React.useState<string | null>(null);
+  const clearError = React.useCallback(() => {
+    setError(null);
+    setErrorRaw(null);
+  }, []);
+
+  // --- budget (item 73) — cap reached blocks sending -------------------------
+  const budgetExceeded = !!(
+    user?.budget &&
+    user.budget.max_budget != null &&
+    user.budget.max_budget > 0 &&
+    user.budget.spend >= user.budget.max_budget
+  );
+
+  // --- attachments (items 74/75) ---------------------------------------------
+  const [files, setFiles] = React.useState<FileUIPart[] | null>(null);
+  const [fileItems, setFileItems] = React.useState<string[] | null>(null);
+
+  // --- pinned knowledge scope (items 66/67) ----------------------------------
+  const [sessionItems, setSessionItems] = React.useState<string[] | null>(
+    initialSession?.session_items || null,
+  );
+
+  // --- per-request model override (item 26) ----------------------------------
+  const [modelOverride, setModelOverrideState] = React.useState<string | null>(
+    null,
+  );
+  const modelOverrideRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    modelOverrideRef.current = modelOverride;
+  }, [modelOverride]);
+  const setModelOverride = React.useCallback(
+    (modelId: string | null) => {
+      // null / the agent's own model clears the override (contract).
+      setModelOverrideState(
+        !modelId || modelId === agent.model ? null : modelId,
+      );
+    },
+    [agent.model],
+  );
+
+  // --- capability toggles (items 69–71) --------------------------------------
+  const [disabledTools, setDisabledTools] = React.useState<string[]>([]);
+  const toggleTool = React.useCallback((id: string) => {
+    setDisabledTools((prev) =>
+      prev.includes(id) ? prev.filter((name) => name !== id) : [...prev, id],
+    );
+  }, []);
+  const enableAll = React.useCallback((ids: string[]) => {
+    setDisabledTools((prev) => prev.filter((id) => !ids.includes(id)));
+  }, []);
+  const disableAll = React.useCallback((ids: string[]) => {
+    setDisabledTools((prev) => Array.from(new Set([...prev, ...ids])));
+  }, []);
+
+  // --- input budget (item 60): 80% of context window × ~4 chars/token --------
+  const maxInputLength = agent.maxContextLength
+    ? Math.floor(agent.maxContextLength * 0.8 * 4)
+    : 50000;
+
+  // --- suggestions (item 63) --------------------------------------------------
+  const [suggestions, setSuggestions] = React.useState<string[]>([]);
+  const suggestionAbortRef = React.useRef<AbortController | null>(null);
+
+  // --- session identity (item 34: lazy creation) ------------------------------
+  const [currentSession, setCurrentSession] = React.useState<AgentSession | null>(
+    initialSession,
+  );
+  const currentSessionRef = React.useRef<AgentSession | null>(initialSession);
+  React.useEffect(() => {
+    currentSessionRef.current = currentSession;
+  }, [currentSession]);
+
+  const [writeAccess, setWriteAccess] = React.useState<boolean>(
+    initialSession ? checkChatSessionWriteAccess(initialSession, user) : true,
+  );
+
+  const [createAgentSession] = useMutation(CREATE_AGENT_SESSION, {
+    // STRING operation names kept so observers of both the monolith documents
+    // and the chat/queries.ts copies refresh (binding contract).
+    refetchQueries: [GET_AGENT_SESSIONS, "GetAgentSessions", GET_USER_BY_ID, "GetUserById"],
+  });
+  const [updateAgentSessionItems] = useMutation(UPDATE_AGENT_SESSION_ITEMS);
+
+  // --- creator attribution (item 29 support) ----------------------------------
+  const creatorQuery = useQuery(GET_USER_BY_ID, {
+    variables: { id: currentSession?.created_by },
+    skip: !currentSession?.created_by,
+  });
+  const creatorEmail: string | undefined =
+    creatorQuery.data?.userById?.email ?? undefined;
+
+  // --- managed context (item 72) ----------------------------------------------
+  const managedContextEnabled = React.useMemo(() => {
+    return (
+      agent.tools
+        ?.find((tool) => tool.id === "agentic_context_search")
+        ?.config.find((c) => c.name === "managed_context")?.variable === "true" ||
+      // @ts-ignore — backend sometimes delivers a real boolean here
+      agent.tools
+        ?.find((tool) => tool.id === "agentic_context_search")
+        ?.config.find((c) => c.name === "managed_context")?.variable === true
+    );
+  }, [agent.tools]);
+
+  // --- transport (items 32/33/71 — invariants verbatim from the monolith) -----
+  const {
+    messages,
+    sendMessage,
+    status,
+    stop,
+    regenerate,
+    setMessages,
+    addToolApprovalResponse,
+  } = useChat({
+    messages: initialMessages,
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+    // Throttle the messages and data updates to 50ms:
+    experimental_throttle: 50,
+    async onToolCall({ toolCall }) {
+      // Check if it's a dynamic tool first for proper type narrowing
+      if (toolCall.dynamic) {
+        return;
+      }
+    },
+    onError: (err) => {
+      if (process.env.NODE_ENV === "development") {
+        console.error("[Chat Error]", err?.message);
+      }
+      setErrorRaw(err?.message || null);
+      try {
+        const { message } = JSON.parse(err?.message);
+        setError(message);
+      } catch {
+        setError(err?.message || t("errors.unexpected"));
+      }
+    },
+    transport: new DefaultChatTransport({
+      api: `${configContext?.backend}${agent.slug}/${agent.id}`,
+      // only send the last message to the server: we load
+      // the history from the database.
+      prepareSendMessagesRequest: async ({ messages, id: chatId, body }) => {
+        const token = await getToken();
+        if (!token) {
+          throw new Error("No valid session token available.");
+        }
+        const session = currentSessionRef.current;
+        if (!session) {
+          throw new Error("No session available.");
+        }
+        const override = modelOverrideRef.current;
+        return {
+          body: {
+            ...body,
+            message: messages[messages.length - 1],
+            id: chatId,
+            session: session.id,
+          },
+          headers: {
+            User: user.id,
+            Session: session.id,
+            Authorization: `Bearer ${token}`,
+            Stream: "true",
+            ...(override && override !== agent.model
+              ? { "X-Exulu-Model-Override": override }
+              : {}),
+          },
+        };
+      },
+    }),
+  });
+
+  // --- reset on session navigation (page params change without remount) -------
+  React.useEffect(() => {
+    setCurrentSession(initialSession);
+    currentSessionRef.current = initialSession;
+    setWriteAccess(
+      initialSession ? checkChatSessionWriteAccess(initialSession, user) : true,
+    );
+    setSessionItems(initialSession?.session_items || null);
+    // Keep the visible conversation in sync when the route's session changes
+    // without a remount (App Router preserves client state across param-only
+    // navigations — the legacy monolith reset currentSession the same way).
+    setMessages(initialMessages);
+    clearError();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSession, user]);
+
+  // --- token accounting (items 27/38) ------------------------------------------
+  const [tokenCounts, setTokenCounts] = React.useState<TokenCounts>({
+    totalTokens: 0,
+    reasoningTokens: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    cachedInputTokens: 0,
+  });
+  React.useEffect(() => {
+    const sum = (key: keyof TokenCounts) =>
+      messages?.reduce((acc, message) => {
+        const meta = message.metadata as Partial<TokenCounts> | undefined;
+        return acc + (meta?.[key] || 0);
+      }, 0) ?? 0;
+    setTokenCounts({
+      totalTokens: sum("totalTokens"),
+      reasoningTokens: sum("reasoningTokens"),
+      inputTokens: sum("inputTokens"),
+      outputTokens: sum("outputTokens"),
+      cachedInputTokens: sum("cachedInputTokens"),
+    });
+  }, [messages]);
+
+  // --- lazy session creation (item 34) -----------------------------------------
+  const createSession = async (
+    title: string,
+  ): Promise<AgentSession | null> => {
+    try {
+      const result = await createAgentSession({
+        variables: {
+          agent: agent.id,
+          user: user.id,
+          title,
+          rights_mode: "private",
+          RBAC: {
+            users: [],
+            roles: [],
+          },
+        },
+      });
+
+      if (result.data?.agent_sessionsCreateOne?.item) {
+        const newSession = result.data.agent_sessionsCreateOne
+          .item as AgentSession;
+        newSession.created_by = user.id;
+        // Sync the ref immediately — the transport may read it before React
+        // re-renders (the legacy effect-only sync was a latent race).
+        currentSessionRef.current = newSession;
+        setCurrentSession(newSession);
+        setWriteAccess(true);
+
+        // Update URL quietly without triggering Next.js routing — NO remount.
+        window.history.replaceState(null, "", `/chat/${agent.id}/${newSession.id}`);
+
+        return newSession;
+      }
+      setError(t("errors.sessionCreateFailed"));
+      return null;
+    } catch (err) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Failed to create session:", err);
+      }
+      const errorMessage =
+        err instanceof Error ? err.message : t("errors.sessionCreateFailed");
+      setError(errorMessage);
+      toast.error(t("errors.sessionCreateTitle"), { description: errorMessage });
+      return null;
+    }
+  };
+
+  const ensureSession = async (): Promise<AgentSession | null> => {
+    const existing = currentSessionRef.current;
+    if (existing && existing.id !== "new") return existing;
+    return createSession("");
+  };
+
+  // --- sending -------------------------------------------------------------------
+  const sendUserMessage = async (text: string): Promise<void> => {
+    if (budgetExceeded) {
+      toast.error(t("errors.budgetReachedTitle"), {
+        description: t("errors.budgetReachedDescription"),
+      });
+      return;
+    }
+
+    let sessionToUse = currentSessionRef.current;
+    if (!sessionToUse || sessionToUse.id === "new") {
+      const createdSession = await createSession(text.substring(0, 50));
+      if (!createdSession) {
+        toast.error(t("errors.title"), {
+          description: t("errors.sessionCreateFailed"),
+        });
+        return;
+      }
+      sessionToUse = createdSession;
+    }
+
+    // approvedTools is read from localStorage at send time (stable key).
+    const approvedTools = readApprovedToolsRaw(sessionToUse.id);
+
+    suggestionAbortRef.current?.abort();
+    setSuggestions([]);
+    sendMessage(
+      {
+        text,
+        files: files || [],
+      },
+      {
+        body: {
+          disabledTools: disabledTools,
+          approvedTools: approvedTools,
+        },
+      },
+    );
+    setFiles(null);
+    setFileItems(null);
+  };
+
+  // item 47: question_ask answers are dispatched as "[answer:…]" with no files.
+  const sendQuestionAnswer = (answerText: string): void => {
+    const approvedTools = readApprovedToolsRaw(currentSessionRef.current?.id);
+    suggestionAbortRef.current?.abort();
+    setSuggestions([]);
+    sendMessage(
+      { text: "[answer:" + answerText + "]", files: [] },
+      { body: { disabledTools, approvedTools } },
+    );
+  };
+
+  // --- follow-up suggestions (item 63) — verbatim from the monolith ------------
+  React.useEffect(() => {
+    if (!agent.suggestions_enabled) return;
+    if (status === "streaming" || status === "submitted") return;
+    if (!messages || messages.length === 0) return;
+    const lastAssistant = messages[messages.length - 1];
+    if (!lastAssistant || lastAssistant.role !== "assistant") return;
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    if (!lastUser) return;
+
+    suggestionAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    suggestionAbortRef.current = ctrl;
+
+    (async () => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+
+        const res = await fetch(
+          `${configContext?.backend}/agents/suggestions/${agent.id}`,
+          {
+            method: "POST",
+            signal: ctrl.signal,
+            headers: {
+              "Content-Type": "application/json",
+              User: user.id,
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              messages: [lastUser, lastAssistant],
+            }),
+          },
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const arr = Array.isArray(data?.suggestions) ? data.suggestions : [];
+        setSuggestions(arr.slice(0, 3).map(String));
+      } catch {
+        // Aborted or network error — silently drop. Suggestions are non-essential.
+      }
+    })();
+
+    return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    status,
+    messages.length,
+    agent.suggestions_enabled,
+    agent.id,
+    configContext?.backend,
+    user.id,
+  ]);
+
+  // --- tool pre-approvals (item 50) — mirror of the stable localStorage key ----
+  const [preApprovedTools, setPreApprovedTools] = React.useState<string[]>([]);
+  React.useEffect(() => {
+    setPreApprovedTools(readPreApprovedList(currentSession?.id));
+  }, [currentSession?.id]);
+
+  const approveToolForChat = React.useCallback((toolId: string) => {
+    const id = currentSessionRef.current?.id;
+    if (!id) return;
+    try {
+      const list = readPreApprovedList(id);
+      if (!list.includes(toolId)) list.push(toolId);
+      window.localStorage.setItem(
+        `pre-approved-tool-calls-${id}`,
+        JSON.stringify(list),
+      );
+      setPreApprovedTools(list);
+    } catch {
+      // localStorage unavailable — approval simply won't persist.
+    }
+  }, []);
+
+  const revokePreApprovedTool = React.useCallback((toolId: string) => {
+    const id = currentSessionRef.current?.id;
+    if (!id) return;
+    try {
+      const list = readPreApprovedList(id).filter((x) => x !== toolId);
+      window.localStorage.setItem(
+        `pre-approved-tool-calls-${id}`,
+        JSON.stringify(list),
+      );
+      setPreApprovedTools(list);
+    } catch {
+      // localStorage unavailable.
+    }
+  }, []);
+
+  // --- pinned knowledge scope mutations (items 66/67) ----------------------------
+  const addSessionItems = async (gids: string[]): Promise<void> => {
+    const session = await ensureSession();
+    if (!session) {
+      toast.error(t("errors.title"), {
+        description: t("errors.sessionCreateFailed"),
+      });
+      return;
+    }
+    const existing = new Set(sessionItems || []);
+    const fresh = gids.filter((gid) => !existing.has(gid));
+    if (fresh.length === 0) return;
+    const update = [...(sessionItems || []), ...fresh];
+    updateAgentSessionItems({
+      variables: { id: session.id, session_items: update },
+    });
+    setSessionItems(update);
+  };
+
+  const removeSessionItem = async (gid: string): Promise<void> => {
+    const session = await ensureSession();
+    if (!session) {
+      toast.error(t("errors.title"), {
+        description: t("errors.sessionCreateFailed"),
+      });
+      return;
+    }
+    const update = (sessionItems || []).filter((i) => i !== gid);
+    updateAgentSessionItems({
+      variables: { id: session.id, session_items: update },
+    });
+    setSessionItems(update);
+  };
+
+  // --- next-message attachments (items 74/75) -------------------------------------
+  const addFileItem = React.useCallback((s3Key: string) => {
+    setFileItems((prev) => [...(prev || []), s3Key]);
+  }, []);
+  const removeFileItem = React.useCallback((s3Key: string) => {
+    setFileItems((prev) => {
+      const next = (prev || []).filter((i) => i !== s3Key);
+      return next.length > 0 ? next : null;
+    });
+  }, []);
+
+  // s3 keys → presigned FileUIParts (data-URL fallback for s3-less items),
+  // verbatim from the monolith's updateMessageFiles.
+  React.useEffect(() => {
+    if (!fileItems) {
+      setFiles(null);
+      return;
+    }
+    const items: Item[] = fileItems.map(
+      (item) =>
+        ({
+          s3key: item,
+          name: item,
+          type: "file",
+        }) as unknown as Item,
+    );
+    (async () => {
+      const nextFiles = await Promise.all(
+        items.map(async (item) => {
+          if (!item.s3key) {
+            // Take all item fields and turn into a data url
+            let content = "";
+            Object.entries(item).forEach(([key, value]) => {
+              content += `${key}: ${value}\n`;
+            });
+            return {
+              type: "file" as const,
+              mediaType: item.type,
+              filename: item.name,
+              url: `data:text/plain;base64,${btoa(content)}`,
+            };
+          }
+          return {
+            type: "file" as const,
+            mediaType: item.type,
+            filename: item.name,
+            url: await getPresignedUrl(item.s3key),
+          };
+        }),
+      );
+      setFiles(nextFiles);
+    })();
+  }, [fileItems]);
+
+  // --- session files panel (items 64/79) -------------------------------------------
+  const [filesPanelOpen, setFilesPanelOpenState] = React.useState(false);
+  React.useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("chat.sessionFilesPanel.open");
+      if (stored === "true") setFilesPanelOpenState(true);
+    } catch {
+      // localStorage can throw in private browsing / SSR; default-closed is fine.
+    }
+  }, []);
+
+  const setFilesPanelOpen = async (open: boolean): Promise<void> => {
+    if (open) {
+      const session = await ensureSession();
+      if (!session) {
+        toast.error(t("errors.title"), {
+          description: t("errors.sessionCreateFailed"),
+        });
+        return;
+      }
+    }
+    setFilesPanelOpenState(open);
+    try {
+      window.localStorage.setItem("chat.sessionFilesPanel.open", String(open));
+    } catch {
+      // Persistence is best-effort.
+    }
+  };
+
+  // --- session files count (header chip, chat.md row 64) ----------------------------
+  const [sessionFilesCount, setSessionFilesCount] = React.useState<number | null>(
+    null,
+  );
+  const refreshFilesCount = React.useCallback(async (sessionId: string) => {
+    try {
+      const res = await sessionFilesApi.list(sessionId);
+      setSessionFilesCount(res.files?.length ?? 0);
+    } catch {
+      // Count is decorative — never block chat on it.
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const id = currentSession?.id;
+    if (!id || id === "new") {
+      setSessionFilesCount(null);
+      return;
+    }
+    refreshFilesCount(id);
+  }, [currentSession?.id, refreshFilesCount]);
+
+  // Refresh after each completed turn (streaming → ready).
+  const prevStatusRef = React.useRef<ChatStatus>(status as ChatStatus);
+  React.useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = status as ChatStatus;
+    const id = currentSessionRef.current?.id;
+    if (prev === "streaming" && status === "ready" && id && id !== "new") {
+      refreshFilesCount(id);
+    }
+  }, [status, refreshFilesCount]);
+
+  return {
+    agent,
+    session: currentSession,
+    writeAccess,
+    creatorEmail,
+    messages,
+    status: status as ChatStatus,
+    sendUserMessage,
+    sendQuestionAnswer,
+    stop: () => {
+      stop();
+    },
+    regenerate: () => {
+      regenerate();
+    },
+    setMessages,
+    addToolApprovalResponse,
+    ensureSession,
+    error,
+    errorRaw,
+    clearError,
+    tokenCounts,
+    maxInputLength,
+    modelOverride,
+    setModelOverride,
+    disabledTools,
+    toggleTool,
+    enableAll,
+    disableAll,
+    preApprovedTools,
+    approveToolForChat,
+    revokePreApprovedTool,
+    sessionItems,
+    addSessionItems,
+    removeSessionItem,
+    fileItems,
+    addFileItem,
+    removeFileItem,
+    suggestions,
+    filesPanelOpen,
+    setFilesPanelOpen,
+    sessionFilesCount,
+    budgetExceeded,
+    managedContextEnabled,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// useChatSessions — the list (history rail + /chat/[agent]/search)
+// ---------------------------------------------------------------------------
+
+export interface UseChatSessionsArgs {
+  agentId: string;
+  /** Title-contains filter, applied when length ≥ 3 (legacy behavior). */
+  search?: string;
+  limit?: number;
+}
+
+export interface UseChatSessionsResult {
+  /** The list query populates `.agent` as an object — cast at use site. */
+  sessions: AgentSession[];
+  itemCount: number;
+  loading: boolean;
+  /** Skeleton gate — true only until the first network response
+   *  (returnPartialData semantics kept from the legacy sidebar). */
+  initialLoading: boolean;
+  refetch: () => void;
+}
+
+export function useChatSessions({
+  agentId,
+  search,
+  limit = 20,
+}: UseChatSessionsArgs): UseChatSessionsResult {
+  const [initialLoadDone, setInitialLoadDone] = React.useState(false);
+
+  const sessionsQuery = useQuery(GET_AGENT_SESSIONS, {
+    returnPartialData: true,
+    fetchPolicy: "network-only",
+    nextFetchPolicy: "network-only",
+    variables: {
+      page: 1,
+      limit,
+      filters: {
+        agent: {
+          eq: agentId,
+        },
+        ...(search && search.length >= 3
+          ? {
+              title: {
+                contains: search,
+              },
+            }
+          : {}),
+      },
+    },
+    onCompleted: () => {
+      setInitialLoadDone(true);
+    },
+  });
+
+  const sessions: AgentSession[] =
+    sessionsQuery?.data?.agent_sessionsPagination?.items ||
+    sessionsQuery?.previousData?.agent_sessionsPagination?.items ||
+    [];
+  const itemCount: number =
+    sessionsQuery?.data?.agent_sessionsPagination?.pageInfo?.itemCount ??
+    sessionsQuery?.previousData?.agent_sessionsPagination?.pageInfo?.itemCount ??
+    0;
+
+  return {
+    sessions,
+    itemCount,
+    loading: sessionsQuery.loading,
+    initialLoading: !initialLoadDone && sessionsQuery.loading,
+    refetch: () => {
+      sessionsQuery.refetch();
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// useSessionMutations — named create (item 18) / rename (14) / delete (15/23)
+// ---------------------------------------------------------------------------
+
+export interface UseSessionMutationsResult {
+  /** Item 18 — named session creation (type "FLOW", as dormant mode today). */
+  createNamedSession: (title: string) => Promise<AgentSession | null>;
+  renameSession: (id: string, title: string) => Promise<boolean>;
+  deleteSession: (id: string) => Promise<boolean>;
+  deleteSessions: (ids: string[]) => Promise<{ deleted: number; failed: number }>;
+  creating: boolean;
+  renaming: boolean;
+  deleting: boolean;
+}
+
+export function useSessionMutations(agentId: string): UseSessionMutationsResult {
+  const { user } = React.useContext(UserContext);
+
+  const [createAgentSession, createResult] = useMutation(CREATE_AGENT_SESSION, {
+    refetchQueries: [GET_AGENT_SESSIONS, "GetAgentSessions"],
+  });
+  const [updateSessionTitle, renameResult] = useMutation(
+    UPDATE_AGENT_SESSION_TITLE,
+    {
+      refetchQueries: [GET_AGENT_SESSIONS, "GetAgentSessions"],
+    },
+  );
+  const [removeSession, removeResult] = useMutation(REMOVE_AGENT_SESSION_BY_ID, {
+    refetchQueries: [GET_AGENT_SESSIONS, "GetAgentSessions"],
+  });
+
+  const createNamedSession = async (
+    title: string,
+  ): Promise<AgentSession | null> => {
+    if (!title.trim()) return null;
+    try {
+      // Variable set kept verbatim from the legacy dialog (incl. the dormant
+      // `type: "FLOW"` / timestamps the operation does not declare).
+      const result = await createAgentSession({
+        variables: {
+          user: user.id,
+          agent: agentId,
+          type: "FLOW",
+          title: title.trim(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      if (result.errors || !result.data?.agent_sessionsCreateOne?.item?.id) {
+        return null;
+      }
+      return result.data.agent_sessionsCreateOne.item as AgentSession;
+    } catch {
+      return null;
+    }
+  };
+
+  const renameSession = async (id: string, title: string): Promise<boolean> => {
+    if (!title.trim()) return false;
+    try {
+      const result = await updateSessionTitle({
+        variables: { id, title: title.trim() },
+      });
+      return !result.errors;
+    } catch {
+      return false;
+    }
+  };
+
+  const deleteSession = async (id: string): Promise<boolean> => {
+    try {
+      const result = await removeSession({ variables: { id } });
+      return !result.errors;
+    } catch {
+      return false;
+    }
+  };
+
+  const deleteSessions = async (
+    ids: string[],
+  ): Promise<{ deleted: number; failed: number }> => {
+    const settled = await Promise.allSettled(
+      ids.map((id) => removeSession({ variables: { id } })),
+    );
+    let deleted = 0;
+    let failed = 0;
+    for (const result of settled) {
+      if (result.status === "fulfilled" && !result.value.errors) deleted += 1;
+      else failed += 1;
+    }
+    return { deleted, failed };
+  };
+
+  return {
+    createNamedSession,
+    renameSession,
+    deleteSession,
+    deleteSessions,
+    creating: createResult.loading,
+    renaming: renameResult.loading,
+    deleting: removeResult.loading,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// useAvailableModels — LiteLLM catalog vs Models table (item 26)
+// ---------------------------------------------------------------------------
+
+export interface ChatModelOption {
+  id: string;
+  name: string;
+  type: string | null;
+  provider: string;
+  active: boolean;
+  brand?: string | null;
+  region?: string | null;
+}
+
+/** LiteLLM catalog vs Models table by config flag; speech models filtered out. */
+export function useAvailableModels(): {
+  models: ChatModelOption[];
+  loading: boolean;
+} {
+  const configContext = React.useContext(ConfigContext);
+  const litellmEnabled = configContext?.liteLLM?.enabled === true;
+
+  const modelsQuery = useQuery(GET_MODELS_LITE, {
+    variables: { page: 1, limit: 100 },
+    fetchPolicy: "cache-and-network",
+    skip: litellmEnabled,
+  });
+  const litellmCatalogQuery = useQuery(GET_LITELLM_CATALOG, {
+    fetchPolicy: "cache-and-network",
+    skip: !litellmEnabled,
+  });
+
+  const models: ChatModelOption[] = litellmEnabled
+    ? (litellmCatalogQuery.data?.litellmCatalog ?? [])
+        .map((m: any) => ({
+          id: m.model_name,
+          name: m.model_name,
+          type: m.type ?? null,
+          provider: m.upstream_model ?? "",
+          active: true,
+          brand: m.brand ?? null,
+          region: m.region ?? null,
+        }))
+        .filter(
+          (m: ChatModelOption) =>
+            m.type !== "speech_to_text" && m.type !== "text_to_speech",
+        )
+    : (modelsQuery.data?.modelsPagination?.items ?? []).map((m: any) => ({
+        id: m.id,
+        name: m.name,
+        type: null,
+        provider: m.provider ?? "",
+        active: m.active,
+      }));
+
+  return {
+    models,
+    loading: litellmEnabled ? litellmCatalogQuery.loading : modelsQuery.loading,
+  };
+}

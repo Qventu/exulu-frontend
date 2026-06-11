@@ -23,9 +23,10 @@ import { UserContext } from "@/app/(application)/authenticated"
 import { getToken } from "@/lib/api/client"
 import { preprocessForTTS, chunkForTTS, TTS_MAX_CONCURRENT } from "@/lib/tts-text"
 import { MessageActions, MessageAction } from '@/components/ai-elements/message'
-import { Skeleton } from "./ui/skeleton"
 import { ChatAddToolApproveResponseFunction } from "ai"
-import { GradientText } from "@/components/primitives/gradient-text"
+import { Shimmer } from "@/components/ai-elements/shimmer"
+import { useReducedMotion } from "motion/react"
+import type { CSSProperties } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea";
 import { CheckIcon, XIcon } from "lucide-react"
@@ -454,6 +455,9 @@ export function MessageRenderer({
   ]
 
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
+  // Streaming placeholder (item 39 / U10): the ai-elements Shimmer animates
+  // continuously, so honor prefers-reduced-motion with a static line instead.
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -642,7 +646,7 @@ export function MessageRenderer({
                             value={editedText}
                             rows={3}
                             onChange={(e) => setEditedText(e.target.value)}
-                            className="flex-1 w-full min-w-[500px] resize-none"
+                            className="flex-1 w-full max-w-full resize-none"
                             autoFocus
                           />
                         </div>
@@ -997,7 +1001,7 @@ export function MessageRenderer({
               })}
 
               {files.length > 0 && (
-                <div className="grid grid-cols-6 min-w-[500px] gap-2 mt-3 mb-3">
+                <div className="grid w-full max-w-full grid-cols-2 gap-2 mt-3 mb-3 sm:grid-cols-4">
                   {files.map((file) => (
                     <FileItem key={file.s3Key + "_file_item_" + message.id} s3Key={file.s3Key} onRemove={() => { }} active={false} disabled={false} />
                   ))}
@@ -1005,14 +1009,25 @@ export function MessageRenderer({
               )}
 
               {status !== "ready" && status !== "error" && isLastMessage && message.role === 'assistant' && (
-                <div className="pointer-events-none">
-                  <Skeleton className="w-[500px] rounded h-[35px] rounded-lg">
-                    <GradientText
-                      text={streamingTexts[currentTextIndex]}
-                      gradient="linear-gradient(90deg, #404040 0%, #a3a3a3 50%, #d4d4d4 100%)"
-                      className="my-auto w-full h-full flex"
-                    />
-                  </Skeleton>
+                <div
+                  className="pointer-events-none py-1"
+                  // The vendored Shimmer (read-only) paints with the Tailwind v4
+                  // `--color-*` variable names; bridge them to this app's theme
+                  // tokens locally so the line stays theme-correct in both modes.
+                  style={{
+                    "--color-background": "hsl(var(--background))",
+                    "--color-muted-foreground": "hsl(var(--muted-foreground))",
+                  } as CSSProperties}
+                >
+                  {prefersReducedMotion ? (
+                    <span className="text-sm text-muted-foreground">
+                      {streamingTexts[currentTextIndex]}
+                    </span>
+                  ) : (
+                    <Shimmer as="span" className="text-sm">
+                      {streamingTexts[currentTextIndex]}
+                    </Shimmer>
+                  )}
                 </div>
               )}
 
@@ -1021,7 +1036,17 @@ export function MessageRenderer({
                 !editingMessageId &&
                 (message.metadata as any)?.type !== 'placeholder'
               ) && (
-                  <MessageActions className="mt-2">
+                  // T7 / item 55: hover-reveal is an enhancement only —
+                  // gated behind hover-capable pointers; touch devices and
+                  // the last assistant message keep the row always visible,
+                  // and keyboard focus reveals it (focus-within).
+                  <MessageActions
+                    className={cn(
+                      "mt-2 transition-opacity duration-150 motion-reduce:transition-none",
+                      message.role === 'assistant' && !isLastAssistantMessage &&
+                      "[@media(hover:hover)_and_(pointer:fine)]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-focus-within:opacity-100"
+                    )}
+                  >
                     {(showActions && message.role === 'assistant' && onRegenerate) && (
                       <MessageAction
                         className="mr-1"
@@ -1117,14 +1142,14 @@ export function MessageRenderer({
                         <>
                           <MessageAction
                             className="mr-1"
-                            label="Feedback"
+                            label="Good response"
                             onClick={() => handleFeedback?.(message.id, 'positive')}
                           >
                             <ThumbsUp className="size-3" />
                           </MessageAction>
                           <MessageAction
                             className="mr-1"
-                            label="Feedback"
+                            label="Bad response"
                             onClick={() => handleFeedback?.(message.id, 'negative')}
                           >
                             <ThumbsDown className="size-3" />
