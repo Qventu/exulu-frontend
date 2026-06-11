@@ -15,6 +15,7 @@
     "build-package": "NEXT_PRIVATE_STANDALONE=1 next build && rm -rf package/dist && cp -r .next/standalone package/dist && cp -r .next/static package/dist/.next/static && node scripts/add-shebang-to-server.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "check-messages": "node scripts/check-messages.js",
     "prettier": "prettier --check \"**/*.{js,jsx,ts,tsx}\"",
     "prettier:fix": "prettier --write \"**/*.{js,jsx,ts,tsx}\"",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
