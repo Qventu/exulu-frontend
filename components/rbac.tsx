@@ -51,6 +51,7 @@ export function RBACControl({
   allowedModes,
   initialRightsMode,
   modalMode = false,
+  subjectLabel = 'agent',
   initialUsers,
   initialRoles,
   initialTeams,
@@ -59,6 +60,13 @@ export function RBACControl({
 }: {
   allowedModes?: Modes[],
   modalMode?: boolean,
+  /**
+   * What the visibility copy refers to ("agent", "transcript", …) — fixes the
+   * context-blind "Only you can see this agent" on non-agent consumers
+   * (design/pages/transcriptions.md §4). Defaults to the legacy "agent" so
+   * existing call sites render byte-identical copy.
+   */
+  subjectLabel?: string,
   initialRightsMode: 'private' | 'users' | 'roles' | 'teams' | 'public' /* | 'projects' */ | undefined,
   initialUsers: { id: number, rights: 'read' | 'write' }[] | undefined,
   initialRoles: { id: string, rights: 'read' | 'write' }[] | undefined,
@@ -167,9 +175,12 @@ export function RBACControl({
 
   const filteredUsers = hydratedUsers?.slice(0, 5).filter(user => !!user?.id)
 
-  let visibilityOptions = VISIBILITY_OPTIONS
+  let visibilityOptions = VISIBILITY_OPTIONS.map(option => ({
+    ...option,
+    description: option.description.replace('agent', subjectLabel),
+  }))
   if (allowedModes?.length) {
-    visibilityOptions = VISIBILITY_OPTIONS.filter(option => allowedModes.includes(option.value as Modes))
+    visibilityOptions = visibilityOptions.filter(option => allowedModes.includes(option.value as Modes))
   }
 
   return (
