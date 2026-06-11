@@ -10,7 +10,7 @@ import { getToken } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 
 export default function GraphiQLComponent() {
 

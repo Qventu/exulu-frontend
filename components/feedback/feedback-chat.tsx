@@ -8,7 +8,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import { ArrowLeft, ArrowUp } from "lucide-react";
 import { StopIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
 
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 import { UserContext } from "@/app/(application)/authenticated";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

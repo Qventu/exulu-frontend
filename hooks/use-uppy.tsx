@@ -6,7 +6,7 @@ import "@uppy/dashboard/dist/style.min.css";
 import '@uppy/core/dist/style.min.css';
 import '@uppy/dashboard/dist/style.min.css';
 import { getToken } from "@/lib/api/client";
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 
 interface InitializeOptions {
     backend: string;

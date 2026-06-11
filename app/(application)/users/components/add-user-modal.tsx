@@ -3,7 +3,7 @@
 import React, { useState, useContext } from 'react';
 import { useMutation } from '@apollo/client';
 import { UserContext } from '@/app/(application)/authenticated';
-import { ConfigContext } from '@/components/config-context';
+import { ConfigContext } from '@/components/shell/config-context';
 import { CREATE_USER, GET_USERS } from '@/queries/queries';
 import {
   Dialog,

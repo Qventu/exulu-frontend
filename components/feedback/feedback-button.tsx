@@ -4,7 +4,7 @@ import { useContext, useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 import {
   SidebarMenuButton,
   SidebarMenuItem,

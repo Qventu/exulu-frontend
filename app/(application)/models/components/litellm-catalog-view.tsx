@@ -4,7 +4,7 @@ import { useContext } from "react";
 import { useQuery } from "@apollo/client";
 import { ExternalLink, Info } from "lucide-react";
 import { GET_LITELLM_CATALOG } from "@/queries/queries";
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/primitives/loading";

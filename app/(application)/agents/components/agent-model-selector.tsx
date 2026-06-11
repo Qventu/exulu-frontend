@@ -12,7 +12,7 @@ import {
 import { useQuery } from "@apollo/client";
 import { GET_LITELLM_CATALOG, GET_MODELS_LITE } from "@/queries/queries";
 import { Input } from "@/components/ui/input";
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 import { ProviderLogo } from "@/components/provider-logo";
 import { Badge } from "@/components/ui/badge";
 

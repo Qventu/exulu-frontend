@@ -10,9 +10,9 @@ import {
 import { setContext } from "@apollo/client/link/context";
 import { SessionProvider } from "next-auth/react";
 import * as React from "react";
-import { MainNavProvider } from "@/components/custom/main-nav";
+import { MainNavProvider } from "@/components/shell/main-nav";
 import { getToken } from "@/lib/api/client";
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 import { type User } from "@/types/models/user";
 
 interface AuthenticatedProps {

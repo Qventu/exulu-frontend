@@ -26,9 +26,10 @@ import { ChevronUp, ChevronDown, Moon, Sun, Code, MessageCircle, Users, Key, Lay
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "../ui/avatar";
-import { useLanguage } from "@/components/language-provider";
+import { useLanguage } from "@/components/shell/language-provider";
 import { useTranslations } from "next-intl";
 import { FeedbackButton } from "@/components/feedback/feedback-button";
+import { can, RightsUser } from "@/lib/rights";
 
 interface User {
   email: string;
@@ -110,6 +111,8 @@ const isSegmentActive = (pathname: string, path: string) =>
 const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => {
   const mainNavigationItems: { label: string; path: string; icon: React.ReactNode }[] = [];
   const bottomNavigationItems: { label: string; path: string; icon: React.ReactNode }[] = [];
+  // Shared RBAC predicates (lib/rights.ts) — same checks the future shell + Home consume.
+  const rightsUser: RightsUser = { super_admin: user.super_admin, role };
 
 
   mainNavigationItems.push({
@@ -148,7 +151,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     icon: <FolderOpen className="h-4 w-4" strokeWidth={1.5} />,
   });
 
-  if (user.super_admin || role.workflows === "write") {
+  if (can(rightsUser, { area: "workflows", level: "write" })) {
     mainNavigationItems.push({
       label: t('navigation.routines'),
       path: "workflows",
@@ -156,7 +159,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     });
   }
 
-  if (user.super_admin || role.evals === "read" || role.evals === "write") {
+  if (can(rightsUser, { area: "evals", level: "read" })) {
     mainNavigationItems.push({
       label: t('navigation.evals'),
       path: "evals",
@@ -164,7 +167,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     });
   }
 
-  if (user.super_admin) {
+  if (can(rightsUser, "super_admin")) {
     mainNavigationItems.push({
       label: t('navigation.feedback'),
       path: "feedback",
@@ -180,7 +183,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
   });
 
   if (
-    (user.super_admin || role.workflows === "write")
+    can(rightsUser, { area: "workflows", level: "write" })
     && config.n8n?.enabled
   ) {
     mainNavigationItems.push({
@@ -190,7 +193,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     });
   }
 
-  if (user.super_admin || role.users === "write") {
+  if (can(rightsUser, { area: "users", level: "write" })) {
     bottomNavigationItems.push({
       label: t('navigation.users'),
       path: "users",
@@ -198,7 +201,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     });
   }
 
-  if (user.super_admin) {
+  if (can(rightsUser, "super_admin")) {
     bottomNavigationItems.push({
       label: t('navigation.analytics'),
       path: "analytics",
@@ -207,7 +210,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
   }
 
   // Bottom navigation items
-  if (user.super_admin || role.api === "write") {
+  if (can(rightsUser, { area: "api", level: "write" })) {
     bottomNavigationItems.push({
       label: t('navigation.apiPlayground'),
       path: "explorer",
@@ -215,7 +218,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     });
   }
 
-  if (user.super_admin) {
+  if (can(rightsUser, "super_admin")) {
     bottomNavigationItems.push({
       label: t('navigation.themeSettings'),
       path: "configuration",
@@ -223,7 +226,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     });
   }
 
-  if (user.super_admin || role.api === "write") {
+  if (can(rightsUser, { area: "api", level: "write" })) {
     bottomNavigationItems.push({
       label: t('navigation.apiKeys'),
       path: "keys",
@@ -231,7 +234,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     });
   }
 
-  if (user.super_admin || role.variables === "write") {
+  if (can(rightsUser, { area: "variables", level: "write" })) {
     bottomNavigationItems.push({
       label: t('navigation.systemVariables'),
       path: "variables",
@@ -239,7 +242,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     });
   }
 
-  if (user.super_admin || role.agents === "write") {
+  if (can(rightsUser, { area: "agents", level: "write" })) {
     bottomNavigationItems.push({
       label: "Models",
       path: "models",
@@ -247,11 +250,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     });
   }
 
-  if (
-    user.super_admin ||
-    role.budget_management === "read" ||
-    role.budget_management === "write"
-  ) {
+  if (can(rightsUser, { area: "budget_management", level: "read" })) {
     bottomNavigationItems.push({
       label: "Budgets",
       path: "budgets",

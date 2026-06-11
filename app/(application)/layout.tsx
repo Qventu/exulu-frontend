@@ -5,13 +5,13 @@ import { cn } from "@/lib/utils";
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "@/components/shell/theme-provider";
 import Authenticated from "@/app/(application)/authenticated";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
-import { ConfigContextProvider } from "@/components/config-context";
+import { ConfigContextProvider } from "@/components/shell/config-context";
 import { configApi, BackendConfigType } from "@/lib/api/config";
-import { LanguageProvider } from "@/components/language-provider";
+import { LanguageProvider } from "@/components/shell/language-provider";
 import { LOCALE_COOKIE, Locale, defaultLocale } from "@/i18n/config";
 
 export default async function RootLayout({

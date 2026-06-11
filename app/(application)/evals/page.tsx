@@ -6,7 +6,7 @@ import { DataTable } from "./components/data-table";
 import { UserContext } from "@/app/(application)/authenticated";
 import { Brain } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 
 export const dynamic = "force-dynamic";
 

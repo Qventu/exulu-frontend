@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/select";
 import { getToken } from "@/lib/api/client"
 import { Agent } from "@EXULU_SHARED/models/agent";
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 import { ArrowUp, FileText, Form, Plus, Share2, Copy, Check, Sparkles, FolderOpen, Mic, Square, AlertTriangle, Wallet } from "lucide-react";
 import { SessionFilesPanel } from "@/components/session-files/session-files-panel";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -107,7 +107,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { useLanguage } from "@/components/language-provider";
+import { useLanguage } from "@/components/shell/language-provider";
 
 export function ChatLayout({
   session,

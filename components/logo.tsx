@@ -1,6 +1,6 @@
 "use client";
 
-import { ConfigContext } from "./config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 import { useContext } from "react";
 import { useTheme } from "next-themes";
 

@@ -3,7 +3,7 @@
 import { useContext, useState } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import { UserContext } from "@/app/(application)/authenticated";
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 import { Brain, Plus, AlertTriangle, ListChecks, RefreshCcw, Loader2, ChevronsUpDown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

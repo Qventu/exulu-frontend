@@ -16,7 +16,7 @@ import '@uppy/core/dist/style.min.css';
 import '@uppy/dashboard/dist/style.min.css';
 import { filesApi, S3FileListOutput, S3ObjectOutput } from "@/lib/api/files"
 import { useTheme } from "next-themes";
-import { ConfigContext } from "./config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 import { allFileTypes } from "@/types/models/agent";
 import { Input } from "./ui/input";
 import { DoubleArrowLeftIcon } from "@radix-ui/react-icons";

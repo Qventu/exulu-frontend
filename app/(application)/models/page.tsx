@@ -5,7 +5,7 @@ import { createColumns } from "./components/columns";
 import { DataTable } from "./components/data-table";
 import { LiteLLMCatalogView } from "./components/litellm-catalog-view";
 import { UserContext } from "@/app/(application)/authenticated";
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 
 export const dynamic = "force-dynamic";
 

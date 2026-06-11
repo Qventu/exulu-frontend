@@ -3,7 +3,7 @@
 import { useState, useEffect, useContext, useRef, useCallback } from "react";
 import { UIMessage } from "ai";
 import { useQuery } from "@apollo/client";
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 import { UserContext } from "@/app/(application)/authenticated";
 import { GET_IMAGE_GENERATION_STYLES } from "@/queries/queries";
 import { getToken } from "@/lib/api/client";

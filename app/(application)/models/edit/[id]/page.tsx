@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Info } from "lucide-react";
 import { ModelForm } from "../../components/model-form";
 import { Button } from "@/components/ui/button";
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 
 export const dynamic = "force-dynamic";
 

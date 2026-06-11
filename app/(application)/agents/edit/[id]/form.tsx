@@ -80,7 +80,7 @@ import {
 import { Variable } from "@/types/models/variable";
 import UppyDashboard, { FileDataCard } from "@/components/uppy-dashboard";
 import AgentVisual from "@/components/lottie";
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 import { TextPreview } from "@/components/custom/text-preview";
 import { PromptBrowserSheet } from "./components/prompt-browser-sheet";
 import { usePrompts } from "@/hooks/use-prompts";
