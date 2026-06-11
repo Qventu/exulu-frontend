@@ -80,16 +80,11 @@ export function Leaderboard({
       .slice(0, maxEntries);
   }, [data, maxEntries, hydrationQuery]);
 
-  console.log("[EXULU] IDs to hydrate:", idsToHydrate);
-  console.log("[EXULU] Hydration query:", hydrationQuery);
-
   // Fetch names if hydration is needed
   const { data: hydrationData, loading: hydrationLoading } = useQuery(hydrationQuery || query, {
     variables: { ids: idsToHydrate },
     skip: !hydrationQuery || idsToHydrate.length === 0
   });
-
-  console.log("[EXULU] Hydration data:", hydrationData);
 
   const leaderboardData = useMemo(() => {
     if (!data?.trackingStatistics) return [];
@@ -109,8 +104,6 @@ export function Leaderboard({
         if (hydrationData && hydrationField) {
           const hydratedItem = hydrationData[hydrationField]?.find(
             (h: any) => {
-              console.log("[EXULU] Hydrated item:", h);
-              console.log("[EXULU] Item group:", item.group);
               if (typeof h.id === "number") {
                 return h.id === parseInt(item.group);
               } else {

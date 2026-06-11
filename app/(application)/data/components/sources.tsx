@@ -349,7 +349,6 @@ export function ContextSources(props: DataDisplayProps) {
                                                                 return `Source update`;
                                                             }}
                                                             retryJob={(job: QueueJob) => {
-                                                                console.log("[EXULU] Retrying job: ", job);
                                                                 if (!job.data?.source || !job.data?.context) {
                                                                     return;
                                                                 }

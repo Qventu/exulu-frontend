@@ -56,20 +56,6 @@ export default function PromptsPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Developer easter egg in console
-  useEffect(() => {
-    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-      console.log(
-        '%c👋 Hey Developer!',
-        'font-size: 16px; font-weight: bold; color: hsl(257.9, 100%, 60%);'
-      );
-      console.log(
-        '%cKeyboard shortcuts:\n• Cmd/Ctrl + K → Quick create prompt\n• Cmd/Ctrl + / → Focus search',
-        'font-size: 12px; color: #888;'
-      );
-    }
-  }, []);
-
   // Reset page to 1 when filters change
   useEffect(() => {
     setPage(1);

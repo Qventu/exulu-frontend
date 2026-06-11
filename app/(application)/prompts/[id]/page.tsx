@@ -9,8 +9,6 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const data = await fetchGraphQLServerSide(GET_PROMPT_BY_ID.loc?.source.body || "", { id });
 
-  console.log(data);
-
   const prompt = data?.prompt_library_itemById;
 
   if (!data?.prompt_library_itemById) {

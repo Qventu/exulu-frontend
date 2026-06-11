@@ -492,9 +492,7 @@ export function MessageRenderer({
         )?.flatMap((part) => {
           const fileParts = (part as any).text.match(/<file name="([^"]+)">([^<]+)<\/file>/g);
           return fileParts?.map((filePart) => {
-            console.log("filePart", filePart);
             const s3Key = filePart.match(/<file name="([^"]+)">/)?.[1] ?? '';
-            console.log("s3Key", s3Key);
             const content = filePart.match(/<file name="([^"]+)">([^<]+)<\/file>/)?.[2] ?? '';
             return { s3Key, content } as { s3Key: string, content: string };
           }) ?? []

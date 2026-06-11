@@ -244,7 +244,6 @@ export function ContextEmbeddings(props: DataDisplayProps) {
                                                         currentValue={currentValue?.value || ""}
                                                         variables={variables}
                                                         onVariableSelect={(variableName) => {
-                                                            console.log("variableName", variableName);
                                                             if (currentValue) {
                                                                 updateEmbedderConfigs({
                                                                     variables: {

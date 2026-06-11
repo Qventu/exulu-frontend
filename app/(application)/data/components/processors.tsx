@@ -81,7 +81,6 @@ export function ContextProcessors(props: DataDisplayProps) {
         PROCESS_ITEMS(props.context),
         {
             onCompleted: (data) => {
-                console.log("[EXULU] Processor result", data);
                 const result = data[`${props.context}_itemsProcessItems`];
                 setDialogOpen(false);
 
@@ -109,7 +108,6 @@ export function ContextProcessors(props: DataDisplayProps) {
         }
     }>(PROCESS_ITEM(props.context), {
         onCompleted: (data) => {
-            console.log("data", data);
             const result = data[`${props.context}_itemsProcessItem`];
             toast.success(result.message || "Items processed successfully", {
                 description: result.jobs?.length

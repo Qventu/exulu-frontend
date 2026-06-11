@@ -745,8 +745,6 @@ export const NewItemDialog = ({ context, onItemCreated, fieldsToReturn, onSelect
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        console.log("formData", formData);
-
         if (!formData.name?.trim()) {
             toast.error("Required fields missing", {
                 description: "Please fill in name and description.",

@@ -158,8 +158,6 @@ export default function EvalSetEditorPage() {
       return;
     }
 
-    console.log("newTestCases", newTestCases);
-
     for (const testCaseId of newTestCases) {
       updateTestCase({
         variables: {

@@ -142,7 +142,6 @@ function RecentItemsView() {
   const { data: contextsData, loading: contextsLoading } = useQuery(GET_CONTEXTS);
 
   const contexts = contextsData?.contexts?.items || [];
-  console.log("contexts", contexts);
 
   // Track if we've checked all contexts and found no items
   const handleItemsCheck = (contextHasItems: boolean) => {
@@ -244,9 +243,6 @@ function ContextRecentItems({
     skip: !context.slug,
   });
 
-  console.log("raw", raw);
-  console.log("context.id + PAGINATION_POSTFIX", context.id + PAGINATION_POSTFIX);
-
   const data: {
     items: any;
     pageInfo: {
@@ -290,8 +286,6 @@ function ContextRecentItems({
   if (!items || items.length === 0) {
     return null; // Don't show contexts with no items
   }
-
-  console.log("items final", items);
 
   return (
     <Card>

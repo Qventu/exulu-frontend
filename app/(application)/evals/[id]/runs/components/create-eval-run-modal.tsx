@@ -182,8 +182,6 @@ export function CreateEvalRunModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("[EXULU] Eval run", evalRun);
-
     if (!evalRun.name) {
       toast({
         title: "Validation error",

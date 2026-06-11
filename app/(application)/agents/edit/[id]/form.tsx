@@ -145,7 +145,6 @@ export const VariableSelectionElement = ({
                     key={variable.id}
                     onSelect={() => {
                       onVariableSelect(variable.name);
-                      console.log("variable", variable)
                       setPopoverOpen(false);
                     }}
                   >
@@ -238,7 +237,6 @@ export default function AgentForm({
   const router = useRouter();
   const { user } = useContext(UserContext);
   const configContext = useContext(ConfigContext);
-  console.log("agent tools", agent.tools)
   const [enabledTools, setEnabledTools] = useState<AgentTool[]>(
     // Convert legacy string[] format to new object format
     agent.tools ? agent.tools : []
@@ -416,7 +414,6 @@ export default function AgentForm({
         "GetAgentById"
       ],
       onCompleted: (data) => {
-        console.log("Agent copied successfully", data)
         toast({ title: "Agent copied successfully" });
         router.push(`/agents/edit/${data?.agentsCopyOneById?.item?.id}`, { scroll: false });
       },
@@ -473,7 +470,6 @@ export default function AgentForm({
             <Button
               onClick={agentForm.handleSubmit(
                 async (data) => {
-                  console.log("data", data)
                   updateAgent({
                     variables: {
                       id: data.id,
@@ -737,7 +733,6 @@ export default function AgentForm({
                                   <Button
                                     className="mt-2"
                                     onClick={async () => {
-                                      console.log("agent", agent)
                                       router.push(
                                         `/chat/${agent.id}/new`,
                                       );
@@ -1097,7 +1092,6 @@ export default function AgentForm({
                                                   <CommandItem
                                                     key={context.id}
                                                     onSelect={() => {
-                                                      console.log("context", context)
                                                       setMemory(context.id);
                                                     }}
                                                   >
@@ -1346,14 +1340,12 @@ export default function AgentForm({
                                           config={enabledTools.find(t => t.id === "agentic_context_search")?.config || []}
                                           variables={variables}
                                           update={(value, name) => {
-                                            console.log("value", value)
                                             const updated = enabledTools.map(t => {
                                               if (t.id === "agentic_context_search") {
                                                 return { ...t, config: t.config.map(c => c.name === name ? { ...c, variable: value } : c) }
                                               }
                                               return t;
                                             });
-                                            console.log("updated", updated)
                                             setEnabledTools(updated);
                                           }}
                                         />

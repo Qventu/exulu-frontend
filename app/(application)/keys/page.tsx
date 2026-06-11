@@ -79,8 +79,6 @@ export default function ApiKeyManagement() {
         pollInterval: 30000, // polls every 30 seconds for updates on users
     });
 
-    console.log("data", data)
-
     // Generate new API key
     const generateApiKey = async () => {
         if (!newKeyName.trim()) {
@@ -120,7 +118,6 @@ export default function ApiKeyManagement() {
             }
         })
 
-        console.log("response", response)
         setNewlyGeneratedKey({
             id: `${response.data?.usersCreateOne?.item?.id}`,
             name: newKeyName,

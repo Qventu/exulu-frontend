@@ -12,7 +12,7 @@ interface SearchBarProps {
 }
 
 export function SearchBar({
-  onSearch = (query) => console.log(`Search query: ${query}`),
+  onSearch = () => {},
   placeholder = "Search...",
   className = "",
 }: SearchBarProps) {

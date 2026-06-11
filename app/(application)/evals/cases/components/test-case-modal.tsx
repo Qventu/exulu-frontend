@@ -58,7 +58,6 @@ export function TestCaseModal({
   // Split tools by type
   const { regularTools, agentTools, knowledgeSourceTools } = useMemo(() => {
     const tools = toolsData?.tools?.items || [];
-    console.log("tools", tools);
     return {
       regularTools: tools.filter(t => t.type === "function"),
       agentTools: tools.filter(t => t.type === "agent"),
@@ -232,33 +231,21 @@ export function TestCaseModal({
   };
 
   const handleAddTool = () => {
-    console.log("selectedTool", selectedTool);
-    console.log("expectedTools", expectedTools);
     if (selectedTool && !expectedTools.includes(selectedTool)) {
-      console.log("adding tool", selectedTool);
-      console.log("new expectedTools", [...expectedTools, selectedTool]);
       setExpectedTools([...expectedTools, selectedTool]);
       setSelectedTool("");
     }
   };
 
   const handleAddContext = () => {
-    console.log("selectedContext", selectedContext);
-    console.log("expectedKnowledgeSources", expectedKnowledgeSources);
     if (selectedContext && !expectedKnowledgeSources.includes(selectedContext)) {
-      console.log("adding context", selectedContext);
-      console.log("new expectedKnowledgeSources", [...expectedKnowledgeSources, selectedContext]);
       setExpectedKnowledgeSources([...expectedKnowledgeSources, selectedContext]);
       setSelectedContext("");
     }
   };
 
   const handleAddAgent = () => {
-    console.log("selectedAgent", selectedAgent);
-    console.log("expectedAgentTools", expectedAgentTools);
     if (selectedAgent && !expectedAgentTools.includes(selectedAgent)) {
-      console.log("adding agent", selectedAgent);
-      console.log("new expectedAgentTools", [...expectedAgentTools, selectedAgent]);
       setExpectedAgentTools([...expectedAgentTools, selectedAgent]);
       setSelectedAgent("");
     }

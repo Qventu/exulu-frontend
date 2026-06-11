@@ -365,7 +365,6 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                         tooltipText="Select or create items from/for knowledge sources to add to the project context."
                         onConfirm={(data) => {
                         const update = [...projectItems, ...data.map((x) => `${x.context.id}/${x.item.id}`)];
-                        console.log("update", update);
                         setProjectItems(update);
                         updateProject({
                           variables: {

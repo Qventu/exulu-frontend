@@ -57,7 +57,6 @@ export default function AgentsPage() {
       onCompleted: (data: {
         agentsCreateOne: { item: { id: string, type: "chat" } };
       }) => {
-        console.log(data);
         router.push(`/agents/edit/${data?.agentsCreateOne?.item?.id}`, {
           scroll: false,
         });

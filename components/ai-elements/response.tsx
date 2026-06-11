@@ -393,7 +393,6 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
 
   useEffect(() => {
     async function loadPdfUrl() {
-      console.log("Loading PDF URL for chunk", chunk);
       let pdfUrl: string | null = null;
       if (chunk?.chunk_metadata?.pdf) {
         pdfUrl = chunk?.chunk_metadata?.pdf;
@@ -822,7 +821,6 @@ const components = {
         language={language as BundledLanguage}
       >
         <CodeBlockCopyButton
-          onCopy={() => console.log('Copied code to clipboard')}
           onError={() => console.error('Failed to copy code to clipboard')}
         />
       </CodeBlock>

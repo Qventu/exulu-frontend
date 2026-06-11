@@ -86,8 +86,6 @@ export default async function SessionsPage({
       }
     );
 
-    console.log("[EXULU] Agent data", agentData);
-
     if (!agentData?.agentById) {
       return <Alert variant="destructive">
         <ExclamationTriangleIcon className="size-4" />

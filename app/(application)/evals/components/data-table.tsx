@@ -136,7 +136,6 @@ export function DataTable<TData, TValue>({
 
           <CreateEvalSetModal
             onSuccess={() => {
-              console.log("Eval set created, refetching");
               refetch();
             }}
           />

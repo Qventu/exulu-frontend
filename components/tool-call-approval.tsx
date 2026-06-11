@@ -99,7 +99,6 @@ export const ToolCallApproval = ({
                                     });
                                     return;
                                 }
-                                console.log("[EXULU] Adding tool approval response", part.approval!.id);
                                 addToolApprovalResponse({
                                     id: part.approval!.id as string,
                                     approved: true,
@@ -122,7 +121,6 @@ export const ToolCallApproval = ({
                             size="default"
                             className="flex-1 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                             onClick={() => {
-                                console.log("[EXULU] Adding tool approval response", part.approval!.id);
                                 addToolApprovalResponse({
                                     id: part.approval!.id as string,
                                     approved: true,
@@ -137,7 +135,6 @@ export const ToolCallApproval = ({
                             size="default"
                             className="bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black"
                             onClick={() => {
-                                console.log("[EXULU] Adding tool approval response", part.approval!.id);
                                 addToolApprovalResponse({
                                     id: part.approval!.id as string,
                                     approved: false,

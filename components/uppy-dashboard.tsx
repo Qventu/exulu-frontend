@@ -58,7 +58,6 @@ export function FileDataCard({ s3key, children }: { s3key: string, children?: Re
   // Get the part after _EXULU_
   name = name.split("_EXULU_").pop() || "";
 
-  console.log("s3Key", s3key)
   return <Card>
     <CardHeader className="pb-3">
       <CardTitle className="text-sm max-w-[500px] truncate">
@@ -92,9 +91,7 @@ export function FileDataCard({ s3key, children }: { s3key: string, children?: Re
               className="h-7 px-2"
               onClick={() => {
                 files.download(s3key).then(async res => {
-                  console.log("res", res);
                   const json = await res.json()
-                  console.log("res", json);
                   const downloadUrl = json.url;
                   window.open(downloadUrl, '_blank');
                   return;
@@ -244,8 +241,6 @@ export const FileGalleryAndUpload = ({
     },
   })
 
-  console.log("!! data !!", data)
-
   const { theme } = useTheme()
   const uppy = useUppy(
     {
@@ -257,7 +252,6 @@ export const FileGalleryAndUpload = ({
       },
       callbacks: {
         uploadSuccess: async (data) => {
-          console.log("data", data)
           const fullKey = data.s3Key || data.key;
 
           // Add the newly uploaded file to our state
@@ -503,9 +497,7 @@ export const FileItem = ({ s3Key, onSelect, onRemove, active, disabled, addToCon
           className="h-6 w-6 bg-background/80 hover:bg-background"
           onClick={() => {
             files.download(s3Key).then(async res => {
-              console.log("res", res);
               const json = await res.json()
-              console.log("res", json);
               const downloadUrl = json.url;
               window.open(downloadUrl, '_blank');
               return;
@@ -551,7 +543,6 @@ export const getPresignedUrl = async (fileKey: string) => {
   }
   const response = await files.download(fileKey)
   const json = await response.json();
-  console.log("json", json)
   signedUrlCache[fileKey] = {
     url: json.url,
     expiresAt: Date.now() + 60 * 1000, // 1 minute
@@ -561,7 +552,6 @@ export const getPresignedUrl = async (fileKey: string) => {
 
 const SecureImageRenderComponent = ({ fileKey }: { fileKey: string }) => {
   // Gets a signed key to show the image
-  console.log("key", fileKey)
   const query = useTanstackQuery({
     queryKey: ['imageQuery', fileKey],
     staleTime: 30000,

@@ -373,11 +373,6 @@ export function ChatLayout({
         setError(error?.message || "An unexpected error occurred. Please try again.")
       }
     },
-    onData: (data) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log("[Chat Data]", data);
-      }
-    },
     transport: new DefaultChatTransport({
       api: `${configContext?.backend}${agent.slug}/${agent.id}`,
       // only send the last message to the server: we load
@@ -613,14 +608,7 @@ export function ChatLayout({
       sessionToUse = createdSession;
     }
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log("[EXULU] Current session", currentSession);
-    }
     const approvedTools = localStorage.getItem(`pre-approved-tool-calls-${currentSession?.id}`) || [];
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log("[EXULU] Approved tools", approvedTools);
-    }
 
     suggestionAbortRef.current?.abort();
     setSuggestions([]);
@@ -1062,9 +1050,6 @@ export function ChatLayout({
                 {messages?.length > 0 ? (
                   <MessageRenderer
                     handleFeedback={(messageId: string, feedback: 'positive' | 'negative') => {
-                      if (process.env.NODE_ENV === 'development') {
-                        console.log("Feedback submitted -", "messageId:", messageId, "feedback:", feedback);
-                      }
                       const message = messages?.find((m) => m.id === messageId);
                       const referencedItems = feedback === 'negative' && message
                         ? extractReferencedItems(message)

@@ -31,7 +31,6 @@ export default function WorkflowsPage() {
     queueName?: string | undefined,
     variables?: string[] | undefined
   ) => {
-    console.log("Run workflow:", workflowId, queueName);
     setDialogOpen({
       id: workflowId,
       queue: queueName,
@@ -40,7 +39,6 @@ export default function WorkflowsPage() {
   };
 
   const onShowQueueManagementModal = (queueName: string) => {
-    console.log("Show queue management modal:", queueName);
     setQueueManagementModalOpen(queueName);
   };
 
@@ -53,7 +51,6 @@ export default function WorkflowsPage() {
 
   const [runWorkflow, { loading }] = useMutation(RUN_WORKFLOW, {
     onCompleted: (data) => {
-      console.log("Template run completed:", data);
       toast("Template run completed", {
         description: "The template has been run successfully.",
       });

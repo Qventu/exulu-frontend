@@ -36,8 +36,6 @@ export default function GraphiQLComponent() {
       </Alert>
     }
     
-    console.log("token", data)
-
     const fetcher = createGraphiQLFetcher({
         url: `${configContext?.backend}/graphql`, headers: {
             "Authorization": `Bearer ${data}`

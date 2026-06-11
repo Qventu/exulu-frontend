@@ -22,8 +22,6 @@ export function ConfigContextProvider({ children, config }: {
   config: ConfigContextType;
 }) {
 
-  console.log("[EXULU] Config: ", config);
-
   if (!config) {
     throw new Error("Config not found");
   }

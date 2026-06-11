@@ -40,7 +40,6 @@ export const columns: ColumnDef<any>[] = [
     cell: ({ row }) => {
       /*const label = labels.find((label) => label.value === row.original.label)*/
 
-      console.log("original", row.original);
       return (
         <div className="flex flex-column grid grid-cols-1">
           {/*{label && <Badge variant="outline">{label.label}</Badge>}*/}

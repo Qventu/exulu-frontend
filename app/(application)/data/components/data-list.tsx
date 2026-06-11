@@ -203,7 +203,6 @@ export function DataList({
         }
     }>(CREATE_ITEM(activeFolder, []), {
         onCompleted: (data) => {
-            console.log("data", data);
             const id = data ? data[activeFolder + CREATE_ONE_POSTFIX]?.item?.id : undefined;
             if (id) {
                 router.push(`/data/${activeFolder}/${id}`);
@@ -482,10 +481,6 @@ export function DataList({
                                     variant="outline"
                                     className="size-8 p-0"
                                     onClick={() => {
-                                        console.log(
-                                            "itemsData.data?.pageInfo.hasPreviousPage",
-                                            data?.pageInfo.hasPreviousPage,
-                                        );
                                         setParams({
                                             page: data?.pageInfo.hasPreviousPage ? page - 1 : undefined,
                                             search: search ?? undefined,
@@ -547,8 +542,6 @@ export function DataList({
                         }}
                         onCancel={() => setShowAdvancedSearch(false)}
                         onConfirm={async (graphqlFilters, rawFilters, limit) => {
-                            console.log("graphqlFilters", graphqlFilters);
-                            console.log("rawFilters", rawFilters);
                             setAdvancedFilters(graphqlFilters);
                             setSavedFilterState({
                                 filters: rawFilters,

@@ -74,7 +74,6 @@ export function EvalRunColumn({
   };
 
   const getCellColor = (result: JobResult | null): string => {
-    console.log("[EXULU] result", result?.result);
     if (!result || result.state !== "completed" || result.result === undefined) {
       return "";
     }

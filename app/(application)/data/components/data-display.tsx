@@ -124,9 +124,6 @@ export function DataDisplay(props: DataDisplayProps) {
   const context = props.context;
   const fields = props.context.fields.map(field => field.name);
 
-  console.log("fields", fields);
-  console.log("context", context);
-
   const { loading, error, refetch } = useQuery<{
     item: Item;
   }>(GET_ITEM_BY_ID(props.context.id, fields, true), {
@@ -138,7 +135,6 @@ export function DataDisplay(props: DataDisplayProps) {
     fetchPolicy: "no-cache",
     nextFetchPolicy: "network-only",
     onCompleted: (data) => {
-      console.log("Item data", data);
       const item = data[props.context.id + "_itemsById"];
       setData({
         ...item,
@@ -249,7 +245,6 @@ export function DataDisplay(props: DataDisplayProps) {
     }
   }>(PROCESS_ITEM(props.context.id), {
     onCompleted: (data) => {
-      console.log("data", data);
       const result = data[`${props.context.id}_itemsProcessItem`];
       toast.success(result.message || "Items processed successfully", {
         description: result.jobs?.length
@@ -303,7 +298,6 @@ export function DataDisplay(props: DataDisplayProps) {
       }
       const tags: string[] = [...copy];
       tags.push(e.target.value);
-      console.log("tags", tags);
       form.setValue("tags", tags.join(","));
       setData({
         ...data,
@@ -842,7 +836,6 @@ export function DataDisplay(props: DataDisplayProps) {
                                             type="text"
                                             disabled={!editing}
                                             onChange={(e) => {
-                                              console.log("e", e)
                                               setData({
                                                 ...data,
                                                 external_id: e.target.value,
@@ -1211,7 +1204,6 @@ export function DataDisplay(props: DataDisplayProps) {
                                                     dependencies={[]}
                                                     selectionLimit={1}
                                                     onConfirm={(keys) => {
-                                                      console.log("keys", keys)
                                                       setData({
                                                         ...data,
                                                         [contextField.name]: keys[0],
@@ -1496,7 +1488,6 @@ export function DataDisplay(props: DataDisplayProps) {
                 if (!data?.id) {
                   return;
                 }
-                console.log("Generate embeddings for item:", data?.id);
                 setConfirmationModal(null);
                 generateChunksMutation({
                   variables: {
@@ -1530,7 +1521,6 @@ export function DataDisplay(props: DataDisplayProps) {
                 if (!data?.id) {
                   return;
                 }
-                console.log("Delete embeddings for item:", data?.id);
                 setConfirmationModal(null);
                 deleteChunksMutation({
                   variables: {

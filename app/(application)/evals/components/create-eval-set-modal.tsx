@@ -25,23 +25,19 @@ interface CreateEvalSetModalProps {
 export function CreateEvalSetModal({
   onSuccess,
 }: CreateEvalSetModalProps) {
-  console.log("CreateEvalSetModal rendered.");
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState("");
 
   const [createEvalSet, { loading }] = useMutation(CREATE_EVAL_SET, {
-    onCompleted: (data: any) => {
-      console.log("Mutation completed:", data);
-     
+    onCompleted: () => {
       setName("");
       setDescription("");
       onSuccess();
       setOpen(false);
     },
     onError: (error: any) => {
-      console.log("Mutation error:", error);
-   
+      console.error("Mutation error:", error);
     },
   });
 

@@ -69,8 +69,6 @@ export function CreateProjectDialog({ open, onOpenChange, refetchProjects }: Cre
         },
       });
 
-      console.log(result);
-
       const newProject = result.data?.projectsCreateOne?.item;
       
       if (newProject) {

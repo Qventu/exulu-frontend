@@ -624,10 +624,6 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                       variant="outline"
                       className="size-8 p-0"
                       onClick={() => {
-                        console.log(
-                          "itemsData.data?.pageInfo.hasPreviousPage",
-                          jobs?.pageInfo?.hasPreviousPage,
-                        );
                         setPage(jobs?.pageInfo?.hasPreviousPage ? jobs?.pageInfo?.currentPage - 1 : 1);
                         refetchJobs();
                       }}

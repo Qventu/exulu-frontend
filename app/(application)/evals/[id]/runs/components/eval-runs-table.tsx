@@ -57,7 +57,6 @@ export function EvalRunsTable({ evalRuns, evalSet, onRefetch }: EvalRunsTablePro
   const [runToStart, setRunToStart] = useState<EvalRun | null>(null);
   const [viewingTestCase, setViewingTestCase] = useState<TestCase | null>(null);
 
-  console.log("[EXULU] Eval set", evalSet);
   const { data: testCasesData, loading: loadingTestCases } = useQuery(GET_TEST_CASES, {
     variables: {
       page: 1,

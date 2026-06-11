@@ -34,7 +34,6 @@ export default async function RootLayout({
     if (!user) return redirect(`/login${pathname ? `?destination=${pathname}` : ''}`);
 
     const backend = await api.backend();
-    console.log("[EXULU] backend", backend)
     const json: BackendConfigType = await backend.json();
 
     // Load messages for the current locale

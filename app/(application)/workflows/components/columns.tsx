@@ -882,7 +882,6 @@ function WorkflowActionsCell({
           size="sm"
           onClick={() => {
             onRunWorkflow(workflow.id);
-            console.log('Run workflow:', workflow.id);
           }}
           className="h-8"
         >
