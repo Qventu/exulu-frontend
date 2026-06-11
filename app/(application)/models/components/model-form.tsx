@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loading } from "@/components/ui/loading";
+import { Loading } from "@/components/primitives/loading";
 import {
   Select,
   SelectContent,

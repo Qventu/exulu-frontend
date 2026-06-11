@@ -37,7 +37,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loading } from "@/components/ui/loading";
+import { Loading } from "@/components/primitives/loading";
 
 export function ChatSessionsComponent({ agent, type }: { agent: Agent, type: string }) {
 

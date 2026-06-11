@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loading } from "@/components/ui/loading";
+import { Loading } from "@/components/primitives/loading";
 import { useTranslations } from "next-intl";
 
 export function AgentDelete({

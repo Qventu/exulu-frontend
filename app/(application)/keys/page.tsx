@@ -18,7 +18,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { RoleSelector } from "@/components/ui/role-selector"
+import { RoleSelector } from "@/components/widgets/role-selector"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import {

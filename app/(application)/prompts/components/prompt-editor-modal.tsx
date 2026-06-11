@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MarkdownEditor } from "@/components/ui/markdown-editor";
+import { MarkdownEditor } from "@/components/primitives/markdown-editor";
 import { Badge } from "@/components/ui/badge";
 import { X, Lightbulb, Check, ChevronsUpDown, FileCode } from "lucide-react";
 import { PromptLibrary } from "@/types/models/prompt-library";

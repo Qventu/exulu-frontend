@@ -5,7 +5,7 @@ import { SkillFileNode } from "@/types/models/skill";
 import { skillsApi } from "@/lib/api/skills";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MarkdownEditor } from "@/components/ui/markdown-editor";
+import { MarkdownEditor } from "@/components/primitives/markdown-editor";
 import { Save, Loader2, FileText } from "lucide-react";
 import { toast } from "sonner";
 

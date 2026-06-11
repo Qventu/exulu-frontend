@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog"
 import { Item } from "@/types/models/item";
 import { GET_ITEMS, PAGINATION_POSTFIX, CREATE_ITEM, GET_CONTEXT_PRESETS, INCREMENT_PRESET_USAGE } from "@/queries/queries";
-import { Loading } from "./ui/loading";
+import { Loading } from "@/components/primitives/loading";
 import { LoadingStates } from "@/components/loading-states";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";

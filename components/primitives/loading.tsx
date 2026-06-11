@@ -5,7 +5,7 @@ export const Loading = ({ className }: { className?: null | string }) => {
     <svg
       aria-hidden="true"
       role="status"
-      className={cn("inline w-4 h-4 text-white animate-spin fill-inherit", className)}
+      className={cn("inline w-4 h-4 text-current animate-spin fill-inherit", className)}
       viewBox="0 0 100 101"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"

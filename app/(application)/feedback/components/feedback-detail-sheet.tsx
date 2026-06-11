@@ -11,7 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Loading } from "@/components/ui/loading";
+import { Loading } from "@/components/primitives/loading";
 import {
   GET_AGENT_MESSAGES,
   GET_USER_BY_ID,

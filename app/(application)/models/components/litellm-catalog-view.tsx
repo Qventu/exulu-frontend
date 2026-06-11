@@ -7,7 +7,7 @@ import { GET_LITELLM_CATALOG } from "@/queries/queries";
 import { ConfigContext } from "@/components/config-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loading } from "@/components/ui/loading";
+import { Loading } from "@/components/primitives/loading";
 import { ProviderLogo } from "@/components/provider-logo";
 import {
   Table,

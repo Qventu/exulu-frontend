@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loading } from "@/components/ui/loading";
+import { Loading } from "@/components/primitives/loading";
 import { AgentModelSelector } from "@/app/(application)/agents/components/agent-model-selector";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";

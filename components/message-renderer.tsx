@@ -25,7 +25,7 @@ import { preprocessForTTS, chunkForTTS, TTS_MAX_CONCURRENT } from "@/lib/tts-tex
 import { MessageActions, MessageAction } from '@/components/ai-elements/message'
 import { Skeleton } from "./ui/skeleton"
 import { ChatAddToolApproveResponseFunction } from "ai"
-import { GradientText } from "./ui/shadcn-io/gradient-text"
+import { GradientText } from "@/components/primitives/gradient-text"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea";
 import { CheckIcon, XIcon } from "lucide-react"

@@ -31,7 +31,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loading } from "@/components/ui/loading";
+import { Loading } from "@/components/primitives/loading";
 import { LoadingStates, type LoadingStatesVariant } from "@/components/loading-states";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -52,7 +52,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { MarkdownEditor } from "@/components/ui/markdown-editor";
+import { MarkdownEditor } from "@/components/primitives/markdown-editor";
 import {
   Tooltip,
   TooltipContent,

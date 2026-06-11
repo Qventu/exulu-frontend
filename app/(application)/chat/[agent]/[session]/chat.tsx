@@ -50,7 +50,7 @@ import { Button } from "@/components/ui/button";
 import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation";
 import { RBACControl } from "@/components/rbac";
 import { toast } from "sonner";
-import { Loading } from "@/components/ui/loading";
+import { Loading } from "@/components/primitives/loading";
 import { Badge } from "@/components/ui/badge";
 import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
 import { FileItem, getPresignedUrl } from "@/components/uppy-dashboard";

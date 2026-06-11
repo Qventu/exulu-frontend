@@ -8,7 +8,7 @@ import { TestCase } from "@/types/models/test-case";
 import { Clock, XCircle, Pause, AlertTriangle, Loader2, MoreVertical, Edit, Play, Square, Copy, RefreshCcw, Trash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Loading } from "@/components/ui/loading";
+import { Loading } from "@/components/primitives/loading";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 

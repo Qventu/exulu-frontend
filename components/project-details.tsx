@@ -14,7 +14,7 @@ import { Trash2, Plus, MessageSquare, Settings2, Files, AlertTriangle, Shield, P
 import { RBACControl } from "@/components/rbac";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Loading } from "./ui/loading";
+import { Loading } from "@/components/primitives/loading";
 import { useRouter } from "next/navigation";
 import { AgentSession } from "@/types/models/agent-session";
 import { Project } from "@/types/models/project";

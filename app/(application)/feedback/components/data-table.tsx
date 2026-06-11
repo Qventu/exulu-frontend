@@ -32,7 +32,7 @@ import {
 } from "@/queries/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loading } from "@/components/ui/loading";
+import { Loading } from "@/components/primitives/loading";
 import {
   Table,
   TableBody,

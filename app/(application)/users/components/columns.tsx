@@ -7,8 +7,8 @@ import { User } from "@EXULU_SHARED/models/user";
 import { DataTableColumnHeader } from "./data-table-column-header";
 import { DataTableRowActions } from "./data-table-row-actions";
 import { SuperAdminToggle } from "./super-admin-toggle";
-import { RoleSelector } from "@/components/ui/role-selector";
-import { TeamSelector } from "@/components/ui/team-selector";
+import { RoleSelector } from "@/components/widgets/role-selector";
+import { TeamSelector } from "@/components/widgets/team-selector";
 
 export const createColumns = (
   currentUser: any,
