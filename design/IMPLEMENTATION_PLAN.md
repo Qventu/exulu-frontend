@@ -517,7 +517,7 @@ Per-page entries below list only doc, scope, **page-specific dependencies**, and
 | # | Work item | Doc | Scope | Phase | Depends on | Status |
 |---|---|---|---|---|---|---|
 | 0.1 | Security & correctness fixes | codebase-structure §4, navigation §7 | S | 0 | — | done (key rotation is a human action in vendor dashboards) |
-| 0.2 | Hygiene & structure (Wave 0) | codebase-structure §4 | M | 0 | — | partial — lint guards + check-messages exist and pass locally, but no CI workflow runs lint/tsc/check-messages (only gitleaks + release builds) |
+| 0.2 | Hygiene & structure (Wave 0) | codebase-structure §4 | M | 0 | — | done (lint guards + check-messages enforced in CI via .github/workflows/quality.yml: lint, tsc, i18n parity, build on every PR) |
 | 0.3 | Design tokens & theme safety | audits/design-system R1–R13 | M | 0 | — | done |
 | 0.4 | Scaffolding + core primitives | codebase-structure §1–2 | M | 0 | 0.2, 0.3 | done (15 core primitives shipped; remaining registry primitives built on demand by first consumer, per plan) |
 | 1A | Shell: Spine sidebar, rights, guards, mobile nav | navigation.md | L | 1 | 0.1, 0.2, 0.4 | pending |
