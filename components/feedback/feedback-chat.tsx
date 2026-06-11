@@ -35,9 +35,9 @@ export function FeedbackChat({ kind, sessionId, onBack }: Props) {
   const fb = config?.feedback;
   if (!fb?.enabled) return null;
 
-  const agentSlug = kind === "bug" ? fb.bugAgentSlug : fb.featureAgentSlug;
-  const agentId = kind === "bug" ? fb.bugAgentId : fb.featureAgentId;
-  const api = `${fb.backend}/agents/${agentSlug}/run/${agentId}`;
+  // Same-origin proxy route; FEEDBACK_TOKEN is injected server-side there and
+  // never reaches the browser.
+  const api = `/api/feedback/${kind}`;
 
   const feedbackContext = useMemo(
     () => ({
@@ -72,7 +72,6 @@ export function FeedbackChat({ kind, sessionId, onBack }: Props) {
           feedbackContext,
         },
         headers: {
-          'exulu-api-key': `${fb.token}`,
           User: user?.id ?? "anonymous",
           Session: sessionId,
           Stream: "true",

@@ -21,11 +21,13 @@ export async function GET(request: Request) {
         google_client_id: process.env.GOOGLE_CLIENT_ID,
         auth_mode: process.env.AUTH_MODE,
         langfuse: process.env.LANGFUSE_URI,
+        // FEEDBACK_TOKEN is deliberately NOT included: this endpoint is
+        // unauthenticated and the token is a server-only secret (the
+        // /api/feedback/[kind] proxy injects it server-side).
         feedback: feedbackEnabled
             ? {
                 enabled: true as const,
                 backend: process.env.FEEDBACK_BACKEND!,
-                token: process.env.FEEDBACK_TOKEN!,
                 agentSlug: process.env.FEEDBACK_AGENT_SLUG ?? "/agent",
                 bugAgentId:
                     process.env.FEEDBACK_AGENT_BUG_ID ??

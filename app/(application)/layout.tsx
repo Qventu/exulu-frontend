@@ -42,9 +42,10 @@ export default async function RootLayout({
 
     const config = {
         feedback: {
+            // FEEDBACK_TOKEN is a server-only secret: it stays out of this
+            // client-serialized config and is injected by /api/feedback/[kind].
             enabled: process.env.FEEDBACK_ENABLED === "true",
             backend: process.env.FEEDBACK_BACKEND || "",
-            token: process.env.FEEDBACK_TOKEN || "",
 
             featureAgentSlug: process.env.FEATURE_AGENT_SLUG || "",
             featureAgentId: process.env.FEATURE_AGENT_ID || "",
