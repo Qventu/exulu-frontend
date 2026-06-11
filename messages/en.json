@@ -1020,5 +1020,162 @@
     "signInAgain": "Sign in again",
     "keysCrossLink": "Need an org-level key?",
     "keysCrossLinkAction": "API keys"
+  },
+  "auth": {
+    "signIn": {
+      "title": "Sign in",
+      "subtitlePassword": "Enter your email and password.",
+      "subtitleOtp": "We'll email you a one-time code.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "m@example.com",
+      "passwordLabel": "Password",
+      "submitPassword": "Sign in",
+      "submitOtp": "Email me a code",
+      "or": "or",
+      "continueWithGoogle": "Continue with Google",
+      "trustNote": "Processed and stored in the EU. Never used to train AI models.",
+      "noAccount": "No account? Ask your administrator."
+    },
+    "otp": {
+      "title": "Check your email",
+      "subtitle": "We sent a 6-digit code to <strong>{email}</strong>. It expires in 3 minutes.",
+      "codeLabel": "One-time code",
+      "submit": "Submit code",
+      "resend": "Resend code",
+      "resendCooldown": "Resend code ({seconds}s)",
+      "resent": "A new code is on its way.",
+      "changeEmail": "Use a different email"
+    },
+    "errors": {
+      "title": "Sign-in failed",
+      "CredentialsSignin": "Incorrect email or password.",
+      "EmailSignin": "The sign-in code could not be sent. Check the address and try again.",
+      "Verification": "That code is invalid or has expired. Request a new one and try again.",
+      "Configuration": "Sign-in is not configured correctly. Please contact your administrator.",
+      "AccessDenied": "You don't have permission to sign in. Contact your administrator if you think this is a mistake.",
+      "OAuthSignin": "Google sign-in could not be started. Please try again.",
+      "OAuthCallback": "Google sign-in did not complete. Please try again.",
+      "OAuthAccountNotLinked": "This email is already linked to a different sign-in method. Use that method instead.",
+      "SessionRequired": "Please sign in to continue.",
+      "Default": "Something went wrong while signing you in. Please try again."
+    },
+    "footer": {
+      "copyright": "© {year}",
+      "terms": "Terms & Conditions",
+      "languageLabel": "Language"
+    },
+    "boundary": {
+      "title": "Something went wrong",
+      "description": "The sign-in page hit an unexpected error. Please try again.",
+      "retry": "Try again"
+    }
+  },
+  "settings": {
+    "description": "How Exulu looks, speaks, and responds to you.",
+    "appearance": {
+      "title": "Appearance",
+      "description": "Choose how the interface is themed. System follows your device setting."
+    },
+    "language": {
+      "title": "Language",
+      "description": "The language of the interface.",
+      "placeholder": "Select a language",
+      "hint": "Changing the language reloads the page.",
+      "confirmTitle": "Discard unsaved changes?",
+      "confirmDescription": "Changing the language reloads the page — your unsaved system prompt edits will be lost.",
+      "confirmAction": "Change language"
+    },
+    "prompt": {
+      "title": "Personal system prompt",
+      "description": "Added to the system prompt of every chat you start. Tell the AI who you are and how it should respond — it applies across all agents.",
+      "placeholder": "e.g. I'm a backend engineer working in TypeScript. Keep answers concise and include code examples.",
+      "charCount": "{count, plural, one {# character} other {# characters}}",
+      "saving": "Saving…",
+      "savedTitle": "Settings saved",
+      "savedDescription": "Your personal system prompt now applies to new chats.",
+      "errorTitle": "Couldn't save your settings"
+    },
+    "account": {
+      "title": "Account",
+      "description": "Who you are on this platform.",
+      "email": "Email",
+      "role": "Role",
+      "superAdmin": "Super admin",
+      "token": "Personal API token"
+    }
+  },
+  "configuration": {
+    "description": "White-label Exulu for your organization — changes apply to every user.",
+    "unsavedChanges": "Unsaved changes",
+    "preview": "Preview",
+    "publish": "Publish theme",
+    "publishConfirmTitle": "Publish this theme?",
+    "publishConfirmDescription": "{lightCount} light / {darkCount} dark overrides — this applies to every user.",
+    "publishSuccessTitle": "Theme published",
+    "publishSuccessDescription": "It's live for you now — other users get it the next time they load the app.",
+    "publishErrorTitle": "Couldn't publish the theme",
+    "publishErrorDescription": "Nothing was changed. Check your connection and try again.",
+    "resetConfirmTitle": "Reset to defaults?",
+    "resetConfirmDescription": "Removes all overrides ({count}) and immediately publishes the stock theme to every user.",
+    "resetConfirmAction": "Reset and publish",
+    "resetSuccessTitle": "Theme reset",
+    "resetSuccessDescription": "The stock theme is live again.",
+    "loadErrorTitle": "Couldn't load the theme configuration",
+    "loadErrorDescription": "Check your connection and try again.",
+    "exportCopied": "CSS copied to clipboard",
+    "menu": {
+      "import": "Import CSS…",
+      "export": "Export CSS",
+      "showRaw": "Show raw configuration",
+      "hideRaw": "Hide raw configuration",
+      "reset": "Reset to defaults…"
+    },
+    "editor": {
+      "searchPlaceholder": "Filter variables…",
+      "modifiedOnly": "Modified only",
+      "noMatches": "No variables match your filter.",
+      "modified": "Modified",
+      "resetToken": "Reset to default",
+      "defaultValue": "Default: {value}",
+      "invalidValue": "Not a recognized color value — it will be published exactly as typed."
+    },
+    "groups": {
+      "surfaces": "Surfaces",
+      "text": "Text",
+      "brand": "Brand",
+      "semantic": "Semantic",
+      "charts": "Charts",
+      "sidebar": "Sidebar",
+      "shape": "Shape & typography",
+      "custom": "Custom"
+    },
+    "import": {
+      "title": "Import theme CSS",
+      "description": "Paste a full CSS theme with :root and .dark blocks. Detected variables merge into your draft — nothing changes for users until you publish.",
+      "placeholder": ":root {\n  --primary: 258 100% 60%;\n}\n\n.dark {\n  --primary: 258 100% 68%;\n}",
+      "action": "Import",
+      "detected": "{lightCount} light · {darkCount} dark variables detected",
+      "noBlocks": "No :root or .dark block found — paste a complete CSS theme.",
+      "skipped": "{count, plural, one {# line couldn't be read and will be skipped:} other {# lines couldn't be read and will be skipped:}}",
+      "successTitle": "Theme imported",
+      "successDescription": "{count, plural, one {# variable} other {# variables}} merged into your draft — review, then publish."
+    },
+    "raw": {
+      "title": "Raw configuration",
+      "json": "Stored configuration (JSON)",
+      "css": "Generated CSS (published theme)",
+      "copyJson": "Copy JSON",
+      "copyCss": "Copy CSS"
+    },
+    "sampler": {
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "outline": "Outline",
+      "cardTitle": "Card title",
+      "cardDescription": "A short supporting description.",
+      "userBubble": "Summarize this document for me.",
+      "agentBubble": "Here's a summary of the key points…",
+      "charts": "Chart colors"
+    }
   }
 }

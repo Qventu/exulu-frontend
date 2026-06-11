@@ -1020,5 +1020,162 @@
     "signInAgain": "Erneut anmelden",
     "keysCrossLink": "Benötigen Sie einen Schlüssel auf Organisationsebene?",
     "keysCrossLinkAction": "API-Schlüssel"
+  },
+  "auth": {
+    "signIn": {
+      "title": "Anmelden",
+      "subtitlePassword": "Geben Sie Ihre E-Mail-Adresse und Ihr Passwort ein.",
+      "subtitleOtp": "Wir senden Ihnen einen einmaligen Code per E-Mail.",
+      "emailLabel": "E-Mail",
+      "emailPlaceholder": "m@beispiel.de",
+      "passwordLabel": "Passwort",
+      "submitPassword": "Anmelden",
+      "submitOtp": "Code per E-Mail senden",
+      "or": "oder",
+      "continueWithGoogle": "Mit Google fortfahren",
+      "trustNote": "Verarbeitung und Speicherung in der EU. Niemals für das Training von KI-Modellen verwendet.",
+      "noAccount": "Kein Konto? Wenden Sie sich an Ihren Administrator."
+    },
+    "otp": {
+      "title": "Prüfen Sie Ihr E-Mail-Postfach",
+      "subtitle": "Wir haben einen 6-stelligen Code an <strong>{email}</strong> gesendet. Er läuft in 3 Minuten ab.",
+      "codeLabel": "Einmalcode",
+      "submit": "Code bestätigen",
+      "resend": "Code erneut senden",
+      "resendCooldown": "Code erneut senden ({seconds}s)",
+      "resent": "Ein neuer Code ist unterwegs.",
+      "changeEmail": "Andere E-Mail-Adresse verwenden"
+    },
+    "errors": {
+      "title": "Anmeldung fehlgeschlagen",
+      "CredentialsSignin": "Falsche E-Mail-Adresse oder falsches Passwort.",
+      "EmailSignin": "Der Anmeldecode konnte nicht gesendet werden. Prüfen Sie die Adresse und versuchen Sie es erneut.",
+      "Verification": "Der Code ist ungültig oder abgelaufen. Fordern Sie einen neuen an und versuchen Sie es erneut.",
+      "Configuration": "Die Anmeldung ist nicht korrekt konfiguriert. Bitte wenden Sie sich an Ihren Administrator.",
+      "AccessDenied": "Sie haben keine Berechtigung, sich anzumelden. Wenden Sie sich an Ihren Administrator, wenn Sie dies für einen Fehler halten.",
+      "OAuthSignin": "Die Google-Anmeldung konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
+      "OAuthCallback": "Die Google-Anmeldung wurde nicht abgeschlossen. Bitte versuchen Sie es erneut.",
+      "OAuthAccountNotLinked": "Diese E-Mail-Adresse ist bereits mit einer anderen Anmeldemethode verknüpft. Verwenden Sie stattdessen diese Methode.",
+      "SessionRequired": "Bitte melden Sie sich an, um fortzufahren.",
+      "Default": "Bei der Anmeldung ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
+    },
+    "footer": {
+      "copyright": "© {year}",
+      "terms": "AGB",
+      "languageLabel": "Sprache"
+    },
+    "boundary": {
+      "title": "Etwas ist schiefgelaufen",
+      "description": "Auf der Anmeldeseite ist ein unerwarteter Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+      "retry": "Erneut versuchen"
+    }
+  },
+  "settings": {
+    "description": "Wie Exulu für Sie aussieht, spricht und antwortet.",
+    "appearance": {
+      "title": "Erscheinungsbild",
+      "description": "Wählen Sie das Erscheinungsbild der Oberfläche. „System“ folgt der Einstellung Ihres Geräts."
+    },
+    "language": {
+      "title": "Sprache",
+      "description": "Die Sprache der Benutzeroberfläche.",
+      "placeholder": "Sprache auswählen",
+      "hint": "Beim Ändern der Sprache wird die Seite neu geladen.",
+      "confirmTitle": "Ungespeicherte Änderungen verwerfen?",
+      "confirmDescription": "Beim Sprachwechsel wird die Seite neu geladen — Ihre ungespeicherten Änderungen am System-Prompt gehen verloren.",
+      "confirmAction": "Sprache ändern"
+    },
+    "prompt": {
+      "title": "Persönlicher System-Prompt",
+      "description": "Wird dem System-Prompt jedes Chats hinzugefügt, den Sie starten. Beschreiben Sie, wer Sie sind und wie die KI antworten soll — gilt für alle Agenten.",
+      "placeholder": "z. B. Ich bin Backend-Entwickler und arbeite mit TypeScript. Antworten bitte knapp halten und Codebeispiele einfügen.",
+      "charCount": "{count, plural, one {# Zeichen} other {# Zeichen}}",
+      "saving": "Wird gespeichert…",
+      "savedTitle": "Einstellungen gespeichert",
+      "savedDescription": "Ihr persönlicher System-Prompt gilt ab sofort für neue Chats.",
+      "errorTitle": "Einstellungen konnten nicht gespeichert werden"
+    },
+    "account": {
+      "title": "Konto",
+      "description": "Wer Sie auf dieser Plattform sind.",
+      "email": "E-Mail",
+      "role": "Rolle",
+      "superAdmin": "Super-Admin",
+      "token": "Persönlicher API-Token"
+    }
+  },
+  "configuration": {
+    "description": "Gestalten Sie Exulu im Stil Ihrer Organisation — Änderungen gelten für alle Benutzer.",
+    "unsavedChanges": "Ungespeicherte Änderungen",
+    "preview": "Vorschau",
+    "publish": "Theme veröffentlichen",
+    "publishConfirmTitle": "Dieses Theme veröffentlichen?",
+    "publishConfirmDescription": "{lightCount} helle / {darkCount} dunkle Anpassungen — gilt für alle Benutzer.",
+    "publishSuccessTitle": "Theme veröffentlicht",
+    "publishSuccessDescription": "Für Sie ist es sofort aktiv — andere Benutzer erhalten es beim nächsten Laden der App.",
+    "publishErrorTitle": "Theme konnte nicht veröffentlicht werden",
+    "publishErrorDescription": "Es wurde nichts geändert. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "resetConfirmTitle": "Auf Standardwerte zurücksetzen?",
+    "resetConfirmDescription": "Entfernt alle Anpassungen ({count}) und veröffentlicht sofort das Standard-Theme für alle Benutzer.",
+    "resetConfirmAction": "Zurücksetzen und veröffentlichen",
+    "resetSuccessTitle": "Theme zurückgesetzt",
+    "resetSuccessDescription": "Das Standard-Theme ist wieder aktiv.",
+    "loadErrorTitle": "Theme-Konfiguration konnte nicht geladen werden",
+    "loadErrorDescription": "Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "exportCopied": "CSS in die Zwischenablage kopiert",
+    "menu": {
+      "import": "CSS importieren…",
+      "export": "CSS exportieren",
+      "showRaw": "Roh-Konfiguration anzeigen",
+      "hideRaw": "Roh-Konfiguration ausblenden",
+      "reset": "Auf Standardwerte zurücksetzen…"
+    },
+    "editor": {
+      "searchPlaceholder": "Variablen filtern…",
+      "modifiedOnly": "Nur geänderte",
+      "noMatches": "Keine Variablen entsprechen Ihrem Filter.",
+      "modified": "Geändert",
+      "resetToken": "Auf Standard zurücksetzen",
+      "defaultValue": "Standard: {value}",
+      "invalidValue": "Kein erkennbarer Farbwert — wird genau so veröffentlicht wie eingegeben."
+    },
+    "groups": {
+      "surfaces": "Flächen",
+      "text": "Text",
+      "brand": "Marke",
+      "semantic": "Semantisch",
+      "charts": "Diagramme",
+      "sidebar": "Seitenleiste",
+      "shape": "Form & Typografie",
+      "custom": "Benutzerdefiniert"
+    },
+    "import": {
+      "title": "Theme-CSS importieren",
+      "description": "Fügen Sie ein vollständiges CSS-Theme mit :root- und .dark-Blöcken ein. Erkannte Variablen werden in Ihren Entwurf übernommen — für Benutzer ändert sich erst etwas, wenn Sie veröffentlichen.",
+      "placeholder": ":root {\n  --primary: 258 100% 60%;\n}\n\n.dark {\n  --primary: 258 100% 68%;\n}",
+      "action": "Importieren",
+      "detected": "{lightCount} helle · {darkCount} dunkle Variablen erkannt",
+      "noBlocks": "Kein :root- oder .dark-Block gefunden — fügen Sie ein vollständiges CSS-Theme ein.",
+      "skipped": "{count, plural, one {# Zeile konnte nicht gelesen werden und wird übersprungen:} other {# Zeilen konnten nicht gelesen werden und werden übersprungen:}}",
+      "successTitle": "Theme importiert",
+      "successDescription": "{count, plural, one {# Variable} other {# Variablen}} in Ihren Entwurf übernommen — prüfen Sie die Werte und veröffentlichen Sie dann."
+    },
+    "raw": {
+      "title": "Roh-Konfiguration",
+      "json": "Gespeicherte Konfiguration (JSON)",
+      "css": "Generiertes CSS (veröffentlichtes Theme)",
+      "copyJson": "JSON kopieren",
+      "copyCss": "CSS kopieren"
+    },
+    "sampler": {
+      "primary": "Primär",
+      "secondary": "Sekundär",
+      "outline": "Outline",
+      "cardTitle": "Kartentitel",
+      "cardDescription": "Eine kurze ergänzende Beschreibung.",
+      "userBubble": "Fasse dieses Dokument für mich zusammen.",
+      "agentBubble": "Hier ist eine Zusammenfassung der wichtigsten Punkte …",
+      "charts": "Diagrammfarben"
+    }
   }
 }
