@@ -10,11 +10,66 @@ import { Badge } from "@/components/ui/badge"
 import { Copy, CheckCircle, AlertCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 
+function ContinueConfig({ backendUrl, token }: { backendUrl: string; token: string | null }) {
+  const [copied, setCopied] = useState(false)
+  const { toast } = useToast()
+
+  const yaml = `name: Local Config
+version: 1.0.0
+schema: v1
+models:
+  - name: EXULU
+    provider: openai
+    apiBase: ${backendUrl || "<backend-url>"}/gateway/open-ai/v1
+    apiKey: ${token ?? "<your-token>"}
+    model: AUTODETECT
+    roles:
+      - chat
+      - edit
+      - apply
+    capabilities:
+      - tool_use
+      - image_input`
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(yaml)
+      setCopied(true)
+      toast({ title: "Configuration copied!" })
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast({ title: "Failed to copy", variant: "destructive" })
+    }
+  }
+
+  return (
+    <div className="space-y-3 pt-1">
+      <p className="text-sm text-muted-foreground">
+        Add the following configuration to your{" "}
+        <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">~/.continue/config.yaml</code>{" "}
+        to use Exulu as an AI provider in continue.dev.
+      </p>
+      <div className="relative">
+        <pre className="rounded-md bg-muted p-4 text-xs font-mono overflow-x-auto whitespace-pre">{yaml}</pre>
+        <Button
+          onClick={copy}
+          variant="ghost"
+          size="sm"
+          className="absolute top-2 right-2 h-7 w-7 p-0"
+          aria-label="Copy configuration"
+        >
+          {copied ? <CheckCircle className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+        </Button>
+      </div>
+    </div>
+  )
+}
 export default function TokenPage() {
   const { data: session, status } = useSession()
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [backendUrl, setBackendUrl] = useState<string>("")
   const { toast } = useToast()
 
   useEffect(() => {
@@ -31,7 +86,18 @@ export default function TokenPage() {
       setLoading(false)
     }
 
+    const fetchBackendUrl = async () => {
+      try {
+        const res = await fetch("/api/config")
+        const data = await res.json()
+        if (data.backend) setBackendUrl(data.backend)
+      } catch {
+        // ignore
+      }
+    }
+
     fetchToken()
+    fetchBackendUrl()
   }, [status])
 
   const copyToClipboard = async () => {
@@ -138,7 +204,7 @@ export default function TokenPage() {
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="text-sm text-muted-foreground space-y-2">
                   <p>
                     <strong>Security:</strong> This token provides access to your account. Keep it private and secure.
@@ -153,6 +219,10 @@ export default function TokenPage() {
                 </p>
               </div>
             )}
+            <div className="border-t pt-4">
+              <p className="text-base font-semibold mb-3">Use with continue.dev</p>
+              <ContinueConfig backendUrl={backendUrl} token={token} />
+            </div>
           </CardContent>
         </Card>
       </div>
