@@ -179,6 +179,7 @@ export function AppSidebar({ user, onSendFeedback }: AppSidebarProps) {
             key={view.group}
             group={view.group}
             entries={view.entries}
+            collapsible={view.collapsible}
             suppressHeader={tree.suppressGroupHeaders}
             first={index === 0}
             onSelect={handleSelect}

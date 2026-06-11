@@ -359,6 +359,16 @@ const BODY_GROUPS: readonly Exclude<NavGroup, "top" | "personal">[] = [
 ];
 
 /**
+ * Groups that render collapsible in the expanded sidebar (product decision
+ * 2026-06-11 — amends rendering rule §1.3 #3 for Administration only: most
+ * of its items are infrequent even for admins). Manual + persistent +
+ * active-route-aware — deliberately NOT the retired auto-collapsing
+ * accordion (shell audit M10).
+ */
+const COLLAPSIBLE_GROUPS: ReadonlySet<Exclude<NavGroup, "top" | "personal">> =
+  new Set(["administration"]);
+
+/**
  * Whether a NavEntry's backend config flag is on. Exported so route guards
  * (lib/route-guard.tsx) evaluate the exact same gate as the rendering
  * surfaces — gating can never diverge (§1.1 principle 3).
@@ -388,6 +398,8 @@ export function visibleEntries(user: RightsUser, config: NavConfig): NavEntry[] 
 export interface NavGroupView {
   group: Exclude<NavGroup, "top" | "personal">;
   entries: NavEntry[];
+  /** Renders with a toggleable header in the expanded sidebar (§1.3 #3 amendment). */
+  collapsible: boolean;
 }
 
 export interface SidebarTree {
@@ -417,6 +429,7 @@ export function groupsFor(user: RightsUser, config: NavConfig): SidebarTree {
   const groups = BODY_GROUPS.map((group) => ({
     group,
     entries: visible.filter((entry) => entry.group === group),
+    collapsible: COLLAPSIBLE_GROUPS.has(group),
   })).filter((view) => view.entries.length > 0);
 
   return {

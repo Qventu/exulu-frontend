@@ -59,7 +59,7 @@ calm, grouped command center. Same shell, RBAC-composed.
 | Administration | Budgets / Budgets | `/budgets` | `Wallet` | `SA \|\| role.budget_management:r+` | Read-scoped roles are the legitimate secondary audience (budgets.md correction) |
 | Administration | Analytics / Analytik | `/analytics` | `BarChart3` | `SA` | Unchanged gate; a future `role.analytics:r+` opens an agent-scoped P2 path without IA change (analytics.md) |
 | Administration | Variables / Variablen | `/variables` | `Variable` | `SA \|\| role.variables:r+` | Label unified ("Vault" retired); read role gets read-only page (variables.md row 1). Aliases: `/variables/*` |
-| Administration | Configuration / Konfiguration | `/configuration` | `Palette` | `SA` | Label canon: "Configuration", not "Theme" (it owns more than theming) |
+| Administration | Theme / Theme | `/configuration` | `Palette` | `SA` | **Product decision 2026-06-11: relabeled "Theme"** (the page is theming/white-label only, so the earlier "Configuration" canon overstated it; route unchanged). If the page ever grows beyond theming, revisit the label |
 | **Personal** (footer) | Send feedback / Feedback senden | dialog (no route) | `MessageSquarePlus` | all **and** `config.feedback.enabled` | Relabeled from "Feedback" to break the homonym with the review console (feedback.md issue 2) |
 | Personal (footer) | Settings / Einstellungen | `/settings` | `Settings` | all | **Product decision 2026-06-11: not a footer item** — Settings lives only in the user menu (and the ⌘K palette). The entry stays in `nav-config.ts` with `hiddenInSidebar` so the palette and mobile top-bar label keep resolving it |
 | Personal (footer) | User menu | — | avatar | all | Theme (light/dark/**system** three-state), Language submenu (scales past 2 locales), Settings link (the only Settings affordance), Log out. **Token link removed** (lives in Develop) |
@@ -88,8 +88,14 @@ Develop items; the groups compose additively.
 1. A group renders iff ≥1 of its items passes `can(user, requires)` **and** its config flags.
 2. When exactly one group (Workspace) survives, its header label is suppressed — P1's sidebar
    reads as a flat app, not a one-folder tree.
-3. Group headers are never interactive; **no collapsible sections** (the old auto-collapsing
-   "Admin" accordion is retired — audit M10). RBAC is the density control; admins scroll.
+3. Group headers are never interactive — **with one deliberate exception** (product decision
+   2026-06-11): **Administration is collapsible**, because most of its items are infrequent
+   even for admins. Guard rails that distinguish it from the retired auto-collapsing "Admin"
+   accordion (audit M10): collapse is **manual only** (never auto-collapses), the choice
+   **persists** (`localStorage`), the group **auto-expands when it contains the active
+   route**, and a collapsed group owning the active route shows a small primary dot on its
+   header so "where am I" never disappears. All other groups stay non-interactive; RBAC
+   remains the primary density control.
 4. Active-state matching is **first-segment equality plus the alias list**
    (`pathname.split("/")[1]`), never substring matching (fixes audit H7).
 5. Route-level guards consume the same `requires` predicate via `lib/rights.ts` —
@@ -135,7 +141,10 @@ visual identity is Exulu's own:
   the indicator is the sidebar's only purple, philosophy §4). This is where the concept name
   comes from — the indicator travels the spine of the app.
 - **Group headers:** `text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70
-  px-2 pt-6 pb-1`, never sticky, never interactive. The first group gets `pt-2`.
+  px-2 pt-6 pb-1`, never sticky. The first group gets `pt-2`. Non-interactive except
+  Administration's collapsible header (§1.3 #3 amendment): chevron right-aligned (rotates 90°
+  open, 200 ms), 0.2 s height animation, reduced-motion instant; collapsibility is disabled in
+  rail mode (at 3 rem every item stays reachable under the hairline).
 - **Hover affordance:** background `bg-sidebar-accent/50` in 150 ms; no scale, no shadow.
 - **Focus:** standard ring-offset pattern on every item (keyboard parity with hover).
 
@@ -294,6 +303,7 @@ The shell owns exactly five animations (CLAUDE.md timings; every one behind
 | 3 | **Mobile drawer** | slide-in 300 ms `ease-in-out` + scrim fade 300 ms | Origin: nav lives off-canvas left |
 | 4 | **Command palette** | fade + scale 0.98→1, 150 ms `ease-in-out`; close 150 ms | Summoned overlay, not a page change |
 | 5 | **Hover / focus on items** | background 150 ms | Standard affordance |
+| 6 | **Administration group collapse** *(2026-06-11 amendment)* | height 200 ms `ease-in-out` (Radix Collapsible), chevron rotate 200 ms | The same items persist; only the group's density changes |
 
 **Deliberately absent:** page-transition animations (navigation must feel instant —
 philosophy §6; perceived speed comes from route-level `loading.tsx` skeletons that mirror each

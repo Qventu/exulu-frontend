@@ -223,6 +223,18 @@ describe("persona matrix (§1.3)", () => {
     expect(tree.personal.map((entry) => entry.id)).toEqual(["send-feedback"]);
   });
 
+  it("only Administration is collapsible (§1.3 #3 amendment, 2026-06-11)", () => {
+    const tree = groupsFor(superAdmin, fullConfig);
+    expect(
+      tree.groups.map((group) => [group.group, group.collapsible]),
+    ).toEqual([
+      ["workspace", false],
+      ["build", false],
+      ["develop", false],
+      ["administration", true],
+    ]);
+  });
+
   it("settings: in visibleEntries (palette) but never in the sidebar tree", () => {
     expect(ids(superAdmin, fullConfig)).toContain("settings");
     const tree = groupsFor(superAdmin, fullConfig);
