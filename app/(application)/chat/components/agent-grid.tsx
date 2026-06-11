@@ -8,9 +8,9 @@
  * owner's agent-switcher-dialog. `onSelect(agent)` ONLY — navigation is the
  * caller's job and the grid NEVER pre-creates a session (lazy creation,
  * item 34, happens on first send). This replaces the /chat usage of
- * components/agent-selection-dialog.tsx (the legacy file stays —
- * components/project-details.tsx still imports it; the projects work item
- * retires it).
+ * components/agent-selection-dialog.tsx (retired by the projects work item
+ * 2.4 — projects now owns its picker at
+ * app/(application)/projects/components/new-session-dialog.tsx).
  */
 
 import { useQuery } from "@apollo/client";

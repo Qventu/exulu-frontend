@@ -70,8 +70,8 @@ export const ItemsSelectionModal = ({
     onApplyPreset?: (items: string[], preset: ContextPreset) => void | Promise<void>
     /** Optional controlled mode (additive): when `open` is provided the
      *  built-in trigger button is not rendered and open state is owned by
-     *  the caller (used by the chat composer's AttachMenu). Existing
-     *  trigger-based consumers (project-details) are unaffected. */
+     *  the caller (used by the chat composer's AttachMenu and the projects
+     *  Files tab). Trigger-based consumers remain unaffected. */
     open?: boolean
     onOpenChange?: (open: boolean) => void
     /** Optional one-line note rendered under the dialog description (e.g.
