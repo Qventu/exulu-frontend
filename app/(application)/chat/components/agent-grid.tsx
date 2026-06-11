@@ -21,8 +21,8 @@ import * as React from "react";
 
 import AgentVisual from "@/components/lottie";
 import { EmptyState } from "@/components/primitives/empty-state";
+import { Toolbar } from "@/components/primitives/toolbar";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Agent } from "@/types/models/agent";
 
@@ -63,21 +63,17 @@ export function AgentGrid({ onSelect, autoFocusSearch = false }: AgentGridProps)
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      <div className="relative">
-        <Search
-          className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-          aria-hidden="true"
-        />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t("agentSelection.searchPlaceholder")}
-          aria-label={t("agentSelection.searchPlaceholder")}
-          autoFocus={autoFocusSearch}
-          className="pl-10 text-base md:text-sm"
-        />
-      </div>
+      {/* Agent search — the shared Toolbar primitive (chat.md §3); the
+          filter is client-side over an already-loaded list, so no debounce. */}
+      <Toolbar
+        search={{
+          value: search,
+          onChange: setSearch,
+          placeholder: t("agentSelection.searchPlaceholder"),
+          debounceMs: 0,
+          autoFocus: autoFocusSearch,
+        }}
+      />
 
       {loading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

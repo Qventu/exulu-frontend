@@ -48,6 +48,12 @@ export interface OverflowMenuItem {
    */
   destructive?: boolean;
   disabled?: boolean;
+  /**
+   * Optional one-line muted sub-label rendered under the label. Use it to
+   * explain WHY an item is disabled (disabled menu items receive no pointer
+   * events, so a tooltip can never fire on them).
+   */
+  description?: string;
   /** Display-only keyboard shortcut hint (e.g. "⌘D"). */
   shortcut?: string;
 }
@@ -130,8 +136,17 @@ function OverflowMenuEntry({ item }: { item: OverflowMenuItem }) {
           "text-destructive focus:bg-destructive/10 focus:text-destructive",
       )}
     >
-      {Icon ? <Icon className="mr-2 size-4" /> : null}
-      {item.label}
+      {Icon ? <Icon className="mr-2 size-4 shrink-0" /> : null}
+      {item.description ? (
+        <span className="flex min-w-0 flex-col">
+          <span>{item.label}</span>
+          <span className="text-xs text-muted-foreground">
+            {item.description}
+          </span>
+        </span>
+      ) : (
+        item.label
+      )}
       {item.shortcut ? (
         <DropdownMenuShortcut>{item.shortcut}</DropdownMenuShortcut>
       ) : null}

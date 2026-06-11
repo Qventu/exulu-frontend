@@ -31,7 +31,6 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea";
 import { CheckIcon, XIcon } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ToolCallApproval } from "./tool-call-approval"
 import { Agent } from "@/types/models/agent"
 import { ImageGenerationWidget, type ImageGenerationWidgetConfig } from "./image-generation/image-generation-widget"
 
@@ -754,18 +753,17 @@ export function MessageRenderer({
                   return null;
                 }
 
-                if (part.type?.toLowerCase().includes('context_search')) {
-
-                  if (
-                    (
-                      (part as any)?.state === 'approval-requested' ||
-                      (part as any)?.state === 'approval-responded'
-                    ) && agent && addToolApprovalResponse
-                  ) {
-                    return (
-                      <ToolCallApproval agent={agent} part={part as any} addToolApprovalResponse={addToolApprovalResponse} />
-                    )
-                  }
+                if (
+                  part.type?.toLowerCase().includes('context_search') &&
+                  // Approval states deliberately fall through to the generic
+                  // tool branch below: UntypedToolPartComponent renders the
+                  // rebuilt tool-call approval card (theme tokens, corrected
+                  // button hierarchy, controller-backed "Allow for this chat"
+                  // — design/pages/chat.md item 50 / U4). The legacy
+                  // components/tool-call-approval.tsx is retired.
+                  (part as any)?.state !== 'approval-requested' &&
+                  (part as any)?.state !== 'approval-responded'
+                ) {
 
                   const dynamicToolPart = part as any;
                   let output = dynamicToolPart.output as {

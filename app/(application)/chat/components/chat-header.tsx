@@ -169,11 +169,12 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
   const budgetOver = !!budgetProjection?.overBudget;
 
   // ── Files chip (item 64 direct opener) ───────────────────────────────────
-  // count > 0 → "{n} files" (chat.md row 64: appears when files exist);
-  // count === 0 → hidden; count === null (no cheap list API) → label-only
-  // "Files" per the architect's recorded fallback.
+  // chat.md row 64: the chip appears only when files exist. count === null
+  // means "not resolved yet" (list in flight, or it failed) — render nothing
+  // rather than a label-only chip that flashes in and out on zero-file
+  // sessions. The files panel stays reachable via ＋ → "Session files".
   const filesCount = controller.sessionFilesCount;
-  const showFilesChip = !!session && (filesCount === null || filesCount > 0);
+  const showFilesChip = !!session && filesCount !== null && filesCount > 0;
 
   // ── Save as Routine gate (items 28/30): ≥1 user + ≥1 assistant message ───
   const canSaveRoutine = React.useMemo(() => {
@@ -211,6 +212,9 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
     label: t("header.menuSaveAsRoutine"),
     icon: ListChecks,
     disabled: !canSaveRoutine,
+    // Item 30: disabled menu items get no pointer events, so the "why" is a
+    // muted sub-line instead of a tooltip.
+    description: canSaveRoutine ? undefined : t("header.menuSaveAsRoutineHint"),
     onSelect: () => setRoutineOpen(true),
   });
   menuItems.push({
@@ -394,9 +398,7 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
               className={cn(CHIP, "hidden sm:inline-flex")}
             >
               <FolderOpen className="size-3" aria-hidden="true" />
-              {filesCount === null
-                ? t("header.filesLabel")
-                : t("header.filesChip", { count: filesCount })}
+              {t("header.filesChip", { count: filesCount ?? 0 })}
             </button>
           ) : null}
 

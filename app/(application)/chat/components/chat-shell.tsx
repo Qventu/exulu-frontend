@@ -18,8 +18,11 @@
  *   the legacy 850/672/850 mix (chat.md U1/U9).
  */
 
+import { usePathname } from "next/navigation";
 import * as React from "react";
 
+import { isChatSessionRoute } from "@/components/shell/mobile-topbar";
+import { cn } from "@/lib/utils";
 import type { Agent } from "@/types/models/agent";
 
 /** The single conversation-column width (chat.md §3 "One width"). */
@@ -56,6 +59,7 @@ export interface ChatShellProps {
 }
 
 export function ChatShell({ agent, children }: ChatShellProps) {
+  const pathname = usePathname();
   const [historySheetOpen, setHistorySheetOpen] = React.useState(false);
   const [railCollapsed, setRailCollapsedState] = React.useState(false);
 
@@ -116,10 +120,20 @@ export function ChatShell({ agent, children }: ChatShellProps) {
       {/* dvh-bounded full-bleed host (V1 — no 100vh anywhere). At ≥md the app
           shell renders a fixed h-12 top bar (`md:pt-12` on the content column,
           components/shell/top-bar.tsx), so the shell subtracts that 3rem to
-          keep the composer on-screen; below md, h-dvh is exact once the
-          integrator lands the MobileTopbar suppression on session routes
-          (navigation.md §5.3). */}
-      <div className="flex h-dvh min-h-0 w-full overflow-hidden md:h-[calc(100dvh-3rem)]">
+          keep the composer on-screen. Below md the shell MobileTopbar is
+          suppressed on SESSION routes only (navigation.md §5.3) — there
+          h-dvh is exact; on the remaining /chat/[agent] routes (search) the
+          bar stays visible (h-12 + safe-area top), so its height is
+          subtracted too or the page bottom would sit one bar-height below
+          the fold (double scroll at 390px). */}
+      <div
+        className={cn(
+          "flex min-h-0 w-full overflow-hidden md:h-[calc(100dvh-3rem)]",
+          isChatSessionRoute(pathname)
+            ? "h-dvh"
+            : "h-[calc(100dvh-3rem-env(safe-area-inset-top))]",
+        )}
+      >
         {children}
       </div>
     </ChatShellContext.Provider>

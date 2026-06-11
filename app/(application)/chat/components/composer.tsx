@@ -603,6 +603,13 @@ export function Composer({ controller }: ComposerProps) {
       <ItemsSelectionModal
         open={contextModalOpen}
         onOpenChange={setContextModalOpen}
+        // Item 72, third placement: the managed-context one-liner inside the
+        // Context modal (alongside the ＋-menu subtitle and the composer hint).
+        note={
+          controller.managedContextEnabled
+            ? `${t("composer.managedContextTitle")} — ${t("composer.managedContextHint")}`
+            : undefined
+        }
         onConfirm={async (data) => {
           await controller.addSessionItems(
             data.map((entry) => `${entry.context.id}/${entry.item.id}`),

@@ -54,6 +54,7 @@ export const ItemsSelectionModal = ({
     onApplyPreset,
     open: controlledOpen,
     onOpenChange,
+    note,
     buttonText,
     buttonType,
     buttonVariant,
@@ -73,6 +74,9 @@ export const ItemsSelectionModal = ({
      *  trigger-based consumers (project-details) are unaffected. */
     open?: boolean
     onOpenChange?: (open: boolean) => void
+    /** Optional one-line note rendered under the dialog description (e.g.
+     *  the chat composer's managed-context notice, chat.md item 72). */
+    note?: string
     buttonText?: string
     tooltipText?: string
     buttonType?: "button" | "submit" | "reset"
@@ -249,6 +253,12 @@ export const ItemsSelectionModal = ({
                     <DialogDescription>
                         Browse contexts and items, or load a saved preset
                     </DialogDescription>
+                    {note && (
+                        <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                            <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                            <span className="min-w-0">{note}</span>
+                        </p>
+                    )}
                 </DialogHeader>
 
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "browse" | "presets")} className="flex flex-col flex-1 overflow-hidden">

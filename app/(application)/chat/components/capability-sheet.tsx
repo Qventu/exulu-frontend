@@ -141,10 +141,19 @@ function ApprovedSection({ controller }: { controller: ChatSessionController }) 
   if (controller.preApprovedTools.length === 0) return null;
 
   const { agent } = controller;
-  const resolveName = (id: string) =>
-    agent.tools?.find((tool) => tool.id === id)?.name ??
-    agent.skills?.find((skill) => skill.id === id)?.name ??
-    id;
+  // Pre-approval ids are persisted as raw message-part types (e.g.
+  // "tool-bash"), while agent.tools / agent.skills ids carry no "tool-"
+  // prefix — try both forms before falling back to the bare id so the
+  // revocation rows show the capability's display name.
+  const resolveName = (id: string) => {
+    const bare = id.startsWith("tool-") ? id.slice("tool-".length) : id;
+    return (
+      agent.tools?.find((tool) => tool.id === id || tool.id === bare)?.name ??
+      agent.skills?.find((skill) => skill.id === id || skill.id === bare)
+        ?.name ??
+      bare
+    );
+  };
 
   return (
     <section aria-label={t("capabilities.approvedForChat")}>

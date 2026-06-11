@@ -37,8 +37,10 @@ export interface ToolbarSearch {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
-  /** Debounce for onChange in ms; 300 by default. */
+  /** Debounce for onChange in ms; 300 by default. Use 0 for instant client-side filters. */
   debounceMs?: number;
+  /** Autofocus the search input on mount (e.g. inside a just-opened dialog). */
+  autoFocus?: boolean;
 }
 
 export interface ToolbarProps {
@@ -108,6 +110,7 @@ function Toolbar({
               onChange={handleSearchChange}
               placeholder={search.placeholder}
               aria-label={search.placeholder}
+              autoFocus={search.autoFocus}
               className="pl-9 text-base md:text-sm"
             />
           </div>

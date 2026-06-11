@@ -70,6 +70,13 @@ export interface MessageColumnProps {
  * Behavior for non-approval states is identical to the legacy UntypedToolPart
  * (chat.tsx:1708–1753): collapsed Tool block with input/output (items 49, L4
  * detail inside).
+ *
+ * RECORDED DEVIATION (chat.md item 75): the addToContext channel is wired end
+ * to end (MessageRenderer → here → controller.addFileItem), but no "Attach to
+ * next message" action renders on tool outputs yet — exactly like legacy,
+ * where the prop was also discarded. Tool outputs carry no recognizable
+ * file/s3-key contract today, so there is nothing reliable to attach;
+ * surface the labeled action here once the backend defines one.
  */
 function makeUntypedToolPart(onApproveForChat: (toolId: string) => void) {
   const UntypedToolPart = ({

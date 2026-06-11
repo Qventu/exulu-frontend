@@ -14,8 +14,9 @@
  *   SidePanel primitive hosting SessionFilesContent (item 79: resizable ≥lg,
  *   Sheet below — owner of the content: messages)
  *
- * Every in-column surface uses CHAT_COLUMN; the composer region is wrapped
- * with safe-area bottom padding (responsive.md V3).
+ * Every in-column surface uses CHAT_COLUMN; the Composer owns the safe-area
+ * bottom padding on its own root (responsive.md V3) — it is applied exactly
+ * once, never re-wrapped here.
  */
 
 import { TriangleAlert, X } from "lucide-react";
@@ -98,10 +99,11 @@ export function SessionScreen({
           </div>
         )}
 
-        {/* Composer region — safe-area padded fixed-bottom chrome (V3).
-            The Composer itself renders the read-only bar for read-only
-            sessions (items 36/78) and the disclaimer (item 76). */}
-        <div className="shrink-0 pb-[env(safe-area-inset-bottom)]">
+        {/* Composer region — bottom chrome. The Composer pads its own root
+            with the safe-area inset (V3) in BOTH its read-only-bar and
+            editable modes, so this wrapper must not add it again (devices
+            with a non-zero bottom inset would get it twice). */}
+        <div className="shrink-0">
           <Composer controller={controller} />
         </div>
       </div>
