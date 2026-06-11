@@ -23,6 +23,7 @@ import {
   MobileTopbar,
   MobileTopbarProvider,
 } from "@/components/shell/mobile-topbar";
+import { TopBar } from "@/components/shell/top-bar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { getToken } from "@/lib/api/client";
 import { type UserWithRole } from "@/types/models/user";
@@ -38,15 +39,24 @@ export const UserContext = React.createContext<any>(null);
 /**
  * AppShell — the composed shell (navigation.md §7: replaces MainNavProvider).
  *
- * SidebarProvider (state + ⌘B + tooltips) wraps:
- *  - AppSidebar — "The Spine" (desktop rail + mobile Sheet drawer),
- *  - the content column: MobileTopbar (self-suppresses on chat sessions)
- *    above the page scroll container (a div — the single <main> landmark
- *    lives in app/(application)/layout.tsx, a11y fix M11),
+ * The 2026-06-11 chrome decision (navigation.md §3): top bar + sidebar share
+ * the `--sidebar` background as one chrome "L"; the page content is an inset
+ * card with a rounded top-left corner flowing out of the chrome.
+ *
+ * SidebarProvider (state + ⌘B + tooltips, `bg-sidebar` = the chrome tone)
+ * wraps:
+ *  - TopBar — fixed h-12 desktop chrome (brand + collapse · feedback ·
+ *    search ⌘K · avatar),
+ *  - AppSidebar — "The Spine", pure nav (desktop rail + mobile Sheet
+ *    drawer), padded below the fixed bar,
+ *  - the content column: MobileTopbar (<md; self-suppresses on chat
+ *    sessions) above the inset page card — the scroll container (a div —
+ *    the single <main> landmark lives in app/(application)/layout.tsx,
+ *    a11y fix M11),
  *  - CommandPalette (global ⌘K, fed from the same nav-config),
- *  - ONE FeedbackDialog instance, shared by the sidebar's "Send feedback"
- *    footer item and the palette's entry. It mounts here — outside the
- *    mobile Sheet — so closing the drawer cannot unmount an open dialog.
+ *  - ONE FeedbackDialog instance, shared by the TopBar button, the drawer's
+ *    "Send feedback" item and the palette's entry. It mounts here — outside
+ *    the mobile Sheet — so closing the drawer cannot unmount an open dialog.
  */
 const AppShell = ({
   children,
@@ -74,12 +84,15 @@ const AppShell = ({
         <MobileTopbarProvider>
           <SidebarProvider
             defaultOpen={sidebarDefaultOpen}
-            className="bg-background overflow-clip"
+            className="bg-sidebar overflow-clip"
           >
+            <TopBar user={shellUser} onSendFeedback={openFeedback} />
             <AppSidebar user={shellUser} onSendFeedback={openFeedback} />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <MobileTopbar />
-              <div className="min-w-0 flex-1 overflow-auto">{children}</div>
+            <div className="flex min-w-0 flex-1 flex-col md:pt-12">
+              <MobileTopbar user={shellUser} />
+              <div className="min-w-0 flex-1 overflow-auto bg-background md:rounded-tl-2xl md:border-l md:border-t md:border-sidebar-border">
+                {children}
+              </div>
             </div>
             <CommandPalette
               user={shellUser}

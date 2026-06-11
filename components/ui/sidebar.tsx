@@ -253,7 +253,10 @@ const Sidebar = React.forwardRef<
             // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
+              : // Side borders removed (2026-06-11 chrome decision, navigation.md
+                // §3): the inset content card's own edge is the separator — a
+                // sidebar border would double the line.
+                "group-data-[collapsible=icon]:w-[--sidebar-width-icon]",
             className
           )}
           {...props}

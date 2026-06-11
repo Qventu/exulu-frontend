@@ -110,21 +110,17 @@ Not a stock shadcn sidebar. The shadcn `Sidebar` primitives (`components/ui/side
 remain the structural base (provider, rail, sheet, tooltips, cookie persistence), but the
 visual identity is Exulu's own:
 
-### Brand header
+### Brand & header affordances
 
-- **Generic wordmark** *(product decision 2026-06-11 — supersedes the earlier backend-logo
-  concept)*: the plain text **"AI Studio"** (`text-sm font-semibold tracking-tight`,
-  i18n key `navigation.brand.productName`). No customer logo, no backend-served product
-  name — the platform presents itself generically. In rail mode the wordmark unmounts and a
-  compact **"AI" monogram tile** (`size-6 rounded-md bg-sidebar-accent`) shows, centered, so
-  the header never reads as empty at 3rem.
-- The collapse trigger (`PanelLeft`, stroke-1) sits at the header's right edge; its tooltip
-  reads "Collapse sidebar — ⌘B" (surfaces the existing shortcut, audit L3).
-- Directly under the header: a **Search affordance** — a ghost, input-shaped button
-  (`h-8 rounded-md border border-input bg-transparent text-sm text-muted-foreground`) with
-  `Search` icon, the label "Search…", and a right-aligned `⌘K` kbd chip. It opens the command
-  palette; it is not itself an input. In rail mode it collapses to an icon button with the
-  same tooltip + shortcut.
+*(Reworked by the 2026-06-11 chrome decision — see §3.)* The sidebar itself has **no brand
+header on desktop**: the generic **"AI Studio"** wordmark (`text-sm font-semibold
+tracking-tight`, i18n key `navigation.brand.productName` — no customer logo, the platform
+presents itself generically) and the collapse trigger (`PanelLeft`, tooltip "Collapse
+sidebar — ⌘B", audit L3) live in the **top bar**, left cluster. The search ⌘K affordance
+(ghost input-shaped button — opens the palette, is not an input) lives in the top bar's
+right cluster. The mobile drawer keeps its own search affordance as its header, since the
+desktop bar is hidden below `md`. The sidebar's nav column starts below the fixed bar
+(`md:pt-14`) so the menu visibly "hangs" from the chrome.
 
 ### Items & icon language
 
@@ -162,17 +158,16 @@ visual identity is Exulu's own:
 
 ### Footer
 
-Anchored at the bottom (`mt-auto`), separated by a hairline:
-
-1. **Send feedback** — ghost item, `MessageSquarePlus`, opens the existing FeedbackDialog
-   (config-gated).
-2. **User row** — avatar (initial, `bg-muted text-foreground` — no gradient/`text-white`
-   contrast trap, audit L8), name, chevron. Opens a DropdownMenu (upward): **Theme**
-   (light / dark / system — three-state, restoring the lost `system` option, audit M8),
-   **Language** (submenu listing locales — scales past en/de, audit M9, switching via cookie +
-   `router.refresh()`), **Settings** (*the only Settings affordance — product decision
-   2026-06-11: no duplicate footer item*), **Log out**. Nothing else — Token has moved to
-   Develop.
+*(Reworked by the 2026-06-11 chrome decision.)* The desktop sidebar has **no footer**: the
+Feedback button and the avatar user menu live in the top bar (§3). The **mobile drawer**
+keeps a hairline-separated footer with the **Send feedback** item (`MessageSquarePlus`,
+config-gated, opens the shared FeedbackDialog), because the desktop bar is hidden below
+`md`; the avatar menu sits in the MobileTopbar's right edge there. The user menu itself:
+avatar trigger (initial, `bg-muted text-foreground` — no gradient/`text-white` contrast
+trap, audit L8), opening downward with an identity header (name + email), then **Theme**
+(light / dark / system — three-state, audit M8), **Language** (locale submenu, audit M9,
+cookie + `router.refresh()`), **Settings** (*the only Settings affordance*), **Log out**.
+Nothing else — Token has moved to Develop.
 
 ### Tokens
 
@@ -191,8 +186,22 @@ their scroll containers as they migrate.
 
 ## 3. Top bar / page chrome
 
-**Desktop has no global top bar. Deliberately.** The vertical sidebar is the entire persistent
-chrome; everything to its right belongs to the page, built on the shared primitives
+**Product decision 2026-06-11 (supersedes the original "no desktop top bar" rule):** the
+shell uses a **unified chrome "L"** — a fixed `h-12` top bar and the sidebar share the
+`--sidebar` background as one surface, and the page content sits in an **inset card** with a
+rounded top-left corner (`md:rounded-tl-2xl md:border-l md:border-t border-sidebar-border`,
+`bg-background`) that flows out of the chrome. The sidebar carries no side border — the
+card's edge is the separator. Reference: Mistral Studio's console layout.
+
+**Top bar contents (≥ md):** left — sidebar collapse trigger (⌘B tooltip) + the generic
+"AI Studio" wordmark; right — **Feedback** ghost button (config-gated, opens the shared
+FeedbackDialog), the **search ⌘K affordance** (input-shaped button, `w-56 lg:w-64`, opens
+the command palette), and the **avatar user menu** (opens downward, identity header with
+name + email, then Theme / Language / Settings / Log out). The sidebar itself is pure
+navigation: its nav column starts below the bar (`md:pt-14`), and its old header/footer
+affordances live in the bar. No border under the bar — the chrome flows into the page card.
+
+Everything inside the content card belongs to the page, built on the shared primitives
 (philosophy §5):
 
 - **PageShell** — the layout renders a single scroll container (`div`, not `main` — the one
@@ -206,14 +215,15 @@ chrome; everything to its right belongs to the page, built on the shared primiti
   cases". The shell exports the recipe; pages supply the trail.
 - **Toolbar** — directly under PageHeader on list pages, identical placement everywhere.
 
-**What deliberately does NOT exist in the shell:** a persistent horizontal top bar, a
-notification bell, global breadcrumbs, a top-bar search field (search is ⌘K), theme/language
-toggles outside the user menu, and any second "Settings" affordance (the old duplicate
-Settings-icon-as-Admin-trigger is gone). Every pixel of horizontal chrome the shell doesn't
-ship is conversation/working room — the calm command center is mostly *page*.
+**What deliberately does NOT exist in the shell:** a notification bell, global breadcrumbs
+(breadcrumbs live in PageHeaders), a real top-bar search *input* (the affordance is a button
+into ⌘K), theme/language toggles outside the user menu, and any second "Settings" affordance
+(product decision 2026-06-11: Settings exists only in the user menu). The bar holds chrome,
+never page content — page titles, toolbars, and actions stay inside the content card.
 
-**Mobile is the exception** — see §5: the shell contributes a 48px top bar below `md`, because
-the sidebar is off-canvas there and something must hold the drawer trigger (fixes audit H3).
+**Mobile (< md)** — see §5: the MobileTopbar replaces the desktop bar (drawer trigger + page
+label + action slot + the same avatar menu, fixes audit H3); the drawer keeps its own ⌘K
+search affordance and Send-feedback footer since the desktop bar is hidden there.
 
 ---
 
@@ -344,9 +354,11 @@ script in `layout.tsx:108` (audit L1, M7).
 
 ### `components/ui/sidebar.tsx` (shadcn primitive)
 
-Kept as vendored primitive. Three changes: (1) first-run `defaultOpen` fixed in `layout.tsx`
-(`cookie === undefined ? true : cookie === "true"`); (2) mobile Sheet close button
-un-suppressed; (3) no other forks — tooltips, cookie, `⌘B` machinery are reused as-is.
+Kept as vendored primitive. Sanctioned changes: (1) first-run `defaultOpen` fixed in
+`layout.tsx` (`cookie === undefined ? true : cookie === "true"`); (2) mobile Sheet close
+button un-suppressed; (3) mobile Sheet `duration-300` (motion budget §6 #3); (4) side
+borders removed (2026-06-11 chrome decision — the inset content card's edge is the
+separator). No other forks — tooltips, cookie, `⌘B` machinery are reused as-is.
 
 ### Layout / providers (same milestone, shell-adjacent)
 

@@ -43,6 +43,7 @@ import * as React from "react";
 
 import { AppNavTrigger } from "@/components/shell/app-nav-trigger";
 import { activeEntryFor } from "@/components/shell/nav-config";
+import { UserMenu, type UserMenuUser } from "@/components/shell/user-menu";
 import { cn } from "@/lib/utils";
 
 /* ----------------------------- action slot ------------------------------ */
@@ -126,15 +127,21 @@ export function isChatSessionRoute(pathname: string): boolean {
   );
 }
 
-export type MobileTopbarProps = React.HTMLAttributes<HTMLElement>;
+export interface MobileTopbarProps
+  extends React.HTMLAttributes<HTMLElement> {
+  /** The signed-in account — feeds the top-right avatar menu (§3 chrome). */
+  user?: UserMenuUser | null;
+}
 
 /**
  * The bar itself: `h-12 px-3 border-b`, rendered below `md` only. The current
  * page label resolves from nav-config's activeEntryFor(pathname) → i18n label
- * (nav label = page H1 = palette entry, navigation.md §1.1 #4).
+ * (nav label = page H1 = palette entry, navigation.md §1.1 #4). The avatar
+ * menu anchors the right edge (2026-06-11 chrome decision: profile top-right
+ * on every viewport).
  */
 const MobileTopbar = React.forwardRef<HTMLElement, MobileTopbarProps>(
-  ({ className, ...props }, ref) => {
+  ({ className, user, ...props }, ref) => {
     const pathname = usePathname();
     const t = useTranslations();
     const action = React.useContext(ActionValueContext);
@@ -167,6 +174,7 @@ const MobileTopbar = React.forwardRef<HTMLElement, MobileTopbarProps>(
           {action ? (
             <div className="flex shrink-0 items-center gap-1">{action}</div>
           ) : null}
+          <UserMenu user={user} className="-mr-1" />
         </div>
       </header>
     );

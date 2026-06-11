@@ -1,23 +1,26 @@
 "use client";
 
 /**
- * UserMenu — the sidebar footer's user row (navigation.md §2 "Footer").
+ * UserMenu — the top-right avatar menu (navigation.md §3, product decision
+ * 2026-06-11: the profile moved from the sidebar footer to the chrome bar's
+ * right edge — desktop TopBar ≥ md, MobileTopbar < md).
  *
- * Avatar (initial, `bg-muted text-foreground` — no gradient/`text-white`
- * contrast trap, shell audit L8), name, chevron. Opens a DropdownMenu
- * upward with exactly:
+ * Trigger: avatar only (initial, `bg-muted text-foreground` — no
+ * gradient/`text-white` contrast trap, shell audit L8), ≥44px touch target
+ * below `md`. Opens a DropdownMenu downward, anchored end, with:
  *
+ *  - Identity header — name + email, non-interactive.
  *  - Theme — light / dark / system three-state (restores the lost `system`
  *    option, audit M8); the current choice carries a check.
  *  - Language — submenu listing every locale from i18n/config.ts (scales
  *    past en/de, audit M9). Switching goes through LanguageProvider's
  *    setLocale — the existing cookie-write + reload mechanism.
- *  - Settings — link to /settings.
- *  - Log out — the existing signout mechanism (router → /api/auth/signout).
+ *  - Settings — link to /settings (the ONLY Settings affordance, product
+ *    decision 2026-06-11).
+ *  - Log out — the existing signout mechanism.
  *
  * Nothing else: the Token link moved to the Develop nav group
- * (navigation.md §1.2). Touch targets are ≥44px below `md` (trigger h-12,
- * items min-h-11).
+ * (navigation.md §1.2).
  *
  * Tier note: components/shell must not import from app/ (codebase-structure
  * §1.2), so the user arrives as a prop — the mounting shell composition
@@ -26,7 +29,6 @@
 
 import {
   Check,
-  ChevronUp,
   Languages,
   LogOut,
   Monitor,
@@ -47,6 +49,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuPortal,
   DropdownMenuSeparator,
   DropdownMenuSub,
@@ -54,7 +57,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { useLanguage } from "@/components/shell/language-provider";
 import { locales, type Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
@@ -100,7 +102,7 @@ function localeEndonym(code: Locale): string {
  */
 const ITEM_CLASS = "min-h-11 gap-2 md:min-h-0";
 
-const UserMenu = React.forwardRef<HTMLLIElement, UserMenuProps>(
+const UserMenu = React.forwardRef<HTMLButtonElement, UserMenuProps>(
   ({ user, className }, ref) => {
     const t = useTranslations();
     const router = useRouter();
@@ -136,112 +138,132 @@ const UserMenu = React.forwardRef<HTMLLIElement, UserMenuProps>(
     }, [router]);
 
     return (
-      <SidebarMenuItem ref={ref} className={className}>
-        <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              aria-label={t("navigation.userMenu.label")}
-              className="data-[state=open]:bg-sidebar-accent group-data-[collapsible=icon]:justify-center"
-            >
-              <Avatar className="size-6 shrink-0">
-                <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
-                  {initial}
-                </AvatarFallback>
-              </Avatar>
-              <span className="min-w-0 flex-1 truncate text-sm font-medium capitalize group-data-[collapsible=icon]:hidden">
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <button
+            ref={ref}
+            type="button"
+            aria-label={t("navigation.userMenu.label")}
+            className={cn(
+              // ≥44px touch target below md; compact on desktop.
+              "flex size-11 shrink-0 items-center justify-center rounded-full md:size-8",
+              "transition-colors duration-150 ease-in-out hover:bg-sidebar-accent/50 motion-reduce:transition-none",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+              "data-[state=open]:bg-sidebar-accent",
+              className,
+            )}
+          >
+            <Avatar className="size-7 shrink-0">
+              <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                {initial}
+              </AvatarFallback>
+            </Avatar>
+          </button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent
+          side="bottom"
+          align="end"
+          sideOffset={8}
+          className="min-w-56"
+        >
+          {/* Identity header — who is signed in (non-interactive). */}
+          <DropdownMenuLabel className="flex min-w-0 items-center gap-2 font-normal">
+            <Avatar className="size-7 shrink-0">
+              <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                {initial}
+              </AvatarFallback>
+            </Avatar>
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate text-sm font-medium capitalize">
                 {name}
               </span>
-              <ChevronUp
-                aria-hidden="true"
-                className="ml-auto size-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden"
-              />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent
-            side="top"
-            align="start"
-            sideOffset={8}
-            className="w-[--radix-popper-anchor-width] min-w-56"
-          >
-            {/* Theme — three-state, current choice checked (audit M8). */}
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className={ITEM_CLASS}>
-                <SunMoon aria-hidden="true" className="size-4 shrink-0" />
-                <span className="truncate">{t("navigation.userMenu.theme")}</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent>
-                  {THEME_OPTIONS.map(({ value, icon: Icon, i18nKey }) => (
-                    <DropdownMenuItem
-                      key={value}
-                      className={ITEM_CLASS}
-                      onClick={() => setTheme(value)}
-                    >
-                      <Icon aria-hidden="true" className="size-4 shrink-0" />
-                      <span className="flex-1 truncate">{t(i18nKey)}</span>
-                      <Check
-                        aria-hidden="true"
-                        className={cn(
-                          "ml-2 size-4 shrink-0",
-                          theme === value ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-
-            {/* Language — every locale from i18n/config.ts (audit M9). */}
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className={ITEM_CLASS}>
-                <Languages aria-hidden="true" className="size-4 shrink-0" />
-                <span className="truncate">
-                  {t("navigation.userMenu.language")}
+              {email ? (
+                <span className="truncate text-xs text-muted-foreground">
+                  {email}
                 </span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent>
-                  {locales.map((code) => (
-                    <DropdownMenuItem
-                      key={code}
-                      className={ITEM_CLASS}
-                      onClick={() => handleLocaleSelect(code)}
-                    >
-                      <span className="flex-1 truncate">
-                        {localeEndonym(code)}
-                      </span>
-                      <Check
-                        aria-hidden="true"
-                        className={cn(
-                          "ml-2 size-4 shrink-0",
-                          locale === code ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
+              ) : null}
+            </span>
+          </DropdownMenuLabel>
 
-            <DropdownMenuSeparator />
+          <DropdownMenuSeparator />
 
-            <DropdownMenuItem asChild className={ITEM_CLASS}>
-              <Link href="/settings">
-                <Settings aria-hidden="true" className="size-4 shrink-0" />
-                <span className="truncate">{t("navigation.settings")}</span>
-              </Link>
-            </DropdownMenuItem>
+          {/* Theme — three-state, current choice checked (audit M8). */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className={ITEM_CLASS}>
+              <SunMoon aria-hidden="true" className="size-4 shrink-0" />
+              <span className="truncate">{t("navigation.userMenu.theme")}</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent>
+                {THEME_OPTIONS.map(({ value, icon: Icon, i18nKey }) => (
+                  <DropdownMenuItem
+                    key={value}
+                    className={ITEM_CLASS}
+                    onClick={() => setTheme(value)}
+                  >
+                    <Icon aria-hidden="true" className="size-4 shrink-0" />
+                    <span className="flex-1 truncate">{t(i18nKey)}</span>
+                    <Check
+                      aria-hidden="true"
+                      className={cn(
+                        "ml-2 size-4 shrink-0",
+                        theme === value ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
 
-            <DropdownMenuItem className={ITEM_CLASS} onClick={handleSignOut}>
-              <LogOut aria-hidden="true" className="size-4 shrink-0" />
-              <span className="truncate">{t("navigation.logout")}</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
+          {/* Language — every locale from i18n/config.ts (audit M9). */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className={ITEM_CLASS}>
+              <Languages aria-hidden="true" className="size-4 shrink-0" />
+              <span className="truncate">
+                {t("navigation.userMenu.language")}
+              </span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent>
+                {locales.map((code) => (
+                  <DropdownMenuItem
+                    key={code}
+                    className={ITEM_CLASS}
+                    onClick={() => handleLocaleSelect(code)}
+                  >
+                    <span className="flex-1 truncate">
+                      {localeEndonym(code)}
+                    </span>
+                    <Check
+                      aria-hidden="true"
+                      className={cn(
+                        "ml-2 size-4 shrink-0",
+                        locale === code ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem asChild className={ITEM_CLASS}>
+            <Link href="/settings">
+              <Settings aria-hidden="true" className="size-4 shrink-0" />
+              <span className="truncate">{t("navigation.settings")}</span>
+            </Link>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem className={ITEM_CLASS} onClick={handleSignOut}>
+            <LogOut aria-hidden="true" className="size-4 shrink-0" />
+            <span className="truncate">{t("navigation.logout")}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   },
 );
