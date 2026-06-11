@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Item } from "@/types/models/item";
 import { ItemsSelectionModal } from "./items-selection-modal";
-import { files } from "@/util/api";
+import { filesApi } from "@/lib/api/files";
 import { AgentSelectionModalContent } from "./agent-selection-dialog";
 
 interface ProjectDetailsProps {
@@ -157,7 +157,7 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
 
           if (data[`${context}_itemsRemoveOneById`]?.s3key) {
             try {
-              await files.delete(data[`${context}_itemsRemoveOneById`]?.s3key)
+              await filesApi.delete(data[`${context}_itemsRemoveOneById`]?.s3key)
             } catch (error: any) {
               console.error("[EXULU] Error deleting file from s3 storage:", error);
             }

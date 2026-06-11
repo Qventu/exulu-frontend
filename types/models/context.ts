@@ -1,4 +1,4 @@
-import type { ExuluFieldTypes } from "../enums/field-types"
+import type { ExuluFieldTypes } from "@/lib/enums/field-types"
 import { allFileTypes } from "./agent"
 
 export interface Context {

@@ -7,7 +7,7 @@ import 'graphiql/setup-workers/webpack';
 import 'graphiql/style.css';
 import '../../graphiql.css';
 import { useQuery } from "@tanstack/react-query";
-import { getToken } from "@/util/api";
+import { getToken } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";

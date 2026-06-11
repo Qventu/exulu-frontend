@@ -1,5 +1,5 @@
 "use client"
-import { BackendConfigType, FeedbackConfig } from "@/util/api";
+import { BackendConfigType, FeedbackConfig } from "@/lib/api/config";
 import { createContext } from "react";
 
 export type ConfigContextType = {

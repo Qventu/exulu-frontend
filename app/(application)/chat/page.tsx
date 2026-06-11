@@ -1,6 +1,6 @@
 import { AgentSelectionModalContentWrapper } from "@/components/agent-selection-dialog";
 import { GET_AGENTS } from "@/queries/queries";
-import { fetchGraphQLServerSide } from "@/util/fetch-graphql-server-side";
+import { fetchGraphQLServerSide } from "@/lib/graphql/server";
 import { redirect } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";

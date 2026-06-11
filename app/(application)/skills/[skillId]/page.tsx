@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useSkill } from "@/hooks/use-skills";
-import { skillsApi } from "@/util/api";
+import { skillsApi } from "@/lib/api/skills";
 import { SkillFileNode, SkillFilesResponse } from "@/types/models/skill";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

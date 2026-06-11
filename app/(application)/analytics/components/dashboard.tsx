@@ -3,7 +3,7 @@
 import { subDays } from "date-fns";
 import { useState } from "react";
 import { DateRange } from "react-day-picker";
-import { STATISTICS_TYPE, STATISTICS_TYPE_ENUM } from "@/types/enums/statistics";
+import { STATISTICS_TYPE, STATISTICS_TYPE_ENUM } from "@/lib/enums/statistics";
 import { SummaryCard } from "@/components/dashboard/summary-cards";
 import { DateRangeSelector } from "@/components/dashboard/date-range-selector";
 import { TimeSeriesChart } from "@/components/dashboard/time-series-chart";

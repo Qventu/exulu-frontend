@@ -12,8 +12,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 import { ConfigContextProvider } from "@/components/config-context";
-import { config as api, BackendConfigType } from "@/util/api";
-import { config as apiConfig } from "@/util/api";
+import { configApi, BackendConfigType } from "@/lib/api/config";
 import { LanguageProvider } from "@/components/language-provider";
 import { LOCALE_COOKIE, Locale, defaultLocale } from "@/i18n/config";
 
@@ -33,7 +32,7 @@ export default async function RootLayout({
     const user = await serverSideAuthCheck();
     if (!user) return redirect(`/login${pathname ? `?destination=${pathname}` : ''}`);
 
-    const backend = await api.backend();
+    const backend = await configApi.backend();
     const json: BackendConfigType = await backend.json();
 
     // Load messages for the current locale
@@ -74,7 +73,7 @@ export default async function RootLayout({
         ...json
     }
 
-    const themeConfig = await apiConfig.theme();
+    const themeConfig = await configApi.theme();
 
     return (
         <html lang={locale} suppressHydrationWarning>

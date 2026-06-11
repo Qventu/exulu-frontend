@@ -11,7 +11,7 @@ import {
     GET_TEAMS_WITH_BUDGETS,
     GET_USERS_WITH_BUDGETS,
 } from "@/queries/queries"
-import { budgetsApi, type BudgetSettings } from "@/util/api"
+import { budgetsApi, type BudgetSettings } from "@/lib/api/budgets"
 import {
     BUDGET_DURATIONS,
     BUDGET_ENTITY_TYPES,

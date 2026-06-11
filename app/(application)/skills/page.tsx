@@ -50,7 +50,7 @@ import {
 import { useSkills, useCreateSkill, useUpdateSkill } from "@/hooks/use-skills";
 import { SkillListItem } from "./components/skill-list-item";
 import { Skill } from "@/types/models/skill";
-import { skillsApi } from "@/util/api";
+import { skillsApi } from "@/lib/api/skills";
 import { RBACControl } from "@/components/rbac";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";

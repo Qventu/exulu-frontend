@@ -2,7 +2,7 @@ import { ChatLayout } from "@/app/(application)/chat/[agent]/[session]/chat";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { GET_AGENT_BY_ID, GET_AGENT_MESSAGES, GET_AGENT_SESSION_BY_ID } from "@/queries/queries";
-import { fetchGraphQLServerSide } from "@/util/fetch-graphql-server-side";
+import { fetchGraphQLServerSide } from "@/lib/graphql/server";
 
 export const dynamic = "force-dynamic";
 

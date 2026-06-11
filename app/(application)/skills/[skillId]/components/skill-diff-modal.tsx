@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Skill, SkillFileDiff } from "@/types/models/skill";
-import { skillsApi } from "@/util/api";
+import { skillsApi } from "@/lib/api/skills";
 import {
   Dialog,
   DialogContent,

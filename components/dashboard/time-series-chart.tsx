@@ -5,7 +5,7 @@ import { useQuery } from "@apollo/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GET_TIME_SERIES_STATISTICS } from "@/queries/queries";
-import { STATISTICS_TYPE } from "@/types/enums/statistics";
+import { STATISTICS_TYPE } from "@/lib/enums/statistics";
 import { XAxis, YAxis, CartesianGrid, Area, AreaChart } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
 import { format, eachDayOfInterval, startOfDay } from "date-fns";

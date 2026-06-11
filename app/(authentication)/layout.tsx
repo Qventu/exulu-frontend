@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TanstackQueryClientProvider } from "@/app/(application)/query-client";
 import { ConfigContextProvider } from "@/components/config-context";
-import { config as apiConfig } from "@/util/api";
+import { configApi } from "@/lib/api/config";
 import Logo from "@/components/logo";
 import { LOCALE_COOKIE, Locale, defaultLocale } from "@/i18n/config";
 
@@ -21,7 +21,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     auth_mode: process.env.AUTH_MODE || "",
   };
 
-  const themeConfig = await apiConfig.theme();
+  const themeConfig = await configApi.theme();
 
   return (
     <html lang={locale} suppressHydrationWarning>

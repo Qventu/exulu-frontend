@@ -14,7 +14,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import '@uppy/core/dist/style.min.css';
 import '@uppy/dashboard/dist/style.min.css';
-import { files, S3FileListOutput } from "@/util/api"
+import { filesApi, S3FileListOutput } from "@/lib/api/files"
 import { useTheme } from "next-themes";
 import { ConfigContext } from "./config-context";
 import { useQuery as useTanstackQuery, useMutation as useTanstackMutation } from "@tanstack/react-query";
@@ -31,7 +31,7 @@ export function FileDataCard({ s3key, children }: { s3key: string, children?: Re
       if (!s3key) {
         return null;
       }
-      const result = await files.object(s3key);
+      const result = await filesApi.object(s3key);
       return result;
     },
     enabled: s3key !== undefined && s3key !== null,
@@ -90,7 +90,7 @@ export function FileDataCard({ s3key, children }: { s3key: string, children?: Re
               type="button"
               className="h-7 px-2"
               onClick={() => {
-                files.download(s3key).then(async res => {
+                filesApi.download(s3key).then(async res => {
                   const json = await res.json()
                   const downloadUrl = json.url;
                   window.open(downloadUrl, '_blank');
@@ -223,7 +223,7 @@ export const FileGalleryAndUpload = ({
 
   const deleteFile = useTanstackMutation({
     mutationFn: async ({ key }: { key: string }) => {
-      await files.delete(key)
+      await filesApi.delete(key)
       refetch();
       return;
     }
@@ -233,7 +233,7 @@ export const FileGalleryAndUpload = ({
     queryKey: ['filesQuery', search, currentContinuationToken],
     staleTime: 30000,
     queryFn: async (): Promise<S3FileListOutput> => {
-      return files.list({
+      return filesApi.list({
         search,
         continuationToken: currentContinuationToken,
         global: global,
@@ -496,7 +496,7 @@ export const FileItem = ({ s3Key, onSelect, onRemove, active, disabled, addToCon
           type="button"
           className="h-6 w-6 bg-background/80 hover:bg-background"
           onClick={() => {
-            files.download(s3Key).then(async res => {
+            filesApi.download(s3Key).then(async res => {
               const json = await res.json()
               const downloadUrl = json.url;
               window.open(downloadUrl, '_blank');
@@ -541,7 +541,7 @@ export const getPresignedUrl = async (fileKey: string) => {
       return signedUrlCache[fileKey].url;
     }
   }
-  const response = await files.download(fileKey)
+  const response = await filesApi.download(fileKey)
   const json = await response.json();
   signedUrlCache[fileKey] = {
     url: json.url,

@@ -6,7 +6,7 @@ import { useQuery } from "@apollo/client";
 import { ConfigContext } from "@/components/config-context";
 import { UserContext } from "@/app/(application)/authenticated";
 import { GET_IMAGE_GENERATION_STYLES } from "@/queries/queries";
-import { getToken } from "@/util/api";
+import { getToken } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

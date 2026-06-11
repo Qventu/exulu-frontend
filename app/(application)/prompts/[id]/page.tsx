@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { PromptPreview } from "../components/prompt-preview";
-import { fetchGraphQLServerSide } from "@/util/fetch-graphql-server-side";
+import { fetchGraphQLServerSide } from "@/lib/graphql/server";
 import { GET_PROMPT_BY_ID } from "@/queries/queries";
 
 export default async function PromptDetailPage({ params }: { params: Promise<{ id: string }> }) {

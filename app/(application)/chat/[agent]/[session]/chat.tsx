@@ -39,7 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getToken } from "@/util/api"
+import { getToken } from "@/lib/api/client"
 import { Agent } from "@EXULU_SHARED/models/agent";
 import { ConfigContext } from "@/components/config-context";
 import { ArrowUp, FileText, Form, Plus, Share2, Copy, Check, Sparkles, FolderOpen, Mic, Square, AlertTriangle, Wallet } from "lucide-react";

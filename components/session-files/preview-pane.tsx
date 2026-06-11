@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
-import { sessionFilesApi, type SessionFile } from "@/util/api";
+import { sessionFilesApi, type SessionFile } from "@/lib/api/session-files";
 import { TextPreview } from "@/components/custom/text-preview";
 import { CodePreview } from "@/components/custom/code-preview";
 import { formatBytes, getPreviewCategory } from "./utils";

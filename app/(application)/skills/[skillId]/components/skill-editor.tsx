@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { SkillFileNode } from "@/types/models/skill";
-import { skillsApi } from "@/util/api";
+import { skillsApi } from "@/lib/api/skills";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MarkdownEditor } from "@/components/ui/markdown-editor";

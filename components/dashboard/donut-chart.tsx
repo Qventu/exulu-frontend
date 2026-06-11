@@ -5,7 +5,7 @@ import { useQuery } from "@apollo/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GET_DONUT_STATISTICS } from "@/queries/queries";
-import { STATISTICS_TYPE } from "@/types/enums/statistics";
+import { STATISTICS_TYPE } from "@/lib/enums/statistics";
 import { PieChart, Pie, Cell } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
 import { DateRange } from "react-day-picker";

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, Medal, Award } from "lucide-react";
 import { useMemo } from "react";
-import { STATISTICS_TYPE } from "@/types/enums/statistics";
+import { STATISTICS_TYPE } from "@/lib/enums/statistics";
 
 interface LeaderboardEntry {
   name: string;

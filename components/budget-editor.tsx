@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
 import { BudgetBar } from "@/components/budget-bar"
-import { budgetsApi } from "@/util/api"
+import { budgetsApi } from "@/lib/api/budgets"
 import {
     BUDGET_DURATIONS,
     type BudgetDuration,

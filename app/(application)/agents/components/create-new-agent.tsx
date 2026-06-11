@@ -18,7 +18,7 @@ import { AgentModelSelector } from "@/app/(application)/agents/components/agent-
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { agents, ImageStyle } from "@/util/api";
+import { agentsApi, ImageStyle } from "@/lib/api/agents";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
@@ -249,7 +249,7 @@ export function CreateNewAgent({ createAgent, createAgentResult, company, childr
                   try {
                     // Generate 4 images simultaneously
                     const promises = Array.from({ length: 4 }, async () => {
-                      const response = await agents.image.generate({ name, description, style: imageStyle });
+                      const response = await agentsApi.image.generate({ name, description, style: imageStyle });
                       const result = await response.json();
                       setImageGenerationProgress(prev => prev + 1);
                       return result.image;

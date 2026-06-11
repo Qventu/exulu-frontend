@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Loader2, AlertTriangle } from "lucide-react";
-import { sessionFilesApi, type SessionFile } from "@/util/api";
+import { sessionFilesApi, type SessionFile } from "@/lib/api/session-files";
 import { toast } from "sonner";
 import { FileRow } from "./file-row";
 import { UploadZone } from "./upload-zone";

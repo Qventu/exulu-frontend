@@ -1,7 +1,7 @@
 import * as React from "react";
 import { ChatSessionsComponent } from "./chat-sessions";
 import { GET_AGENT_BY_ID } from "@/queries/queries";
-import { fetchGraphQLServerSide } from "@/util/fetch-graphql-server-side";
+import { fetchGraphQLServerSide } from "@/lib/graphql/server";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 

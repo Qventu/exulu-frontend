@@ -20,7 +20,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useState, useEffect, useContext, useRef } from "react"
 import { ConfigContext } from "@/components/config-context"
 import { UserContext } from "@/app/(application)/authenticated"
-import { getToken } from "@/util/api"
+import { getToken } from "@/lib/api/client"
 import { preprocessForTTS, chunkForTTS, TTS_MAX_CONCURRENT } from "@/lib/tts-text"
 import { MessageActions, MessageAction } from '@/components/ai-elements/message'
 import { Skeleton } from "./ui/skeleton"

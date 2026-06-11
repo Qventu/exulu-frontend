@@ -2,7 +2,7 @@ import AgentForm from "@/app/(application)/agents/edit/[id]/form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { GET_AGENT_BY_ID } from "@/queries/queries";
-import { fetchGraphQLServerSide } from "@/util/fetch-graphql-server-side";
+import { fetchGraphQLServerSide } from "@/lib/graphql/server";
 
 export const dynamic = "force-dynamic";
 

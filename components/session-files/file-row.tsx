@@ -12,7 +12,7 @@ import {
     Download,
     Trash2,
 } from "lucide-react";
-import type { SessionFile } from "@/util/api";
+import type { SessionFile } from "@/lib/api/session-files";
 import { formatBytes, formatRelativeTime, getPreviewCategory } from "./utils";
 
 function IconFor({ name }: { name: string }) {

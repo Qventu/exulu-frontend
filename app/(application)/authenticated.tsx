@@ -11,7 +11,7 @@ import { setContext } from "@apollo/client/link/context";
 import { SessionProvider } from "next-auth/react";
 import * as React from "react";
 import { MainNavProvider } from "@/components/custom/main-nav";
-import { getToken } from "@/util/api";
+import { getToken } from "@/lib/api/client";
 import { ConfigContext } from "@/components/config-context";
 import { type User } from "@/types/models/user";
 

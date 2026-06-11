@@ -4,7 +4,7 @@ import { subDays, formatDistanceToNow } from "date-fns";
 import { useState, useContext, useEffect } from "react";
 import * as React from "react";
 import { DateRange } from "react-day-picker";
-import { STATISTICS_TYPE, STATISTICS_TYPE_ENUM } from "@/types/enums/statistics";
+import { STATISTICS_TYPE, STATISTICS_TYPE_ENUM } from "@/lib/enums/statistics";
 import { DateRangeSelector } from "@/components/dashboard/date-range-selector";
 import { TimeSeriesChart } from "@/components/dashboard/time-series-chart";
 import { DonutChart } from "@/components/dashboard/donut-chart";

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Upload, Loader2 } from "lucide-react";
-import { sessionFilesApi } from "@/util/api";
+import { sessionFilesApi } from "@/lib/api/session-files";
 import { toast } from "sonner";
 import { MAX_UPLOAD_BYTES, formatBytes } from "./utils";
 
