@@ -1,18 +1,48 @@
+/**
+ * (authentication) root layout — the standalone pre-auth shell
+ * (design/pages/auth.md ladder #26-#28).
+ *
+ * - White-label theming kept: backend `GET /theme` CSS variables injected for
+ *   `:root` + `.dark`, backend favicons in four sizes (ladder #27).
+ * - i18n is now real pre-auth (fixes U6): locale from the `NEXT_LOCALE`
+ *   cookie drives `<html lang>` and a LanguageProvider mirroring
+ *   `app/(application)/layout.tsx` — the product's first screen speaks the
+ *   user's language. The `auth.*` namespace lives in `messages/{en,de}.json`
+ *   like every other feature namespace.
+ * - The body scrolls naturally (`min-h-dvh`, responsive.md V1/V4): the old
+ *   `max-h-screen overflow-y-hidden` keyboard trap is removed — the on-screen
+ *   keyboard can no longer hide the submit button.
+ * - Chrome (wordmark, cover pane, slim footer with dynamic © year, terms
+ *   link, locale toggle) lives in the route-local AuthShell frame.
+ */
 import "../globals.css";
 import { fontVariables } from "@/lib/fonts";
-import * as React from "react";
-import { cn } from "@/lib/utils";
+import type { Viewport } from "next";
 import { cookies } from "next/headers";
-import { Toaster } from "@/components/ui/sonner";
-import { ThemeProvider } from "@/components/shell/theme-provider";
+import * as React from "react";
+
 import { ConfigContextProvider } from "@/components/shell/config-context";
-import { configApi } from "@/lib/api/config";
-import Logo from "@/components/logo";
+import { LanguageProvider } from "@/components/shell/language-provider";
+import { ThemeProvider } from "@/components/shell/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { LOCALE_COOKIE, Locale, defaultLocale } from "@/i18n/config";
+import { configApi } from "@/lib/api/config";
+import { cn } from "@/lib/utils";
+
+import { AuthShell } from "./components/auth-shell";
+
+// viewport-fit=cover so env(safe-area-inset-*) resolves on notched devices —
+// the AuthShell footer pads itself with it (responsive.md V3).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
   const locale = (cookieStore.get(LOCALE_COOKIE)?.value as Locale) || defaultLocale;
+  const messages = (await import(`../../messages/${locale}.json`)).default;
 
   const config = {
     backend: process.env.BACKEND || "",
@@ -47,33 +77,31 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
 
-      <ConfigContextProvider config={config}>
-        <body
-          className={cn(
-            "min-h-screen flex flex-col bg-background font-sans antialiased max-h-screen overflow-y-hidden",
-            fontVariables
-          )}
-        >
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-            <main className="grow flex">
-              <div className="grow flex flex-col">{children}</div>
-            </main>
-            <Toaster />
-            <footer className="flex items-center h-20 gap-1 px-8 font-medium border-t md:px-20">
-              <Logo width={64} height={32} alt="Logo" />
-              <span className="text-sm ml-2">© 2025</span>
-              {/* <nav className="flex justify-end grow sm:gap-2">
-                <a
-                  className="flex gap-2 px-3 py-2 text-sm font-semibold text-gray-600 transition duration-100 rounded-md hover:text-gray-800"
-                  href="https://www.exulu.com/toc"
-                >
-                  <span>Terms and conditions</span>
-                </a>
-              </nav> */}
-            </footer>
-          </ThemeProvider>
-        </body>
-      </ConfigContextProvider>
+      <body
+        className={cn(
+          "flex min-h-dvh flex-col bg-background font-sans antialiased",
+          fontVariables,
+        )}
+      >
+        <ConfigContextProvider config={config}>
+          <LanguageProvider initialLocale={locale} initialMessages={messages}>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <AuthShell
+                coverUrl={process.env.BACKEND ? `${process.env.BACKEND}/cover.jpg` : undefined}
+                termsHref={process.env.TERMS_URL || undefined}
+              >
+                {children}
+              </AuthShell>
+              <Toaster />
+            </ThemeProvider>
+          </LanguageProvider>
+        </ConfigContextProvider>
+      </body>
     </html>
   );
 }

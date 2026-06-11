@@ -1,259 +1,284 @@
 "use client";
 
-import google from "../../../public/assets/google.svg";
+/**
+ * /login — the calm, brand-true front door (design/pages/auth.md §3).
+ * Primary persona P1 (the flow is identical for all personas — designed for
+ * the least technical visitor). #1 job: get past this screen and into work
+ * in under ten seconds, without thinking.
+ *
+ * Rewritten as an `identify → verify` state machine (ladder #19):
+ * - Mode-adaptive form (#7): AUTH_MODE "otp" → email + "Email me a code";
+ *   anything else → email + password + "Sign in". Google appears below an
+ *   "or" separator only when configured (#10/#20, "Continue with Google" —
+ *   the "Sign up" mislabel dies, U10).
+ * - Errors render in place via AuthErrorAlert — `?error=` redirects from
+ *   NextAuth seed the same state, no URL round-trips on retry (U1/U9).
+ * - `submitting` resets on every failure path (U2); Google has its own
+ *   pending state (U10) with a visible spinner on the outline background.
+ * - Email normalized (trim + lowercase) ONCE on submit and reused everywhere
+ *   (U18); autocomplete + autoFocus make most sign-ins zero-typing (U7).
+ * - The `?destination` deep link survives all three methods and the OTP
+ *   detour (#4); the dead "/dashboard" fallbacks are gone (U19).
+ * - Philosophy §9 (security you can feel): the EU-residency / no-training
+ *   reassurance sits quietly at the exact moment of disclosure — beside the
+ *   credentials form, not as wallpaper.
+ * - The single purple element per state is the primary submit button.
+ *
+ * Future provider slot (#13): "Sign in with Microsoft Teams" remains a
+ * dormant capability — when it lands it renders as another outline
+ * "Continue with…" button in the provider cluster below the separator,
+ * exactly like Google. (The inert commented button that used to live here
+ * is documented by this note instead of dead JSX.)
+ */
+
+import { Loader2, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import * as React from "react";
-import { useEffect, useRef, useState } from "react";
-import VerificationAlert from "@/app/(authentication)/login/error";
+
+import { ConfigContext } from "@/components/shell/config-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
-import { ConfigContext } from "@/components/shell/config-context";
+import { Separator } from "@/components/ui/separator";
+
+import google from "../../../public/assets/google.svg";
+import { AuthErrorAlert } from "./components/auth-error-alert";
+import { OtpStep } from "./components/otp-step";
+
+type Step = "identify" | "verify";
 
 export default function Login() {
+  const t = useTranslations("auth");
   const configContext = React.useContext(ConfigContext);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [submittedOTP, setSubmittedOTP] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [code, setCode] = useState("");
-  const formRef = useRef<any>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const destination = searchParams.get('destination') || '/';
 
-  async function handleOTPVerification(e: React.FormEvent<HTMLFormElement>) {
+  const authMode: "otp" | "password" =
+    configContext?.auth_mode === "otp" ? "otp" : "password";
+  const isOtp = authMode === "otp";
+
+  // Deep-link preservation (#4): default "/" — the server routes onward
+  // (P1-only → /chat, elevated → Home). decodeURIComponent kept for parity
+  // with the historical contract; raw values pass through unharmed.
+  const rawDestination = searchParams.get("destination");
+  const destination = React.useMemo(() => {
+    if (!rawDestination) return "/";
+    try {
+      return decodeURIComponent(rawDestination);
+    } catch {
+      return rawDestination;
+    }
+  }, [rawDestination]);
+
+  const [step, setStep] = React.useState<Step>("identify");
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = React.useState(false);
+  // Seeded from ?error= (NextAuth full-redirect failures land here because
+  // pages.signIn = /login); afterwards state-driven — no replace() loops.
+  const [error, setError] = React.useState<string | null>(
+    searchParams.get("error"),
+  );
+
+  const urlError = searchParams.get("error");
+  React.useEffect(() => {
+    if (urlError) setError(urlError);
+  }, [urlError]);
+
+  const pending = submitting || googleSubmitting;
+
+  async function handleIdentify(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitting(true);
-    const formattedEmail = encodeURIComponent(email.toLowerCase().trim());
-    const formattedCode = encodeURIComponent(code);
-    const formattedCallback = encodeURIComponent(destination ? decodeURIComponent(destination) : "/dashboard");
-    const otpRequestURL = `../api/auth/callback/email?email=${formattedEmail}&token=${formattedCode}&callbackUrl=${formattedCallback}`;
-    const response = await fetch(otpRequestURL);
+    if (pending) return;
 
-    if (!response) {
+    // Normalize once, reuse everywhere (U18).
+    const normalizedEmail = email.trim().toLowerCase();
+    setEmail(normalizedEmail);
+    setError(null);
+    setSubmitting(true);
+
+    try {
+      // Exact NextAuth call signatures preserved (auth.md §4 risk note).
+      const res = await signIn(isOtp ? "email" : "credentials", {
+        email: normalizedEmail,
+        password: !isOtp ? password : null,
+        redirect: false,
+      });
+
+      if (res?.error) {
+        setError(res.error);
+        setSubmitting(false);
+        return;
+      }
+
+      if (isOtp) {
+        // Advance to the code step in place (L2) — the flow, not a navigation.
+        setStep("verify");
+        setSubmitting(false);
+        return;
+      }
+
+      router.push(destination);
+    } catch (err: unknown) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : "Default");
       setSubmitting(false);
     }
-
-    if (response.url.includes(destination ? decodeURIComponent(destination) : "/dashboard")) {
-      router.push(response.url);
-      return;
-    }
-    router.replace(`/login?error=Verification`);
-
   }
 
-  useEffect(() => {
-    if (formRef.current && code.length === 6) {
-      formRef.current.requestSubmit();
-    }
-  }, [code]);
-
-  const authMode: "otp" | "password" | undefined = configContext?.auth_mode as "otp" | "password";
-
-  const handleFormSignIn = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-
+  async function handleGoogleSignIn() {
+    if (pending) return;
+    setError(null);
+    setGoogleSubmitting(true);
     try {
-      const res: any = await signIn(
-        authMode === "otp" ? "email" : "credentials",
-        {
-          email,
-          password: authMode !== "otp" ? password : null,
-          redirect: false
-        }
-      );
-
-      if (res.error) {
-        // Handle error
-        console.error(res.error);
-        setSubmitting(false);
-        router.replace(`/login?error=${encodeURIComponent(res.error)}`);
-        return;
-      }
-      
-      if (authMode === "otp") {
-        setSubmittedOTP(true);
-        setSubmitting(false);
-        return;
-      }
-
-      router.push(destination ? decodeURIComponent(destination) : "/dashboard");
-    } catch (error: any) {
-      console.error(error);
-      setSubmitting(false);
-      router.replace(`/login?error=${encodeURIComponent(error?.message || "Unknown error")}`);
-      return;
+      // Full redirect; pending state holds until the browser navigates (U10).
+      await signIn("google", { callbackUrl: destination });
+    } catch (err: unknown) {
+      console.error(err);
+      setError("OAuthSignin");
+      setGoogleSubmitting(false);
     }
-  };
+  }
 
-  const handleGoogleSignIn = async () => {
-    try {
-      await signIn("google", { callbackUrl: destination ? decodeURIComponent(destination) : "/dashboard" });
-    } catch (error: any) {
-      console.error("Sign in failed:", error);
-      setSubmitting(false);
-      router.replace(`/login?error=${encodeURIComponent(error?.message || "Unknown error")}`);
-    }
+  if (step === "verify") {
+    return (
+      // Step transition: 300 ms fade + 8 px rise — explains the flow advanced,
+      // not navigated (auth.md §3 Motion; reduced motion gets an instant swap).
+      <div
+        key="verify"
+        className="duration-300 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2"
+      >
+        <OtpStep
+          email={email}
+          destination={destination}
+          onChangeEmail={() => {
+            // Back to step 1, email preserved (U2 recovery path).
+            setError(null);
+            setStep("identify");
+          }}
+        />
+      </div>
+    );
   }
 
   return (
-    <div className="w-full h-full lg:grid lg:grid-cols-2">
-      <div className="flex items-center justify-center py-12">
-        <div className="mx-auto grid w-[350px] gap-6">
-          <div className="grid gap-2 text-center">
-            <h1 className="text-3xl font-bold">Login</h1>
-            <p className="text-balance text-muted-foreground">
-              Enter your email below to login to your account
-            </p>
-          </div>
-          <VerificationAlert />
-          {submittedOTP ? (
-            <form
-              className="grid gap-4"
-              onSubmit={handleOTPVerification}
-              ref={formRef}
-            >
-              <div className="space-y-2">
-                <InputOTP
-                  maxLength={6}
-                  value={code}
-                  onChange={(value) => setCode(value)}>
-                  <InputOTPGroup className="mx-auto">
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-                <div className="text-center text-sm">
-                  Enter your one-time password.
-                </div>
-              </div>
-              <Button disabled={submitting} type="submit" className="w-full">
-                {submitting ? (
-                  <div className="flex items-center space-x-2">
-                    <span className="size-2 animate-pulse rounded-full bg-primary-foreground" />
-                    <span className="size-2 animate-pulse rounded-full bg-primary-foreground" />
-                    <span className="size-2 animate-pulse rounded-full bg-primary-foreground" />
-                  </div>
-                ) : (
-                  "Submit code"
-                )}
-              </Button>
+    <div
+      key="identify"
+      className="flex flex-col gap-6 duration-300 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2"
+    >
+      {/* Heading: on-scale type (text-2xl, fixes the off-scale text-3xl);
+          subline adapts to the configured auth mode (#7/#14). */}
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {t("signIn.title")}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {isOtp ? t("signIn.subtitleOtp") : t("signIn.subtitlePassword")}
+        </p>
+      </div>
 
-            </form>
-          ) : (
-            <form className="grid gap-4" onSubmit={handleFormSignIn}>
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                {
-                  authMode !== "otp" ? (
-                    <>
-                      <Label htmlFor="password">Password</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                    </>
-                  ) : null
-                }
-              </div>
-              <Button disabled={submitting} type="submit" className="w-full">
-                {submitting ? (
-                  <div className="flex items-center space-x-2">
-                    <span className="size-2 animate-pulse rounded-full bg-primary-foreground" />
-                    <span className="size-2 animate-pulse rounded-full bg-primary-foreground" />
-                    <span className="size-2 animate-pulse rounded-full bg-primary-foreground" />
-                  </div>
-                ) : (
-                  "Login"
-                )}
-              </Button>
+      <AuthErrorAlert error={error} />
 
-              {/* <Button
-                variant="outline"
-                disabled={submitting}
-                type="button"
-                className="w-full"
-                onClick={() => {}}
-              >
-                {submitting ? (
-                  <div className="flex items-center space-x-2">
-                    <span className="size-2 animate-pulse rounded-full bg-primary-foreground" />
-                    <span className="size-2 animate-pulse rounded-full bg-primary-foreground" />
-                    <span className="size-2 animate-pulse rounded-full bg-primary-foreground" />
-                  </div>
-                ) : (
-                  <div className="flex items-center">
-                    <svg className="size-4 mr-3" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="0.5" y="0.5" width="10" height="10" fill="#7FBA00"/>
-                      <rect x="12.5" y="0.5" width="10" height="10" fill="#00A4EF"/>
-                      <rect x="0.5" y="12.5" width="10" height="10" fill="#FFB900"/>
-                      <rect x="12.5" y="12.5" width="10" height="10" fill="#F25022"/>
-                    </svg>
-                    Sign in with Microsoft Teams
-                  </div>
-                )}
-              </Button> */}
-
-              {
-                configContext?.google_client_id && (<Button
-                  variant="outline"
-                  disabled={submitting}
-                  type="button"
-                  className="w-full"
-                  onClick={handleGoogleSignIn}
-                >
-                  {submitting ? (
-                    <div className="flex items-center space-x-2">
-                      <span className="size-2 animate-pulse rounded-full bg-primary-foreground" />
-                      <span className="size-2 animate-pulse rounded-full bg-primary-foreground" />
-                      <span className="size-2 animate-pulse rounded-full bg-primary-foreground" />
-                    </div>
-                  ) : (
-                    <><Image className="size-4 mr-3" src={google} alt="Google logo" /> Sign up with Google</>
-                  )}
-                </Button>)
-              }
-            </form>
-          )}
-          <div className="mt-4 text-center text-sm">
-            Don&apos;t have an account? <div>Contact your admin</div>
-          </div>
+      <form onSubmit={handleIdentify} className="grid gap-4">
+        <div className="grid gap-2">
+          <Label htmlFor="email">{t("signIn.emailLabel")}</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            autoFocus
+            inputMode="email"
+            placeholder={t("signIn.emailPlaceholder")}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={pending}
+            className="h-11 text-base md:h-10 md:text-sm"
+          />
         </div>
+
+        {!isOtp ? (
+          <div className="grid gap-2">
+            <Label htmlFor="password">{t("signIn.passwordLabel")}</Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={pending}
+              className="h-11 text-base md:h-10 md:text-sm"
+            />
+          </div>
+        ) : null}
+
+        {/* THE primary action — the only purple on the screen. Label stays
+            visible while pending (U13). */}
+        <Button
+          type="submit"
+          disabled={pending}
+          aria-busy={submitting}
+          className="h-11 w-full md:h-10"
+        >
+          {submitting ? (
+            <Loader2 aria-hidden="true" className="mr-2 size-4 animate-spin" />
+          ) : null}
+          {isOtp ? t("signIn.submitOtp") : t("signIn.submitPassword")}
+        </Button>
+      </form>
+
+      {configContext?.google_client_id ? (
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-3" aria-hidden="true">
+            <Separator className="flex-1" />
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              {t("signIn.or")}
+            </span>
+            <Separator className="flex-1" />
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pending}
+            aria-busy={googleSubmitting}
+            onClick={handleGoogleSignIn}
+            className="h-11 w-full md:h-10"
+          >
+            {googleSubmitting ? (
+              // Token-colored spinner — visible on the outline background (U10).
+              <Loader2 aria-hidden="true" className="mr-2 size-4 animate-spin" />
+            ) : (
+              <Image
+                src={google}
+                alt=""
+                aria-hidden="true"
+                className="mr-2 size-4"
+              />
+            )}
+            {t("signIn.continueWithGoogle")}
+          </Button>
+        </div>
+      ) : null}
+
+      {/* Philosophy §9: quiet reassurance at the moment of disclosure —
+          a single muted line, not a banner. */}
+      <div className="flex items-start gap-2 text-xs text-muted-foreground">
+        <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+        <p>{t("signIn.trustNote")}</p>
       </div>
-      <div className="hidden bg-muted lg:block">
-        <img
-          src={configContext?.backend + "/cover.jpg"}
-          alt="Image"
-          width="1920"
-          height="1080"
-          className="size-full object-cover"
-        />
-      </div>
+
+      {/* Single-sentence footer line (fixes U16's dead-end line break). */}
+      <p className="text-center text-sm text-muted-foreground">
+        {t("signIn.noAccount")}
+      </p>
     </div>
   );
 }
