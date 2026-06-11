@@ -30,8 +30,28 @@
       "administration": "Administration",
       "personal": "Personal"
     },
-    "theme": "Theme",
     "logout": "Logout",
+    "brand": {
+      "productName": "Exulu"
+    },
+    "userMenu": {
+      "label": "User menu",
+      "fallbackName": "User",
+      "theme": "Theme",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "themeSystem": "System",
+      "language": "Language"
+    },
+    "openNavigation": "Open navigation",
+    "collapseSidebar": "Collapse sidebar — ⌘B",
+    "search": "Search…",
+    "error": {
+      "title": "Navigation error",
+      "description": "Something went wrong loading the navigation. Please refresh the page.",
+      "refresh": "Refresh page"
+    },
+    "theme": "Theme",
     "admin": "Admin",
     "users": "Users",
     "apiPlayground": "Playground",
@@ -255,5 +275,52 @@
     "emptyStateFeature": "Tell me about the feature you'd like to suggest.",
     "send": "Send",
     "stop": "Stop"
+  },
+  "palette": {
+    "title": "Command palette",
+    "placeholder": "Type a command or search…",
+    "empty": "No results found.",
+    "searching": "Searching…",
+    "inGroup": "— {group}",
+    "untitledSession": "Untitled session",
+    "groups": {
+      "recent": "Recent",
+      "navigate": "Navigate",
+      "create": "Create",
+      "search": "Search",
+      "preferences": "Preferences"
+    },
+    "search": {
+      "agents": "Agents",
+      "chatSessions": "Chat sessions",
+      "projects": "Projects",
+      "prompts": "Prompts",
+      "knowledgeContexts": "Knowledge contexts",
+      "skills": "Skills"
+    },
+    "create": {
+      "chat": "New chat",
+      "project": "New project",
+      "agent": "New agent",
+      "prompt": "New prompt",
+      "skill": "New skill",
+      "routine": "New routine",
+      "eval": "New eval",
+      "variable": "New variable",
+      "model": "New model",
+      "apiKey": "New API key",
+      "inviteUser": "Invite user",
+      "uploadAudio": "Upload audio"
+    },
+    "preferences": {
+      "themeLight": "Theme: Light",
+      "themeDark": "Theme: Dark",
+      "themeSystem": "Theme: System",
+      "toggleSidebar": "Toggle sidebar"
+    }
+  },
+  "home": {
+    "placeholderDescription": "Your dashboard is on its way. In the meantime, jump straight to one of your areas.",
+    "quickLinks": "Quick links"
   }
 }

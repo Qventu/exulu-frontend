@@ -30,8 +30,28 @@
       "administration": "Administration",
       "personal": "Persönlich"
     },
-    "theme": "Design",
     "logout": "Abmelden",
+    "brand": {
+      "productName": "Exulu"
+    },
+    "userMenu": {
+      "label": "Benutzermenü",
+      "fallbackName": "Benutzer",
+      "theme": "Design",
+      "themeLight": "Hell",
+      "themeDark": "Dunkel",
+      "themeSystem": "System",
+      "language": "Sprache"
+    },
+    "openNavigation": "Navigation öffnen",
+    "collapseSidebar": "Seitenleiste einklappen — ⌘B",
+    "search": "Suchen…",
+    "error": {
+      "title": "Navigationsfehler",
+      "description": "Beim Laden der Navigation ist ein Fehler aufgetreten. Bitte laden Sie die Seite neu.",
+      "refresh": "Seite neu laden"
+    },
+    "theme": "Design",
     "admin": "Administration",
     "users": "Benutzer",
     "apiPlayground": "API Playground",
@@ -255,5 +275,52 @@
     "emptyStateFeature": "Erzählen Sie mir von der Funktion, die Sie vorschlagen möchten.",
     "send": "Senden",
     "stop": "Stopp"
+  },
+  "palette": {
+    "title": "Befehlspalette",
+    "placeholder": "Befehl eingeben oder suchen…",
+    "empty": "Keine Ergebnisse gefunden.",
+    "searching": "Suche läuft…",
+    "inGroup": "— {group}",
+    "untitledSession": "Unbenannte Sitzung",
+    "groups": {
+      "recent": "Zuletzt verwendet",
+      "navigate": "Navigieren",
+      "create": "Erstellen",
+      "search": "Suche",
+      "preferences": "Einstellungen"
+    },
+    "search": {
+      "agents": "Agenten",
+      "chatSessions": "Chat-Sitzungen",
+      "projects": "Projekte",
+      "prompts": "Prompts",
+      "knowledgeContexts": "Wissenskontexte",
+      "skills": "Skills"
+    },
+    "create": {
+      "chat": "Neuer Chat",
+      "project": "Neues Projekt",
+      "agent": "Neuer Agent",
+      "prompt": "Neuer Prompt",
+      "skill": "Neuer Skill",
+      "routine": "Neue Routine",
+      "eval": "Neue Evaluation",
+      "variable": "Neue Variable",
+      "model": "Neues Modell",
+      "apiKey": "Neuer API-Schlüssel",
+      "inviteUser": "Benutzer einladen",
+      "uploadAudio": "Audio hochladen"
+    },
+    "preferences": {
+      "themeLight": "Design: Hell",
+      "themeDark": "Design: Dunkel",
+      "themeSystem": "Design: System",
+      "toggleSidebar": "Seitenleiste umschalten"
+    }
+  },
+  "home": {
+    "placeholderDescription": "Ihr Dashboard ist in Arbeit. Springen Sie in der Zwischenzeit direkt in einen Ihrer Bereiche.",
+    "quickLinks": "Schnellzugriff"
   }
 }
