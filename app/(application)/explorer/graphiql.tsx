@@ -6,7 +6,6 @@ import React from "react";
 import 'graphiql/setup-workers/webpack';
 import 'graphiql/style.css';
 import '../../graphiql.css';
-import { useQuery } from "@tanstack/react-query";
 import { getToken } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,13 +16,34 @@ export default function GraphiQLComponent() {
 
     const configContext = React.useContext(ConfigContext);
 
-    const { data, isLoading, error } = useQuery({
-        queryKey: ["user"],
-        queryFn: () => getToken()
-    });
+    const [data, setData] = React.useState<string | undefined>(undefined);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [error, setError] = React.useState<Error | null>(null);
+
+    React.useEffect(() => {
+        let cancelled = false;
+        setIsLoading(true);
+        setError(null);
+        getToken()
+            .then((token) => {
+                if (cancelled) return;
+                setData(token);
+            })
+            .catch((err) => {
+                if (cancelled) return;
+                setError(err instanceof Error ? err : new Error(String(err)));
+            })
+            .finally(() => {
+                if (cancelled) return;
+                setIsLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     if (isLoading) {
-        return <Skeleton className="h-10 w-20" /> 
+        return <Skeleton className="h-10 w-20" />
     }
 
     if (error) {
@@ -35,7 +55,7 @@ export default function GraphiQLComponent() {
         </AlertDescription>
       </Alert>
     }
-    
+
     const fetcher = createGraphiQLFetcher({
         url: `${configContext?.backend}/graphql`, headers: {
             "Authorization": `Bearer ${data}`

@@ -1,6 +1,6 @@
 import useUppy from "@/hooks/use-uppy";
 import { Dashboard } from '@uppy/react';
-import { useContext, useEffect, useState } from "react"
+import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { X, File, ImageIcon, FileText, FilePlus, Download, LoaderIcon, FileWarning, Upload, PlusSquareIcon, EyeIcon, PlusIcon, ChevronRightIcon, ChevronLeftIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,10 +14,9 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import '@uppy/core/dist/style.min.css';
 import '@uppy/dashboard/dist/style.min.css';
-import { filesApi, S3FileListOutput } from "@/lib/api/files"
+import { filesApi, S3FileListOutput, S3ObjectOutput } from "@/lib/api/files"
 import { useTheme } from "next-themes";
 import { ConfigContext } from "./config-context";
-import { useQuery as useTanstackQuery, useMutation as useTanstackMutation } from "@tanstack/react-query";
 import { allFileTypes } from "@/types/models/agent";
 import { Input } from "./ui/input";
 import { DoubleArrowLeftIcon } from "@radix-ui/react-icons";
@@ -25,22 +24,31 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
 
 export function FileDataCard({ s3key, children }: { s3key: string, children?: React.ReactNode }) {
-  const { data, isLoading, error, refetch } = useTanstackQuery({
-    queryKey: ['fileObject', s3key],
-    queryFn: async () => {
-      if (!s3key) {
-        return null;
-      }
-      const result = await filesApi.object(s3key);
-      return result;
-    },
-    enabled: s3key !== undefined && s3key !== null,
-  })
+  const [data, setData] = useState<S3ObjectOutput | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(!!s3key);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (s3key) {
-      refetch();
+    if (!s3key) {
+      setData(null);
+      return;
     }
+    let cancelled = false;
+    setIsLoading(true);
+    setError(null);
+    filesApi.object(s3key)
+      .then((result) => {
+        if (!cancelled) setData(result);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err : new Error(String(err)));
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [s3key]);
 
   if (!s3key) {
@@ -221,25 +229,51 @@ export const FileGalleryAndUpload = ({
     setSelected([...selected, key])
   }
 
-  const deleteFile = useTanstackMutation({
-    mutationFn: async ({ key }: { key: string }) => {
-      await filesApi.delete(key)
-      refetch();
-      return;
-    }
-  })
+  const [data, setData] = useState<S3FileListOutput | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const lastQueryKeyRef = useRef<string | null>(null);
 
-  const { data, isLoading: loading, error, refetch } = useTanstackQuery({
-    queryKey: ['filesQuery', search, currentContinuationToken],
-    staleTime: 30000,
-    queryFn: async (): Promise<S3FileListOutput> => {
-      return filesApi.list({
-        search,
-        continuationToken: currentContinuationToken,
-        global: global,
+  // Stable identity so the uppy uploadSuccess callback never holds a stale closure.
+  const refetch = useCallback(() => setRefreshCounter((c) => c + 1), []);
+
+  const deleteFile = useCallback(async (key: string) => {
+    try {
+      await filesApi.delete(key);
+    } catch (err) {
+      console.error("Failed to delete file", err);
+    }
+    refetch();
+  }, [refetch]);
+
+  useEffect(() => {
+    const queryKey = JSON.stringify([search, currentContinuationToken]);
+    // New search / page: drop the stale list and show the loading skeletons.
+    // Plain refetches (after upload/delete) keep the current list on screen.
+    if (lastQueryKeyRef.current !== queryKey) {
+      lastQueryKeyRef.current = queryKey;
+      setData(undefined);
+      setLoading(true);
+    }
+    let cancelled = false;
+    filesApi.list({
+      search,
+      continuationToken: currentContinuationToken,
+      global: global,
+    })
+      .then((result) => {
+        if (!cancelled) setData(result);
       })
-    },
-  })
+      .catch((err) => {
+        console.error("Failed to list files", err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [search, currentContinuationToken, global, refreshCounter]);
 
   const { theme } = useTheme()
   const uppy = useUppy(
@@ -282,10 +316,6 @@ export const FileGalleryAndUpload = ({
     },
     dependencies,
   );
-
-  useEffect(() => {
-    refetch();
-  }, [search, currentContinuationToken]);
 
   const filteredNewlyUploaded = newlyUploadedFiles.filter(item => {
     if (!search) return true;
@@ -347,9 +377,7 @@ export const FileGalleryAndUpload = ({
             {displayContents.map((item: S3FileListOutput["Contents"][0]) => {
               return (
                 <FileItem s3Key={item.Key} onSelect={addSelected} active={selected.some((s) => s === item.Key)} onRemove={() => {
-                  deleteFile.mutate({
-                    key: item.Key
-                  })
+                  deleteFile(item.Key)
                   setNewlyUploadedFiles((prev) => prev.filter((f) => f.Key !== item.Key));
                   setSelected((prev) => prev.filter((s) => s !== item.Key));
                 }} disabled={!allowedFileTypes ? false : !allowedFileTypes?.some((type) => item.Key.endsWith(type))} />
@@ -551,25 +579,40 @@ export const getPresignedUrl = async (fileKey: string) => {
 }
 
 const SecureImageRenderComponent = ({ fileKey }: { fileKey: string }) => {
-  // Gets a signed key to show the image
-  const query = useTanstackQuery({
-    queryKey: ['imageQuery', fileKey],
-    staleTime: 30000,
-    queryFn: async () => {
-      return getPresignedUrl(fileKey)
-    },
-  })
+  // Gets a signed url to show the image. getPresignedUrl keeps its own
+  // short-lived module cache, so repeat renders don't re-hit the backend.
+  const [url, setUrl] = useState<string | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (query.isLoading) {
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    setUrl(undefined);
+    getPresignedUrl(fileKey)
+      .then((signedUrl) => {
+        if (!cancelled) setUrl(signedUrl);
+      })
+      .catch((err) => {
+        console.error("Failed to get presigned url", err);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fileKey]);
+
+  if (isLoading) {
     return <div><LoaderIcon /></div>
   }
 
-  if (!query.isLoading && !query.data) {
+  if (!isLoading && !url) {
     return <div><FileWarning /></div>
   }
 
   return (<img
-    src={query.data}
+    src={url}
     alt={fileKey}
     className="object-cover w-full h-full"
   />)

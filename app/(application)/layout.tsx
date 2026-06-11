@@ -6,7 +6,6 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { ThemeProvider } from "@/components/theme-provider";
-import { TanstackQueryClientProvider } from "@/app/(application)/query-client";
 import Authenticated from "@/app/(application)/authenticated";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
@@ -114,11 +113,9 @@ export default async function RootLayout({
                             disableTransitionOnChange>
                             <main className="grow flex min-w-0 w-full">
                                 <div className="grow flex flex-col min-w-0 w-full">
-                                    <TanstackQueryClientProvider>
-                                        <Authenticated sidebarDefaultOpen={defaultOpen} user={user} config={config}>
-                                            {children}
-                                        </Authenticated>
-                                    </TanstackQueryClientProvider>
+                                    <Authenticated sidebarDefaultOpen={defaultOpen} user={user} config={config}>
+                                        {children}
+                                    </Authenticated>
                                 </div>
                             </main>
                             <Toaster />

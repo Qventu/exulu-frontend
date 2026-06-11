@@ -48,40 +48,45 @@ const Authenticated = ({ children, user, sidebarDefaultOpen, config }: Authentic
     ? configContext?.backend + "/graphql"
     : "http://localhost:9001/graphql";
 
-  const basic = setContext((operation, context) => ({
-    headers: {
-      Accept: "charset=utf-8",
-    },
-  }));
-
-  const authLink = setContext(async (operation, context) => {
-    const token = await getToken();
-    return {
+  // Memoized so the client (and its cache) is built once per backend uri
+  // instead of on every render. errorPolicy "all" surfaces GraphQL errors to
+  // callers via the `error` result field alongside any partial data.
+  const client = React.useMemo(() => {
+    const basic = setContext(() => ({
       headers: {
-        Authorization: `Bearer ${token}`,
+        Accept: "charset=utf-8",
       },
-    };
-  });
+    }));
 
-  const link = ApolloLink.from([basic, authLink, new HttpLink({ uri: uri })]);
+    const authLink = setContext(async () => {
+      const token = await getToken();
+      return {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      };
+    });
 
-  const client = new ApolloClient({
-    uri: uri,
-    cache: new InMemoryCache({
-      addTypename: false,
-    }),
-    link: link,
-    defaultOptions: {
-      watchQuery: {
-        fetchPolicy: "no-cache",
-        errorPolicy: "ignore",
+    const link = ApolloLink.from([basic, authLink, new HttpLink({ uri: uri })]);
+
+    return new ApolloClient({
+      uri: uri,
+      cache: new InMemoryCache({
+        addTypename: false,
+      }),
+      link: link,
+      defaultOptions: {
+        watchQuery: {
+          fetchPolicy: "no-cache",
+          errorPolicy: "all",
+        },
+        query: {
+          fetchPolicy: "no-cache",
+          errorPolicy: "all",
+        },
       },
-      query: {
-        fetchPolicy: "no-cache",
-        errorPolicy: "all",
-      },
-    },
-  });
+    });
+  }, [uri]);
 
   return (
     <ApolloProvider client={client}>
