@@ -67,7 +67,7 @@ export function VersionHistoryPanel({
           <h3 className="text-sm font-semibold">Version History</h3>
         </div>
         <div className="flex flex-col items-center justify-center py-8 text-center border rounded-lg bg-muted/20">
-          <GitBranch className="h-10 w-10 text-muted-foreground mb-3" strokeWidth={1.5} />
+          <GitBranch className="size-10 text-muted-foreground mb-3" />
           <p className="text-sm text-muted-foreground">No previous versions yet</p>
           <p className="text-xs text-muted-foreground mt-1">
             Changes will be tracked automatically when you edit

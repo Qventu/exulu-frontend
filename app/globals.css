@@ -62,6 +62,11 @@
     --chart-3: 24.8571 98.1308% 58.0392%;
     --chart-4: 217.0787 76.7241% 54.5098%;
     --chart-5: 0 0% 45.4902%;
+    --chart-6: 173 80% 40%;
+    --chart-7: 330 81% 60%;
+    --chart-8: 45 93% 47%;
+    --chart-9: 292 84% 61%;
+    --chart-10: 84 81% 44%;
     --sidebar: 210 42.8571% 97.2549%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -70,6 +75,8 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: var(--ring);
+    --code-surface: 231 15% 18%;
+    --code-surface-foreground: 60 30% 96%;
     --font-sans: 'Inter', system-ui, sans-serif;
     --font-serif: 'Merriweather', serif;
     --font-mono: 'JetBrains Mono', monospace;
@@ -113,9 +120,14 @@
     --ring: 257.6687 100% 68.0392%;
     --chart-1: 141.8919 69.1589% 58.0392%;
     --chart-2: 257.6687 100% 68.0392%;
-    --chart-3: 0 93.5484% 81.7647%;
+    --chart-3: 24.8571 98.1308% 66%;
     --chart-4: 217.5484 87.5706% 65.2941%;
     --chart-5: 0 0% 62.7451%;
+    --chart-6: 172 66% 50%;
+    --chart-7: 329 86% 70%;
+    --chart-8: 48 96% 53%;
+    --chart-9: 292 91% 73%;
+    --chart-10: 83 78% 55%;
     --sidebar: 240 4.3478% 9.0196%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -124,6 +136,8 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: var(--ring);
+    --code-surface: 231 15% 18%;
+    --code-surface-foreground: 60 30% 96%;
     --font-sans: 'Inter', system-ui, sans-serif;
     --font-serif: 'Merriweather', serif;
     --font-mono: 'JetBrains Mono', monospace;
@@ -161,8 +175,9 @@
   ;
 }
 
+/* `background` is not paintable on SVG bar geometry, so the old hardcoded
+   `background: #0c85d0` here was a silent no-op; only the cursor matters (R6). */
 .recharts-active-bar {
-  background: #0c85d0;
   cursor: pointer;
 }
 

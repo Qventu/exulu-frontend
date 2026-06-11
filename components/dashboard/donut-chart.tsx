@@ -19,17 +19,19 @@ interface DonutChartProps {
   unit: "tokens" | "count";
 }
 
+// --chart-6..10 are defined in globals.css (both themes); the var() fallbacks
+// cycle back through --chart-1..5 so slices 6-10 stay theme-safe regardless (R6).
 const CHART_COLORS = [
   "hsl(var(--chart-1))",
   "hsl(var(--chart-2))",
   "hsl(var(--chart-3))",
   "hsl(var(--chart-4))",
   "hsl(var(--chart-5))",
-  "hsl(var(--chart-6))",
-  "hsl(var(--chart-7))",
-  "hsl(var(--chart-8))",
-  "hsl(var(--chart-9))",
-  "hsl(var(--chart-10))"
+  "hsl(var(--chart-6, var(--chart-1)))",
+  "hsl(var(--chart-7, var(--chart-2)))",
+  "hsl(var(--chart-8, var(--chart-3)))",
+  "hsl(var(--chart-9, var(--chart-4)))",
+  "hsl(var(--chart-10, var(--chart-5)))"
 ];
 
 function transformGroupValue(value: string): string {
@@ -89,7 +91,7 @@ export function DonutChart({ groupByOptions, dateRange, selectedType, groupBy, o
       <text
         x={x}
         y={y}
-        fill="black"
+        fill="hsl(var(--foreground))"
         textAnchor={x > cx ? 'start' : 'end'}
         dominantBaseline="central"
         fontSize="12"

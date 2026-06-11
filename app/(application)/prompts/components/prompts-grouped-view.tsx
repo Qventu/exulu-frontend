@@ -58,7 +58,7 @@ export function PromptsGroupedView({
           <div className="flex justify-center">
             <div className="relative">
               <div className="absolute inset-0 bg-primary/20 blur-3xl"></div>
-              <FolderPlus className="relative h-24 w-24 text-primary" strokeWidth={1.5} />
+              <FolderPlus className="relative size-24 text-primary" />
             </div>
           </div>
           <div className="space-y-4">
@@ -180,7 +180,7 @@ export function PromptsGroupedView({
               >
               <CardContent className="p-8">
                 <div className="flex flex-col gap-4">
-                  <Folder className="h-16 w-16 flex-shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 ease-out" strokeWidth={1.5} />
+                  <Folder className="size-16 flex-shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 ease-out" />
                   <div className="space-y-2">
                     <h3 className="font-bold text-2xl leading-tight group-hover:text-primary transition-colors duration-200">
                       {folder}
@@ -212,7 +212,7 @@ export function PromptsGroupedView({
             >
             <CardContent className="p-8">
               <div className="flex flex-col gap-4">
-                <Inbox className="h-16 w-16 text-muted-foreground flex-shrink-0 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300 ease-out" strokeWidth={1.5} />
+                <Inbox className="size-16 text-muted-foreground flex-shrink-0 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300 ease-out" />
                 <div className="space-y-2">
                   <h3 className="font-bold text-2xl leading-tight text-muted-foreground group-hover:text-foreground transition-colors duration-200">
                     Unorganized

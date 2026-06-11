@@ -274,7 +274,7 @@ export default function SkillEditorPage({ params }: PageProps) {
         <Separator orientation="vertical" className="h-5" />
 
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <Sparkles className="h-4 w-4 text-primary flex-shrink-0" strokeWidth={1.5} />
+          <Sparkles className="size-4 text-primary flex-shrink-0" />
           <h1 className="text-sm font-semibold truncate">{skill.name}</h1>
           <Badge variant="secondary" className="font-mono text-[10px] px-1.5 py-0 flex-shrink-0">
             v{currentVersion}

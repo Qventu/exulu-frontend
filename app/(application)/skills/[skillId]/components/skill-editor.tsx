@@ -88,7 +88,7 @@ export function SkillEditor({ skillId, file, onSaved }: SkillEditorProps) {
   if (!file) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
-        <FileText className="h-14 w-14" strokeWidth={1} />
+        <FileText className="size-14" />
         <p className="text-sm">Select a file from the tree to edit</p>
       </div>
     );

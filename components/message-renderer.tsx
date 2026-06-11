@@ -1248,7 +1248,7 @@ const ToolCallChip = ({ tool }: { tool: { name: string; id: string; input: any; 
         )}
       >
         <div className="p-1 rounded bg-primary/10 shrink-0">
-          <Icon className="h-3 w-3 text-primary" strokeWidth={1.5} />
+          <Icon className="size-3 text-primary" />
         </div>
         <div className="flex-1 min-w-0 flex items-center gap-2">
           <span className="text-xs font-medium text-foreground shrink-0">
@@ -1263,10 +1263,9 @@ const ToolCallChip = ({ tool }: { tool: { name: string; id: string; input: any; 
         {expandable && (
           <ChevronDown
             className={cn(
-              "h-3 w-3 text-muted-foreground shrink-0 transition-transform duration-200",
+              "size-3 text-muted-foreground shrink-0 transition-transform duration-200",
               isOpen && "rotate-180"
             )}
-            strokeWidth={1.5}
           />
         )}
       </button>

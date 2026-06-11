@@ -118,44 +118,44 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
   mainNavigationItems.push({
     label: t('navigation.chat'),
     path: "chat",
-    icon: <MessageCircle className="h-4 w-4" strokeWidth={1.5} />,
+    icon: <MessageCircle className="size-4" />,
   });
 
   mainNavigationItems.push({
     label: t('navigation.agents'),
     path: "agents",
-    icon: <Bot className="h-4 w-4" strokeWidth={1.5} />,
+    icon: <Bot className="size-4" />,
   });  
 
   mainNavigationItems.push({
     label: t('navigation.knowledge'),
     path: "data",
-    icon: <Brain className="h-4 w-4" strokeWidth={1.5} />,
+    icon: <Brain className="size-4" />,
   });
 
   mainNavigationItems.push({
     label: t('navigation.prompts'),
     path: "prompts",
-    icon: <ClipboardType className="h-4 w-4" strokeWidth={1.5} />,
+    icon: <ClipboardType className="size-4" />,
   });
 
   mainNavigationItems.push({
     label: t('navigation.skills'),
     path: "skills",
-    icon: <Sparkles className="h-4 w-4" strokeWidth={1.5} />,
+    icon: <Sparkles className="size-4" />,
   });
 
   mainNavigationItems.push({
     label: t('navigation.projects'),
     path: "projects",
-    icon: <FolderOpen className="h-4 w-4" strokeWidth={1.5} />,
+    icon: <FolderOpen className="size-4" />,
   });
 
   if (can(rightsUser, { area: "workflows", level: "write" })) {
     mainNavigationItems.push({
       label: t('navigation.routines'),
       path: "workflows",
-      icon: <Form className="h-4 w-4" strokeWidth={1.5} />,
+      icon: <Form className="size-4" />,
     });
   }
 
@@ -163,7 +163,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     mainNavigationItems.push({
       label: t('navigation.evals'),
       path: "evals",
-      icon: <BookCheck className="h-4 w-4" strokeWidth={1.5} />,
+      icon: <BookCheck className="size-4" />,
     });
   }
 
@@ -171,7 +171,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     mainNavigationItems.push({
       label: t('navigation.feedback'),
       path: "feedback",
-      icon: <ThumbsUp className="h-4 w-4" strokeWidth={1.5} />,
+      icon: <ThumbsUp className="size-4" />,
     });
   }
 
@@ -179,7 +179,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
   mainNavigationItems.push({
     label: t('navigation.transcriptions'),
     path: "transcriptions",
-    icon: <FileAudio className="h-4 w-4" strokeWidth={1.5} />,
+    icon: <FileAudio className="size-4" />,
   });
 
   if (
@@ -189,7 +189,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     mainNavigationItems.push({
       label: t('navigation.automation'),
       path: "n8n",
-      icon: <Workflow className="h-4 w-4" strokeWidth={1.5} />,
+      icon: <Workflow className="size-4" />,
     });
   }
 
@@ -197,7 +197,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     bottomNavigationItems.push({
       label: t('navigation.users'),
       path: "users",
-      icon: <Users className="h-4 w-4" strokeWidth={1.5} />,
+      icon: <Users className="size-4" />,
     });
   }
 
@@ -205,7 +205,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     bottomNavigationItems.push({
       label: t('navigation.analytics'),
       path: "analytics",
-      icon: <BarChart4 className="h-4 w-4" strokeWidth={1.5} />,
+      icon: <BarChart4 className="size-4" />,
     });
   }
 
@@ -214,7 +214,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     bottomNavigationItems.push({
       label: t('navigation.apiPlayground'),
       path: "explorer",
-      icon: <Code className="h-4 w-4" strokeWidth={1.5} />,
+      icon: <Code className="size-4" />,
     });
   }
 
@@ -222,7 +222,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     bottomNavigationItems.push({
       label: t('navigation.themeSettings'),
       path: "configuration",
-      icon: <Palette className="h-4 w-4" strokeWidth={1.5} />,
+      icon: <Palette className="size-4" />,
     });
   }
 
@@ -230,7 +230,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     bottomNavigationItems.push({
       label: t('navigation.apiKeys'),
       path: "keys",
-      icon: <Key className="h-4 w-4" strokeWidth={1.5} />,
+      icon: <Key className="size-4" />,
     });
   }
 
@@ -238,7 +238,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     bottomNavigationItems.push({
       label: t('navigation.systemVariables'),
       path: "variables",
-      icon: <Variable className="h-4 w-4" strokeWidth={1.5} />,
+      icon: <Variable className="size-4" />,
     });
   }
 
@@ -246,7 +246,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     bottomNavigationItems.push({
       label: "Models",
       path: "models",
-      icon: <Cpu className="h-4 w-4" strokeWidth={1.5} />,
+      icon: <Cpu className="size-4" />,
     });
   }
 
@@ -254,7 +254,7 @@ const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => 
     bottomNavigationItems.push({
       label: "Budgets",
       path: "budgets",
-      icon: <Wallet className="h-4 w-4" strokeWidth={1.5} />,
+      icon: <Wallet className="size-4" />,
     });
   }
 
@@ -376,14 +376,13 @@ function AdminNavigationSection({
                 !isAnyAdminPageActive && "opacity-60 hover:opacity-100"
               )}
             >
-              <Settings className="h-4 w-4 flex-shrink-0" strokeWidth={1.5} />
+              <Settings className="size-4 flex-shrink-0" />
               <span className="font-medium truncate">{label}</span>
               <ChevronUp
                 className={cn(
-                  "ml-auto h-4 w-4 flex-shrink-0 transition-transform duration-200",
+                  "ml-auto size-4 flex-shrink-0 transition-transform duration-200",
                   isOpen && "rotate-180"
                 )}
-                strokeWidth={1.5}
               />
             </SidebarMenuButton>
           </CollapsibleTrigger>
@@ -540,10 +539,9 @@ export function MainNavSidebar({ sidebarDefaultOpen, config }: { sidebarDefaultO
                   </div>
                   <ChevronUp
                     className={cn(
-                      "ml-auto h-4 w-4 flex-shrink-0 group-data-[collapsible=icon]:hidden transition-transform",
+                      "ml-auto size-4 flex-shrink-0 group-data-[collapsible=icon]:hidden transition-transform",
                       isDropdownOpen && "rotate-180"
                     )}
-                    strokeWidth={1.5}
                   />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
@@ -555,16 +553,16 @@ export function MainNavSidebar({ sidebarDefaultOpen, config }: { sidebarDefaultO
                 <DropdownMenuItem onClick={handleThemeToggle}>
                   <div className="flex items-center gap-2 w-full min-w-0">
                     {theme === "dark" ? (
-                      <Sun className="h-4 w-4 flex-shrink-0" strokeWidth={1.5} />
+                      <Sun className="size-4 flex-shrink-0" />
                     ) : (
-                      <Moon className="h-4 w-4 flex-shrink-0" strokeWidth={1.5} />
+                      <Moon className="size-4 flex-shrink-0" />
                     )}
                     <span className="truncate">{t('navigation.theme')}</span>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLocaleToggle}>
                   <div className="flex items-center gap-2 w-full min-w-0">
-                    <Languages className="h-4 w-4 flex-shrink-0" strokeWidth={1.5} />
+                    <Languages className="size-4 flex-shrink-0" />
                     <span className="truncate">
                       {locale === 'en' ? 'Deutsch' : 'English'}
                     </span>
@@ -572,19 +570,19 @@ export function MainNavSidebar({ sidebarDefaultOpen, config }: { sidebarDefaultO
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/settings" className="flex items-center gap-2 w-full min-w-0">
-                    <Settings className="h-4 w-4 flex-shrink-0" strokeWidth={1.5} />
+                    <Settings className="size-4 flex-shrink-0" />
                     <span className="truncate">{t('navigation.settings')}</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/token" className="flex items-center gap-2 w-full min-w-0">
-                    <Album className="h-4 w-4 flex-shrink-0" strokeWidth={1.5} />
+                    <Album className="size-4 flex-shrink-0" />
                     <span className="truncate">Token</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignout}>
                   <div className="flex items-center gap-2 w-full min-w-0">
-                    <LogOut className="h-4 w-4 flex-shrink-0" strokeWidth={1.5} />
+                    <LogOut className="size-4 flex-shrink-0" />
                     <span className="truncate">{t('navigation.logout')}</span>
                   </div>
                 </DropdownMenuItem>

@@ -272,7 +272,7 @@ export default function SkillsPage() {
                 </div>
               ) : skills.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                  <Sparkles className="h-12 w-12 text-muted-foreground mb-4" strokeWidth={1} />
+                  <Sparkles className="size-12 text-muted-foreground mb-4" />
                   <p className="text-sm font-medium text-muted-foreground mb-2">
                     {searchQuery ? "No matches found" : "No skills yet"}
                   </p>
@@ -311,10 +311,7 @@ export default function SkillsPage() {
             ) : (
               <div className="h-full flex items-center justify-center border rounded-lg bg-muted/20">
                 <div className="text-center space-y-4 px-8">
-                  <Sparkles
-                    className="h-16 w-16 text-muted-foreground mx-auto"
-                    strokeWidth={1}
-                  />
+                  <Sparkles className="size-16 text-muted-foreground mx-auto" />
                   <div className="space-y-2">
                     <p className="text-lg font-semibold text-muted-foreground">
                       Select a skill to preview

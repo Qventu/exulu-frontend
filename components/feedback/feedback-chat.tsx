@@ -115,7 +115,7 @@ export function FeedbackChat({ kind, sessionId, onBack }: Props) {
           onClick={onBack}
           className="h-8 px-2 -ml-2 text-muted-foreground"
         >
-          <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
+          <ArrowLeft className="size-4" />
           <span className="ml-1">{t("feedback.back")}</span>
         </Button>
       </div>
@@ -180,7 +180,7 @@ export function FeedbackChat({ kind, sessionId, onBack }: Props) {
               disabled={!input.trim()}
               aria-label={t("feedback.send")}
             >
-              <ArrowUp className="h-4 w-4" strokeWidth={1.5} />
+              <ArrowUp className="size-4" />
             </Button>
           )}
         </div>

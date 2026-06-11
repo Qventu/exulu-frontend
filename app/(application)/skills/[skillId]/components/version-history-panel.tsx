@@ -64,7 +64,7 @@ export function VersionHistoryPanel({ skill, onCompare }: VersionHistoryPanelPro
 
           {history.length === 0 && (
             <div className="flex flex-col items-center py-8 text-center text-muted-foreground">
-              <GitBranch className="h-10 w-10 mb-3" strokeWidth={1.5} />
+              <GitBranch className="size-10 mb-3" />
               <p className="text-sm">No previous versions yet</p>
               <p className="text-xs mt-1">
                 Click "Save Version" to create a snapshot

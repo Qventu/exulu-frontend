@@ -281,7 +281,7 @@ export default function PromptsPage() {
                 ) : (
                   <div className="h-full min-h-[300px] flex items-center justify-center border rounded-lg bg-muted/20">
                     <div className="text-center space-y-3 sm:space-y-4 px-6 sm:px-8">
-                      <FileText className="h-12 sm:h-16 w-12 sm:w-16 text-muted-foreground mx-auto" strokeWidth={1.5} />
+                      <FileText className="size-12 sm:size-16 text-muted-foreground mx-auto" />
                       <div className="space-y-1 sm:space-y-2">
                         <p className="text-base sm:text-lg font-semibold text-muted-foreground">
                           Select a prompt to preview
