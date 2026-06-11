@@ -136,6 +136,7 @@ export default function SkillEditorPage({ params }: PageProps) {
     const label = node.type === "folder"
       ? `folder "${node.name}" and all its contents`
       : `file "${node.name}"`;
+    // eslint-disable-next-line no-restricted-globals -- pre-existing native dialog; replace with ConfirmDialog in this page's redesign
     if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
 
     try {

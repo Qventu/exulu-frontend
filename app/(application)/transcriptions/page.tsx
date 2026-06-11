@@ -69,7 +69,6 @@ type Job = {
 // "5h ago", "2d ago", "May 27"). The `tick` arg is unused inside but lets
 // callers re-render once per second to keep the "X ago" counter live for
 // recently-saved rows.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const formatRelative = (iso: string, _tick: number): string => {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return "";
@@ -729,6 +728,7 @@ function ReviewPanel({
       onClose();
       return;
     }
+    // eslint-disable-next-line no-restricted-globals -- pre-existing native dialog; replace with ConfirmDialog in this page's redesign
     if (!confirm("Discard this transcript? The job will be cancelled.")) return;
     setBusy(true);
     try {

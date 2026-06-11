@@ -128,6 +128,7 @@ export function EditStyleDialog({
 
   const handleDelete = async () => {
     if (!initialStyle?.id) return;
+    // eslint-disable-next-line no-restricted-globals -- pre-existing native dialog; replace with ConfirmDialog in this page's redesign
     if (!confirm(`Delete style "${initialStyle.name}"? This can't be undone.`)) return;
     try {
       await deleteStyle({ variables: { id: initialStyle.id } });

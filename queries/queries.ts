@@ -280,7 +280,6 @@ export const GET_CONTEXT_BY_ID = gql`
 `;
 
 export const GET_ITEMS = (context: string, fields: string[]) => {
-  console.log("context", context);
   const upperCaseContext = context.charAt(0).toUpperCase() + context.slice(1)
   return gql`
     query ${context}Pagination($page: Int!, $limit: Int!, $filters: [Filter${upperCaseContext}_items], $sort: SortBy = { field: "updatedAt", direction: DESC }) {

@@ -71,6 +71,7 @@ export function PromptPreview({ prompt, onUpdate, onEdit }: PromptPreviewProps) 
   const creatorName = creatorData?.userById?.name || "Unknown";
 
   const handleDelete = async () => {
+    // eslint-disable-next-line no-restricted-globals -- pre-existing native dialog; replace with ConfirmDialog in this page's redesign
     if (confirm("Are you sure you want to delete this prompt?")) {
       try {
         await deletePrompt({ variables: { id: prompt.id } });

@@ -42,6 +42,7 @@ export function SkillListItem({ skill, isSelected, onClick, onDelete }: SkillLis
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    // eslint-disable-next-line no-restricted-globals -- pre-existing native dialog; replace with ConfirmDialog in this page's redesign
     if (!confirm(`Delete "${skill.name}"? This cannot be undone.`)) return;
     setIsDeleting(true);
     try {

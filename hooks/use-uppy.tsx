@@ -80,9 +80,6 @@ export const initializeUppy = async (options: InitializeOptions): Promise<Uppy> 
                 ...(options.global && { Global: "true" }),
             }
         })
-        .on("file-added", async (file) => {
-            console.debug("added", file);
-        })
         .on("upload-error", (file, error) => {
             if (!file?.id) {
                 return;
@@ -95,7 +92,6 @@ export const initializeUppy = async (options: InitializeOptions): Promise<Uppy> 
                 return;
             }
             if (uploadSuccess) {
-                console.log("response", response)
                 uploadSuccess({
                     file: file,
                     key: response.uploadURL.split("/").pop() || "",

@@ -27,6 +27,7 @@ export function PromptListItem({ prompt, isSelected, onClick, user, onDelete }: 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent selecting the prompt
 
+    // eslint-disable-next-line no-restricted-globals -- pre-existing native dialog; replace with ConfirmDialog in this page's redesign
     if (!confirm(`Are you sure you want to delete "${prompt.name}"?`)) {
       return;
     }
