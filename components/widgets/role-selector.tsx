@@ -28,12 +28,42 @@ interface Role {
   users?: string
 }
 
+/** Localized labels for the derived permission summary on each role row. */
+export interface RoleSelectorPermissionCopy {
+  agents: string
+  workflows: string
+  variables: string
+  users: string
+  readWrite: string
+  read: string
+  none: string
+}
+
+const DEFAULT_PERMISSION_COPY: RoleSelectorPermissionCopy = {
+  agents: "Agents",
+  workflows: "Workflows",
+  variables: "Variables",
+  users: "Users",
+  readWrite: "Read/Write",
+  read: "Read",
+  none: "No specific permissions configured",
+}
+
 interface RoleSelectorProps {
   value?: string
   onChange: (roleId: string) => void
   placeholder?: string
   className?: string
   disabled?: boolean
+  /**
+   * Localized copy, passed in by the consuming feature (widgets carry no
+   * feature namespace of their own). Defaults preserve the pre-i18n English
+   * strings for existing consumers.
+   */
+  loadingText?: string
+  searchPlaceholder?: string
+  emptyText?: string
+  permissionCopy?: RoleSelectorPermissionCopy
 }
 
 export function RoleSelector({
@@ -42,6 +72,10 @@ export function RoleSelector({
   placeholder = "Select role...",
   className,
   disabled,
+  loadingText = "Loading roles...",
+  searchPlaceholder = "Search roles...",
+  emptyText = "No roles found.",
+  permissionCopy = DEFAULT_PERMISSION_COPY,
 }: RoleSelectorProps) {
   const [open, setOpen] = useState(false)
 
@@ -53,47 +87,33 @@ export function RoleSelector({
   const roles: Role[] = data?.rolesPagination?.items || []
   const selectedRole = roles.find((role) => role.id === value)
 
+  // Parse permission strings and determine read/write access — same keyword
+  // checks and ordering as before, with the labels supplied via props.
   const formatPermissions = (role: Role) => {
     const permissions: string[] = []
+    const areas = [
+      ["agents", role.agents],
+      ["workflows", role.workflows],
+      ["variables", role.variables],
+      ["users", role.users],
+    ] as const
 
-    // Parse permission strings and determine read/write access
-    if (role.agents) {
-      const agentPerms = role.agents.toLowerCase()
-      if (agentPerms.includes('write') || agentPerms.includes('create') || agentPerms.includes('update') || agentPerms.includes('delete')) {
-        permissions.push("Agents: Read/Write")
-      } else if (agentPerms.includes('read') || agentPerms.includes('view')) {
-        permissions.push("Agents: Read")
+    for (const [area, value] of areas) {
+      if (!value) continue
+      const perms = value.toLowerCase()
+      if (
+        perms.includes('write') ||
+        perms.includes('create') ||
+        perms.includes('update') ||
+        perms.includes('delete')
+      ) {
+        permissions.push(`${permissionCopy[area]}: ${permissionCopy.readWrite}`)
+      } else if (perms.includes('read') || perms.includes('view')) {
+        permissions.push(`${permissionCopy[area]}: ${permissionCopy.read}`)
       }
     }
 
-    if (role.workflows) {
-      const workflowPerms = role.workflows.toLowerCase()
-      if (workflowPerms.includes('write') || workflowPerms.includes('create') || workflowPerms.includes('update') || workflowPerms.includes('delete')) {
-        permissions.push("Workflows: Read/Write")
-      } else if (workflowPerms.includes('read') || workflowPerms.includes('view')) {
-        permissions.push("Workflows: Read")
-      }
-    }
-
-    if (role.variables) {
-      const variablePerms = role.variables.toLowerCase()
-      if (variablePerms.includes('write') || variablePerms.includes('create') || variablePerms.includes('update') || variablePerms.includes('delete')) {
-        permissions.push("Variables: Read/Write")
-      } else if (variablePerms.includes('read') || variablePerms.includes('view')) {
-        permissions.push("Variables: Read")
-      }
-    }
-
-    if (role.users) {
-      const userPerms = role.users.toLowerCase()
-      if (userPerms.includes('write') || userPerms.includes('create') || userPerms.includes('update') || userPerms.includes('delete')) {
-        permissions.push("Users: Read/Write")
-      } else if (userPerms.includes('read') || userPerms.includes('view')) {
-        permissions.push("Users: Read")
-      }
-    }
-
-    return permissions.length > 0 ? permissions : ["No specific permissions configured"]
+    return permissions.length > 0 ? permissions : [permissionCopy.none]
   }
 
   return (
@@ -109,7 +129,7 @@ export function RoleSelector({
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading roles...
+              {loadingText}
             </>
           ) : selectedRole ? (
             selectedRole.name
@@ -121,8 +141,8 @@ export function RoleSelector({
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
         <Command>
-          <CommandInput placeholder="Search roles..." />
-          <CommandEmpty>No roles found.</CommandEmpty>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandEmpty>{emptyText}</CommandEmpty>
           <CommandGroup>
             {roles.map((role) => (
               <CommandItem
