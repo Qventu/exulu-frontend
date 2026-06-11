@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { TestCase } from "@/types/models/test-case";
+import { can } from "@/lib/rights";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +22,9 @@ export default function TestCasesPage() {
   });
   const router = useRouter();
 
-  // Check if user has evals access
-  const hasEvalsAccess = user.super_admin || user.role?.evals === "read" || user.role?.evals === "write";
+  // Check if user has evals access (shared RBAC predicate — same source as
+  // the nav entry and the /evals route guard, which catches this server-side)
+  const hasEvalsAccess = can(user, { area: "evals", level: "read" });
 
   if (!hasEvalsAccess) {
     return (

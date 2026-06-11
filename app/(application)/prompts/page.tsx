@@ -36,14 +36,11 @@ export default function PromptsPage() {
     return false;
   });
 
-  // Keyboard shortcuts for power users
+  // Keyboard shortcuts for power users.
+  // NOTE: ⌘K belongs to the shell's command palette (navigation.md §4) —
+  // this page's old quick-create binding was released in Phase 1.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + K: Quick create
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsCreateModalOpen(true);
-      }
       // Cmd/Ctrl + /: Focus search
       if ((e.metaKey || e.ctrlKey) && e.key === '/') {
         e.preventDefault();

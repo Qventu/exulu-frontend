@@ -346,7 +346,12 @@ const BODY_GROUPS: readonly Exclude<NavGroup, "top" | "personal">[] = [
   "administration",
 ];
 
-function flagEnabled(config: NavConfig, flag?: NavConfigFlag): boolean {
+/**
+ * Whether a NavEntry's backend config flag is on. Exported so route guards
+ * (lib/route-guard.tsx) evaluate the exact same gate as the rendering
+ * surfaces — gating can never diverge (§1.1 principle 3).
+ */
+export function flagEnabled(config: NavConfig, flag?: NavConfigFlag): boolean {
   if (!flag) return true;
   switch (flag) {
     case "transcriptions":

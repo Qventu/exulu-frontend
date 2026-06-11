@@ -1,0 +1,145 @@
+// Server-side route guards (navigation.md §1.3 rule 5, IMPLEMENTATION_PLAN 1A).
+//
+// "Nav-hidden must imply route-guarded": every route the sidebar would hide is
+// guarded here with the SAME `requires` predicate the sidebar consumes — the
+// declarative table in components/shell/nav-config.ts, evaluated via
+// lib/rights.ts#can. Gating can never diverge between the nav and the routes.
+//
+// Usage (App Router):
+//   - server `page.tsx`:   const denied = await guardRoute("explorer");
+//                          if (denied) return denied;
+//   - client `page.tsx`:   add a server `layout.tsx` next to it:
+//                          export default async function Layout({ children }) {
+//                            return (await guardRoute("agents")) ?? children;
+//                          }
+//
+// Denied accounts get the shared AccessDenied primitive (philosophy: trust
+// through transparency — the missing right is named, nobody is silently
+// bounced). Unauthenticated requests are redirected to /login exactly like
+// app/(application)/layout.tsx does. Config-flag gates (e.g. n8n) also render
+// AccessDenied when the feature is off (navigation.md §1.2).
+//
+// Server-only module: imports next/headers — never import from client code.
+
+import { type ReactElement } from "react";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+
+import { AccessDenied } from "@/components/primitives/access-denied";
+import {
+  flagEnabled,
+  NAV_ENTRIES,
+  type NavConfig,
+  type NavEntry,
+} from "@/components/shell/nav-config";
+import { can, type Requirement, type RightsUser } from "@/lib/rights";
+import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
+
+// serverSideAuthCheck is wrapped in React.cache at its source, so the root
+// layout's call and every guard in the same render pass share one DB
+// round-trip per request.
+const getSessionUser = serverSideAuthCheck;
+
+/**
+ * The server-derived slice of NavConfig the guards need. Mirrors the env
+ * wiring in app/(application)/layout.tsx — these flags are env-only (the
+ * backend /config payload carries no n8n/transcription/feedback switches,
+ * see BackendConfigType), so reading process.env here is the same source
+ * of truth the client ConfigContext receives.
+ */
+function serverNavConfig(): NavConfig {
+  return {
+    transcription: {
+      enabled:
+        typeof process.env.TRANSCRIPTION_MODEL === "string" &&
+        process.env.TRANSCRIPTION_MODEL !== "" &&
+        process.env.EXULU_USE_LITELLM === "true",
+    },
+    n8n: {
+      enabled:
+        typeof process.env.N8N_URL === "string" && process.env.N8N_URL !== "",
+    },
+    feedback: { enabled: process.env.FEEDBACK_ENABLED === "true" },
+  };
+}
+
+/** Human-readable right for AccessDenied's `requiredRight` code chip. */
+function describeRequirement(requirement: Requirement): string | undefined {
+  if (requirement === "all") return undefined;
+  if (requirement === "super_admin" || requirement === "elevated") {
+    return requirement;
+  }
+  return `${requirement.area}:${requirement.level}`;
+}
+
+/**
+ * Either the `id` of a NavEntry in components/shell/nav-config.ts (preferred —
+ * the gate then lives in exactly one place, config flags included), or an
+ * inline Requirement for surfaces that have no nav entry.
+ */
+export type RouteGuardInput = NavEntry["id"] | Requirement;
+
+/**
+ * Server-side route guard. Resolves the requirement (and config flag) from
+ * nav-config, runs serverSideAuthCheck, and returns:
+ *   - a redirect to /login (never returns) when unauthenticated,
+ *   - the shared <AccessDenied/> element when the predicate or config flag
+ *     denies the route — render it INSTEAD of the page/children,
+ *   - null when the account may proceed.
+ */
+export async function guardRoute(
+  input: RouteGuardInput,
+): Promise<ReactElement | null> {
+  let entry: NavEntry | undefined;
+  let requirement: Requirement;
+
+  if (typeof input === "string") {
+    entry = NAV_ENTRIES.find((candidate) => candidate.id === input);
+    if (entry) {
+      requirement = entry.requires;
+    } else if (
+      input === "all" ||
+      input === "super_admin" ||
+      input === "elevated"
+    ) {
+      // Inline string-form Requirement (no nav entry carries these as ids).
+      requirement = input;
+    } else {
+      // Programmer error — fail loudly so a typo can't ship an open route.
+      throw new Error(
+        `guardRoute: unknown nav entry id "${input}" (see components/shell/nav-config.ts)`,
+      );
+    }
+  } else {
+    requirement = input;
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    // Same contract as app/(application)/layout.tsx for unauthenticated hits.
+    const headerList = await headers();
+    const pathname = headerList.get("x-next-pathname") ?? "";
+    redirect(`/login${pathname ? `?destination=${pathname}` : ""}`);
+  }
+
+  const rightsUser: RightsUser = {
+    super_admin: user.super_admin === true,
+    role: user.role,
+  };
+
+  if (!can(rightsUser, requirement)) {
+    return (
+      <AccessDenied
+        requiredRight={describeRequirement(requirement)}
+        backHref="/chat"
+      />
+    );
+  }
+
+  if (entry?.configFlag && !flagEnabled(serverNavConfig(), entry.configFlag)) {
+    // Feature is switched off for the whole workspace — no right to name.
+    return <AccessDenied backHref="/chat" />;
+  }
+
+  return null;
+}

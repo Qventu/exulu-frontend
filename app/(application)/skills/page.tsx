@@ -99,17 +99,8 @@ export default function SkillsPage() {
     }
   }, [skills]);
 
-  // Keyboard shortcut: Cmd/Ctrl+K → create
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setIsCreateModalOpen(true);
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
+  // The old Cmd/Ctrl+K → create binding was released to the shell's command
+  // palette (navigation.md §4 — pages release squatted ⌘K bindings).
 
   const resetCreateForm = () => {
     setCreateName("");

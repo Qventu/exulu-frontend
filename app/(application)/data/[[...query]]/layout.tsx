@@ -3,11 +3,18 @@ import {
     TooltipProvider,
 } from "@/components/ui/tooltip";
 import Contexts from "@/app/(application)/data/[[...query]]/contexts";
+import { guardRoute } from "@/lib/route-guard";
 
 export default async function DataLayout({ children, params }: {
     children: any,
     params: Promise<{ query?: string[] }>;
 }) {
+
+    // Route guard for /data (Knowledge) — gate from nav-config ("knowledge"):
+    // interim SA || role.agents:r+ until the backend ships the `knowledge`
+    // role key (navigation.md §1.2/§1.3 rule 5).
+    const denied = await guardRoute("knowledge");
+    if (denied) return denied;
 
     const { query } = await params;
     const archived = query && query[1] === "archived";

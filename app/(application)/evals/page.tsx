@@ -7,6 +7,7 @@ import { UserContext } from "@/app/(application)/authenticated";
 import { Brain } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ConfigContext } from "@/components/shell/config-context";
+import { can } from "@/lib/rights";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,9 @@ export default function EvalsPage() {
   const { user } = useContext(UserContext);
   const config = useContext(ConfigContext);
   const columns = createColumns(user);
-  const hasEvalsAccess = user.super_admin || user.role?.evals === "read" || user.role?.evals === "write";
+  // Shared RBAC predicate — same source as the nav entry and the /evals
+  // route guard (which catches this server-side; kept as defense in depth)
+  const hasEvalsAccess = can(user, { area: "evals", level: "read" });
 
   if (!hasEvalsAccess) {
     return (

@@ -12,6 +12,7 @@ import {
     GET_USERS_WITH_BUDGETS,
 } from "@/queries/queries"
 import { budgetsApi, type BudgetSettings } from "@/lib/api/budgets"
+import { can } from "@/lib/rights"
 import {
     BUDGET_DURATIONS,
     BUDGET_ENTITY_TYPES,
@@ -104,9 +105,10 @@ export default function BudgetsPage() {
     const { user } = useContext(UserContext)
     const client = useApolloClient()
 
-    const scope = user?.role?.budget_management
-    const canRead = !!user?.super_admin || scope === "read" || scope === "write"
-    const canWrite = !!user?.super_admin || scope === "write"
+    // Shared RBAC predicate — same source as the nav entry and the /budgets
+    // route guard (which catches denied accounts server-side)
+    const canRead = !!user && can(user, { area: "budget_management", level: "read" })
+    const canWrite = !!user && can(user, { area: "budget_management", level: "write" })
 
     const [activeType, setActiveType] = useState<BudgetEntityType>("user")
     const [entities, setEntities] = useState<Entity[]>([])

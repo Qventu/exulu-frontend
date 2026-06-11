@@ -22,6 +22,7 @@ import { TestCase } from "@/types/models/test-case";
 import EvalRuns from "./runs/eval-runs";
 import { ListBulletIcon } from "@radix-ui/react-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
+import { can } from "@/lib/rights";
 
 export const dynamic = "force-dynamic";
 
@@ -39,9 +40,10 @@ export default function EvalSetEditorPage() {
   const [testCaseToRemove, setTestCaseToRemove] = useState<string | null>(null);
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
 
-  // Check if user has evals access
-  const hasEvalsAccess = user.super_admin || user.role?.evals === "read" || user.role?.evals === "write";
-  const canWrite = user.super_admin || user.role?.evals === "write";
+  // Check if user has evals access (shared RBAC predicate — same source as
+  // the nav entry and the /evals route guard, which catches this server-side)
+  const hasEvalsAccess = can(user, { area: "evals", level: "read" });
+  const canWrite = can(user, { area: "evals", level: "write" });
 
   // Fetch eval set
   const { loading: loadingEvalSet, data: evalSetData, refetch } = useQuery(GET_EVAL_SET_BY_ID, {

@@ -13,6 +13,7 @@ import { Search } from "lucide-react";
 import { AgentDetailsSheet } from "./components/agent-details-sheet";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { can } from "@/lib/rights";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +25,9 @@ export default function AgentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showDetails, setShowDetails] = useState<Agent | null>(null);
 
-  // Check if user has edit permissions for agents
-  const canEditAgents = user.super_admin || user.role?.agents === "write";
+  // Check if user has edit permissions for agents (shared RBAC predicate —
+  // same source as the nav entry and the /agents route guard)
+  const canEditAgents = can(user, { area: "agents", level: "write" });
 
   const { data, loading: isLoading, error } = useQuery<{
     agentsPagination: {
