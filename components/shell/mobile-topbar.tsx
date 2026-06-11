@@ -13,6 +13,8 @@
  * component via a pathname check: on /chat/[agent]/[session|new] the bar
  * returns null and the ChatHeader is the only bar (it mounts AppNavTrigger
  * itself). /chat, /chat/[agent], and /chat/[agent]/search keep the bar.
+ * TEMPORARILY DISABLED until the chat header rework lands — see the
+ * TODO(redesign Phase 2.3) at the suppression site below.
  *
  * Page-action slot API (one primary action per page, philosophy §5):
  *
@@ -137,7 +139,14 @@ const MobileTopbar = React.forwardRef<HTMLElement, MobileTopbarProps>(
     const t = useTranslations();
     const action = React.useContext(ActionValueContext);
 
-    if (isChatSessionRoute(pathname)) return null;
+    // TODO(redesign Phase 2.3 — chat): restore the suppression
+    //   `if (isChatSessionRoute(pathname)) return null;`
+    // once ChatHeader mounts AppNavTrigger as its leftmost control. Until
+    // then the agreed fallback applies (navigation.md §7 "Risks", plan §3 1A):
+    // the shell bar renders above chat's own chrome — ugly but navigable.
+    // Suppressing it today would leave the nav drawer unreachable on
+    // /chat/[agent]/[session] below `md` (exit criterion: drawer reachable
+    // on every route at 390px).
 
     const entry = activeEntryFor(pathname);
 

@@ -203,7 +203,10 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground"
+            // duration-300 caps the drawer slide-in at the shell motion
+            // budget (navigation.md §6 #3: 300 ms) — the Sheet default opens
+            // at 500 ms. Class-only override; the primitive is not forked.
+            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground data-[state=open]:duration-300"
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,

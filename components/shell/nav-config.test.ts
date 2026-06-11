@@ -271,6 +271,37 @@ describe("persona matrix (§1.3)", () => {
     expect(tree.suppressGroupHeaders).toBe(false);
   });
 
+  it("P2 hat (agents:w + workflows:w): Home + Workspace + Build, no Develop/Administration beyond interim Models", () => {
+    const tree = groupsFor(
+      userWith({ agents: "write", workflows: "write" }),
+      fullConfig,
+    );
+    expect(tree.top.map((entry) => entry.id)).toEqual(["home"]);
+    expect(tree.groups.map((group) => group.group)).toEqual([
+      "workspace",
+      "build",
+      "administration", // models rides agents:w (interim gate, audit M4)
+    ]);
+    expect(
+      tree.groups
+        .find((group) => group.group === "build")
+        ?.entries.map((entry) => entry.id),
+    ).toEqual([
+      "agents",
+      "knowledge",
+      "prompts",
+      "skills",
+      "routines",
+      "automation",
+    ]);
+    expect(
+      tree.groups
+        .find((group) => group.group === "administration")
+        ?.entries.map((entry) => entry.id),
+    ).toEqual(["models"]);
+    expect(tree.suppressGroupHeaders).toBe(false);
+  });
+
   it("P4 hat (api:w + evals:r): Workspace + Develop, no Build/Administration", () => {
     const tree = groupsFor(userWith({ api: "write", evals: "read" }), fullConfig);
     expect(tree.groups.map((group) => group.group)).toEqual([

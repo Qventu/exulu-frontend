@@ -85,7 +85,9 @@ const NavItem = React.forwardRef<HTMLLIElement, NavItemProps>(
 
     const itemClassName = cn(
       // Anatomy (§2): h-8 rounded-md px-2 gap-2 text-sm — icon + label.
-      "flex h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm",
+      // Below `md` the item only ever renders inside the mobile drawer,
+      // where the touch-target floor is 44px (navigation.md §5 #6) — h-11.
+      "flex h-11 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm md:h-8",
       // Inactive → hover (§2 hover affordance; motion row 5: background
       // 150 ms; no scale, no shadow). Replaces the WCAG-risky opacity-60.
       "text-sidebar-foreground/70 transition-colors duration-150 ease-in-out",
