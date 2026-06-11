@@ -41,7 +41,6 @@ import { UserContext } from "@/app/(application)/authenticated";
 import { ExuluTool } from "@EXULU_SHARED/models/tool";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { CopyIcon } from "@/icons";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Popover,
@@ -56,7 +55,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Check, ChevronsUpDown, Wrench, Image, FileText, Volume2, Video, Info, AlertCircle, Settings, Text, Search, X, Plus } from "lucide-react";
+import { Check, ChevronsUpDown, Copy, Wrench, Image, FileText, Volume2, Video, Info, AlertCircle, Settings, Text, Search, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RBACControl } from "@/components/rbac";
 import {
@@ -570,7 +569,7 @@ export default function AgentForm({
                                       className="p-1 hover:bg-muted rounded transition-colors text-muted-foreground"
                                       title="Copy Agent ID"
                                     >
-                                      <CopyIcon />
+                                      <Copy className="h-5 w-5" />
                                     </button>
                                   </div>
                                 </div>
