@@ -40,7 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { FilterOperator } from "@/types/models/filter";
 
 export type ModelFilters = {
@@ -69,7 +69,6 @@ export function usePagination() {
 export function DataTable<TData, TValue>({
   columns,
 }: DataTableProps<TData, TValue>) {
-  const { toast } = useToast();
   const router = useRouter();
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
@@ -171,18 +170,10 @@ export function DataTable<TData, TValue>({
                   Promise.all(promises)
                     .then(() => {
                       table.resetRowSelection();
-                      toast({
-                        title: "Models deleted",
-                        description: `Successfully deleted ${promises.length} model(s).`,
-                      });
+                      toast.success("Models deleted", { description: `Successfully deleted ${promises.length} model(s).` });
                     })
                     .catch(() => {
-                      toast({
-                        title: "Error",
-                        description:
-                          "Failed to delete some models. Please try again.",
-                        variant: "destructive",
-                      });
+                      toast.error("Error", { description: "Failed to delete some models. Please try again." });
                     });
                 }}
                 variant="secondary"

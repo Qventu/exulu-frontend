@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DELETE_TEST_CASE } from "@/queries/queries";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { User, UserWithRole } from "@EXULU_SHARED/models/user";
 import {
   AlertDialog,
@@ -39,7 +39,6 @@ export function DataTableRowActions<TData>({
   user,
   edit
 }: DataTableRowActionsProps<TData>) {
-  const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const testCase = row.original as any;
 
@@ -47,19 +46,12 @@ export function DataTableRowActions<TData>({
 
   const [deleteTestCase, { loading: deleteLoading }] = useMutation(DELETE_TEST_CASE, {
     onCompleted: () => {
-      toast({
-        title: "Test case deleted",
-        description: "The test case has been successfully deleted.",
-      });
+      toast.success("Test case deleted", { description: "The test case has been successfully deleted." });
       setShowDeleteDialog(false);
       window.location.reload();
     },
     onError: (error) => {
-      toast({
-        title: "Failed to delete test case",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to delete test case", { description: error.message });
     },
   });
 

@@ -15,7 +15,7 @@ import { EvalRunsTable } from "./components/eval-runs-table";
 import { QueueManagement } from "./components/queue-management";
 import { EvalSet } from "@/types/models/eval-set";
 import { EvalRun } from "@/types/models/eval-run";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { QueueJob } from "@/types/models/job";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
 import { ListBulletIcon } from "@radix-ui/react-icons";
@@ -25,7 +25,6 @@ export default function EvalRuns({ id }: { id: string }) {
   const config = useContext(ConfigContext);
   const eval_set_id = id;
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const { toast } = useToast();
 
   // Check if user has evals access
   const hasEvalsAccess = user.super_admin || user.role?.evals === "read" || user.role?.evals === "write";
@@ -33,17 +32,10 @@ export default function EvalRuns({ id }: { id: string }) {
 
   const [runEval] = useMutation(RUN_EVAL, {
     onCompleted: (data) => {
-      toast({
-        title: "Eval run started",
-        description: `Scheduled ${data.runEval.count} test cases to run.`,
-      });
+      toast.success("Eval run started", { description: `Scheduled ${data.runEval.count} test cases to run.` });
     },
     onError: (error) => {
-      toast({
-        title: "Failed to start eval run",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to start eval run", { description: error.message });
     },
   });
 
@@ -189,11 +181,7 @@ export default function EvalRuns({ id }: { id: string }) {
                   }}
                   retryJob={(job: QueueJob) => {
                     if (!job.data?.test_case_id || !job.data?.eval_run_id) {
-                      toast({
-                        title: "Error retrying job",
-                        description: "Job data is missing.",
-                        variant: "destructive",
-                      });
+                      toast.error("Error retrying job", { description: "Job data is missing." });
                       return;
                     }
                     runEval({

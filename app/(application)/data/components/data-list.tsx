@@ -40,7 +40,7 @@ import { Loading } from "@/components/ui/loading";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { columns } from "./columns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -79,7 +79,6 @@ export function DataList({
     const [page, setPage] = useState(params.get("page") ? parseInt(params.get("page")!) : 1);
     const search = params.get("search");
     const { user } = useContext(UserContext);
-    const { toast } = useToast();
     const [company, setCompany] = useState<any>({ ...user.company });
 
     const router = useRouter();
@@ -307,11 +306,7 @@ export function DataList({
                                     });
                                     Promise.all(promises).then(() => {
                                         table.resetRowSelection();
-                                        toast({
-                                            title: "Unarchived items",
-                                            description:
-                                                "We unarchived " + promises.length + " items.",
-                                        });
+                                        toast.success("Unarchived items", { description: "We unarchived " + promises.length + " items." });
                                     });
                                 }}
                                 variant="secondary"
@@ -339,10 +334,7 @@ export function DataList({
                                     });
                                     Promise.all(promises).then(() => {
                                         table.resetRowSelection();
-                                        toast({
-                                            title: "Deleted items",
-                                            description: "We deleted " + promises.length + " items.",
-                                        });
+                                        toast.success("Deleted items", { description: "We deleted " + promises.length + " items." });
                                     });
                                 }}
                                 variant="secondary"
@@ -372,10 +364,7 @@ export function DataList({
                                 });
                                 Promise.all(promises).then(() => {
                                     table.resetRowSelection();
-                                    toast({
-                                        title: "Archived items",
-                                        description: "We archived " + promises.length + " items.",
-                                    });
+                                    toast.success("Archived items", { description: "We archived " + promises.length + " items." });
                                 });
                             }}
                             variant="secondary"

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useToast } from "./ui/use-toast";
+import { toast } from "sonner";
 
 interface CreateProjectDialogProps {
   open: boolean;
@@ -33,7 +33,6 @@ export function CreateProjectDialog({ open, onOpenChange, refetchProjects }: Cre
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { toast } = useToast();
   const router = useRouter();
   
   const [createProject] = useMutation(CREATE_PROJECT, {
@@ -47,11 +46,7 @@ export function CreateProjectDialog({ open, onOpenChange, refetchProjects }: Cre
     e.preventDefault();
     
     if (!formData.name.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Project name is required.",
-        variant: "destructive",
-      });
+      toast.error("Validation Error", { description: "Project name is required." });
       return;
     }
 
@@ -72,10 +67,7 @@ export function CreateProjectDialog({ open, onOpenChange, refetchProjects }: Cre
       const newProject = result.data?.projectsCreateOne?.item;
       
       if (newProject) {
-        toast({
-          title: "Success",
-          description: "Project created successfully!",
-        });
+        toast.success("Success", { description: "Project created successfully!" });
         
         // Reset form
         setFormData({
@@ -93,11 +85,7 @@ export function CreateProjectDialog({ open, onOpenChange, refetchProjects }: Cre
       }
     } catch (error: any) {
       console.error("Error creating project:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create project. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to create project. Please try again." });
     } finally {
       setIsSubmitting(false);
     }

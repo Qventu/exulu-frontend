@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Trash2, Pause, Droplet, Play, RefreshCcw, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { TextPreview } from "@/components/custom/text-preview";
 import { DoubleArrowLeftIcon } from "@radix-ui/react-icons";
@@ -54,7 +54,6 @@ interface QueueManagementProps {
 }
 
 export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueManagementProps) {
-  const { toast } = useToast();
   const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
   const [drainDialogOpen, setDrainDialogOpen] = useState(false);
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
@@ -83,66 +82,41 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
 
   const [deleteJob, { loading: deletingJob }] = useMutation(DELETE_JOB, {
     onError: (error) => {
-      toast({
-        title: "Failed to delete job",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to delete job", { description: error.message });
     },
   });
 
   const [pauseQueue, { loading: pausingQueue }] = useMutation(PAUSE_QUEUE, {
     onCompleted: () => {
-      toast({
-        title: "Queue paused",
-        description: `The ${queueName} queue has been paused.`,
-      });
+      toast.success("Queue paused", { description: `The ${queueName} queue has been paused.` });
       refetchQueue();
       setPauseDialogOpen(false);
     },
     onError: (error) => {
-      toast({
-        title: "Failed to pause queue",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to pause queue", { description: error.message });
     },
   });
 
   const [resumeQueue, { loading: resumingQueue }] = useMutation(RESUME_QUEUE, {
     onCompleted: () => {
-      toast({
-        title: "Queue resumed",
-        description: `The ${queueName} queue has been resumed.`,
-      });
+      toast.success("Queue resumed", { description: `The ${queueName} queue has been resumed.` });
       refetchQueue();
       setResumeDialogOpen(false);
     },
     onError: (error) => {
-      toast({
-        title: "Failed to resume queue",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to resume queue", { description: error.message });
     },
   });
 
   const [drainQueue, { loading: drainingQueue }] = useMutation(DRAIN_QUEUE, {
     onCompleted: () => {
-      toast({
-        title: "Queue drained",
-        description: "All waiting and delayed jobs have been removed from the queue.",
-      });
+      toast.success("Queue drained", { description: "All waiting and delayed jobs have been removed from the queue." });
       refetchQueue();
       refetchJobs();
       setDrainDialogOpen(false);
     },
     onError: (error) => {
-      toast({
-        title: "Failed to drain queue",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to drain queue", { description: error.message });
     },
   });
 
@@ -187,11 +161,7 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
   const confirmDeleteJobs = async () => {
     const jobsWithoutId = jobsToDelete.filter(job => !job.id);
     if (jobsWithoutId.length > 0) {
-      toast({
-        title: "Failed to delete jobs",
-        description: "Some jobs have no ID.",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete jobs", { description: "Some jobs have no ID." });
       return;
     }
 
@@ -208,8 +178,7 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
         )
       );
 
-      toast({
-        title: jobsToDelete.length === 1 ? "Job deleted" : "Jobs deleted",
+      toast.success(jobsToDelete.length === 1 ? "Job deleted" : "Jobs deleted", {
         description: `Successfully deleted ${jobsToDelete.length} job${jobsToDelete.length === 1 ? '' : 's'}.`,
       });
 
@@ -522,10 +491,7 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                             <TooltipTrigger asChild>
                               <span onClick={() => {
                                 navigator.clipboard.writeText(job.id);
-                                toast({
-                                  title: "Copied to clipboard",
-                                  description: `The job ID: "${job.id}" was copied to your clipboard.`,
-                                });
+                                toast.success("Copied to clipboard", { description: `The job ID: "${job.id}" was copied to your clipboard.` });
                               }} className="max-w-[120px] truncate cursor-copy">
                                 {job.id}
                               </span>
@@ -731,8 +697,7 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                       )
                   );
 
-                  toast({
-                    title: jobsToRetry.length === 1 ? "Job deleted" : "Jobs deleted",
+                  toast.success(jobsToRetry.length === 1 ? "Job deleted" : "Jobs deleted", {
                     description: `Successfully deleted ${jobsToRetry.length} original job${jobsToRetry.length === 1 ? '' : 's'}.`,
                   });
                   refetchJobs();
@@ -742,8 +707,7 @@ export function QueueManagement({ queueName, nameGenerator, retryJob }: QueueMan
                 }
               }
 
-              toast({
-                title: jobsToRetry.length === 1 ? "Job retried" : "Jobs retried",
+              toast.success(jobsToRetry.length === 1 ? "Job retried" : "Jobs retried", {
                 description: `Successfully retried ${jobsToRetry.length} job${jobsToRetry.length === 1 ? '' : 's'}.`,
               });
 

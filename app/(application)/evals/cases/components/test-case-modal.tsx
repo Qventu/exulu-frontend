@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CREATE_TEST_CASE, UPDATE_TEST_CASE, GET_TOOLS } from "@/queries/queries";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { TestCase } from "@/types/models/test-case";
 import { ExuluTool as Tool } from "@EXULU_SHARED/models/tool";
 import { UIMessage, FileUIPart } from "ai";
@@ -43,7 +43,6 @@ export function TestCaseModal({
   onSuccess,
   testCase,
 }: TestCaseModalProps) {
-  const { toast } = useToast();
   const isEditing = !!testCase;
 
   // Fetch tools from server
@@ -150,35 +149,21 @@ export function TestCaseModal({
 
   const [createTestCase, { loading: creating }] = useMutation(CREATE_TEST_CASE, {
     onCompleted: () => {
-      toast({
-        title: "Test case created",
-        description: "The test case has been successfully created.",
-      });
+      toast.success("Test case created", { description: "The test case has been successfully created." });
       onSuccess();
     },
     onError: (error) => {
-      toast({
-        title: "Failed to create test case",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to create test case", { description: error.message });
     },
   });
 
   const [updateTestCase, { loading: updating }] = useMutation(UPDATE_TEST_CASE, {
     onCompleted: () => {
-      toast({
-        title: "Test case updated",
-        description: "The test case has been successfully updated.",
-      });
+      toast.success("Test case updated", { description: "The test case has been successfully updated." });
       onSuccess();
     },
     onError: (error) => {
-      toast({
-        title: "Failed to update test case",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to update test case", { description: error.message });
     },
   });
 
@@ -254,11 +239,7 @@ export function TestCaseModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !expectedOutput.trim() || inputs.length === 0) {
-      toast({
-        title: "Validation error",
-        description: "Name, at least one input message, and expected output are required.",
-        variant: "destructive",
-      });
+      toast.error("Validation error", { description: "Name, at least one input message, and expected output are required." });
       return;
     }
 

@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
 import { GET_USERS, UPDATE_USER_BY_ID } from "@/queries/queries";
 import { UserContext } from "@/app/(application)/authenticated";
@@ -30,7 +30,6 @@ export function SuperAdminToggle({ user }: SuperAdminToggleProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingChange, setPendingChange] = useState<boolean | null>(null);
-  const { toast } = useToast();
   const { user: currentUser } = useContext(UserContext);
   const [updateUser] = useMutation(UPDATE_USER_BY_ID, {
     refetchQueries: [
@@ -42,11 +41,7 @@ export function SuperAdminToggle({ user }: SuperAdminToggleProps) {
   const isCurrentUser = currentUser?.id === user.id;
   const handleToggleChange = (checked: boolean) => {
     if (isCurrentUser && isSuperAdmin && !checked) {
-      toast({
-        title: "Cannot Disable Own Super Admin Rights",
-        description: "You cannot disable your own super admin privileges for security reasons.",
-        variant: "destructive",
-      });
+      toast.error("Cannot Disable Own Super Admin Rights", { description: "You cannot disable your own super admin privileges for security reasons." });
       return;
     }
     setPendingChange(checked);
@@ -67,16 +62,11 @@ export function SuperAdminToggle({ user }: SuperAdminToggleProps) {
       
       setIsDialogOpen(false);
       setPendingChange(null);
-      toast({
-        title: pendingChange ? "Super Admin Enabled" : "Super Admin Disabled",
+      toast.success(pendingChange ? "Super Admin Enabled" : "Super Admin Disabled", {
         description: `Super admin access has been ${pendingChange ? 'granted to' : 'removed from'} ${user.email}.`,
       });
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update super admin status.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to update super admin status." });
     } finally {
       setIsLoading(false);
     }

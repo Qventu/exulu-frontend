@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CopyIcon } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import Link from "next/link";
 
 export interface ItemFilters {
@@ -42,7 +42,6 @@ export const ItemsFilter = (props: {
     initialLimit?: number;
 }) => {
 
-    const { toast } = useToast();
     const [loading, setLoading] = useState(false);
 
     const formatDate = (dateString?: string) => {
@@ -334,8 +333,7 @@ export const ItemsFilter = (props: {
                                                     </Link>
                                                     <CopyIcon onClick={() => {
                                                         navigator.clipboard.writeText(item.name);
-                                                        toast({
-                                                            title: "Copied to clipboard",
+                                                        toast.success("Copied to clipboard", {
                                                             description: `The name: "${item.name}" was copied to your clipboard.`,
                                                         });
                                                     }} className="size-8 cursor-copy hidden group-hover:block" />
@@ -351,8 +349,7 @@ export const ItemsFilter = (props: {
                                                         <p className="text-[10px] uppercase text-muted-foreground font-medium tracking-wide">Main ID</p>
                                                         <p onClick={() => {
                                                             navigator.clipboard.writeText(item.id);
-                                                            toast({
-                                                                title: "Copied to clipboard",
+                                                            toast.success("Copied to clipboard", {
                                                                 description: `The main ID: "${item.id}" was copied to your clipboard.`,
                                                             });
                                                         }} className="text-xs font-medium cursor-copy truncate max-w-[80%]">{item.id}</p>
@@ -363,8 +360,7 @@ export const ItemsFilter = (props: {
                                                         <p className="text-[10px] uppercase text-muted-foreground font-medium tracking-wide">External ID</p>
                                                         <p onClick={() => {
                                                             navigator.clipboard.writeText(item.external_id);
-                                                            toast({
-                                                                title: "Copied to clipboard",
+                                                            toast.success("Copied to clipboard", {
                                                                 description: `The external ID: "${item.external_id}" was copied to your clipboard.`,
                                                             });
                                                         }} className="text-xs font-medium cursor-copy truncate max-w-[80%]">{item.external_id}</p>

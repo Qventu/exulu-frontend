@@ -14,7 +14,7 @@ import {
 } from "@/queries/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
@@ -34,7 +34,6 @@ import {
 export default function SearchPage({ params }: { params: Promise<{ agent: string }> }) {
   const resolvedParams = React.use(params);
   const agentId = resolvedParams.agent;
-  const { toast } = useToast();
   const { user } = useContext(UserContext);
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -124,18 +123,11 @@ export default function SearchPage({ params }: { params: Promise<{ agent: string
 
     try {
       await Promise.all(deletionPromises);
-      toast({
-        title: "Sessions deleted",
-        description: `${selectedSessions.size} session(s) have been deleted.`,
-      });
+      toast.success("Sessions deleted", { description: `${selectedSessions.size} session(s) have been deleted.` });
       setSelectedSessions(new Set());
       setDeleteDialogOpen(false);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete some sessions.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to delete some sessions." });
     }
   };
 

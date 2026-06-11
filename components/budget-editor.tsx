@@ -12,7 +12,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { BudgetBar } from "@/components/budget-bar"
 import { budgetsApi } from "@/lib/api/budgets"
 import {
@@ -60,7 +60,7 @@ export function BudgetEditor(props: BudgetEditorProps) {
                     max_budget: amountValue,
                     budget_duration: duration,
                 })
-                toast({ title: "Budget saved", description: `Budget set for ${label}.` })
+                toast.success("Budget saved", { description: `Budget set for ${label}.` })
             } else {
                 const results = await budgetsApi.bulkUpsert(entityType, props.entityIds, {
                     max_budget: amountValue,
@@ -68,19 +68,13 @@ export function BudgetEditor(props: BudgetEditorProps) {
                 })
                 const ok = results.filter((r) => r.ok).length
                 const failed = results.length - ok
-                toast({
-                    title: "Budgets applied",
+                ;(failed ? toast.error : toast.success)("Budgets applied", {
                     description: `${ok} succeeded${failed ? `, ${failed} failed` : ""}.`,
-                    variant: failed ? "destructive" : undefined,
                 })
             }
             onDone()
         } catch (err) {
-            toast({
-                title: "Failed to save budget",
-                description: err instanceof Error ? err.message : "Unknown error.",
-                variant: "destructive",
-            })
+            toast.error("Failed to save budget", { description: err instanceof Error ? err.message : "Unknown error." })
         } finally {
             setSaving(false)
         }
@@ -91,14 +85,10 @@ export function BudgetEditor(props: BudgetEditorProps) {
         setDeleting(true)
         try {
             await budgetsApi.remove(entityType, props.entityId)
-            toast({ title: "Budget removed", description: `Budget removed for ${label}.` })
+            toast.success("Budget removed", { description: `Budget removed for ${label}.` })
             onDone()
         } catch (err) {
-            toast({
-                title: "Failed to remove budget",
-                description: err instanceof Error ? err.message : "Unknown error.",
-                variant: "destructive",
-            })
+            toast.error("Failed to remove budget", { description: err instanceof Error ? err.message : "Unknown error." })
         } finally {
             setDeleting(false)
         }

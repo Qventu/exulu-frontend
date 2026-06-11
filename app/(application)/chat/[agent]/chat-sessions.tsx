@@ -31,7 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -42,7 +42,6 @@ import { Loading } from "@/components/ui/loading";
 export function ChatSessionsComponent({ agent, type }: { agent: Agent, type: string }) {
 
   const pathname = usePathname();
-  const { toast } = useToast();
   const { user } = useContext(UserContext);
   const router = useRouter();
   const [sessionDialogOpen, setSessionDialogOpen] = useState(false);
@@ -121,29 +120,18 @@ export function ChatSessionsComponent({ agent, type }: { agent: Agent, type: str
     });
     if (newSession.errors) {
       console.error("error", newSession.errors);
-      toast({
-        title: "Error",
-        description: "Failed to create session.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to create session." });
       return;
     }
     if (
       !newSession.data?.agent_sessionsCreateOne?.item?.id
     ) {
       console.error("error", "failed to create session");
-      toast({
-        title: "Error",
-        description: "Failed to create session.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to create session." });
       return;
     }
 
-    toast({
-      title: "Session created",
-      description: "The session has been created successfully.",
-    });
+    toast.success("Session created", { description: "The session has been created successfully." });
 
     setSessionDialogOpen(false);
     setSessionDialogName("");
@@ -165,18 +153,11 @@ export function ChatSessionsComponent({ agent, type }: { agent: Agent, type: str
 
     if (result.errors) {
       console.error("error", result.errors);
-      toast({
-        title: "Error",
-        description: "Failed to rename session.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to rename session." });
       return;
     }
 
-    toast({
-      title: "Session renamed",
-      description: "The session has been renamed successfully.",
-    });
+    toast.success("Session renamed", { description: "The session has been renamed successfully." });
 
     setSessionDialogOpen(false);
     setRenameSessionId(null);
@@ -384,10 +365,7 @@ export function ChatSessionsComponent({ agent, type }: { agent: Agent, type: str
                                     id: item.id,
                                   },
                                 });
-                                toast({
-                                  title: "Deleting session",
-                                  description: "We deleted the session.",
-                                });
+                                toast("Deleting session", { description: "We deleted the session." });
                               }}>
                               Delete
                             </DropdownMenuItem>

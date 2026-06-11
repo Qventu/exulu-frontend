@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -40,7 +40,6 @@ export function DataTableRowActions<TData>({
   const variable = row.original as Variable;
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const { toast } = useToast();
 
   const [removeVariable, removeVariableResult] = useMutation(REMOVE_VARIABLE_BY_ID, {
     refetchQueries: [
@@ -56,16 +55,9 @@ export function DataTableRowActions<TData>({
           id: variable.id,
         },
       });
-      toast({
-        title: "Variable deleted",
-        description: "The variable has been successfully deleted.",
-      });
+      toast.success("Variable deleted", { description: "The variable has been successfully deleted." });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete the variable. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to delete the variable. Please try again." });
     }
     setShowDeleteDialog(false);
   };

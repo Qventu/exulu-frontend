@@ -13,13 +13,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 export const dynamic = "force-dynamic";
 
 export default function SettingsPage() {
   const { user } = useContext(UserContext);
-  const { toast } = useToast();
 
   const [personalPrompt, setPersonalPrompt] = useState<string>(
     user?.personal_system_prompt ?? "",
@@ -31,19 +30,10 @@ export default function SettingsPage() {
 
   const [updateUser, { loading }] = useMutation(UPDATE_USER_BY_ID, {
     onCompleted: () => {
-      toast({
-        title: "Settings saved",
-        description: "Your personal system prompt has been updated.",
-        duration: 3000,
-      });
+      toast.success("Settings saved", { description: "Your personal system prompt has been updated.", duration: 3000 });
     },
     onError: (error) => {
-      toast({
-        title: "Could not save",
-        description: error.message,
-        variant: "destructive",
-        duration: 5000,
-      });
+      toast.error("Could not save", { description: error.message, duration: 5000 });
     },
   });
 

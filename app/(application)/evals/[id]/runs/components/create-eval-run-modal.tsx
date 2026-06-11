@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CREATE_EVAL_RUN, UPDATE_EVAL_RUN, GET_AGENTS, GET_EVAL_FUNCTIONS, GET_TEST_CASES } from "@/queries/queries";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -48,7 +48,6 @@ export function CreateEvalRunModal({
   open,
   onOpenChange,
 }: CreateEvalRunModalProps) {
-  const { toast } = useToast();
   const isEditing = !!existingRun && !!existingRun.id;
 
   const [evalRun, setEvalRun] = useState<EvalRun>({
@@ -112,41 +111,27 @@ export function CreateEvalRunModal({
 
   const [createEvalRun, { loading: createLoading }] = useMutation(CREATE_EVAL_RUN, {
     onCompleted: () => {
-      toast({
-        title: "Eval run created",
-        description: "The eval run has been created successfully. You can now run it.",
-      });
+      toast.success("Eval run created", { description: "The eval run has been created successfully. You can now run it." });
       if (onCreateSuccess) {
         onCreateSuccess();
       }
       onOpenChange(false);
     },
     onError: (error) => {
-      toast({
-        title: "Failed to create eval run",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to create eval run", { description: error.message });
     },
   });
 
   const [updateEvalRun, { loading: updateLoading }] = useMutation(UPDATE_EVAL_RUN, {
     onCompleted: () => {
-      toast({
-        title: "Eval run updated",
-        description: "The eval run has been updated successfully.",
-      });
+      toast.success("Eval run updated", { description: "The eval run has been updated successfully." });
       if (onCreateSuccess) {
         onCreateSuccess();
       }
       onOpenChange(false);
     },
     onError: (error) => {
-      toast({
-        title: "Failed to update eval run",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to update eval run", { description: error.message });
     },
   });
 
@@ -183,38 +168,22 @@ export function CreateEvalRunModal({
     e.preventDefault();
 
     if (!evalRun.name) {
-      toast({
-        title: "Validation error",
-        description: "Please enter a name for this eval run.",
-        variant: "destructive",
-      });
+      toast.error("Validation error", { description: "Please enter a name for this eval run." });
       return;
     }
 
     if (!evalRun.agent_id) {
-      toast({
-        title: "Validation error",
-        description: "Please select an agent.",
-        variant: "destructive",
-      });
+      toast.error("Validation error", { description: "Please select an agent." });
       return;
     }
 
     if (evalRun.test_case_ids.length === 0) {
-      toast({
-        title: "Validation error",
-        description: "Please select at least one test case.",
-        variant: "destructive",
-      });
+      toast.error("Validation error", { description: "Please select at least one test case." });
       return;
     }
 
     if (evalRun.eval_functions.length === 0) {
-      toast({
-        title: "Validation error",
-        description: "Please select at least one eval function.",
-        variant: "destructive",
-      });
+      toast.error("Validation error", { description: "Please select at least one eval function." });
       return;
     }
 

@@ -3,7 +3,7 @@ import { fontVariables } from "@/lib/fonts";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { cookies } from "next/headers";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ConfigContextProvider } from "@/components/config-context";
 import { configApi } from "@/lib/api/config";

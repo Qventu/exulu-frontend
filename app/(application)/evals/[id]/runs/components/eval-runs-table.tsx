@@ -16,7 +16,7 @@ import { JobResult } from "@/types/models/job-result";
 import { EvalSet } from "@/types/models/eval-set";
 import { useQuery, useMutation } from "@apollo/client";
 import { CreateEvalRunModal } from "./create-eval-run-modal";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { EvalRunColumn } from "./eval-run-column";
 import {
   AlertDialog,
@@ -45,7 +45,6 @@ interface EvalRunsTableProps {
 }
 
 export function EvalRunsTable({ evalRuns, evalSet, onRefetch }: EvalRunsTableProps) {
-  const { toast } = useToast();
   const [visibleRuns, setVisibleRuns] = useState(3);
   const [selectedResult, setSelectedResult] = useState<JobResult | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -80,35 +79,21 @@ export function EvalRunsTable({ evalRuns, evalSet, onRefetch }: EvalRunsTablePro
 
   const [runEval, { loading: runningEval }] = useMutation(RUN_EVAL, {
     onCompleted: (data) => {
-      toast({
-        title: "Eval run started",
-        description: `Scheduled ${data.runEval.count} test cases to run.`,
-      });
+      toast.success("Eval run started", { description: `Scheduled ${data.runEval.count} test cases to run.` });
       onRefetch();
     },
     onError: (error) => {
-      toast({
-        title: "Failed to start eval run",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to start eval run", { description: error.message });
     },
   });
 
   const [deleteEvalRun, { loading: deletingRun }] = useMutation(DELETE_EVAL_RUN_BY_ID, {
     onCompleted: () => {
-      toast({
-        title: "Eval run deleted",
-        description: "The eval run has been successfully deleted.",
-      });
+      toast.success("Eval run deleted", { description: "The eval run has been successfully deleted." });
       onRefetch();
     },
     onError: (error) => {
-      toast({
-        title: "Failed to delete eval run",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to delete eval run", { description: error.message });
     },
   });
 

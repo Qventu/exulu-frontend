@@ -8,7 +8,7 @@ import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai
 import { RefreshCcwIcon, CopyIcon, ChevronDown, ChevronRight, Search, FileText, Database, ListChecks, LayoutList, EditIcon, Trash2Icon, DownloadIcon, ThumbsUp, ThumbsDown, Terminal, FileEdit, HelpCircle, Wrench, Globe, List, FolderOpen, GitBranch, Code2, Volume2, Pause, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { TodoList } from "./ai-elements/todo-list"
 import { FileItem } from "./uppy-dashboard"
 import { Card, CardContent } from "@/components/ui/card";
@@ -120,7 +120,6 @@ export function MessageRenderer({
   setMessages,
   handleFeedback
 }: MessageRendererProps) {
-  const { toast } = useToast()
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [editedText, setEditedText] = useState<string>("")
 
@@ -246,11 +245,11 @@ export function MessageRenderer({
     const raw = message.parts?.map((p: any) => p?.text ?? "").join("\n") ?? ""
     const { text, truncated } = preprocessForTTS(raw)
     if (!text) {
-      toast({ title: "Nothing to read", description: "Message has no readable text.", variant: "destructive" })
+      toast.error("Nothing to read", { description: "Message has no readable text." })
       return
     }
     if (truncated) {
-      toast({ title: "Long message truncated", description: "Only the first 4000 characters will be read." })
+      toast("Long message truncated", { description: "Only the first 4000 characters will be read." })
     }
     const chunks = chunkForTTS(text)
     const cached = ttsCacheRef.current.get(message.id) ?? new Array<Blob | undefined>(chunks.length)
@@ -348,11 +347,7 @@ export function MessageRenderer({
       })
       .catch((err) => {
         console.error("[TTS] playback failed", err)
-        toast({
-          title: "Couldn't play message",
-          description: err instanceof Error ? err.message : "Audio playback failed.",
-          variant: "destructive",
-        })
+        toast.error("Couldn't play message", { description: err instanceof Error ? err.message : "Audio playback failed." })
         setTtsStateByMessage((s) => ({ ...s, [message.id]: "idle" }))
         playingMessageIdRef.current = null
         abortController.abort()
@@ -1044,10 +1039,7 @@ export function MessageRenderer({
                           navigator.clipboard.writeText(
                             message.parts?.map((part: any) => part?.text || "").join('\n')
                           )
-                          toast({
-                            title: "Copied message",
-                            description: "The message was copied to your clipboard.",
-                          })
+                          toast.success("Copied message", { description: "The message was copied to your clipboard." })
                         }}
                         label="Copy"
                       >
@@ -1092,10 +1084,7 @@ export function MessageRenderer({
                           document.body.removeChild(a)
                           URL.revokeObjectURL(url)
 
-                          toast({
-                            title: "Downloaded message",
-                            description: "The message was downloaded as a text file.",
-                          })
+                          toast.success("Downloaded message", { description: "The message was downloaded as a text file." })
                         }}
                         label="Download"
                       >

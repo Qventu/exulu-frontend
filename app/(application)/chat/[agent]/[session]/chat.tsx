@@ -49,7 +49,7 @@ import { SaveWorkflowModal } from "@/components/save-workflow-modal";
 import { Button } from "@/components/ui/button";
 import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation";
 import { RBACControl } from "@/components/rbac";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { Loading } from "@/components/ui/loading";
 import { Badge } from "@/components/ui/badge";
 import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
@@ -123,7 +123,6 @@ export function ChatLayout({
   const configContext = React.useContext(ConfigContext);
   const [files, setFiles] = useState<FileUIPart[] | null>(null);
   const [fileItems, setFileItems] = useState<string[] | null>(null);
-  const { toast } = useToast();
   const [sessionItems, setSessionItems] = useState<string[] | null>(session?.session_items || null);
   const { user } = useContext(UserContext);
   // Budget cap reached → block sending. Only when a budget is set and shown.
@@ -236,11 +235,7 @@ export function ChatLayout({
     if (!sessionToUse) {
       const createdSession = await createSession();
       if (!createdSession) {
-        toast({
-          title: "Error",
-          description: "Failed to create session. Please try again.",
-          variant: "destructive",
-        });
+        toast.error("Error", { description: "Failed to create session. Please try again." });
         return;
       }
       sessionToUse = createdSession;
@@ -551,11 +546,7 @@ export function ChatLayout({
       }
       const errorMessage = error instanceof Error ? error.message : "Failed to create session. Please check your connection and try again.";
       setError(errorMessage);
-      toast({
-        title: "Session Creation Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error("Session Creation Failed", { description: errorMessage });
       return;
     }
   }
@@ -584,11 +575,7 @@ export function ChatLayout({
     e.preventDefault();
 
     if (budgetExceeded) {
-      toast({
-        title: "Budget reached",
-        description: "You've used your full budget for this period. Messaging is paused until it resets.",
-        variant: "destructive",
-      });
+      toast.error("Budget reached", { description: "You've used your full budget for this period. Messaging is paused until it resets." });
       return;
     }
 
@@ -598,11 +585,7 @@ export function ChatLayout({
     if (!sessionToUse) {
       const createdSession = await createSession();
       if (!createdSession) {
-        toast({
-          title: "Error",
-          description: "Failed to create session. Please try again.",
-          variant: "destructive",
-        });
+        toast.error("Error", { description: "Failed to create session. Please try again." });
         return;
       }
       sessionToUse = createdSession;
@@ -668,11 +651,7 @@ export function ChatLayout({
         inputRef.current?.focus();
       }
     } catch (err) {
-      toast({
-        title: "Transcription failed",
-        description: err instanceof Error ? err.message : "Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Transcription failed", { description: err instanceof Error ? err.message : "Please try again." });
     } finally {
       setRecordingState("idle");
       mediaRecorderRef.current = null;
@@ -686,19 +665,11 @@ export function ChatLayout({
     // the browser will not prompt for permission — fail loudly with a clear
     // message instead of a generic "denied".
     if (typeof window !== "undefined" && !window.isSecureContext) {
-      toast({
-        title: "Microphone unavailable",
-        description: `Recording requires HTTPS or localhost. Current origin: ${window.location.origin}`,
-        variant: "destructive",
-      });
+      toast.error("Microphone unavailable", { description: `Recording requires HTTPS or localhost. Current origin: ${window.location.origin}` });
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
-      toast({
-        title: "Microphone unavailable",
-        description: "This browser doesn't expose getUserMedia. Try a recent Chrome, Firefox, or Safari over HTTPS.",
-        variant: "destructive",
-      });
+      toast.error("Microphone unavailable", { description: "This browser doesn't expose getUserMedia. Try a recent Chrome, Firefox, or Safari over HTTPS." });
       return;
     }
 
@@ -728,11 +699,7 @@ export function ChatLayout({
       } else if (name === "SecurityError") {
         description = "Microphone access blocked by the page's permissions policy.";
       }
-      toast({
-        title: "Microphone unavailable",
-        description,
-        variant: "destructive",
-      });
+      toast.error("Microphone unavailable", { description });
     }
   };
 
@@ -790,10 +757,7 @@ export function ChatLayout({
         },
       });
 
-      toast({
-        title: "Feedback submitted",
-        description: "Thank you for your feedback!",
-      });
+      toast.success("Feedback submitted", { description: "Thank you for your feedback!" });
 
       setFeedbackModal(null);
       setFeedbackDescription("");
@@ -801,10 +765,8 @@ export function ChatLayout({
       if (process.env.NODE_ENV === 'development') {
         console.error("Failed to submit feedback:", error);
       }
-      toast({
-        title: "Error submitting feedback",
+      toast.error("Error submitting feedback", {
         description: error instanceof Error ? error.message : "Failed to submit feedback. Please check your connection and try again.",
-        variant: "destructive",
       });
     }
   };
@@ -1230,7 +1192,7 @@ export function ChatLayout({
                             if (currentSession?.id === "new" || !currentSession) {
                               const createdSession = await createSession();
                               if (!createdSession) {
-                                toast({ title: "Error", description: "Failed to create session. Please try again.", variant: "destructive" });
+                                toast.error("Error", { description: "Failed to create session. Please try again." });
                                 return;
                               }
                               sessionToUse = createdSession;
@@ -1244,7 +1206,7 @@ export function ChatLayout({
                             if (currentSession?.id === "new" || !currentSession) {
                               const createdSession = await createSession();
                               if (!createdSession) {
-                                toast({ title: "Error", description: "Failed to create session. Please try again.", variant: "destructive" });
+                                toast.error("Error", { description: "Failed to create session. Please try again." });
                                 return;
                               }
                               sessionToUse = createdSession;
@@ -1260,7 +1222,7 @@ export function ChatLayout({
                             if (currentSession?.id === "new" || !currentSession) {
                               const createdSession = await createSession();
                               if (!createdSession) {
-                                toast({ title: "Error", description: "Failed to create session. Please try again.", variant: "destructive" });
+                                toast.error("Error", { description: "Failed to create session. Please try again." });
                                 return;
                               }
                               sessionToUse = createdSession;
@@ -1327,7 +1289,7 @@ export function ChatLayout({
                               if (currentSession?.id === "new" || !currentSession) {
                                 const createdSession = await createSession();
                                 if (!createdSession) {
-                                  toast({ title: "Error", description: "Failed to create session. Please try again.", variant: "destructive" });
+                                  toast.error("Error", { description: "Failed to create session. Please try again." });
                                   return;
                                 }
                                 sessionToUse = createdSession;
@@ -1707,7 +1669,6 @@ const ReferencedSourceRow = ({
   itemName,
   context,
 }: ReferencedItem) => {
-  const { toast } = useToast();
   const [deactivated, setDeactivated] = useState(false);
   const [updateItem, { loading }] = useMutation(UPDATE_ITEM(context));
 
@@ -1715,16 +1676,9 @@ const ReferencedSourceRow = ({
     try {
       await updateItem({ variables: { id: itemId, input: { archived: true } } });
       setDeactivated(true);
-      toast({
-        title: 'Source deactivated',
-        description: `${itemName} has been archived globally.`,
-      });
+      toast.success('Source deactivated', { description: `${itemName} has been archived globally.` });
     } catch (error) {
-      toast({
-        title: 'Failed to deactivate source',
-        description: error instanceof Error ? error.message : 'Please try again.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to deactivate source', { description: error instanceof Error ? error.message : 'Please try again.' });
     }
   };
 

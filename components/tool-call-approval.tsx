@@ -2,7 +2,7 @@ import { ChatAddToolApproveResponseFunction, DynamicToolUIPart } from "ai"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { CheckCircle2, XCircleIcon, AlertTriangle, ChevronRight } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Agent } from "@/types/models/agent"
 
 export const ToolCallApproval = ({
@@ -15,7 +15,6 @@ export const ToolCallApproval = ({
     addToolApprovalResponse: ChatAddToolApproveResponseFunction
 }) => {
 
-    const { toast } = useToast();
     const toolName = (part as { type: string }).type?.replace('tool-', '')?.replace(/_/g, ' ') || 'command'
     const toolId = (part as { type: string }).type;
 
@@ -92,11 +91,7 @@ export const ToolCallApproval = ({
                                 const path = window.location.pathname;
                                 const session = path.split('/').filter(Boolean).pop();
                                 if (!session) {
-                                    toast({
-                                        title: 'No session ID provided.',
-                                        description: 'No session ID provided.',
-                                        variant: 'destructive',
-                                    });
+                                    toast.error('No session ID provided.', { description: 'No session ID provided.' });
                                     return;
                                 }
                                 addToolApprovalResponse({

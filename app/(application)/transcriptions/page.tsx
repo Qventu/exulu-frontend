@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FileAudio, Loader2, Trash2, X } from "lucide-react";
 import Link from "next/link";
@@ -269,7 +269,6 @@ function NewTranscriptionPanel({
   const [language, setLanguage] = useState<string>("auto");
   const [numSpeakers, setNumSpeakers] = useState<string>("auto");
   const [busy, setBusy] = useState(false);
-  const { toast } = useToast();
 
   const { data: projectsData } = useQuery<{
     projectsPagination: { items: { id: string; name: string }[] };
@@ -309,15 +308,11 @@ function NewTranscriptionPanel({
           },
         },
       });
-      toast({ title: "Transcription started" });
+      toast.success("Transcription started");
       onStarted();
     } catch (err: any) {
       const msg = err?.message ?? "Failed to start transcription";
-      toast({
-        title: "Could not start transcription",
-        description: msg,
-        variant: "destructive",
-      });
+      toast.error("Could not start transcription", { description: msg });
     } finally {
       setBusy(false);
     }
@@ -473,7 +468,6 @@ function JobRow({
 }) {
   const [cancelJob] = useMutation(CANCEL_TRANSCRIPTION_JOB);
   const [removeJob] = useMutation(REMOVE_TRANSCRIPTION_JOB);
-  const { toast } = useToast();
 
   const filename = useMemo(() => {
     if (job.title) return job.title;
@@ -515,11 +509,7 @@ function JobRow({
       await cancelJob({ variables: { id: job.id } });
       onChanged();
     } catch (err: any) {
-      toast({
-        title: "Cancel failed",
-        description: err?.message,
-        variant: "destructive",
-      });
+      toast.error("Cancel failed", { description: err?.message });
     }
   };
 
@@ -528,11 +518,7 @@ function JobRow({
       await removeJob({ variables: { id: job.id } });
       onChanged();
     } catch (err: any) {
-      toast({
-        title: "Dismiss failed",
-        description: err?.message,
-        variant: "destructive",
-      });
+      toast.error("Dismiss failed", { description: err?.message });
     }
   };
 
@@ -689,7 +675,6 @@ function ReviewPanel({
 
   const [finalize] = useMutation(FINALIZE_TRANSCRIPTION_JOB);
   const [cancelJob] = useMutation(CANCEL_TRANSCRIPTION_JOB);
-  const { toast } = useToast();
 
   const renderedPreview = useMemo(() => {
     if (segments.length === 0) return "";
@@ -723,22 +708,15 @@ function ReviewPanel({
       });
       const itemId =
         (result.data as any)?.transcriptionJobFinalize?.item_id ?? null;
-      toast({
-        title: isReSave ? "Transcript updated" : "Transcript saved",
-        description: itemId ? (
+      toast.success(isReSave ? "Transcript updated" : "Transcript saved", { description: itemId ? (
           <Link href={`/data/transcriptions/${itemId}`} className="underline">
             View in /data
           </Link>
-        ) : undefined,
-      });
+        ) : undefined });
       onSaved();
       if (isReSave) onClose();
     } catch (err: any) {
-      toast({
-        title: "Save failed",
-        description: err?.message,
-        variant: "destructive",
-      });
+      toast.error("Save failed", { description: err?.message });
     } finally {
       setBusy(false);
     }
@@ -758,11 +736,7 @@ function ReviewPanel({
       onSaved();
       onClose();
     } catch (err: any) {
-      toast({
-        title: "Discard failed",
-        description: err?.message,
-        variant: "destructive",
-      });
+      toast.error("Discard failed", { description: err?.message });
     } finally {
       setBusy(false);
     }

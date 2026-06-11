@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { AlertCircle, ChevronDown, Plus, Sparkles } from 'lucide-react'
-import { useToast } from '@/components/ui/use-toast'
+import { toast } from "sonner"
 import { cn } from '@/lib/utils'
 import { RBACControl } from './rbac'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -45,7 +45,6 @@ interface SaveWorkflowModalProps {
 
 export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, existingWorkflow, isReadOnly = false, agentId }: SaveWorkflowModalProps) {
   const { user } = useContext(UserContext)
-  const { toast } = useToast()
   const [rbac, setRbac] = useState<{
     rights_mode: 'private' | 'users' | 'roles' | 'teams' | 'public';
     users: Array<{ id: number; rights: 'read' | 'write' }>;
@@ -127,10 +126,7 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
           }
         })
 
-        toast({
-          title: "Workflow updated!",
-          description: `"${workflowName}" has been updated successfully.`
-        })
+        toast.success("Workflow updated!", { description: `"${workflowName}" has been updated successfully.` })
 
       } else {
         await createWorkflowTemplate({
@@ -149,21 +145,14 @@ export function SaveWorkflowModal({ isOpen, onClose, messages, sessionTitle, exi
           }
         })
 
-        toast({
-          title: "Workflow created!",
-          description: `"${workflowName}" has been saved as a workflow template.`
-        })
+        toast.success("Workflow created!", { description: `"${workflowName}" has been saved as a workflow template.` })
 
       }
 
       onClose()
     } catch (error) {
       console.error('Error saving workflow:', error)
-      toast({
-        title: "Error saving workflow",
-        description: "There was an error saving your workflow. Please try again.",
-        variant: "destructive"
-      })
+      toast.error("Error saving workflow", { description: "There was an error saving your workflow. Please try again." })
     } finally {
       setIsCreating(false)
     }

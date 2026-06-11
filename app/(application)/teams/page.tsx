@@ -17,7 +17,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { useMutation, useQuery } from "@apollo/client"
 import { GET_TEAMS, CREATE_TEAM, UPDATE_TEAM_BY_ID, REMOVE_TEAM_BY_ID } from "@/queries/queries"
 import { TeamForm } from "@/components/team-form"
@@ -62,16 +62,9 @@ export default function TeamManagement() {
                 }
             })
             setCreateDialogOpen(false)
-            toast({
-                title: "Success",
-                description: "Team created successfully",
-            })
+            toast.success("Success", { description: "Team created successfully" })
         } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to create team",
-                variant: "destructive",
-            })
+            toast.error("Error", { description: "Failed to create team" })
         }
     }
 
@@ -88,16 +81,9 @@ export default function TeamManagement() {
             })
             setEditDialogOpen(false)
             setSelectedTeam(null)
-            toast({
-                title: "Success",
-                description: "Team updated successfully",
-            })
+            toast.success("Success", { description: "Team updated successfully" })
         } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to update team",
-                variant: "destructive",
-            })
+            toast.error("Error", { description: "Failed to update team" })
         }
     }
 
@@ -110,16 +96,9 @@ export default function TeamManagement() {
             })
             setDeleteDialogOpen(false)
             setSelectedTeam(null)
-            toast({
-                title: "Success",
-                description: "Team deleted successfully",
-            })
+            toast.success("Success", { description: "Team deleted successfully" })
         } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to delete team",
-                variant: "destructive",
-            })
+            toast.error("Error", { description: "Failed to delete team" })
         }
     }
 

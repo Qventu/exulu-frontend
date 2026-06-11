@@ -16,7 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from "sonner";
 import { Copy, Eye, EyeOff } from 'lucide-react';
 
 interface AddUserModalProps {
@@ -27,7 +27,6 @@ interface AddUserModalProps {
 export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
   const { user } = useContext(UserContext);
   const configContext = useContext(ConfigContext);
-  const { toast } = useToast();
 
   const [step, setStep] = useState<'email' | 'password'>('email');
   const [email, setEmail] = useState('');
@@ -51,20 +50,12 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
 
   const handleEmailSubmit = async () => {
     if (!email.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter an email address',
-        variant: 'destructive',
-      });
+      toast.error('Error', { description: 'Please enter an email address' });
       return;
     }
 
     if (!email.includes('@')) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a valid email address',
-        variant: 'destructive',
-      });
+      toast.error('Error', { description: 'Please enter a valid email address' });
       return;
     }
 
@@ -82,10 +73,7 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
         },
       });
       
-      toast({
-        title: 'User created',
-        description: `User ${email} has been created successfully.`,
-      });
+      toast.success('User created', { description: `User ${email} has been created successfully.` });
       
       handleClose();
     }
@@ -102,19 +90,12 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
         },
       });
       
-      toast({
-        title: 'User created',
-        description: `User ${email} has been created with a temporary password.`,
-      });
+      toast.success('User created', { description: `User ${email} has been created with a temporary password.` });
       
       handleClose();
     } catch (error) {
       console.error('Error creating user:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create user. Please try again.',
-        variant: 'destructive',
-      });
+      toast.error('Error', { description: 'Failed to create user. Please try again.' });
     } finally {
       setIsCreating(false);
     }
@@ -132,16 +113,9 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast({
-        title: 'Copied',
-        description: 'Password copied to clipboard',
-      });
+      toast.success('Copied', { description: 'Password copied to clipboard' });
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to copy to clipboard',
-        variant: 'destructive',
-      });
+      toast.error('Error', { description: 'Failed to copy to clipboard' });
     }
   };
 

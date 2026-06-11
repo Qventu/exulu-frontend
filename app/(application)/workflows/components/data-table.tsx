@@ -43,7 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { FilterOperator } from "@/types/models/filter";
 
 export type WorkflowFilters = {
@@ -75,7 +75,6 @@ export function usePagination() {
 export function DataTable<TData, TValue>({
   columns,
 }: DataTableProps<TData, TValue>) {
-  const { toast } = useToast();
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -194,16 +193,9 @@ export function DataTable<TData, TValue>({
                   });
                   Promise.all(promises).then(() => {
                     table.resetRowSelection();
-                    toast({
-                      title: "Workflows deleted",
-                      description: "Successfully deleted " + promises.length + " workflow(s).",
-                    });
+                    toast.success("Workflows deleted", { description: "Successfully deleted " + promises.length + " workflow(s)." });
                   }).catch(() => {
-                    toast({
-                      title: "Error",
-                      description: "Failed to delete some workflows. Please try again.",
-                      variant: "destructive",
-                    });
+                    toast.error("Error", { description: "Failed to delete some workflows. Please try again." });
                   });
                 }}
                 variant="secondary"

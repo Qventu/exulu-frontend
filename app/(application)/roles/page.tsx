@@ -18,7 +18,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { useMutation, useQuery } from "@apollo/client"
 import { GET_USER_ROLES, CREATE_USER_ROLE, UPDATE_USER_ROLE_BY_ID, REMOVE_USER_ROLE_BY_ID } from "@/queries/queries"
 import { RoleForm } from "@/components/role-form"
@@ -120,16 +120,9 @@ export default function RoleManagement() {
                 }
             })
             setCreateDialogOpen(false)
-            toast({
-                title: "Success",
-                description: "Role created successfully",
-            })
+            toast.success("Success", { description: "Role created successfully" })
         } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to create role",
-                variant: "destructive",
-            })
+            toast.error("Error", { description: "Failed to create role" })
         }
     }
 
@@ -152,16 +145,9 @@ export default function RoleManagement() {
             })
             setEditDialogOpen(false)
             setSelectedRole(null)
-            toast({
-                title: "Success",
-                description: "Role updated successfully",
-            })
+            toast.success("Success", { description: "Role updated successfully" })
         } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to update role",
-                variant: "destructive",
-            })
+            toast.error("Error", { description: "Failed to update role" })
         }
     }
 
@@ -174,16 +160,9 @@ export default function RoleManagement() {
             })
             setDeleteDialogOpen(false)
             setSelectedRole(null)
-            toast({
-                title: "Success",
-                description: "Role deleted successfully",
-            })
+            toast.success("Success", { description: "Role deleted successfully" })
         } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to delete role",
-                variant: "destructive",
-            })
+            toast.error("Error", { description: "Failed to delete role" })
         }
     }
 

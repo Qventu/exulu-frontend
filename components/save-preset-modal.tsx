@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { ChevronDown, Tag, Database } from 'lucide-react'
-import { useToast } from '@/components/ui/use-toast'
+import { toast } from "sonner"
 import { cn } from '@/lib/utils'
 import { RBACControl } from './rbac'
 import { Badge } from './ui/badge'
@@ -46,7 +46,6 @@ export function SavePresetModal({
   onSave
 }: SavePresetModalProps) {
   const { user } = useContext(UserContext)
-  const { toast } = useToast()
   const apolloClient = useApolloClient()
 
   const isEditing = Boolean(existingPreset)
@@ -105,11 +104,7 @@ export function SavePresetModal({
     if (!user?.id) return
 
     if (!presetName.trim()) {
-      toast({
-        title: "Name required",
-        description: "Please enter a name for your preset.",
-        variant: "destructive"
-      })
+      toast.error("Name required", { description: "Please enter a name for your preset." })
       return
     }
 
@@ -134,10 +129,7 @@ export function SavePresetModal({
           }
         })
 
-        toast({
-          title: "Preset updated!",
-          description: `"${presetName}" has been updated successfully.`
-        })
+        toast.success("Preset updated!", { description: `"${presetName}" has been updated successfully.` })
 
         if (onSave && data?.context_presetsUpdateOneById?.item) {
           onSave(data.context_presetsUpdateOneById.item)
@@ -145,10 +137,7 @@ export function SavePresetModal({
       } else {
         const { data } = await createPreset({ variables })
 
-        toast({
-          title: "Preset created!",
-          description: `"${presetName}" has been saved successfully.`
-        })
+        toast.success("Preset created!", { description: `"${presetName}" has been saved successfully.` })
 
         if (onSave && data?.context_presetsCreateOne?.item) {
           onSave(data.context_presetsCreateOne.item)
@@ -158,11 +147,7 @@ export function SavePresetModal({
       onClose()
     } catch (error) {
       console.error('Error saving preset:', error)
-      toast({
-        title: "Error saving preset",
-        description: error instanceof Error ? error.message : "There was an error saving your preset. Please try again.",
-        variant: "destructive"
-      })
+      toast.error("Error saving preset", { description: error instanceof Error ? error.message : "There was an error saving your preset. Please try again." })
     }
   }, [user?.id, presetName, presetDescription, currentItems, tags, rbac, createPreset, updatePreset, toast, onClose, isEditing, existingPreset, onSave])
 

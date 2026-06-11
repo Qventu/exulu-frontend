@@ -13,7 +13,7 @@ import { Context } from "@/types/models/context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DotsHorizontalIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -63,7 +63,6 @@ export function ContextEmbeddings(props: DataDisplayProps) {
     const [embeddersOpen, setEmbeddersOpen] = useState(true);
     const [dialogRunEmbedderOpen, setDialogRunEmbedderOpen] = useState(false);
     const [dialogDeleteEmbeddingsOpen, setDialogDeleteEmbeddingsOpen] = useState(false);
-    const { toast } = useToast();
     const { data, loading, error } = useQuery<
         { contextById: Context }>(GET_CONTEXT_BY_ID, {
             variables: {
@@ -82,17 +81,11 @@ export function ContextEmbeddings(props: DataDisplayProps) {
     }>(UPDATE_EMBEDDER_CONFIG, {
         onCompleted: (output) => {
             refetchEmbedderConfigs();
-            toast({
-                title: "Embedder configs updated",
-                description: "Embedder configs updated successfully.",
-            })
+            toast.success("Embedder configs updated", { description: "Embedder configs updated successfully." })
         },
         onError: (error) => {
             refetchEmbedderConfigs();
-            toast({
-                title: "Error updating embedder configs",
-                description: error.message,
-            })
+            toast.error("Error updating embedder configs", { description: error.message })
         }
     });
 
@@ -105,17 +98,11 @@ export function ContextEmbeddings(props: DataDisplayProps) {
     }>(CREATE_EMBEDDER_CONFIG, {
         onCompleted: (output) => {
             refetchEmbedderConfigs();
-            toast({
-                title: "Embedder configs created",
-                description: "Embedder configs created successfully.",
-            })
+            toast.success("Embedder configs created", { description: "Embedder configs created successfully." })
         },
         onError: (error) => {
             refetchEmbedderConfigs();
-            toast({
-                title: "Error creating embedder configs",
-                description: error.message,
-            })
+            toast.error("Error creating embedder configs", { description: error.message })
         }
     });
 
@@ -156,16 +143,12 @@ export function ContextEmbeddings(props: DataDisplayProps) {
         onCompleted: (output) => {
             const data = output[props.context + "_itemsGenerateChunks"];
             if (data.jobs?.length > 0) {
-                toast({
-                    title: "Chunks generation started",
+                toast.success("Chunks generation started", {
                     description: "Jobs have been started in the background, depending on the size of the item this may take a while.",
                 })
                 return;
             }
-            toast({
-                title: "Chunks generated",
-                description: "Chunks generated successfully.",
-            })
+            toast.success("Chunks generated", { description: "Chunks generated successfully." })
         },
     });
 
@@ -178,16 +161,12 @@ export function ContextEmbeddings(props: DataDisplayProps) {
         onCompleted: (output) => {
             const data = output[props.context + "_itemsDeleteChunks"];
             if (data.jobs?.length > 0) {
-                toast({
-                    title: "Chunks deletion started",
+                toast.success("Chunks deletion started", {
                     description: "Jobs have been started in the background, depending on the size of the item this may take a while.",
                 })
                 return;
             }
-            toast({
-                title: "Chunks deleted",
-                description: "Chunks deleted successfully.",
-            })
+            toast.success("Chunks deleted", { description: "Chunks deleted successfully." })
         },
     });
 
@@ -379,10 +358,7 @@ export function ContextEmbeddings(props: DataDisplayProps) {
                                                         }}
                                                         retryJob={(job: QueueJob) => {
                                                             if (!job.data?.item || !job.data?.context) {
-                                                                toast({
-                                                                    title: "Error retrying job",
-                                                                    description: "Job data is missing.",
-                                                                })
+                                                                toast.error("Error retrying job", { description: "Job data is missing." })
                                                                 return;
                                                             }
 

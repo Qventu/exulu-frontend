@@ -12,14 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { Loading } from "@/components/ui/loading";
 
 export const dynamic = "force-dynamic";
 
 export default function CreateVariablePage() {
   const router = useRouter();
-  const { toast } = useToast();
   
   const [formData, setFormData] = useState({
     name: "",
@@ -38,11 +37,7 @@ export default function CreateVariablePage() {
     e.preventDefault();
     
     if (!formData.name.trim() || !formData.value.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Name and value are required fields.",
-        variant: "destructive",
-      });
+      toast.error("Validation Error", { description: "Name and value are required fields." });
       return;
     }
 
@@ -55,18 +50,11 @@ export default function CreateVariablePage() {
         },
       });
 
-      toast({
-        title: "Variable Created",
-        description: `Variable "${formData.name}" has been created successfully.`,
-      });
+      toast.success("Variable Created", { description: `Variable "${formData.name}" has been created successfully.` });
 
       router.push("/variables");
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create variable. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to create variable. Please try again." });
     }
   };
 

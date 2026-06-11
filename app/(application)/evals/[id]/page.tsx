@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { GET_EVAL_SET_BY_ID, UPDATE_EVAL_SET, GET_TEST_CASES, UPDATE_TEST_CASE } from "@/queries/queries";
 import { TestCaseSelectionModal } from "./components/test-case-selection-modal";
 import { TestCaseModal } from "../cases/components/test-case-modal";
@@ -30,7 +30,6 @@ export default function EvalSetEditorPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useContext(UserContext);
-  const { toast } = useToast();
   const evalSetId = params.id as string;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -67,37 +66,22 @@ export default function EvalSetEditorPage() {
 
   const [updateEvalSet, { loading: updating }] = useMutation(UPDATE_EVAL_SET, {
     onCompleted: () => {
-      toast({
-        title: "Eval set updated",
-        description: "The eval set has been successfully updated.",
-      });
+      toast.success("Eval set updated", { description: "The eval set has been successfully updated." });
       refetch();
     },
     onError: (error) => {
-      toast({
-        title: "Failed to update eval set",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to update eval set", { description: error.message });
     },
   });
 
   const handleSave = () => {
     if (!name.trim()) {
-      toast({
-        title: "Validation error",
-        description: "Name is required.",
-        variant: "destructive",
-      });
+      toast.error("Validation error", { description: "Name is required." });
       return;
     }
 
     if (testCases.length > 500) {
-      toast({
-        title: "Validation error",
-        description: "Maximum 500 test cases allowed per eval set.",
-        variant: "destructive",
-      });
+      toast.error("Validation error", { description: "Maximum 500 test cases allowed per eval set." });
       return;
     }
 
@@ -125,10 +109,7 @@ export default function EvalSetEditorPage() {
         data: { eval_set_id: null },
       },
       onCompleted: () => {
-        toast({
-          title: "Test case removed",
-          description: "The test case has been removed from this eval set.",
-        });
+        toast.success("Test case removed", { description: "The test case has been removed from this eval set." });
         refetchTestCases();
         setTestCaseToRemove(null);
       },
@@ -137,11 +118,7 @@ export default function EvalSetEditorPage() {
 
   const [updateTestCase, { loading: updatingTestCase }] = useMutation(UPDATE_TEST_CASE, {
     onError: (error) => {
-      toast({
-        title: "Failed to update test case",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to update test case", { description: error.message });
     },
   });
 
@@ -150,11 +127,7 @@ export default function EvalSetEditorPage() {
     const newTestCases = Array.from(new Set([...testCases, ...selectedTestCaseIds]));
 
     if (newTestCases.length > 500) {
-      toast({
-        title: "Too many test cases",
-        description: "Maximum 500 test cases allowed per eval set.",
-        variant: "destructive",
-      });
+      toast.error("Too many test cases", { description: "Maximum 500 test cases allowed per eval set." });
       return;
     }
 

@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -40,7 +40,6 @@ export function DataTableRowActions<TData>({
   const model = row.original as Model;
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const { toast } = useToast();
 
   const [removeModel] = useMutation(REMOVE_MODEL_BY_ID, {
     refetchQueries: [GET_MODELS, "GetModels"],
@@ -49,16 +48,9 @@ export function DataTableRowActions<TData>({
   const handleDelete = async () => {
     try {
       await removeModel({ variables: { id: model?.id } });
-      toast({
-        title: "Model deleted",
-        description: "The model has been successfully deleted.",
-      });
+      toast.success("Model deleted", { description: "The model has been successfully deleted." });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete the model. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to delete the model. Please try again." });
     }
     setShowDeleteDialog(false);
   };

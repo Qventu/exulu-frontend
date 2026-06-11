@@ -40,7 +40,7 @@ import { Agent, AgentTool } from "@EXULU_SHARED//models/agent";
 import { UserContext } from "@/app/(application)/authenticated";
 import { ExuluTool } from "@EXULU_SHARED/models/tool";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Popover,
@@ -276,7 +276,6 @@ export default function AgentForm({
     piiDetection: agent.firewall?.scanners?.piiDetection || false,
   })
   const [memory, setMemory] = useState<string>(agent.memory || '')
-  const { toast } = useToast();
 
   // Prepare query variables
   const toolsQueryVariables = useMemo(() => ({
@@ -388,9 +387,9 @@ export default function AgentForm({
   const copyAgentId = async () => {
     try {
       await navigator.clipboard.writeText(agent.id);
-      toast({ title: "Agent ID copied to clipboard" });
+      toast.success("Agent ID copied to clipboard");
     } catch (error) {
-      toast({ title: "Failed to copy Agent ID", variant: "destructive" });
+      toast.error("Failed to copy Agent ID");
     }
   };
 
@@ -413,11 +412,11 @@ export default function AgentForm({
         "GetAgentById"
       ],
       onCompleted: (data) => {
-        toast({ title: "Agent copied successfully" });
+        toast.success("Agent copied successfully");
         router.push(`/agents/edit/${data?.agentsCopyOneById?.item?.id}`, { scroll: false });
       },
       onError: (error) => {
-        toast({ title: "Failed to copy agent", variant: "destructive" });
+        toast.error("Failed to copy agent");
       },
     },
   );

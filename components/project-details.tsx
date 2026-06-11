@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Plus, MessageSquare, Settings2, Files, AlertTriangle, Shield, Pencil, PackageMinus, X, Database, FileText } from "lucide-react";
 import { RBACControl } from "@/components/rbac";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { Loading } from "./ui/loading";
 import { useRouter } from "next/navigation";
 import { AgentSession } from "@/types/models/agent-session";
@@ -52,7 +52,6 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
     description: project.description || "",
     custom_instructions: project.custom_instructions || "",
   });
-  const { toast } = useToast();
 
   const [rbac, setRbac] = useState({
     rights_mode: project.rights_mode,
@@ -91,11 +90,7 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Project name is required.",
-        variant: "destructive",
-      });
+      toast.error("Validation Error", { description: "Project name is required." });
       return;
     }
 
@@ -111,19 +106,12 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
         },
       });
 
-      toast({
-        title: "Success",
-        description: "Project updated successfully!",
-      });
+      toast.success("Success", { description: "Project updated successfully!" });
 
       setIsEditing(false);
     } catch (error: any) {
       console.error("Error updating project:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update project. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to update project. Please try again." });
     }
   };
 
@@ -182,10 +170,7 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
         variables: { id: project.id },
       });
 
-      toast({
-        title: "Success",
-        description: `Project "${project.name}" has been deleted successfully.`,
-      });
+      toast.success("Success", { description: `Project "${project.name}" has been deleted successfully.` });
 
       // Navigate back to projects list or close modal
       setIsDeleteDialogOpen(false);
@@ -194,11 +179,7 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
     } catch (error: any) {
       setDeletingProject(false);
       console.error("Error deleting project:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete project. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to delete project. Please try again." });
     }
   };
 

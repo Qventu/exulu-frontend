@@ -12,7 +12,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { CopyIcon, DownloadIcon, InfoIcon } from "lucide-react";
 
@@ -32,7 +32,6 @@ export function CodePreview({
     language?: string;
     slice?: number | null;
 }) {
-    const { toast } = useToast();
     const [code, setCode] = useState<string | null>(null);
 
     const format = (code: any) => {
@@ -68,7 +67,7 @@ export function CodePreview({
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        toast({ title: "Downloaded as file" });
+        toast.success("Downloaded as file");
     };
 
     if (isVeryLarge && code?.length) {
@@ -140,7 +139,7 @@ export function CodePreview({
                             className="text-sm px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors font-medium"
                             onClick={async () => {
                                 await navigator.clipboard.writeText(code ?? "");
-                                toast({ title: "Copied to clipboard" });
+                                toast.success("Copied to clipboard");
                             }}
                         >
                             <div className="flex items-center gap-2">

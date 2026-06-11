@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { RBACControl } from "@/components/rbac";
 
 type ModelFormProps = {
@@ -33,7 +33,6 @@ type ModelFormProps = {
 
 export function ModelForm({ modelId }: ModelFormProps) {
   const router = useRouter();
-  const { toast } = useToast();
   const isEdit = !!modelId;
 
   const [name, setName] = React.useState("");
@@ -106,11 +105,7 @@ export function ModelForm({ modelId }: ModelFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !providerId) {
-      toast({
-        title: "Missing fields",
-        description: "Name and provider are required.",
-        variant: "destructive",
-      });
+      toast.error("Missing fields", { description: "Name and provider are required." });
       return;
     }
 
@@ -135,24 +130,14 @@ export function ModelForm({ modelId }: ModelFormProps) {
     try {
       if (isEdit) {
         await updateModel({ variables: { id: modelId, ...variables } });
-        toast({
-          title: "Model updated",
-          description: `"${name}" has been saved.`,
-        });
+        toast.success("Model updated", { description: `"${name}" has been saved.` });
       } else {
         await createModel({ variables });
-        toast({
-          title: "Model created",
-          description: `"${name}" has been created.`,
-        });
+        toast.success("Model created", { description: `"${name}" has been created.` });
       }
       router.push("/models");
     } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err?.message ?? "Failed to save the model.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: err?.message ?? "Failed to save the model." });
     }
   };
 

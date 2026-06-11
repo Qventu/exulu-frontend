@@ -43,7 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { FilterOperator } from "@/types/models/filter";
 import { AddUserModal } from "@/app/(application)/users/components/add-user-modal";
 import { UserContext } from "@/app/(application)/authenticated";
@@ -79,7 +79,6 @@ export function usePagination() {
 export function DataTable<TData, TValue>({
   columns,
 }: DataTableProps<TData, TValue>) {
-  const { toast } = useToast();
   const router = useRouter();
   const { user } = React.useContext(UserContext);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -245,10 +244,7 @@ export function DataTable<TData, TValue>({
                   });
                   Promise.all(promises).then(() => {
                     table.resetRowSelection();
-                    toast({
-                      title: "Removed users",
-                      description: "We removed " + promises.length + " users.",
-                    });
+                    toast.success("Removed users", { description: "We removed " + promises.length + " users." });
                   });
                 }}
                 variant="secondary"

@@ -20,7 +20,7 @@ import { GET_CHUNK_BY_ID, UPDATE_ITEM } from '@/queries/queries';
 import { getPresignedUrl } from '../uppy-dashboard';
 import Link from 'next/link';
 import { AlertTriangle, LinkIcon, CopyIcon } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from "sonner";
 
 /**
  * Parses markdown text and removes incomplete tokens to prevent partial rendering
@@ -192,7 +192,6 @@ const WebSearchCitationBadge = ({ url, title, snippet }: {
   snippet: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { toast } = useToast();
 
   if (!url) {
     return null;
@@ -279,10 +278,7 @@ const WebSearchCitationBadge = ({ url, title, snippet }: {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(snippet);
-                    toast({
-                      title: "Copied to clipboard",
-                      description: "The citation snippet has been copied.",
-                    });
+                    toast.success("Copied to clipboard", { description: "The citation snippet has been copied." });
                   }}
                   className="flex-shrink-0 p-1.5 rounded hover:bg-muted transition-colors"
                   title="Copy snippet to clipboard"
@@ -331,7 +327,6 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
   context: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { toast } = useToast();
 
   if (!context) {
     return null;
@@ -362,16 +357,9 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
     try {
       await updateItem({ variables: { id: itemId, input: { archived: true } } });
       setDeactivated(true);
-      toast({
-        title: 'Source deactivated',
-        description: `${itemName} has been archived globally.`,
-      });
+      toast.success('Source deactivated', { description: `${itemName} has been archived globally.` });
     } catch (error) {
-      toast({
-        title: 'Failed to deactivate source',
-        description: error instanceof Error ? error.message : 'Please try again.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to deactivate source', { description: error instanceof Error ? error.message : 'Please try again.' });
     }
   };
 

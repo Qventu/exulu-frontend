@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RBACControl } from "@/components/rbac";
 import { Loader2, Trash2 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 /**
  * Create / edit a saved image-generation style. Styles are stored in the
@@ -61,7 +61,6 @@ export function EditStyleDialog({
   initialStyle?: StyleEditTarget;
   onSaved: () => void;
 }) {
-  const { toast } = useToast();
   const isEdit = !!initialStyle?.id;
 
   const [name, setName] = useState(initialStyle?.name ?? "");
@@ -92,11 +91,11 @@ export function EditStyleDialog({
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast({ title: "Name required", description: "Give the style a name.", variant: "destructive" });
+      toast.error("Name required", { description: "Give the style a name." });
       return;
     }
     if (!markdown.trim()) {
-      toast({ title: "Style content required", description: "Add markdown describing the style.", variant: "destructive" });
+      toast.error("Style content required", { description: "Add markdown describing the style." });
       return;
     }
 
@@ -113,21 +112,17 @@ export function EditStyleDialog({
     try {
       if (isEdit) {
         await updateStyle({ variables: { id: initialStyle!.id, data } });
-        toast({ title: "Style updated" });
+        toast.success("Style updated");
       } else {
         data.config_key = `image_generation_style:${toSlug(name)}`;
         await createStyle({ variables: { data } });
-        toast({ title: "Style created" });
+        toast.success("Style created");
       }
       onSaved();
       onOpenChange(false);
     } catch (err) {
       console.error("[EXULU] Failed to save style", err);
-      toast({
-        title: "Couldn't save style",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
-      });
+      toast.error("Couldn't save style", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   };
 
@@ -136,16 +131,12 @@ export function EditStyleDialog({
     if (!confirm(`Delete style "${initialStyle.name}"? This can't be undone.`)) return;
     try {
       await deleteStyle({ variables: { id: initialStyle.id } });
-      toast({ title: "Style deleted" });
+      toast.success("Style deleted");
       onSaved();
       onOpenChange(false);
     } catch (err) {
       console.error("[EXULU] Failed to delete style", err);
-      toast({
-        title: "Couldn't delete style",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
-      });
+      toast.error("Couldn't delete style", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   };
 

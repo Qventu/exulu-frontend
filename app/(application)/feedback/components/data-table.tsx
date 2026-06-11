@@ -41,7 +41,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { FilterOperator } from "@/types/models/filter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -82,7 +82,6 @@ type Feedback = {
 };
 
 export function DataTable() {
-  const { toast } = useToast();
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -285,20 +284,13 @@ export function DataTable() {
         ),
       );
 
-      toast({
-        title: "Success",
-        description: `Deleted ${selectedRows.length} feedback item(s)`,
-      });
+      toast.success("Success", { description: `Deleted ${selectedRows.length} feedback item(s)` });
 
       setRowSelection({});
       setDeleteDialogOpen(false);
       refetch();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete feedback",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to delete feedback" });
     }
   };
 
@@ -591,10 +583,7 @@ export function DataTable() {
           deleteFeedback({
             variables: { id },
           }).then(() => {
-            toast({
-              title: "Success",
-              description: "Feedback deleted successfully",
-            });
+            toast.success("Success", { description: "Feedback deleted successfully" });
             setSelectedFeedback(null);
             refetch();
           });

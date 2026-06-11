@@ -57,7 +57,7 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 
 type Entity = { id: string; label: string; budget: BudgetInfo | null }
 
@@ -170,11 +170,7 @@ export default function BudgetsPage() {
                 )
                 setPageInfo(root?.pageInfo ?? EMPTY_PAGE_INFO)
             } catch (err) {
-                toast({
-                    title: "Failed to load budgets",
-                    description: err instanceof Error ? err.message : "Unknown error.",
-                    variant: "destructive",
-                })
+                toast.error("Failed to load budgets", { description: err instanceof Error ? err.message : "Unknown error." })
                 setEntities([])
                 setPageInfo(EMPTY_PAGE_INFO)
             } finally {
@@ -208,11 +204,7 @@ export default function BudgetsPage() {
     const handleSaveSettings = async () => {
         const amount = Number(globalAmount)
         if (globalEnabled && (!Number.isFinite(amount) || amount <= 0)) {
-            toast({
-                title: "Invalid amount",
-                description: "Set a positive budget to enable the global default.",
-                variant: "destructive",
-            })
+            toast.error("Invalid amount", { description: "Set a positive budget to enable the global default." })
             return
         }
         setSavingSettings(true)
@@ -225,13 +217,9 @@ export default function BudgetsPage() {
                 },
                 show_user_budget_in_chat: showInChat,
             })
-            toast({ title: "Settings saved" })
+            toast.success("Settings saved")
         } catch (err) {
-            toast({
-                title: "Failed to save settings",
-                description: err instanceof Error ? err.message : "Unknown error.",
-                variant: "destructive",
-            })
+            toast.error("Failed to save settings", { description: err instanceof Error ? err.message : "Unknown error." })
         } finally {
             setSavingSettings(false)
         }

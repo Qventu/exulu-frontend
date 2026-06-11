@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { Loading } from "@/components/ui/loading";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -21,7 +21,6 @@ export const dynamic = "force-dynamic";
 export default function EditVariablePage() {
   const params = useParams();
   const router = useRouter();
-  const { toast } = useToast();
   const variableId = params.variable_id as string;
   
   const [formData, setFormData] = useState({
@@ -59,11 +58,7 @@ export default function EditVariablePage() {
     e.preventDefault();
     
     if (!formData.name.trim() || !formData.value.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Name and value are required fields.",
-        variant: "destructive",
-      });
+      toast.error("Validation Error", { description: "Name and value are required fields." });
       return;
     }
 
@@ -77,18 +72,11 @@ export default function EditVariablePage() {
         },
       });
 
-      toast({
-        title: "Variable Updated",
-        description: `Variable "${formData.name}" has been updated successfully.`,
-      });
+      toast.success("Variable Updated", { description: `Variable "${formData.name}" has been updated successfully.` });
 
       router.push("/variables");
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update variable. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to update variable. Please try again." });
     }
   };
 

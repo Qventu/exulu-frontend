@@ -3,7 +3,7 @@
 import AgentVisual from "./lottie";
 import React, { useState } from "react";
 import { Agent } from "@/types/models/agent";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { CREATE_AGENT_SESSION, GET_AGENTS } from "@/queries/queries";
 import { useQuery, useMutation } from "@apollo/client";
 import { Search, Bot } from "lucide-react";
@@ -44,7 +44,6 @@ export const AgentSelectionModalContent = ({
     });
     const agents: Agent[] = agentsData?.agentsPagination?.items || [];
     const [createAgentSession] = useMutation(CREATE_AGENT_SESSION);
-    const { toast } = useToast();
     const [agentSearch, setAgentSearch] = useState("");
 
     const handleAgentSelect = async (agent: Agent) => {
@@ -64,10 +63,7 @@ export const AgentSelectionModalContent = ({
             const sessionId = result.data?.agent_sessionsCreateOne?.item?.id;
 
             if (sessionId) {
-                toast({
-                    title: t('common.success'),
-                    description: t('agentSelection.sessionCreated'),
-                });
+                toast.success(t('common.success'), { description: t('agentSelection.sessionCreated') });
 
                 setAgentSearch("");
 
@@ -79,11 +75,7 @@ export const AgentSelectionModalContent = ({
             }
         } catch (error: any) {
             console.error("Error creating session:", error);
-            toast({
-                title: t('common.error'),
-                description: error.message || t('agentSelection.sessionError'),
-                variant: "destructive",
-            });
+            toast.error(t('common.error'), { description: error.message || t('agentSelection.sessionError') });
         }
     };
 

@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DELETE_EVAL_SET } from "@/queries/queries";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { User, UserWithRole } from "@EXULU_SHARED/models/user";
 import {
   AlertDialog,
@@ -39,7 +39,6 @@ export function DataTableRowActions<TData>({
   user,
 }: DataTableRowActionsProps<TData>) {
   const router = useRouter();
-  const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const evalSet = row.original as any;
 
@@ -47,19 +46,12 @@ export function DataTableRowActions<TData>({
 
   const [deleteEvalSet, { loading: deleteLoading }] = useMutation(DELETE_EVAL_SET, {
     onCompleted: () => {
-      toast({
-        title: "Eval set deleted",
-        description: "The eval set has been successfully deleted.",
-      });
+      toast.success("Eval set deleted", { description: "The eval set has been successfully deleted." });
       setShowDeleteDialog(false);
       window.location.reload();
     },
     onError: (error) => {
-      toast({
-        title: "Failed to delete eval set",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to delete eval set", { description: error.message });
     },
   });
 

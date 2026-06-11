@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { RoleSelector } from "@/components/ui/role-selector"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
@@ -82,22 +82,14 @@ export default function ApiKeyManagement() {
     // Generate new API key
     const generateApiKey = async () => {
         if (!newKeyName.trim()) {
-            toast({
-                title: "Error",
-                description: "Please enter a name for your API key",
-                variant: "destructive",
-            })
+            toast.error("Error", { description: "Please enter a name for your API key" })
             return
         }
 
         setIsGenerating(true)
 
         if (scopeMode === "agents" && selectedAgentIds.length === 0) {
-            toast({
-                title: "Error",
-                description: "Select at least one agent for an agents-scoped key.",
-                variant: "destructive",
-            })
+            toast.error("Error", { description: "Select at least one agent for an agents-scoped key." })
             setIsGenerating(false)
             return
         }
@@ -155,10 +147,7 @@ export default function ApiKeyManagement() {
     // Copy API key to clipboard
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text)
-        toast({
-            title: "Copied!",
-            description: "API key copied to clipboard",
-        })
+        toast.success("Copied!", { description: "API key copied to clipboard" })
     }
 
     // Delete API key
@@ -169,10 +158,7 @@ export default function ApiKeyManagement() {
             }
         })
         setDeleteKeyId(null)
-        toast({
-            title: "Deleted",
-            description: "API key has been deleted",
-        })
+        toast.success("Deleted", { description: "API key has been deleted" })
     }
 
     // Update API key role
@@ -184,16 +170,9 @@ export default function ApiKeyManagement() {
                     role: roleId || null
                 }
             })
-            toast({
-                title: "Updated",
-                description: "API key role has been updated",
-            })
+            toast.success("Updated", { description: "API key role has been updated" })
         } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to update API key role",
-                variant: "destructive",
-            })
+            toast.error("Error", { description: "Failed to update API key role" })
         }
     }
 

@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import {
   Loader2,
   Plus,
@@ -121,7 +121,6 @@ export function ImageGenerationWidget({
   config: ImageGenerationWidgetConfig;
   setMessages?: (updater: (prev: UIMessage[]) => UIMessage[]) => void;
 }) {
-  const { toast } = useToast();
   const configContext = useContext(ConfigContext);
   const userContext = useContext(UserContext);
   const backend = configContext?.backend;
@@ -235,19 +234,15 @@ export function ImageGenerationWidget({
 
   const handleGenerate = async () => {
     if (!backend) {
-      toast({ title: "Backend not configured", variant: "destructive" });
+      toast.error("Backend not configured");
       return;
     }
     if (!prompt.trim()) {
-      toast({ title: "Prompt is required", variant: "destructive" });
+      toast.error("Prompt is required");
       return;
     }
     if (mode === "edit" && !currentModel?.supportsEdit) {
-      toast({
-        title: "Model doesn't support editing",
-        description: `Pick a model with edit support, or remove reference images.`,
-        variant: "destructive",
-      });
+      toast.error("Model doesn't support editing", { description: `Pick a model with edit support, or remove reference images.` });
       return;
     }
 
@@ -295,11 +290,7 @@ export function ImageGenerationWidget({
       if (controller.signal.aborted) return;
       console.error("[EXULU] Image generation failed", err);
       setError(err instanceof Error ? err.message : "Generation failed");
-      toast({
-        title: "Generation failed",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
-      });
+      toast.error("Generation failed", { description: err instanceof Error ? err.message : "Unknown error" });
     } finally {
       setIsGenerating(false);
       abortControllerRef.current = null;
@@ -341,16 +332,12 @@ export function ImageGenerationWidget({
         // after a refetch.
         setMessages((prev) => [...prev, json.systemMessage as UIMessage]);
       }
-      toast({ title: "Selection saved", description: `${selectedImages.length} image(s) sent to the assistant.` });
+      toast.success("Selection saved", { description: `${selectedImages.length} image(s) sent to the assistant.` });
       // Refresh history so the selected flags now reflect the server state.
       await fetchHistory();
     } catch (err) {
       console.error("[EXULU] /images/select failed", err);
-      toast({
-        title: "Couldn't save selection",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
-      });
+      toast.error("Couldn't save selection", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   };
 
@@ -367,7 +354,7 @@ export function ImageGenerationWidget({
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      toast({ title: "Download failed", variant: "destructive" });
+      toast.error("Download failed");
     }
   };
 

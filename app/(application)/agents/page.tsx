@@ -12,14 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { AgentDetailsSheet } from "./components/agent-details-sheet";
 import { useTranslations } from "next-intl";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 export const dynamic = "force-dynamic";
 
 export default function AgentsPage() {
   const t = useTranslations();
   const router = useRouter();
-  const { toast } = useToast();
   const { user } = useContext(UserContext);
   const company = user.company;
   const [searchQuery, setSearchQuery] = useState("");
@@ -83,20 +82,13 @@ export default function AgentsPage() {
       const sessionId = result.data?.agent_sessionsCreateOne?.item?.id;
 
       if (sessionId) {
-        toast({
-          title: t('common.success'),
-          description: t('agentSelection.sessionCreated'),
-        });
+        toast.success(t('common.success'), { description: t('agentSelection.sessionCreated') });
 
         router.push(`/chat/${agent.id}/${sessionId}`, { scroll: false });
       }
     } catch (error: any) {
       console.error("Error creating session:", error);
-      toast({
-        title: t('common.error'),
-        description: error.message || t('agentSelection.sessionError'),
-        variant: "destructive",
-      });
+      toast.error(t('common.error'), { description: error.message || t('agentSelection.sessionError') });
     }
   };
 

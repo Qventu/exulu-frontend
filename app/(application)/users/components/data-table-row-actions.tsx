@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { userSchema } from "../data/schema";
 import { UserContext } from "@/app/(application)/authenticated";
 import { useContext, useState } from "react";
@@ -40,7 +40,6 @@ export function DataTableRowActions<TData>({
   const { user: currentUser } = useContext(UserContext);
   const user = userSchema.parse(row.original);
 
-  const { toast } = useToast();
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -83,21 +82,14 @@ export function DataTableRowActions<TData>({
         },
       });
 
-      toast({
-        title: "Password reset",
-        description: `Password has been reset for ${user.email}.`,
-      });
+      toast.success("Password reset", { description: `Password has been reset for ${user.email}.` });
 
       setIsResetPasswordOpen(false);
       setGeneratedPassword("");
       setShowPassword(false);
     } catch (error) {
       console.error('Error resetting password:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to reset password. Please try again.',
-        variant: 'destructive',
-      });
+      toast.error('Error', { description: 'Failed to reset password. Please try again.' });
     } finally {
       setIsResetting(false);
     }
@@ -106,16 +98,9 @@ export function DataTableRowActions<TData>({
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast({
-        title: 'Copied',
-        description: 'Password copied to clipboard',
-      });
+      toast.success('Copied', { description: 'Password copied to clipboard' });
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to copy to clipboard',
-        variant: 'destructive',
-      });
+      toast.error('Error', { description: 'Failed to copy to clipboard' });
     }
   };
 
@@ -138,10 +123,7 @@ export function DataTableRowActions<TData>({
           <DropdownMenuItem
             onClick={() => {
               if (currentUser.id === user.id) {
-                toast({
-                  title: "Cannot delete your own user",
-                  description: "You cannot delete your own user, that would be a bad idea.",
-                });
+                toast.error("Cannot delete your own user", { description: "You cannot delete your own user, that would be a bad idea." });
                 return;
               }
               const confirm = window.confirm("Are you sure you want to delete this user?");
@@ -153,10 +135,7 @@ export function DataTableRowActions<TData>({
                   id: user.id,
                 },
               });
-              toast({
-                title: "Deleting user",
-                description: "We deleted the user.",
-              });
+              toast("Deleting user", { description: "We deleted the user." });
             }}
           >
             Delete user

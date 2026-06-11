@@ -8,14 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Copy, CheckCircle, AlertCircle } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 
 export default function TokenPage() {
   const { data: session, status } = useSession()
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
-  const { toast } = useToast()
 
   useEffect(() => {
     const fetchToken = async () => {
@@ -40,17 +39,10 @@ export default function TokenPage() {
     try {
       await navigator.clipboard.writeText(token)
       setCopied(true)
-      toast({
-        title: "Token copied!",
-        description: "The token has been copied to your clipboard.",
-      })
+      toast.success("Token copied!", { description: "The token has been copied to your clipboard." })
       setTimeout(() => setCopied(false), 2000)
     } catch (error) {
-      toast({
-        title: "Failed to copy",
-        description: "Could not copy token to clipboard.",
-        variant: "destructive",
-      })
+      toast.error("Failed to copy", { description: "Could not copy token to clipboard." })
     }
   }
 

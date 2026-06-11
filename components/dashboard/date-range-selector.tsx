@@ -8,7 +8,7 @@ import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import {
   Popover,
   PopoverContent,
@@ -23,18 +23,13 @@ interface DateRangeSelectorProps {
 }
 
 export function DateRangeSelector({ dateRange, onDateRangeChange, className, maxDays = 30 }: DateRangeSelectorProps) {
-  const { toast } = useToast();
 
   const handleDateRangeChange = (newRange: DateRange | undefined) => {
     if (newRange?.from && newRange?.to) {
       const daysDifference = differenceInDays(newRange.to, newRange.from);
       if (daysDifference > maxDays) {
         // Show toast notification
-        toast({
-          title: "Date range too large",
-          description: `Please select a date range of ${maxDays} days or less.`,
-          variant: "destructive",
-        });
+        toast.error("Date range too large", { description: `Please select a date range of ${maxDays} days or less.` });
         return;
       }
     }

@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import Link from "next/link";
 import { CodePreview } from "@/components/custom/code-preview";
 import { TextPreview } from "@/components/custom/text-preview";
@@ -424,7 +424,6 @@ function ScheduleManagementDialog({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const { toast } = useToast();
   const [scheduleMode, setScheduleMode] = useState<"preset" | "custom">("preset");
   const [selectedPreset, setSelectedPreset] = useState<string>("");
   const [customCron, setCustomCron] = useState<string>("");
@@ -441,18 +440,11 @@ function ScheduleManagementDialog({
       { query: GET_WORKFLOW_SCHEDULE, variables: { workflow: workflowId } }
     ],
     onCompleted: () => {
-      toast({
-        title: "Schedule saved",
-        description: "The workflow schedule has been successfully saved.",
-      });
+      toast.success("Schedule saved", { description: "The workflow schedule has been successfully saved." });
       refetch();
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to save schedule: ${error.message}`,
-        variant: "destructive",
-      });
+      toast.error("Error", { description: `Failed to save schedule: ${error.message}` });
     },
   });
 
@@ -461,20 +453,13 @@ function ScheduleManagementDialog({
       { query: GET_WORKFLOW_SCHEDULE, variables: { workflow: workflowId } }
     ],
     onCompleted: () => {
-      toast({
-        title: "Schedule deleted",
-        description: "The workflow schedule has been successfully deleted.",
-      });
+      toast.success("Schedule deleted", { description: "The workflow schedule has been successfully deleted." });
       setSelectedPreset("");
       setCustomCron("");
       refetch();
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to delete schedule: ${error.message}`,
-        variant: "destructive",
-      });
+      toast.error("Error", { description: `Failed to delete schedule: ${error.message}` });
     },
   });
 
@@ -498,20 +483,12 @@ function ScheduleManagementDialog({
     const scheduleToSave = scheduleMode === "preset" ? selectedPreset : customCron;
 
     if (!scheduleToSave) {
-      toast({
-        title: "Error",
-        description: "Please select a preset or enter a custom CRON expression.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Please select a preset or enter a custom CRON expression." });
       return;
     }
 
     if (!cron.isValidCron(scheduleToSave, { seconds: false })) {
-      toast({
-        title: "Error",
-        description: "Invalid CRON expression. Please check your input.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Invalid CRON expression. Please check your input." });
       return;
     }
 
@@ -823,7 +800,6 @@ function WorkflowActionsCell({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
-  const { toast } = useToast();
 
   // Determine if user has write access
   const hasWriteAccess = (() => {
@@ -846,11 +822,7 @@ function WorkflowActionsCell({
 
   const handleDelete = async () => {
     if (deleteConfirmation !== workflow.name) {
-      toast({
-        title: "Error",
-        description: "Please type the workflow name exactly to confirm deletion.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Please type the workflow name exactly to confirm deletion." });
       return;
     }
 
@@ -858,18 +830,11 @@ function WorkflowActionsCell({
       await removeWorkflow({
         variables: { id: workflow.id },
       });
-      toast({
-        title: "Workflow deleted",
-        description: `"${workflow.name}" has been successfully deleted.`,
-      });
+      toast.success("Workflow deleted", { description: `"${workflow.name}" has been successfully deleted.` });
       setIsDeleteModalOpen(false);
       setDeleteConfirmation('');
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete the workflow. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to delete the workflow. Please try again." });
     }
   };
 
@@ -951,10 +916,7 @@ function WorkflowActionsCell({
               <br /><br />
               To confirm, please type the workflow name "<b className="cursor-pointer hover:underline" onClick={() => {
                 navigator.clipboard.writeText(workflow.name);
-                toast({
-                  title: "Copied workflow name",
-                  description: "The workflow name has been copied to your clipboard.",
-                });
+                toast.success("Copied workflow name", { description: "The workflow name has been copied to your clipboard." });
               }}>{workflow.name}</b>" below:
             </AlertDialogDescription>
           </AlertDialogHeader>

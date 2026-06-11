@@ -40,7 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { TestCaseModal } from "./test-case-modal";
 import { TestCase } from "@/types/models/test-case";
 import { FilterOperator } from "@/types/models/filter";
@@ -60,7 +60,6 @@ export function DataTable<TData, TValue>({
   columns,
   testCase,
 }: DataTableProps<TData, TValue>) {
-  const { toast } = useToast();
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -97,18 +96,11 @@ export function DataTable<TData, TValue>({
 
   const [deleteTestCase] = useMutation(DELETE_TEST_CASE, {
     onCompleted: () => {
-      toast({
-        title: "Test case deleted",
-        description: "The test case has been successfully deleted.",
-      });
+      toast.success("Test case deleted", { description: "The test case has been successfully deleted." });
       refetch();
     },
     onError: (error) => {
-      toast({
-        title: "Failed to delete test case",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to delete test case", { description: error.message });
     },
   });
 

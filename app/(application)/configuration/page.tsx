@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, CheckCircle2, RotateCcw } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { useMutation, useQuery } from "@apollo/client";
 import {
   GET_PLATFORM_CONFIGURATIONS,
@@ -25,7 +25,6 @@ export default function ConfigurationPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [configId, setConfigId] = useState<string | null>(null);
   const [characterStyle, setCharacterStyle] = useState(0);
-  const { toast } = useToast();
 
   // Fetch all platform configurations
   const { data, loading, refetch } = useQuery(GET_PLATFORM_CONFIGURATIONS);
@@ -112,8 +111,7 @@ export default function ConfigurationPage() {
       setCssInput("");
       setIsImporting(false);
 
-      toast({
-        title: "Theme imported successfully!",
+      toast.success("Theme imported successfully!", {
         description: `Updated ${Object.keys(parsed.light).length + Object.keys(parsed.dark).length} variables.`,
         duration: 3000,
       });
@@ -123,11 +121,7 @@ export default function ConfigurationPage() {
   const handleReset = () => {
     setLightTheme({});
     setDarkTheme({});
-    toast({
-      title: "Theme reset",
-      description: "Both themes have been reset to default (empty).",
-      duration: 3000,
-    });
+    toast.success("Theme reset", { description: "Both themes have been reset to default (empty).", duration: 3000 });
   };
 
   const handleSave = async () => {
@@ -161,19 +155,10 @@ export default function ConfigurationPage() {
 
       await refetch();
 
-      toast({
-        title: "Configuration saved",
-        description: "Theme configuration has been saved successfully.",
-        duration: 3000,
-      });
+      toast.success("Configuration saved", { description: "Theme configuration has been saved successfully.", duration: 3000 });
     } catch (error) {
       console.error("Error saving configuration:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save configuration. Please try again.",
-        duration: 3000,
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to save configuration. Please try again.", duration: 3000 });
     }
   };
 

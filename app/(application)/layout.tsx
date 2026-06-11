@@ -7,7 +7,6 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { ThemeProvider } from "@/components/theme-provider";
 import Authenticated from "@/app/(application)/authenticated";
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 import { ConfigContextProvider } from "@/components/config-context";
@@ -118,7 +117,6 @@ export default async function RootLayout({
                                     </Authenticated>
                                 </div>
                             </main>
-                            <Toaster />
                             <SonnerToaster />
                         </ThemeProvider>
                     </LanguageProvider>
