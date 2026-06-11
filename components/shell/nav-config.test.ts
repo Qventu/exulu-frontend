@@ -68,16 +68,16 @@ describe("the table itself (§1.2)", () => {
       "skills",
       "routines",
       "automation",
+      "feedback",
       "evals",
       "explorer",
+      "keys",
       "token",
       "users",
       "models",
       "budgets",
       "analytics",
       "variables",
-      "keys",
-      "feedback",
       "configuration",
       "send-feedback",
       "settings",
@@ -185,13 +185,13 @@ describe("single-right matrix (Phase 1 exit criterion)", () => {
     ]);
   });
 
-  it("api:write → Explorer + Personal token + API keys", () => {
+  it("api:write → Explorer + API keys + Personal token (all Develop)", () => {
     expect(ids(userWith({ api: "write" }))).toEqual([
       "home",
       ...ALL_USER_BODY,
       "explorer",
-      "token",
       "keys",
+      "token",
       ...FOOTER,
     ]);
   });
@@ -219,7 +219,19 @@ describe("persona matrix (§1.3)", () => {
     expect(tree.top).toEqual([]);
     expect(tree.groups.map((group) => group.group)).toEqual(["workspace"]);
     expect(tree.suppressGroupHeaders).toBe(true);
-    expect(tree.personal.map((entry) => entry.id)).toEqual(FOOTER);
+    // Settings is palette-visible but lives in the user menu, not the footer.
+    expect(tree.personal.map((entry) => entry.id)).toEqual(["send-feedback"]);
+  });
+
+  it("settings: in visibleEntries (palette) but never in the sidebar tree", () => {
+    expect(ids(superAdmin, fullConfig)).toContain("settings");
+    const tree = groupsFor(superAdmin, fullConfig);
+    const sidebarIds = [
+      ...tree.top,
+      ...tree.groups.flatMap((group) => group.entries),
+      ...tree.personal,
+    ].map((entry) => entry.id);
+    expect(sidebarIds).not.toContain("settings");
   });
 
   it("super admin: everything (all 23 rows with full config)", () => {
@@ -236,9 +248,29 @@ describe("persona matrix (§1.3)", () => {
       "administration",
     ]);
     expect(tree.suppressGroupHeaders).toBe(false);
+    // Administration after the keys/feedback moves: users, models, budgets,
+    // analytics, variables, configuration.
     expect(
       tree.groups.find((group) => group.group === "administration")?.entries.length,
-    ).toBe(8);
+    ).toBe(6);
+    expect(
+      tree.groups
+        .find((group) => group.group === "build")
+        ?.entries.map((entry) => entry.id),
+    ).toEqual([
+      "agents",
+      "knowledge",
+      "prompts",
+      "skills",
+      "routines",
+      "automation",
+      "feedback",
+    ]);
+    expect(
+      tree.groups
+        .find((group) => group.group === "develop")
+        ?.entries.map((entry) => entry.id),
+    ).toEqual(["evals", "explorer", "keys", "token"]);
   });
 
   it("config flags hide Transcripts / Automation / Send feedback — even for super admins", () => {
@@ -302,18 +334,17 @@ describe("persona matrix (§1.3)", () => {
     expect(tree.suppressGroupHeaders).toBe(false);
   });
 
-  it("P4 hat (api:w + evals:r): Workspace + Develop, no Build/Administration", () => {
+  it("P4 hat (api:w + evals:r): Workspace + Develop only — keys lives in Develop now", () => {
     const tree = groupsFor(userWith({ api: "write", evals: "read" }), fullConfig);
     expect(tree.groups.map((group) => group.group)).toEqual([
       "workspace",
       "develop",
-      "administration", // keys rides api:w (table gate)
     ]);
     expect(
       tree.groups
         .find((group) => group.group === "develop")
         ?.entries.map((entry) => entry.id),
-    ).toEqual(["evals", "explorer", "token"]);
+    ).toEqual(["evals", "explorer", "keys", "token"]);
   });
 });
 

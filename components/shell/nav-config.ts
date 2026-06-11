@@ -85,6 +85,12 @@ export interface NavEntry {
   aliases?: string[];
   /** Reserved for §5 mobile composition (drawer/top-bar special-casing). */
   mobile?: boolean;
+  /**
+   * Entry stays in `visibleEntries` (command palette Navigate group, mobile
+   * top-bar label) but is excluded from the sidebar/drawer tree (`groupsFor`).
+   * Used by `settings`, which lives in the user menu instead of the footer.
+   */
+  hiddenInSidebar?: boolean;
 }
 
 /**
@@ -195,6 +201,18 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     requires: { area: "workflows", level: "read" },
     configFlag: "n8n",
   },
+  {
+    id: "feedback",
+    group: "build",
+    route: "/feedback",
+    i18nKey: "navigation.feedback",
+    icon: Inbox,
+    // Product decision 2026-06-11: lives in Build (was Administration in the
+    // original navigation.md §1.2 table — doc updated). Still the review
+    // console; icon deliberately differs from the footer's "Send feedback".
+    // TODO(backend role-model): flip to a `feedback` role key when it ships.
+    requires: "super_admin",
+  },
 
   // — Develop —
   {
@@ -213,6 +231,16 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     i18nKey: "navigation.apiExplorer",
     icon: Code,
     // Evaluable once `api` is populated in serverSideAuthCheck (explorer.md U2).
+    requires: { area: "api", level: "write" },
+  },
+  {
+    id: "keys",
+    group: "develop",
+    route: "/keys",
+    i18nKey: "navigation.apiKeys",
+    icon: Key,
+    // Product decision 2026-06-11: lives in Develop next to the API Explorer
+    // and Personal token (was Administration — navigation.md updated).
     requires: { area: "api", level: "write" },
   },
   {
@@ -279,26 +307,6 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     aliases: ["/variables/*"],
   },
   {
-    id: "keys",
-    group: "administration",
-    route: "/keys",
-    i18nKey: "navigation.apiKeys",
-    icon: Key,
-    requires: { area: "api", level: "write" },
-  },
-  {
-    id: "feedback",
-    group: "administration",
-    route: "/feedback",
-    i18nKey: "navigation.feedback",
-    icon: Inbox,
-    // TODO(backend role-model): flip to a `feedback` role key when it ships
-    // (navigation.md §1.2 — "SA (future role.feedback)"). This is the P3
-    // review console; icon deliberately differs from the footer's
-    // "Send feedback" (the name is split, the surfaces stay).
-    requires: "super_admin",
-  },
-  {
     id: "configuration",
     group: "administration",
     route: "/configuration",
@@ -325,6 +333,10 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     i18nKey: "navigation.settings",
     icon: Settings,
     requires: "all",
+    // Product decision 2026-06-11: Settings lives ONLY in the user menu —
+    // not duplicated as a footer item. Kept in the table so the command
+    // palette and mobile top-bar label keep resolving it.
+    hiddenInSidebar: true,
   },
   // The user menu (avatar row) is shell chrome, not a NavEntry (§1.2).
 ];
@@ -388,7 +400,7 @@ export interface SidebarTree {
    * so its header label is suppressed and P1's sidebar reads as a flat app.
    */
   suppressGroupHeaders: boolean;
-  /** Footer rows (Send feedback, Settings) — the user menu is not an entry. */
+  /** Footer rows (Send feedback) — Settings and the user menu live in the avatar drop-up. */
   personal: NavEntry[];
 }
 
@@ -397,7 +409,11 @@ export interface SidebarTree {
  * rendering rules of navigation.md §1.3 (group trims, header suppression).
  */
 export function groupsFor(user: RightsUser, config: NavConfig): SidebarTree {
-  const visible = visibleEntries(user, config);
+  // `hiddenInSidebar` entries (Settings) stay palette-visible but never
+  // render in the sidebar/drawer tree.
+  const visible = visibleEntries(user, config).filter(
+    (entry) => !entry.hiddenInSidebar,
+  );
   const groups = BODY_GROUPS.map((group) => ({
     group,
     entries: visible.filter((entry) => entry.group === group),

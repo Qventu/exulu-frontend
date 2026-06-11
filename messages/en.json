@@ -32,7 +32,8 @@
     },
     "logout": "Logout",
     "brand": {
-      "productName": "Exulu"
+      "productName": "AI Studio",
+      "mark": "AI"
     },
     "userMenu": {
       "label": "User menu",

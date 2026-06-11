@@ -5,9 +5,10 @@
  *
  * Brand header + collapse trigger, the ⌘K search affordance, RBAC-trimmed
  * nav groups from `groupsFor()` (single-group header suppression for P1),
- * and the Personal footer (Send feedback · Settings · user menu) behind a
- * hairline. Built on the shadcn Sidebar primitives: provider, rail CSS,
- * mobile Sheet, tooltips and cookie persistence are all reused as-is.
+ * and the Personal footer (Send feedback · user menu — Settings lives inside
+ * the user menu only) behind a hairline. Built on the shadcn Sidebar
+ * primitives: provider, rail CSS, mobile Sheet, tooltips and cookie
+ * persistence are all reused as-is.
  *
  * Mount contract:
  * - Inside `SidebarProvider` (tooltips + sidebar state) — the AppShell
@@ -161,7 +162,7 @@ export function AppSidebar({ user, onSendFeedback }: AppSidebarProps) {
         </Tooltip>
       </SidebarHeader>
 
-      <SidebarContent className="gap-0">
+      <SidebarContent className="scrollbar-subtle gap-0">
         {/* Top, ungrouped rows (Home) — px-2 per NavItem's mount contract. */}
         {tree.top.length > 0 ? (
           <div className="px-2 pt-2">

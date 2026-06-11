@@ -49,20 +49,20 @@ calm, grouped command center. Same shell, RBAC-composed.
 | Build | Skills / Skills | `/skills` | `Sparkles` | `SA \|\| role.agents:w` | skills.md ladder row 1 |
 | Build | Routines / Routinen | `/workflows` | `ListChecks` | `SA \|\| role.workflows:r+` | Read role now gets the item + read-only page (workflows.md row 187). Terminology canon: "Routine" everywhere |
 | Build | Automation / Automatisierung | `/n8n` | `Workflow` | (`SA \|\| role.workflows:r+`) **and** `config.n8n.enabled` | n8n secondary = P4, not P3 (workflows.md correction) |
+| Build | Feedback / Feedback | `/feedback` | `Inbox` | `SA` (future `role.feedback`) | The review console (feedback.md). **Product decision 2026-06-11: lives in Build** (originally Administration). Icon deliberately ≠ the footer's "Send feedback" icon — the name is split, the surfaces stay |
 | **Develop** | Evals / Evaluationen | `/evals` | `BookCheck` | `SA \|\| role.evals:r+` | Aliases: `/evals/[id]`, `/evals/cases` |
 | Develop | API Explorer / API-Explorer | `/explorer` | `Code` | `SA \|\| role.api:w` | Gate made *evaluable* by adding `api` to `serverSideAuthCheck`'s role object (explorer.md U2). Secondary persona: P2 via `role.api:w` |
+| Develop | API keys / API-Schlüssel | `/keys` | `Key` | `SA \|\| role.api:w` | **Product decision 2026-06-11: lives in Develop** beside the Explorer and Personal token (originally Administration). Same `serverSideAuthCheck` fix as Explorer |
 | Develop | Personal token / Persönlicher Token | `/token` | `KeyRound` | `SA \|\| role.api:r+` | **Moves out of the every-user dropdown** into Develop (keys-token.md row 23). Route stays URL-accessible for all — placement fix, not an access change |
 | **Administration** | Users & access / Benutzer & Zugriff | `/users` | `Users` | `SA \|\| role.users:w` | One entry for the whole identity area; `/roles` and `/teams` are tabs of it and **aliases** for active-state matching (access.md). Fixes audit M5 |
 | Administration | Models / Modelle | `/models` | `Cpu` | `SA \|\| role.models:w` → **interim:** `SA \|\| role.agents:w` | Interim gate is the current (semantically wrong) one; recorded as backend dependency (audit M4) |
 | Administration | Budgets / Budgets | `/budgets` | `Wallet` | `SA \|\| role.budget_management:r+` | Read-scoped roles are the legitimate secondary audience (budgets.md correction) |
 | Administration | Analytics / Analytik | `/analytics` | `BarChart3` | `SA` | Unchanged gate; a future `role.analytics:r+` opens an agent-scoped P2 path without IA change (analytics.md) |
 | Administration | Variables / Variablen | `/variables` | `Variable` | `SA \|\| role.variables:r+` | Label unified ("Vault" retired); read role gets read-only page (variables.md row 1). Aliases: `/variables/*` |
-| Administration | API keys / API-Schlüssel | `/keys` | `Key` | `SA \|\| role.api:w` | Same `serverSideAuthCheck` fix as Explorer |
-| Administration | Feedback / Feedback | `/feedback` | `Inbox` | `SA` (future `role.feedback`) | This is the P3 **review console** (feedback.md correction). Icon deliberately ≠ the footer's "Send feedback" icon — the name is split, the surfaces stay |
 | Administration | Configuration / Konfiguration | `/configuration` | `Palette` | `SA` | Label canon: "Configuration", not "Theme" (it owns more than theming) |
 | **Personal** (footer) | Send feedback / Feedback senden | dialog (no route) | `MessageSquarePlus` | all **and** `config.feedback.enabled` | Relabeled from "Feedback" to break the homonym with the review console (feedback.md issue 2) |
-| Personal (footer) | Settings / Einstellungen | `/settings` | `Settings` | all | Now a real nav destination **and** still in the user menu (settings-config.md row 1) |
-| Personal (footer) | User menu | — | avatar | all | Theme (light/dark/**system** three-state), Language submenu (scales past 2 locales), Settings link, Log out. **Token link removed** (lives in Develop) |
+| Personal (footer) | Settings / Einstellungen | `/settings` | `Settings` | all | **Product decision 2026-06-11: not a footer item** — Settings lives only in the user menu (and the ⌘K palette). The entry stays in `nav-config.ts` with `hiddenInSidebar` so the palette and mobile top-bar label keep resolving it |
+| Personal (footer) | User menu | — | avatar | all | Theme (light/dark/**system** three-state), Language submenu (scales past 2 locales), Settings link (the only Settings affordance), Log out. **Token link removed** (lives in Develop) |
 
 **Routes with no nav entry (by design):** `/login` (unauthenticated shell — auth.md owns it;
 design owner P1, flow identical for all), `/chat/[agent]/search` (reached from chat's history
@@ -75,10 +75,10 @@ item via the alias list.
 
 | Account | Sidebar contents | Item count |
 |---|---|---|
-| **P1 only** (no role rights) | Chat · Projects · Transcripts* — no group header rendered (single-group rule) — footer: Send feedback* · Settings · user menu | **3–5** — a chat app |
+| **P1 only** (no role rights) | Chat · Projects · Transcripts* — no group header rendered (single-group rule) — footer: Send feedback* · user menu (Settings inside) | **3–4** — a chat app |
 | **P2 hat** (agents/workflows write) | Home · Workspace (3) · Build (4–6*) · footer | ~9–11 |
-| **P4 hat** (api/evals) | Home · Workspace (3) · Develop (2–3) · footer | ~7 |
-| **P3 / super admin** | Everything: Home · Workspace · Build · Develop · Administration (8) · footer | ~21, grouped and scrollable |
+| **P4 hat** (api/evals) | Home · Workspace (3) · Develop (3–4) · footer | ~8 |
+| **P3 / super admin** | Everything: Home · Workspace (3) · Build (7*) · Develop (4) · Administration (6) · footer | ~22, grouped and scrollable (subtle token-styled scrollbar, §2) |
 
 \* config-flag dependent. Personas are cumulative — a real P2 account usually also has
 Develop items; the groups compose additively.
@@ -106,9 +106,12 @@ visual identity is Exulu's own:
 
 ### Brand header
 
-- **Backend-served logo** (`components/logo.tsx`, fixed to use `resolvedTheme` — audit H5) at
-  `h-6`, beside the **product name from `/config`** (`text-sm font-semibold tracking-tight`).
-  The hardcoded "AI Studio" string dies. In rail mode only the logo mark shows, centered.
+- **Generic wordmark** *(product decision 2026-06-11 — supersedes the earlier backend-logo
+  concept)*: the plain text **"AI Studio"** (`text-sm font-semibold tracking-tight`,
+  i18n key `navigation.brand.productName`). No customer logo, no backend-served product
+  name — the platform presents itself generically. In rail mode the wordmark unmounts and a
+  compact **"AI" monogram tile** (`size-6 rounded-md bg-sidebar-accent`) shows, centered, so
+  the header never reads as empty at 3rem.
 - The collapse trigger (`PanelLeft`, stroke-1) sits at the header's right edge; its tooltip
   reads "Collapse sidebar — ⌘B" (surfaces the existing shortcut, audit L3).
 - Directly under the header: a **Search affordance** — a ghost, input-shaped button
@@ -154,12 +157,13 @@ Anchored at the bottom (`mt-auto`), separated by a hairline:
 
 1. **Send feedback** — ghost item, `MessageSquarePlus`, opens the existing FeedbackDialog
    (config-gated).
-2. **Settings** — ghost item, links `/settings`.
-3. **User row** — avatar (initial, `bg-muted text-foreground` — no gradient/`text-white`
+2. **User row** — avatar (initial, `bg-muted text-foreground` — no gradient/`text-white`
    contrast trap, audit L8), name, chevron. Opens a DropdownMenu (upward): **Theme**
    (light / dark / system — three-state, restoring the lost `system` option, audit M8),
    **Language** (submenu listing locales — scales past en/de, audit M9, switching via cookie +
-   `router.refresh()`), **Settings**, **Log out**. Nothing else — Token has moved to Develop.
+   `router.refresh()`), **Settings** (*the only Settings affordance — product decision
+   2026-06-11: no duplicate footer item*), **Log out**. Nothing else — Token has moved to
+   Develop.
 
 ### Tokens
 
@@ -168,6 +172,11 @@ The `--sidebar-*` token set is kept but reconciled to a single background var (t
 `--sidebar-ring` is remapped to the brand ring, killing the stray blue. Sidebar background
 stays a quiet cool gray one step off the content background with a `border-r
 border-sidebar-border` hairline — structure from spacing first, lines second.
+
+Long trees (super admin) scroll inside `SidebarContent` with the **`scrollbar-subtle`**
+utility (app/globals.css): thin, transparent track, rounded `--border`-token thumb that
+darkens on hover — quiet, theme-correct in both modes. Pages adopt the same utility for
+their scroll containers as they migrate.
 
 ---
 
@@ -304,7 +313,7 @@ components/shell/
   nav-group.tsx        # group header + item list (one renderer — kills the duplicated markup)
   nav-item.tsx         # item + sliding indicator + rail tooltip
   user-menu.tsx        # avatar dropdown (theme 3-state, language submenu, settings, logout)
-  brand.tsx            # backend logo + product name (replaces "AI Studio")
+  brand.tsx            # generic "AI Studio" wordmark + rail monogram (product decision 2026-06-11)
   mobile-topbar.tsx    # h-12 bar below md, page label + action slot
   app-nav-trigger.tsx  # exported hamburger (consumed by ChatHeader)
   command-palette.tsx  # cmdk dialog fed from nav-config + action/search registries
