@@ -634,8 +634,51 @@
     }
   },
   "home": {
-    "placeholderDescription": "Your dashboard is on its way. In the meantime, jump straight to one of your areas.",
-    "quickLinks": "Quick links"
+    "description": "Where you left off, and what needs you.",
+    "newChat": "New chat",
+    "resume": {
+      "title": "Pick up where you left off",
+      "untitled": "Untitled conversation",
+      "error": "Your recent conversations could not be loaded.",
+      "emptyTitle": "No conversations yet",
+      "emptyDescription": "Your recent conversations will appear here.",
+      "emptyAction": "Start a conversation"
+    },
+    "vitals": {
+      "title": "Last 24 hours",
+      "sessions": "Sessions",
+      "agentCalls": "Agent calls",
+      "tokens": "Tokens",
+      "routineRuns": "Routine runs",
+      "budgetsAtRisk": "Budgets at risk",
+      "evalRuns": "Eval runs",
+      "vsAvg": "vs 7-day avg: {value}",
+      "noChange": "No change"
+    },
+    "attention": {
+      "title": "Needs attention",
+      "allClear": "All clear — nothing needs your attention.",
+      "partialError": "Some checks could not be loaded.",
+      "runFailed": "Run failed: {label}",
+      "runFailedNoLabel": "A run failed",
+      "runStuck": "Run stuck: {label}",
+      "runStuckNoLabel": "A run is stuck",
+      "evalFailed": "Eval job failed: {label}",
+      "evalFailedNoLabel": "An eval job failed",
+      "evalStuck": "Eval job stuck: {label}",
+      "evalStuckNoLabel": "An eval job is stuck",
+      "budgetOver": "{name} is over budget ({percent}% used)",
+      "budgetWarn": "{name} is nearing its budget ({percent}% used)"
+    },
+    "footer": {
+      "label": "More areas",
+      "analytics": "Open analytics"
+    },
+    "onboarding": {
+      "title": "Get started",
+      "description": "Create an agent and start a conversation — your activity will show up here.",
+      "createAgent": "Create your first agent"
+    }
   },
   "projects": {
     "title": "Projects",

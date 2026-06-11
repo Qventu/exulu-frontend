@@ -634,8 +634,51 @@
     }
   },
   "home": {
-    "placeholderDescription": "Ihr Dashboard ist in Arbeit. Springen Sie in der Zwischenzeit direkt in einen Ihrer Bereiche.",
-    "quickLinks": "Schnellzugriff"
+    "description": "Wo Sie aufgehört haben – und was Ihre Aufmerksamkeit braucht.",
+    "newChat": "Neuer Chat",
+    "resume": {
+      "title": "Da weitermachen, wo Sie aufgehört haben",
+      "untitled": "Unbenannte Unterhaltung",
+      "error": "Ihre letzten Unterhaltungen konnten nicht geladen werden.",
+      "emptyTitle": "Noch keine Unterhaltungen",
+      "emptyDescription": "Ihre letzten Unterhaltungen erscheinen hier.",
+      "emptyAction": "Unterhaltung beginnen"
+    },
+    "vitals": {
+      "title": "Letzte 24 Stunden",
+      "sessions": "Sitzungen",
+      "agentCalls": "Agenten-Aufrufe",
+      "tokens": "Tokens",
+      "routineRuns": "Routine-Läufe",
+      "budgetsAtRisk": "Gefährdete Budgets",
+      "evalRuns": "Evaluationsläufe",
+      "vsAvg": "ggü. 7-Tage-Schnitt: {value}",
+      "noChange": "Keine Veränderung"
+    },
+    "attention": {
+      "title": "Braucht Aufmerksamkeit",
+      "allClear": "Alles in Ordnung – nichts braucht Ihre Aufmerksamkeit.",
+      "partialError": "Einige Prüfungen konnten nicht geladen werden.",
+      "runFailed": "Lauf fehlgeschlagen: {label}",
+      "runFailedNoLabel": "Ein Lauf ist fehlgeschlagen",
+      "runStuck": "Lauf hängt fest: {label}",
+      "runStuckNoLabel": "Ein Lauf hängt fest",
+      "evalFailed": "Evaluationsjob fehlgeschlagen: {label}",
+      "evalFailedNoLabel": "Ein Evaluationsjob ist fehlgeschlagen",
+      "evalStuck": "Evaluationsjob hängt fest: {label}",
+      "evalStuckNoLabel": "Ein Evaluationsjob hängt fest",
+      "budgetOver": "{name} ist über dem Budget ({percent} % verbraucht)",
+      "budgetWarn": "{name} nähert sich dem Budget ({percent} % verbraucht)"
+    },
+    "footer": {
+      "label": "Weitere Bereiche",
+      "analytics": "Analytik öffnen"
+    },
+    "onboarding": {
+      "title": "Erste Schritte",
+      "description": "Erstellen Sie einen Agenten und beginnen Sie eine Unterhaltung – Ihre Aktivität erscheint hier.",
+      "createAgent": "Ersten Agenten erstellen"
+    }
   },
   "projects": {
     "title": "Projekte",

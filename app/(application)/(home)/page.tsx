@@ -1,19 +1,20 @@
 // "/" routing rule (design/navigation.md §1.2 "Home" row; design/pages/dashboard.md
 // "Routing rule"; IMPLEMENTATION_PLAN 1B): server component — P1-only accounts
 // (no elevated right) keep today's behavior and go straight to /chat; elevated
-// accounts land on Home. This also removes one hop of the old /  → /chat →
+// accounts land on Home. This also removes one hop of the old "/" → /chat →
 // /chat/[agent] redirect chain for elevated users.
 //
-// TODO(design/pages/dashboard.md): the rendered Home is an interim placeholder.
-// Work item 2.7 replaces <HomePlaceholder /> with the real role-composed
-// dashboard; the routing rule below ships here and stays.
+// The (home) route group keeps the URL at "/" while colocating the Today
+// page's components/hooks/queries (codebase-structure §1 target tree).
+// Work item 2.7: the interim HomePlaceholder is replaced by the real
+// role-composed Today dashboard; the routing rule below is unchanged.
 
 import { redirect } from "next/navigation";
 
 import { isElevated } from "@/lib/rights";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 
-import { HomePlaceholder } from "./home-placeholder";
+import { HomeDashboard } from "./components/home-dashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -32,5 +33,5 @@ export default async function Home() {
   // (preserves the single-agent / default-agent landing logic on /chat).
   if (!elevated) redirect("/chat");
 
-  return <HomePlaceholder />;
+  return <HomeDashboard />;
 }
