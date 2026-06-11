@@ -5,8 +5,10 @@
  *
  * The table IS the page: four quiet columns (Name · Scope · Last used ·
  * Created) + a chevron affordance; clicking a row opens the L2 detail via
- * ListDetail (docked panel ≥lg, right Sheet on tablet, bottom Sheet on
- * phones — T2; selection is URL-synced for deep links). The masked-asterisks
+ * ListDetail (full-height right Sheet at md+, bottom Sheet on phones — T2;
+ * detailPresentation="sheet" because a docked aside cannot reach the edges
+ * of this centered content page, 2026-06-11 QA decision; selection is
+ * URL-synced for deep links). The masked-asterisks
  * column is gone (it conveyed nothing) — the mask lives in the panel where it
  * has context. Creation moved into the L3 dialog behind the page's single
  * purple action. Pagination is wired to pageInfo (fixes U2), search filters
@@ -202,6 +204,7 @@ export function KeysView() {
         />
 
         <ListDetail<ApiKeyRow>
+          detailPresentation="sheet"
           items={filteredKeys}
           selected={selected}
           onSelect={(item) => setSelectedId(item ? item.id : null)}

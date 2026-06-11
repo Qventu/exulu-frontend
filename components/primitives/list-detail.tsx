@@ -66,6 +66,18 @@ export interface ListDetailProps<T> {
   onSelect: (item: T | null) => void;
   /** @default "panel" */
   detailMode?: DetailMode;
+  /**
+   * How `"panel"`-mode detail presents at `lg+` (below `lg` it is always a
+   * Sheet, per T2):
+   * - `"docked"` (default): inline aside docked right of the list. Only fits
+   *   full-height work surfaces — inside a centered/content-width PageShell
+   *   the aside cannot reach the surface edges and looks clipped.
+   * - `"sheet"`: the same right-side overlay Sheet as `md–lg`, at every
+   *   width — the choice for centered content pages (e.g. /keys,
+   *   2026-06-11 QA decision).
+   * Ignored by `"page"`/`"static"` modes.
+   */
+  detailPresentation?: "docked" | "sheet";
   /** Quiet EmptyState shown in the `"static"` pane when nothing is selected. */
   emptyDetail?: React.ReactNode;
   /** Items backing URL deep-link resolution and keyboard navigation. */
@@ -130,6 +142,7 @@ export function ListDetail<T>({
   selected,
   onSelect,
   detailMode = "panel",
+  detailPresentation = "docked",
   emptyDetail,
   items,
   getItemId,
@@ -307,11 +320,18 @@ export function ListDetail<T>({
   );
 
   const showAside =
-    detailMode === "static" || (detailMode === "panel" && selectedItem !== null);
+    detailMode === "static" ||
+    (detailMode === "panel" &&
+      detailPresentation === "docked" &&
+      selectedItem !== null);
   // The Sheet is the <lg rendering of the SAME detail content (T2) — the aside
-  // below is CSS-hidden under lg, so nothing is ever lost by breakpoint.
+  // below is CSS-hidden under lg, so nothing is ever lost by breakpoint. With
+  // detailPresentation="sheet" it is the lg+ rendering too.
   const showSheet =
-    detailMode !== "page" && breakpoint !== undefined && breakpoint !== "lg";
+    detailMode !== "page" &&
+    breakpoint !== undefined &&
+    (breakpoint !== "lg" ||
+      (detailMode === "panel" && detailPresentation === "sheet"));
 
   return (
     <div

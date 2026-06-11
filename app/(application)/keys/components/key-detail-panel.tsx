@@ -2,9 +2,9 @@
 
 /**
  * Key detail content (L2) — keys-token.md §3 ladder rows 15–18 + "NEW: detail
- * panel". Rendered by ListDetail (docked panel ≥lg, right Sheet md–lg, bottom
- * Sheet <md — responsive.md T2). Sections: Identity → Scope → Role →
- * Activity → Danger zone.
+ * panel". Rendered by ListDetail as a full-height right Sheet at md+ and a
+ * bottom Sheet <md (detailPresentation="sheet", responsive.md T2 — 2026-06-11
+ * QA decision). Sections: Identity → Scope → Role → Activity → Danger zone.
  *
  * - Scope allowlist is plain text with copyable IDs — the hover-only tooltip
  *   is gone everywhere (T7, mobile-safe).

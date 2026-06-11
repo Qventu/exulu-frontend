@@ -249,7 +249,10 @@ explorer concept already needs.
   `outline` badge because an unused credential is an audit signal), Created. A chevron
   affordance marks rows as openable; clicking a row opens the **detail panel** (L2). The
   masked-asterisks column is dropped from the table (it conveyed nothing); the mask moves
-  into the detail panel where it has context.
+  into the detail panel where it has context. *(QA decision 2026-06-11: the panel presents
+  as a full-height right Sheet at every width — `ListDetail detailPresentation="sheet"` —
+  because a docked aside inside this centered content page cannot reach the surface edges
+  and looks clipped.)*
 - **Scope is honest and quiet** (philosophy §4 "status is quiet until it isn't"): agents
   keys show `Agents (n)` as a plain `secondary` badge; admin keys show **`● Admin`** with a
   small filled dot — full-access credentials are the risk on this page and earn the one
