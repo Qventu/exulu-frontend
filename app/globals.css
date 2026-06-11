@@ -48,6 +48,12 @@
     --accent-foreground: 216.3158 76% 49.0196%;
     --destructive: 358.4416 74.7573% 59.6078%;
     --destructive-foreground: 0 0% 100%;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 0 0% 100%;
+    --warning: 32.1 94.6% 43.7%;
+    --warning-foreground: 0 0% 100%;
+    --info: 221.2 83.2% 53.3%;
+    --info-foreground: 0 0% 100%;
     --border: 240 17.0732% 91.9608%;
     --input: 0 0% 92.1569%;
     --ring: 0 0% 0%;
@@ -63,7 +69,7 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: var(--ring);
     --font-sans: 'Inter', system-ui, sans-serif;
     --font-serif: 'Merriweather', serif;
     --font-mono: 'JetBrains Mono', monospace;
@@ -77,8 +83,6 @@
     --shadow-xl: 0px 2px 3px 0px hsl(0 0% 0% / 0.16), 0px 8px 10px -1px hsl(0 0% 0% / 0.16);
     --shadow-2xl: 0px 2px 3px 0px hsl(0 0% 0% / 0.40);
     --tracking-normal: -0.025em;
-    --spacing: 0.27rem;
-    --sidebar-background: 0 0% 98%;
   }
 
   .dark {
@@ -98,6 +102,12 @@
     --accent-foreground: 208.2090 100.0000% 73.7255%;
     --destructive: 0 90.6040% 70.7843%;
     --destructive-foreground: 0 0% 100%;
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 0 0% 100%;
+    --warning: 37.7 92.1% 50.2%;
+    --warning-foreground: 25.7 90% 9.8%;
+    --info: 217.2 91.2% 59.8%;
+    --info-foreground: 0 0% 100%;
     --border: 222.8571 6.4220% 21.3725%;
     --input: 222.8571 6.4220% 21.3725%;
     --ring: 257.6687 100% 68.0392%;
@@ -113,7 +123,7 @@
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: var(--ring);
     --font-sans: 'Inter', system-ui, sans-serif;
     --font-serif: 'Merriweather', serif;
     --font-mono: 'JetBrains Mono', monospace;
@@ -126,7 +136,6 @@
     --shadow-lg: 0px 2px 3px 0px hsl(0 0% 0% / 0.16), 0px 4px 6px -1px hsl(0 0% 0% / 0.16);
     --shadow-xl: 0px 2px 3px 0px hsl(0 0% 0% / 0.16), 0px 8px 10px -1px hsl(0 0% 0% / 0.16);
     --shadow-2xl: 0px 2px 3px 0px hsl(0 0% 0% / 0.40);
-    --sidebar-background: 240 5.9% 10%;
   }
 
   html {
@@ -155,10 +164,6 @@
 .recharts-active-bar {
   background: #0c85d0;
   cursor: pointer;
-}
-
-.bg-sidebar {
-  background-color: hsl(var(--sidebar));
 }
 
 .text-wrap {
@@ -257,15 +262,6 @@
 }
 
 
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
 
 .chat-response-container p {
   margin-bottom: 0.5rem;

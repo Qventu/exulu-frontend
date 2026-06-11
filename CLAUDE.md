@@ -47,7 +47,7 @@
 
 **Typography Hierarchy:**
 ```
-Display/Hero: text-4xl (2.25rem) - Page titles, major headings
+Display/Hero: text-4xl (2.25rem) - True hero/display moments only (page titles are text-2xl)
 Heading 1: text-2xl (1.5rem) - Section titles
 Heading 2: text-xl (1.25rem) - Subsection titles
 Heading 3: text-lg (1.125rem) - Card titles, group labels
