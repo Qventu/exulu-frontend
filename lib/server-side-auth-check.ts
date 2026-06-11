@@ -47,6 +47,7 @@ export const serverSideAuthCheck = async (): Promise<UserWithRole | false> => {
               'workflows', roles.workflows,
               'variables', roles.variables,
               'users', roles.users,
+              'api', roles.api,
               'evals', roles.evals,
               'budget_management', roles.budget_management
             ) as role

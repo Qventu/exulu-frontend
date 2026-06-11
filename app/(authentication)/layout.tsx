@@ -2,14 +2,19 @@ import "../globals.css";
 import { fontVariables } from "@/lib/fonts";
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { cookies } from "next/headers";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TanstackQueryClientProvider } from "@/app/(application)/query-client";
 import { ConfigContextProvider } from "@/components/config-context";
 import { config as apiConfig } from "@/util/api";
 import Logo from "@/components/logo";
+import { LOCALE_COOKIE, Locale, defaultLocale } from "@/i18n/config";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const locale = (cookieStore.get(LOCALE_COOKIE)?.value as Locale) || defaultLocale;
+
   const config = {
     backend: process.env.BACKEND || "",
     google_client_id: process.env.GOOGLE_CLIENT_ID || "",
@@ -19,7 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const themeConfig = await apiConfig.theme();
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <link rel="icon" href={process.env.BACKEND + "/icon_16x16.png"} type="image/png" sizes="16x16" />
         <link rel="icon" href={process.env.BACKEND + "/icon_32x32.png"} type="image/png" sizes="32x32" />

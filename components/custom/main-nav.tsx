@@ -101,6 +101,12 @@ class NavigationErrorBoundary extends React.Component<
   }
 }
 
+// Interim active-state check (this file is replaced wholesale in Phase 1):
+// a nav item is active only when the FIRST path segment equals its path.
+// Substring matching caused false positives (e.g. "data" matching "/users/data").
+const isSegmentActive = (pathname: string, path: string) =>
+  pathname.split("/").filter(Boolean)[0] === path;
+
 const buildNavigation = (user: User, role: UserRole, config: Config, t: any) => {
   const mainNavigationItems: { label: string; path: string; icon: React.ReactNode }[] = [];
   const bottomNavigationItems: { label: string; path: string; icon: React.ReactNode }[] = [];
@@ -267,7 +273,7 @@ function NavigationItems({ items }: { items: { label: string; path: string; icon
   return (
     <SidebarMenu className="space-y-0">
       {items.map((navItem) => {
-        const isActive = pathname.includes(navItem.path);
+        const isActive = isSegmentActive(pathname, navItem.path);
         return (
           <SidebarMenuItem key={navItem.path}>
             <SidebarMenuButton
@@ -311,7 +317,7 @@ function AdminNavigationSection({
   const { state } = useSidebar();
 
   // Check if any admin item is currently active
-  const isAnyAdminPageActive = items.some(item => pathname.includes(item.path));
+  const isAnyAdminPageActive = items.some(item => isSegmentActive(pathname, item.path));
 
   // Auto-expand if on admin page, otherwise collapse
   const [isOpen, setIsOpen] = useState(isAnyAdminPageActive);
@@ -331,7 +337,7 @@ function AdminNavigationSection({
       <CollapsibleContent className="transition-all duration-200 ease-in-out overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
         <SidebarMenu className="space-y-0 mb-0">
           {items.map((navItem) => {
-            const isActive = pathname.includes(navItem.path);
+            const isActive = isSegmentActive(pathname, navItem.path);
             return (
               <SidebarMenuItem key={navItem.path}>
                 <SidebarMenuButton

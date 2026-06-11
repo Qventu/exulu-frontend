@@ -109,9 +109,7 @@ export function SummaryCard({
   // Calculate 7-day averages (divide by 7 for daily average)
   const sevenDayAverage = Math.round(getTotal(data7d?.[`${entity}Statistics`]) / 7);
 
-  const isLoading = 
-    loading24h
-    loading7d
+  const isLoading = loading24h || loading7d;
 
   return (
       <SummaryCardElement

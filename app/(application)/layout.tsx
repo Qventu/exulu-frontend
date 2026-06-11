@@ -23,7 +23,8 @@ export default async function RootLayout({
     children: React.ReactNode;
 }) {
     const cookieStore = await cookies()
-    const defaultOpen = cookieStore.get("sidebar_state")?.value === "true"
+    const sidebarCookie = cookieStore.get("sidebar_state")?.value
+    const defaultOpen = sidebarCookie === undefined ? true : sidebarCookie === "true"
     const locale = (cookieStore.get(LOCALE_COOKIE)?.value as Locale) || defaultLocale;
 
     const headersList = await headers()
@@ -76,7 +77,7 @@ export default async function RootLayout({
     const themeConfig = await apiConfig.theme();
 
     return (
-        <html lang="en" suppressHydrationWarning>
+        <html lang={locale} suppressHydrationWarning>
             <head>
                 <link rel="icon" href={process.env.BACKEND + "/icon_16x16.png"} type="image/png" sizes="16x16" />
                 <link rel="icon" href={process.env.BACKEND + "/icon_32x32.png"} type="image/png" sizes="32x32" />
@@ -105,7 +106,6 @@ export default async function RootLayout({
                     fontVariables,
                 )}
             >
-                <script type="module" defer src="https://cdn.jsdelivr.net/npm/ldrs/dist/auto/grid.js"></script>
                 <ConfigContextProvider config={config}>
                     <LanguageProvider initialLocale={locale} initialMessages={messages}>
                         <ThemeProvider
