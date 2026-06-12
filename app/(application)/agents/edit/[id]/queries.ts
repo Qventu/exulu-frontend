@@ -38,8 +38,11 @@ import { gql } from "@apollo/client";
 export const AGENT_FIREWALL_SUPPORTED = true;
 
 /** false → RBACControl gets allowedModes WITHOUT "teams" (transcriptions
- *  precedent: composer.tsx:50-54). RBAC payload omits teams. */
-export const AGENT_RBAC_TEAMS_SUPPORTED = true;
+ *  precedent: composer.tsx:50-54). RBAC payload omits teams.
+ *  Backend introspection 2026-06-12: RBACData has no `teams` field —
+ *  selecting it crashed the editor with "Cannot query field 'teams' on
+ *  type 'RBACData'." Flag flipped to false (architect's risk #1 fallback). */
+export const AGENT_RBAC_TEAMS_SUPPORTED = false;
 
 /** false → Appearance hides "Generate with AI"; the create dialog gains an
  *  optional collapsed avatar disclosure so items 9-13 stay reachable. */
