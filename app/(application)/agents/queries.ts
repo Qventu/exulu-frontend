@@ -40,8 +40,14 @@ import { gql } from "@apollo/client";
  * AGENT_FIREWALL_SUPPORTED per contracts §5; the cross-owner import rule
  * ("index imports nothing of the editor's") forces this read-side duplicate.
  * Both constants must be flipped together at verification time.
+ * Backend introspection 2026-06-12: Agent has no `firewall` field —
+ * selecting it crashed the detail panel and editor loader with
+ * "Cannot query field 'firewall' on type 'Agent'." Flag flipped to false
+ * (architect's risk #1 fallback); the editor's Safety section renders an
+ * honest read-only EmptyState and the detail panel's firewall pill is
+ * suppressed.
  * -------------------------------------------------------------------------- */
-export const AGENT_FIREWALL_SUPPORTED = true;
+export const AGENT_FIREWALL_SUPPORTED = false;
 
 /**
  * Deliberate SUBSET of the monolith's AGENT_FIELDS for list rows — rows need

@@ -34,8 +34,12 @@ import { gql } from "@apollo/client";
  * ------------------------------------------------------------------------- */
 
 /** false → Safety section renders read-only "not supported" notice instead of
- *  switches; $firewall is omitted from the mutation. */
-export const AGENT_FIREWALL_SUPPORTED = true;
+ *  switches; $firewall is omitted from the mutation.
+ *  Backend introspection 2026-06-12: Agent has no `firewall` field —
+ *  selecting it crashed the editor with "Cannot query field 'firewall' on
+ *  type 'Agent'." Flag flipped to false; the read-side duplicate in
+ *  ../../queries.ts is flipped to match (both must flip together). */
+export const AGENT_FIREWALL_SUPPORTED = false;
 
 /** false → RBACControl gets allowedModes WITHOUT "teams" (transcriptions
  *  precedent: composer.tsx:50-54). RBAC payload omits teams.
