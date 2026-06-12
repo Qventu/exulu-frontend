@@ -23,6 +23,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -171,9 +172,11 @@ export function BasicsSection({ agent, editor }: EditorSectionProps) {
       </Form>
 
       <div className="space-y-3">
-        <FormLabel className="text-sm font-medium">
+        {/* Plain Label: this block lives OUTSIDE the <Form> wrapper above,
+            so FormLabel (which needs FormProvider context) crashes here. */}
+        <Label className="text-sm font-medium">
           {t("editor.basics.modelLabel")}
-        </FormLabel>
+        </Label>
         {agent.modelName && agent.providerName && (
           <Badge variant="outline" className="font-normal">
             {t("editor.basics.modelBadge", {
