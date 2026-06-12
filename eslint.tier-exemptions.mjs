@@ -38,7 +38,6 @@ export const tierBoundaryExemptions = {
     // as "reused as-is", promotion is scoped to the prompts redesign.
     "app/(application)/agents/edit/[id]/sections/instructions.tsx",
     "app/(application)/agents/edit/[id]/form.tsx",
-    "app/(application)/prompts/components/prompt-preview.tsx",
     "app/(application)/workflows/page.tsx",
     "app/(application)/data/components/embeddings.tsx",
     "app/(application)/data/components/sources.tsx",
