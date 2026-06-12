@@ -253,3 +253,53 @@ export const COPY_AGENT_INDEX = gql`
     }
   }
 `;
+
+/* -----------------------------------------------------------------------------
+ * Model-selector reads — colocated per codebase-structure §3.2/D5.
+ *
+ * Copied verbatim (field-for-field) from queries/queries.ts:1266-1278
+ * (GET_MODELS_LITE) and :1367-1388 (GET_LITELLM_CATALOG) under
+ * unique operation names (§3.1) so the selector — used only inside agents
+ * (basics.tsx + create-agent-dialog.tsx) — no longer reaches into the monolith.
+ * Backend contracts unchanged: identical fields, identical args.
+ * -------------------------------------------------------------------------- */
+export const GET_AGENT_MODELS_LITE = gql`
+  query GetAgentModelsLite($page: Int!, $limit: Int!) {
+    modelsPagination(
+      page: $page
+      limit: $limit
+      sort: { field: "name", direction: ASC }
+    ) {
+      items {
+        id
+        name
+        description
+        provider
+        active
+      }
+    }
+  }
+`;
+
+export const GET_AGENT_LITELLM_CATALOG = gql`
+  query GetAgentLiteLLMCatalog {
+    litellmCatalog {
+      model_name
+      active
+      upstream_model
+      type
+      tags
+      brand
+      region
+      max_tokens
+      max_input_tokens
+      max_output_tokens
+      supports_vision
+      supports_function_calling
+      supports_pdf_input
+      supports_audio_input
+      input_cost_per_million_tokens
+      output_cost_per_million_tokens
+    }
+  }
+`;

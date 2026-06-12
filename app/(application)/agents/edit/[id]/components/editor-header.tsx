@@ -81,7 +81,13 @@ export function EditorHeader({
     {
       label: t("editor.header.duplicate"),
       icon: Files,
-      onSelect: () => editor.duplicate(),
+      // Guard against silent navigation to the new copy when there are
+      // unsaved edits (parity with Test in chat and Back; minor from the
+      // 2.8 review).
+      onSelect: () =>
+        confirmIfDirty(() => {
+          void editor.duplicate();
+        }),
     },
     {
       label: t("editor.header.copyId"),
@@ -136,9 +142,17 @@ export function EditorHeader({
         {t("editor.header.testInChat")}
       </Button>
 
-      {/* Save primary (item 30) */}
+      {/*
+        Save (item 30). When the form is dirty the SaveBar mounts at the
+        viewport bottom with its own primary Save (review #5: ONE purple
+        primary per screen). Demote this header Save to outline while the
+        SaveBar is visible so we don't paint two purple buttons at once —
+        the redundant safety stays (header Save remains keyboard-reachable
+        and clickable), just not as the focal CTA.
+      */}
       <Button
         type="button"
+        variant={editor.dirty ? "outline" : "default"}
         onClick={() => void editor.save()}
         disabled={!editor.dirty || editor.saving}
         aria-busy={editor.saving}

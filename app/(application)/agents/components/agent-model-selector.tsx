@@ -10,7 +10,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useQuery } from "@apollo/client";
-import { GET_LITELLM_CATALOG, GET_MODELS_LITE } from "@/queries/queries";
+import { useTranslations } from "next-intl";
+import {
+  GET_AGENT_LITELLM_CATALOG,
+  GET_AGENT_MODELS_LITE,
+} from "@/app/(application)/agents/queries";
 import { Input } from "@/components/ui/input";
 import { ConfigContext } from "@/components/shell/config-context";
 import { ProviderLogo } from "@/components/provider-logo";
@@ -51,19 +55,20 @@ export function AgentModelSelector({
   autoSelectDefault = false,
 }: AgentModelSelectorProps) {
 
+  const t = useTranslations("agents.modelSelector");
   const [searchTerm, setSearchTerm] = React.useState("");
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const configContext = useContext(ConfigContext);
   const litellmEnabled = configContext?.liteLLM?.enabled === true;
 
-  // Source the dropdown from either the 
+  // Source the dropdown from either the
   // LiteLLM catalog or our DB Models table.
-  const litellmQuery = useQuery(GET_LITELLM_CATALOG, {
+  const litellmQuery = useQuery(GET_AGENT_LITELLM_CATALOG, {
     fetchPolicy: "cache-and-network",
     skip: !litellmEnabled,
   });
 
-  const modelsQuery = useQuery(GET_MODELS_LITE, {
+  const modelsQuery = useQuery(GET_AGENT_MODELS_LITE, {
     fetchPolicy: "no-cache",
     nextFetchPolicy: "network-only",
     variables: { page: 1, limit: 100 },
@@ -128,13 +133,13 @@ export function AgentModelSelector({
     return [
       {
         id: value,
-        label: `(unknown — re-select): ${value}`,
+        label: t("staleLabel", { value }),
         stale: true,
         active: false,
       },
       ...options,
     ];
-  }, [options, value, isLoading]);
+  }, [options, value, isLoading, t]);
 
   const selected = optionsWithStale.find((m) => m.id === value);
 
@@ -155,13 +160,13 @@ export function AgentModelSelector({
       onValueChange={(v) => onSelect(v)}
     >
       <SelectTrigger
-        className={selected?.stale ? "border-red-500 text-red-600" : undefined}
+        className={selected?.stale ? "border-destructive text-destructive" : undefined}
       >
-        <SelectValue placeholder={selected?.label ?? "Select a model"}>
+        <SelectValue placeholder={selected?.label ?? t("placeholder")}>
           {selected ? (
             <span className="flex items-center gap-2">
               <ProviderLogo brand={selected.brand} region={selected.region} />
-              <span className={selected.stale ? "text-red-600" : undefined}>
+              <span className={selected.stale ? "text-destructive" : undefined}>
                 {selected.label}
               </span>
             </span>
@@ -173,7 +178,7 @@ export function AgentModelSelector({
           <Input
             ref={searchInputRef}
             placeholder={
-              litellmEnabled ? "Search LiteLLM models..." : "Search models..."
+              litellmEnabled ? t("searchLitellm") : t("searchModels")
             }
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -183,13 +188,13 @@ export function AgentModelSelector({
         </div>
         {isLoading ? (
           <SelectItem key="loading" value="loading" disabled>
-            Loading...
+            {t("loading")}
           </SelectItem>
         ) : filtered.length === 0 ? (
           <SelectItem value="__none" disabled>
             {litellmEnabled
-              ? "No LiteLLM models configured. Edit config.yaml on the host."
-              : "No models found. Create one in the Models page."}
+              ? t("emptyLitellm")
+              : t("emptyModels")}
           </SelectItem>
         ) : (
           filtered.map((m) => (
@@ -200,17 +205,19 @@ export function AgentModelSelector({
             >
               <div className="flex items-center gap-2">
                 <ProviderLogo brand={m.brand} region={m.region} />
-                <span className={m.stale ? "text-red-600" : undefined + " uppercase"}>
-                  {m.label} 
+                <span className={m.stale ? "text-destructive" : "uppercase"}>
+                  {m.label}
                 </span>
                 {/* Show a badge for each tag */}
-                {m.tags?.map((t) => (
-                  <Badge key={t} variant="secondary">
-                    {t}
+                {m.tags?.map((tag) => (
+                  <Badge key={tag} variant="secondary">
+                    {tag}
                   </Badge>
                 ))}
                 {m.active === false && !m.stale && (
-                  <span className="text-xs text-amber-600">(inactive)</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t("inactive")}
+                  </span>
                 )}
               </div>
             </SelectItem>
