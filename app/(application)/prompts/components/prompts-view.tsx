@@ -522,6 +522,10 @@ export function PromptsView() {
         <div className="flex min-h-[60vh] overflow-hidden rounded-md border bg-card lg:min-h-[calc(100dvh-18rem)]">
           <ListDetail<PromptLibrary>
             detailMode="static"
+            // Prompt body IS the page — slim picker on the left, full content
+            // on the right (default detailEmphasis is "compact" for keys-style
+            // metadata-on-the-right pages).
+            detailEmphasis="primary"
             items={items}
             selected={selected}
             onSelect={(item) => setSelectedId(item ? item.id : null)}
