@@ -12,3 +12,7 @@ export {
   checkPromptWriteAccess,
   checkPromptReadAccess,
 } from "./check-prompt-access";
+export {
+  buildVersionHistory,
+  buildRestoreHistory,
+} from "./build-version-history";
