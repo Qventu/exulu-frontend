@@ -82,14 +82,23 @@ export function RBACControl({
   const [visibilitySelectorOpen, setVisibilitySelectorOpen] = useState(false)
   const [userFilters, setUserFilters] = useState<any[]>([])
   const [userSearchValue, setUserSearchValue] = useState('')
+  const [debouncedUserSearch, setDebouncedUserSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [modalLoading, setModalLoading] = useState(false)
   const client = useApolloClient()
 
+  // ADDITIVE (work item 2.8 / agents.md item 45): 300 ms debounce on the
+  // user-search refetch so we don't fire a query per keystroke. No prop/API
+  // change; only the internal trigger of `refetchUsers` is delayed.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedUserSearch(userSearchValue), 300)
+    return () => clearTimeout(timer)
+  }, [userSearchValue])
+
   // GraphQL queries for RBAC
   const { data: usersData, loading: usersLoading, refetch: refetchUsers } = useQuery(GET_USERS, {
     variables: { page: 1, limit: 5, filters: userFilters },
-    skip: visibility !== 'users' || !userSearchValue
+    skip: visibility !== 'users' || !debouncedUserSearch
   })
 
   const roles = useQuery(GET_USER_ROLES, {
@@ -121,24 +130,17 @@ export function RBACControl({
   // User search function
   const searchUsers = useCallback((value: string) => {
     setUserSearchValue(value)
-    const copy = [...userFilters, {
-      type: {
-        ne: "api"
-      }
-    }]
-    const exists = copy.find((filter) => filter.email)
-    if (exists?.email) {
-      exists.email.contains = value
-    } else {
-      copy.push({
-        email: {
-          contains: value,
-        },
-      })
-    }
+  }, [])
+
+  // ADDITIVE: build filters + refetch on the DEBOUNCED value rather than per
+  // keystroke. Preserves the prior filter shape (email.contains + type.ne).
+  useEffect(() => {
+    if (!debouncedUserSearch) return
+    const copy: any[] = [{ type: { ne: "api" } }]
+    copy.push({ email: { contains: debouncedUserSearch } })
     setUserFilters(copy)
     refetchUsers()
-  }, [userFilters, refetchUsers])
+  }, [debouncedUserSearch, refetchUsers])
 
   const hydrateUsers = async (max: number  = 5) => {
     setModalLoading(true)

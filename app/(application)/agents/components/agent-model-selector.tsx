@@ -32,13 +32,24 @@ type ModelOption = {
   region?: string | null;
 };
 
+export interface AgentModelSelectorProps {
+  value?: string;
+  onSelect: (id: string) => void;
+  /**
+   * NEW (additive, work item 2.8 contracts §2): when no value is set,
+   * auto-select the first ACTIVE catalog/model entry once options load and
+   * report it via `onSelect` — the create dialog's "pre-selected model"
+   * (agents.md create flow: decision 2 is a confirmation, not a hunt).
+   * Default false → existing call sites behave byte-identically.
+   */
+  autoSelectDefault?: boolean;
+}
+
 export function AgentModelSelector({
   value,
   onSelect,
-}: {
-  value?: string;
-  onSelect: (id: string) => void;
-}) {
+  autoSelectDefault = false,
+}: AgentModelSelectorProps) {
 
   const [searchTerm, setSearchTerm] = React.useState("");
   const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -85,6 +96,25 @@ export function AgentModelSelector({
   }, [litellmEnabled, litellmQuery.data, modelsQuery.data]);
 
   const isLoading = litellmEnabled ? litellmQuery.loading : modelsQuery.loading;
+
+  // autoSelectDefault (additive): once options are loaded and nothing is
+  // selected, pick the first active entry and report it upward. Fires at most
+  // once per mount; never competes with an existing value, and never touches
+  // the stale-value armor below.
+  const autoSelectedRef = React.useRef(false);
+  const onSelectRef = React.useRef(onSelect);
+  React.useEffect(() => {
+    onSelectRef.current = onSelect;
+  });
+  React.useEffect(() => {
+    if (!autoSelectDefault || autoSelectedRef.current) return;
+    if (value || isLoading) return;
+    const firstActive = options.find((option) => option.active !== false);
+    if (firstActive) {
+      autoSelectedRef.current = true;
+      onSelectRef.current(firstActive.id);
+    }
+  }, [autoSelectDefault, value, isLoading, options]);
 
   // If the agent's stored model value doesn't appear in the current catalog,
   // surface it as a stale entry so the user sees why their dropdown shows

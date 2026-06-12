@@ -33,6 +33,10 @@ export const tierBoundaryExemptions = {
   // VariableSelectionElement).
   features: [
     "app/(application)/agents/edit/[id]/components/prompt-browser-sheet.tsx",
+    // PromptCard reuse preserved verbatim from the legacy form.tsx through
+    // the 2.8 redesign — agents.md §4 marks PromptCard/PromptEditorModal
+    // as "reused as-is", promotion is scoped to the prompts redesign.
+    "app/(application)/agents/edit/[id]/sections/instructions.tsx",
     "app/(application)/agents/edit/[id]/form.tsx",
     "app/(application)/prompts/components/prompt-preview.tsx",
     "app/(application)/workflows/page.tsx",

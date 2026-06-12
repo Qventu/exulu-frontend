@@ -18,7 +18,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Search, Folder, ArrowLeft, Plus, X as XIcon, Check } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+// Cross-feature reuse — see instructions.tsx note. Promotion is scoped to the
+// prompts redesign, not this work item.
 import { PromptEditorModal } from "@/app/(application)/prompts/components/prompt-editor-modal";
 
 interface PromptBrowserSheetProps {
@@ -40,6 +43,7 @@ export function PromptBrowserSheet({
   user,
   onUpdate,
 }: PromptBrowserSheetProps) {
+  const t = useTranslations("agents");
   const [viewMode, setViewMode] = useState<ViewMode>("folders");
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -247,7 +251,7 @@ export function PromptBrowserSheet({
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <Folder className="h-5 w-5 text-gray-400" />
-                            <span className="font-medium text-muted-foreground">All</span>
+                            <span className="font-medium text-muted-foreground">{t('promptBrowser.untagged')}</span>
                           </div>
                           <Badge variant="outline">{untaggedCount}</Badge>
                         </div>
