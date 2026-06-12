@@ -73,11 +73,12 @@ const SectionNav = React.forwardRef<HTMLElement, SectionNavProps>(
         ref={ref}
         aria-label={label}
         className={cn(
-          // Vertical rail on ≥lg, scrollable horizontal chip row on <lg.
-          // top-6 (24px) buys breathing room from the chrome bar; the
-          // self-scrolling max-h keeps runaway navs reachable on short
-          // viewports without blowing out of the sticky frame.
-          "lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:pr-2 scrollbar-subtle",
+          // Sticky on every viewport (chip-row stays pinned under the header
+          // on phones too); z-10 + bg so scrolling content can't show
+          // through. self-scrolling max-h keeps runaway navs reachable on
+          // short viewports without blowing out of the sticky frame.
+          "sticky top-2 z-10 self-start bg-background py-1",
+          "lg:top-6 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:pr-2 scrollbar-subtle",
           className,
         )}
         {...props}

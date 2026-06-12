@@ -542,6 +542,22 @@ export function useEditorReferenceData(agentId: string): UseEditorReferenceData 
  * useScrollSpy — observes anchored sections and reports the active id.
  * ------------------------------------------------------------------------- */
 
+/** Walks up the DOM from `el` to the nearest ancestor that establishes a
+ *  scrolling formatting context (overflow-y: auto|scroll|overlay). Returns
+ *  null when the document/window itself is the scroller. Needed because our
+ *  AppShell scrolls inside a sibling `overflow-auto` div, NOT on the window —
+ *  IntersectionObserver with the default root would observe against the
+ *  viewport and never fire as the inner div scrolls. */
+function findScrollParent(el: Element): Element | null {
+  let parent: Element | null = el.parentElement;
+  while (parent && parent !== document.body) {
+    const style = window.getComputedStyle(parent);
+    if (/(auto|scroll|overlay)/.test(style.overflowY)) return parent;
+    parent = parent.parentElement;
+  }
+  return null;
+}
+
 export function useScrollSpy(sectionIds: string[]): string {
   const [activeId, setActiveId] = React.useState<string>(
     sectionIds[0] ?? "",
@@ -554,6 +570,8 @@ export function useScrollSpy(sectionIds: string[]): string {
       .filter((el): el is HTMLElement => !!el);
     if (elements.length === 0) return;
 
+    const root = findScrollParent(elements[0]);
+
     const observer = new IntersectionObserver(
       (entries) => {
         // Pick the entry highest in the viewport that's intersecting.
@@ -565,7 +583,8 @@ export function useScrollSpy(sectionIds: string[]): string {
         }
       },
       {
-        // Activate when the section is in the top 40% of the viewport.
+        // Activate when the section is in the top 40% of the (root) viewport.
+        root,
         rootMargin: "-10% 0px -55% 0px",
         threshold: 0,
       },
