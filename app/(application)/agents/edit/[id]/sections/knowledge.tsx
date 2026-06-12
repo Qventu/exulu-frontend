@@ -162,7 +162,13 @@ export function KnowledgeSection({ editor, refs }: EditorSectionProps) {
               <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="max-h-[300px] w-full p-0">
+          {/* Constrain to the trigger width — Radix doesn't anchor it by
+              default, which made the popover stretch the full content card. */}
+          <PopoverContent
+            align="start"
+            className="max-h-[300px] p-0"
+            style={{ width: "var(--radix-popover-trigger-width)" }}
+          >
             <Command>
               <CommandInput
                 placeholder={t("editor.knowledge.searchContexts")}

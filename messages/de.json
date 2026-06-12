@@ -570,13 +570,13 @@
         "welcomeLabel": "Willkommensnachricht"
       },
       "developer": {
-        "description": "Bezeichner und Integrationsdetails für Entwickler.",
-        "editModel": "Dieses Modell bearbeiten",
+        "description": "Identifikatoren und kopierfertige Snippets zum Aufruf dieses Agenten.",
         "idLabel": "Agent-ID",
-        "modelAuthDescription": "Authentifizierung und Budget werden am ausgewählten Modell konfiguriert.",
-        "modelAuthTitle": "Modell-Authentifizierung & Budget",
-        "noModelHint": "Kein Modell ausgewählt – wählen Sie eines unter Grundlagen.",
-        "slugLabel": "Slug"
+        "slugLabel": "Slug",
+        "endpointLabel": "Endpoint",
+        "curlLabel": "curl",
+        "tsLabel": "TypeScript (fetch)",
+        "noSlugHint": "Speichere den Agenten einmal, damit ein Slug erzeugt wird — danach erscheinen hier die Snippets."
       },
       "duplicated": "Agent dupliziert",
       "header": {

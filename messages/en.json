@@ -570,13 +570,13 @@
         "welcomeLabel": "Welcome message"
       },
       "developer": {
-        "description": "Identifiers and integration details for developers.",
-        "editModel": "Edit this model",
+        "description": "Identifiers and copy-pasteable snippets for calling this agent.",
         "idLabel": "Agent ID",
-        "modelAuthDescription": "Authentication and budget live on the selected model.",
-        "modelAuthTitle": "Model authentication & budget",
-        "noModelHint": "No model selected — choose one in Basics.",
-        "slugLabel": "Slug"
+        "slugLabel": "Slug",
+        "endpointLabel": "Endpoint",
+        "curlLabel": "curl",
+        "tsLabel": "TypeScript (fetch)",
+        "noSlugHint": "Save the agent once so a slug is generated, then snippets will appear here."
       },
       "duplicated": "Agent duplicated",
       "header": {

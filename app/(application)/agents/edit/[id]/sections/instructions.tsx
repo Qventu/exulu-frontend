@@ -19,6 +19,7 @@ import * as React from "react";
 import { PromptCard } from "@/app/(application)/prompts/components/prompt-card";
 import { UserContext } from "@/app/(application)/authenticated";
 import { FormSection } from "@/components/primitives/form-section";
+import { MarkdownEditor } from "@/components/primitives/markdown-editor";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -72,11 +73,17 @@ export function InstructionsSection({ agent, editor }: EditorSectionProps) {
                 {t("editor.instructions.customDescription")}
               </FormDescription>
               <FormControl>
-                <Textarea
-                  rows={10}
-                  className="font-mono text-sm"
-                  {...field}
+                {/* Markdown editor — instructions support headings/lists/code,
+                    so the plain textarea was lying about its inputs. The
+                    primitive lazy-loads MDEditor to keep SSR clean and
+                    follows resolvedTheme automatically. */}
+                <MarkdownEditor
                   value={field.value ?? ""}
+                  onChange={(v) =>
+                    field.onChange(v ?? "")
+                  }
+                  height={360}
+                  preview="edit"
                 />
               </FormControl>
               <FormMessage />

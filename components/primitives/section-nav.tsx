@@ -74,7 +74,10 @@ const SectionNav = React.forwardRef<HTMLElement, SectionNavProps>(
         aria-label={label}
         className={cn(
           // Vertical rail on ≥lg, scrollable horizontal chip row on <lg.
-          "lg:sticky lg:top-4 lg:self-start",
+          // top-6 (24px) buys breathing room from the chrome bar; the
+          // self-scrolling max-h keeps runaway navs reachable on short
+          // viewports without blowing out of the sticky frame.
+          "lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:pr-2 scrollbar-subtle",
           className,
         )}
         {...props}

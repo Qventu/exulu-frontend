@@ -30,6 +30,7 @@ import {
   useEditorReferenceData,
   useScrollSpy,
 } from "../hooks";
+import { AGENT_FIREWALL_SUPPORTED } from "../queries";
 import { AccessSection } from "../sections/access";
 import { AppearanceSection } from "../sections/appearance";
 import { BasicsSection } from "../sections/basics";
@@ -41,7 +42,11 @@ import { SafetySection } from "../sections/safety";
 import { ToolsSection } from "../sections/tools";
 import { EditorHeader } from "./editor-header";
 
-const SECTION_IDS = [
+// Safety section is gated on AGENT_FIREWALL_SUPPORTED — when the backend
+// schema does not carry the firewall field, the whole section (and its
+// SectionNav anchor) is omitted; agents.md item 69 remains deferred per
+// the page-doc's "unsupported" path.
+const ALL_SECTION_IDS = [
   "basics",
   "instructions",
   "tools",
@@ -52,6 +57,9 @@ const SECTION_IDS = [
   "appearance",
   "developer",
 ] as const;
+const SECTION_IDS = ALL_SECTION_IDS.filter(
+  (id) => id !== "safety" || AGENT_FIREWALL_SUPPORTED,
+);
 
 export function EditorView({ agent }: { agent: Agent }) {
   const t = useTranslations("agents");
@@ -105,7 +113,9 @@ export function EditorView({ agent }: { agent: Agent }) {
             <KnowledgeSection {...sectionProps} />
             <ChatExperienceSection {...sectionProps} />
             <AccessSection {...sectionProps} />
-            <SafetySection {...sectionProps} />
+            {AGENT_FIREWALL_SUPPORTED ? (
+              <SafetySection {...sectionProps} />
+            ) : null}
             <AppearanceSection {...sectionProps} />
             <DeveloperSection {...sectionProps} />
           </div>
