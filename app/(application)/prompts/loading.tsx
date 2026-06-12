@@ -31,9 +31,9 @@ export default function Loading() {
         </div>
 
         <div className="flex min-h-[60vh] overflow-hidden rounded-md border bg-card lg:min-h-[calc(100dvh-18rem)]">
-          {/* List — fills the remaining width (matches ListDetail's
-              `min-w-0 flex-1` on the list pane in the loaded layout). */}
-          <div className="flex min-w-0 flex-1 flex-col">
+          {/* List — slim picker on the left (matches ListDetail's
+              `detailEmphasis="primary"` shape: list lg:w-80 xl:w-96). */}
+          <div className="flex min-w-0 flex-col lg:w-80 lg:shrink-0 xl:w-96">
             <ul className="flex-1 divide-y divide-border">
               {Array.from({ length: 10 }).map((_, index) => (
                 <li key={index} className="space-y-1.5 px-3 py-2.5">
@@ -43,18 +43,18 @@ export default function Loading() {
               ))}
             </ul>
           </div>
-          {/* Detail pane (lg+) — fixed-width on the right, matching
-              ListDetail's `w-96 xl:w-[28rem]` aside in static mode. Mirrors
-              the loaded layout exactly so the skeleton → content swap has no
-              visual jolt (cosmetic fix flagged in adversarial review). */}
-          <aside className="hidden w-96 shrink-0 border-l border-border lg:flex lg:flex-col xl:w-[28rem]">
+          {/* Detail pane (lg+) — flex-1 on the right; the prompt body IS the
+              page so the content area gets the room. */}
+          <aside className="hidden min-w-0 flex-1 border-l border-border lg:flex lg:flex-col">
             <div className="border-b border-border px-4 py-3">
               <Skeleton className="h-5 w-32" />
             </div>
             <div className="space-y-4 p-6">
               <Skeleton className="h-6 w-2/3" />
               <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-2/3" />
             </div>
           </aside>
         </div>

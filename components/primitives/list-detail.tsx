@@ -78,6 +78,16 @@ export interface ListDetailProps<T> {
    * Ignored by `"page"`/`"static"` modes.
    */
   detailPresentation?: "docked" | "sheet";
+  /**
+   * Which side carries the bounded width vs. `flex-1` at `lg+`. Default
+   * `"compact"` is right for credentials/admin lists where the detail pane
+   * shows compact metadata next to a long row list (current /keys). Use
+   * `"primary"` when the detail IS the content (prompts, evals — long body
+   * with a slim picker list).
+   * Ignored by `"page"` mode and on `<lg` (the Sheet always fills).
+   * @default "compact"
+   */
+  detailEmphasis?: "compact" | "primary";
   /** Quiet EmptyState shown in the `"static"` pane when nothing is selected. */
   emptyDetail?: React.ReactNode;
   /** Items backing URL deep-link resolution and keyboard navigation. */
@@ -143,6 +153,7 @@ export function ListDetail<T>({
   onSelect,
   detailMode = "panel",
   detailPresentation = "docked",
+  detailEmphasis = "compact",
   emptyDetail,
   items,
   getItemId,
@@ -338,14 +349,28 @@ export function ListDetail<T>({
       className={cn("flex min-h-0 w-full flex-1 items-stretch", className)}
       onKeyDown={handleRootKeyDown}
     >
-      <div className="min-w-0 flex-1" onKeyDown={handleListKeyDown}>
+      <div
+        className={cn(
+          "min-w-0",
+          // primary = the detail is the page; list is the slim picker.
+          showAside && detailEmphasis === "primary"
+            ? "lg:w-80 lg:shrink-0 xl:w-96"
+            : "flex-1",
+        )}
+        onKeyDown={handleListKeyDown}
+      >
         {list}
       </div>
 
       {showAside ? (
         <aside
           aria-label={titleText}
-          className="hidden w-96 shrink-0 flex-col overflow-hidden border-l border-border bg-background lg:flex xl:w-[28rem]"
+          className={cn(
+            "hidden flex-col overflow-hidden border-l border-border bg-background lg:flex",
+            detailEmphasis === "primary"
+              ? "min-w-0 flex-1"
+              : "w-96 shrink-0 xl:w-[28rem]",
+          )}
         >
           <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
             <h2 className="truncate text-base font-semibold">{titleText}</h2>
