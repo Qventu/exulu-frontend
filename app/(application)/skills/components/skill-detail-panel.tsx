@@ -493,10 +493,12 @@ export function SkillDetailPanel({
 
           <Separator />
 
-          {/* Stats footer */}
+          {/* Stats footer. items-start keeps both numbers on the same
+              baseline — the Uses label is taller (it carries the Info
+              tooltip), so items-end would shift its number up by ~4px. */}
           <section
             className={cn(
-              "flex flex-wrap items-end gap-x-8 gap-y-3 pb-2 pt-1",
+              "flex flex-wrap items-start gap-x-8 gap-y-3 pb-2 pt-1",
             )}
           >
             <div>
