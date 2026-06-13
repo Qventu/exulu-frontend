@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DocumentNode, useMutation, useQuery } from '@apollo/client';
 import { GET_CHUNK_BY_ID, UPDATE_ITEM } from '@/queries/queries';
-import { getPresignedUrl } from '../uppy-dashboard';
+import { getPresignedUrl } from '../primitives/file-picker';
 import Link from 'next/link';
 import { AlertTriangle, LinkIcon, CopyIcon } from 'lucide-react';
 import { toast } from "sonner";

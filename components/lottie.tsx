@@ -3,7 +3,7 @@
 import { Agent } from "@/types/models/agent";
 import { useLottie } from "lottie-react";
 import { useEffect, useState } from "react";
-import { getPresignedUrl } from "./uppy-dashboard";
+import { getPresignedUrl } from "./primitives/file-picker";
 
 const AgentVisual = ({ agent, status, className }: { agent: Agent, status: 'submitted' | 'streaming' | 'ready' | 'error', className?: string }) => {
   return <LottieVisual className={className} agent={agent} status={status} />

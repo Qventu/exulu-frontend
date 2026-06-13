@@ -1,63 +1,4 @@
 {
-  "navigation": {
-    "agents": "Agents",
-    "analytics": "Analytics",
-    "apiExplorer": "API Explorer",
-    "apiKeys": "API keys",
-    "automation": "Automation",
-    "brand": {
-      "mark": "AI",
-      "productName": "AI Studio"
-    },
-    "budgets": "Budgets",
-    "chat": "Chat",
-    "collapseSidebar": "Collapse sidebar — ⌘B",
-    "configuration": "Theme",
-    "error": {
-      "description": "Something went wrong loading the navigation. Please refresh the page.",
-      "refresh": "Refresh page",
-      "title": "Navigation error"
-    },
-    "evals": "Evals",
-    "feedback": "Feedback",
-    "groups": {
-      "administration": "Administration",
-      "build": "Build",
-      "develop": "Develop",
-      "personal": "Personal",
-      "workspace": "Workspace"
-    },
-    "home": "Home",
-    "knowledge": "Knowledge",
-    "logout": "Logout",
-    "models": "Models",
-    "openNavigation": "Open navigation",
-    "personalToken": "Personal token",
-    "projects": "Projects",
-    "prompts": "Prompts",
-    "routines": "Routines",
-    "search": "Search…",
-    "sendFeedback": "Send feedback",
-    "settings": "Settings",
-    "skills": "Skills",
-    "transcriptions": "Transcripts",
-    "userMenu": {
-      "fallbackName": "User",
-      "label": "User menu",
-      "language": "Language",
-      "theme": "Theme",
-      "themeDark": "Dark",
-      "themeLight": "Light",
-      "themeSystem": "System"
-    },
-    "usersAccess": "Users",
-    "variables": "Variables"
-  },
-  "language": {
-    "english": "English",
-    "german": "German",
-    "switchTo": "Switch to {language}"
-  },
   "agentSelection": {
     "newSession": "New session with {agentName}",
     "noAgentsAvailable": "No agents available",
@@ -65,6 +6,362 @@
     "searchPlaceholder": "Search agents...",
     "sessionCreated": "Session created successfully! Sessions started in a project are accessible for viewing by project members.",
     "sessionError": "Failed to create session. Please try again."
+  },
+  "agents": {
+    "chatAction": "Chat",
+    "copyId": "Copy ID",
+    "createDialog": {
+      "buttonCreate": "Create Agent",
+      "buttonGenerateImages": "Generate Images",
+      "buttonGenerating": "Generating...",
+      "complete": "Complete",
+      "createFailed": "Failed to create agent. Please try again.",
+      "creating": "Creating…",
+      "description": "Give your new agent a name and a description (optional).",
+      "fillAllFields": "Please fill in all fields",
+      "generateImageLabel": "Generate AI image for this agent",
+      "generating": "Generating...",
+      "generatingImages": "Generating your agent images...",
+      "generatingProgress": "Creating {current}/4 image options",
+      "imageGenerationFailed": "Failed to generate images. Please try again.",
+      "imageInfoAlert": "Exulu can generate a cool image for your agent if an OPENAI_IMAGE_GENERATION_API_KEY has been added to your variables page.",
+      "imageStyle": "Image Style",
+      "imageStylePlaceholder": "Select image style",
+      "instructionsLabel": "Instructions",
+      "instructionsPlaceholder": "What should this agent do? (you can refine later)",
+      "instructionsSaveFailed": "The agent was created, but its instructions couldn't be saved — add them in the editor.",
+      "modelLabel": "Model",
+      "nameRequired": "Give your agent a name.",
+      "optional": "optional",
+      "subtitle": "Give it a name, confirm the model, and optionally tell it what to do — everything else can be refined in the editor.",
+      "title": "Create a new agent"
+    },
+    "createNewAgent": "Create New Agent",
+    "deleteDialog": {
+      "buttonDelete": "Delete",
+      "confirmationPrompt": "Type \"{confirmation}\" to confirm",
+      "confirmationText": "delete this agent",
+      "title": "Delete this agent"
+    },
+    "detailPanel": {
+      "firewallUnsupported": "Firewall status isn't available on this backend."
+    },
+    "detailsSheet": {
+      "accessControl": "Access Control",
+      "active": "Active",
+      "capabilities": "Capabilities",
+      "capabilityLabels": {
+        "audio": "Audio",
+        "files": "Files",
+        "images": "Images",
+        "none": "None",
+        "text": "Text",
+        "video": "Video"
+      },
+      "description": "Description",
+      "noDescriptionAvailable": "No description available.",
+      "noModelSelected": "No model selected",
+      "noToolsEnabled": "No tools enabled",
+      "protected": "Protected",
+      "scanners": {
+        "agentAlignment": "Agent Alignment",
+        "codeShield": "Code Shield",
+        "hiddenAscii": "Hidden ASCII Detection",
+        "piiDetection": "PII Detection",
+        "promptGuard": "Prompt Guard"
+      },
+      "security": "Security",
+      "tools": "Tools",
+      "unprotected": "Unprotected"
+    },
+    "duplicate": "Duplicate",
+    "duplicateFailed": "Couldn't duplicate the agent. Please try again.",
+    "duplicateSuccess": "Agent duplicated",
+    "editAgent": "Edit agent",
+    "editor": {
+      "access": {
+        "description": "Who can see and edit this agent.",
+        "subjectLabel": "agent",
+        "summaryPrivate": "Private — only you.",
+        "summaryPublic": "Public — anyone in your workspace.",
+        "summaryRoles": "Shared with {count} role(s).",
+        "summaryTeams": "Shared with {count} team(s).",
+        "summaryUsers": "Shared with {count} user(s)."
+      },
+      "appearance": {
+        "avatarDescription": "Shown next to this agent everywhere it appears.",
+        "avatarTitle": "Avatar",
+        "description": "Avatar and idle/responding animations shown in chat.",
+        "generateButton": "Generate with AI",
+        "generateDescription": "Pick a style and we'll create four options for you.",
+        "generateTitle": "Generate an avatar",
+        "idleDescription": "Played while the agent is waiting.",
+        "idleLabel": "Idle animation",
+        "optionLabel": "Option",
+        "preview": "Preview:",
+        "respondingDescription": "Played while the agent is generating a reply.",
+        "respondingLabel": "Responding animation",
+        "useImage": "Use selected image"
+      },
+      "basics": {
+        "categoryLabel": "Category",
+        "categoryPlaceholder": "Select a category",
+        "description": "Who this agent is and what it talks to.",
+        "descriptionLabel": "Description",
+        "modelBadge": "{model} from {provider}",
+        "modelLabel": "Model",
+        "nameLabel": "Name"
+      },
+      "chatExperience": {
+        "defaultDescription": "Loads this agent by default on the chat page.",
+        "defaultLabel": "Set as default agent",
+        "description": "How the agent shows up inside chat.",
+        "feedbackDescription": "Allow users to send feedback during chat.",
+        "feedbackLabel": "Feedback collection",
+        "suggestionsDescription": "After each reply, suggest up to 3 messages the user might send next. Uses the agent’s model; tokens count toward limits.",
+        "suggestionsLabel": "Follow-up suggestions",
+        "welcomeDescription": "Shown when the agent is first loaded in chat.",
+        "welcomeLabel": "Welcome message"
+      },
+      "developer": {
+        "curlLabel": "curl",
+        "description": "Identifiers and copy-pasteable snippets for calling this agent.",
+        "endpointLabel": "Endpoint",
+        "idLabel": "Agent ID",
+        "noSlugHint": "Save the agent once so a slug is generated, then snippets will appear here.",
+        "slugLabel": "Slug",
+        "tsLabel": "TypeScript (fetch)"
+      },
+      "duplicated": "Agent duplicated",
+      "header": {
+        "activeAria": "Active",
+        "copyId": "Copy agent ID",
+        "copySlug": "Copy slug",
+        "delete": "Delete agent",
+        "duplicate": "Duplicate",
+        "testInChat": "Test in chat"
+      },
+      "instructions": {
+        "customDescription": "These instructions are sent with every conversation. Up to 40,000 characters.",
+        "customLabel": "Custom instructions",
+        "description": "What the agent should do, included with every session.",
+        "loadingPrompts": "Loading prompts…",
+        "manage": "Manage",
+        "noPromptsAssigned": "No prompts assigned yet — open Manage to browse and add some.",
+        "promptsDescription": "{count} prompt(s) assigned to this agent.",
+        "promptsTitle": "Prompt templates",
+        "systemDescription": "Set by a developer — read-only here.",
+        "systemTitle": "System instructions"
+      },
+      "knowledge": {
+        "agenticDescription": "A tool loop that searches knowledge contexts intelligently when needed.",
+        "agenticTitle": "Agentic retrieval",
+        "description": "What the agent can read, remember and retrieve.",
+        "disabled": "disabled",
+        "enabled": "enabled",
+        "memoryDescription": "Choose a context for the agent to store and recall items per user.",
+        "memoryTitle": "Long-term memory",
+        "noContexts": "No contexts found.",
+        "none": "None",
+        "searchContexts": "Search contexts…",
+        "selectContext": "Select context…"
+      },
+      "notFoundDescription": "This agent could not be loaded. It may have been deleted, or you may not have access.",
+      "notFoundTitle": "Agent not found",
+      "safety": {
+        "description": "Firewall and content scanners protecting this agent's traffic.",
+        "enableDescription": "Turn on the safety firewall for messages exchanged with this agent.",
+        "enableLabel": "Enable firewall",
+        "scanners": {
+          "agentAlignment": {
+            "description": "Checks tool calls against the agent's declared role.",
+            "label": "Agent Alignment"
+          },
+          "codeShield": {
+            "description": "Detects unsafe code patterns in inputs and outputs.",
+            "label": "Code Shield"
+          },
+          "hiddenAscii": {
+            "description": "Catches invisible characters used to hide instructions.",
+            "label": "Hidden ASCII detection"
+          },
+          "piiDetection": {
+            "description": "Flags personal data in messages and tool outputs.",
+            "label": "PII detection"
+          },
+          "promptGuard": {
+            "description": "Blocks prompt-injection and jailbreak attempts.",
+            "label": "Prompt Guard"
+          }
+        },
+        "unsupportedDescription": "Firewall configuration is not exposed by the connected GraphQL schema yet.",
+        "unsupportedTitle": "Not available on this backend"
+      },
+      "saved": "Agent saved",
+      "sections": {
+        "access": "Access",
+        "appearance": "Appearance",
+        "basics": "Basics",
+        "chatExperience": "Chat experience",
+        "developer": "Developer",
+        "instructions": "Instructions",
+        "knowledge": "Knowledge & memory",
+        "safety": "Safety",
+        "tools": "Tools & skills"
+      },
+      "tools": {
+        "allCategories": "All categories",
+        "available": "available",
+        "categoryPlaceholder": "Filter by category",
+        "clearFilters": "Clear filters",
+        "clearFiltersAria": "Clear filters",
+        "clearSearchAria": "Clear search",
+        "collapseAll": "Collapse all",
+        "configuration": "Configuration",
+        "configureAria": "Configure {name}",
+        "enabledCount": "{enabled}/{total} enabled",
+        "expandAll": "Expand all",
+        "found": "found",
+        "infoAria": "About {name}",
+        "noResults": "No tools match your filters.",
+        "resultCount": "{count} tool(s) {suffix}.",
+        "searchPlaceholder": "Search tools by name or description…",
+        "showSubAgent": "Show this agent's tools & sub-agents",
+        "skills": "Skills",
+        "skillsHint": "Instruction sets that guide behavior for specific tasks.",
+        "subAgentCapabilities": "{count} capabilit(y/ies)",
+        "subAgentDelegates": "{count} sub-agent(s)",
+        "subAgentDelegatesHint": "This agent can delegate to {count} other agent(s).",
+        "subAgentSheetDescription": "Details for this sub-agent.",
+        "subAgentTools": "{count} tool(s)",
+        "subAgentToolsHint": "This agent has access to {count} tool(s).",
+        "subAgents": "Sub-Agents",
+        "subAgentsHint": "Other agents this one can call as tools.",
+        "summary": "{count} tool(s) enabled for this agent.",
+        "toggleAria": "Enable {name}",
+        "tools": "Tools",
+        "toolsHint": "Standard tools with specific functionalities.",
+        "typeAgent": "Agent",
+        "typeTool": "Tool"
+      },
+      "unsavedChanges": "Unsaved changes to this agent"
+    },
+    "emptyDescription": "Agents are AI assistants configured for your team's work.",
+    "emptyReadOnlyDescription": "No agents are available to you yet — ask your workspace admin.",
+    "emptyReadOnlyTitle": "No agents available",
+    "emptyTitle": "No agents yet",
+    "errorLoading": "Error loading agents",
+    "errorLoadingDescription": "There was an error loading your agents. Please try again.",
+    "filters": {
+      "statusAll": "All statuses",
+      "statusLabel": "Status"
+    },
+    "imageStyles": {
+      "3d": "3D",
+      "anime": "Anime",
+      "app_icon": "App Icon",
+      "felt_puppet": "Felt Puppet",
+      "isometric": "Isometric",
+      "japanese_anime": "Japanese Anime",
+      "lego": "Lego",
+      "origami": "Origami",
+      "paper_cut": "Paper Cut",
+      "pixel_art": "Pixel Art",
+      "vaporwave": "Vaporwave"
+    },
+    "newAgent": "New agent",
+    "noDescriptionAvailable": "No description available",
+    "openInChat": "Open in chat",
+    "pageDescription": "Build and manage the AI agents your organization talks to.",
+    "promptBrowser": {
+      "add": "Add",
+      "addedToAgent": "Added to {name}",
+      "assignedToAgent": "Assigned to {name}",
+      "backToFolders": "Back to folders",
+      "createPrompt": "New prompt",
+      "foldersSubtitle": "Browse prompts by folder.",
+      "loadingFolders": "Loading folders…",
+      "loadingPrompts": "Loading prompts…",
+      "noPromptsFound": "No prompts match your search.",
+      "noPromptsInFolder": "No prompts in this folder yet.",
+      "otherPrompts": "Other prompts",
+      "promptsSubtitle": "Prompts in {folder}.",
+      "remove": "Remove",
+      "removedFromAgent": "Removed from {name}",
+      "searchPlaceholder": "Search prompts…",
+      "title": "Browse prompts",
+      "untagged": "Untagged",
+      "updateFailed": "Couldn't update the prompt assignment. Please try again."
+    },
+    "rightsMode": {
+      "private": "Private",
+      "public": "Public",
+      "roles": "Shared with roles",
+      "teams": "Shared with teams",
+      "unknown": "Restricted",
+      "users": "Shared with users"
+    },
+    "searchEmptyDescription": "Try a different name, or clear the search and filters.",
+    "searchEmptyTitle": "No agents match your search",
+    "searchPlaceholder": "Search agents...",
+    "sort": {
+      "label": "Sort by",
+      "lastUpdated": "Last updated",
+      "nameAsc": "Name A–Z",
+      "nameDesc": "Name Z–A",
+      "newest": "Newest first"
+    },
+    "subtitle": "Manage your AI agents and create new ones.",
+    "title": "Agents"
+  },
+  "auth": {
+    "boundary": {
+      "description": "The sign-in page hit an unexpected error. Please try again.",
+      "retry": "Try again",
+      "title": "Something went wrong"
+    },
+    "errors": {
+      "AccessDenied": "You don't have permission to sign in. Contact your administrator if you think this is a mistake.",
+      "Configuration": "Sign-in is not configured correctly. Please contact your administrator.",
+      "CredentialsSignin": "Incorrect email or password.",
+      "Default": "Something went wrong while signing you in. Please try again.",
+      "EmailSignin": "The sign-in code could not be sent. Check the address and try again.",
+      "OAuthAccountNotLinked": "This email is already linked to a different sign-in method. Use that method instead.",
+      "OAuthCallback": "Google sign-in did not complete. Please try again.",
+      "OAuthSignin": "Google sign-in could not be started. Please try again.",
+      "SessionRequired": "Please sign in to continue.",
+      "Verification": "That code is invalid or has expired. Request a new one and try again.",
+      "title": "Sign-in failed"
+    },
+    "footer": {
+      "copyright": "© {year}",
+      "languageLabel": "Language",
+      "terms": "Terms & Conditions"
+    },
+    "otp": {
+      "changeEmail": "Use a different email",
+      "codeLabel": "One-time code",
+      "resend": "Resend code",
+      "resendCooldown": "Resend code ({seconds}s)",
+      "resent": "A new code is on its way.",
+      "submit": "Submit code",
+      "subtitle": "We sent a 6-digit code to <strong>{email}</strong>. It expires in 3 minutes.",
+      "title": "Check your email"
+    },
+    "signIn": {
+      "continueWithGoogle": "Continue with Google",
+      "emailLabel": "Email",
+      "emailPlaceholder": "m@example.com",
+      "noAccount": "No account? Ask your administrator.",
+      "or": "or",
+      "passwordLabel": "Password",
+      "submitOtp": "Email me a code",
+      "submitPassword": "Sign in",
+      "subtitleOtp": "We'll email you a one-time code.",
+      "subtitlePassword": "Enter your email and password.",
+      "title": "Sign in",
+      "trustNote": "Processed and stored in the EU. Never used to train AI models."
+    }
   },
   "chat": {
     "agentSelect": {
@@ -395,50 +692,121 @@
     "actions": "Actions",
     "active": "Active",
     "activeFilters": "{count, plural, one {# active filter} other {# active filters}}",
+    "add": "Add",
+    "allowedTypes": "Allowed types",
     "backend": "Backend",
     "bulkErrorSummary": "{count, plural, one {# item failed} other {# items failed}}",
     "cancel": "Cancel",
     "clear": "Clear",
+    "clearFilters": "Clear filters",
     "clearSelection": "Clear selection",
     "close": "Close",
+    "collapse": "Collapse",
     "confirm": "Confirm",
+    "confirmSelection": "Confirm selection",
     "copied": "Copied to clipboard",
     "copy": "Copy",
     "copyFailed": "Couldn't copy to clipboard",
     "create": "Create",
+    "created": "Created",
     "delete": "Delete",
+    "deleteFileDescription": "\"{name}\" will be permanently removed. It may be referenced by other items, agents, or chat sessions — those references will break. This cannot be undone.",
+    "deleteFileTitle": "Delete this file?",
+    "deleteJobDescription": "The job \"{name}\" will be removed from the queue. This cannot be undone.",
+    "deleteJobTitle": "Delete job?",
+    "deleteJobsDescription": "{count} jobs will be removed from the queue. This cannot be undone.",
+    "deleteJobsTitle": "Delete {count} jobs?",
+    "deleteOriginalJobAfterRetry": "Delete the original job after retrying",
+    "deleteOriginalJobsAfterRetry": "Delete the original jobs after retrying",
     "description": "Description",
     "details": "Details",
     "discard": "Discard",
     "done": "Done",
+    "drainQueue": "Drain queue",
+    "drainQueueDescription": "All waiting and delayed jobs in the {queue} queue will be removed. Active and finished jobs are kept. This cannot be undone.",
+    "drainQueueTitle": "Drain queue?",
     "edit": "Edit",
     "enabled": "Enabled",
     "error": "Error",
+    "expand": "Expand",
+    "fileGallery": "File gallery",
+    "fileGalleryDescription": "Browse your previously uploaded files or upload new ones.",
+    "filesSelected": "files selected",
     "filters": "Filters",
     "filtersDescription": "Adjust the active filters.",
+    "finished": "Finished",
+    "gallery": "Gallery",
     "goToFirstPage": "Go to first page",
     "goToLastPage": "Go to last page",
     "goToNextPage": "Go to next page",
     "goToPreviousPage": "Go to previous page",
     "hide": "Hide",
+    "id": "ID",
     "inactive": "Inactive",
     "leaveWithoutSaving": "Leave without saving",
     "leaveWithoutSavingDescription": "Your changes will be lost if you leave this page.",
+    "limit": "Limit",
     "loading": "Loading...",
     "name": "Name",
+    "noFileSelected": "No file selected",
+    "noFilesYet": "Nothing to see here yet",
+    "none": "None",
     "pageOf": "Page {page} of {count}",
+    "pauseQueue": "Pause queue",
+    "pauseQueueDescription": "No new jobs will be processed in the {queue} queue until it's resumed.",
+    "pauseQueueTitle": "Pause queue?",
+    "preview": "Preview",
+    "previouslyUploadedFiles": "Previously uploaded files",
     "publish": "Publish",
+    "queue": "Queue",
+    "queueAttempts": "Attempts",
+    "queueCreated": "Created",
+    "queueDeleteFailed": "Couldn't delete job",
+    "queueDescription": "Manage the job queue and view all jobs.",
+    "queueDrainFailed": "Couldn't drain queue",
+    "queueDrained": "Queue drained",
+    "queueFinished": "Finished",
+    "queueJobDeleted": "Job deleted",
+    "queueJobId": "Job ID",
+    "queueJobRetried": "Job retried",
+    "queueJobs": "Queue jobs",
+    "queueJobsDeleted": "Jobs deleted",
+    "queueJobsDescription": "All jobs currently in the {queue} queue.",
+    "queueJobsRetried": "Jobs retried",
+    "queueMaxConcurrency": "Max queue concurrency",
+    "queueNoJobs": "No jobs in queue",
+    "queuePauseFailed": "Couldn't pause queue",
+    "queuePaused": "Queue paused",
+    "queueRateLimit": "Rate limit",
+    "queueResumeFailed": "Couldn't resume queue",
+    "queueResumed": "Queue resumed",
+    "queueRetentionNote": "Only the last 5,000 successful and failed jobs are kept.",
+    "queueStatus": "Status",
+    "queueTimeout": "Job timeout",
+    "queueWorkerConcurrency": "Max worker concurrency",
+    "remove": "Remove",
     "reset": "Reset",
     "resizePanel": "Resize panel",
+    "resumeQueue": "Resume queue",
+    "resumeQueueDescription": "The {queue} queue will start processing jobs again.",
+    "resumeQueueTitle": "Resume queue?",
     "retry": "Retry",
+    "retryJobDescription": "This will create a new job with the same inputs as the original. The original remains unless you also delete it below.",
+    "retryJobTitle": "Retry job?",
+    "retryJobsDescription": "This will create {count} new jobs with the same inputs as the originals. The originals remain unless you also delete them below.",
+    "retryJobsTitle": "Retry {count} jobs?",
     "reveal": "Reveal",
     "save": "Save",
     "search": "Search",
+    "searchFiles": "Search files…",
     "sections": "Sections",
+    "select": "Select",
     "selectAll": "Select all",
+    "selectFiles": "Select files",
     "selectItemToViewDetails": "Select an item to view its details",
     "selectRow": "Select row",
     "selectedCount": "{count} selected",
+    "show": "Show",
     "somethingWentWrong": "Something went wrong",
     "status": {
       "error": "Error",
@@ -449,316 +817,88 @@
     },
     "stay": "Stay on page",
     "success": "Success",
+    "totalItems": "total items",
     "typeToConfirmLabel": "Type \"{name}\" to confirm",
     "unsavedChanges": "Unsaved changes",
-    "unsavedChangesTitle": "You have unsaved changes"
+    "unsavedChangesTitle": "You have unsaved changes",
+    "upload": "Upload",
+    "uploadNewFiles": "Upload new files",
+    "uploadToGetStarted": "Upload some files to get started",
+    "view": "View"
   },
-  "agents": {
-    "chatAction": "Chat",
-    "copyId": "Copy ID",
-    "createDialog": {
-      "buttonCreate": "Create Agent",
-      "buttonGenerateImages": "Generate Images",
-      "buttonGenerating": "Generating...",
-      "complete": "Complete",
-      "createFailed": "Failed to create agent. Please try again.",
-      "creating": "Creating…",
-      "description": "Give your new agent a name and a description (optional).",
-      "fillAllFields": "Please fill in all fields",
-      "generateImageLabel": "Generate AI image for this agent",
-      "generating": "Generating...",
-      "generatingImages": "Generating your agent images...",
-      "generatingProgress": "Creating {current}/4 image options",
-      "imageGenerationFailed": "Failed to generate images. Please try again.",
-      "imageInfoAlert": "Exulu can generate a cool image for your agent if an OPENAI_IMAGE_GENERATION_API_KEY has been added to your variables page.",
-      "imageStyle": "Image Style",
-      "imageStylePlaceholder": "Select image style",
-      "instructionsLabel": "Instructions",
-      "instructionsPlaceholder": "What should this agent do? (you can refine later)",
-      "instructionsSaveFailed": "The agent was created, but its instructions couldn't be saved — add them in the editor.",
-      "modelLabel": "Model",
-      "nameRequired": "Give your agent a name.",
-      "optional": "optional",
-      "subtitle": "Give it a name, confirm the model, and optionally tell it what to do — everything else can be refined in the editor.",
-      "title": "Create a new agent"
-    },
-    "createNewAgent": "Create New Agent",
-    "deleteDialog": {
-      "buttonDelete": "Delete",
-      "confirmationPrompt": "Type \"{confirmation}\" to confirm",
-      "confirmationText": "delete this agent",
-      "title": "Delete this agent"
-    },
-    "detailPanel": {
-      "firewallUnsupported": "Firewall status isn't available on this backend."
-    },
-    "detailsSheet": {
-      "accessControl": "Access Control",
-      "active": "Active",
-      "capabilities": "Capabilities",
-      "capabilityLabels": {
-        "audio": "Audio",
-        "files": "Files",
-        "images": "Images",
-        "none": "None",
-        "text": "Text",
-        "video": "Video"
-      },
-      "description": "Description",
-      "noDescriptionAvailable": "No description available.",
-      "noModelSelected": "No model selected",
-      "noToolsEnabled": "No tools enabled",
-      "protected": "Protected",
-      "scanners": {
-        "agentAlignment": "Agent Alignment",
-        "codeShield": "Code Shield",
-        "hiddenAscii": "Hidden ASCII Detection",
-        "piiDetection": "PII Detection",
-        "promptGuard": "Prompt Guard"
-      },
-      "security": "Security",
-      "tools": "Tools",
-      "unprotected": "Unprotected"
-    },
-    "duplicate": "Duplicate",
-    "duplicateFailed": "Couldn't duplicate the agent. Please try again.",
-    "duplicateSuccess": "Agent duplicated",
-    "editAgent": "Edit agent",
+  "configuration": {
+    "description": "White-label Exulu for your organization — changes apply to every user.",
     "editor": {
-      "access": {
-        "description": "Who can see and edit this agent.",
-        "subjectLabel": "agent",
-        "summaryPrivate": "Private — only you.",
-        "summaryPublic": "Public — anyone in your workspace.",
-        "summaryRoles": "Shared with {count} role(s).",
-        "summaryTeams": "Shared with {count} team(s).",
-        "summaryUsers": "Shared with {count} user(s)."
-      },
-      "appearance": {
-        "avatarDescription": "Shown next to this agent everywhere it appears.",
-        "avatarTitle": "Avatar",
-        "description": "Avatar and idle/responding animations shown in chat.",
-        "generateButton": "Generate with AI",
-        "generateDescription": "Pick a style and we'll create four options for you.",
-        "generateTitle": "Generate an avatar",
-        "idleDescription": "Played while the agent is waiting.",
-        "idleLabel": "Idle animation",
-        "optionLabel": "Option",
-        "preview": "Preview:",
-        "respondingDescription": "Played while the agent is generating a reply.",
-        "respondingLabel": "Responding animation",
-        "useImage": "Use selected image"
-      },
-      "basics": {
-        "categoryLabel": "Category",
-        "categoryPlaceholder": "Select a category",
-        "description": "Who this agent is and what it talks to.",
-        "descriptionLabel": "Description",
-        "modelBadge": "{model} from {provider}",
-        "modelLabel": "Model",
-        "nameLabel": "Name"
-      },
-      "chatExperience": {
-        "defaultDescription": "Loads this agent by default on the chat page.",
-        "defaultLabel": "Set as default agent",
-        "description": "How the agent shows up inside chat.",
-        "feedbackDescription": "Allow users to send feedback during chat.",
-        "feedbackLabel": "Feedback collection",
-        "suggestionsDescription": "After each reply, suggest up to 3 messages the user might send next. Uses the agent’s model; tokens count toward limits.",
-        "suggestionsLabel": "Follow-up suggestions",
-        "welcomeDescription": "Shown when the agent is first loaded in chat.",
-        "welcomeLabel": "Welcome message"
-      },
-      "developer": {
-        "description": "Identifiers and copy-pasteable snippets for calling this agent.",
-        "idLabel": "Agent ID",
-        "slugLabel": "Slug",
-        "endpointLabel": "Endpoint",
-        "curlLabel": "curl",
-        "tsLabel": "TypeScript (fetch)",
-        "noSlugHint": "Save the agent once so a slug is generated, then snippets will appear here."
-      },
-      "duplicated": "Agent duplicated",
-      "header": {
-        "activeAria": "Active",
-        "copyId": "Copy agent ID",
-        "copySlug": "Copy slug",
-        "delete": "Delete agent",
-        "duplicate": "Duplicate",
-        "testInChat": "Test in chat"
-      },
-      "instructions": {
-        "customDescription": "These instructions are sent with every conversation. Up to 40,000 characters.",
-        "customLabel": "Custom instructions",
-        "description": "What the agent should do, included with every session.",
-        "loadingPrompts": "Loading prompts…",
-        "manage": "Manage",
-        "noPromptsAssigned": "No prompts assigned yet — open Manage to browse and add some.",
-        "promptsDescription": "{count} prompt(s) assigned to this agent.",
-        "promptsTitle": "Prompt templates",
-        "systemDescription": "Set by a developer — read-only here.",
-        "systemTitle": "System instructions"
-      },
-      "knowledge": {
-        "agenticDescription": "A tool loop that searches knowledge contexts intelligently when needed.",
-        "agenticTitle": "Agentic retrieval",
-        "description": "What the agent can read, remember and retrieve.",
-        "disabled": "disabled",
-        "enabled": "enabled",
-        "memoryDescription": "Choose a context for the agent to store and recall items per user.",
-        "memoryTitle": "Long-term memory",
-        "noContexts": "No contexts found.",
-        "none": "None",
-        "searchContexts": "Search contexts…",
-        "selectContext": "Select context…"
-      },
-      "notFoundDescription": "This agent could not be loaded. It may have been deleted, or you may not have access.",
-      "notFoundTitle": "Agent not found",
-      "safety": {
-        "description": "Firewall and content scanners protecting this agent's traffic.",
-        "enableDescription": "Turn on the safety firewall for messages exchanged with this agent.",
-        "enableLabel": "Enable firewall",
-        "scanners": {
-          "agentAlignment": {
-            "description": "Checks tool calls against the agent's declared role.",
-            "label": "Agent Alignment"
-          },
-          "codeShield": {
-            "description": "Detects unsafe code patterns in inputs and outputs.",
-            "label": "Code Shield"
-          },
-          "hiddenAscii": {
-            "description": "Catches invisible characters used to hide instructions.",
-            "label": "Hidden ASCII detection"
-          },
-          "piiDetection": {
-            "description": "Flags personal data in messages and tool outputs.",
-            "label": "PII detection"
-          },
-          "promptGuard": {
-            "description": "Blocks prompt-injection and jailbreak attempts.",
-            "label": "Prompt Guard"
-          }
-        },
-        "unsupportedDescription": "Firewall configuration is not exposed by the connected GraphQL schema yet.",
-        "unsupportedTitle": "Not available on this backend"
-      },
-      "saved": "Agent saved",
-      "sections": {
-        "access": "Access",
-        "appearance": "Appearance",
-        "basics": "Basics",
-        "chatExperience": "Chat experience",
-        "developer": "Developer",
-        "instructions": "Instructions",
-        "knowledge": "Knowledge & memory",
-        "safety": "Safety",
-        "tools": "Tools & skills"
-      },
-      "tools": {
-        "allCategories": "All categories",
-        "available": "available",
-        "categoryPlaceholder": "Filter by category",
-        "clearFilters": "Clear filters",
-        "clearFiltersAria": "Clear filters",
-        "clearSearchAria": "Clear search",
-        "collapseAll": "Collapse all",
-        "configuration": "Configuration",
-        "configureAria": "Configure {name}",
-        "enabledCount": "{enabled}/{total} enabled",
-        "expandAll": "Expand all",
-        "found": "found",
-        "infoAria": "About {name}",
-        "noResults": "No tools match your filters.",
-        "resultCount": "{count} tool(s) {suffix}.",
-        "searchPlaceholder": "Search tools by name or description…",
-        "showSubAgent": "Show this agent's tools & sub-agents",
-        "skills": "Skills",
-        "skillsHint": "Instruction sets that guide behavior for specific tasks.",
-        "subAgentCapabilities": "{count} capabilit(y/ies)",
-        "subAgentDelegates": "{count} sub-agent(s)",
-        "subAgentDelegatesHint": "This agent can delegate to {count} other agent(s).",
-        "subAgentSheetDescription": "Details for this sub-agent.",
-        "subAgentTools": "{count} tool(s)",
-        "subAgentToolsHint": "This agent has access to {count} tool(s).",
-        "subAgents": "Sub-Agents",
-        "subAgentsHint": "Other agents this one can call as tools.",
-        "summary": "{count} tool(s) enabled for this agent.",
-        "toggleAria": "Enable {name}",
-        "tools": "Tools",
-        "toolsHint": "Standard tools with specific functionalities.",
-        "typeAgent": "Agent",
-        "typeTool": "Tool"
-      },
-      "unsavedChanges": "Unsaved changes to this agent"
+      "defaultValue": "Default: {value}",
+      "invalidValue": "Not a recognized color value — it will be published exactly as typed.",
+      "modified": "Modified",
+      "modifiedOnly": "Modified only",
+      "noMatches": "No variables match your filter.",
+      "resetToken": "Reset to default",
+      "searchPlaceholder": "Filter variables…"
     },
-    "emptyDescription": "Agents are AI assistants configured for your team's work.",
-    "emptyReadOnlyDescription": "No agents are available to you yet — ask your workspace admin.",
-    "emptyReadOnlyTitle": "No agents available",
-    "emptyTitle": "No agents yet",
-    "errorLoading": "Error loading agents",
-    "errorLoadingDescription": "There was an error loading your agents. Please try again.",
-    "filters": {
-      "statusAll": "All statuses",
-      "statusLabel": "Status"
+    "exportCopied": "CSS copied to clipboard",
+    "groups": {
+      "brand": "Brand",
+      "charts": "Charts",
+      "custom": "Custom",
+      "semantic": "Semantic",
+      "shape": "Shape & typography",
+      "sidebar": "Sidebar",
+      "surfaces": "Surfaces",
+      "text": "Text"
     },
-    "imageStyles": {
-      "3d": "3D",
-      "anime": "Anime",
-      "app_icon": "App Icon",
-      "felt_puppet": "Felt Puppet",
-      "isometric": "Isometric",
-      "japanese_anime": "Japanese Anime",
-      "lego": "Lego",
-      "origami": "Origami",
-      "paper_cut": "Paper Cut",
-      "pixel_art": "Pixel Art",
-      "vaporwave": "Vaporwave"
+    "import": {
+      "action": "Import",
+      "description": "Paste a full CSS theme with :root and .dark blocks. Detected variables merge into your draft — nothing changes for users until you publish.",
+      "detected": "{lightCount} light · {darkCount} dark variables detected",
+      "noBlocks": "No :root or .dark block found — paste a complete CSS theme.",
+      "placeholder": ":root {\n  --primary: 258 100% 60%;\n}\n\n.dark {\n  --primary: 258 100% 68%;\n}",
+      "skipped": "{count, plural, one {# line couldn't be read and will be skipped:} other {# lines couldn't be read and will be skipped:}}",
+      "successDescription": "{count, plural, one {# variable} other {# variables}} merged into your draft — review, then publish.",
+      "successTitle": "Theme imported",
+      "title": "Import theme CSS"
     },
-    "newAgent": "New agent",
-    "noDescriptionAvailable": "No description available",
-    "openInChat": "Open in chat",
-    "pageDescription": "Build and manage the AI agents your organization talks to.",
-    "promptBrowser": {
-      "add": "Add",
-      "addedToAgent": "Added to {name}",
-      "assignedToAgent": "Assigned to {name}",
-      "backToFolders": "Back to folders",
-      "createPrompt": "New prompt",
-      "foldersSubtitle": "Browse prompts by folder.",
-      "loadingFolders": "Loading folders…",
-      "loadingPrompts": "Loading prompts…",
-      "noPromptsFound": "No prompts match your search.",
-      "noPromptsInFolder": "No prompts in this folder yet.",
-      "otherPrompts": "Other prompts",
-      "promptsSubtitle": "Prompts in {folder}.",
-      "remove": "Remove",
-      "removedFromAgent": "Removed from {name}",
-      "searchPlaceholder": "Search prompts…",
-      "title": "Browse prompts",
-      "untagged": "Untagged",
-      "updateFailed": "Couldn't update the prompt assignment. Please try again."
+    "loadErrorDescription": "Check your connection and try again.",
+    "loadErrorTitle": "Couldn't load the theme configuration",
+    "menu": {
+      "export": "Export CSS",
+      "hideRaw": "Hide raw configuration",
+      "import": "Import CSS…",
+      "reset": "Reset to defaults…",
+      "showRaw": "Show raw configuration"
     },
-    "rightsMode": {
-      "private": "Private",
-      "public": "Public",
-      "roles": "Shared with roles",
-      "teams": "Shared with teams",
-      "unknown": "Restricted",
-      "users": "Shared with users"
+    "preview": "Preview",
+    "publish": "Publish theme",
+    "publishConfirmDescription": "{lightCount} light / {darkCount} dark overrides — this applies to every user.",
+    "publishConfirmTitle": "Publish this theme?",
+    "publishErrorDescription": "Nothing was changed. Check your connection and try again.",
+    "publishErrorTitle": "Couldn't publish the theme",
+    "publishSuccessDescription": "It's live for you now — other users get it the next time they load the app.",
+    "publishSuccessTitle": "Theme published",
+    "raw": {
+      "copyCss": "Copy CSS",
+      "copyJson": "Copy JSON",
+      "css": "Generated CSS (published theme)",
+      "json": "Stored configuration (JSON)",
+      "title": "Raw configuration"
     },
-    "searchEmptyDescription": "Try a different name, or clear the search and filters.",
-    "searchEmptyTitle": "No agents match your search",
-    "searchPlaceholder": "Search agents...",
-    "sort": {
-      "label": "Sort by",
-      "lastUpdated": "Last updated",
-      "nameAsc": "Name A–Z",
-      "nameDesc": "Name Z–A",
-      "newest": "Newest first"
+    "resetConfirmAction": "Reset and publish",
+    "resetConfirmDescription": "Removes all overrides ({count}) and immediately publishes the stock theme to every user.",
+    "resetConfirmTitle": "Reset to defaults?",
+    "resetSuccessDescription": "The stock theme is live again.",
+    "resetSuccessTitle": "Theme reset",
+    "sampler": {
+      "agentBubble": "Here's a summary of the key points…",
+      "cardDescription": "A short supporting description.",
+      "cardTitle": "Card title",
+      "charts": "Chart colors",
+      "outline": "Outline",
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "userBubble": "Summarize this document for me."
     },
-    "subtitle": "Manage your AI agents and create new ones.",
-    "title": "Agents"
+    "unsavedChanges": "Unsaved changes"
   },
   "dashboard": {
     "leaderboards": {
@@ -832,49 +972,6 @@
     "stop": "Stop",
     "title": "Send feedback"
   },
-  "palette": {
-    "create": {
-      "agent": "New agent",
-      "apiKey": "New API key",
-      "chat": "New chat",
-      "eval": "New eval",
-      "inviteUser": "Invite user",
-      "model": "New model",
-      "project": "New project",
-      "prompt": "New prompt",
-      "routine": "New routine",
-      "skill": "New skill",
-      "uploadAudio": "Upload audio",
-      "variable": "New variable"
-    },
-    "empty": "No results found.",
-    "groups": {
-      "create": "Create",
-      "navigate": "Navigate",
-      "preferences": "Preferences",
-      "recent": "Recent",
-      "search": "Search"
-    },
-    "inGroup": "— {group}",
-    "placeholder": "Type a command or search…",
-    "preferences": {
-      "themeDark": "Theme: Dark",
-      "themeLight": "Theme: Light",
-      "themeSystem": "Theme: System",
-      "toggleSidebar": "Toggle sidebar"
-    },
-    "search": {
-      "agents": "Agents",
-      "chatSessions": "Chat sessions",
-      "knowledgeContexts": "Knowledge contexts",
-      "projects": "Projects",
-      "prompts": "Prompts",
-      "skills": "Skills"
-    },
-    "searching": "Searching…",
-    "title": "Command palette",
-    "untitledSession": "Untitled session"
-  },
   "home": {
     "attention": {
       "allClear": "All clear — nothing needs your attention.",
@@ -921,6 +1018,497 @@
       "tokens": "Tokens",
       "vsAvg": "vs 7-day avg: {value}"
     }
+  },
+  "keys": {
+    "adminRoleNotice": "Admin keys currently act as a super admin — the selected role does not restrict them yet.",
+    "columns": {
+      "created": "Created",
+      "lastUsed": "Last used",
+      "name": "Name",
+      "scope": "Scope"
+    },
+    "create": {
+      "addAgent": "Add agent…",
+      "agentsLabel": "Allowed agents",
+      "agentsRequired": "Add at least one agent.",
+      "copyKey": "Copy key",
+      "createFailed": "Couldn't create the key",
+      "creating": "Creating…",
+      "description": "Name the key and choose how much access it gets.",
+      "nameLabel": "Name",
+      "namePlaceholder": "Production, Development…",
+      "nameRequired": "Enter a name for this key.",
+      "removeAgent": "Remove {name}",
+      "revealDescription": "This key is shown only once — copy it now and store it securely. You won't be able to view it again.",
+      "revealTitle": "Your new API key",
+      "roleIgnoredForAgents": "Role is ignored for agents-scoped keys.",
+      "roleLabel": "Role",
+      "rolePlaceholder": "Select role…",
+      "scopeAdminDescription": "Full access. Currently acts as a super admin, regardless of the selected role.",
+      "scopeAdminTitle": "Admin",
+      "scopeAgentsDescription": "Read-only access to the agents on the allowlist.",
+      "scopeAgentsTitle": "Agents",
+      "scopeLabel": "Scope",
+      "submit": "Create key",
+      "title": "Create API key"
+    },
+    "createKey": "Create key",
+    "description": "Service credentials for this organization.",
+    "detail": {
+      "activity": "Activity",
+      "adminScopeNote": "This key has full access — it currently acts as a super admin.",
+      "changeRoleConfirm": "Change role",
+      "changeRoleDescription": "Change the role of “{name}” to “{role}”? This changes what the key can access.",
+      "changeRoleTitle": "Change role?",
+      "copyAgentId": "Copy agent ID",
+      "created": "Created",
+      "dangerZone": "Danger zone",
+      "deleteConfirm": "Delete key",
+      "deleteDescription": "“{name}” will be deleted permanently. Requests using this key stop working immediately. This action cannot be undone.",
+      "deleteFailed": "Couldn't delete the key",
+      "deleteKey": "Delete key…",
+      "deleteTitle": "Delete API key?",
+      "deleted": "API key deleted",
+      "identity": "Identity",
+      "keyId": "Key ID",
+      "keyMaskHint": "The suffix after “sk_…/” identifies this key in logs.",
+      "keyMaskLegacyNote": "If this key was created before suffix sanitization, it appears in logs as {legacyMask} instead.",
+      "lastUsed": "Last used",
+      "role": "Role",
+      "roleNotUsed": "Not used",
+      "roleNotUsedCaption": "Roles are not used for agents-scoped keys.",
+      "roleUpdateFailed": "Couldn't update the role",
+      "roleUpdated": "Role updated",
+      "scope": "Scope"
+    },
+    "emptyDescription": "Create one to call the Exulu API from your services.",
+    "emptyTitle": "No API keys yet",
+    "neverUsed": "Never",
+    "roles": {
+      "areaAgents": "Agents",
+      "areaUsers": "Users",
+      "areaVariables": "Variables",
+      "areaWorkflows": "Workflows",
+      "empty": "No roles found.",
+      "loading": "Loading roles…",
+      "noPermissions": "No specific permissions configured",
+      "read": "Read",
+      "readWrite": "Read/Write",
+      "searchPlaceholder": "Search roles…"
+    },
+    "scopeAdmin": "Admin",
+    "scopeAgents": "Agents ({count})",
+    "searchEmptyDescription": "No keys match your search. Try a different name.",
+    "searchEmptyTitle": "No matching keys",
+    "searchPlaceholder": "Search keys…",
+    "title": "API keys",
+    "tokenCrossLink": "Looking for your personal token?",
+    "tokenCrossLinkAction": "Personal token"
+  },
+  "knowledge": {
+    "library": {
+      "backendHint": "Contexts are defined in your backend.",
+      "backendHintLink": "View docs",
+      "description": "Contexts your agents retrieve from.",
+      "empty": {
+        "description": "Contexts are defined in code by your backend team. See the docs to learn how to add one.",
+        "title": "No knowledge contexts yet",
+        "viewDocs": "View docs"
+      },
+      "noMatches": {
+        "description": "Try a different name or clear the search to see all contexts.",
+        "title": "No contexts match your search"
+      },
+      "row": {
+        "failedJobs": "{count, plural, one {# failed job} other {# failed jobs}}",
+        "ingested": "ingested",
+        "itemCount": "{count, plural, one {# item} other {# items}}",
+        "statusFailed": "{count, plural, one {# failed job — needs attention} other {# failed jobs — needs attention}}"
+      },
+      "searchPlaceholder": "Search contexts",
+      "stats": {
+        "itemsTotal": "Items total",
+        "last7Days": "vs previous 7 days",
+        "retrievals7d": "Retrievals (7 days)",
+        "upserts7d": "Upserts (7 days)"
+      },
+      "title": "Knowledge",
+      "usage": {
+        "count": "Count",
+        "donutDescription": "Distribution by label.",
+        "donutTitle": "By context",
+        "hide": "Hide usage",
+        "region": "Usage",
+        "timeSeriesDescription": "Upserts and retrievals across all contexts.",
+        "timeSeriesTitle": "Activity over time",
+        "view": "View usage"
+      }
+    },
+    "workspace": {
+      "access": {
+        "modePrivate": "Private",
+        "modePublic": "Public",
+        "modeRoles": "Roles",
+        "modeTeams": "Teams",
+        "modeUsers": "Users",
+        "subjectLabel": "item"
+      },
+      "activity": {
+        "empty": "No recent processing or embedding activity.",
+        "stageEmbedded": "Embedded",
+        "stageProcessed": "Processed",
+        "title": "Recent activity"
+      },
+      "backToLibrary": "Back to library",
+      "bulk": {
+        "cancel": "Cancel",
+        "delete-embeddings": {
+          "cta": "Confirm and delete",
+          "description": "Configure filters to select which items lose their embeddings.",
+          "title": "Delete embeddings in bulk"
+        },
+        "deleteError": "Couldn't schedule deletion",
+        "deleteScheduled": "Deletion scheduled",
+        "filter-list": {
+          "cta": "Apply filters",
+          "description": "Narrow the items table to a focused view.",
+          "title": "Filter items"
+        },
+        "generate-embeddings": {
+          "cta": "Confirm and generate",
+          "description": "Configure filters to select which items to embed.",
+          "title": "Generate embeddings in bulk"
+        },
+        "generateError": "Couldn't schedule embeddings",
+        "generateScheduled": "Embedding generation scheduled",
+        "jobsScheduled": "{count} job(s) scheduled",
+        "process": {
+          "cta": "Confirm and process",
+          "description": "Configure filters to select which items to process.",
+          "title": "Process items in bulk"
+        },
+        "processError": "Couldn't schedule processing",
+        "processScheduled": "Processing scheduled"
+      },
+      "calculated": {
+        "lastProcessedAt": "Last processed at"
+      },
+      "embeddings": {
+        "columns": {
+          "content": "Content",
+          "created": "Created",
+          "index": "#",
+          "updated": "Updated"
+        },
+        "empty": "No embeddings yet.",
+        "fallbackNote": "Showing all {count} chunks — backend pagination not yet supported.",
+        "pageOf": "Page {current} of {total}"
+      },
+      "expandEditor": {
+        "title": "Edit {label}"
+      },
+      "fields": {
+        "copyValue": "Copy {label}",
+        "description": "Description",
+        "descriptionPlaceholder": "Item description",
+        "descriptionTooLong": "Description must not exceed 10,000 characters.",
+        "descriptionTooShort": "Description must be at least 2 characters.",
+        "expand": "Expand editor",
+        "externalId": "External ID",
+        "name": "Name",
+        "namePlaceholder": "Item name",
+        "process": "Process item",
+        "removeTag": "Remove tag",
+        "tags": "Tags",
+        "tagsPlaceholder": "Type and press enter to add"
+      },
+      "filterPreview": {
+        "copyExternalId": "Copy external ID",
+        "copyMainId": "Copy main ID",
+        "created": "Created",
+        "embeddingsUpdated": "Embeddings updated",
+        "empty": "No items match the current filters.",
+        "externalId": "External ID",
+        "lastProcessed": "Last processed",
+        "loading": "Loading…",
+        "mainId": "Main ID",
+        "matchCount": "{count, plural, one {# match} other {# matches}}",
+        "subtitle": "First 3 matches sorted by most recently updated.",
+        "subtitleAffecting": "First 3 matches · this operation affects up to {count} items.",
+        "title": "Preview",
+        "updated": "Updated"
+      },
+      "itemPanel": {
+        "title": "Item details"
+      },
+      "items": {
+        "action": {
+          "archive": "Archive",
+          "clearSelection": "Clear selection",
+          "delete": "Delete",
+          "selected": "{count, plural, one {# item selected} other {# items selected}}",
+          "unarchive": "Unarchive"
+        },
+        "addFirst": "Add your first item",
+        "chunks": "{count, plural, one {# chunk} other {# chunks}}",
+        "clearFilters": "Clear filters",
+        "columns": {
+          "embeddings": "Embeddings",
+          "name": "Name",
+          "processed": "Processed",
+          "tags": "Tags",
+          "updated": "Updated"
+        },
+        "confirmDelete": {
+          "confirm": "Delete items",
+          "description": "This will permanently delete the selected items and their embeddings.",
+          "title": "Delete {count} items?"
+        },
+        "errorDescription": "An unexpected error occurred while loading items.",
+        "errorTitle": "Couldn't load items",
+        "filters": "Filters",
+        "firstPage": "First page",
+        "footer": {
+          "summary": "{selected} of {shown} selected · {total} total"
+        },
+        "never": "Never",
+        "nextPage": "Next page",
+        "noItemsDescription": "Add your first item to start ingesting content for retrieval.",
+        "noItemsTitle": "No items yet",
+        "noMatchesDescription": "Try a different search term or clear the active filters.",
+        "noMatchesTitle": "No items match",
+        "notEmbedded": "Not embedded",
+        "pageOf": "Page {current} of {total}",
+        "previousPage": "Previous page",
+        "searchPlaceholder": "Search items by name…",
+        "selectAll": "Select all",
+        "selectRow": "Select row",
+        "untitled": "Untitled",
+        "viewActive": "Active",
+        "viewArchived": "Archived"
+      },
+      "newItem": "New item",
+      "newItemDialog": {
+        "cancel": "Cancel",
+        "create": "Create item",
+        "created": "Item created",
+        "creating": "Creating…",
+        "error": "Couldn't create item",
+        "nameRequired": "Name is required",
+        "title": "New item"
+      },
+      "notFoundDescription": "The context you are looking for does not exist or was removed.",
+      "notFoundTitle": "Context not found",
+      "panel": {
+        "archived": "Archived",
+        "cancel": "Cancel",
+        "confirm": {
+          "deleteEmbeddings": {
+            "confirm": "Delete embeddings",
+            "description": "This removes all stored vectors for this item. It can be regenerated later.",
+            "title": "Delete this item's embeddings?"
+          },
+          "deleteItem": {
+            "confirm": "Delete item",
+            "description": "This permanently deletes the item and its embeddings. This action cannot be undone.",
+            "title": "Delete this item?"
+          },
+          "generate": {
+            "confirm": "Generate",
+            "description": "This will recompute embedding vectors for this item.",
+            "title": "Generate embeddings?"
+          }
+        },
+        "edit": "Edit",
+        "errorDescription": "An unexpected error occurred.",
+        "errorTitle": "Couldn't load item",
+        "menu": {
+          "archive": "Archive",
+          "delete": "Delete item",
+          "deleteEmbeddings": "Delete embeddings",
+          "generateEmbeddings": "Generate embeddings",
+          "label": "Item actions",
+          "process": "Process item",
+          "unarchive": "Unarchive"
+        },
+        "notFound": "Item not found.",
+        "save": "Save",
+        "toasts": {
+          "deleteError": "Couldn't delete",
+          "deleted": "Item deleted",
+          "embeddingsDeleted": "Embeddings deleted",
+          "generateError": "Couldn't generate embeddings",
+          "generateStarted": "Embedding generation started",
+          "processError": "Couldn't process item",
+          "processed": "Item processed",
+          "updateError": "Couldn't update item",
+          "updated": "Item updated",
+          "validation": "Form has errors"
+        }
+      },
+      "pipeline": {
+        "configuration": "Configuration",
+        "embedder": {
+          "bindingCreated": "Binding created",
+          "bindingError": "Couldn't update binding",
+          "bindingUpdated": "Binding updated",
+          "deleteEmbeddings": "Delete embeddings (bulk)",
+          "description": "The embedder generates retrieval vectors for items.",
+          "empty": "No embedder configured.",
+          "identity": "Embedder · {id}",
+          "identityLabel": "Embedder",
+          "noBindings": "No variable bindings configured.",
+          "title": "Embedder",
+          "trigger": "Trigger"
+        },
+        "emptyDescription": "This context has no sources, processor, or embedder defined in code.",
+        "emptyTitle": "No pipeline configured",
+        "jobs": "Jobs",
+        "processor": {
+          "description": "The processor transforms items before they are embedded.",
+          "descriptionLabel": "Description",
+          "embeddings": "Embeddings",
+          "embeddingsOffLabel": "Manual only",
+          "embeddingsOnLabel": "Generated automatically",
+          "empty": "No processor configured.",
+          "name": "Name",
+          "timeout": "Timeout",
+          "title": "Processor",
+          "trigger": "Trigger"
+        },
+        "run": "Run",
+        "sources": {
+          "backoff": "Backoff",
+          "description": "Sources ingest external data into this context.",
+          "empty": "No sources configured.",
+          "error": "Couldn't execute source",
+          "noParams": "No parameters configured.",
+          "noQueues": "No queues configured.",
+          "parameters": "Parameters",
+          "queued": "Source queued",
+          "retries": "Retries",
+          "schedule": "Schedule",
+          "title": "Sources",
+          "triggerCta": "Trigger source",
+          "triggerImmediate": "The source will execute immediately without queueing.",
+          "triggerQueued": "A job will be scheduled in the {queue} queue.",
+          "triggerTitle": "Trigger {name}"
+        },
+        "stageMenuLabel": "{stage} actions"
+      },
+      "sections": {
+        "access": "Access",
+        "calculated": "Calculated",
+        "embeddings": "Embeddings",
+        "fields": "Fields"
+      },
+      "tabs": {
+        "items": "Items",
+        "pipeline": "Pipeline"
+      }
+    }
+  },
+  "language": {
+    "english": "English",
+    "german": "German",
+    "switchTo": "Switch to {language}"
+  },
+  "navigation": {
+    "agents": "Agents",
+    "analytics": "Analytics",
+    "apiExplorer": "API Explorer",
+    "apiKeys": "API keys",
+    "automation": "Automation",
+    "brand": {
+      "mark": "AI",
+      "productName": "AI Studio"
+    },
+    "budgets": "Budgets",
+    "chat": "Chat",
+    "collapseSidebar": "Collapse sidebar — ⌘B",
+    "configuration": "Theme",
+    "error": {
+      "description": "Something went wrong loading the navigation. Please refresh the page.",
+      "refresh": "Refresh page",
+      "title": "Navigation error"
+    },
+    "evals": "Evals",
+    "feedback": "Feedback",
+    "groups": {
+      "administration": "Administration",
+      "build": "Build",
+      "develop": "Develop",
+      "personal": "Personal",
+      "workspace": "Workspace"
+    },
+    "home": "Home",
+    "knowledge": "Knowledge",
+    "logout": "Logout",
+    "models": "Models",
+    "openNavigation": "Open navigation",
+    "personalToken": "Personal token",
+    "projects": "Projects",
+    "prompts": "Prompts",
+    "routines": "Routines",
+    "search": "Search…",
+    "sendFeedback": "Send feedback",
+    "settings": "Settings",
+    "skills": "Skills",
+    "transcriptions": "Transcripts",
+    "userMenu": {
+      "fallbackName": "User",
+      "label": "User menu",
+      "language": "Language",
+      "theme": "Theme",
+      "themeDark": "Dark",
+      "themeLight": "Light",
+      "themeSystem": "System"
+    },
+    "usersAccess": "Users",
+    "variables": "Variables"
+  },
+  "palette": {
+    "create": {
+      "agent": "New agent",
+      "apiKey": "New API key",
+      "chat": "New chat",
+      "eval": "New eval",
+      "inviteUser": "Invite user",
+      "model": "New model",
+      "project": "New project",
+      "prompt": "New prompt",
+      "routine": "New routine",
+      "skill": "New skill",
+      "uploadAudio": "Upload audio",
+      "variable": "New variable"
+    },
+    "empty": "No results found.",
+    "groups": {
+      "create": "Create",
+      "navigate": "Navigate",
+      "preferences": "Preferences",
+      "recent": "Recent",
+      "search": "Search"
+    },
+    "inGroup": "— {group}",
+    "placeholder": "Type a command or search…",
+    "preferences": {
+      "themeDark": "Theme: Dark",
+      "themeLight": "Theme: Light",
+      "themeSystem": "Theme: System",
+      "toggleSidebar": "Toggle sidebar"
+    },
+    "search": {
+      "agents": "Agents",
+      "chatSessions": "Chat sessions",
+      "knowledgeContexts": "Knowledge contexts",
+      "projects": "Projects",
+      "prompts": "Prompts",
+      "skills": "Skills"
+    },
+    "searching": "Searching…",
+    "title": "Command palette",
+    "untitledSession": "Untitled session"
   },
   "projects": {
     "allProjects": "All projects",
@@ -1114,8 +1702,8 @@
       "essentialsTitle": "Essentials",
       "invalidVariables": "Invalid variable names: {names}. Use letters, numbers, and underscores only.",
       "markdownHint": "Markdown formatting is supported.",
-      "nameRequired": "Give the prompt a name before saving.",
       "namePlaceholder": "Customer support template",
+      "nameRequired": "Give the prompt a name before saving.",
       "noAgentsFound": "No agents found.",
       "organizeTitle": "Organize",
       "plainText": "Plain text",
@@ -1141,10 +1729,10 @@
     "emptyTitle": "No prompts yet",
     "errorDescription": "There was an error loading your prompt library. Please try again.",
     "errorTitle": "Couldn't load prompts",
-    "favorited": "Favorited",
     "favoriteAdded": "Added to favorites.",
     "favoriteFailed": "Couldn't update favorite.",
     "favoriteRemoved": "Removed from favorites.",
+    "favorited": "Favorited",
     "favoritesCount": "{count, plural, one {# favorite} other {# favorites}}",
     "favoritesOnly": "Favorites only",
     "history": {
@@ -1169,8 +1757,8 @@
     "removeFilter": "Remove {name}",
     "removeFromFavorites": "Remove from favorites",
     "restore": {
-      "charCount": "{count} characters",
       "changesPreview": "The following will be restored:",
+      "charCount": "{count} characters",
       "confirm": "Restore version",
       "defaultMessage": "Restored from v{version}",
       "description": "Apply the content from version {version}. A new version will be created with your current state first.",
@@ -1203,14 +1791,48 @@
     "tagsPlaceholder": "Search tags…",
     "title": "Prompts",
     "unknownUser": "Unknown",
-    "usedCount": "Used {count, plural, one {# time} other {# times}}",
     "usePrompt": "Use prompt",
+    "usedCount": "Used {count, plural, one {# time} other {# times}}",
     "variables": {
       "description": "Complete the following fields for \"{name}\".",
       "placeholder": "Enter {name}…",
       "title": "Fill in variables"
     },
     "varsCount": "{count, plural, one {# var} other {# vars}}"
+  },
+  "settings": {
+    "account": {
+      "description": "Who you are on this platform.",
+      "email": "Email",
+      "role": "Role",
+      "superAdmin": "Super admin",
+      "title": "Account",
+      "token": "Personal API token"
+    },
+    "appearance": {
+      "description": "Choose how the interface is themed. System follows your device setting.",
+      "title": "Appearance"
+    },
+    "description": "How Exulu looks, speaks, and responds to you.",
+    "language": {
+      "confirmAction": "Change language",
+      "confirmDescription": "Changing the language reloads the page — your unsaved system prompt edits will be lost.",
+      "confirmTitle": "Discard unsaved changes?",
+      "description": "The language of the interface.",
+      "hint": "Changing the language reloads the page.",
+      "placeholder": "Select a language",
+      "title": "Language"
+    },
+    "prompt": {
+      "charCount": "{count, plural, one {# character} other {# characters}}",
+      "description": "Added to the system prompt of every chat you start. Tell the AI who you are and how it should respond — it applies across all agents.",
+      "errorTitle": "Couldn't save your settings",
+      "placeholder": "e.g. I'm a backend engineer working in TypeScript. Keep answers concise and include code examples.",
+      "savedDescription": "Your personal system prompt now applies to new chats.",
+      "savedTitle": "Settings saved",
+      "saving": "Saving…",
+      "title": "Personal system prompt"
+    }
   },
   "skills": {
     "access": {
@@ -1415,6 +2037,26 @@
     "searchPlaceholder": "Search skills",
     "title": "Skills"
   },
+  "token": {
+    "authRequiredDescription": "Sign in to view your personal token.",
+    "authRequiredTitle": "Authentication required",
+    "cardTitle": "Token",
+    "copySnippet": "Copy example",
+    "copyToken": "Copy token",
+    "description": "Your bearer token for the Exulu API.",
+    "expired": "Expired — sign in again",
+    "expiresInHours": "Expires in {hours} h",
+    "expiresInMinutes": "Expires in {minutes} min",
+    "keysCrossLink": "Need an org-level key?",
+    "keysCrossLinkAction": "API keys",
+    "noTokenDescription": "Your session has no token. Sign in again to get a fresh one.",
+    "noTokenTitle": "No token available",
+    "securityNote": "This token acts as you. Keep it private.",
+    "sentAs": "Sent as",
+    "signInAgain": "Sign in again",
+    "title": "Personal token",
+    "usageExample": "Usage example (cURL)"
+  },
   "transcriptions": {
     "composer": {
       "audioFile": "Audio file",
@@ -1561,268 +2203,5 @@
       "uploadFailed": "Upload failed",
       "viewInLibrary": "View in library"
     }
-  },
-  "keys": {
-    "adminRoleNotice": "Admin keys currently act as a super admin — the selected role does not restrict them yet.",
-    "columns": {
-      "created": "Created",
-      "lastUsed": "Last used",
-      "name": "Name",
-      "scope": "Scope"
-    },
-    "create": {
-      "addAgent": "Add agent…",
-      "agentsLabel": "Allowed agents",
-      "agentsRequired": "Add at least one agent.",
-      "copyKey": "Copy key",
-      "createFailed": "Couldn't create the key",
-      "creating": "Creating…",
-      "description": "Name the key and choose how much access it gets.",
-      "nameLabel": "Name",
-      "namePlaceholder": "Production, Development…",
-      "nameRequired": "Enter a name for this key.",
-      "removeAgent": "Remove {name}",
-      "revealDescription": "This key is shown only once — copy it now and store it securely. You won't be able to view it again.",
-      "revealTitle": "Your new API key",
-      "roleIgnoredForAgents": "Role is ignored for agents-scoped keys.",
-      "roleLabel": "Role",
-      "rolePlaceholder": "Select role…",
-      "scopeAdminDescription": "Full access. Currently acts as a super admin, regardless of the selected role.",
-      "scopeAdminTitle": "Admin",
-      "scopeAgentsDescription": "Read-only access to the agents on the allowlist.",
-      "scopeAgentsTitle": "Agents",
-      "scopeLabel": "Scope",
-      "submit": "Create key",
-      "title": "Create API key"
-    },
-    "createKey": "Create key",
-    "description": "Service credentials for this organization.",
-    "detail": {
-      "activity": "Activity",
-      "adminScopeNote": "This key has full access — it currently acts as a super admin.",
-      "changeRoleConfirm": "Change role",
-      "changeRoleDescription": "Change the role of “{name}” to “{role}”? This changes what the key can access.",
-      "changeRoleTitle": "Change role?",
-      "copyAgentId": "Copy agent ID",
-      "created": "Created",
-      "dangerZone": "Danger zone",
-      "deleteConfirm": "Delete key",
-      "deleteDescription": "“{name}” will be deleted permanently. Requests using this key stop working immediately. This action cannot be undone.",
-      "deleteFailed": "Couldn't delete the key",
-      "deleteKey": "Delete key…",
-      "deleteTitle": "Delete API key?",
-      "deleted": "API key deleted",
-      "identity": "Identity",
-      "keyId": "Key ID",
-      "keyMaskHint": "The suffix after “sk_…/” identifies this key in logs.",
-      "keyMaskLegacyNote": "If this key was created before suffix sanitization, it appears in logs as {legacyMask} instead.",
-      "lastUsed": "Last used",
-      "role": "Role",
-      "roleNotUsed": "Not used",
-      "roleNotUsedCaption": "Roles are not used for agents-scoped keys.",
-      "roleUpdateFailed": "Couldn't update the role",
-      "roleUpdated": "Role updated",
-      "scope": "Scope"
-    },
-    "emptyDescription": "Create one to call the Exulu API from your services.",
-    "emptyTitle": "No API keys yet",
-    "neverUsed": "Never",
-    "roles": {
-      "areaAgents": "Agents",
-      "areaUsers": "Users",
-      "areaVariables": "Variables",
-      "areaWorkflows": "Workflows",
-      "empty": "No roles found.",
-      "loading": "Loading roles…",
-      "noPermissions": "No specific permissions configured",
-      "read": "Read",
-      "readWrite": "Read/Write",
-      "searchPlaceholder": "Search roles…"
-    },
-    "scopeAdmin": "Admin",
-    "scopeAgents": "Agents ({count})",
-    "searchEmptyDescription": "No keys match your search. Try a different name.",
-    "searchEmptyTitle": "No matching keys",
-    "searchPlaceholder": "Search keys…",
-    "title": "API keys",
-    "tokenCrossLink": "Looking for your personal token?",
-    "tokenCrossLinkAction": "Personal token"
-  },
-  "token": {
-    "authRequiredDescription": "Sign in to view your personal token.",
-    "authRequiredTitle": "Authentication required",
-    "cardTitle": "Token",
-    "copySnippet": "Copy example",
-    "copyToken": "Copy token",
-    "description": "Your bearer token for the Exulu API.",
-    "expired": "Expired — sign in again",
-    "expiresInHours": "Expires in {hours} h",
-    "expiresInMinutes": "Expires in {minutes} min",
-    "keysCrossLink": "Need an org-level key?",
-    "keysCrossLinkAction": "API keys",
-    "noTokenDescription": "Your session has no token. Sign in again to get a fresh one.",
-    "noTokenTitle": "No token available",
-    "securityNote": "This token acts as you. Keep it private.",
-    "sentAs": "Sent as",
-    "signInAgain": "Sign in again",
-    "title": "Personal token",
-    "usageExample": "Usage example (cURL)"
-  },
-  "auth": {
-    "boundary": {
-      "description": "The sign-in page hit an unexpected error. Please try again.",
-      "retry": "Try again",
-      "title": "Something went wrong"
-    },
-    "errors": {
-      "AccessDenied": "You don't have permission to sign in. Contact your administrator if you think this is a mistake.",
-      "Configuration": "Sign-in is not configured correctly. Please contact your administrator.",
-      "CredentialsSignin": "Incorrect email or password.",
-      "Default": "Something went wrong while signing you in. Please try again.",
-      "EmailSignin": "The sign-in code could not be sent. Check the address and try again.",
-      "OAuthAccountNotLinked": "This email is already linked to a different sign-in method. Use that method instead.",
-      "OAuthCallback": "Google sign-in did not complete. Please try again.",
-      "OAuthSignin": "Google sign-in could not be started. Please try again.",
-      "SessionRequired": "Please sign in to continue.",
-      "Verification": "That code is invalid or has expired. Request a new one and try again.",
-      "title": "Sign-in failed"
-    },
-    "footer": {
-      "copyright": "© {year}",
-      "languageLabel": "Language",
-      "terms": "Terms & Conditions"
-    },
-    "otp": {
-      "changeEmail": "Use a different email",
-      "codeLabel": "One-time code",
-      "resend": "Resend code",
-      "resendCooldown": "Resend code ({seconds}s)",
-      "resent": "A new code is on its way.",
-      "submit": "Submit code",
-      "subtitle": "We sent a 6-digit code to <strong>{email}</strong>. It expires in 3 minutes.",
-      "title": "Check your email"
-    },
-    "signIn": {
-      "continueWithGoogle": "Continue with Google",
-      "emailLabel": "Email",
-      "emailPlaceholder": "m@example.com",
-      "noAccount": "No account? Ask your administrator.",
-      "or": "or",
-      "passwordLabel": "Password",
-      "submitOtp": "Email me a code",
-      "submitPassword": "Sign in",
-      "subtitleOtp": "We'll email you a one-time code.",
-      "subtitlePassword": "Enter your email and password.",
-      "title": "Sign in",
-      "trustNote": "Processed and stored in the EU. Never used to train AI models."
-    }
-  },
-  "settings": {
-    "account": {
-      "description": "Who you are on this platform.",
-      "email": "Email",
-      "role": "Role",
-      "superAdmin": "Super admin",
-      "title": "Account",
-      "token": "Personal API token"
-    },
-    "appearance": {
-      "description": "Choose how the interface is themed. System follows your device setting.",
-      "title": "Appearance"
-    },
-    "description": "How Exulu looks, speaks, and responds to you.",
-    "language": {
-      "confirmAction": "Change language",
-      "confirmDescription": "Changing the language reloads the page — your unsaved system prompt edits will be lost.",
-      "confirmTitle": "Discard unsaved changes?",
-      "description": "The language of the interface.",
-      "hint": "Changing the language reloads the page.",
-      "placeholder": "Select a language",
-      "title": "Language"
-    },
-    "prompt": {
-      "charCount": "{count, plural, one {# character} other {# characters}}",
-      "description": "Added to the system prompt of every chat you start. Tell the AI who you are and how it should respond — it applies across all agents.",
-      "errorTitle": "Couldn't save your settings",
-      "placeholder": "e.g. I'm a backend engineer working in TypeScript. Keep answers concise and include code examples.",
-      "savedDescription": "Your personal system prompt now applies to new chats.",
-      "savedTitle": "Settings saved",
-      "saving": "Saving…",
-      "title": "Personal system prompt"
-    }
-  },
-  "configuration": {
-    "description": "White-label Exulu for your organization — changes apply to every user.",
-    "editor": {
-      "defaultValue": "Default: {value}",
-      "invalidValue": "Not a recognized color value — it will be published exactly as typed.",
-      "modified": "Modified",
-      "modifiedOnly": "Modified only",
-      "noMatches": "No variables match your filter.",
-      "resetToken": "Reset to default",
-      "searchPlaceholder": "Filter variables…"
-    },
-    "exportCopied": "CSS copied to clipboard",
-    "groups": {
-      "brand": "Brand",
-      "charts": "Charts",
-      "custom": "Custom",
-      "semantic": "Semantic",
-      "shape": "Shape & typography",
-      "sidebar": "Sidebar",
-      "surfaces": "Surfaces",
-      "text": "Text"
-    },
-    "import": {
-      "action": "Import",
-      "description": "Paste a full CSS theme with :root and .dark blocks. Detected variables merge into your draft — nothing changes for users until you publish.",
-      "detected": "{lightCount} light · {darkCount} dark variables detected",
-      "noBlocks": "No :root or .dark block found — paste a complete CSS theme.",
-      "placeholder": ":root {\n  --primary: 258 100% 60%;\n}\n\n.dark {\n  --primary: 258 100% 68%;\n}",
-      "skipped": "{count, plural, one {# line couldn't be read and will be skipped:} other {# lines couldn't be read and will be skipped:}}",
-      "successDescription": "{count, plural, one {# variable} other {# variables}} merged into your draft — review, then publish.",
-      "successTitle": "Theme imported",
-      "title": "Import theme CSS"
-    },
-    "loadErrorDescription": "Check your connection and try again.",
-    "loadErrorTitle": "Couldn't load the theme configuration",
-    "menu": {
-      "export": "Export CSS",
-      "hideRaw": "Hide raw configuration",
-      "import": "Import CSS…",
-      "reset": "Reset to defaults…",
-      "showRaw": "Show raw configuration"
-    },
-    "preview": "Preview",
-    "publish": "Publish theme",
-    "publishConfirmDescription": "{lightCount} light / {darkCount} dark overrides — this applies to every user.",
-    "publishConfirmTitle": "Publish this theme?",
-    "publishErrorDescription": "Nothing was changed. Check your connection and try again.",
-    "publishErrorTitle": "Couldn't publish the theme",
-    "publishSuccessDescription": "It's live for you now — other users get it the next time they load the app.",
-    "publishSuccessTitle": "Theme published",
-    "raw": {
-      "copyCss": "Copy CSS",
-      "copyJson": "Copy JSON",
-      "css": "Generated CSS (published theme)",
-      "json": "Stored configuration (JSON)",
-      "title": "Raw configuration"
-    },
-    "resetConfirmAction": "Reset and publish",
-    "resetConfirmDescription": "Removes all overrides ({count}) and immediately publishes the stock theme to every user.",
-    "resetConfirmTitle": "Reset to defaults?",
-    "resetSuccessDescription": "The stock theme is live again.",
-    "resetSuccessTitle": "Theme reset",
-    "sampler": {
-      "agentBubble": "Here's a summary of the key points…",
-      "cardDescription": "A short supporting description.",
-      "cardTitle": "Card title",
-      "charts": "Chart colors",
-      "outline": "Outline",
-      "primary": "Primary",
-      "secondary": "Secondary",
-      "userBubble": "Summarize this document for me."
-    },
-    "unsavedChanges": "Unsaved changes"
   }
 }

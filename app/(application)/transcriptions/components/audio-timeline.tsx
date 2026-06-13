@@ -22,7 +22,7 @@ import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
-import { getPresignedUrl } from "@/components/uppy-dashboard";
+import { getPresignedUrl } from "@/components/primitives/file-picker";
 
 import {
   formatClock,

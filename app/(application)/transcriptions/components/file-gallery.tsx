@@ -58,7 +58,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { getPresignedUrl } from "@/components/uppy-dashboard";
+import { getPresignedUrl } from "@/components/primitives/file-picker";
 import useUppy from "@/hooks/use-uppy";
 import { filesApi, type S3FileListOutput } from "@/lib/api/files";
 import { cn } from "@/lib/utils";

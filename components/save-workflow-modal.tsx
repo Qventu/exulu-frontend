@@ -17,7 +17,7 @@ import { RBACControl } from './rbac'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MessageRenderer } from './message-renderer'
 import { Conversation, ConversationContent } from './ai-elements/conversation'
-import UppyDashboard, { FileItem, getPresignedUrl } from "@/components/uppy-dashboard";
+import UppyDashboard, { FileItem, getPresignedUrl } from "@/components/primitives/file-picker";
 
 interface WorkflowTemplate {
   id: string

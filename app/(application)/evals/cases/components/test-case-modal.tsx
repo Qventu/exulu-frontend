@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import UppyDashboard, { FileItem, getPresignedUrl } from "@/components/uppy-dashboard";
+import UppyDashboard, { FileItem, getPresignedUrl } from "@/components/primitives/file-picker";
 import { MessageRenderer } from "@/components/message-renderer";
 import { Conversation, ConversationContent } from "@/components/ai-elements/conversation";
 

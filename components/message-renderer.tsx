@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { toast } from "sonner"
 import { TodoList } from "./ai-elements/todo-list"
-import { FileItem } from "./uppy-dashboard"
+import { FileItem } from "./primitives/file-picker"
 import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation"
 import { AgenticKnowledgeSourceSearchResults, KnowledgeSourceSearchResultChunk } from "@/types/models/knowledge-source-search-results"

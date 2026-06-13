@@ -35,7 +35,7 @@ import { toast } from "sonner";
 
 import { UserContext } from "@/app/(application)/authenticated";
 import { ConfigContext } from "@/components/shell/config-context";
-import { getPresignedUrl } from "@/components/uppy-dashboard";
+import { getPresignedUrl } from "@/components/primitives/file-picker";
 import { getToken } from "@/lib/api/client";
 import { sessionFilesApi } from "@/lib/api/session-files";
 import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";

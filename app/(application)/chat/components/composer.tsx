@@ -44,7 +44,7 @@ import { ConfigContext } from "@/components/shell/config-context";
 import { useLanguage } from "@/components/shell/language-provider";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/primitives/loading";
-import { FileItem } from "@/components/uppy-dashboard";
+import { FileItem } from "@/components/primitives/file-picker";
 import { ItemsSelectionModal } from "@/components/items-selection-modal";
 import { getToken } from "@/lib/api/client";
 import { cn } from "@/lib/utils";

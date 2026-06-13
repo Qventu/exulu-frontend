@@ -16,7 +16,7 @@ import { AgentAvatarGenerator } from "@/app/(application)/agents/components/agen
 import AgentVisual from "@/components/lottie";
 import { Button } from "@/components/ui/button";
 import { ConfigContext } from "@/components/shell/config-context";
-import UppyDashboard, { FileDataCard } from "@/components/uppy-dashboard";
+import UppyDashboard, { FileDataCard } from "@/components/primitives/file-picker";
 
 import { AGENT_IMAGE_UPDATE_SUPPORTED } from "../queries";
 import type { EditorSectionProps } from "./types";

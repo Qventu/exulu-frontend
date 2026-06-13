@@ -44,7 +44,7 @@ import {
   EditStyleDialog,
   type StyleEditTarget,
 } from "./edit-style-dialog";
-import UppyDashboard from "@/components/uppy-dashboard";
+import UppyDashboard from "@/components/primitives/file-picker";
 
 /**
  * Tool result payload produced by the backend image_generation widget tool.

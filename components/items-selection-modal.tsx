@@ -26,7 +26,7 @@ import { LoadingStates } from "@/components/loading-states";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ItemFormFields } from "@/components/item-form-fields";
+import { ItemFormFields } from "@/app/(application)/data/components/item-form-fields-shim";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { parsePresetItemsForDisplay, validatePresetItems, type PresetValidationResult } from "@/lib/validate-preset-items";
