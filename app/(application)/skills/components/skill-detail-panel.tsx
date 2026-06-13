@@ -502,14 +502,18 @@ export function SkillDetailPanel({
             )}
           >
             <div>
-              <p className="text-2xl font-semibold">{versionCount}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-2xl font-semibold leading-none">
+                {versionCount}
+              </p>
+              <p className="mt-1.5 inline-flex h-4 items-center text-xs leading-none text-muted-foreground">
                 {t("detail.versionsLabel")}
               </p>
             </div>
             <div>
-              <p className="text-2xl font-semibold">{skill.usage_count ?? 0}</p>
-              <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <p className="text-2xl font-semibold leading-none">
+                {skill.usage_count ?? 0}
+              </p>
+              <p className="mt-1.5 inline-flex h-4 items-center gap-1 text-xs leading-none text-muted-foreground">
                 {t("detail.usesLabel")}
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
