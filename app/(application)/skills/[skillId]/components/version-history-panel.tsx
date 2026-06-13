@@ -1,125 +1,176 @@
 "use client";
 
-import { Skill, SkillVersion } from "@/types/models/skill";
+/**
+ * VersionHistoryPanel — Sheet content listing every saved version with the
+ * current one pinned and labels/timestamps, plus a Compare button gated
+ * `current_version >= 2` (skills.md inventory #65; ladder row 65).
+ *
+ * The editor's history sheet is the canonical version-history surface
+ * (skills.md ladder row 27 / L2-dup resolution). The /skills detail panel
+ * uses a compact preview that links here for the full list.
+ */
+
+import { formatDistanceToNow } from "date-fns";
+import { de, enUS } from "date-fns/locale";
+import {
+  Clock,
+  GitBranch,
+  GitCompare,
+  History,
+  TagIcon,
+} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import * as React from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  History,
-  GitBranch,
-  Clock,
-  GitCompare,
-  TagIcon,
-} from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
-interface VersionHistoryPanelProps {
+import type { Skill, SkillHistoryEntry } from "../../types";
+
+export interface VersionHistoryPanelProps {
   skill: Skill;
   onCompare: () => void;
 }
 
-export function VersionHistoryPanel({ skill, onCompare }: VersionHistoryPanelProps) {
-  const history = skill.history ?? [];
+type VersionRow = SkillHistoryEntry & { isCurrent?: boolean };
+
+export function VersionHistoryPanel({
+  skill,
+  onCompare,
+}: VersionHistoryPanelProps) {
+  const t = useTranslations("skills");
+  const locale = useLocale();
+  const dateLocale = locale === "de" ? de : enUS;
+
+  const history = React.useMemo(
+    () => skill.history ?? [],
+    [skill.history],
+  );
   const currentVersion = skill.current_version ?? 1;
 
-  // Build a full version list from history + current
-  const allVersionEntries: Array<SkillVersion & { isCurrent?: boolean }> = [
-    {
-      version: currentVersion,
-      created_at: skill.updatedAt,
-      label: "Current",
-      isCurrent: true,
-    },
-    ...history
-      .slice()
-      .sort((a, b) => b.version - a.version),
-  ];
+  const rows = React.useMemo<VersionRow[]>(
+    () => [
+      {
+        version: currentVersion,
+        created_at: skill.updatedAt,
+        label: t("editor.history.currentLabel"),
+        isCurrent: true,
+      },
+      ...history.slice().sort((a, b) => b.version - a.version),
+    ],
+    [currentVersion, history, skill.updatedAt, t],
+  );
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b">
+    <div className="flex h-full flex-col">
+      <div className="flex flex-shrink-0 items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-2">
-          <History className="h-4 w-4 text-primary/70" />
-          <h3 className="text-sm font-semibold">Version History</h3>
+          <History
+            className="size-4 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <h3 className="text-sm font-semibold">
+            {t("editor.history.title")}
+          </h3>
         </div>
         <Button
+          type="button"
           variant="outline"
           size="sm"
-          className="h-7 text-xs gap-1.5"
           onClick={onCompare}
           disabled={currentVersion < 2}
+          className="gap-1.5"
         >
-          <GitCompare className="h-3.5 w-3.5" />
-          Compare
+          <GitCompare className="size-3.5" aria-hidden="true" />
+          {t("editor.history.compare")}
         </Button>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-3 space-y-2">
-          {allVersionEntries.map((entry, idx) => (
-            <VersionItem key={entry.version} entry={entry} isFirst={idx === 0} />
+        <div className="space-y-2 p-3">
+          {rows.map((row) => (
+            <VersionRowCard
+              key={row.version}
+              row={row}
+              dateLocale={dateLocale}
+            />
           ))}
 
-          {history.length === 0 && (
-            <div className="flex flex-col items-center py-8 text-center text-muted-foreground">
-              <GitBranch className="size-10 mb-3" />
-              <p className="text-sm">No previous versions yet</p>
-              <p className="text-xs mt-1">
-                Click "Save Version" to create a snapshot
+          {history.length === 0 ? (
+            <div className="flex flex-col items-center gap-1 py-8 text-center text-muted-foreground">
+              <GitBranch
+                className="size-9 text-muted-foreground/60"
+                aria-hidden="true"
+              />
+              <p className="text-sm">
+                {t("editor.history.emptyTitle")}
+              </p>
+              <p className="text-xs">
+                {t("editor.history.emptyHint")}
               </p>
             </div>
-          )}
+          ) : null}
         </div>
       </ScrollArea>
     </div>
   );
 }
 
-function VersionItem({
-  entry,
-  isFirst,
+function VersionRowCard({
+  row,
+  dateLocale,
 }: {
-  entry: SkillVersion & { isCurrent?: boolean };
-  isFirst: boolean;
+  row: VersionRow;
+  dateLocale: Locale;
 }) {
+  const t = useTranslations("skills");
+
   return (
     <div
       className={cn(
-        "rounded-lg border p-3 space-y-1.5 transition-colors",
-        entry.isCurrent
-          ? "bg-primary/5 border-primary/20"
+        "space-y-1.5 rounded-lg border p-3 transition-colors",
+        row.isCurrent
+          ? "border-primary/30 bg-primary/5"
           : "bg-card hover:bg-accent/30",
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <Badge
-            variant={entry.isCurrent ? "default" : "secondary"}
-            className="font-mono text-[10px] px-1.5 py-0"
+            variant={row.isCurrent ? "default" : "secondary"}
+            className="font-mono text-xs"
           >
-            v{entry.version}
+            v{row.version}
           </Badge>
-          {entry.isCurrent && (
-            <span className="text-[10px] text-primary font-semibold">CURRENT</span>
-          )}
+          {row.isCurrent ? (
+            <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+              {t("editor.history.currentBadge")}
+            </span>
+          ) : null}
         </div>
       </div>
 
-      {entry.label && !entry.isCurrent && (
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <TagIcon className="h-3 w-3" />
-          <span className="truncate">{entry.label}</span>
+      {row.label && !row.isCurrent ? (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <TagIcon className="size-3" aria-hidden="true" />
+          <span className="truncate">{row.label}</span>
         </div>
-      )}
+      ) : null}
 
-      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-        <Clock className="h-3 w-3" />
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Clock className="size-3" aria-hidden="true" />
         <span>
-          {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}
+          {formatDistanceToNow(new Date(row.created_at), {
+            addSuffix: true,
+            locale: dateLocale,
+          })}
         </span>
       </div>
     </div>
   );
 }
+
+// `Locale` type is provided by date-fns; we just declare the shape we use.
+type Locale = typeof enUS;
