@@ -251,16 +251,16 @@ export function SkillDetailPanel({
                 <Skeleton className="h-4 w-2/3" />
               </div>
             ) : skillMdMissing ? (
-              <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-500/20 dark:bg-amber-950/50">
+              <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-sm">
                 <AlertTriangle
                   aria-hidden="true"
-                  className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                  className="mt-0.5 size-4 shrink-0 text-warning"
                 />
                 <div className="space-y-0.5">
-                  <p className="text-sm font-medium text-amber-900 dark:text-amber-300">
+                  <p className="text-sm font-medium text-foreground">
                     {t("detail.skillMdMissingTitle")}
                   </p>
-                  <p className="text-xs text-amber-900/80 dark:text-amber-300/80">
+                  <p className="text-xs text-muted-foreground">
                     {t("detail.skillMdMissingDescription")}
                   </p>
                 </div>

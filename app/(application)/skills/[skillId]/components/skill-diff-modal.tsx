@@ -78,15 +78,15 @@ interface StatusConfigEntry {
 const STATUS_CONFIG: Record<DiffStatus, StatusConfigEntry> = {
   added: {
     icon: FilePlus,
-    className: "text-green-600 dark:text-green-500",
+    className: "text-success",
   },
   removed: {
     icon: FileMinus,
-    className: "text-red-600 dark:text-red-500",
+    className: "text-destructive",
   },
   modified: {
     icon: FileEdit,
-    className: "text-yellow-600 dark:text-yellow-500",
+    className: "text-warning",
   },
   unchanged: {
     icon: FileCheck,
@@ -432,7 +432,7 @@ function DiffViewerBody({
       <div className="p-4">
         <Badge
           variant="outline"
-          className="mb-3 border-green-600/30 text-green-600 dark:text-green-500"
+          className="mb-3 border-success/30 text-success"
         >
           {t("editor.diff.fileAdded", { version: toVersion })}
         </Badge>
@@ -454,7 +454,7 @@ function DiffViewerBody({
       <div className="p-4">
         <Badge
           variant="outline"
-          className="mb-3 border-red-600/30 text-red-600 dark:text-red-500"
+          className="mb-3 border-destructive/30 text-destructive"
         >
           {t("editor.diff.fileRemoved", { version: toVersion })}
         </Badge>

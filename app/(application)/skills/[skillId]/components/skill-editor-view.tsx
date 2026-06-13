@@ -585,7 +585,8 @@ export function SkillEditorView({ skillId }: SkillEditorViewProps) {
       {/* Mobile shell action — Save Version (purple) + overflow trigger.
           The shell renders these next to the burger; this slot is the only
           path to Save Version on mobile because the inline top bar's
-          purple button goes icon-only at <sm and disappears below 320px. */}
+          Save Version button is hidden below md (one canonical purple
+          primary at a time — anti-pattern #5). */}
       <MobileTopbarAction>
         {canWrite ? (
           <Button

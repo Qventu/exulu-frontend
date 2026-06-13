@@ -32,7 +32,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -77,7 +76,6 @@ export function EditorTopBar({
   onRequestSaveVersion,
 }: EditorTopBarProps) {
   const t = useTranslations("skills");
-  const router = useRouter();
   const isMobile = useIsMobile();
 
   const handleCopyId = React.useCallback(async () => {
@@ -90,9 +88,11 @@ export function EditorTopBar({
   }, [skill.id, t]);
 
   const handleBack = () => {
-    // onBack lets the host run the unsaved-leave guard before routing.
+    // The host's onBack runs the unsaved-leave guard (confirmIfDirty) and
+    // routes to /skills only after the user confirms. We must NOT call
+    // router.push here — that would race the confirm dialog and navigate
+    // away unconditionally, losing the user's edits.
     onBack();
-    router.push("/skills");
   };
 
   // OverflowMenu items — desktop just gets Copy ID; mobile absorbs
@@ -251,8 +251,10 @@ export function EditorTopBar({
           ) : null}
 
           {/* Save Version — the editor's one purple element (#47). Hidden
-              under read-only. Icon-only on tiny widths so it fits alongside
-              the truncating name on a 320px phone. */}
+              under read-only and hidden below md (the shell's
+              MobileTopbarAction renders the canonical mobile Save Version
+              button — see skill-editor-view.tsx). One purple primary at a
+              time per anti-pattern #5. */}
           {canWrite ? (
             <Button
               type="button"
@@ -260,7 +262,7 @@ export function EditorTopBar({
               onClick={onRequestSaveVersion}
               disabled={savingVersion}
               aria-busy={savingVersion}
-              className="gap-1.5"
+              className="hidden gap-1.5 md:inline-flex"
               aria-label={t("editor.topbar.saveVersion")}
             >
               {savingVersion ? (
@@ -268,9 +270,7 @@ export function EditorTopBar({
               ) : (
                 <GitBranch className="size-3.5" aria-hidden="true" />
               )}
-              <span className="hidden sm:inline">
-                {t("editor.topbar.saveVersion")}
-              </span>
+              <span>{t("editor.topbar.saveVersion")}</span>
             </Button>
           ) : null}
 
