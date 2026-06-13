@@ -17,8 +17,16 @@
 export const tierBoundaryExemptions = {
   // components/ui/ — clean.
   "components/ui": [],
-  // components/primitives/ — clean.
-  "components/primitives": [],
+  // components/primitives/ — FilePicker + QueuePanel were promoted to
+  // primitives with their data-layer reach-ins preserved (work item 2.11).
+  // FilePicker imports lib/api/files + shell/config-context (Uppy hook).
+  // QueuePanel imports @apollo/client + queries/queries.ts (the operations
+  // owner — queues are a platform concern, not a feature-local op-set).
+  // Both deviations are recorded in work item 2.11 deviations.
+  "components/primitives": [
+    "components/primitives/file-picker.tsx",
+    "components/primitives/queue-panel.tsx",
+  ],
   // Both still read from the legacy queries/queries.ts monolith.
   "components/widgets": [
     "components/widgets/role-selector.tsx",
@@ -39,9 +47,11 @@ export const tierBoundaryExemptions = {
     "app/(application)/agents/edit/[id]/sections/instructions.tsx",
     "app/(application)/agents/edit/[id]/form.tsx",
     "app/(application)/workflows/page.tsx",
-    "app/(application)/data/components/embeddings.tsx",
-    "app/(application)/data/components/sources.tsx",
-    "app/(application)/data/components/processors.tsx",
+    // stage-embedder reuses agents/edit/form.tsx's VariableSelectionElement
+    // (the cross-feature pattern that already accumulated 3 exemptions
+    // above) — work item 2.11. Promotion of VariableSelectionElement to
+    // components/widgets is queued for the variables redesign work item.
+    "app/(application)/data/[ctx]/components/stage-embedder.tsx",
   ],
 };
 
@@ -53,6 +63,12 @@ export const tierBoundaryExemptions = {
  */
 export const jsxLiteralExemptions = [
   "components/primitives/rating.tsx",
+  // FilePicker + QueuePanel use punctuation-only literals ("MB", "/", ":",
+  // "(", ")", "·") as visual separators between i18n'd values. Marking
+  // these as exemptions keeps the rule strict for content while accepting
+  // the documented architectural deviations from work item 2.11.
+  "components/primitives/file-picker.tsx",
+  "components/primitives/queue-panel.tsx",
   "components/widgets/role-selector.tsx",
   "components/widgets/team-selector.tsx",
 ];
