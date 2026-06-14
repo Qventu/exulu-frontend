@@ -189,7 +189,7 @@ export function ItemEmbeddingsSection({
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="size-7"
+                className="size-11 md:size-7"
                 disabled={page === 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 aria-label={t("workspace.items.previousPage")}
@@ -200,7 +200,7 @@ export function ItemEmbeddingsSection({
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="size-7"
+                className="size-11 md:size-7"
                 disabled={page === pageCount}
                 onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
                 aria-label={t("workspace.items.nextPage")}

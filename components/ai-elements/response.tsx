@@ -447,7 +447,7 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {(itemId && context) ? (
-                <Link className="flex items-center gap-1" href={`/data/${context}/${itemId}`} target="_blank">
+                <Link className="flex items-center gap-1" href={`/data/${context}?item=${itemId}`} target="_blank">
                   <span className="max-w-[400px] truncate hover:underline cursor-pointer">{itemName}</span>
                   <LinkIcon className="size-4" />
                 </Link>

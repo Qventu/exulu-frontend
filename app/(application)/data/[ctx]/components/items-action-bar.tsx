@@ -50,6 +50,7 @@ export function ItemsActionBar({
               type="button"
               variant="secondary"
               size="sm"
+              className="h-11 md:h-9"
               disabled={pending}
               onClick={() => onUnarchive()}
             >
@@ -60,6 +61,7 @@ export function ItemsActionBar({
               type="button"
               variant="destructive"
               size="sm"
+              className="h-11 md:h-9"
               disabled={pending}
               onClick={() => setConfirmDelete(true)}
             >
@@ -72,6 +74,7 @@ export function ItemsActionBar({
             type="button"
             variant="secondary"
             size="sm"
+            className="h-11 md:h-9"
             disabled={pending}
             onClick={() => onArchive()}
           >
@@ -83,7 +86,7 @@ export function ItemsActionBar({
           type="button"
           variant="ghost"
           size="sm"
-          className="ml-auto"
+          className="ml-auto size-11 md:size-9"
           onClick={onClear}
           aria-label={t("workspace.items.action.clearSelection")}
         >

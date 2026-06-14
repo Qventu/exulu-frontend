@@ -133,7 +133,7 @@ export function ItemsFilterPreview({
                     value={item.id}
                     label={t("workspace.filterPreview.copyMainId")}
                     size="icon"
-                    className="size-6"
+                    className="size-11 md:size-6"
                   />
                 </KV>
                 <KV
@@ -145,7 +145,7 @@ export function ItemsFilterPreview({
                       value={item.external_id}
                       label={t("workspace.filterPreview.copyExternalId")}
                       size="icon"
-                      className="size-6"
+                      className="size-11 md:size-6"
                     />
                   ) : null}
                 </KV>

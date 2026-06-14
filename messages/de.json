@@ -1219,6 +1219,7 @@
         "namePlaceholder": "Elementname",
         "process": "Element verarbeiten",
         "removeTag": "Tag entfernen",
+        "selectPlaceholder": "Wert auswählen",
         "tags": "Tags",
         "tagsPlaceholder": "Tippen und Enter drücken zum Hinzufügen"
       },

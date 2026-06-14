@@ -144,7 +144,7 @@ export function ItemFormFields({
               type="button"
               variant="ghost"
               size="sm"
-              className="absolute top-2 right-2 size-7 p-0"
+              className="absolute top-2 right-2 size-11 p-0 md:size-7"
               onClick={() =>
                 setExpanded({
                   name: "description",
@@ -206,6 +206,8 @@ export function ItemFormFields({
                   })
                 }
                 itemId={data.id ?? "new"}
+                expandLabel={t("workspace.fields.expand")}
+                selectPlaceholder={t("workspace.fields.selectPlaceholder")}
               />
             )}
           </Row>
@@ -278,12 +280,16 @@ function EditValue({
   onChange,
   onExpand,
   itemId,
+  expandLabel,
+  selectPlaceholder,
 }: {
   field: ContextField;
   value: unknown;
   onChange: (next: unknown) => void;
   onExpand: (label: string, value: unknown) => void;
   itemId: string;
+  expandLabel: string;
+  selectPlaceholder: string;
 }) {
   if (
     field.type === "code" ||
@@ -305,9 +311,9 @@ function EditValue({
           type="button"
           variant="ghost"
           size="sm"
-          className="absolute top-2 right-2 size-7 p-0"
+          className="absolute top-2 right-2 size-11 p-0 md:size-7"
           onClick={() => onExpand(field.label, value)}
-          aria-label="Expand"
+          aria-label={expandLabel}
         >
           <Expand className="size-3" />
         </Button>
@@ -338,7 +344,7 @@ function EditValue({
         onValueChange={(v) => onChange(v.toUpperCase())}
       >
         <SelectTrigger>
-          <SelectValue placeholder="Select a value" />
+          <SelectValue placeholder={selectPlaceholder} />
         </SelectTrigger>
         <SelectContent>
           {field.enumValues?.map((option) => (

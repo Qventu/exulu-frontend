@@ -1580,7 +1580,9 @@ const SearchResultItem = ({ item }: { item: ItemWithChunks }) => {
   };
 
   return (<Card className="group relative overflow-hidden hover:shadow-md transition-all duration-200 hover:border-primary/50 cursor-pointer" onClick={() => {
-    router.push(`/data/${item.context.id}/${item.id}`);
+    // /data/[ctx] workspace opens the item via the `?item=` searchParam; the
+    // legacy `/data/[ctx]/[item]` path was retired with the 2.11 redesign.
+    router.push(`/data/${item.context.id}?item=${item.id}`);
   }}>
     <CardContent className="p-4">
       {/* Item Name */}

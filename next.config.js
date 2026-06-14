@@ -37,6 +37,51 @@ const baseConfig = {
       },
     ];
   },
+  // Knowledge redesign (work item 2.11): the legacy `/data/[[...query]]`
+  // catch-all route was retired in favor of `/data` + `/data/[ctx]` with
+  // `?tab/?view/?item` params. These 308 redirects keep every previously
+  // valid URL working — covering deep links in toasts, notifications, chat
+  // citations, saved bookmarks, etc. (see design/pages/knowledge.md §3 and
+  // §4 risks: "Redirect shim must cover all 8 legacy URL shapes").
+  async redirects() {
+    return [
+      // Pipeline stage URLs → ?tab=pipeline (anchor preserves stage focus).
+      {
+        source: '/data/:ctx/sources',
+        destination: '/data/:ctx?tab=pipeline#sources',
+        permanent: true,
+      },
+      {
+        source: '/data/:ctx/processors',
+        destination: '/data/:ctx?tab=pipeline#processor',
+        permanent: true,
+      },
+      {
+        source: '/data/:ctx/embeddings',
+        destination: '/data/:ctx?tab=pipeline#embedder',
+        permanent: true,
+      },
+      // Archived item deep link → ?view=archived&item=...
+      {
+        source: '/data/:ctx/archived/:item',
+        destination: '/data/:ctx?view=archived&item=:item',
+        permanent: true,
+      },
+      // Archived list view → ?view=archived
+      {
+        source: '/data/:ctx/archived',
+        destination: '/data/:ctx?view=archived',
+        permanent: true,
+      },
+      // Item deep link → ?item=... (kept last so it doesn't shadow the
+      // segment-named routes above).
+      {
+        source: '/data/:ctx/:item',
+        destination: '/data/:ctx?item=:item',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 if (process.env.DOCKER) {

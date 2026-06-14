@@ -1219,6 +1219,7 @@
         "namePlaceholder": "Item name",
         "process": "Process item",
         "removeTag": "Remove tag",
+        "selectPlaceholder": "Select a value",
         "tags": "Tags",
         "tagsPlaceholder": "Type and press enter to add"
       },

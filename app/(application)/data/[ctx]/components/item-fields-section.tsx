@@ -91,7 +91,7 @@ export function ItemFieldsSection({
                 value={e.value}
                 label={t("workspace.fields.copyValue", { label: e.label })}
                 size="icon"
-                className="size-6"
+                className="size-11 md:size-6"
               />
             </div>
           ))}
