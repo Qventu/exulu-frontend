@@ -927,14 +927,14 @@
         "tokens": "Tokens"
       }
     },
-    "subtitle": "Monitor your AI workflows and performance metrics.",
+    "subtitle": "Monitor your AI routines and performance metrics.",
     "summary": "Summary",
     "summaryCards": {
       "agentCalls": "Agent Calls",
       "agentSessions": "Agent Sessions",
       "functionCalls": "Function Calls",
       "tokenUsage": "Token Usage",
-      "workflowRuns": "Workflow Runs"
+      "workflowRuns": "Routine runs"
     },
     "timeSeriesAnalytics": {
       "groupByOptions": {
@@ -1088,7 +1088,7 @@
       "areaAgents": "Agents",
       "areaUsers": "Users",
       "areaVariables": "Variables",
-      "areaWorkflows": "Workflows",
+      "areaWorkflows": "Routines",
       "empty": "No roles found.",
       "loading": "Loading roles…",
       "noPermissions": "No specific permissions configured",
@@ -1413,6 +1413,16 @@
     "english": "English",
     "german": "German",
     "switchTo": "Switch to {language}"
+  },
+  "n8n": {
+    "title": "Automation",
+    "description": "Build and run automations in the embedded n8n editor.",
+    "openInNewTab": "Open in new tab",
+    "iframeTitle": "n8n automation editor",
+    "notConfiguredTitle": "Automation is not configured",
+    "notConfiguredDescription": "Set N8N_URL on the server to enable the embedded editor.",
+    "mobileTitle": "The n8n editor needs a larger screen",
+    "mobileDescription": "Open the editor in a new tab on desktop to build and debug automations."
   },
   "navigation": {
     "agents": "Agents",
@@ -1800,6 +1810,210 @@
       "title": "Fill in variables"
     },
     "varsCount": "{count, plural, one {# var} other {# vars}}"
+  },
+  "routines": {
+    "title": "Routines",
+    "description": "Saved conversations that run on demand or on a schedule.",
+    "searchPlaceholder": "Search routines…",
+    "countLabel": "{count, plural, =0 {No routines} one {# routine} other {# routines}}",
+    "openChat": "Open chat",
+    "clearSearch": "Clear search",
+    "emptyTitle": "No routines yet",
+    "emptyDescription": "Save any chat conversation as a routine to run it again — on demand or on a schedule.",
+    "emptyFilteredTitle": "No matching routines",
+    "emptyFilteredDescription": "No routines match your search. Try a different term or clear the filter.",
+    "columns": {
+      "name": "Name",
+      "lastRun": "Last run",
+      "schedule": "Schedule",
+      "actions": "Actions"
+    },
+    "run": {
+      "title": "Run routine",
+      "titleNamed": "Run {name}",
+      "immediate": "Runs immediately",
+      "queuedOn": "Queued on {queue}",
+      "noVariables": "No input variables required for this routine.",
+      "placeholder": "Enter {variable}…",
+      "required": "Required",
+      "now": "Run now",
+      "queue": "Queue routine",
+      "starting": "Starting…"
+    },
+    "edit": "Edit",
+    "view": "View",
+    "noAgent": "No agent attached",
+    "noWriteAccess": "You don't have permission to run this routine",
+    "rowActions": "Routine actions",
+    "panelActions": "Routine actions",
+    "lastRun": {
+      "never": "Never run"
+    },
+    "visibility": {
+      "public": "Public",
+      "users": "Users ({count})",
+      "roles": "Roles ({count})",
+      "teams": "Teams ({count})",
+      "tooltip": "Visibility: {label}"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "runs": "Runs",
+      "schedule": "Schedule",
+      "queue": "Queue"
+    },
+    "overview": {
+      "title": "Overview",
+      "noDescription": "No description provided.",
+      "variables": "Variables",
+      "noVariables": "No variables defined.",
+      "sharing": {
+        "heading": "Sharing",
+        "private": "Private — only you can access this routine.",
+        "public": "Public — everyone can access this routine.",
+        "users": "Shared with {count, plural, one {# user} other {# users}}.",
+        "roles": "Shared with {count, plural, one {# role} other {# roles}}.",
+        "teams": "Shared with {count, plural, one {# team} other {# teams}}.",
+        "teamsDegraded": "Team sharing is not enabled — this routine is currently read-only."
+      },
+      "created": "Created",
+      "updated": "Updated"
+    },
+    "runs": {
+      "title": "Runs",
+      "count": "{count, plural, =0 {no runs} one {# run} other {# runs}}",
+      "emptyTitle": "No runs yet",
+      "emptyDescription": "Press Run to try this routine.",
+      "selectPrompt": "Select a run to view details",
+      "backToList": "Back",
+      "errorHeading": "Error",
+      "metadataHeading": "Metadata",
+      "metadataKey": "Key",
+      "metadataValue": "Value",
+      "showRaw": "Show raw payload",
+      "hideRaw": "Hide raw payload"
+    },
+    "schedule": {
+      "title": "Schedule",
+      "none": "No schedule",
+      "loading": "Loading schedule…",
+      "nextRun": "Next run",
+      "save": "Save schedule",
+      "update": "Update schedule",
+      "saving": "Saving…",
+      "remove": "Remove schedule",
+      "delete": {
+        "title": "Remove schedule?",
+        "description": "Remove the cron schedule for \"{name}\". The routine stays — only the automatic schedule is removed.",
+        "confirmLabel": "Remove"
+      },
+      "toast": {
+        "saved": "Schedule saved",
+        "saveFailed": "Could not save schedule",
+        "deleted": "Schedule removed",
+        "deleteFailed": "Could not remove schedule",
+        "invalidCron": "Invalid CRON expression"
+      },
+      "editor": {
+        "presets": "Presets",
+        "custom": "Custom CRON",
+        "selectPreset": "Select a preset",
+        "chooseAPreset": "Choose a preset…",
+        "expression": "CRON expression",
+        "cronExpression": "CRON expression",
+        "invalid": "Invalid CRON expression. Format: minute hour day month weekday",
+        "formatHelp": "Format help",
+        "formatLine": "minute hour day month weekday",
+        "minute": "minute: 0–59",
+        "hour": "hour: 0–23",
+        "day": "day: 1–31",
+        "month": "month: 1–12",
+        "weekday": "weekday: 0–7 (0 and 7 are Sunday)"
+      }
+    },
+    "queue": {
+      "title": "Queue",
+      "none": "No queue configured for this routine's agent.",
+      "manage": "Manage queue",
+      "sheetTitle": "Queue: {name}",
+      "runPrefix": "Routine run:",
+      "toast": {
+        "cannotRetry": "Cannot retry — original routine reference missing"
+      }
+    },
+    "toast": {
+      "queued": "Routine queued",
+      "started": "Routine run started",
+      "runFailed": "Could not run routine"
+    },
+    "delete": {
+      "action": "Delete",
+      "title": "Delete \"{name}\"?",
+      "descriptionBefore": "This permanently deletes the routine. To confirm, type its name",
+      "descriptionAfter": "below. Click the name to copy it.",
+      "confirmLabel": "Delete routine",
+      "success": "\"{name}\" deleted",
+      "failed": "Could not delete routine"
+    },
+    "editor": {
+      "title": {
+        "save": "Save as routine",
+        "edit": "Edit routine",
+        "view": "View routine"
+      },
+      "description": {
+        "save": "Convert this conversation into a reusable routine. Use {variable_name} syntax to create variables.",
+        "edit": "Edit this routine. Use {variable_name} syntax to create variables.",
+        "view": "View this routine's configuration.",
+        "label": "Description",
+        "placeholder": "Describe what this routine does and when to use it…"
+      },
+      "name": {
+        "label": "Routine name",
+        "placeholder": "My routine",
+        "required": "A name is required."
+      },
+      "tabs": {
+        "setup": "Setup",
+        "steps": "Steps"
+      },
+      "sharing": {
+        "heading": "Sharing & permissions",
+        "show": "Show advanced",
+        "hide": "Hide advanced",
+        "collapsed": {
+          "private": "Private — only you",
+          "public": "Public — everyone",
+          "users": "Shared with {count, plural, one {# user} other {# users}}",
+          "roles": "Shared with {count, plural, one {# role} other {# roles}}",
+          "teams": "Shared with {count, plural, one {# team} other {# teams}}",
+          "teamsDegraded": "Team sharing requires backend support — assignments will not persist."
+        }
+      },
+      "steps": {
+        "heading": "Conversation steps",
+        "tip": "Use {variable_name} syntax to create reusable variables (e.g. {company_name}).",
+        "addMessage": "Add user message",
+        "add": "Add message",
+        "placeholder": "Type the user's message…",
+        "hint": "Press Enter to add, Shift+Enter for a new line. You can attach files.",
+        "fileTypeWarning": "Make sure the selected agent supports these file types (images, documents, audio).",
+        "emptyTitle": "No messages yet",
+        "emptyDescription": "Start building your routine by adding a user message below."
+      },
+      "save": "Save routine",
+      "saving": "Saving…",
+      "update": "Update routine",
+      "updating": "Updating…",
+      "close": "Close",
+      "toast": {
+        "created": "\"{name}\" created",
+        "updated": "\"{name}\" updated",
+        "saveFailed": "Could not save routine",
+        "nameRequired": "Routine name is required",
+        "agentRequired": "Routines must have an agent attached"
+      }
+    }
   },
   "settings": {
     "account": {

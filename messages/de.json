@@ -927,14 +927,14 @@
         "tokens": "Tokens"
       }
     },
-    "subtitle": "Überwachen Sie Ihre KI-Workflows und Leistungsmetriken.",
+    "subtitle": "Überwachen Sie Ihre KI-Routinen und Leistungsmetriken.",
     "summary": "Zusammenfassung",
     "summaryCards": {
       "agentCalls": "Agenten-Aufrufe",
       "agentSessions": "Agenten-Sitzungen",
       "functionCalls": "Funktionsaufrufe",
       "tokenUsage": "Token-Nutzung",
-      "workflowRuns": "Workflow-Durchläufe"
+      "workflowRuns": "Routine-Läufe"
     },
     "timeSeriesAnalytics": {
       "groupByOptions": {
@@ -1088,7 +1088,7 @@
       "areaAgents": "Agenten",
       "areaUsers": "Benutzer",
       "areaVariables": "Variablen",
-      "areaWorkflows": "Workflows",
+      "areaWorkflows": "Routinen",
       "empty": "Keine Rollen gefunden.",
       "loading": "Rollen werden geladen…",
       "noPermissions": "Keine spezifischen Berechtigungen konfiguriert",
@@ -1413,6 +1413,16 @@
     "english": "Englisch",
     "german": "Deutsch",
     "switchTo": "Wechseln zu {language}"
+  },
+  "n8n": {
+    "title": "Automatisierung",
+    "description": "Automatisierungen im eingebetteten n8n-Editor erstellen und ausführen.",
+    "openInNewTab": "In neuem Tab öffnen",
+    "iframeTitle": "n8n Automatisierungs-Editor",
+    "notConfiguredTitle": "Automatisierung ist nicht konfiguriert",
+    "notConfiguredDescription": "Setze N8N_URL auf dem Server, um den eingebetteten Editor zu aktivieren.",
+    "mobileTitle": "Der n8n-Editor benötigt einen größeren Bildschirm",
+    "mobileDescription": "Öffne den Editor in einem neuen Tab auf dem Desktop, um Automatisierungen zu erstellen und zu debuggen."
   },
   "navigation": {
     "agents": "Agenten",
@@ -1800,6 +1810,210 @@
       "title": "Variablen ausfüllen"
     },
     "varsCount": "{count, plural, one {# Var.} other {# Var.}}"
+  },
+  "routines": {
+    "title": "Routinen",
+    "description": "Gespeicherte Unterhaltungen, die auf Abruf oder nach Zeitplan ausgeführt werden.",
+    "searchPlaceholder": "Routinen suchen…",
+    "countLabel": "{count, plural, =0 {Keine Routinen} one {# Routine} other {# Routinen}}",
+    "openChat": "Chat öffnen",
+    "clearSearch": "Suche löschen",
+    "emptyTitle": "Noch keine Routinen",
+    "emptyDescription": "Speichern Sie eine Chat-Unterhaltung als Routine, um sie erneut auszuführen — auf Abruf oder nach Zeitplan.",
+    "emptyFilteredTitle": "Keine passenden Routinen",
+    "emptyFilteredDescription": "Keine Routinen entsprechen Ihrer Suche. Versuchen Sie einen anderen Begriff oder löschen Sie den Filter.",
+    "columns": {
+      "name": "Name",
+      "lastRun": "Letzter Lauf",
+      "schedule": "Zeitplan",
+      "actions": "Aktionen"
+    },
+    "run": {
+      "title": "Routine ausführen",
+      "titleNamed": "{name} ausführen",
+      "immediate": "Wird sofort ausgeführt",
+      "queuedOn": "In Warteschlange {queue} eingereiht",
+      "noVariables": "Für diese Routine sind keine Eingabevariablen erforderlich.",
+      "placeholder": "{variable} eingeben…",
+      "required": "Erforderlich",
+      "now": "Jetzt ausführen",
+      "queue": "In Warteschlange einreihen",
+      "starting": "Wird gestartet…"
+    },
+    "edit": "Bearbeiten",
+    "view": "Ansehen",
+    "noAgent": "Kein Agent verknüpft",
+    "noWriteAccess": "Sie haben keine Berechtigung, diese Routine auszuführen",
+    "rowActions": "Routinenaktionen",
+    "panelActions": "Routinenaktionen",
+    "lastRun": {
+      "never": "Noch nie ausgeführt"
+    },
+    "visibility": {
+      "public": "Öffentlich",
+      "users": "Benutzer ({count})",
+      "roles": "Rollen ({count})",
+      "teams": "Teams ({count})",
+      "tooltip": "Sichtbarkeit: {label}"
+    },
+    "tabs": {
+      "overview": "Übersicht",
+      "runs": "Läufe",
+      "schedule": "Zeitplan",
+      "queue": "Warteschlange"
+    },
+    "overview": {
+      "title": "Übersicht",
+      "noDescription": "Keine Beschreibung vorhanden.",
+      "variables": "Variablen",
+      "noVariables": "Keine Variablen definiert.",
+      "sharing": {
+        "heading": "Freigabe",
+        "private": "Privat — nur Sie können auf diese Routine zugreifen.",
+        "public": "Öffentlich — alle haben Zugriff auf diese Routine.",
+        "users": "Geteilt mit {count, plural, one {# Benutzer} other {# Benutzern}}.",
+        "roles": "Geteilt mit {count, plural, one {# Rolle} other {# Rollen}}.",
+        "teams": "Geteilt mit {count, plural, one {# Team} other {# Teams}}.",
+        "teamsDegraded": "Team-Freigabe ist nicht aktiviert — diese Routine ist derzeit schreibgeschützt."
+      },
+      "created": "Erstellt",
+      "updated": "Aktualisiert"
+    },
+    "runs": {
+      "title": "Läufe",
+      "count": "{count, plural, =0 {keine Läufe} one {# Lauf} other {# Läufe}}",
+      "emptyTitle": "Noch keine Läufe",
+      "emptyDescription": "Drücken Sie Ausführen, um diese Routine zu testen.",
+      "selectPrompt": "Wählen Sie einen Lauf aus, um Details anzuzeigen",
+      "backToList": "Zurück",
+      "errorHeading": "Fehler",
+      "metadataHeading": "Metadaten",
+      "metadataKey": "Schlüssel",
+      "metadataValue": "Wert",
+      "showRaw": "Rohdaten anzeigen",
+      "hideRaw": "Rohdaten ausblenden"
+    },
+    "schedule": {
+      "title": "Zeitplan",
+      "none": "Kein Zeitplan",
+      "loading": "Zeitplan wird geladen…",
+      "nextRun": "Nächster Lauf",
+      "save": "Zeitplan speichern",
+      "update": "Zeitplan aktualisieren",
+      "saving": "Speichern…",
+      "remove": "Zeitplan entfernen",
+      "delete": {
+        "title": "Zeitplan entfernen?",
+        "description": "Cron-Zeitplan für \"{name}\" entfernen. Die Routine bleibt erhalten — nur der automatische Zeitplan wird entfernt.",
+        "confirmLabel": "Entfernen"
+      },
+      "toast": {
+        "saved": "Zeitplan gespeichert",
+        "saveFailed": "Zeitplan konnte nicht gespeichert werden",
+        "deleted": "Zeitplan entfernt",
+        "deleteFailed": "Zeitplan konnte nicht entfernt werden",
+        "invalidCron": "Ungültiger CRON-Ausdruck"
+      },
+      "editor": {
+        "presets": "Vorlagen",
+        "custom": "Eigenes CRON",
+        "selectPreset": "Vorlage wählen",
+        "chooseAPreset": "Vorlage auswählen…",
+        "expression": "CRON-Ausdruck",
+        "cronExpression": "CRON-Ausdruck",
+        "invalid": "Ungültiger CRON-Ausdruck. Format: Minute Stunde Tag Monat Wochentag",
+        "formatHelp": "Format-Hilfe",
+        "formatLine": "Minute Stunde Tag Monat Wochentag",
+        "minute": "Minute: 0–59",
+        "hour": "Stunde: 0–23",
+        "day": "Tag: 1–31",
+        "month": "Monat: 1–12",
+        "weekday": "Wochentag: 0–7 (0 und 7 sind Sonntag)"
+      }
+    },
+    "queue": {
+      "title": "Warteschlange",
+      "none": "Keine Warteschlange für den Agenten dieser Routine konfiguriert.",
+      "manage": "Warteschlange verwalten",
+      "sheetTitle": "Warteschlange: {name}",
+      "runPrefix": "Routinenlauf:",
+      "toast": {
+        "cannotRetry": "Wiederholung nicht möglich — ursprüngliche Routinenreferenz fehlt"
+      }
+    },
+    "toast": {
+      "queued": "Routine in Warteschlange eingereiht",
+      "started": "Routinenlauf gestartet",
+      "runFailed": "Routine konnte nicht ausgeführt werden"
+    },
+    "delete": {
+      "action": "Löschen",
+      "title": "\"{name}\" löschen?",
+      "descriptionBefore": "Damit wird die Routine endgültig gelöscht. Geben Sie zur Bestätigung den Namen ein",
+      "descriptionAfter": "unten ein. Klicken Sie auf den Namen, um ihn zu kopieren.",
+      "confirmLabel": "Routine löschen",
+      "success": "\"{name}\" gelöscht",
+      "failed": "Routine konnte nicht gelöscht werden"
+    },
+    "editor": {
+      "title": {
+        "save": "Als Routine speichern",
+        "edit": "Routine bearbeiten",
+        "view": "Routine ansehen"
+      },
+      "description": {
+        "save": "Verwandeln Sie dieses Gespräch in eine wiederverwendbare Routine. Verwenden Sie {variable_name}-Syntax für Variablen.",
+        "edit": "Bearbeiten Sie diese Routine. Verwenden Sie {variable_name}-Syntax für Variablen.",
+        "view": "Konfiguration dieser Routine ansehen.",
+        "label": "Beschreibung",
+        "placeholder": "Beschreiben Sie, was diese Routine tut und wann sie verwendet werden soll…"
+      },
+      "name": {
+        "label": "Routinenname",
+        "placeholder": "Meine Routine",
+        "required": "Ein Name ist erforderlich."
+      },
+      "tabs": {
+        "setup": "Konfiguration",
+        "steps": "Schritte"
+      },
+      "sharing": {
+        "heading": "Freigabe & Berechtigungen",
+        "show": "Erweitert anzeigen",
+        "hide": "Erweitert ausblenden",
+        "collapsed": {
+          "private": "Privat — nur Sie",
+          "public": "Öffentlich — alle",
+          "users": "Geteilt mit {count, plural, one {# Benutzer} other {# Benutzern}}",
+          "roles": "Geteilt mit {count, plural, one {# Rolle} other {# Rollen}}",
+          "teams": "Geteilt mit {count, plural, one {# Team} other {# Teams}}",
+          "teamsDegraded": "Team-Freigabe erfordert Backend-Unterstützung — Zuweisungen werden nicht gespeichert."
+        }
+      },
+      "steps": {
+        "heading": "Gesprächsschritte",
+        "tip": "Verwenden Sie {variable_name}-Syntax, um wiederverwendbare Variablen zu erstellen (z. B. {company_name}).",
+        "addMessage": "Benutzernachricht hinzufügen",
+        "add": "Nachricht hinzufügen",
+        "placeholder": "Geben Sie die Benutzernachricht ein…",
+        "hint": "Eingabetaste zum Hinzufügen, Umschalt+Eingabe für neue Zeile. Sie können Dateien anhängen.",
+        "fileTypeWarning": "Stellen Sie sicher, dass der gewählte Agent diese Dateitypen unterstützt (Bilder, Dokumente, Audio).",
+        "emptyTitle": "Noch keine Nachrichten",
+        "emptyDescription": "Beginnen Sie mit dem Aufbau Ihrer Routine, indem Sie unten eine Benutzernachricht hinzufügen."
+      },
+      "save": "Routine speichern",
+      "saving": "Speichern…",
+      "update": "Routine aktualisieren",
+      "updating": "Aktualisieren…",
+      "close": "Schließen",
+      "toast": {
+        "created": "\"{name}\" erstellt",
+        "updated": "\"{name}\" aktualisiert",
+        "saveFailed": "Routine konnte nicht gespeichert werden",
+        "nameRequired": "Routinenname ist erforderlich",
+        "agentRequired": "Routinen müssen einem Agenten zugeordnet sein"
+      }
+    }
   },
   "settings": {
     "account": {
