@@ -1,8 +1,13 @@
 "use client";
 
 /**
- * ScheduleSection — DetailSection wrapping the per-routine cron schedule
- * (workflows.md ladder items 22, 23, 24, 25).
+ * ScheduleSection — DetailSection wrapping the per-routine cron schedule for
+ * /workflows/[id] (workflows.md ladder items 22, 23, 24, 25).
+ *
+ * Body identical to the panel's schedule-section (the source the list owner
+ * deletes); only the wrapper differs (anchored <section> for useScrollSpy)
+ * and `defaultOpen` flips to true (a workbench section is "open by default";
+ * only the panel's space pressure justified the previous defaultOpen=false).
  *
  * Fetches GET_WORKFLOW_SCHEDULE once on mount (no poll). Hosts ScheduleEditor
  * for create/update. Remove goes through the shared ConfirmDialog. Refetches
@@ -20,14 +25,14 @@ import { DetailSection } from "@/components/primitives/detail-section";
 import { RelativeTime } from "@/components/primitives/relative-time";
 import { Button } from "@/components/ui/button";
 
+import { ScheduleEditor } from "../../components/schedule-editor";
 import {
   DELETE_WORKFLOW_SCHEDULE,
   GET_WORKFLOW_SCHEDULE,
   GET_WORKFLOW_TEMPLATES,
   UPSERT_WORKFLOW_SCHEDULE,
-} from "../queries";
-import type { Routine, RoutineAccess } from "../types";
-import { ScheduleEditor } from "./schedule-editor";
+} from "../../queries";
+import type { Routine, RoutineAccess } from "../../types";
 
 export interface ScheduleSectionProps {
   routine: Routine;
@@ -102,69 +107,77 @@ export function ScheduleSection({ routine, access }: ScheduleSectionProps) {
   };
 
   return (
-    <DetailSection
-      title={t("schedule.title")}
-      defaultOpen={false}
-      meta={
-        currentCron ? (
-          <code className="font-mono text-xs">{currentCron}</code>
-        ) : (
-          t("schedule.none")
-        )
-      }
-    >
-      <div className="space-y-3">
-        {loading && !current ? (
-          <p className="text-sm text-muted-foreground">{t("schedule.loading")}</p>
-        ) : null}
+    <section id="schedule" className="scroll-mt-20" tabIndex={-1}>
+      <DetailSection
+        title={t("schedule.title")}
+        defaultOpen={true}
+        meta={
+          currentCron ? (
+            <code className="font-mono text-xs">{currentCron}</code>
+          ) : (
+            t("schedule.none")
+          )
+        }
+      >
+        <div className="space-y-3">
+          {loading && !current ? (
+            <p className="text-sm text-muted-foreground">{t("schedule.loading")}</p>
+          ) : null}
 
-        {current?.next ? (
-          <p className="text-xs text-muted-foreground">
-            {t("schedule.nextRun")} <RelativeTime date={current.next} />
-          </p>
-        ) : null}
+          {current?.next ? (
+            <p className="text-xs text-muted-foreground">
+              {t("schedule.nextRun")} <RelativeTime date={current.next} />
+            </p>
+          ) : null}
 
-        <ScheduleEditor
-          value={currentCron}
-          onChange={setPendingCron}
-          disabled={!access.canWrite || upsertState.loading || deleteState.loading}
-        />
+          <ScheduleEditor
+            value={currentCron}
+            onChange={setPendingCron}
+            disabled={
+              !access.canWrite || upsertState.loading || deleteState.loading
+            }
+          />
 
-        {access.canWrite ? (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={handleSave}
-              disabled={!pendingCron || pendingCron === currentCron || upsertState.loading}
-            >
-              {upsertState.loading
-                ? t("schedule.saving")
-                : currentCron
-                  ? t("schedule.update")
-                  : t("schedule.save")}
-            </Button>
-            {currentCron ? (
+          {access.canWrite ? (
+            <div className="flex flex-wrap gap-2">
               <Button
-                variant="outline"
-                onClick={() => setDeleteOpen(true)}
-                disabled={deleteState.loading}
+                onClick={handleSave}
+                disabled={
+                  !pendingCron ||
+                  pendingCron === currentCron ||
+                  upsertState.loading
+                }
               >
-                <Trash2 aria-hidden="true" className="mr-2 size-4" />
-                {t("schedule.remove")}
+                {upsertState.loading
+                  ? t("schedule.saving")
+                  : currentCron
+                    ? t("schedule.update")
+                    : t("schedule.save")}
               </Button>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+              {currentCron ? (
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteOpen(true)}
+                  disabled={deleteState.loading}
+                >
+                  <Trash2 aria-hidden="true" className="mr-2 size-4" />
+                  {t("schedule.remove")}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
 
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title={t("schedule.delete.title")}
-        description={t("schedule.delete.description", { name: routine.name })}
-        variant="destructive"
-        onConfirm={handleConfirmDelete}
-        confirmLabel={t("schedule.delete.confirmLabel")}
-      />
-    </DetailSection>
+        <ConfirmDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          title={t("schedule.delete.title")}
+          description={t("schedule.delete.description", { name: routine.name })}
+          variant="destructive"
+          onConfirm={handleConfirmDelete}
+          confirmLabel={t("schedule.delete.confirmLabel")}
+        />
+      </DetailSection>
+    </section>
   );
 }

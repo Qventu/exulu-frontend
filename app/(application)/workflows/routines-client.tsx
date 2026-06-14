@@ -3,44 +3,37 @@
 /**
  * RoutinesClient — top-level 'use client' container for /workflows (Routines).
  *
- * Owns: list query (useRoutinesIndex), batched agent/lastRun/schedule lookups,
- * selection state (panel + run dialog + queue sheet), the four route-level
- * dialog/sheet mount points, and the mobile topbar action.
+ * After the workbench promotion (work item: routine detail panel → routed
+ * subpage at /workflows/[id]): this file no longer owns selection, the
+ * detail panel, or the queue sheet. Row click navigates to the subpage;
+ * RoutineEditorDialog, DeleteRoutineDialog and RunRoutineDialog stay
+ * mounted here because they're still launched from row overflow actions
+ * (Edit / View / Delete) and from the Quick-Run cell.
  *
- * Single-overlay invariant (architect risk): the page tracks exactly ONE
- * active overlay state at a time — opening the run dialog closes the queue
- * sheet and vice versa.
+ * Single-overlay invariant carried over for the dialogs still hosted here:
+ * only one of {run, editor, delete} is active at a time. The Queue Sheet
+ * moves to the subpage workbench (only one routine selected there).
  *
  * NO primary action on the PageHeader: routines are created exclusively from
  * chat (workflows.md §3). The EmptyState carries the "Open chat" link; the
  * mobile topbar surfaces a quiet "Open chat" shortcut.
  */
 
-import { useMutation } from "@apollo/client";
 import { MessageSquare } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
-import { toast } from "sonner";
 
 import { UserContext } from "@/app/(application)/authenticated";
-import { ListDetail } from "@/components/primitives/list-detail";
 import { PageHeader } from "@/components/primitives/page-header";
 import { PageShell } from "@/components/primitives/page-shell";
-import { QueuePanel } from "@/components/primitives/queue-panel";
 import { MobileTopbarAction } from "@/components/shell/mobile-topbar";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 
 import { routineAccess } from "./access";
 import { RoutineEditorDialog } from "./components/routine-editor-dialog";
 import { RoutineList } from "./components/routine-list";
-import { RoutinePanel } from "./components/routine-panel";
 import { RoutineToolbar } from "./components/routine-toolbar";
 import { RoutinesEmptyState } from "./components/empty-state";
 import { DeleteRoutineDialog } from "./components/delete-routine-dialog";
@@ -52,7 +45,6 @@ import {
   useRoutinesIndex,
   useSchedulesForPage,
 } from "./hooks";
-import { RUN_WORKFLOW } from "./queries";
 import type {
   Routine,
   RoutineAccess,
@@ -62,10 +54,7 @@ import type {
 export function RoutinesClient() {
   const t = useTranslations("routines");
   const { user } = React.useContext(UserContext);
-
-  // Page-level RUN_WORKFLOW for non-interactive queue retries (workflows.md
-  // ladder #26 / #33). Inline mutation avoids the dialog overwrite bug.
-  const [runWorkflowMutation] = useMutation(RUN_WORKFLOW);
+  const router = useRouter();
 
   const {
     items,
@@ -73,7 +62,7 @@ export function RoutinesClient() {
     loading,
     error,
     refetch,
-    page,
+    page: _page,
     setPage,
     search,
     setSearch,
@@ -90,17 +79,9 @@ export function RoutinesClient() {
   const lastRunById = useLastRunForPage(workflowIds);
   const scheduleById = useSchedulesForPage(workflowIds);
 
-  // Single-source-of-truth overlay state (architect risk).
-  type Overlay =
-    | { kind: "none" }
-    | { kind: "run"; request: RunRoutineRequest }
-    | { kind: "queue"; queueName: string };
-  const [overlay, setOverlay] = React.useState<Overlay>({ kind: "none" });
-
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
-  const selected = React.useMemo(
-    () => items.find((r) => r.id === selectedId) ?? null,
-    [items, selectedId],
+  // Run dialog request (still page-level — Quick-Run cell + row overflow Run).
+  const [runRequest, setRunRequest] = React.useState<RunRoutineRequest | null>(
+    null,
   );
 
   // Editor (Save / Edit / View)
@@ -116,24 +97,13 @@ export function RoutinesClient() {
 
   const { removeRoutine } = useRoutineMutations();
 
-  // Keep selection valid after refetch
-  React.useEffect(() => {
-    if (!selectedId) return;
-    if (items.find((r) => r.id === selectedId)) return;
-    setSelectedId(null);
-  }, [items, selectedId]);
-
   // Access computation per routine.
   const accessFor = React.useCallback(
     (routine: Routine): RoutineAccess => routineAccess(routine, user),
     [user],
   );
 
-  // Resolve agentName / queueName via the agents map.
-  const agentNameOf = React.useCallback(
-    (routine: Routine): string | null => agents[routine.agent]?.name ?? null,
-    [agents],
-  );
+  // Resolve queueName via the agents map (used for run dialog wiring).
   const queueNameOf = React.useCallback(
     (routine: Routine): string | null =>
       agents[routine.agent]?.queueName ?? null,
@@ -143,21 +113,15 @@ export function RoutinesClient() {
   /* ---- Run wiring -------------------------------------------------------- */
 
   const requestRun = React.useCallback(
-    (
-      routine: Routine,
-      prefill?: Record<string, string>,
-    ) => {
+    (routine: Routine, prefill?: Record<string, string>) => {
       const queue = queueNameOf(routine) ?? undefined;
       const variables = (routine.variables ?? []) as string[];
-      setOverlay({
-        kind: "run",
-        request: {
-          id: routine.id,
-          queue,
-          variables,
-          prefill,
-          routineName: routine.name,
-        },
+      setRunRequest({
+        id: routine.id,
+        queue,
+        variables,
+        prefill,
+        routineName: routine.name,
       });
     },
     [queueNameOf],
@@ -174,18 +138,11 @@ export function RoutinesClient() {
   const handleDelete = React.useCallback(
     async (id: string) => {
       await removeRoutine(id);
-      if (selectedId === id) setSelectedId(null);
       setPendingDelete(null);
       await refetch();
     },
-    [removeRoutine, refetch, selectedId],
+    [removeRoutine, refetch],
   );
-
-  /* ---- Queue sheet (page-level) ----------------------------------------- */
-
-  const openQueueSheet = (queueName: string) => {
-    setOverlay({ kind: "queue", queueName });
-  };
 
   /* ---- Render branches --------------------------------------------------- */
 
@@ -196,45 +153,6 @@ export function RoutinesClient() {
     search.trim().length === 0;
 
   const isFiltered = search.trim().length > 0;
-
-  // List region. When the initial list is empty (no search), DataTable's
-  // empty slot renders a stylish full EmptyState; when filtered-empty we
-  // show the "no match" variant via the same primitive.
-  const listRegion = (
-    <RoutineList
-      items={items}
-      loading={loading}
-      error={
-        error
-          ? {
-              message: error.message,
-              onRetry: () => refetch(),
-            }
-          : null
-      }
-      pageInfo={pageInfo}
-      onPageChange={setPage}
-      lastRunById={lastRunById}
-      scheduleById={scheduleById}
-      accessFor={accessFor}
-      onRowClick={(routine) => setSelectedId(routine.id)}
-      onRun={(routine) => requestRun(routine)}
-      onEdit={(routine) => openEditor(routine, "edit")}
-      onView={(routine) => openEditor(routine, "view")}
-      onDelete={(routine) => setPendingDelete(routine)}
-      emptyTitle={
-        isFiltered ? t("emptyFilteredTitle") : t("emptyTitle")
-      }
-      emptyDescription={
-        isFiltered ? t("emptyFilteredDescription") : t("emptyDescription")
-      }
-      emptyAction={
-        isFiltered
-          ? { label: t("clearSearch"), onClick: () => setSearch("") }
-          : { label: t("openChat"), href: "/chat" }
-      }
-    />
-  );
 
   const countSlot =
     !loading && pageInfo ? (
@@ -268,126 +186,52 @@ export function RoutinesClient() {
             <RoutinesEmptyState />
           </div>
         ) : (
-          // No outer card chrome — DataTable already wraps itself in a
-          // `rounded-md border` shell (2026-06-14 QA: outer + inner card
-          // looked card-in-card; flex container is enough here).
-          <div className="flex min-h-[60vh] overflow-hidden lg:min-h-[calc(100dvh-18rem)]">
-            <ListDetail<Routine>
-              detailMode="panel"
-              detailPresentation="docked"
-              // "compact" (default): list flex-1, detail w-96/xl:w-[28rem].
-              // The routines list is a multi-column TABLE; "primary" was
-              // squeezing every column into multi-line rows on detail open.
-              detailEmphasis="compact"
-              items={items}
-              selected={selected}
-              onSelect={(item) => setSelectedId(item ? item.id : null)}
-              detailTitle={(item) => item.name}
-              detail={(item) => {
-                const access = accessFor(item);
-                return (
-                  <RoutinePanel
-                    routine={item}
-                    access={access}
-                    agentName={agentNameOf(item)}
-                    queueName={queueNameOf(item)}
-                    onRun={() => requestRun(item)}
-                    onEdit={() => openEditor(item, "edit")}
-                    onView={() => openEditor(item, "view")}
-                    onDelete={() => setPendingDelete(item)}
-                    onManageQueue={openQueueSheet}
-                  />
-                );
-              }}
-              emptyDetail={
-                <div className="flex h-full w-full items-center justify-center p-6">
-                  <RoutinesEmptyState
-                    filtered={isFiltered}
-                    onClearFilter={
-                      isFiltered ? () => setSearch("") : undefined
-                    }
-                  />
-                </div>
-              }
-              list={listRegion}
-              className="w-full"
-            />
-          </div>
+          <RoutineList
+            items={items}
+            loading={loading}
+            error={
+              error
+                ? {
+                    message: error.message,
+                    onRetry: () => refetch(),
+                  }
+                : null
+            }
+            pageInfo={pageInfo}
+            onPageChange={setPage}
+            lastRunById={lastRunById}
+            scheduleById={scheduleById}
+            accessFor={accessFor}
+            onRowClick={(routine) =>
+              router.push(`/workflows/${routine.id}`)
+            }
+            onRun={(routine) => requestRun(routine)}
+            onEdit={(routine) => openEditor(routine, "edit")}
+            onView={(routine) => openEditor(routine, "view")}
+            onDelete={(routine) => setPendingDelete(routine)}
+            emptyTitle={
+              isFiltered ? t("emptyFilteredTitle") : t("emptyTitle")
+            }
+            emptyDescription={
+              isFiltered ? t("emptyFilteredDescription") : t("emptyDescription")
+            }
+            emptyAction={
+              isFiltered
+                ? { label: t("clearSearch"), onClick: () => setSearch("") }
+                : { label: t("openChat"), href: "/chat" }
+            }
+          />
         )}
       </div>
 
-      {/* Run dialog (page-level) */}
+      {/* Run dialog (page-level — Quick-Run + row overflow Run) */}
       <RunRoutineDialog
-        request={overlay.kind === "run" ? overlay.request : null}
+        request={runRequest}
         onClose={async () => {
-          setOverlay({ kind: "none" });
+          setRunRequest(null);
           await refetch();
         }}
       />
-
-      {/* Queue sheet (page-level) */}
-      <Sheet
-        open={overlay.kind === "queue"}
-        onOpenChange={(open) => {
-          if (!open) setOverlay({ kind: "none" });
-        }}
-      >
-        <SheetContent
-          side="right"
-          className="w-full overflow-y-auto sm:max-w-2xl"
-        >
-          <SheetHeader>
-            <SheetTitle>
-              {overlay.kind === "queue"
-                ? t("queue.sheetTitle", { name: overlay.queueName })
-                : t("queue.title")}
-            </SheetTitle>
-          </SheetHeader>
-          {overlay.kind === "queue" ? (
-            <div className="mt-4">
-              <QueuePanel
-                queueName={overlay.queueName}
-                displayName={overlay.queueName}
-                canWrite={true}
-                enableDeleteOriginalAfterRetry={true}
-                nameGenerator={(job) => {
-                  const data = job.data as { workflow?: string } | undefined;
-                  return `${t("queue.runPrefix")} ${data?.workflow ?? job.id}`;
-                }}
-                retryJob={async (job) => {
-                  const data = job.data as
-                    | {
-                        workflow?: string;
-                        inputs?: Record<string, string>;
-                      }
-                    | undefined;
-                  if (!data?.workflow) {
-                    toast.error(t("queue.toast.cannotRetry"));
-                    return true;
-                  }
-                  // Non-interactive retry via RUN_WORKFLOW with original
-                  // inputs (workflows.md ladder #26). Mirrors evals'
-                  // direct-mutation retry — never opens the run dialog,
-                  // never overwrites overlay state on bulk retry.
-                  try {
-                    await runWorkflowMutation({
-                      variables: {
-                        id: data.workflow,
-                        variables: data.inputs ?? {},
-                      },
-                    });
-                  } catch (err) {
-                    toast.error(t("toast.runFailed"), {
-                      description: (err as Error).message,
-                    });
-                  }
-                  return true;
-                }}
-              />
-            </div>
-          ) : null}
-        </SheetContent>
-      </Sheet>
 
       {/* Editor dialog */}
       {editorState ? (

@@ -1891,7 +1891,8 @@
       "metadataKey": "Key",
       "metadataValue": "Value",
       "showRaw": "Show raw payload",
-      "hideRaw": "Hide raw payload"
+      "hideRaw": "Hide raw payload",
+      "retry": "Retry with edits"
     },
     "schedule": {
       "title": "Schedule",
@@ -1945,6 +1946,12 @@
       "queued": "Routine queued",
       "started": "Routine run started",
       "runFailed": "Could not run routine"
+    },
+    "workbench": {
+      "notFoundTitle": "Routine not found",
+      "notFoundDescription": "This routine could not be loaded. It may have been deleted, or you may not have access.",
+      "usesAgent": "Uses",
+      "copyId": "Copy routine ID"
     },
     "delete": {
       "action": "Delete",

@@ -1891,7 +1891,8 @@
       "metadataKey": "Schlüssel",
       "metadataValue": "Wert",
       "showRaw": "Rohdaten anzeigen",
-      "hideRaw": "Rohdaten ausblenden"
+      "hideRaw": "Rohdaten ausblenden",
+      "retry": "Erneut ausführen mit Änderungen"
     },
     "schedule": {
       "title": "Zeitplan",
@@ -1945,6 +1946,12 @@
       "queued": "Routine in Warteschlange eingereiht",
       "started": "Routinenlauf gestartet",
       "runFailed": "Routine konnte nicht ausgeführt werden"
+    },
+    "workbench": {
+      "notFoundTitle": "Routine nicht gefunden",
+      "notFoundDescription": "Diese Routine konnte nicht geladen werden. Sie wurde möglicherweise gelöscht oder Sie haben keinen Zugriff.",
+      "usesAgent": "Verwendet",
+      "copyId": "Routine-ID kopieren"
     },
     "delete": {
       "action": "Löschen",

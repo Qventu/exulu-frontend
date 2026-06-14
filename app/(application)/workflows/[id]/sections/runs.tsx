@@ -3,13 +3,24 @@
 /**
  * RunsSection — flat list of recent runs that expand IN PLACE.
  *
- * Replaces the previous two-column list+detail layout (2026-06-14 QA: a
- * detail-inside-detail was fighting the routines ListDetail for space —
- * four nav altitudes deep). New model: each run is a row showing summary
- * inline (state badge + timestamps + duration if available + a one-line
- * error preview when failed); clicking a row toggles an inline disclosure
- * with the full error block, metadata table, and a Raw JSON toggle. At
- * most one run is expanded at a time. No second navigation altitude.
+ * Wrapper for the /workflows/[id] workbench. The body (RunRow + listing
+ * behaviour + lazy detail fetch) is COPIED BYTE-FOR-BYTE from the deleted
+ * /workflows/components/runs-section.tsx — the 2026-06-14 flat-list inline-
+ * disclosure pattern is the keeper and MUST NOT drift.
+ *
+ * Wrapper additions over the panel version:
+ * - <section id="runs" className="scroll-mt-20" tabIndex={-1}> for useScrollSpy
+ *   and SectionNav's scrollIntoView+focus contract.
+ * - Optional onRetry prop — the workbench passes a handler that opens the
+ *   RunRoutineDialog pre-filled with the row's last variables (where
+ *   available). The base behaviour (collapse / expand / lazy fetch) is
+ *   unaffected when onRetry is omitted.
+ *
+ * Original pattern: each run is a row showing summary inline (state badge +
+ * timestamps + duration if available + a one-line error preview when failed);
+ * clicking a row toggles an inline disclosure with the full error block,
+ * metadata table, and a Raw JSON toggle. At most one run is expanded at a
+ * time. No second navigation altitude.
  *
  * Detail data is fetched lazily on first expand (GET_JOB_RESULT_BY_ID,
  * cache-first); the row stays mounted so re-collapse is instant.
@@ -42,8 +53,8 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
-import { GET_JOB_RESULTS_LIGHT, GET_JOB_RESULT_BY_ID } from "../queries";
-import type { Routine } from "../types";
+import { GET_JOB_RESULTS_LIGHT, GET_JOB_RESULT_BY_ID } from "../../queries";
+import type { Routine } from "../../types";
 
 type RunListItem = {
   id: string;
@@ -104,9 +115,11 @@ function previewError(error: unknown): string | null {
 
 export interface RunsSectionProps {
   routine: Routine;
+  /** Subpage hosts the run dialog → row "Retry" calls back here. */
+  onRetry?: (prefill: Record<string, string>) => void;
 }
 
-export function RunsSection({ routine }: RunsSectionProps) {
+export function RunsSection({ routine, onRetry }: RunsSectionProps) {
   const t = useTranslations("routines");
   const tCommon = useTranslations("common");
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
@@ -129,45 +142,48 @@ export function RunsSection({ routine }: RunsSectionProps) {
   const runs = listData?.job_resultsPagination?.items ?? [];
 
   return (
-    <DetailSection
-      title={t("runs.title")}
-      defaultOpen={true}
-      meta={listLoading ? undefined : t("runs.count", { count: runs.length })}
-    >
-      {listLoading && runs.length === 0 ? (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, idx) => (
-            <Skeleton key={idx} className="h-14 w-full" />
-          ))}
-        </div>
-      ) : runs.length === 0 ? (
-        <EmptyState
-          variant="quiet"
-          icon={Info}
-          title={t("runs.emptyTitle")}
-          description={t("runs.emptyDescription")}
-        />
-      ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-md border">
-          {runs.map((run) => (
-            <RunRow
-              key={run.id}
-              run={run}
-              expanded={expandedId === run.id}
-              onToggle={() =>
-                setExpandedId((id) => (id === run.id ? null : run.id))
-              }
-              showRaw={!!showRawById[run.id]}
-              onToggleRaw={() =>
-                setShowRawById((m) => ({ ...m, [run.id]: !m[run.id] }))
-              }
-              t={t}
-              tCommon={tCommon}
-            />
-          ))}
-        </ul>
-      )}
-    </DetailSection>
+    <section id="runs" className="scroll-mt-20" tabIndex={-1}>
+      <DetailSection
+        title={t("runs.title")}
+        defaultOpen={true}
+        meta={listLoading ? undefined : t("runs.count", { count: runs.length })}
+      >
+        {listLoading && runs.length === 0 ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <Skeleton key={idx} className="h-14 w-full" />
+            ))}
+          </div>
+        ) : runs.length === 0 ? (
+          <EmptyState
+            variant="quiet"
+            icon={Info}
+            title={t("runs.emptyTitle")}
+            description={t("runs.emptyDescription")}
+          />
+        ) : (
+          <ul className="divide-y divide-border overflow-hidden rounded-md border">
+            {runs.map((run) => (
+              <RunRow
+                key={run.id}
+                run={run}
+                expanded={expandedId === run.id}
+                onToggle={() =>
+                  setExpandedId((id) => (id === run.id ? null : run.id))
+                }
+                showRaw={!!showRawById[run.id]}
+                onToggleRaw={() =>
+                  setShowRawById((m) => ({ ...m, [run.id]: !m[run.id] }))
+                }
+                onRetry={onRetry}
+                t={t}
+                tCommon={tCommon}
+              />
+            ))}
+          </ul>
+        )}
+      </DetailSection>
+    </section>
   );
 }
 
@@ -177,6 +193,7 @@ interface RunRowProps {
   onToggle: () => void;
   showRaw: boolean;
   onToggleRaw: () => void;
+  onRetry?: (prefill: Record<string, string>) => void;
   t: ReturnType<typeof useTranslations>;
   tCommon: ReturnType<typeof useTranslations>;
 }
@@ -187,6 +204,7 @@ function RunRow({
   onToggle,
   showRaw,
   onToggleRaw,
+  onRetry,
   t,
   tCommon,
 }: RunRowProps) {
@@ -208,6 +226,18 @@ function RunRow({
   const detail = detailData?.job_resultById;
   const mapped = mapDot(run.state);
   const errorPreview = previewError(detail?.error);
+
+  // Build retry prefill from the run's metadata.inputs (mirrors the queue
+  // panel's retry behaviour). When metadata is missing or inputs aren't
+  // present, the retry button still opens the dialog (empty prefill).
+  const handleRetry = onRetry
+    ? () => {
+        const inputs =
+          (detail?.metadata as { inputs?: Record<string, string> } | null | undefined)
+            ?.inputs ?? {};
+        onRetry(inputs);
+      }
+    : undefined;
 
   return (
     <li>
@@ -307,7 +337,7 @@ function RunRow({
                 </div>
               ) : null}
 
-              <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -316,23 +346,28 @@ function RunRow({
                 >
                   {showRaw ? t("runs.hideRaw") : t("runs.showRaw")}
                 </Button>
-                {showRaw ? (
-                  <CodeBlock
-                    language="json"
-                    code={JSON.stringify(
-                      {
-                        result: detail.result,
-                        error: detail.error,
-                        metadata: detail.metadata,
-                      },
-                      null,
-                      2,
-                    )}
-                  >
-                    <CodeBlockCopyButton />
-                  </CodeBlock>
+                {handleRetry ? (
+                  <Button variant="outline" size="sm" onClick={handleRetry}>
+                    {t("runs.retry")}
+                  </Button>
                 ) : null}
               </div>
+              {showRaw ? (
+                <CodeBlock
+                  language="json"
+                  code={JSON.stringify(
+                    {
+                      result: detail.result,
+                      error: detail.error,
+                      metadata: detail.metadata,
+                    },
+                    null,
+                    2,
+                  )}
+                >
+                  <CodeBlockCopyButton />
+                </CodeBlock>
+              ) : null}
             </>
           ) : (
             <p className="text-xs text-muted-foreground">
