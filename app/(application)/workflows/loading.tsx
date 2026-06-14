@@ -23,6 +23,8 @@ export default function Loading() {
         </div>
 
         <div className="flex min-h-[60vh] gap-0 overflow-hidden rounded-md border bg-card">
+          {/* Skeleton kept with the card chrome here because there's no
+              real DataTable to provide its own border during loading. */}
           <div className="flex-1 space-y-2 p-2">
             {Array.from({ length: 8 }).map((_, i) => (
               <Skeleton key={i} className="h-12 w-full" />

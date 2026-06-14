@@ -268,11 +268,17 @@ export function RoutinesClient() {
             <RoutinesEmptyState />
           </div>
         ) : (
-          <div className="flex min-h-[60vh] overflow-hidden rounded-md border bg-card lg:min-h-[calc(100dvh-18rem)]">
+          // No outer card chrome — DataTable already wraps itself in a
+          // `rounded-md border` shell (2026-06-14 QA: outer + inner card
+          // looked card-in-card; flex container is enough here).
+          <div className="flex min-h-[60vh] overflow-hidden lg:min-h-[calc(100dvh-18rem)]">
             <ListDetail<Routine>
               detailMode="panel"
               detailPresentation="docked"
-              detailEmphasis="primary"
+              // "compact" (default): list flex-1, detail w-96/xl:w-[28rem].
+              // The routines list is a multi-column TABLE; "primary" was
+              // squeezing every column into multi-line rows on detail open.
+              detailEmphasis="compact"
               items={items}
               selected={selected}
               onSelect={(item) => setSelectedId(item ? item.id : null)}

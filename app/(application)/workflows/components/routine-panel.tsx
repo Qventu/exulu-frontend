@@ -68,30 +68,29 @@ export function RoutinePanel({
   const runButton = (
     <Button onClick={onRun} disabled={runDisabled} size="sm">
       <Play aria-hidden="true" className="mr-2 size-4" />
-      {t("run")}
+      {t("runActionLabel")}
     </Button>
   );
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Header */}
-      <header className="border-b p-4">
-        <div className="flex flex-wrap items-start gap-3">
-          <div className="min-w-0 flex-1 space-y-1">
-            <h2 className="text-lg font-semibold leading-tight">{routine.name}</h2>
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              {routine.agent ? (
-                <Link
-                  href={`/agents/edit/${routine.agent}`}
-                  className="hover:text-foreground hover:underline"
-                >
-                  {agentName ?? routine.agent}
-                </Link>
-              ) : (
-                <span>{t("noAgent")}</span>
-              )}
-              <VisibilityChip routine={routine} />
-            </div>
+      {/* Subheader — the routine name + close X live in the ListDetail bar
+          above (2026-06-14 QA: dropping the duplicate <h2>). This row carries
+          only metadata + actions. */}
+      <header className="border-b px-4 py-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            {routine.agent ? (
+              <Link
+                href={`/agents/edit/${routine.agent}`}
+                className="hover:text-foreground hover:underline"
+              >
+                {agentName ?? routine.agent}
+              </Link>
+            ) : (
+              <span>{t("noAgent")}</span>
+            )}
+            <VisibilityChip routine={routine} />
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {runDisabled ? (
