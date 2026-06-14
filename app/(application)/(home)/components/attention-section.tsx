@@ -4,7 +4,7 @@
  * Region C — "Needs attention" (design/pages/dashboard.md §3 #4).
  *
  * Composes the RBAC-gated failure sources into the shared AttentionList
- * primitive: failed/stuck background jobs of the last 24h (workflow runs for
+ * primitive: failed/stuck background jobs of the last 24h (routine runs for
  * workflows:write, eval jobs for evals:read — knowledge embedding/processing
  * failures land in the same job_results feed, see hooks.ts) and budgets at
  * ≥80% / over pace (budget_management:read). Healthy state collapses to one

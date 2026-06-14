@@ -41,7 +41,7 @@ export interface RoleSelectorPermissionCopy {
 
 const DEFAULT_PERMISSION_COPY: RoleSelectorPermissionCopy = {
   agents: "Agents",
-  workflows: "Workflows",
+  workflows: "Routines",
   variables: "Variables",
   users: "Users",
   readWrite: "Read/Write",

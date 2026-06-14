@@ -31,9 +31,9 @@ const PERMISSION_AREAS = [
     },
     {
         key: "workflows" as const,
-        label: "Workflows",
+        label: "Routines",
         icon: Workflow,
-        description: "Workflow templates and executions"
+        description: "Routines and their runs"
     },
     {
         key: "variables" as const,

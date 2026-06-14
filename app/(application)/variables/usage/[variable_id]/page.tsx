@@ -126,9 +126,9 @@ export default function VariableUsagePage() {
             ...prev,
             [resourceId]: {
               ...prev[resourceId],
-              name: type === 'agent' ? 'Unknown Agent' : 'Unknown Flow',
+              name: type === 'agent' ? 'Unknown Agent' : 'Unknown Routine',
               loading: false,
-              error: type === 'agent' ? 'Failed to load agent' : 'Failed to load flow',
+              error: type === 'agent' ? 'Failed to load agent' : 'Failed to load routine',
             }
           }));
         }
@@ -261,7 +261,9 @@ export default function VariableUsagePage() {
                         <div className="flex items-center space-x-2">
                           {getResourceIcon(type)}
                           <Badge variant={getResourceBadgeVariant(type)}>
-                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                            {type === 'workflow'
+                              ? 'Routine'
+                              : type.charAt(0).toUpperCase() + type.slice(1)}
                           </Badge>
                         </div>
                       </TableCell>

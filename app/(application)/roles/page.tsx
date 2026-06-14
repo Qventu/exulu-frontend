@@ -69,9 +69,9 @@ export default function RoleManagement() {
         if (role.workflows) {
             const workflowPerms = role.workflows.toLowerCase()
             if (workflowPerms.includes('write') || workflowPerms.includes('create') || workflowPerms.includes('update') || workflowPerms.includes('delete')) {
-                permissions.push({ name: "Workflows", level: "Read/Write" })
+                permissions.push({ name: "Routines", level: "Read/Write" })
             } else if (workflowPerms.includes('read') || workflowPerms.includes('view')) {
-                permissions.push({ name: "Workflows", level: "Read" })
+                permissions.push({ name: "Routines", level: "Read" })
             }
         }
         
@@ -177,7 +177,7 @@ export default function RoleManagement() {
                 </Link>
                 <h1 className="text-3xl font-bold tracking-tight">Role Management</h1>
                 <p className="text-muted-foreground">
-                    Create and manage roles with specific permissions for agents, workflows, variables, the api and users.
+                    Create and manage roles with specific permissions for agents, routines, variables, the api and users.
                 </p>
             </div>
 
