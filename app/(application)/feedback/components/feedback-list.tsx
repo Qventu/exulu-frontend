@@ -16,7 +16,7 @@
  * Data comes from useFeedbackQuery — the hook owns Apollo.
  */
 
-import { useMutation } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import {
   ChevronLeft,
   ChevronRight,
@@ -49,7 +49,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { DELETE_FEEDBACK, GET_FEEDBACK } from "@/queries/queries";
+import {
+  DELETE_FEEDBACK,
+  GET_AGENTS_BY_IDS,
+  GET_FEEDBACK,
+  GET_USERS_BY_IDS,
+} from "@/queries/queries";
 
 import { FeedbackDetailPanel } from "./feedback-detail-panel";
 import { FeedbackToolbar } from "./feedback-toolbar";
@@ -62,6 +67,24 @@ const SKELETON_ROWS = 8;
 
 export interface FeedbackListProps {
   query: UseFeedbackQueryResult;
+}
+
+interface AgentHydration {
+  id: string;
+  name?: string | null;
+}
+
+interface UserHydration {
+  id: string | number;
+  name?: string | null;
+  firstname?: string | null;
+  lastname?: string | null;
+  email?: string | null;
+}
+
+function userLabel(u: UserHydration): string {
+  const composed = [u.firstname, u.lastname].filter(Boolean).join(" ").trim();
+  return u.name?.trim() || composed || u.email?.trim() || String(u.id);
 }
 
 export function FeedbackList({ query }: FeedbackListProps) {
@@ -80,6 +103,61 @@ export function FeedbackList({ query }: FeedbackListProps) {
   });
 
   const { items, loading, pageCount, page, setPage } = query;
+
+  // Batch hydration of agent/user names for the visible page. One query per
+  // type per page — fixes the BE-4 honest-degradation state where cells fell
+  // back to raw ids. When the backend learns to denormalise agentName /
+  // userName onto feedbackPagination this section can simplify.
+  const agentIds = React.useMemo(
+    () =>
+      Array.from(
+        new Set(
+          items
+            .map((item) => (item.agent ? String(item.agent) : null))
+            .filter((id): id is string => !!id),
+        ),
+      ),
+    [items],
+  );
+  const userIds = React.useMemo(
+    () =>
+      Array.from(
+        new Set(
+          items
+            .map((item) => (item.user != null ? String(item.user) : null))
+            .filter((id): id is string => !!id),
+        ),
+      ),
+    [items],
+  );
+  const agentsHydration = useQuery(GET_AGENTS_BY_IDS, {
+    variables: { ids: agentIds },
+    skip: agentIds.length === 0,
+  });
+  const usersHydration = useQuery(GET_USERS_BY_IDS, {
+    variables: { ids: userIds },
+    skip: userIds.length === 0,
+  });
+  const agentNameMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    const list = (agentsHydration.data?.agentByIds ?? []) as AgentHydration[];
+    for (const a of list) {
+      if (a?.id && a?.name) map.set(String(a.id), a.name);
+    }
+    return map;
+  }, [agentsHydration.data]);
+  const userNameMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    const list = (usersHydration.data?.userByIds ?? []) as UserHydration[];
+    for (const u of list) {
+      if (u?.id != null) map.set(String(u.id), userLabel(u));
+    }
+    return map;
+  }, [usersHydration.data]);
+  const agentDisplay = (raw: string | null | undefined): string =>
+    raw ? agentNameMap.get(String(raw)) ?? String(raw) : "—";
+  const userDisplay = (raw: number | string | null | undefined): string =>
+    raw != null ? userNameMap.get(String(raw)) ?? String(raw) : "—";
 
   // Track selection across paginated requests; prune ids that no longer exist
   // on the visible page so the bulk count never counts stale rows.
@@ -198,9 +276,9 @@ export function FeedbackList({ query }: FeedbackListProps) {
                   {item.description}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  <span className="truncate">{item.agent}</span>
+                  <span className="truncate">{agentDisplay(item.agent)}</span>
                   <span className="mx-1">·</span>
-                  <span>{item.user}</span>
+                  <span>{userDisplay(item.user)}</span>
                 </p>
               </div>
               <RelativeTime
@@ -292,10 +370,10 @@ export function FeedbackList({ query }: FeedbackListProps) {
                   </p>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  <span className="truncate">{item.agent}</span>
+                  <span className="truncate">{agentDisplay(item.agent)}</span>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {item.user}
+                  {userDisplay(item.user)}
                 </TableCell>
                 <TableCell>
                   <RelativeTime
