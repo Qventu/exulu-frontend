@@ -39,7 +39,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { can } from "@/lib/rights";
-import { cn } from "@/lib/utils";
 import {
   GET_VARIABLE_BY_ID,
   GET_VARIABLE_USAGE,
@@ -93,7 +92,6 @@ export default function EditVariablePage() {
   });
   const [originalName, setOriginalName] = React.useState("");
   const [originalEncrypted, setOriginalEncrypted] = React.useState(false);
-  const [replaceMode, setReplaceMode] = React.useState(false);
   const [revealedValue, setRevealedValue] = React.useState<string | null>(null);
   const [revealing, setRevealing] = React.useState(false);
   const [errors, setErrors] = React.useState<FormErrors>({});
@@ -179,9 +177,6 @@ export default function EditVariablePage() {
     if (!formData.name.trim()) {
       next.name = t("form.nameRequired");
     }
-    if (replaceMode && !formData.value.trim()) {
-      next.value = t("form.valueRequired");
-    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -208,9 +203,10 @@ export default function EditVariablePage() {
         name: formData.name.trim(),
         encrypted: formData.encrypted,
       };
-      // Only send the value when the user opted into replacement — backend
-      // treats undefined as "unchanged" (UPDATE_VARIABLE plan, point 6).
-      if (replaceMode) {
+      // Only send the value when the user actually entered one — empty
+      // textarea means "leave value unchanged" (UPDATE_VARIABLE plan,
+      // point 6: backend treats undefined as no-op).
+      if (formData.value.trim().length > 0) {
         vars.value = formData.value;
       }
       await updateVariable({ variables: vars });
@@ -314,8 +310,6 @@ export default function EditVariablePage() {
     );
   }
 
-  const showValueField = replaceMode;
-
   return (
     <PageShell variant="narrow">
       <PageHeader
@@ -369,15 +363,6 @@ export default function EditVariablePage() {
                 <span className="text-sm text-muted-foreground">
                   {t("form.typePlainDescription")}
                 </span>
-                <span
-                  className={cn(
-                    "mt-1 text-sm text-warning-foreground transition-opacity duration-150 ease-in-out motion-reduce:transition-none",
-                    formData.encrypted ? "opacity-0" : "opacity-100",
-                  )}
-                  aria-hidden={formData.encrypted}
-                >
-                  {t("form.typePlainWarning")}
-                </span>
               </div>
             </div>
           </RadioGroup>
@@ -414,84 +399,42 @@ export default function EditVariablePage() {
           )}
         </div>
 
-        {/* Value — collapsed "Replace value" by default. */}
+        {/* Value — always visible. Empty = keep current value.
+            "Show current value" reveals on demand via GET_VARIABLE_VALUE. */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium">
+          <Label htmlFor="value" className="text-sm font-medium">
             {t("form.value")}
           </Label>
-          {!showValueField ? (
-            <div className="space-y-2 rounded-md border border-dashed p-3">
-              <p className="text-sm text-muted-foreground">
-                {t("edit.replaceValueHelp")}
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setReplaceMode(true)}
-              >
-                {t("actions.replaceValue")}
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Textarea
-                id="value"
-                className="font-mono"
-                placeholder={t("form.valuePlaceholder")}
-                value={revealedValue ?? formData.value}
-                onChange={(e) => setField("value", e.target.value)}
-                rows={4}
-                aria-invalid={Boolean(errors.value)}
-                aria-describedby={errors.value ? "value-error" : "value-help"}
-                readOnly={revealedValue !== null}
-                spellCheck={false}
-              />
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p
-                  id="value-help"
-                  className={cn(
-                    "text-sm",
-                    errors.value ? "text-destructive" : "text-muted-foreground",
-                  )}
-                >
-                  {errors.value
-                    ? errors.value
-                    : formData.encrypted
-                      ? t("form.valueHelperSecret")
-                      : t("form.valueHelperPlain")}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    onClick={handleShowCurrentValue}
-                    disabled={revealing}
-                    className="h-auto p-0"
-                  >
-                    {revealedValue !== null
-                      ? t("edit.replaceValueHide")
-                      : revealing
-                        ? t("edit.replaceValueLoading")
-                        : t("edit.replaceValueShow")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setReplaceMode(false);
-                      setRevealedValue(null);
-                      setField("value", "");
-                    }}
-                  >
-                    {tCommon("cancel")}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+          <Textarea
+            id="value"
+            className="font-mono"
+            placeholder={t("edit.valuePlaceholderUnchanged")}
+            value={revealedValue ?? formData.value}
+            onChange={(e) => setField("value", e.target.value)}
+            rows={4}
+            aria-describedby="value-help"
+            readOnly={revealedValue !== null}
+            spellCheck={false}
+          />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p id="value-help" className="text-sm text-muted-foreground">
+              {t("edit.valueHintUnchanged")}
+            </p>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              onClick={handleShowCurrentValue}
+              disabled={revealing}
+              className="h-auto p-0"
+            >
+              {revealedValue !== null
+                ? t("edit.replaceValueHide")
+                : revealing
+                  ? t("edit.replaceValueLoading")
+                  : t("edit.replaceValueShow")}
+            </Button>
+          </div>
         </div>
 
         {/* Sticky footer */}

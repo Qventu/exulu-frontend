@@ -30,7 +30,6 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { can } from "@/lib/rights";
-import { cn } from "@/lib/utils";
 import {
   CREATE_VARIABLE,
   GET_VARIABLES_LIST,
@@ -188,16 +187,6 @@ export default function CreateVariablePage() {
                 </Label>
                 <span className="text-sm text-muted-foreground">
                   {t("form.typePlainDescription")}
-                </span>
-                {/* Crossfade-handled inline warning when Plain is active. */}
-                <span
-                  className={cn(
-                    "mt-1 text-sm text-warning-foreground transition-opacity duration-150 ease-in-out motion-reduce:transition-none",
-                    formData.encrypted ? "opacity-0" : "opacity-100",
-                  )}
-                  aria-hidden={formData.encrypted}
-                >
-                  {t("form.typePlainWarning")}
                 </span>
               </div>
             </div>

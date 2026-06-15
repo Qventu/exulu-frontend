@@ -3044,7 +3044,6 @@
       "create": "Variable erstellen",
       "retry": "Erneut versuchen",
       "back": "Zurück zu Variablen",
-      "replaceValue": "Wert ersetzen",
       "showCurrent": "Aktuellen Wert anzeigen"
     },
     "toolbar": {
@@ -3112,7 +3111,6 @@
       "type": "Typ",
       "typeSecret": "Geheimnis — verschlüsselt gespeichert",
       "typePlain": "Klartext — unverändert gespeichert",
-      "valueUnchanged": "Der aktuelle Wert bleibt erhalten, sofern Sie ihn nicht ersetzen.",
       "required": "{field} ist erforderlich."
     },
     "create": {
@@ -3129,7 +3127,9 @@
       "notFoundTitle": "Variable nicht gefunden",
       "notFoundBody": "Diese Variable wurde möglicherweise gelöscht.",
       "loadErrorTitle": "Diese Variable konnte nicht geladen werden",
-      "loadErrorBody": "Bitte erneut versuchen oder zur Übersicht zurückkehren."
+      "loadErrorBody": "Bitte erneut versuchen oder zur Übersicht zurückkehren.",
+      "valuePlaceholderUnchanged": "Leer lassen, um den aktuellen Wert zu behalten",
+      "valueHintUnchanged": "Leer lassen, um den aktuellen Wert zu behalten; einen neuen Wert eingeben, um ihn zu ersetzen."
     },
     "usage": {
       "title": "Variablenverwendung",

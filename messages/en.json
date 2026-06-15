@@ -3044,7 +3044,6 @@
       "create": "Create variable",
       "retry": "Retry",
       "back": "Back to Variables",
-      "replaceValue": "Replace value",
       "showCurrent": "Show current value"
     },
     "toolbar": {
@@ -3114,8 +3113,6 @@
       "typePlain": "Plain text — stored as-is",
       "typeSecretDescription": "Encrypted at rest. Recommended for API keys, tokens, and passwords.",
       "typePlainDescription": "Stored as-is. Use for non-sensitive values like base URLs.",
-      "typePlainWarning": "Stored without encryption. Use only for non-sensitive values like base URLs.",
-      "valueUnchanged": "The current value will be kept unless you replace it.",
       "required": "{field} is required.",
       "nameRequired": "Name is required.",
       "valueRequired": "Value is required."
@@ -3142,7 +3139,6 @@
       "submit": "Save changes",
       "submitting": "Saving…",
       "revealFailed": "Couldn't reveal the current value.",
-      "replaceValueHelp": "The current value will be kept unless you replace it.",
       "replaceValueShow": "Show current value",
       "replaceValueHide": "Hide current value",
       "replaceValueLoading": "Loading…",
@@ -3156,7 +3152,9 @@
       "confirmTitle": "Save changes?",
       "confirmRename": "Renaming may break {count, plural, =0 {referencing resources} one {# referencing resource} other {# referencing resources}}.",
       "confirmSecretToPlain": "Switching from Secret to Plain stores the value without encryption — consumers that decrypt it may break.",
-      "confirmViewUsage": "View usage"
+      "confirmViewUsage": "View usage",
+      "valuePlaceholderUnchanged": "Leave empty to keep the current value",
+      "valueHintUnchanged": "Leave empty to keep the current value; type a new value to replace it."
     },
     "usage": {
       "title": "Variable usage",
