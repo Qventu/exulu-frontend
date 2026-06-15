@@ -69,16 +69,18 @@ export interface AnalyticsViewProps {
  * router.replace(lensToSearchParams(...)) which canonicalises the URL (the
  * serialiser never emits ?type=).
  */
-const LEGACY_TYPES_REMAPPED_TO_DIMENSION: Record<string, "agents" | "users" | "projects" | "teams" | "roles"> = {
+const LEGACY_TYPES_REMAPPED_TO_DIMENSION: Record<string, "agents" | "users" | "projects" | "teams" | "roles" | "routines"> = {
   AGENT_RUN: "agents",
   TOOL_CALL: "agents",
   USER_BUDGET: "users",
   PROJECT_BUDGET: "projects",
   TEAM_BUDGET: "teams",
   ROLE_BUDGET: "roles",
+  // Phase 3.3.2: buildTags() now emits routine_id_ on cron-scheduled LLM
+  // calls so WORKFLOW_RUN resolves cleanly to a real dimension.
+  WORKFLOW_RUN: "routines",
 };
 const LEGACY_TYPES_DROPPED = new Set([
-  "WORKFLOW_RUN",
   "CONTEXT_RETRIEVE",
   "CONTEXT_UPSERT",
   "SOURCE_UPDATE",

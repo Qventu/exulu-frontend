@@ -253,12 +253,12 @@ export function HomeDashboard() {
                   label={t("vitals.routineRuns")}
                   value={statValue(workflowStat.current, workflowStat.error)}
                   loading={workflowStat.loading}
-                  // Routine runs are Postgres `job_results` — buildTags() emits
-                  // no workflow_/routine_ prefix today (analytics.md §4 honest
-                  // gap), so /analytics can't deliver per-routine breakdown.
-                  // Point at /workflows instead of /analytics?type=WORKFLOW_RUN
-                  // so the deep-link matches what's actually displayable.
-                  href="/workflows"
+                  // Routine runs are now attributed via routine_id_ tags
+                  // (Phase 3.3.2). buildTags() emits the prefix on every
+                  // cron-scheduled LLM call so /analytics?dimension=routines
+                  // breaks down spend per routine. Fall back to /workflows
+                  // for users without analytics access.
+                  href={canAnalytics ? "/analytics?dimension=routines" : "/workflows"}
                   {...trendOf(workflowStat)}
                 />
               )}

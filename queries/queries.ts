@@ -3225,3 +3225,38 @@ export const GET_AGENTS_WITH_BUDGETS = gql`
     }
   }
 `;
+
+export const GET_WORKFLOW_TEMPLATES_WITH_BUDGETS = gql`
+  query GetWorkflowTemplatesWithBudgets(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterWorkflow_template]
+  ) {
+    workflow_templatesPagination(page: $page, limit: $limit, filters: $filters) {
+      ${BUDGET_PAGE_INFO}
+      items {
+        id
+        name
+        budget
+      }
+    }
+  }
+`;
+
+// id → name hydration for analytics breakdown card (Phase 3.3.2 — routines
+// dimension). Slice to limit=10 server-side; the breakdown only renders the
+// top contributors anyway.
+export const GET_ROUTINES_BY_IDS = gql`
+  query GetRoutinesByIds($ids: [String]!) {
+    workflow_templatesPagination(
+      page: 1
+      limit: 10
+      filters: [{ id: { in: $ids } }]
+    ) {
+      items {
+        id
+        name
+      }
+    }
+  }
+`;

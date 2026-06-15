@@ -586,6 +586,7 @@
       "dimAgents": "Agenten",
       "dimProjects": "Projekte",
       "dimRoles": "Rollen",
+      "dimRoutines": "Routinen",
       "dimTeams": "Teams",
       "dimUsers": "Benutzer",
       "emptyHint": "Versuchen Sie einen größeren Zeitraum oder einen anderen Ereignistyp.",
@@ -637,6 +638,7 @@
       "dimensionAgents": "Agenten",
       "dimensionProjects": "Projekte",
       "dimensionRoles": "Rollen",
+      "dimensionRoutines": "Routinen",
       "dimensionTeams": "Teams",
       "dimensionUsers": "Benutzer"
     },
@@ -777,14 +779,16 @@
       "role": "Rolle",
       "team": "Team",
       "project": "Projekt",
-      "agent": "Agent"
+      "agent": "Agent",
+      "routine": "Routine"
     },
     "entityTypePlural": {
       "user": "Benutzer",
       "role": "Rollen",
       "team": "Teams",
       "project": "Projekte",
-      "agent": "Agenten"
+      "agent": "Agenten",
+      "routine": "Routinen"
     },
     "entityTypeSwitcherAria": "Entitätstyp",
     "search": {

@@ -586,6 +586,7 @@
       "dimAgents": "Agents",
       "dimProjects": "Projects",
       "dimRoles": "Roles",
+      "dimRoutines": "Routines",
       "dimTeams": "Teams",
       "dimUsers": "Users",
       "emptyHint": "Try a wider range or a different event type.",
@@ -637,6 +638,7 @@
       "dimensionAgents": "Agents",
       "dimensionProjects": "Projects",
       "dimensionRoles": "Roles",
+      "dimensionRoutines": "Routines",
       "dimensionTeams": "Teams",
       "dimensionUsers": "Users"
     },
@@ -777,14 +779,16 @@
       "role": "Role",
       "team": "Team",
       "project": "Project",
-      "agent": "Agent"
+      "agent": "Agent",
+      "routine": "Routine"
     },
     "entityTypePlural": {
       "user": "Users",
       "role": "Roles",
       "team": "Teams",
       "project": "Projects",
-      "agent": "Agents"
+      "agent": "Agents",
+      "routine": "Routines"
     },
     "entityTypeSwitcherAria": "Entity type",
     "search": {

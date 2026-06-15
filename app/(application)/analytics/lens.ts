@@ -29,7 +29,7 @@ export type RangePreset = (typeof RANGE_PRESETS)[number];
 export const MEASURES = ["spend", "tokens", "requests"] as const;
 export type Measure = (typeof MEASURES)[number];
 
-export const DIMENSIONS = ["agents", "users", "projects", "teams", "roles"] as const;
+export const DIMENSIONS = ["agents", "users", "projects", "teams", "roles", "routines"] as const;
 export type Dimension = (typeof DIMENSIONS)[number];
 
 export const BREAKDOWN_VIEWS = ["list", "share"] as const;
@@ -74,11 +74,15 @@ const DAY_MS = 24 * HOUR_MS;
  * DEFAULT_DIMENSION applies). Same fall-back contract the rest of the
  * parser uses — no toast, no crash.
  *
- * HONEST FALLBACK for WORKFLOW_RUN / CONTEXT_* / EMBEDDER_* / SOURCE_UPDATE:
- * buildTags() emits no workflow_/routine_/context_/embedder_ prefix today,
- * so the only honest move is to drop the override and let the default
- * Agents dimension apply. AnalyticsView still fires a one-shot toast so
- * the deep-link change is visible.
+ * HONEST FALLBACK for CONTEXT_* / EMBEDDER_* / SOURCE_UPDATE:
+ * buildTags() emits no context_/embedder_/source_ prefix today, so the
+ * only honest move is to drop the override and let the default Agents
+ * dimension apply. AnalyticsView still fires a one-shot toast so the
+ * deep-link change is visible.
+ *
+ * WORKFLOW_RUN now resolves cleanly to dimension=routines (Phase 3.3.2):
+ * buildTags() emits routine_id_ on every cron-scheduled LLM call so the
+ * analytics breakdown can attribute spend per routine.
  */
 const LEGACY_TYPE_TO_DIMENSION: Record<string, Dimension | undefined> = {
   AGENT_RUN: "agents",
@@ -87,8 +91,8 @@ const LEGACY_TYPE_TO_DIMENSION: Record<string, Dimension | undefined> = {
   PROJECT_BUDGET: "projects",
   TEAM_BUDGET: "teams",
   ROLE_BUDGET: "roles",
+  WORKFLOW_RUN: "routines",
   // Honest drop — no prefix exists in buildTags() yet:
-  WORKFLOW_RUN: undefined,
   CONTEXT_RETRIEVE: undefined,
   CONTEXT_UPSERT: undefined,
   SOURCE_UPDATE: undefined,
@@ -183,11 +187,13 @@ export function wasRangeReset(
  *   - ?type=PROJECT_BUDGET → dimension="projects"
  *   - ?type=TEAM_BUDGET → dimension="teams"
  *   - ?type=ROLE_BUDGET → dimension="roles"
- *   - ?type=WORKFLOW_RUN / CONTEXT_* / EMBEDDER_* / SOURCE_UPDATE → dropped
- *     (no override; honest fallback per architect §HONEST GAP). The view
- *     still fires a one-shot toast so the change is visible.
- *   - ?type=agents / users / projects / teams / roles (old canonical) →
- *     dimension override of the same value.
+ *   - ?type=WORKFLOW_RUN → dimension="routines" (Phase 3.3.2 — buildTags()
+ *     now emits routine_id_ for cron-scheduled runs).
+ *   - ?type=CONTEXT_* / EMBEDDER_* / SOURCE_UPDATE → dropped (no override;
+ *     honest fallback per architect §HONEST GAP). The view still fires a
+ *     one-shot toast so the change is visible.
+ *   - ?type=agents / users / projects / teams / roles / routines (old
+ *     canonical) → dimension override of the same value.
  *   - An explicit ?dimension=… ALWAYS wins over the legacy ?type seed.
  */
 export function lensFromSearchParams(
@@ -326,6 +332,7 @@ export const DIMENSION_TAG_PREFIX: Record<Dimension, string> = {
   projects: "project_id_",
   teams: "team_id_",
   roles: "role_id_",
+  routines: "routine_id_",
 };
 
 /**

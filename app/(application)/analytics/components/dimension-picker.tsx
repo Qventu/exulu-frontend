@@ -6,7 +6,7 @@
  * Lives in the AnalyticsView header alongside RangePicker so the breakdown
  * scope is reachable at-a-glance and stays sticky-adjacent on mobile (the
  * MobileTopbarAction surfaces the same control). The control is a compact
- * Select — five options fit cleanly without forcing a 5-segment Tabs row
+ * Select — six options fit cleanly without forcing a 6-segment Tabs row
  * to share the header with the 5-segment range Tabs.
  */
 
@@ -37,6 +37,7 @@ const DIMENSION_LABEL_KEYS: Record<Dimension, string> = {
   projects: "header.dimensionProjects",
   teams: "header.dimensionTeams",
   roles: "header.dimensionRoles",
+  routines: "header.dimensionRoutines",
 };
 
 export function DimensionPicker({

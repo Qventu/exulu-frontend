@@ -39,6 +39,7 @@ import {
   GET_ROLES_WITH_BUDGETS,
   GET_TEAMS_WITH_BUDGETS,
   GET_USERS_WITH_BUDGETS,
+  GET_WORKFLOW_TEMPLATES_WITH_BUDGETS,
 } from "./queries";
 
 // ---------------------------------------------------------------------------
@@ -85,6 +86,7 @@ const ENTITY_SOURCES: Record<BudgetEntityType, EntitySourceMeta> = {
   team: { query: GET_TEAMS_WITH_BUDGETS, root: "teamsPagination", searchField: "name" },
   project: { query: GET_PROJECTS_WITH_BUDGETS, root: "projectsPagination", searchField: "name" },
   agent: { query: GET_AGENTS_WITH_BUDGETS, root: "agentsPagination", searchField: "name" },
+  routine: { query: GET_WORKFLOW_TEMPLATES_WITH_BUDGETS, root: "workflow_templatesPagination", searchField: "name" },
 };
 
 interface EntityItem {
@@ -137,6 +139,7 @@ const BUDGET_SOURCES: Array<{
   { entityType: "team", query: GET_TEAMS_WITH_BUDGETS, root: "teamsPagination" },
   { entityType: "project", query: GET_PROJECTS_WITH_BUDGETS, root: "projectsPagination" },
   { entityType: "agent", query: GET_AGENTS_WITH_BUDGETS, root: "agentsPagination" },
+  { entityType: "routine", query: GET_WORKFLOW_TEMPLATES_WITH_BUDGETS, root: "workflow_templatesPagination" },
 ];
 
 /**
@@ -157,11 +160,12 @@ export function useBudgetsAtRisk(enabled: boolean): {
   const teams = useQuery<BudgetEntitiesResult>(GET_TEAMS_WITH_BUDGETS, options);
   const projects = useQuery<BudgetEntitiesResult>(GET_PROJECTS_WITH_BUDGETS, options);
   const agents = useQuery<BudgetEntitiesResult>(GET_AGENTS_WITH_BUDGETS, options);
-  const results = [users, roles, teams, projects, agents];
+  const routines = useQuery<BudgetEntitiesResult>(GET_WORKFLOW_TEMPLATES_WITH_BUDGETS, options);
+  const results = [users, roles, teams, projects, agents, routines];
 
   const alerts = React.useMemo<BudgetAlert[]>(() => {
     if (!enabled) return [];
-    const data = [users.data, roles.data, teams.data, projects.data, agents.data];
+    const data = [users.data, roles.data, teams.data, projects.data, agents.data, routines.data];
     const rows: BudgetAlert[] = [];
     BUDGET_SOURCES.forEach(({ entityType, root }, index) => {
       const items = data[index]?.[root]?.items ?? [];
@@ -187,7 +191,7 @@ export function useBudgetsAtRisk(enabled: boolean): {
           ? -1
           : 1,
     );
-  }, [enabled, users.data, roles.data, teams.data, projects.data, agents.data]);
+  }, [enabled, users.data, roles.data, teams.data, projects.data, agents.data, routines.data]);
 
   return {
     alerts,

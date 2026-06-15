@@ -19,6 +19,7 @@
  *   - agents   → GET_AGENTS_BY_IDS (hydrated)
  *   - users    → GET_USERS_BY_IDS (hydrated)
  *   - projects → GET_PROJECTS_BY_IDS (hydrated)
+ *   - routines → GET_ROUTINES_BY_IDS (hydrated, Phase 3.3.2)
  *   - teams    → DOCUMENTED FALLBACK: raw team id (GET_TEAMS_BY_IDS not
  *                shipped yet; analytics.md §4 follow-up)
  *   - roles    → DOCUMENTED FALLBACK: raw role id (GET_ROLES_BY_IDS not
@@ -45,6 +46,7 @@ import {
 import {
   GET_AGENTS_BY_IDS,
   GET_PROJECTS_BY_IDS,
+  GET_ROUTINES_BY_IDS,
   GET_USERS_BY_IDS,
 } from "../queries";
 
@@ -59,6 +61,7 @@ const DIMENSION_LABEL_KEYS: Record<Dimension, string> = {
   projects: "breakdown.dimProjects",
   teams: "breakdown.dimTeams",
   roles: "breakdown.dimRoles",
+  routines: "breakdown.dimRoutines",
 };
 
 interface HydrationEntity {
@@ -106,6 +109,10 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
     variables: { ids: topIds },
     skip: lens.dimension !== "projects" || topIds.length === 0,
   });
+  const routinesHydration = useQuery(GET_ROUTINES_BY_IDS, {
+    variables: { ids: topIds },
+    skip: lens.dimension !== "routines" || topIds.length === 0,
+  });
 
   const entries = React.useMemo(() => {
     const hydrationList: HydrationEntity[] = (() => {
@@ -118,6 +125,9 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
       if (lens.dimension === "projects") {
         return (projectsHydration.data?.projectByIds ?? []) as HydrationEntity[];
       }
+      if (lens.dimension === "routines") {
+        return (routinesHydration.data?.workflow_templatesPagination?.items ?? []) as HydrationEntity[];
+      }
       return [];
     })();
 
@@ -129,7 +139,7 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
       const name = match ? entityLabel(match, idStr) : idStr;
       return { id: idStr, name, value: row.value };
     });
-  }, [rows, lens.dimension, agentsHydration.data, usersHydration.data, projectsHydration.data]);
+  }, [rows, lens.dimension, agentsHydration.data, usersHydration.data, projectsHydration.data, routinesHydration.data]);
 
   const hydrationLoading =
     (lens.dimension === "agents" &&
@@ -143,7 +153,11 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
     (lens.dimension === "projects" &&
       topIds.length > 0 &&
       projectsHydration.loading &&
-      !projectsHydration.data);
+      !projectsHydration.data) ||
+    (lens.dimension === "routines" &&
+      topIds.length > 0 &&
+      routinesHydration.loading &&
+      !routinesHydration.data);
 
   const unitLabel =
     lens.measure === "spend"

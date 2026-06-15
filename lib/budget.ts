@@ -7,7 +7,7 @@
  * entity that is on track to exceed its budget before the window resets.
  */
 
-export type BudgetEntityType = "user" | "role" | "team" | "project" | "agent";
+export type BudgetEntityType = "user" | "role" | "team" | "project" | "agent" | "routine";
 
 export const BUDGET_ENTITY_TYPES: {
   type: BudgetEntityType;
@@ -19,6 +19,7 @@ export const BUDGET_ENTITY_TYPES: {
   { type: "team", label: "Team", labelPlural: "Teams" },
   { type: "project", label: "Project", labelPlural: "Projects" },
   { type: "agent", label: "Agent", labelPlural: "Agents" },
+  { type: "routine", label: "Routine", labelPlural: "Routines" },
 ];
 
 export type BudgetDuration = "1d" | "7d" | "30d";
