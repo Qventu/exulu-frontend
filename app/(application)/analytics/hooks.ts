@@ -272,4 +272,6 @@ export const HYDRATABLE_DIMENSIONS: ReadonlySet<Dimension> = new Set([
   "users",
   "projects",
   "routines",
+  "teams",
+  "roles",
 ]);

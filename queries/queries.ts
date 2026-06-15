@@ -3260,3 +3260,29 @@ export const GET_ROUTINES_BY_IDS = gql`
     }
   }
 `;
+
+// id → name hydration for analytics breakdown card (3.3.5 — closes the
+// "teams/roles shown as raw ids" gap left after 3.3.2). Mirror the routines
+// shape; rolesPagination + teamsPagination both expose id+name with the
+// FilterRole/FilterTeam id-in filter.
+export const GET_ROLES_BY_IDS = gql`
+  query GetRolesByIds($ids: [String]!) {
+    rolesPagination(page: 1, limit: 10, filters: [{ id: { in: $ids } }]) {
+      items {
+        id
+        name
+      }
+    }
+  }
+`;
+
+export const GET_TEAMS_BY_IDS = gql`
+  query GetTeamsByIds($ids: [String]!) {
+    teamsPagination(page: 1, limit: 10, filters: [{ id: { in: $ids } }]) {
+      items {
+        id
+        name
+      }
+    }
+  }
+`;

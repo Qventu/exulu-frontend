@@ -42,7 +42,9 @@ import { type Dimension, type Measure } from "./lens";
 export {
   GET_AGENTS_BY_IDS,
   GET_PROJECTS_BY_IDS,
+  GET_ROLES_BY_IDS,
   GET_ROUTINES_BY_IDS,
+  GET_TEAMS_BY_IDS,
   GET_USERS_BY_IDS,
 } from "@/queries/queries";
 

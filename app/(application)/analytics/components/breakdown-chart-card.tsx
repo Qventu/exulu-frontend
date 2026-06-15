@@ -20,10 +20,8 @@
  *   - users    → GET_USERS_BY_IDS (hydrated)
  *   - projects → GET_PROJECTS_BY_IDS (hydrated)
  *   - routines → GET_ROUTINES_BY_IDS (hydrated, Phase 3.3.2)
- *   - teams    → DOCUMENTED FALLBACK: raw team id (GET_TEAMS_BY_IDS not
- *                shipped yet; analytics.md §4 follow-up)
- *   - roles    → DOCUMENTED FALLBACK: raw role id (GET_ROLES_BY_IDS not
- *                shipped yet; analytics.md §4 follow-up)
+ *   - teams    → GET_TEAMS_BY_IDS (hydrated, Phase 3.3.5)
+ *   - roles    → GET_ROLES_BY_IDS (hydrated, Phase 3.3.5)
  */
 
 import { useQuery } from "@apollo/client";
@@ -52,7 +50,9 @@ import {
 import {
   GET_AGENTS_BY_IDS,
   GET_PROJECTS_BY_IDS,
+  GET_ROLES_BY_IDS,
   GET_ROUTINES_BY_IDS,
+  GET_TEAMS_BY_IDS,
   GET_USERS_BY_IDS,
 } from "../queries";
 
@@ -146,6 +146,14 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
     variables: { ids: topIds },
     skip: lens.dimension !== "routines" || topIds.length === 0,
   });
+  const teamsHydration = useQuery(GET_TEAMS_BY_IDS, {
+    variables: { ids: topIds },
+    skip: lens.dimension !== "teams" || topIds.length === 0,
+  });
+  const rolesHydration = useQuery(GET_ROLES_BY_IDS, {
+    variables: { ids: topIds },
+    skip: lens.dimension !== "roles" || topIds.length === 0,
+  });
 
   const hydrationList: HydrationEntity[] = React.useMemo(() => {
     if (lens.dimension === "agents") {
@@ -160,8 +168,22 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
     if (lens.dimension === "routines") {
       return (routinesHydration.data?.workflow_templatesPagination?.items ?? []) as HydrationEntity[];
     }
+    if (lens.dimension === "teams") {
+      return (teamsHydration.data?.teamsPagination?.items ?? []) as HydrationEntity[];
+    }
+    if (lens.dimension === "roles") {
+      return (rolesHydration.data?.rolesPagination?.items ?? []) as HydrationEntity[];
+    }
     return [];
-  }, [lens.dimension, agentsHydration.data, usersHydration.data, projectsHydration.data, routinesHydration.data]);
+  }, [
+    lens.dimension,
+    agentsHydration.data,
+    usersHydration.data,
+    projectsHydration.data,
+    routinesHydration.data,
+    teamsHydration.data,
+    rolesHydration.data,
+  ]);
 
   // Index hydrated entities by id (stringified) for O(1) lookups in both the
   // ranked entries below AND the CSV-export pivot in handleExport.
@@ -197,7 +219,15 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
     (lens.dimension === "routines" &&
       topIds.length > 0 &&
       routinesHydration.loading &&
-      !routinesHydration.data);
+      !routinesHydration.data) ||
+    (lens.dimension === "teams" &&
+      topIds.length > 0 &&
+      teamsHydration.loading &&
+      !teamsHydration.data) ||
+    (lens.dimension === "roles" &&
+      topIds.length > 0 &&
+      rolesHydration.loading &&
+      !rolesHydration.data);
 
   const unitLabel =
     lens.measure === "spend"
@@ -356,15 +386,7 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
         <EmptyState
           variant="quiet"
           title={t("breakdown.emptyTitle")}
-          description={
-            // teams/roles: GET_TEAMS_BY_IDS / GET_ROLES_BY_IDS not shipped
-            // yet (file header :19-22, analytics.md §4 follow-up). Name the
-            // gap in the empty state so the dimension switch isn't silent
-            // about its hydration state.
-            lens.dimension === "teams" || lens.dimension === "roles"
-              ? t("breakdown.emptyHintRawIds")
-              : t("breakdown.emptyHint")
-          }
+          description={t("breakdown.emptyHint")}
         />
       ) : lens.view === "share" ? (
         <DonutView
