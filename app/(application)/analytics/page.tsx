@@ -15,9 +15,10 @@ interface AnalyticsPageProps {
 
 export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps) {
   // Route guard for /analytics — gate from nav-config ("analytics"): SA
-  // only (navigation.md §1.2/§1.3 rule 5). A future role.analytics:r+ key
-  // gated by ANALYTICS_OWN_AGENT_USAGE_SUPPORTED in lib/analytics-supported.ts
-  // opens the P2 path; until then this is the only entry point.
+  // only (navigation.md §1.2/§1.3 rule 5). The backend's matching authorize
+  // check on /admin/litellm/tag-activity mirrors this predicate so the
+  // route and the data plumbing fail-closed together. A future
+  // `role.analytics:read` right is its own work item.
   const denied = await guardRoute("analytics");
   if (denied) return denied;
 

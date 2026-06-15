@@ -30,9 +30,16 @@ export interface DonutEntry {
 
 export interface DonutViewProps {
   entries: DonutEntry[];
-  /** Unit label for the tooltip / legend value column ("calls" / "tokens"). */
+  /** Unit label for the tooltip / legend value column ("$" / "tokens" / "requests"). */
   unitLabel: string;
+  /**
+   * The active measure — switches the number formatter to currency for
+   * spend (LiteLLM reports in USD; see analytics.md §4 Risks).
+   */
+  measure?: "spend" | "tokens" | "requests";
 }
+
+const SPEND_CURRENCY = "USD";
 
 const CHART_COLORS = [
   "hsl(var(--chart-1))",
@@ -47,9 +54,17 @@ const CHART_COLORS = [
   "hsl(var(--chart-10))",
 ];
 
-export function DonutView({ entries, unitLabel }: DonutViewProps) {
+export function DonutView({ entries, unitLabel, measure = "requests" }: DonutViewProps) {
   const locale = useLocale();
   const formatNumber = React.useMemo(() => new Intl.NumberFormat(locale), [locale]);
+  const formatCurrency = React.useMemo(
+    () => new Intl.NumberFormat(locale, { style: "currency", currency: SPEND_CURRENCY }),
+    [locale],
+  );
+  const formatValue = React.useCallback(
+    (value: number) => (measure === "spend" ? formatCurrency.format(value) : formatNumber.format(value)),
+    [measure, formatCurrency, formatNumber],
+  );
 
   const sorted = React.useMemo(
     () =>
@@ -134,7 +149,7 @@ export function DonutView({ entries, unitLabel }: DonutViewProps) {
                 nameKey="name"
                 hideLabel
                 formatter={(value, name) => [
-                  typeof value === "number" ? formatNumber.format(value) : String(value),
+                  typeof value === "number" ? formatValue(value) : String(value),
                   ` ${String(name)}`,
                 ]}
               />
@@ -158,7 +173,10 @@ export function DonutView({ entries, unitLabel }: DonutViewProps) {
                 </span>
               </span>
               <span className="shrink-0 tabular-nums text-muted-foreground">
-                {formatNumber.format(entry.value)} {unitLabel} · {pct}%
+                {measure === "spend"
+                  ? formatValue(entry.value)
+                  : `${formatValue(entry.value)} ${unitLabel}`}{" "}
+                · {pct}%
               </span>
             </li>
           );

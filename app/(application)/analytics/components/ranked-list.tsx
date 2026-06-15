@@ -31,14 +31,21 @@ export interface RankedListEntry {
 
 export interface RankedListProps {
   entries: RankedListEntry[];
-  /** Unit label rendered below each value ("calls" / "tokens"). */
+  /** Unit label rendered below each value ("$" / "tokens" / "requests"). */
   unitLabel: string;
-  /** Max rows to render (default 10 — matches the now-fixed query limits). */
+  /**
+   * Active measure — switches the number formatter to currency for spend
+   * (LiteLLM reports in USD; see analytics.md §4 Risks).
+   */
+  measure?: "spend" | "tokens" | "requests";
+  /** Max rows to render (default 10). */
   max?: number;
   loading?: boolean;
   /** Skeleton row count when loading (default 5). */
   loadingRows?: number;
 }
+
+const SPEND_CURRENCY = "USD";
 
 const RANK_STYLES: Record<number, string> = {
   // Subtle medal tints — token-only, additive ring tint on the rank numeral
@@ -51,12 +58,21 @@ const RANK_STYLES: Record<number, string> = {
 export function RankedList({
   entries,
   unitLabel,
+  measure = "requests",
   max = 10,
   loading = false,
   loadingRows = 5,
 }: RankedListProps) {
   const locale = useLocale();
   const formatNumber = React.useMemo(() => new Intl.NumberFormat(locale), [locale]);
+  const formatCurrency = React.useMemo(
+    () => new Intl.NumberFormat(locale, { style: "currency", currency: SPEND_CURRENCY }),
+    [locale],
+  );
+  const formatValue = React.useCallback(
+    (value: number) => (measure === "spend" ? formatCurrency.format(value) : formatNumber.format(value)),
+    [measure, formatCurrency, formatNumber],
+  );
 
   if (loading) {
     return (
@@ -107,7 +123,7 @@ export function RankedList({
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-sm font-semibold tabular-nums text-foreground">
-                  {formatNumber.format(entry.value)}
+                  {formatValue(entry.value)}
                 </p>
                 <p className="text-xs text-muted-foreground">{unitLabel}</p>
               </div>

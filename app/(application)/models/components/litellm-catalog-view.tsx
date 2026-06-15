@@ -5,6 +5,7 @@ import { useQuery } from "@apollo/client";
 import { ExternalLink, Info } from "lucide-react";
 import { GET_LITELLM_CATALOG } from "@/queries/queries";
 import { ConfigContext } from "@/components/shell/config-context";
+import { getLiteLLMAdminUrl } from "@/lib/litellm-admin-url";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/primitives/loading";
@@ -45,19 +46,7 @@ const formatTokens = (n: number | null) => {
 
 export function LiteLLMCatalogView() {
   const configContext = useContext(ConfigContext);
-  const backend = configContext?.backend ?? "";
-  const adminUiUrl = (() => {
-    try {
-      const url = new URL(backend);
-      // LiteLLM Admin UI lives on the LiteLLM port (default 4000), on the same
-      // host as the backend. If the dev is using a non-standard layout they
-      // can override via env, but we don't expose that here.
-      url.pathname = "/litellm-admin/ui";
-      return url.toString();
-    } catch {
-      return `${backend.replace(/\/$/, "")}/litellm-admin/ui`;
-    }
-  })();
+  const adminUiUrl = getLiteLLMAdminUrl(configContext?.backend);
 
   const { data, loading, error } = useQuery<{
     litellmCatalog: LiteLLMCatalogEntry[];

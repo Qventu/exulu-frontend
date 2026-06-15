@@ -1,39 +1,45 @@
 "use client";
 
 /**
- * AnalyticsView — client root for /analytics (work item 3.3).
+ * AnalyticsView — client root for /analytics.
  *
- * Composition (analytics.md §3 "Default view"):
- *   PageShell → PageHeader (RangePicker right-slot)
- *             → KPIStrip (5 StatCards, range-scoped)
+ * /analytics is 100% LiteLLM-driven — data plumbing lives in ../hooks
+ * (useActivityTotals / useActivityDaily / useActivityByTag) which call the
+ * backend's /admin/litellm/tag-activity proxy.
+ *
+ * Composition:
+ *   PageShell → PageHeader (RangePicker + Open LiteLLM admin link)
+ *             → KPIStrip (lens-scoped totals)
  *             → ExploreRegion (Trend + Breakdown ChartCards)
  *             → Footer ghost-link row (Budgets / Evals, RBAC-gated)
  *
  * URL is the source of truth for the lens; router.replace writes, the
- * `useSearchParams` hook reads (rule #10a — no parallel local mirror, the
- * access search-bar bug 2026-06-15 is the precedent). The lens has five
- * keys: range, from, to, type, measure, dimension, view.
+ * `useSearchParams` hook reads (rule #10a — no parallel local mirror).
  *
- * Deep-link contract (verifier-grep): Home emits ?type=AGENT_RUN /
- * ?type=WORKFLOW_RUN (see app/(application)/(home)/components/home-dashboard.tsx);
- * those are honored verbatim by `lensFromSearchParams` in hooks.ts.
+ * Deep-link compat: legacy ?type=AGENT_RUN / ?type=WORKFLOW_RUN URLs are
+ * remapped by lensFromSearchParams (AGENT_RUN→agents, WORKFLOW_RUN→all per
+ * honest fallback). When the user's URL was remapped we surface a quiet
+ * one-shot toast so the deep-link is honored AND visible.
  *
  * Mobile: PageHeader stacks (title row, RangePicker full-width below sm).
  * The MobileTopbarAction surfaces the same RangePicker in the global top
  * bar so it stays reachable when the page scrolls (rule #9).
  */
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ExternalLink } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
+import { toast } from "sonner";
 
 import { UserContext } from "@/app/(application)/authenticated";
 import { PageHeader } from "@/components/primitives/page-header";
 import { PageShell } from "@/components/primitives/page-shell";
+import { ConfigContext } from "@/components/shell/config-context";
 import { MobileTopbarAction } from "@/components/shell/mobile-topbar";
 import { Button } from "@/components/ui/button";
+import { getLiteLLMAdminUrl } from "@/lib/litellm-admin-url";
 import { can, type RightsUser } from "@/lib/rights";
 
 import { ExploreRegion } from "./explore-region";
@@ -49,6 +55,22 @@ export interface AnalyticsViewProps {
   initialLens: Lens;
 }
 
+/**
+ * Legacy ?type=* values we remap (kept in-sync with LENS_TYPE_FROM_LEGACY
+ * in ./lens). Used only to detect "this deep link was rewritten so we
+ * should tell the user" — the actual remap happens in lensFromSearchParams.
+ */
+const LEGACY_TYPES_REMAPPED_TO_AGENTS = new Set(["AGENT_RUN", "TOOL_CALL"]);
+const LEGACY_TYPES_REMAPPED_TO_ALL = new Set([
+  "WORKFLOW_RUN",
+  "CONTEXT_RETRIEVE",
+  "CONTEXT_UPSERT",
+  "SOURCE_UPDATE",
+  "EMBEDDER_GENERATE",
+  "EMBEDDER_UPSERT",
+  "EMBEDDER_DELETE",
+]);
+
 export function AnalyticsView({ initialLens }: AnalyticsViewProps) {
   const t = useTranslations("analytics");
   const router = useRouter();
@@ -61,6 +83,13 @@ export function AnalyticsView({ initialLens }: AnalyticsViewProps) {
     [user],
   );
 
+  const configContext = React.useContext(ConfigContext);
+  const litellmEnabled = configContext?.liteLLM?.enabled === true;
+  const adminUiUrl = React.useMemo(
+    () => getLiteLLMAdminUrl(configContext?.backend),
+    [configContext?.backend],
+  );
+
   // Re-derive the lens from the URL on every render — the URL is the
   // single source of truth (rule #10a; no parallel useState that could
   // race router.replace).
@@ -70,11 +99,8 @@ export function AnalyticsView({ initialLens }: AnalyticsViewProps) {
   );
 
   // `initialLens` is honored on first paint by the server (page.tsx parses
-  // the same searchParams); after that the URL drives everything. The
-  // initialLens prop remains in the API for future SSR-only branches.
+  // the same searchParams); after that the URL drives everything.
   React.useEffect(() => {
-    // No-op: kept to satisfy the architect's prop contract; the URL is the
-    // source of truth and initialLens already equals lensFromSearchParams.
     void initialLens;
   }, [initialLens]);
 
@@ -88,8 +114,49 @@ export function AnalyticsView({ initialLens }: AnalyticsViewProps) {
     [lens, router],
   );
 
+  // One-shot deep-link toast: if the legacy ?type=AGENT_RUN /
+  // ?type=WORKFLOW_RUN value was remapped, tell the user once so the URL
+  // change isn't silent. The `legacyTypeRaw` ref guards against re-firing
+  // when the user re-toggles the lens.
+  const legacyToastFiredRef = React.useRef(false);
+  React.useEffect(() => {
+    if (legacyToastFiredRef.current) return;
+    const raw = searchParams?.get("type");
+    if (!raw) return;
+    if (LEGACY_TYPES_REMAPPED_TO_AGENTS.has(raw)) {
+      legacyToastFiredRef.current = true;
+      toast(t("deepLinkLegacyTypeTitle"), {
+        description: t("deepLinkLegacyTypeAgents"),
+      });
+    } else if (LEGACY_TYPES_REMAPPED_TO_ALL.has(raw)) {
+      legacyToastFiredRef.current = true;
+      toast(t("deepLinkLegacyTypeTitle"), {
+        description: t("deepLinkLegacyTypeAll"),
+      });
+    }
+  }, [searchParams, t]);
+
   const canBudgets = can(rightsUser, { area: "budget_management", level: "read" });
   const canEvals = can(rightsUser, { area: "evals", level: "read" });
+
+  const headerAction = (
+    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+      <RangePicker lens={lens} onLensChange={updateLens} fullWidthBelowSm />
+      {litellmEnabled && (
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="max-md:h-11"
+        >
+          <a href={adminUiUrl} target="_blank" rel="noopener noreferrer">
+            <ExternalLink aria-hidden="true" className="mr-2 size-4" />
+            {t("openLiteLLMAdmin")}
+          </a>
+        </Button>
+      )}
+    </div>
+  );
 
   return (
     <PageShell variant="content">
@@ -100,7 +167,7 @@ export function AnalyticsView({ initialLens }: AnalyticsViewProps) {
       <PageHeader
         title={t("title")}
         description={t("purpose")}
-        action={<RangePicker lens={lens} onLensChange={updateLens} fullWidthBelowSm />}
+        action={headerAction}
       />
 
       <KPIStrip lens={lens} />

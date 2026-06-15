@@ -1,24 +1,25 @@
 "use client";
 
 /**
- * BreakdownChartCard — replaces the legacy three side-by-side leaderboards
- * + the standalone donut with ONE ChartCard. Two controls in the header:
- *   - Dimension Tabs [Agents | Users | Projects | Roles] (scrollable below md)
+ * BreakdownChartCard — one ChartCard with two controls in the header:
+ *   - Dimension Tabs [Agents | Users | Projects | Teams | Roles]
+ *     (scrollable below md)
  *   - View ToggleGroup [List | Share]
  *
- * Both views consume the SAME measure (from the explore toolbar's Tabs)
- * and the SAME range (lens) — the legacy hidden cross-section coupling
- * (analytics.md UX#4 / bug 2.e) becomes physically visible: one card, one
- * scope row.
+ * Source is /admin/litellm/tag-activity (via useActivityByTag). The
+ * backend filters byTag[] by tag_prefix matching the active dimension
+ * (DIMENSION_TAG_PREFIX in ../lens). Each row carries the stripped id;
+ * the frontend hydrates ids → human names via GraphQL (Postgres is the
+ * source of truth for names — LiteLLM tags only carry stable ids).
  *
- * Per-dimension query map:
- *   - agents → GET_AGENT_STATISTICS (no hydration; labels are agent names)
- *   - users  → GET_USER_STATISTICS + GET_USERS_BY_IDS (hydration only when
- *              the tab is active)
- *   - projects → GET_PROJECT_STATISTICS + GET_PROJECTS_BY_IDS (likewise)
- *   - roles  → GET_DONUT_STATISTICS with groupBy="role" (no hydration query
- *              exists yet — gated by ANALYTICS_ROLE_HYDRATION_SUPPORTED;
- *              fallback shows raw group values, identical to today's donut)
+ * Hydration coverage (architect plan §tagTaxonomy):
+ *   - agents   → GET_AGENTS_BY_IDS (hydrated)
+ *   - users    → GET_USERS_BY_IDS (hydrated)
+ *   - projects → GET_PROJECTS_BY_IDS (hydrated)
+ *   - teams    → DOCUMENTED FALLBACK: raw team id (GET_TEAMS_BY_IDS not
+ *                shipped yet; analytics.md §4 follow-up)
+ *   - roles    → DOCUMENTED FALLBACK: raw role id (GET_ROLES_BY_IDS not
+ *                shipped yet; analytics.md §4 follow-up)
  */
 
 import { useQuery } from "@apollo/client";
@@ -31,23 +32,19 @@ import { EmptyState } from "@/components/primitives/empty-state";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ANALYTICS_ROLE_HYDRATION_SUPPORTED } from "@/lib/analytics-supported";
 
 import { DonutView, type DonutEntry } from "./donut-view";
 import { RankedList, type RankedListEntry } from "./ranked-list";
 import {
   DIMENSIONS,
-  resolveWindow,
+  useActivityByTag,
   type Dimension,
   type Lens,
 } from "../hooks";
 import {
-  GET_AGENT_STATISTICS,
-  GET_DONUT_STATISTICS,
+  GET_AGENTS_BY_IDS,
   GET_PROJECTS_BY_IDS,
-  GET_PROJECT_STATISTICS,
   GET_USERS_BY_IDS,
-  GET_USER_STATISTICS,
 } from "../queries";
 
 export interface BreakdownChartCardProps {
@@ -59,6 +56,7 @@ const DIMENSION_LABEL_KEYS: Record<Dimension, string> = {
   agents: "breakdown.dimAgents",
   users: "breakdown.dimUsers",
   projects: "breakdown.dimProjects",
+  teams: "breakdown.dimTeams",
   roles: "breakdown.dimRoles",
 };
 
@@ -79,181 +77,90 @@ function entityLabel(entity: HydrationEntity, fallback: string): string {
   );
 }
 
-function transformGroupValue(value: unknown): string {
-  if (typeof value !== "string" || !value) return "Unknown";
-  return value
-    .replace(/_/g, " ")
-    .split(" ")
-    .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : ""))
-    .join(" ");
-}
-
 export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardProps) {
   const t = useTranslations("analytics");
-  const window = React.useMemo(() => resolveWindow(lens), [lens]);
 
-  const names =
-    lens.measure === "tokens" ? ["inputTokens", "outputTokens"] : ["count"];
+  const { rows, loading, error, refetch } = useActivityByTag(lens);
 
-  // ---- Per-dimension query selection (only the active one fires) ---------
-  const agentsQuery = useQuery(GET_AGENT_STATISTICS, {
-    variables: { from: window.current.from, to: window.current.to, names },
-    skip: lens.dimension !== "agents",
-  });
-  const usersQuery = useQuery(GET_USER_STATISTICS, {
-    variables: { from: window.current.from, to: window.current.to, names },
-    skip: lens.dimension !== "users",
-  });
-  const projectsQuery = useQuery(GET_PROJECT_STATISTICS, {
-    variables: { from: window.current.from, to: window.current.to, names },
-    skip: lens.dimension !== "projects",
-  });
-  const rolesQuery = useQuery(GET_DONUT_STATISTICS, {
-    variables: {
-      type: lens.type,
-      groupBy: "role",
-      from: window.current.from,
-      to: window.current.to,
-      names,
-    },
-    skip: lens.dimension !== "roles",
-  });
-
-  // ---- ID lists for hydration (top N only) -------------------------------
-  const userIds = React.useMemo(
+  // Top-10 ids for hydration. The byTag[] is already sorted desc by value
+  // in useActivityByTag, so .slice(0, 10) gives the top contributors.
+  const topIds = React.useMemo(
     () =>
-      (usersQuery.data?.trackingStatistics ?? [])
-        .filter((row: { group?: string | null; count?: number | null }) => row?.group && row?.count)
-        .map((row: { group: string }) => row.group)
-        .slice(0, 10),
-    [usersQuery.data],
-  );
-  const projectIds = React.useMemo(
-    () =>
-      (projectsQuery.data?.trackingStatistics ?? [])
-        .filter((row: { group?: string | null; count?: number | null }) => row?.group && row?.count)
-        .map((row: { group: string }) => row.group)
-        .slice(0, 10),
-    [projectsQuery.data],
+      rows
+        .filter((r) => r.id != null)
+        .slice(0, 10)
+        .map((r) => r.id as string),
+    [rows],
   );
 
+  const agentsHydration = useQuery(GET_AGENTS_BY_IDS, {
+    variables: { ids: topIds },
+    skip: lens.dimension !== "agents" || topIds.length === 0,
+  });
   const usersHydration = useQuery(GET_USERS_BY_IDS, {
-    variables: { ids: userIds },
-    skip: lens.dimension !== "users" || userIds.length === 0,
+    variables: { ids: topIds },
+    skip: lens.dimension !== "users" || topIds.length === 0,
   });
   const projectsHydration = useQuery(GET_PROJECTS_BY_IDS, {
-    variables: { ids: projectIds },
-    skip: lens.dimension !== "projects" || projectIds.length === 0,
+    variables: { ids: topIds },
+    skip: lens.dimension !== "projects" || topIds.length === 0,
   });
 
-  // ---- Build entries for the active dimension ----------------------------
-  const { entries, loading, error } = React.useMemo(() => {
-    type DimResult = {
-      entries: Array<{ id: string; name: string; value: number }>;
-      loading: boolean;
-      error: { message: string; onRetry: () => void } | null;
-    };
+  const entries = React.useMemo(() => {
+    const hydrationList: HydrationEntity[] = (() => {
+      if (lens.dimension === "agents") {
+        return (agentsHydration.data?.agentByIds ?? []) as HydrationEntity[];
+      }
+      if (lens.dimension === "users") {
+        return (usersHydration.data?.userByIds ?? []) as HydrationEntity[];
+      }
+      if (lens.dimension === "projects") {
+        return (projectsHydration.data?.projectByIds ?? []) as HydrationEntity[];
+      }
+      return [];
+    })();
 
-    const empty = (): DimResult => ({ entries: [], loading: false, error: null });
+    return rows.map((row) => {
+      const idStr = row.id ?? row.tag;
+      const match = hydrationList.find((h) =>
+        typeof h.id === "number" ? h.id === Number(idStr) : String(h.id) === idStr,
+      );
+      const name = match ? entityLabel(match, idStr) : idStr;
+      return { id: idStr, name, value: row.value };
+    });
+  }, [rows, lens.dimension, agentsHydration.data, usersHydration.data, projectsHydration.data]);
 
-    const buildError = (
-      e: { message: string } | undefined | null,
-      onRetry: () => void,
-    ): { message: string; onRetry: () => void } | null =>
-      e ? { message: e.message || t("errors.generic"), onRetry } : null;
-
-    if (lens.dimension === "agents") {
-      const rows = (agentsQuery.data?.trackingStatistics ?? []) as Array<{ group?: string | null; count?: number | null }>;
-      const items = rows
-        .filter((r) => r?.group && r?.count)
-        .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
-        .map((r) => ({ id: String(r.group), name: String(r.group), value: r.count ?? 0 }));
-      return {
-        entries: items,
-        loading: agentsQuery.loading && !agentsQuery.data,
-        error: buildError(agentsQuery.error ?? null, () => void agentsQuery.refetch()),
-      };
-    }
-
-    if (lens.dimension === "users") {
-      const rows = (usersQuery.data?.trackingStatistics ?? []) as Array<{ group?: string | null; count?: number | null }>;
-      const hydrated = (usersHydration.data?.userByIds ?? []) as HydrationEntity[];
-      const items = rows
-        .filter((r) => r?.group && r?.count)
-        .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
-        .map((r) => {
-          const groupId = String(r.group);
-          const match = hydrated.find((h) =>
-            typeof h.id === "number" ? h.id === Number(groupId) : String(h.id) === groupId,
-          );
-          const name = match ? entityLabel(match, groupId) : groupId;
-          return { id: groupId, name, value: r.count ?? 0 };
-        });
-      return {
-        entries: items,
-        loading:
-          (usersQuery.loading && !usersQuery.data) ||
-          (userIds.length > 0 && usersHydration.loading && !usersHydration.data),
-        error: buildError(usersQuery.error ?? null, () => void usersQuery.refetch()),
-      };
-    }
-
-    if (lens.dimension === "projects") {
-      const rows = (projectsQuery.data?.trackingStatistics ?? []) as Array<{ group?: string | null; count?: number | null }>;
-      const hydrated = (projectsHydration.data?.projectByIds ?? []) as HydrationEntity[];
-      const items = rows
-        .filter((r) => r?.group && r?.count)
-        .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
-        .map((r) => {
-          const groupId = String(r.group);
-          const match = hydrated.find((h) =>
-            typeof h.id === "number" ? h.id === Number(groupId) : String(h.id) === groupId,
-          );
-          const name = match ? entityLabel(match, groupId) : groupId;
-          return { id: groupId, name, value: r.count ?? 0 };
-        });
-      return {
-        entries: items,
-        loading:
-          (projectsQuery.loading && !projectsQuery.data) ||
-          (projectIds.length > 0 && projectsHydration.loading && !projectsHydration.data),
-        error: buildError(projectsQuery.error ?? null, () => void projectsQuery.refetch()),
-      };
-    }
-
-    // Roles: GET_DONUT_STATISTICS with groupBy="role" — no by-ids hydration
-    // (gate ANALYTICS_ROLE_HYDRATION_SUPPORTED = false, documented fallback).
-    if (lens.dimension === "roles") {
-      const rows = (rolesQuery.data?.trackingStatistics ?? []) as Array<{ group?: string | null; count?: number | null }>;
-      const items = rows
-        .filter((r) => r?.group && r?.count)
-        .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
-        .map((r) => ({
-          id: String(r.group),
-          name: ANALYTICS_ROLE_HYDRATION_SUPPORTED
-            ? String(r.group) // placeholder — real hydration ships behind the flag
-            : transformGroupValue(r.group),
-          value: r.count ?? 0,
-        }));
-      return {
-        entries: items,
-        loading: rolesQuery.loading && !rolesQuery.data,
-        error: buildError(rolesQuery.error ?? null, () => void rolesQuery.refetch()),
-      };
-    }
-
-    return empty();
-  }, [lens.dimension, agentsQuery, usersQuery, usersHydration, projectsQuery, projectsHydration, rolesQuery, userIds.length, projectIds.length, t]);
+  const hydrationLoading =
+    (lens.dimension === "agents" &&
+      topIds.length > 0 &&
+      agentsHydration.loading &&
+      !agentsHydration.data) ||
+    (lens.dimension === "users" &&
+      topIds.length > 0 &&
+      usersHydration.loading &&
+      !usersHydration.data) ||
+    (lens.dimension === "projects" &&
+      topIds.length > 0 &&
+      projectsHydration.loading &&
+      !projectsHydration.data);
 
   const unitLabel =
-    lens.measure === "tokens"
-      ? t("breakdown.valueLabelTokens")
-      : t("breakdown.valueLabelCalls");
+    lens.measure === "spend"
+      ? t("breakdown.valueLabelSpend")
+      : lens.measure === "tokens"
+        ? t("breakdown.valueLabelTokens")
+        : t("breakdown.valueLabelRequests");
 
   const description =
-    lens.measure === "tokens"
-      ? t("breakdown.subtitleByTokens")
-      : t("breakdown.subtitleByCalls");
+    lens.measure === "spend"
+      ? t("breakdown.subtitleBySpend")
+      : lens.measure === "tokens"
+        ? t("breakdown.subtitleByTokens")
+        : t("breakdown.subtitleByRequests");
+
+  const cardError = error
+    ? { message: error.message || t("errors.generic"), onRetry: () => refetch() }
+    : null;
 
   const toolbar = (
     <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
@@ -263,7 +170,7 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
         className="w-full sm:w-auto"
       >
         <TabsList
-          className="grid w-full grid-cols-4 sm:inline-flex sm:w-auto"
+          className="grid w-full grid-cols-5 sm:inline-flex sm:w-auto"
           aria-label={t("breakdown.title")}
         >
           {DIMENSIONS.map((dim) => (
@@ -315,13 +222,15 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
     </div>
   );
 
+  const isLoading = loading || hydrationLoading;
+
   return (
     <ChartCard
       title={t("breakdown.title")}
       description={description}
       toolbar={toolbar}
-      loading={loading}
-      error={error}
+      loading={isLoading}
+      error={cardError}
     >
       {entries.length === 0 ? (
         <EmptyState
@@ -330,11 +239,19 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
           description={t("breakdown.emptyHint")}
         />
       ) : lens.view === "share" ? (
-        <DonutView entries={entries as DonutEntry[]} unitLabel={unitLabel} />
+        <DonutView
+          entries={entries as DonutEntry[]}
+          unitLabel={unitLabel}
+          measure={lens.measure}
+        />
       ) : (
-        <RankedList entries={entries as RankedListEntry[]} unitLabel={unitLabel} max={10} />
+        <RankedList
+          entries={entries as RankedListEntry[]}
+          unitLabel={unitLabel}
+          measure={lens.measure}
+          max={10}
+        />
       )}
     </ChartCard>
   );
 }
-

@@ -33,13 +33,12 @@ import { Button } from "@/components/ui/button";
 import { can, type RightsUser } from "@/lib/rights";
 
 import {
-  useAgentCallsStat,
   useBudgetAlerts,
   useEvalRunsCount,
   useFailedJobs,
   useResumeSessions,
   useSessionsStat,
-  useTokensStat,
+  useTodayVitals,
   useWorkflowRunsStat,
   type StatPair,
 } from "../hooks";
@@ -88,8 +87,12 @@ export function HomeDashboard() {
   // skeleton and fails alone (WidgetSection error isolation).
   const resume = useResumeSessions(4);
   const sessionsStat = useSessionsStat();
-  const callsStat = useAgentCallsStat();
-  const tokensStat = useTokensStat();
+  // Spend + Tokens (and Requests, if ever surfaced) share one /admin/litellm
+  // /tag-activity round-trip per window (24h + 7d) — two fetches total for
+  // the three LLM-traffic StatCards.
+  const vitals = useTodayVitals();
+  const spendStat = vitals.spend;
+  const tokensStat = vitals.tokens;
   const workflowStat = useWorkflowRunsStat(roleSlot !== "workflows");
   const evalRuns = useEvalRunsCount(roleSlot !== "evals");
   const budgets = useBudgetAlerts(canBudgets);
@@ -99,15 +102,25 @@ export function HomeDashboard() {
     () => new Intl.NumberFormat(locale),
     [locale],
   );
+  // LiteLLM reports spend in the currency configured per-model — typically
+  // USD. Hardcoded for now; multi-currency is a follow-up (analytics.md §4).
+  const formatCurrency = React.useMemo(
+    () =>
+      new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 2,
+      }),
+    [locale],
+  );
 
   /** 24h total vs 7-day daily average → StatCard delta + caption. */
   const trendOf = (
     stat: StatPair,
+    format: (value: number) => string = formatNumber.format,
   ): { delta?: StatCardDelta; caption?: string } => {
     if (stat.current == null || stat.average == null) return {};
-    const caption = t("vitals.vsAvg", {
-      value: formatNumber.format(stat.average),
-    });
+    const caption = t("vitals.vsAvg", { value: format(stat.average) });
     const percent =
       stat.average > 0
         ? ((stat.current - stat.average) / stat.average) * 100
@@ -128,17 +141,21 @@ export function HomeDashboard() {
   const statValue = (value: number | null, error: boolean): string | number =>
     error || value == null ? "—" : value;
 
+  /** Currency-formatted variant for the Spend card. */
+  const spendStatValue = (value: number | null, error: boolean): string =>
+    error || value == null ? "—" : formatCurrency.format(value);
+
   // Day-one platform: when there is nothing to resume AND the 24h vitals are
   // genuinely zero, one consolidated onboarding EmptyState replaces the three
   // hollow sections (dashboard.md §4 risks, "Empty platform").
   const vitalsSettled =
-    !sessionsStat.loading && !callsStat.loading && !tokensStat.loading;
+    !sessionsStat.loading && !spendStat.loading && !tokensStat.loading;
   const vitalsAllZero =
     !sessionsStat.error &&
-    !callsStat.error &&
+    !spendStat.error &&
     !tokensStat.error &&
     sessionsStat.current === 0 &&
-    callsStat.current === 0 &&
+    spendStat.current === 0 &&
     tokensStat.current === 0;
   const showOnboarding =
     !resume.loading &&
@@ -210,17 +227,25 @@ export function HomeDashboard() {
                 {...trendOf(sessionsStat)}
               />
               <StatCard
-                label={t("vitals.agentCalls")}
-                value={statValue(callsStat.current, callsStat.error)}
-                loading={callsStat.loading}
-                href={canAnalytics ? "/analytics?type=AGENT_RUN" : undefined}
-                {...trendOf(callsStat)}
+                label={t("vitals.spend")}
+                value={spendStatValue(spendStat.current, spendStat.error)}
+                loading={spendStat.loading}
+                href={
+                  canAnalytics
+                    ? "/analytics?measure=spend&type=agents"
+                    : undefined
+                }
+                {...trendOf(spendStat, formatCurrency.format)}
               />
               <StatCard
                 label={t("vitals.tokens")}
                 value={statValue(tokensStat.current, tokensStat.error)}
                 loading={tokensStat.loading}
-                href={canAnalytics ? "/analytics?type=AGENT_RUN" : undefined}
+                href={
+                  canAnalytics
+                    ? "/analytics?measure=tokens&type=agents"
+                    : undefined
+                }
                 {...trendOf(tokensStat)}
               />
               {roleSlot === "workflows" && (
@@ -228,9 +253,12 @@ export function HomeDashboard() {
                   label={t("vitals.routineRuns")}
                   value={statValue(workflowStat.current, workflowStat.error)}
                   loading={workflowStat.loading}
-                  href={
-                    canAnalytics ? "/analytics?type=WORKFLOW_RUN" : "/workflows"
-                  }
+                  // Routine runs are Postgres `job_results` — buildTags() emits
+                  // no workflow_/routine_ prefix today (analytics.md §4 honest
+                  // gap), so /analytics can't deliver per-routine breakdown.
+                  // Point at /workflows instead of /analytics?type=WORKFLOW_RUN
+                  // so the deep-link matches what's actually displayable.
+                  href="/workflows"
                   {...trendOf(workflowStat)}
                 />
               )}

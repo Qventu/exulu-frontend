@@ -1870,9 +1870,9 @@ export const GET_TOKEN_USAGE_STATISTICS = gql`
 
 
 // Time Series Chart Query
-// limit: 31 covers up to a 30-day range at day granularity (analytics.md bug
-// 2.c "silent truncation"; gated client-side by
-// ANALYTICS_TIME_SERIES_LIMIT_31_SUPPORTED in lib/analytics-supported.ts).
+// limit: 31 covers up to a 30-day range at day granularity (legacy — the
+// redesigned /analytics is LiteLLM-driven; this query stays for any
+// pre-redesign consumers still in tree).
 export const GET_TIME_SERIES_STATISTICS = gql`
   query TimeSeriesStatistics($type: typeEnum!, $from: Date!, $to: Date!, $names: [String!]) {
     trackingStatistics(

@@ -14,6 +14,7 @@
 import { useQuery, type DocumentNode } from "@apollo/client";
 import * as React from "react";
 
+import { useTagActivity } from "@/lib/litellm-activity";
 import {
   computeBudgetProjection,
   type BudgetInfo,
@@ -21,7 +22,6 @@ import {
 } from "@/lib/budget";
 
 import {
-  GET_AGENT_RUN_STATISTICS,
   GET_AGENT_SESSIONS,
   GET_AGENT_SESSIONS_STATISTICS,
   GET_AGENTS_WITH_BUDGETS,
@@ -29,7 +29,6 @@ import {
   GET_PROJECTS_WITH_BUDGETS,
   GET_ROLES_WITH_BUDGETS,
   GET_TEAMS_WITH_BUDGETS,
-  GET_TOKEN_USAGE_STATISTICS,
   GET_USERS_WITH_BUDGETS,
   GET_WORKFLOW_RUNS_STATISTICS,
   HOME_AGENT_NAMES,
@@ -182,20 +181,101 @@ function useStatPair(query: DocumentNode, root: string, skip: boolean): StatPair
   };
 }
 
+/**
+ * `agent_sessions` is a Postgres-native concept (chat threads). LiteLLM has no
+ * session model, so Sessions deliberately stays GraphQL-driven — if that
+ * endpoint is ever retired the card silently breaks; see analytics.md §4.
+ */
 export function useSessionsStat(skip = false): StatPair {
   return useStatPair(GET_AGENT_SESSIONS_STATISTICS, "agent_sessionsStatistics", skip);
 }
 
-export function useAgentCallsStat(skip = false): StatPair {
-  return useStatPair(GET_AGENT_RUN_STATISTICS, "trackingStatistics", skip);
-}
-
-export function useTokensStat(skip = false): StatPair {
-  return useStatPair(GET_TOKEN_USAGE_STATISTICS, "trackingStatistics", skip);
-}
-
+/**
+ * Workflow / routine runs are Postgres `job_results` rows; LiteLLM's tag scheme
+ * emits no `workflow_` / `routine_` prefix today (buildTags() honest gap, see
+ * design/pages/analytics.md §4), so this card stays GraphQL-driven too.
+ */
 export function useWorkflowRunsStat(skip: boolean): StatPair {
   return useStatPair(GET_WORKFLOW_RUNS_STATISTICS, "jobsStatistics", skip);
+}
+
+// ---------------------------------------------------------------------------
+// Region B.2 — Today Vitals via LiteLLM /admin/litellm/tag-activity
+// ---------------------------------------------------------------------------
+//
+// The fetch primitive (`useTagActivity`) is owned by analytics/hooks.ts so
+// every LiteLLM-driven surface (Home Vitals + /analytics KPI strip + Trend +
+// Breakdown) shares one cache key shape and one ASI-bug-safe loading gate.
+// The two hooks used to be a copy-pair; they are now a single primitive
+// re-used here.
+
+/** YYYY-MM-DD in UTC — matches the LiteLLM /tag/daily/activity contract. */
+function toLiteLLMDate(iso: string): string {
+  return iso.slice(0, 10);
+}
+
+export interface TodayVitals {
+  spend: StatPair;
+  tokens: StatPair;
+  requests: StatPair;
+}
+
+/**
+ * Today's LiteLLM-derived StatCards (Spend, Tokens, Requests) — one shared
+ * fetch per window (24h + 7d) so the three cards cost two round-trips, not
+ * six. Mirrors `useStatPair`'s ASI-bug-safe loading gate: every StatPair is
+ * `loading` until BOTH windows resolve.
+ *
+ * Spend is reported in whatever currency LiteLLM has the model pricing config
+ * set to — typically USD. Multi-currency display is a documented follow-up
+ * (analytics.md §4 Risks).
+ */
+export function useTodayVitals(skip = false): TodayVitals {
+  const dates = useDateAnchors();
+  // LiteLLM /tag/daily/activity is day-granular; we send YYYY-MM-DD.
+  const today = toLiteLLMDate(dates.now);
+  const dayStart = toLiteLLMDate(dates.dayAgo);
+  const weekStart = toLiteLLMDate(dates.weekAgo);
+
+  const dayQuery = React.useMemo(
+    () => ({ start_date: dayStart, end_date: today }),
+    [dayStart, today],
+  );
+  const weekQuery = React.useMemo(
+    () => ({ start_date: weekStart, end_date: today }),
+    [weekStart, today],
+  );
+
+  const day = useTagActivity(dayQuery, skip);
+  const week = useTagActivity(weekQuery, skip);
+
+  const loading = !skip && (day.loading || week.loading);
+  const error = Boolean(day.error || week.error);
+
+  const dayTotals = day.data?.totals;
+  const weekTotals = week.data?.totals;
+  const ready = !skip && !loading && !error && dayTotals != null && weekTotals != null;
+
+  const pair = (current: number, weekly: number, integer: boolean): StatPair => ({
+    current,
+    average: integer ? Math.round(weekly / 7) : weekly / 7,
+    loading,
+    error,
+  });
+
+  const empty: StatPair = { current: null, average: null, loading, error };
+
+  return {
+    spend: ready
+      ? pair(dayTotals!.spend, weekTotals!.spend, false)
+      : empty,
+    tokens: ready
+      ? pair(dayTotals!.total_tokens, weekTotals!.total_tokens, true)
+      : empty,
+    requests: ready
+      ? pair(dayTotals!.successful_requests, weekTotals!.successful_requests, true)
+      : empty,
+  };
 }
 
 interface EvalRunsCountResult {

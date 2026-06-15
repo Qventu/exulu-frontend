@@ -9,12 +9,13 @@
  * and don't need to change.
  *
  * No React. No Apollo. Anything React-touching lives in ./hooks.
+ *
+ * STATISTICS_TYPE is retired from /analytics — LiteLLM has no event-type
+ * taxonomy; spend/tokens/requests already cover what the GraphQL union
+ * used to discriminate. URL backwards-compat for legacy ?type=AGENT_RUN /
+ * ?type=WORKFLOW_RUN deep links is preserved below via
+ * LENS_TYPE_FROM_LEGACY.
  */
-
-import {
-  STATISTICS_TYPE_ENUM,
-  type STATISTICS_TYPE,
-} from "@/lib/enums/statistics";
 
 // ---------------------------------------------------------------------------
 // Lens constants + types
@@ -23,20 +24,34 @@ import {
 export const RANGE_PRESETS = ["24h", "7d", "14d", "30d", "custom"] as const;
 export type RangePreset = (typeof RANGE_PRESETS)[number];
 
-export const MEASURES = ["count", "tokens"] as const;
+export const MEASURES = ["spend", "tokens", "requests"] as const;
 export type Measure = (typeof MEASURES)[number];
 
-export const DIMENSIONS = ["agents", "users", "projects", "roles"] as const;
+export const DIMENSIONS = ["agents", "users", "projects", "teams", "roles"] as const;
 export type Dimension = (typeof DIMENSIONS)[number];
 
 export const BREAKDOWN_VIEWS = ["list", "share"] as const;
 export type BreakdownView = (typeof BREAKDOWN_VIEWS)[number];
 
+/**
+ * Lens type — replaces the legacy STATISTICS_TYPE enum. LiteLLM's
+ * /tag/daily/activity has no event-type taxonomy; the dimension we pivot on
+ * is the *tag prefix family* the backend emits via buildTags() — see
+ * src/exulu/tags.ts. Each Exulu LLM call double-tags itself per dimension
+ * (id + name); the lens type selects which family to filter / breakdown by.
+ *
+ * Note: 'workflows' is intentionally absent. buildTags() emits no
+ * workflow_/routine_ prefix today (architect plan §HONEST GAP). When the
+ * backend ships those prefixes, the dimension joins this union.
+ */
+export const LENS_TYPES = ["all", "agents", "users", "projects", "teams", "roles"] as const;
+export type LensType = (typeof LENS_TYPES)[number];
+
 /** Max days a custom range may span (matches legacy DateRangeSelector). */
 export const MAX_RANGE_DAYS = 30;
 export const DEFAULT_PRESET: RangePreset = "14d";
-export const DEFAULT_TYPE: STATISTICS_TYPE = "AGENT_RUN";
-export const DEFAULT_MEASURE: Measure = "count";
+export const DEFAULT_TYPE: LensType = "all";
+export const DEFAULT_MEASURE: Measure = "spend";
 export const DEFAULT_DIMENSION: Dimension = "agents";
 export const DEFAULT_VIEW: BreakdownView = "list";
 
@@ -54,7 +69,7 @@ export interface Lens {
   /** Only used when preset === "custom"; otherwise derived from preset. */
   customFrom: string | null;
   customTo: string | null;
-  type: STATISTICS_TYPE;
+  type: LensType;
   measure: Measure;
   dimension: Dimension;
   view: BreakdownView;
@@ -67,11 +82,42 @@ const DAY_MS = 24 * HOUR_MS;
 // Helpers
 // ---------------------------------------------------------------------------
 
-function isStatisticsType(
-  value: string | null | undefined,
-): value is STATISTICS_TYPE {
-  if (!value) return false;
-  return Object.prototype.hasOwnProperty.call(STATISTICS_TYPE_ENUM, value);
+/**
+ * Legacy ?type=STATISTICS_TYPE → new LensType. Honored verbatim for deep
+ * links. Anything not in the map degrades silently to DEFAULT_TYPE per
+ * analytics.md UX#10 (the same fall-back contract the rest of the parser
+ * uses — no toast, no crash).
+ *
+ * HONEST FALLBACK for WORKFLOW_RUN / CONTEXT_*: buildTags() emits no
+ * workflow_/routine_/context_ prefix — "all" is the only honest choice
+ * over silently mis-attributing to agents.
+ */
+const LENS_TYPE_FROM_LEGACY: Record<string, LensType> = {
+  AGENT_RUN: "agents",
+  TOOL_CALL: "agents",
+  WORKFLOW_RUN: "all",
+  CONTEXT_RETRIEVE: "all",
+  CONTEXT_UPSERT: "all",
+  SOURCE_UPDATE: "all",
+  EMBEDDER_GENERATE: "all",
+  EMBEDDER_UPSERT: "all",
+  EMBEDDER_DELETE: "all",
+};
+
+function parseLensType(value: string | null | undefined): LensType {
+  if (!value) return DEFAULT_TYPE;
+  if ((LENS_TYPES as readonly string[]).includes(value)) return value as LensType;
+  if (value in LENS_TYPE_FROM_LEGACY) return LENS_TYPE_FROM_LEGACY[value]!;
+  return DEFAULT_TYPE;
+}
+
+function parseMeasure(value: string | null | undefined): Measure {
+  if (!value) return DEFAULT_MEASURE;
+  // Legacy URL alias: ?measure=count → requests (the LiteLLM-shaped synonym).
+  if (value === "count") return "requests";
+  return (MEASURES as readonly string[]).includes(value)
+    ? (value as Measure)
+    : DEFAULT_MEASURE;
 }
 
 function narrow<T extends string>(
@@ -95,10 +141,17 @@ interface ReadonlyURLSearchParamsLike {
 // ---------------------------------------------------------------------------
 
 /**
- * Parse the five URL params honored by the lens. Unknown values fall back
+ * Parse the URL params honored by the lens. Unknown values fall back
  * silently (no crash, no toast — the user typed a deep link, we degrade).
  * The one exception is a custom range over MAX_RANGE_DAYS, which the view
  * component flags with a one-shot toast (analytics.md UX#10, i18n'd).
+ *
+ * Backwards compat:
+ *   - ?measure=count → "requests"
+ *   - ?type=AGENT_RUN / ?type=TOOL_CALL → "agents"
+ *   - ?type=WORKFLOW_RUN / ?type=CONTEXT_* / ?type=EMBEDDER_* → "all"
+ *     (honest fallback per architect §HONEST GAP — buildTags emits no
+ *     workflow_/context_/embedder_ prefix today)
  */
 export function lensFromSearchParams(
   searchParams: URLSearchParams | ReadonlyURLSearchParamsLike,
@@ -131,15 +184,12 @@ export function lensFromSearchParams(
     effectivePreset = DEFAULT_PRESET;
   }
 
-  const typeRaw = get("type");
-  const type = isStatisticsType(typeRaw) ? typeRaw : DEFAULT_TYPE;
-
   return {
     preset: effectivePreset,
     customFrom,
     customTo,
-    type,
-    measure: narrow<Measure>(get("measure"), MEASURES, DEFAULT_MEASURE),
+    type: parseLensType(get("type")),
+    measure: parseMeasure(get("measure")),
     dimension: narrow<Dimension>(get("dimension"), DIMENSIONS, DEFAULT_DIMENSION),
     view: narrow<BreakdownView>(get("view"), BREAKDOWN_VIEWS, DEFAULT_VIEW),
   };
@@ -207,4 +257,36 @@ export function resolveWindow(
       durationMs: duration,
     },
   };
+}
+
+/**
+ * Canonical mapping from lens dimension → tag-prefix forwarded to the
+ * backend /admin/litellm/tag-activity proxy. Encode this map twice — once
+ * on the frontend (here) and once on the backend constant — so any drift
+ * fails loudly rather than silently mis-attributing tag traffic.
+ *
+ * Prefix preference: use `_id_` forms for grouping (ids are stable across
+ * renames; LiteLLM tag budgets already key off the id form per
+ * budgetTagFor()). The `_name_` forms ride along but are redundant for
+ * analytics — the frontend hydrates names via GraphQL using ids.
+ */
+export const DIMENSION_TAG_PREFIX: Record<Dimension, string> = {
+  agents: "agent_id_",
+  users: "user_id_",
+  projects: "project_id_",
+  teams: "team_id_",
+  roles: "role_id_",
+};
+
+/**
+ * Resolve the LensType to a tag_prefix for the backend's /admin/litellm/
+ * tag-activity proxy. 'all' returns null (omit tag_prefix; global view).
+ *
+ * Lens.type and Lens.dimension can disagree (the type narrows totals; the
+ * dimension drives the breakdown). When narrowing totals we use the type;
+ * when computing the breakdown we use the dimension.
+ */
+export function tagPrefixForType(type: LensType): string | null {
+  if (type === "all") return null;
+  return DIMENSION_TAG_PREFIX[type];
 }

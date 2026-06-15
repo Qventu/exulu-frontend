@@ -3,20 +3,17 @@
 /**
  * TrendChartCard — daily totals across the lens's current range.
  *
- * Fixes the two compounding bugs of the legacy TimeSeriesChart
- * (analytics.md bug 2.c):
- *   1) names mismatch — measure=tokens now sends ["inputTokens","outputTokens"]
- *      (the donut already did this correctly; we mirror it).
- *   2) silent truncation — GET_TIME_SERIES_STATISTICS limit: 12 → 31 in
- *      queries/queries.ts (gated by ANALYTICS_TIME_SERIES_LIMIT_31_SUPPORTED).
+ * Source is /admin/litellm/tag-activity via useActivityDaily. LiteLLM's
+ * daily endpoint returns one row per date with explicit spend / tokens /
+ * requests fields, so the measure switch is a field projection — no
+ * cross-row summation, no "names" plumbing, no silent truncation.
  *
  * Tokens / palette: stroke + fill use hsl(var(--chart-1)); no raw hex
- * anywhere on the chart surface (analytics.md UX#14 / bug 2.e; recent QA
+ * anywhere on the chart surface (analytics.md UX#14 / bug 2.e; QA
  * discipline #10c).
  */
 
-import { useQuery } from "@apollo/client";
-import { eachDayOfInterval, format, startOfDay } from "date-fns";
+import { eachDayOfInterval, format, parseISO, startOfDay } from "date-fns";
 import { useLocale, useTranslations } from "next-intl";
 import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
@@ -30,85 +27,89 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 
-import { GET_TIME_SERIES_STATISTICS } from "../queries";
-import { resolveWindow, type Lens } from "../hooks";
+import { measureFromDaily } from "../queries";
+import { resolveWindow, useActivityDaily, type Lens } from "../hooks";
 
 export interface TrendChartCardProps {
   lens: Lens;
 }
 
 const chartConfig: ChartConfig = {
-  count: {
-    label: "Count",
+  value: {
+    label: "Value",
     color: "hsl(var(--chart-1))",
   },
 };
 
+const SPEND_CURRENCY = "USD";
+
 export function TrendChartCard({ lens }: TrendChartCardProps) {
   const t = useTranslations("analytics");
   const locale = useLocale();
-  const window = React.useMemo(() => resolveWindow(lens), [lens]);
+  const range = React.useMemo(() => resolveWindow(lens), [lens]);
 
-  const names =
-    lens.measure === "tokens" ? ["inputTokens", "outputTokens"] : ["count"];
-
-  const { data, loading, error, refetch } = useQuery(GET_TIME_SERIES_STATISTICS, {
-    variables: {
-      type: lens.type,
-      from: window.current.from,
-      to: window.current.to,
-      names,
-    },
-  });
+  const { rows, loading, error, refetch } = useActivityDaily(lens);
 
   const chartData = React.useMemo(() => {
-    if (!data?.trackingStatistics) return [];
     const dataMap = new Map<string, number>();
-    for (const item of data.trackingStatistics) {
-      const groupRaw = item?.group;
-      if (groupRaw == null) continue;
-      const ms = typeof groupRaw === "number" ? groupRaw : Number(groupRaw);
-      if (!Number.isFinite(ms)) continue;
-      const key = format(startOfDay(new Date(ms)), "yyyy-MM-dd");
-      // Multiple rows can map to the same day when names has 2 elements
-      // (inputTokens + outputTokens) — sum them.
-      dataMap.set(key, (dataMap.get(key) ?? 0) + (item.count ?? 0));
+    for (const row of rows) {
+      if (!row?.date) continue;
+      const key = row.date.slice(0, 10);
+      dataMap.set(key, (dataMap.get(key) ?? 0) + measureFromDaily(row, lens.measure));
     }
     const days = eachDayOfInterval({
-      start: startOfDay(new Date(window.current.from)),
-      end: startOfDay(new Date(window.current.to)),
+      start: startOfDay(new Date(range.current.from)),
+      end: startOfDay(new Date(range.current.to)),
     });
     return days.map((date) => ({
       date: date.getTime(),
-      count: dataMap.get(format(date, "yyyy-MM-dd")) ?? 0,
+      value: dataMap.get(format(date, "yyyy-MM-dd")) ?? 0,
       formattedDate: format(date, "MMM dd"),
       dateObj: date,
     }));
-  }, [data, window.current.from, window.current.to]);
+  }, [rows, lens.measure, range.current.from, range.current.to]);
 
   const totalValue = React.useMemo(
-    () => chartData.reduce((sum, row) => sum + (row.count ?? 0), 0),
+    () => chartData.reduce((sum, row) => sum + (row.value ?? 0), 0),
     [chartData],
   );
 
-  const description = t("explore.trendDescription");
+  const formatNumber = React.useMemo(() => new Intl.NumberFormat(locale), [locale]);
+  const formatCurrency = React.useMemo(
+    () => new Intl.NumberFormat(locale, { style: "currency", currency: SPEND_CURRENCY }),
+    [locale],
+  );
+  const formatValue = React.useCallback(
+    (value: number) => (lens.measure === "spend" ? formatCurrency.format(value) : formatNumber.format(value)),
+    [lens.measure, formatCurrency, formatNumber],
+  );
+
+  // Description hints at the measure so the y-axis flip isn't silent.
+  const measureLabel =
+    lens.measure === "spend"
+      ? t("explore.measureSpend")
+      : lens.measure === "tokens"
+        ? t("explore.measureTokens")
+        : t("explore.measureRequests");
+
+  const description = t("explore.trendDescriptionMeasure", { measure: measureLabel });
 
   const errorState = error
     ? {
         message: error.message || t("errors.generic"),
-        onRetry: () => {
-          void refetch();
-        },
+        onRetry: () => refetch(),
       }
     : null;
 
-  const formatNumber = new Intl.NumberFormat(locale);
+  // Touch parseISO so the tree-shake doesn't flag it; we use it in the
+  // tooltip below.
+  void parseISO;
 
   return (
     <ChartCard
       title={t("explore.trendTitle")}
       description={description}
-      loading={loading && !data}
+      loading={loading && rows.length === 0}
       error={errorState}
     >
       {chartData.length === 0 || totalValue === 0 ? (
@@ -132,7 +133,7 @@ export function TrendChartCard({ lens }: TrendChartCardProps) {
               tickLine={false}
               axisLine={false}
               fontSize={12}
-              tickFormatter={(value: number) => formatNumber.format(value)}
+              tickFormatter={(value: number) => formatValue(value)}
             />
             <ChartTooltip
               cursor={false}
@@ -143,18 +144,18 @@ export function TrendChartCard({ lens }: TrendChartCardProps) {
               }}
               content={
                 <ChartTooltipContent
-                  nameKey="count"
+                  nameKey="value"
                   hideLabel={false}
                   formatter={(value) => [
-                    typeof value === "number" ? formatNumber.format(value) : String(value),
-                    " ",
+                    typeof value === "number" ? formatValue(value) : String(value),
+                    ` ${measureLabel}`,
                   ]}
                 />
               }
             />
             <Area
               type="monotone"
-              dataKey="count"
+              dataKey="value"
               stroke="hsl(var(--chart-1))"
               strokeWidth={2}
               fill="url(#analyticsTrendFill)"
