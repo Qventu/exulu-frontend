@@ -1451,6 +1451,8 @@
     },
     "emptyStateBug": "Tell me about the bug you'd like to report.",
     "emptyStateFeature": "Tell me about the feature you'd like to suggest.",
+    "errorFallback": "An unexpected error occurred. Please try again.",
+    "errorTitle": "Error",
     "featureTitle": "Feature request",
     "label": "Feedback",
     "openButton": "Open feedback",
@@ -1459,6 +1461,69 @@
     "send": "Send",
     "stop": "Stop",
     "title": "Send feedback"
+  },
+  "feedbackReview": {
+    "columns": {
+      "agent": "Agent",
+      "date": "Date",
+      "feedback": "Feedback",
+      "type": "Type",
+      "user": "User"
+    },
+    "confirmDelete": {
+      "bulkDescription": "This permanently removes {count} feedback records. The chat sessions themselves are not affected. This cannot be undone.",
+      "bulkTitle": "Delete {count} feedback items?",
+      "singleDescription": "This permanently removes the feedback record. The chat session itself is not affected. This cannot be undone.",
+      "singleTitle": "Delete this feedback?"
+    },
+    "description": "What users said about agent responses.",
+    "detailPanel": {
+      "conversationEmpty": "No messages found for this session.",
+      "conversationHeading": "Conversation",
+      "copyAgentId": "Copy agent id",
+      "copySessionId": "Copy session id",
+      "copyUserId": "Copy user id",
+      "deleteAction": "Delete feedback",
+      "feedbackHeading": "Feedback",
+      "metaAgent": "Agent",
+      "metaSession": "Session",
+      "metaUser": "User",
+      "openInChat": "Open in Chat"
+    },
+    "emptyState": {
+      "action": "Review agent settings",
+      "description": "Thumbs up or down in chat land here once an agent has feedback enabled.",
+      "title": "No feedback yet"
+    },
+    "filteredEmpty": {
+      "action": "Reset filters",
+      "description": "Try widening the type, agent, or user, or clear the search.",
+      "title": "Nothing matches these filters"
+    },
+    "selectionBar": {
+      "deleteN": "Delete {count}"
+    },
+    "summaryStat": "{percent}% positive · {negative} negative",
+    "title": "Feedback",
+    "toasts": {
+      "deleteFailure": "Failed to delete feedback",
+      "deleteSuccessBulk": "Deleted {count} feedback items",
+      "deleteSuccessSingle": "Feedback deleted"
+    },
+    "toolbar": {
+      "agentEmpty": "No agents match",
+      "agentPlaceholder": "Filter by agent",
+      "filterButton": "Filter",
+      "resetChip": "Reset",
+      "searchPlaceholder": "Search feedback…",
+      "typeAll": "All",
+      "typeNegative": "Negative",
+      "typePositive": "Positive",
+      "userEmpty": "No users match",
+      "userPlaceholder": "Filter by user"
+    },
+    "typeNegative": "Negative feedback",
+    "typePositive": "Positive feedback"
   },
   "home": {
     "attention": {

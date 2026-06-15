@@ -1451,6 +1451,8 @@
     },
     "emptyStateBug": "Erzählen Sie mir von dem Fehler, den Sie melden möchten.",
     "emptyStateFeature": "Erzählen Sie mir von der Funktion, die Sie vorschlagen möchten.",
+    "errorFallback": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+    "errorTitle": "Fehler",
     "featureTitle": "Feature-Wunsch",
     "label": "Feedback",
     "openButton": "Feedback öffnen",
@@ -1459,6 +1461,69 @@
     "send": "Senden",
     "stop": "Stopp",
     "title": "Feedback senden"
+  },
+  "feedbackReview": {
+    "columns": {
+      "agent": "Agent",
+      "date": "Datum",
+      "feedback": "Feedback",
+      "type": "Typ",
+      "user": "Nutzer"
+    },
+    "confirmDelete": {
+      "bulkDescription": "Damit werden {count} Feedback-Einträge dauerhaft entfernt. Die Chat-Sitzungen selbst sind nicht betroffen. Dies kann nicht rückgängig gemacht werden.",
+      "bulkTitle": "{count} Feedback-Einträge löschen?",
+      "singleDescription": "Damit wird das Feedback dauerhaft entfernt. Die Chat-Sitzung selbst ist nicht betroffen. Dies kann nicht rückgängig gemacht werden.",
+      "singleTitle": "Dieses Feedback löschen?"
+    },
+    "description": "Was Nutzer zu Agent-Antworten gesagt haben.",
+    "detailPanel": {
+      "conversationEmpty": "Keine Nachrichten für diese Sitzung gefunden.",
+      "conversationHeading": "Konversation",
+      "copyAgentId": "Agent-ID kopieren",
+      "copySessionId": "Sitzungs-ID kopieren",
+      "copyUserId": "Nutzer-ID kopieren",
+      "deleteAction": "Feedback löschen",
+      "feedbackHeading": "Feedback",
+      "metaAgent": "Agent",
+      "metaSession": "Sitzung",
+      "metaUser": "Nutzer",
+      "openInChat": "Im Chat öffnen"
+    },
+    "emptyState": {
+      "action": "Agenten-Einstellungen prüfen",
+      "description": "Daumen hoch oder runter im Chat erscheinen hier, sobald ein Agent Feedback aktiviert hat.",
+      "title": "Noch kein Feedback"
+    },
+    "filteredEmpty": {
+      "action": "Filter zurücksetzen",
+      "description": "Erweitern Sie den Typ, Agenten oder Nutzer, oder leeren Sie die Suche.",
+      "title": "Nichts passt zu diesen Filtern"
+    },
+    "selectionBar": {
+      "deleteN": "{count} löschen"
+    },
+    "summaryStat": "{percent}% positiv · {negative} negativ",
+    "title": "Feedback",
+    "toasts": {
+      "deleteFailure": "Feedback konnte nicht gelöscht werden",
+      "deleteSuccessBulk": "{count} Feedback-Einträge gelöscht",
+      "deleteSuccessSingle": "Feedback gelöscht"
+    },
+    "toolbar": {
+      "agentEmpty": "Keine passenden Agenten",
+      "agentPlaceholder": "Nach Agent filtern",
+      "filterButton": "Filter",
+      "resetChip": "Zurücksetzen",
+      "searchPlaceholder": "Feedback suchen…",
+      "typeAll": "Alle",
+      "typeNegative": "Negativ",
+      "typePositive": "Positiv",
+      "userEmpty": "Keine passenden Nutzer",
+      "userPlaceholder": "Nach Nutzer filtern"
+    },
+    "typeNegative": "Negatives Feedback",
+    "typePositive": "Positives Feedback"
   },
   "home": {
     "attention": {

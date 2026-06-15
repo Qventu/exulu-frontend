@@ -56,9 +56,7 @@ export function FeedbackChat({ kind, sessionId, onBack }: Props) {
         const parsed = JSON.parse(e?.message);
         setError(parsed?.detail ?? parsed?.message ?? e?.message);
       } catch {
-        setError(
-          e?.message ?? "An unexpected error occurred. Please try again."
-        );
+        setError(e?.message ?? t("feedback.errorFallback"));
       }
     },
     transport: new DefaultChatTransport({
@@ -144,7 +142,7 @@ export function FeedbackChat({ kind, sessionId, onBack }: Props) {
         <div className="px-6 pb-2">
           <Alert variant="destructive">
             <ExclamationTriangleIcon className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>{t("feedback.errorTitle")}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         </div>

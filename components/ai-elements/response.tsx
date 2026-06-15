@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from 
 import { DocumentNode, useMutation, useQuery } from '@apollo/client';
 import { GET_CHUNK_BY_ID, UPDATE_ITEM } from '@/queries/queries';
 import { getPresignedUrl } from '../primitives/file-picker';
+import { ConfirmDialog } from '../primitives/confirm-dialog';
 import Link from 'next/link';
 import { AlertTriangle, LinkIcon, CopyIcon } from 'lucide-react';
 import { toast } from "sonner";
@@ -350,8 +351,11 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
   });
 
   const [deactivated, setDeactivated] = useState(false);
+  const [confirmDeactivateOpen, setConfirmDeactivateOpen] = useState(false);
   const [updateItem, { loading: deactivating }] = useMutation(UPDATE_ITEM(context));
 
+  // ConfirmDialog enforces the destructive-confirmation flow (design-system audit
+  // R5; primitives/confirm-dialog.tsx). Reject onConfirm to keep the dialog open.
   const handleDeactivate = async () => {
     if (!itemId) return;
     try {
@@ -360,6 +364,7 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
       toast.success('Source deactivated', { description: `${itemName} has been archived globally.` });
     } catch (error) {
       toast.error('Failed to deactivate source', { description: error instanceof Error ? error.message : 'Please try again.' });
+      throw error;
     }
   };
 
@@ -560,11 +565,20 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
             <Button
               variant={deactivated ? 'outline' : 'destructive'}
               size="sm"
-              onClick={handleDeactivate}
+              onClick={() => setConfirmDeactivateOpen(true)}
               disabled={deactivating || deactivated}
             >
               {deactivated ? 'Deactivated' : deactivating ? 'Deactivating…' : 'Deactivate this source'}
             </Button>
+            <ConfirmDialog
+              open={confirmDeactivateOpen}
+              onOpenChange={setConfirmDeactivateOpen}
+              title="Deactivate this source?"
+              description={`This archives "${itemName}" globally — it will no longer appear in any user's chat or search results.`}
+              confirmLabel="Deactivate"
+              variant="destructive"
+              onConfirm={handleDeactivate}
+            />
           </div>
         )}
       </DialogContent>
