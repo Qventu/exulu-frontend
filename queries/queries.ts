@@ -1856,8 +1856,8 @@ export const GET_AGENT_RUN_STATISTICS = gql`
   }
 `;
 
-export const GET_TOKEN_USAGE_STATISTICS = gql`  
-  query AgentCallsStatistics($from: Date!, $to: Date!) {
+export const GET_TOKEN_USAGE_STATISTICS = gql`
+  query TokenUsageStatistics($from: Date!, $to: Date!) {
     trackingStatistics(limit: 10, filters: {
       name: { in: ["inputTokens", "outputTokens"] }
       createdAt: { and: [{ gte: $from }, { lte: $to }] }
@@ -1870,11 +1870,14 @@ export const GET_TOKEN_USAGE_STATISTICS = gql`
 
 
 // Time Series Chart Query
+// limit: 31 covers up to a 30-day range at day granularity (analytics.md bug
+// 2.c "silent truncation"; gated client-side by
+// ANALYTICS_TIME_SERIES_LIMIT_31_SUPPORTED in lib/analytics-supported.ts).
 export const GET_TIME_SERIES_STATISTICS = gql`
   query TimeSeriesStatistics($type: typeEnum!, $from: Date!, $to: Date!, $names: [String!]) {
     trackingStatistics(
       groupBy: "createdAt"
-      limit: 12
+      limit: 31
       filters: {
         type: { eq: $type }
         createdAt: { and: [{ gte: $from }, { lte: $to }] }
@@ -1887,11 +1890,13 @@ export const GET_TIME_SERIES_STATISTICS = gql`
   }
 `;
 
+// limit: 10 — the leaderboard rows now match the doc's "top 10" promise
+// (analytics.md bug 2.f / UX#8; RankedList default maxEntries = 10).
 export const GET_USER_STATISTICS = gql`
 query UserStatistics($from: Date!, $to: Date!, $names: [String!]) {
   trackingStatistics(
     groupBy: "user"
-    limit: 4
+    limit: 10
     filters: {
       type: { eq: AGENT_RUN }
       createdAt: { and: [{ gte: $from }, { lte: $to }] }
@@ -1908,7 +1913,7 @@ export const GET_PROJECT_STATISTICS = gql`
 query ProjectStatistics($from: Date!, $to: Date!, $names: [String!]) {
   trackingStatistics(
     groupBy: "project"
-    limit: 4
+    limit: 10
     filters: {
       type: { eq: AGENT_RUN }
       createdAt: { and: [{ gte: $from }, { lte: $to }] }
@@ -1925,7 +1930,7 @@ export const GET_AGENT_STATISTICS = gql`
 query AgentStatistics($from: Date!, $to: Date!, $names: [String!]) {
   trackingStatistics(
     groupBy: "label"
-    limit: 4
+    limit: 10
     filters: {
       type: { eq: AGENT_RUN }
       name: { in: $names }

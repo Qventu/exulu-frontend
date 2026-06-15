@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * @deprecated Use `app/(application)/analytics/components/donut-view.tsx`
+ * (token-only label fill, color-keyed legend list) for new pages. Retained
+ * as the legacy fallback consumed by
+ * `app/(application)/data/components/usage-panel.tsx`, where the embedded
+ * group-by Select is hidden (groupByOptions=[]). Migration tracked as work
+ * item 3.3.1; do not add new consumers.
+ */
+
 import * as React from "react";
 import { useQuery } from "@apollo/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

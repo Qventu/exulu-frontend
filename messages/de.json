@@ -581,6 +581,81 @@
     "subtitle": "Verwalten Sie Ihre KI-Agenten und erstellen Sie neue.",
     "title": "Agenten"
   },
+  "analytics": {
+    "breakdown": {
+      "dimAgents": "Agenten",
+      "dimProjects": "Projekte",
+      "dimRoles": "Rollen",
+      "dimUsers": "Benutzer",
+      "emptyHint": "Versuchen Sie einen größeren Zeitraum oder einen anderen Ereignistyp.",
+      "emptyTitle": "Keine Daten für diese Ansicht",
+      "subtitleByCalls": "nach Agent-Aufrufen",
+      "subtitleByTokens": "nach Token-Nutzung",
+      "title": "Aufschlüsselung",
+      "valueLabelCalls": "Aufrufe",
+      "valueLabelTokens": "Tokens",
+      "viewList": "Liste",
+      "viewListAria": "Listenansicht",
+      "viewShare": "Anteil",
+      "viewShareAria": "Anteilsansicht"
+    },
+    "deepLinkRangeReset": "Der verlinkte Zeitraum überschritt 30 Tage und wurde auf die letzten 14 Tage zurückgesetzt.",
+    "errors": {
+      "generic": "Dieses Diagramm konnte nicht geladen werden.",
+      "reload": "Neu laden",
+      "retry": "Erneut versuchen",
+      "technicalDetails": "Technische Details"
+    },
+    "explore": {
+      "measure": "Maßeinheit",
+      "measureCount": "Anzahl",
+      "measureTokens": "Tokens",
+      "trendDescription": "Tägliche Summen im gewählten Zeitraum.",
+      "trendEmptyHint": "Versuchen Sie einen größeren Zeitraum oder einen anderen Ereignistyp.",
+      "trendEmptyTitle": "Keine Aktivität in diesem Zeitraum",
+      "trendTitle": "Verlauf",
+      "type": "Ereignistyp",
+      "typeAgentRun": "Agent-Ausführung",
+      "typeContextRetrieve": "Kontext abrufen",
+      "typeContextUpsert": "Kontext speichern",
+      "typeEmbedderDelete": "Embedder löschen",
+      "typeEmbedderGenerate": "Embedder erzeugen",
+      "typeEmbedderUpsert": "Embedder speichern",
+      "typeGroupAgents": "Agenten",
+      "typeGroupKnowledge": "Wissen",
+      "typeGroupWorkflows": "Workflows",
+      "typeSourceUpdate": "Quelle aktualisieren",
+      "typeToolCall": "Tool-Aufruf",
+      "typeWorkflowRun": "Workflow-Ausführung"
+    },
+    "footer": {
+      "budgets": "Budgets",
+      "evals": "Auswertungen",
+      "label": "Weitere Analysen"
+    },
+    "kpi": {
+      "agentCalls": "Agent-Aufrufe",
+      "sessions": "Sitzungen",
+      "toolCalls": "Tool-Aufrufe",
+      "tokens": "Tokens",
+      "vsPrevious": "ggü. vorher: {value}",
+      "workflowRuns": "Workflow-Ausführungen"
+    },
+    "purpose": "Nutzung über Agenten, Benutzer und Projekte hinweg.",
+    "range": {
+      "footnote": "Maximaler Zeitraum: {days} Tage",
+      "label": "Zeitraum",
+      "placeholder": "Zeitraum auswählen",
+      "preset24h": "24h",
+      "preset7d": "7T",
+      "preset14d": "14T",
+      "preset30d": "30T",
+      "presetCustom": "Benutzerdefiniert",
+      "tooLargeDescription": "Bitte wählen Sie einen Zeitraum von {days} Tagen oder weniger.",
+      "tooLargeTitle": "Zeitraum zu groß"
+    },
+    "title": "Analytik"
+  },
   "auth": {
     "boundary": {
       "description": "Auf der Anmeldeseite ist ein unerwarteter Fehler aufgetreten. Bitte versuchen Sie es erneut.",

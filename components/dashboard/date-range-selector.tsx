@@ -1,5 +1,18 @@
 "use client";
 
+/**
+ * @deprecated Use `app/(application)/analytics/components/range-picker.tsx`
+ * (preset Tabs + bounded custom calendar, i18n'd, responsive) for new pages.
+ * This component is retained ONLY as the legacy fallback consumed by
+ * `app/(application)/data/components/usage-panel.tsx`. Migration to the new
+ * RangePicker is tracked as work item 3.3.1; do not add new consumers.
+ *
+ * The new RangePicker covers a SUPERSET of this component's feature set
+ * (presets + custom popover) but exposes a different `lens` shape (see
+ * `app/(application)/analytics/hooks.ts`), so adoption requires the
+ * consumer to migrate to the lens model.
+ */
+
 import * as React from "react";
 import { CalendarIcon } from "@radix-ui/react-icons";
 import { format, subDays, differenceInDays, addDays } from "date-fns";

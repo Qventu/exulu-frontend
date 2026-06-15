@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * @deprecated Use `app/(application)/analytics/components/trend-chart-card.tsx`
+ * (token-only colors, honest tokens query, no silent day truncation) for
+ * new pages. Retained as the legacy fallback consumed by
+ * `app/(application)/data/components/usage-panel.tsx`, where it's invoked
+ * with a single-unit `[count]` series and never triggers the
+ * tokens-fiction bug (UX#1 / bug 2.c). Migration tracked as work item
+ * 3.3.1; do not add new consumers.
+ */
+
 import * as React from "react";
 import { useQuery } from "@apollo/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
