@@ -153,14 +153,13 @@ export function RangePicker({ lens, onLensChange, fullWidthBelowSm = false }: Ra
           className="w-auto p-0 sm:w-auto"
         >
           <Calendar
-            initialFocus
+            autoFocus
             mode="range"
             defaultMonth={fromDate}
             selected={selected}
             onSelect={handleCalendarSelect}
             disabled={disabledDays}
             numberOfMonths={1}
-            className="sm:[&_.rdp-months]:flex-row"
           />
           <div className="border-t p-3 text-xs text-muted-foreground">
             {t("range.footnote", { days: MAX_RANGE_DAYS })}
