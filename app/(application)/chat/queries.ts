@@ -406,20 +406,6 @@ export const CREATE_FEEDBACK = gql`
 // Models (per-request model override)
 // ---------------------------------------------------------------------------
 
-export const GET_MODELS_LITE = gql`
-  query GetModelsLite($page: Int!, $limit: Int!) {
-    modelsPagination(page: $page, limit: $limit, sort: { field: "name", direction: ASC }) {
-      items {
-        id
-        name
-        description
-        provider
-        active
-      }
-    }
-  }
-`;
-
 export const GET_LITELLM_CATALOG = gql`
   query GetLiteLLMCatalog {
     litellmCatalog {

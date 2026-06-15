@@ -47,7 +47,6 @@ import {
   CREATE_AGENT_SESSION,
   GET_AGENT_SESSIONS,
   GET_LITELLM_CATALOG,
-  GET_MODELS_LITE,
   GET_USER_BY_ID,
   REMOVE_AGENT_SESSION_BY_ID,
   UPDATE_AGENT_SESSION_ITEMS,
@@ -970,49 +969,34 @@ export interface ChatModelOption {
   region?: string | null;
 }
 
-/** LiteLLM catalog vs Models table by config flag; speech models filtered out. */
+/** LiteLLM catalog as the single source of model options; speech models filtered out. */
 export function useAvailableModels(): {
   models: ChatModelOption[];
   loading: boolean;
 } {
-  const configContext = React.useContext(ConfigContext);
-  const litellmEnabled = configContext?.liteLLM?.enabled === true;
-
-  const modelsQuery = useQuery(GET_MODELS_LITE, {
-    variables: { page: 1, limit: 100 },
-    fetchPolicy: "cache-and-network",
-    skip: litellmEnabled,
-  });
   const litellmCatalogQuery = useQuery(GET_LITELLM_CATALOG, {
     fetchPolicy: "cache-and-network",
-    skip: !litellmEnabled,
   });
 
-  const models: ChatModelOption[] = litellmEnabled
-    ? (litellmCatalogQuery.data?.litellmCatalog ?? [])
-        .map((m: any) => ({
-          id: m.model_name,
-          name: m.model_name,
-          type: m.type ?? null,
-          provider: m.upstream_model ?? "",
-          active: true,
-          brand: m.brand ?? null,
-          region: m.region ?? null,
-        }))
-        .filter(
-          (m: ChatModelOption) =>
-            m.type !== "speech_to_text" && m.type !== "text_to_speech",
-        )
-    : (modelsQuery.data?.modelsPagination?.items ?? []).map((m: any) => ({
-        id: m.id,
-        name: m.name,
-        type: null,
-        provider: m.provider ?? "",
-        active: m.active,
-      }));
+  const models: ChatModelOption[] = (
+    litellmCatalogQuery.data?.litellmCatalog ?? []
+  )
+    .map((m: any) => ({
+      id: m.model_name,
+      name: m.model_name,
+      type: m.type ?? null,
+      provider: m.upstream_model ?? "",
+      active: true,
+      brand: m.brand ?? null,
+      region: m.region ?? null,
+    }))
+    .filter(
+      (m: ChatModelOption) =>
+        m.type !== "speech_to_text" && m.type !== "text_to_speech",
+    );
 
   return {
     models,
-    loading: litellmEnabled ? litellmCatalogQuery.loading : modelsQuery.loading,
+    loading: litellmCatalogQuery.loading,
   };
 }

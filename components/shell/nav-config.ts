@@ -272,11 +272,14 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     route: "/models",
     i18nKey: "navigation.models",
     icon: Cpu,
-    // TODO(backend role-model): flip to { area: "models", level: "write" }
-    // once the backend ships the `models` role key (navigation.md §1.2 —
-    // spec gate `SA || role.models:w`, interim `SA || role.agents:w`,
-    // recorded as backend dependency, shell audit M4).
-    requires: { area: "agents", level: "write" },
+    // Phase 4.2 — /models is now a read-only LiteLLM catalog (the admin CRUD
+    // moved to the LiteLLM admin UI). Gate relaxed from agents:write to
+    // agents:read because the page no longer carries any destructive action:
+    // any user who can pick a model in the agent form should be able to
+    // inspect the catalog. super_admin still gets implicit allow via
+    // guardRoute. Label is i18n'd as `navigation.models` (verified in
+    // messages/en.json:1947 and de.json:1947).
+    requires: { area: "agents", level: "read" },
   },
   {
     id: "budgets",

@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useContext } from "react";
 import {
   Select,
   SelectContent,
@@ -11,12 +10,8 @@ import {
 } from "@/components/ui/select";
 import { useQuery } from "@apollo/client";
 import { useTranslations } from "next-intl";
-import {
-  GET_AGENT_LITELLM_CATALOG,
-  GET_AGENT_MODELS_LITE,
-} from "@/app/(application)/agents/queries";
+import { GET_AGENT_LITELLM_CATALOG } from "@/app/(application)/agents/queries";
 import { Input } from "@/components/ui/input";
-import { ConfigContext } from "@/components/shell/config-context";
 import { ProviderLogo } from "@/components/provider-logo";
 import { Badge } from "@/components/ui/badge";
 
@@ -58,49 +53,28 @@ export function AgentModelSelector({
   const t = useTranslations("agents.modelSelector");
   const [searchTerm, setSearchTerm] = React.useState("");
   const searchInputRef = React.useRef<HTMLInputElement>(null);
-  const configContext = useContext(ConfigContext);
-  const litellmEnabled = configContext?.liteLLM?.enabled === true;
 
-  // Source the dropdown from either the
-  // LiteLLM catalog or our DB Models table.
+  // Source the dropdown from the LiteLLM catalog (Phase 4.2 — the legacy
+  // Models-table path is gone; LiteLLM is the single source of truth).
   const litellmQuery = useQuery(GET_AGENT_LITELLM_CATALOG, {
     fetchPolicy: "cache-and-network",
-    skip: !litellmEnabled,
-  });
-
-  const modelsQuery = useQuery(GET_AGENT_MODELS_LITE, {
-    fetchPolicy: "no-cache",
-    nextFetchPolicy: "network-only",
-    variables: { page: 1, limit: 100 },
-    skip: litellmEnabled,
   });
 
   const options: ModelOption[] = React.useMemo(() => {
-    if (litellmEnabled) {
-      const items = litellmQuery.data?.litellmCatalog ?? [];
-      return items.map((m: any) => ({
-        id: m.model_name,
-        label: m.model_name,
-        provider: m.upstream_model ?? "",
-        description: m.upstream_model ?? "",
-        active: true,
-        tags: m.tags ?? [],
-        brand: m.brand ?? null,
-        region: m.region ?? null,
-      }));
-    }
-    const items = modelsQuery.data?.modelsPagination?.items ?? [];
+    const items = litellmQuery.data?.litellmCatalog ?? [];
     return items.map((m: any) => ({
-      id: m.id,
-      label: m.name,
-      provider: m.provider,
-      description: m.description,
-      active: m.active,
-      tags: m.tags,
+      id: m.model_name,
+      label: m.model_name,
+      provider: m.upstream_model ?? "",
+      description: m.upstream_model ?? "",
+      active: true,
+      tags: m.tags ?? [],
+      brand: m.brand ?? null,
+      region: m.region ?? null,
     }));
-  }, [litellmEnabled, litellmQuery.data, modelsQuery.data]);
+  }, [litellmQuery.data]);
 
-  const isLoading = litellmEnabled ? litellmQuery.loading : modelsQuery.loading;
+  const isLoading = litellmQuery.loading;
 
   // autoSelectDefault (additive): once options are loaded and nothing is
   // selected, pick the first active entry and report it upward. Fires at most
@@ -177,9 +151,7 @@ export function AgentModelSelector({
         <div className="p-2">
           <Input
             ref={searchInputRef}
-            placeholder={
-              litellmEnabled ? t("searchLitellm") : t("searchModels")
-            }
+            placeholder={t("searchLitellm")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => e.stopPropagation()}
@@ -192,9 +164,7 @@ export function AgentModelSelector({
           </SelectItem>
         ) : filtered.length === 0 ? (
           <SelectItem value="__none" disabled>
-            {litellmEnabled
-              ? t("emptyLitellm")
-              : t("emptyModels")}
+            {t("emptyLitellm")}
           </SelectItem>
         ) : (
           filtered.map((m) => (

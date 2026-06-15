@@ -1903,6 +1903,70 @@
     "german": "German",
     "switchTo": "Switch to {language}"
   },
+  "models": {
+    "title": "Models",
+    "description": "Read-only — models are managed in LiteLLM.",
+    "openAdminUi": "Open LiteLLM Admin UI",
+    "banner": {
+      "title": "Configured in LiteLLM",
+      "body": "Models live in LiteLLM's config.yaml. Edit it on the host and restart Exulu to pick up changes."
+    },
+    "search": {
+      "placeholder": "Search models…"
+    },
+    "table": {
+      "model": "Model",
+      "context": "Context (in / out)",
+      "modalities": "Modalities",
+      "cost": "Cost (in / out)",
+      "status": "Status",
+      "tags": "Tags"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "modality": {
+      "vision": "Vision",
+      "pdf": "PDF",
+      "audio": "Audio",
+      "tools": "Tools"
+    },
+    "cost": {
+      "perMillion": "{amount}/M"
+    },
+    "empty": {
+      "title": "No models configured",
+      "body": "Edit LiteLLM's config.yaml on the host and restart Exulu to expose models here."
+    },
+    "emptyFiltered": {
+      "title": "No models match your search",
+      "reset": "Clear search"
+    },
+    "error": {
+      "title": "Couldn't load models",
+      "body": "The LiteLLM proxy may be unreachable from the Exulu backend.",
+      "retry": "Retry",
+      "details": "Show error details"
+    },
+    "detail": {
+      "capabilities": "Capabilities",
+      "contextWindow": "Context window",
+      "maxInput": "Max input tokens",
+      "maxOutput": "Max output tokens",
+      "cost": "Cost",
+      "inputCost": "Input",
+      "outputCost": "Output",
+      "routing": "Routing",
+      "upstreamModel": "Upstream model",
+      "tags": "Tags",
+      "rawJson": "Raw JSON",
+      "close": "Close",
+      "copy": "Copy",
+      "copied": "Copied",
+      "notSupported": "—"
+    }
+  },
   "n8n": {
     "title": "Automation",
     "description": "Build and run automations in the embedded n8n editor.",

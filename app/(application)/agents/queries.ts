@@ -261,32 +261,16 @@ export const COPY_AGENT_INDEX = gql`
 `;
 
 /* -----------------------------------------------------------------------------
- * Model-selector reads — colocated per codebase-structure §3.2/D5.
+ * Model-selector read — colocated per codebase-structure §3.2/D5.
  *
- * Copied verbatim (field-for-field) from queries/queries.ts:1266-1278
- * (GET_MODELS_LITE) and :1367-1388 (GET_LITELLM_CATALOG) under
- * unique operation names (§3.1) so the selector — used only inside agents
- * (basics.tsx + create-agent-dialog.tsx) — no longer reaches into the monolith.
- * Backend contracts unchanged: identical fields, identical args.
+ * Copied verbatim (field-for-field) from queries/queries.ts:1367-1388
+ * (GET_LITELLM_CATALOG) under a unique operation name (§3.1) so the
+ * selector — used only inside agents (basics.tsx + create-agent-dialog.tsx) —
+ * no longer reaches into the monolith. Phase 4.2 collapsed the dual-source
+ * design: LiteLLM is now the single source of model options, so the legacy
+ * GET_AGENT_MODELS_LITE (paginated Models table) is gone with the /models
+ * admin CRUD surface. Backend contract unchanged: identical fields/args.
  * -------------------------------------------------------------------------- */
-export const GET_AGENT_MODELS_LITE = gql`
-  query GetAgentModelsLite($page: Int!, $limit: Int!) {
-    modelsPagination(
-      page: $page
-      limit: $limit
-      sort: { field: "name", direction: ASC }
-    ) {
-      items {
-        id
-        name
-        description
-        provider
-        active
-      }
-    }
-  }
-`;
-
 export const GET_AGENT_LITELLM_CATALOG = gql`
   query GetAgentLiteLLMCatalog {
     litellmCatalog {

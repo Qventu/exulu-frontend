@@ -1903,6 +1903,70 @@
     "german": "Deutsch",
     "switchTo": "Wechseln zu {language}"
   },
+  "models": {
+    "title": "Modelle",
+    "description": "Schreibgeschützt — Modelle werden in LiteLLM verwaltet.",
+    "openAdminUi": "LiteLLM Admin UI öffnen",
+    "banner": {
+      "title": "In LiteLLM konfiguriert",
+      "body": "Modelle werden in der config.yaml von LiteLLM gepflegt. Bearbeiten Sie sie auf dem Host und starten Sie Exulu neu, um Änderungen zu übernehmen."
+    },
+    "search": {
+      "placeholder": "Modelle suchen…"
+    },
+    "table": {
+      "model": "Modell",
+      "context": "Kontext (ein / aus)",
+      "modalities": "Modalitäten",
+      "cost": "Kosten (ein / aus)",
+      "status": "Status",
+      "tags": "Tags"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "modality": {
+      "vision": "Bild",
+      "pdf": "PDF",
+      "audio": "Audio",
+      "tools": "Tools"
+    },
+    "cost": {
+      "perMillion": "{amount}/Mio."
+    },
+    "empty": {
+      "title": "Keine Modelle konfiguriert",
+      "body": "Bearbeiten Sie die config.yaml von LiteLLM auf dem Host und starten Sie Exulu neu, um hier Modelle bereitzustellen."
+    },
+    "emptyFiltered": {
+      "title": "Keine Modelle passen zu Ihrer Suche",
+      "reset": "Suche zurücksetzen"
+    },
+    "error": {
+      "title": "Modelle konnten nicht geladen werden",
+      "body": "Der LiteLLM-Proxy ist möglicherweise vom Exulu-Backend aus nicht erreichbar.",
+      "retry": "Erneut versuchen",
+      "details": "Fehlerdetails anzeigen"
+    },
+    "detail": {
+      "capabilities": "Funktionen",
+      "contextWindow": "Kontextfenster",
+      "maxInput": "Max. Eingabe-Tokens",
+      "maxOutput": "Max. Ausgabe-Tokens",
+      "cost": "Kosten",
+      "inputCost": "Eingabe",
+      "outputCost": "Ausgabe",
+      "routing": "Routing",
+      "upstreamModel": "Upstream-Modell",
+      "tags": "Tags",
+      "rawJson": "Roh-JSON",
+      "close": "Schließen",
+      "copy": "Kopieren",
+      "copied": "Kopiert",
+      "notSupported": "—"
+    }
+  },
   "n8n": {
     "title": "Automatisierung",
     "description": "Automatisierungen im eingebetteten n8n-Editor erstellen und ausführen.",
