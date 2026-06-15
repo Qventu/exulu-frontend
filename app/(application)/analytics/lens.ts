@@ -141,10 +141,40 @@ interface ReadonlyURLSearchParamsLike {
 // ---------------------------------------------------------------------------
 
 /**
+ * Inspect the raw URL params and decide whether a custom range deep link
+ * was silently downgraded by `lensFromSearchParams` — i.e. preset=custom
+ * was passed with missing / unparseable / out-of-bounds (>MAX_RANGE_DAYS)
+ * dates. The view consumes this to fire the analytics.deepLinkRangeReset
+ * one-shot toast (lens.ts doc-comment promise; analytics.md UX#10).
+ *
+ * Kept pure / server-safe so AnalyticsView (client) and any future SSR
+ * inspection can call it.
+ */
+export function wasRangeReset(
+  searchParams: URLSearchParams | ReadonlyURLSearchParamsLike,
+): boolean {
+  const get = (key: string) =>
+    typeof (searchParams as URLSearchParams).get === "function"
+      ? (searchParams as URLSearchParams).get(key)
+      : null;
+  if (get("range") !== "custom") return false;
+  const fromRaw = get("from");
+  const toRaw = get("to");
+  if (!fromRaw || !toRaw) return true;
+  const from = Date.parse(fromRaw);
+  const to = Date.parse(toRaw);
+  const valid = Number.isFinite(from) && Number.isFinite(to) && from <= to;
+  if (!valid) return true;
+  return to - from > MAX_RANGE_DAYS * DAY_MS;
+}
+
+/**
  * Parse the URL params honored by the lens. Unknown values fall back
  * silently (no crash, no toast — the user typed a deep link, we degrade).
  * The one exception is a custom range over MAX_RANGE_DAYS, which the view
- * component flags with a one-shot toast (analytics.md UX#10, i18n'd).
+ * component flags with a one-shot toast (analytics.md UX#10, i18n'd) —
+ * detect via `wasRangeReset` above and surface the deepLinkRangeReset
+ * i18n key.
  *
  * Backwards compat:
  *   - ?measure=count → "requests"

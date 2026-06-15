@@ -589,6 +589,7 @@
       "dimTeams": "Teams",
       "dimUsers": "Benutzer",
       "emptyHint": "Versuchen Sie einen größeren Zeitraum oder einen anderen Ereignistyp.",
+      "emptyHintRawIds": "Versuchen Sie einen größeren Zeitraum oder einen anderen Ereignistyp. Hinweis: Diese Dimension zeigt derzeit rohe IDs — lesbare Namen werden noch nicht aufgelöst.",
       "emptyTitle": "Keine Daten für diese Ansicht",
       "subtitleByCalls": "nach Agent-Aufrufen",
       "subtitleByRequests": "nach Anfragen",

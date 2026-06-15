@@ -48,6 +48,7 @@ import { RangePicker } from "./range-picker";
 import {
   lensFromSearchParams,
   lensToSearchParams,
+  wasRangeReset,
   type Lens,
 } from "../hooks";
 
@@ -134,6 +135,21 @@ export function AnalyticsView({ initialLens }: AnalyticsViewProps) {
         description: t("deepLinkLegacyTypeAll"),
       });
     }
+  }, [searchParams, t]);
+
+  // One-shot deep-link toast: if a custom range was downgraded to the
+  // default preset (missing / unparseable dates or >MAX_RANGE_DAYS span),
+  // honour the lens.ts doc-comment promise and surface the i18n'd reset
+  // notice (analytics.md UX#10; messages.analytics.deepLinkRangeReset).
+  const rangeResetToastFiredRef = React.useRef(false);
+  React.useEffect(() => {
+    if (rangeResetToastFiredRef.current) return;
+    if (!searchParams) return;
+    if (!wasRangeReset(searchParams)) return;
+    rangeResetToastFiredRef.current = true;
+    toast(t("deepLinkLegacyTypeTitle"), {
+      description: t("deepLinkRangeReset"),
+    });
   }, [searchParams, t]);
 
   const canBudgets = can(rightsUser, { area: "budget_management", level: "read" });

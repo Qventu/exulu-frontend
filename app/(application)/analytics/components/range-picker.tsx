@@ -114,7 +114,7 @@ export function RangePicker({ lens, onLensChange, fullWidthBelowSm = false }: Ra
       <Tabs value={lens.preset} onValueChange={handlePresetChange} className={cn(fullWidthBelowSm && "w-full sm:w-auto")}>
         <TabsList
           className={cn(
-            "grid w-full grid-cols-5 sm:inline-flex sm:w-auto",
+            "grid w-full grid-cols-5 max-md:h-11 sm:inline-flex sm:w-auto",
             fullWidthBelowSm && "w-full",
           )}
           aria-label={t("range.label")}
@@ -123,7 +123,7 @@ export function RangePicker({ lens, onLensChange, fullWidthBelowSm = false }: Ra
             <TabsTrigger
               key={preset}
               value={preset}
-              className="px-2 text-xs sm:px-3 sm:text-sm"
+              className="px-2 text-xs max-md:h-full sm:px-3 sm:text-sm"
             >
               {t(PRESET_KEYS[preset])}
             </TabsTrigger>

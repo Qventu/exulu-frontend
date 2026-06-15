@@ -78,6 +78,7 @@ export {
   lensToSearchParams,
   resolveWindow,
   tagPrefixForType,
+  wasRangeReset,
   type BreakdownView,
   type Dimension,
   type Lens,

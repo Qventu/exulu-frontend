@@ -170,14 +170,14 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
         className="w-full sm:w-auto"
       >
         <TabsList
-          className="grid w-full grid-cols-5 sm:inline-flex sm:w-auto"
+          className="grid w-full grid-cols-5 max-md:h-11 sm:inline-flex sm:w-auto"
           aria-label={t("breakdown.title")}
         >
           {DIMENSIONS.map((dim) => (
             <TabsTrigger
               key={dim}
               value={dim}
-              className="px-2 text-xs sm:px-3 sm:text-sm"
+              className="px-2 text-xs max-md:h-full sm:px-3 sm:text-sm"
             >
               {t(DIMENSION_LABEL_KEYS[dim])}
             </TabsTrigger>
@@ -236,7 +236,15 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
         <EmptyState
           variant="quiet"
           title={t("breakdown.emptyTitle")}
-          description={t("breakdown.emptyHint")}
+          description={
+            // teams/roles: GET_TEAMS_BY_IDS / GET_ROLES_BY_IDS not shipped
+            // yet (file header :19-22, analytics.md §4 follow-up). Name the
+            // gap in the empty state so the dimension switch isn't silent
+            // about its hydration state.
+            lens.dimension === "teams" || lens.dimension === "roles"
+              ? t("breakdown.emptyHintRawIds")
+              : t("breakdown.emptyHint")
+          }
         />
       ) : lens.view === "share" ? (
         <DonutView

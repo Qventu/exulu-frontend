@@ -589,6 +589,7 @@
       "dimTeams": "Teams",
       "dimUsers": "Users",
       "emptyHint": "Try a wider range or a different event type.",
+      "emptyHintRawIds": "Try a wider range or a different event type. Note: this dimension currently shows raw IDs — human-readable names are not hydrated yet.",
       "emptyTitle": "No data for this lens",
       "subtitleByCalls": "by agent calls",
       "subtitleByRequests": "by requests",

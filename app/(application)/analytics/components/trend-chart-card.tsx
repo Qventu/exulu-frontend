@@ -14,6 +14,7 @@
  */
 
 import { eachDayOfInterval, format, parseISO, startOfDay } from "date-fns";
+import { useReducedMotion } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
 import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
@@ -46,6 +47,10 @@ const SPEND_CURRENCY = "USD";
 export function TrendChartCard({ lens }: TrendChartCardProps) {
   const t = useTranslations("analytics");
   const locale = useLocale();
+  // Honour prefers-reduced-motion (analytics.md §3 Motion; CLAUDE.md a11y).
+  // Recharts respects isAnimationActive so the toggle disables the area
+  // tween entirely under reduce.
+  const reduceMotion = useReducedMotion();
   const range = React.useMemo(() => resolveWindow(lens), [lens]);
 
   const { rows, loading, error, refetch } = useActivityDaily(lens);
@@ -161,8 +166,8 @@ export function TrendChartCard({ lens }: TrendChartCardProps) {
               fill="url(#analyticsTrendFill)"
               dot={false}
               activeDot={{ r: 4, stroke: "hsl(var(--background))", strokeWidth: 2, fill: "hsl(var(--chart-1))" }}
-              isAnimationActive
-              animationDuration={300}
+              isAnimationActive={!reduceMotion}
+              animationDuration={reduceMotion ? 0 : 300}
             />
           </AreaChart>
         </ChartContainer>

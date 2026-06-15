@@ -73,16 +73,16 @@ export function ExploreRegion({ lens, onLensChange }: ExploreRegionProps) {
           className="w-full sm:w-auto"
         >
           <TabsList
-            className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto"
+            className="grid w-full grid-cols-3 max-md:h-11 sm:inline-flex sm:w-auto"
             aria-label={t("explore.measure")}
           >
-            <TabsTrigger value="spend" className="px-3 text-sm">
+            <TabsTrigger value="spend" className="px-3 text-sm max-md:h-full">
               {t("explore.measureSpend")}
             </TabsTrigger>
-            <TabsTrigger value="tokens" className="px-3 text-sm">
+            <TabsTrigger value="tokens" className="px-3 text-sm max-md:h-full">
               {t("explore.measureTokens")}
             </TabsTrigger>
-            <TabsTrigger value="requests" className="px-3 text-sm">
+            <TabsTrigger value="requests" className="px-3 text-sm max-md:h-full">
               {t("explore.measureRequests")}
             </TabsTrigger>
           </TabsList>

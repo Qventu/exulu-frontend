@@ -11,6 +11,7 @@
  * ten in both themes; verified).
  */
 
+import { useReducedMotion } from "framer-motion";
 import { useLocale } from "next-intl";
 import * as React from "react";
 import { Cell, Pie, PieChart } from "recharts";
@@ -56,6 +57,9 @@ const CHART_COLORS = [
 
 export function DonutView({ entries, unitLabel, measure = "requests" }: DonutViewProps) {
   const locale = useLocale();
+  // Honour prefers-reduced-motion (analytics.md §3 Motion; CLAUDE.md a11y).
+  // Recharts honours isAnimationActive — disable the slice tween under reduce.
+  const reduceMotion = useReducedMotion();
   const formatNumber = React.useMemo(() => new Intl.NumberFormat(locale), [locale]);
   const formatCurrency = React.useMemo(
     () => new Intl.NumberFormat(locale, { style: "currency", currency: SPEND_CURRENCY }),
@@ -136,8 +140,8 @@ export function DonutView({ entries, unitLabel, measure = "requests" }: DonutVie
             labelLine={false}
             label={renderLabel}
             strokeWidth={2}
-            isAnimationActive
-            animationDuration={300}
+            isAnimationActive={!reduceMotion}
+            animationDuration={reduceMotion ? 0 : 300}
           >
             {sorted.map((entry) => (
               <Cell key={entry.id} fill={entry.fill} />
