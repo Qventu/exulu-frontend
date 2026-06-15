@@ -161,6 +161,8 @@ RBAC {
         rights
       }
 }
+price_input_token
+price_output_token
 createdAt
 updatedAt
 `;
@@ -1041,6 +1043,8 @@ export const UPDATE_AGENT_BY_ID = gql`
     $skills: JSON
     $active: Boolean
     $RBAC: RBACInput
+    $price_input_token: Float
+    $price_output_token: Float
   ) {
     agentsUpdateOneById(
       input: {
@@ -1061,6 +1065,8 @@ export const UPDATE_AGENT_BY_ID = gql`
         tools: $tools
         skills: $skills
         RBAC: $RBAC
+        price_input_token: $price_input_token
+        price_output_token: $price_output_token
       }
       id: $id
     ) {
@@ -1964,6 +1970,42 @@ export const GET_DONUT_STATISTICS = gql`
       filters: {
         type: { eq: $type }
         name: { in: $names }
+        createdAt: { and: [{ gte: $from }, { lte: $to }] }
+      }
+    ) {
+      group
+      count
+    }
+  }
+`;
+
+export const GET_PROJECT_AGENT_TOKEN_STATISTICS = gql`
+  query ProjectAgentTokenStatistics($project: String!, $from: Date!, $to: Date!, $name: String!) {
+    trackingStatistics(
+      groupBy: "label"
+      limit: 100
+      filters: {
+        type: { eq: AGENT_RUN }
+        project: { eq: $project }
+        name: { eq: $name }
+        createdAt: { and: [{ gte: $from }, { lte: $to }] }
+      }
+    ) {
+      group
+      count
+    }
+  }
+`;
+
+export const GET_PROJECT_TOKEN_STATISTICS = gql`
+  query ProjectTokenStatistics($project: String!, $from: Date!, $to: Date!, $name: String!) {
+    trackingStatistics(
+      groupBy: "createdAt"
+      limit: 100
+      filters: {
+        type: { eq: AGENT_RUN }
+        project: { eq: $project }
+        name: { eq: $name }
         createdAt: { and: [{ gte: $from }, { lte: $to }] }
       }
     ) {

@@ -227,6 +227,8 @@ const agentFormSchema = z.object({
       piiDetection: z.boolean().optional(),
     }).optional(),
   }).optional(),
+  price_input_token: z.number().min(0).nullable().optional(),
+  price_output_token: z.number().min(0).nullable().optional(),
 });
 
 export default function AgentForm({
@@ -501,7 +503,9 @@ export default function AgentForm({
                         scanners: firewallScanners
                       }),
                       tools: JSON.stringify(enabledTools),
-                      skills: JSON.stringify(enabledSkills)
+                      skills: JSON.stringify(enabledSkills),
+                      price_input_token: data.price_input_token ?? null,
+                      price_output_token: data.price_output_token ?? null,
                     },
                   });
                 },
@@ -656,6 +660,63 @@ export default function AgentForm({
                                     );
                                   }}
                                 />
+                                <div className="grid grid-cols-2 gap-4">
+                                  <FormField
+                                    control={agentForm.control}
+                                    name="price_input_token"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Input Token Price ($ / 1M)</FormLabel>
+                                        <FormDescription>
+                                          Cost per 1M input tokens.
+                                        </FormDescription>
+                                        <FormControl>
+                                          <Input
+                                            type="number"
+                                            min={0}
+                                            step={0.01}
+                                            placeholder="e.g. 3.00"
+                                            value={field.value ?? ""}
+                                            onChange={(e) =>
+                                              field.onChange(
+                                                e.target.value === "" ? null : parseFloat(e.target.value)
+                                              )
+                                            }
+                                          />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={agentForm.control}
+                                    name="price_output_token"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Output Token Price ($ / 1M)</FormLabel>
+                                        <FormDescription>
+                                          Cost per 1M output tokens.
+                                        </FormDescription>
+                                        <FormControl>
+                                          <Input
+                                            type="number"
+                                            min={0}
+                                            step={0.01}
+                                            placeholder="e.g. 15.00"
+                                            value={field.value ?? ""}
+                                            onChange={(e) =>
+                                              field.onChange(
+                                                e.target.value === "" ? null : parseFloat(e.target.value)
+                                              )
+                                            }
+                                          />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+
                                 <FormField
                                   control={agentForm.control}
                                   name={`welcomemessage`}
