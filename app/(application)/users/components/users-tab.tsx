@@ -104,10 +104,13 @@ export function UsersTab({
   const urlRole = searchParams.get(PARAM_ROLE) ?? "";
   const urlTeam = searchParams.get(PARAM_TEAM) ?? "";
 
-  const [searchInput, setSearchInput] = React.useState(urlSearch);
-  React.useEffect(() => {
-    setSearchInput(urlSearch);
-  }, [urlSearch]);
+  // The Toolbar primitive owns its own debounced internal query state and
+  // syncs from `search.value` via its own effect. Holding a duplicate
+  // searchInput here + writing it on every keystroke produced a race: the
+  // local state was set BEFORE the router-replace landed, so the next
+  // render saw stale searchParams and an effect re-synced searchInput back
+  // to "", wiping the input. Pass urlSearch directly — single source of
+  // truth. (Bug fix 2026-06-15.)
 
   const updateUrl = React.useCallback(
     (next: { search?: string; role?: string; team?: string }) => {
@@ -217,12 +220,14 @@ export function UsersTab({
     Array<{ item: string; message: string }>
   >([]);
 
-  // Bulk role/team assign popover state. Each opens from a BulkActionBar
-  // action, hosts a [Role|Team]Selector, and on pick fans out one
-  // useUpdateUser call per selected id (Promise.allSettled — partial
-  // failures get summarized in a toast, same shape as bulk delete).
-  const [assignRoleOpen, setAssignRoleOpen] = React.useState(false);
-  const [assignTeamOpen, setAssignTeamOpen] = React.useState(false);
+  // Bulk role/team assign popover state. ONE Popover, mode-switched
+  // content. (The earlier nested-Popover shape had the role popover's
+  // PopoverContent disconnected from any PopoverAnchor — Radix wires
+  // them via React context within the same Popover.Root, and Role's
+  // anchor was buried inside the Team Popover. So Role silently rendered
+  // nothing.) Bug fix 2026-06-15.
+  type AssignMode = "role" | "team" | null;
+  const [assignMode, setAssignMode] = React.useState<AssignMode>(null);
   const [assigning, setAssigning] = React.useState(false);
   const updateUser = useUpdateUser();
   const runBulkAssign = React.useCallback(
@@ -376,11 +381,8 @@ export function UsersTab({
     <div className="flex flex-col gap-4">
       <Toolbar
         search={{
-          value: searchInput,
-          onChange: (value) => {
-            setSearchInput(value);
-            updateUrl({ search: value });
-          },
+          value: urlSearch,
+          onChange: (value) => updateUrl({ search: value }),
           placeholder: t("searchPlaceholder"),
         }}
         filters={
@@ -404,82 +406,78 @@ export function UsersTab({
         when self-deletion was skipped. Closes the self-lockout hole the row
         OverflowMenu was already guarding against.
       */}
-      {/* Bulk role/team assign popovers — anchored to the BulkActionBar
-          itself (via PopoverAnchor) so the popover floats above the bar
-          rather than at the top-left of the page (the sr-only trigger
-          version pinned it to the layout flow). Two Popovers nest around
-          the same anchor; only one is open at a time. */}
-      <Popover open={assignRoleOpen} onOpenChange={setAssignRoleOpen}>
-        <Popover open={assignTeamOpen} onOpenChange={setAssignTeamOpen}>
-          <PopoverAnchor asChild>
-            <div>
-              <BulkActionBar
-                count={selectedIds.length}
-                onClear={() => setSelectedIds([])}
-                actions={[
-                  {
-                    label: t("bulk.assignRole"),
-                    onClick: () => setAssignRoleOpen(true),
+      {/* Bulk role/team assign popover — single Popover whose content
+          switches by mode. Anchored to the BulkActionBar so it floats
+          above the bar (side="top" align="end"). */}
+      <Popover
+        open={assignMode !== null}
+        onOpenChange={(open) => {
+          if (!open) setAssignMode(null);
+        }}
+      >
+        <PopoverAnchor asChild>
+          <div>
+            <BulkActionBar
+              count={selectedIds.length}
+              onClear={() => setSelectedIds([])}
+              actions={[
+                {
+                  label: t("bulk.assignRole"),
+                  onClick: () => setAssignMode("role"),
+                },
+                {
+                  label: t("bulk.assignTeam"),
+                  onClick: () => setAssignMode("team"),
+                },
+                {
+                  label: t("bulk.remove"),
+                  destructive: true,
+                  onClick: () => {
+                    setBulkErrors([]);
+                    setBulkOpen(true);
                   },
-                  {
-                    label: t("bulk.assignTeam"),
-                    onClick: () => setAssignTeamOpen(true),
-                  },
-                  {
-                    label: t("bulk.remove"),
-                    destructive: true,
-                    onClick: () => {
-                      setBulkErrors([]);
-                      setBulkOpen(true);
-                    },
-                  },
-                ]}
-              />
-            </div>
-          </PopoverAnchor>
-          <PopoverContent
-            side="top"
-            align="end"
-            sideOffset={8}
-            className="w-72 p-2"
-          >
-            <p className="px-1 pb-2 text-xs text-muted-foreground">
-              {t("bulk.assignTeamHint", { count: selectedIds.length })}
-            </p>
-            <TeamSelector
-              value=""
-              onChange={(teamId) =>
-                void runBulkAssign("team", teamId, () =>
-                  setAssignTeamOpen(false),
-                )
-              }
-              placeholder={t("bulk.assignTeamPlaceholder")}
+                },
+              ]}
             />
-            {assigning ? (
-              <p className="px-1 pt-2 text-xs text-muted-foreground">
-                {t("bulk.assigning")}
-              </p>
-            ) : null}
-          </PopoverContent>
-        </Popover>
+          </div>
+        </PopoverAnchor>
         <PopoverContent
           side="top"
           align="end"
           sideOffset={8}
           className="w-72 p-2"
         >
-          <p className="px-1 pb-2 text-xs text-muted-foreground">
-            {t("bulk.assignRoleHint", { count: selectedIds.length })}
-          </p>
-          <RoleSelector
-            value=""
-            onChange={(roleId) =>
-              void runBulkAssign("role", roleId, () =>
-                setAssignRoleOpen(false),
-              )
-            }
-            placeholder={t("bulk.assignRolePlaceholder")}
-          />
+          {assignMode === "role" ? (
+            <>
+              <p className="px-1 pb-2 text-xs text-muted-foreground">
+                {t("bulk.assignRoleHint", { count: selectedIds.length })}
+              </p>
+              <RoleSelector
+                value=""
+                onChange={(roleId) =>
+                  void runBulkAssign("role", roleId, () =>
+                    setAssignMode(null),
+                  )
+                }
+                placeholder={t("bulk.assignRolePlaceholder")}
+              />
+            </>
+          ) : assignMode === "team" ? (
+            <>
+              <p className="px-1 pb-2 text-xs text-muted-foreground">
+                {t("bulk.assignTeamHint", { count: selectedIds.length })}
+              </p>
+              <TeamSelector
+                value=""
+                onChange={(teamId) =>
+                  void runBulkAssign("team", teamId, () =>
+                    setAssignMode(null),
+                  )
+                }
+                placeholder={t("bulk.assignTeamPlaceholder")}
+              />
+            </>
+          ) : null}
           {assigning ? (
             <p className="px-1 pt-2 text-xs text-muted-foreground">
               {t("bulk.assigning")}
