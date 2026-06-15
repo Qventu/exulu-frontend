@@ -1249,8 +1249,20 @@ export const GET_JOB_STATISTICS = gql`
   }
 `;
 
-export const GET_VARIABLES = gql`
-  query GetVariables(
+/**
+ * GET_VARIABLES_LIST — the list page query (Phase 4.5 redesign).
+ *
+ * Deliberately omits `value` from the selection set: secrets MUST NOT travel
+ * to the browser to render rows (variables.md §3 / philosophy §9). The
+ * detail-panel reveal fetches the value on demand through
+ * GET_VARIABLE_VALUE with fetchPolicy: "no-cache".
+ *
+ * NOTE: `used_by` / `used_by_count` are not exposed by the backend yet
+ * (Backend Backlog BE-1); the detail panel queries the optional
+ * GET_VARIABLE_USAGE and degrades to "Usage unavailable" on field-missing.
+ */
+export const GET_VARIABLES_LIST = gql`
+  query GetVariablesList(
     $page: Int!
     $limit: Int!
     $filters: [FilterVariable]
@@ -1272,7 +1284,6 @@ export const GET_VARIABLES = gql`
       items {
         id
         name
-        value
         encrypted
         createdAt
         updatedAt
@@ -1281,15 +1292,82 @@ export const GET_VARIABLES = gql`
   }
 `;
 
+/**
+ * GET_VARIABLES_LITE — slim list for downstream consumers (stage-embedder,
+ * agents editor) that need `{ id, name, encrypted }` to populate selects.
+ * No pageInfo, no value, alphabetical sort.
+ */
+export const GET_VARIABLES_LITE = gql`
+  query GetVariablesLite(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterVariable]
+  ) {
+    variablesPagination(
+      page: $page
+      limit: $limit
+      sort: { field: "name", direction: ASC }
+      filters: $filters
+    ) {
+      items {
+        id
+        name
+        encrypted
+      }
+    }
+  }
+`;
+
+/**
+ * Back-compat alias — kept until the consumer-builder migrates the
+ * stage-embedder + agents-editor over to GET_VARIABLES_LITE. Avoids a
+ * stranded import on a partial PR (Phase 4.5 plan, point 7).
+ */
+export const GET_VARIABLES = GET_VARIABLES_LIST;
+
+/**
+ * GET_VARIABLE_BY_ID — meta-only fetch for the detail panel + edit-page form
+ * prefill (name + type). `value` is deliberately absent — values flow only
+ * through GET_VARIABLE_VALUE under no-cache fetch policy.
+ */
 export const GET_VARIABLE_BY_ID = gql`
   query GetVariableById($id: ID!) {
     variableById(id: $id) {
       id
       name
-      value
       encrypted
       createdAt
       updatedAt
+    }
+  }
+`;
+
+/**
+ * GET_VARIABLE_VALUE — value-on-demand for SecretField reveal + copy and the
+ * edit page's "Show current value" affordance. Consumers MUST pass
+ * fetchPolicy: "no-cache" so the value never lands in Apollo's normalized
+ * store between reveals.
+ */
+export const GET_VARIABLE_VALUE = gql`
+  query GetVariableValue($id: ID!) {
+    variableById(id: $id) {
+      id
+      value
+    }
+  }
+`;
+
+/**
+ * GET_VARIABLE_USAGE — guarded by backend availability flag (Backend Backlog
+ * BE-1). Until BE-1 lands the resolver returns null/errors on `used_by`; the
+ * UI catches and renders the "Usage unavailable" state — never a fake "0
+ * resources".
+ */
+export const GET_VARIABLE_USAGE = gql`
+  query GetVariableUsage($id: ID!) {
+    variableById(id: $id) {
+      id
+      used_by
     }
   }
 `;
@@ -1364,6 +1442,15 @@ export const UPDATE_EMBEDDER_CONFIG = gql`
   }
 `;
 
+/**
+ * UPDATE_VARIABLE — explicitly nullable `value` for value-unchanged semantics
+ * (Phase 4.5 plan, point 6). When the user has not toggled "Replace value" the
+ * frontend omits the `$value` variable; the backend treats undefined as
+ * "unchanged" because the GraphQL `String` input has no bang.
+ *
+ * Selection set drops `value` — we never echo the secret back to the browser
+ * on save (mirrors the cleanup of GET_VARIABLE_BY_ID).
+ */
 export const UPDATE_VARIABLE = gql`
   mutation UpdateVariable(
     $id: ID!
@@ -1382,7 +1469,6 @@ export const UPDATE_VARIABLE = gql`
       item {
         id
         name
-        value
         encrypted
         createdAt
         updatedAt

@@ -34,6 +34,7 @@ import * as z from "zod";
 import type { Agent, AgentTool } from "@/types/models/agent";
 import type { ExuluTool } from "@/types/models/tool";
 import type { Variable } from "@/types/models/variable";
+import { GET_VARIABLES_LITE } from "@/queries/queries";
 
 import {
   AGENT_FIREWALL_SUPPORTED,
@@ -45,7 +46,6 @@ import {
   GET_SKILLS_EDITOR,
   GET_TOOL_CATEGORIES_EDITOR,
   GET_TOOLS_EDITOR,
-  GET_VARIABLES_EDITOR,
   REMOVE_AGENT_EDITOR,
   UPDATE_AGENT_EDITOR,
 } from "./queries";
@@ -459,7 +459,9 @@ export interface UseEditorReferenceData {
   setToolCategory: (c: string) => void;
   categories: string[];
   skills: { id: string; name: string; description?: string }[];
-  variables: Variable[];
+  // Slim shape — combobox renders { id, name, encrypted } only (migrated off
+  // GET_VARIABLES_EDITOR which over-fetched `value`). Phase 4.5.
+  variables: Pick<Variable, "id" | "name" | "encrypted">[];
   contexts: { id: string; name: string; description?: string }[];
   agenticRetrievalTool: ExuluTool | null;
 }
@@ -500,9 +502,13 @@ export function useEditorReferenceData(agentId: string): UseEditorReferenceData 
     };
   }>(GET_SKILLS_EDITOR, { variables: { page: 1, limit: 100 } });
 
+  // Slim list — combobox reads { id, name, encrypted } only. Migrated off
+  // GET_VARIABLES_EDITOR (which over-fetched `value` on every editor load).
   const variablesQuery = useQuery<{
-    variablesPagination: { items: Variable[] };
-  }>(GET_VARIABLES_EDITOR, { variables: { page: 1, limit: 100 } });
+    variablesPagination: {
+      items: Pick<Variable, "id" | "name" | "encrypted">[];
+    };
+  }>(GET_VARIABLES_LITE, { variables: { page: 1, limit: 100 } });
 
   const contextsQuery = useQuery<{
     contexts: { items: { id: string; name: string; description?: string }[] };

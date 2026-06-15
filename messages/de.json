@@ -3030,5 +3030,155 @@
       "uploadFailed": "Upload fehlgeschlagen",
       "viewInLibrary": "In der Bibliothek ansehen"
     }
+  },
+  "variables": {
+    "title": "Variablen",
+    "description": "Geheimnisse und Umgebungsvariablen, auf die Modelle, Agenten und Integrationen zugreifen.",
+    "actions": {
+      "add": "Variable hinzufügen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "viewUsage": "Verwendung anzeigen",
+      "cancel": "Abbrechen",
+      "save": "Änderungen speichern",
+      "create": "Variable erstellen",
+      "retry": "Erneut versuchen",
+      "back": "Zurück zu Variablen",
+      "replaceValue": "Wert ersetzen",
+      "showCurrent": "Aktuellen Wert anzeigen"
+    },
+    "toolbar": {
+      "searchPlaceholder": "Variablen suchen…",
+      "filterType": "Typ",
+      "typeAll": "Alle",
+      "typeSecrets": "Geheimnisse",
+      "typePlain": "Klartext",
+      "reset": "Filter zurücksetzen"
+    },
+    "table": {
+      "name": "Name",
+      "type": "Typ",
+      "usedBy": "Verwendet von",
+      "updated": "Aktualisiert",
+      "created": "Erstellt"
+    },
+    "type": {
+      "secret": "Geheimnis",
+      "plain": "Klartext",
+      "plainWarning": "Wird ohne Verschlüsselung gespeichert. Nur für nicht-sensible Werte verwenden."
+    },
+    "usedBy": {
+      "count": "{count, plural, one {# Ressource} other {# Ressourcen}}",
+      "none": "—",
+      "unavailable": "Verwendung nicht verfügbar",
+      "unavailableBody": "Verwendungsverfolgung ist im Backend noch nicht verfügbar."
+    },
+    "list": {
+      "empty": {
+        "title": "Noch keine Variablen",
+        "body": "Speichern Sie API-Schlüssel und Konfigurationswerte einmal — Agenten, Modelle und Integrationen verweisen über den Namen darauf."
+      },
+      "error": {
+        "title": "Variablen konnten nicht geladen werden",
+        "body": "Der Tresor ist nicht erreichbar — Ihre Variablen sind nicht betroffen.",
+        "details": "Fehlerdetails anzeigen"
+      },
+      "bulkSelected": "{count} ausgewählt",
+      "clearSelection": "Aufheben"
+    },
+    "detail": {
+      "value": "Wert",
+      "reveal": "Anzeigen",
+      "hide": "Verbergen",
+      "copyValue": "Wert kopieren",
+      "copyId": "ID kopieren",
+      "copyName": "Namen kopieren",
+      "usage": "Verwendung",
+      "meta": "Details",
+      "id": "ID",
+      "created": "Erstellt",
+      "updated": "Zuletzt aktualisiert",
+      "createdBy": "Erstellt von",
+      "updatedBy": "Zuletzt geändert von"
+    },
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "z. B. ANTHROPIC_API_KEY",
+      "nameHelper": "Ein eindeutiger Bezeichner. Bitte GROSSBUCHSTABEN mit Unterstrichen verwenden.",
+      "value": "Wert",
+      "valuePlaceholder": "Wert einfügen…",
+      "valueHelperSecret": "Wird verschlüsselt gespeichert.",
+      "valueHelperPlain": "Wird als Klartext gespeichert.",
+      "type": "Typ",
+      "typeSecret": "Geheimnis — verschlüsselt gespeichert",
+      "typePlain": "Klartext — unverändert gespeichert",
+      "valueUnchanged": "Der aktuelle Wert bleibt erhalten, sofern Sie ihn nicht ersetzen.",
+      "required": "{field} ist erforderlich."
+    },
+    "create": {
+      "title": "Variable hinzufügen",
+      "description": "Speichern Sie ein neues Geheimnis oder einen Konfigurationswert.",
+      "success": "Variable „{name}\" hinzugefügt.",
+      "error": "Variable konnte nicht hinzugefügt werden."
+    },
+    "edit": {
+      "title": "Variable bearbeiten",
+      "description": "{name} bearbeiten.",
+      "success": "Variable aktualisiert.",
+      "error": "Variable konnte nicht aktualisiert werden.",
+      "notFoundTitle": "Variable nicht gefunden",
+      "notFoundBody": "Diese Variable wurde möglicherweise gelöscht.",
+      "loadErrorTitle": "Diese Variable konnte nicht geladen werden",
+      "loadErrorBody": "Bitte erneut versuchen oder zur Übersicht zurückkehren."
+    },
+    "usage": {
+      "title": "Variablenverwendung",
+      "description": "Ressourcen, die {name} verwenden.",
+      "empty": {
+        "title": "Nicht verwendet",
+        "body": "Kann bearbeitet oder gelöscht werden — keine Ressource verwendet diese Variable."
+      },
+      "resourceType": {
+        "user": "Benutzer",
+        "agent": "Agent",
+        "workflow": "Routine"
+      },
+      "unknownUser": "Unbekannter Benutzer",
+      "unknownAgent": "Unbekannter Agent",
+      "unknownRoutine": "Unbekannte Routine"
+    },
+    "delete": {
+      "title": "Variable löschen?",
+      "bodyUnused": "„{name}\" endgültig löschen. Dies kann nicht rückgängig gemacht werden.",
+      "bodyInUse": "„{name}\" wird von {count, plural, one {# Ressource} other {# Ressourcen}} verwendet. Beim Löschen können diese Ressourcen ausfallen.",
+      "confirm": "Löschen",
+      "success": "Variable gelöscht.",
+      "error": "Variable konnte nicht gelöscht werden."
+    },
+    "bulkDelete": {
+      "title": "{count} Variablen löschen?",
+      "body": "Agenten, Modelle und Integrationen, die diese Variablen über den Namen verwenden, werden ausfallen.",
+      "typeToConfirm": "Geben Sie „delete\" ein, um zu bestätigen",
+      "success": "{count, plural, one {# Variable} other {# Variablen}} gelöscht.",
+      "partialError": "Einige Variablen konnten nicht gelöscht werden."
+    },
+    "rename": {
+      "title": "Diese Variable umbenennen?",
+      "body": "Agenten verweisen über den Namen auf Variablen. Wenn Sie „{oldName}\" in „{newName}\" umbenennen, brechen Agenten und Modelle, die den alten Namen verwenden."
+    },
+    "decrypt": {
+      "title": "In Klartext umwandeln?",
+      "body": "Der Wert wird unverschlüsselt gespeichert. Verbraucher, die ihn als Geheimnis entschlüsseln, können ausfallen."
+    },
+    "readOnly": {
+      "banner": "Nur-Lese-Zugriff — zum Anzeigen, Bearbeiten und Löschen ist die Schreibberechtigung erforderlich.",
+      "redirect": "Nur-Lese-Zugriff — Änderungen erfordern die Schreibberechtigung."
+    },
+    "reveal": {
+      "toast": "Wert für 30 Sekunden sichtbar."
+    },
+    "copyValue": {
+      "toast": "Wert kopiert."
+    }
   }
 }

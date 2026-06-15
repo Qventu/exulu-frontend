@@ -1,13 +1,28 @@
 "use client";
 
+/**
+ * DataTableRowActions — overflow menu for a variables-list row.
+ *
+ * Changes per Phase 4.5 (variables.md §3):
+ *  - Uses the shared ConfirmDialog primitive — no ad-hoc AlertDialog
+ *    (design-system audit R5 / H6).
+ *  - "View usage" is ALWAYS rendered (not gated on a count we cannot get
+ *    until BE-1 ships). It opens the deep-linked Usage page; the detail
+ *    panel surfaces the same content inline.
+ *  - In read-only mode (variables:read without write), Edit + Delete are
+ *    suppressed — only View usage remains.
+ */
+
 import { useMutation } from "@apollo/client";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { Row } from "@tanstack/react-table";
+import { Edit, Eye, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
-import {
-  GET_VARIABLES,
-  REMOVE_VARIABLE_BY_ID,
-} from "@/queries/queries";
+import * as React from "react";
+import { toast } from "sonner";
+
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,53 +31,39 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
-import { useState } from "react";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  GET_VARIABLES_LIST,
+  REMOVE_VARIABLE_BY_ID,
+} from "@/queries/queries";
+
 import { Variable } from "./columns";
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
+  readOnly?: boolean;
 }
 
 export function DataTableRowActions<TData>({
   row,
+  readOnly = false,
 }: DataTableRowActionsProps<TData>) {
+  const t = useTranslations();
   const variable = row.original as Variable;
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
 
-
-  const [removeVariable, removeVariableResult] = useMutation(REMOVE_VARIABLE_BY_ID, {
-    refetchQueries: [
-      GET_VARIABLES,
-      "GetVariables",
-    ],
+  const [removeVariable] = useMutation(REMOVE_VARIABLE_BY_ID, {
+    refetchQueries: [GET_VARIABLES_LIST, "GetVariablesList"],
   });
 
   const handleDelete = async () => {
     try {
-      await removeVariable({
-        variables: {
-          id: variable.id,
-        },
-      });
-      toast.success("Variable deleted", { description: "The variable has been successfully deleted." });
+      await removeVariable({ variables: { id: variable.id } });
+      toast.success(t("variables.delete.success"));
     } catch (error) {
-      toast.error("Error", { description: "Failed to delete the variable. Please try again." });
+      toast.error(t("variables.delete.error"));
+      throw error; // keep dialog open
     }
-    setShowDeleteDialog(false);
   };
-
-  const usedByCount = variable.used_by?.length || 0;
 
   return (
     <>
@@ -71,64 +72,57 @@ export function DataTableRowActions<TData>({
           <Button
             variant="ghost"
             className="flex size-8 p-0 data-[state=open]:bg-muted"
+            onClick={(event) => event.stopPropagation()}
           >
             <DotsHorizontalIcon className="size-4" />
             <span className="sr-only">Open menu</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[160px]">
-          <DropdownMenuItem asChild>
-            <Link href={`/variables/edit/${variable.id}`}>
-              Edit variable
-            </Link>
-          </DropdownMenuItem>
-          {usedByCount > 0 && (
+        <DropdownMenuContent
+          align="end"
+          className="w-[180px]"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {!readOnly && (
             <DropdownMenuItem asChild>
-              <Link href={`/variables/usage/${variable.id}`}>
-                View usage ({usedByCount})
+              <Link href={`/variables/edit/${variable.id}`}>
+                <Edit className="mr-2 size-4" strokeWidth={1} />
+                {t("variables.actions.edit")}
               </Link>
             </DropdownMenuItem>
           )}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => setShowDeleteDialog(true)}
-            className="text-red-600"
-          >
-            Delete variable
+          <DropdownMenuItem asChild>
+            <Link href={`/variables/usage/${variable.id}`}>
+              <Eye className="mr-2 size-4" strokeWidth={1} />
+              {t("variables.actions.viewUsage")}
+            </Link>
           </DropdownMenuItem>
+          {!readOnly && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setConfirmOpen(true);
+                }}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 size-4" strokeWidth={1} />
+                {t("variables.actions.delete")}
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Variable</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete the variable "{variable.name}"?
-              {usedByCount > 0 && (
-                <>
-                  <br />
-                  <br />
-                  <strong>Warning:</strong> This variable is currently used by {usedByCount} resource{usedByCount !== 1 ? 's' : ''}. 
-                  Deleting it may impact those resources.
-                </>
-              )}
-              <br />
-              <br />
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={t("variables.delete.title")}
+        description={t("variables.delete.bodyUnused", { name: variable.name })}
+        confirmLabel={t("variables.delete.confirm")}
+        onConfirm={handleDelete}
+      />
     </>
   );
 }

@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { VariableSelectionElement } from "@/app/(application)/agents/edit/[id]/form";
 import type { Variable } from "@/types/models/variable";
 import type { Context } from "@/types/models/context";
-import { GET_VARIABLES } from "@/queries/queries";
+import { GET_VARIABLES_LITE } from "@/queries/queries";
 
 import {
   CREATE_EMBEDDER_CONFIG,
@@ -52,9 +52,14 @@ export function StageEmbedder({ context }: StageEmbedderProps) {
 
   const embedder = context.embedder;
 
+  // GET_VARIABLES_LITE returns the slim shape `{ id, name, encrypted }` —
+  // the embedder's combobox only reads those three fields, so we cast to the
+  // shared Variable type at the consumer boundary.
   const { data: variablesData } = useQuery<{
-    variablesPagination: { items: Variable[] };
-  }>(GET_VARIABLES, {
+    variablesPagination: {
+      items: Pick<Variable, "id" | "name" | "encrypted">[];
+    };
+  }>(GET_VARIABLES_LITE, {
     skip: !embedder,
     variables: { page: 1, limit: 100 },
   });

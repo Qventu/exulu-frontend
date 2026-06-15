@@ -1909,7 +1909,7 @@
     "openAdminUi": "Open LiteLLM Admin UI",
     "banner": {
       "title": "Configured in LiteLLM",
-      "body": "Models live in LiteLLM's config.yaml. Edit it on the host and restart Exulu to pick up changes."
+      "body": "Models live in LiteLLM's config.yaml. Edit it on the host and restart the server to pick up changes."
     },
     "search": {
       "placeholder": "Search models…"
@@ -1937,7 +1937,7 @@
     },
     "empty": {
       "title": "No models configured",
-      "body": "Edit LiteLLM's config.yaml on the host and restart Exulu to expose models here."
+      "body": "Edit LiteLLM's config.yaml on the host and restart the server to expose models here."
     },
     "emptyFiltered": {
       "title": "No models match your search",
@@ -3029,6 +3029,189 @@
       "updated": "Transcript updated",
       "uploadFailed": "Upload failed",
       "viewInLibrary": "View in library"
+    }
+  },
+  "variables": {
+    "title": "Variables",
+    "description": "Secrets and environment variables your models, agents, and integrations depend on.",
+    "actions": {
+      "add": "Add variable",
+      "edit": "Edit",
+      "delete": "Delete",
+      "viewUsage": "View usage",
+      "cancel": "Cancel",
+      "save": "Save changes",
+      "create": "Create variable",
+      "retry": "Retry",
+      "back": "Back to Variables",
+      "replaceValue": "Replace value",
+      "showCurrent": "Show current value"
+    },
+    "toolbar": {
+      "searchPlaceholder": "Search variables…",
+      "filterType": "Type",
+      "typeAll": "All",
+      "typeSecrets": "Secrets",
+      "typePlain": "Plain text",
+      "reset": "Reset filters"
+    },
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "usedBy": "Used by",
+      "updated": "Updated",
+      "created": "Created"
+    },
+    "type": {
+      "secret": "Secret",
+      "plain": "Plain text",
+      "plainWarning": "Stored without encryption. Use only for non-sensitive values."
+    },
+    "usedBy": {
+      "count": "{count, plural, one {# resource} other {# resources}}",
+      "none": "—",
+      "unavailable": "Usage unavailable",
+      "unavailableBody": "Usage tracking is not yet available from the backend."
+    },
+    "list": {
+      "empty": {
+        "title": "No variables yet",
+        "body": "Store API keys and config values once — agents, models, and integrations reference them by name."
+      },
+      "error": {
+        "title": "Couldn't load variables",
+        "body": "The vault is unreachable — your variables are unaffected.",
+        "details": "Show error details"
+      },
+      "bulkSelected": "{count} selected",
+      "clearSelection": "Clear"
+    },
+    "detail": {
+      "value": "Value",
+      "reveal": "Reveal",
+      "hide": "Hide",
+      "copyValue": "Copy value",
+      "copyId": "Copy ID",
+      "copyName": "Copy name",
+      "usage": "Usage",
+      "meta": "Details",
+      "id": "ID",
+      "created": "Created",
+      "updated": "Last updated",
+      "createdBy": "Created by",
+      "updatedBy": "Last updated by"
+    },
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "e.g. ANTHROPIC_API_KEY",
+      "nameHelper": "A unique identifier. Use UPPERCASE with underscores.",
+      "value": "Value",
+      "valuePlaceholder": "Paste the value…",
+      "valueHelperSecret": "Will be encrypted at rest.",
+      "valueHelperPlain": "Will be stored as plain text.",
+      "type": "Type",
+      "typeSecret": "Secret — encrypted at rest",
+      "typePlain": "Plain text — stored as-is",
+      "typeSecretDescription": "Encrypted at rest. Recommended for API keys, tokens, and passwords.",
+      "typePlainDescription": "Stored as-is. Use for non-sensitive values like base URLs.",
+      "typePlainWarning": "Stored without encryption. Use only for non-sensitive values like base URLs.",
+      "valueUnchanged": "The current value will be kept unless you replace it.",
+      "required": "{field} is required.",
+      "nameRequired": "Name is required.",
+      "valueRequired": "Value is required."
+    },
+    "create": {
+      "title": "Add variable",
+      "description": "Store a new secret or configuration value.",
+      "success": "Variable \"{name}\" added.",
+      "error": "Couldn't add the variable.",
+      "submit": "Create variable",
+      "submitting": "Creating…",
+      "errorGeneric": "Couldn't create the variable. Please try again."
+    },
+    "edit": {
+      "title": "Edit variable",
+      "description": "Modify {name}.",
+      "success": "Variable \"{name}\" updated.",
+      "error": "Couldn't update the variable.",
+      "errorGeneric": "Couldn't update the variable. Please try again.",
+      "notFoundTitle": "Variable not found",
+      "notFoundBody": "This variable may have been deleted.",
+      "loadErrorTitle": "Couldn't load this variable",
+      "loadErrorBody": "Please retry, or go back to the list.",
+      "submit": "Save changes",
+      "submitting": "Saving…",
+      "revealFailed": "Couldn't reveal the current value.",
+      "replaceValueHelp": "The current value will be kept unless you replace it.",
+      "replaceValueShow": "Show current value",
+      "replaceValueHide": "Hide current value",
+      "replaceValueLoading": "Loading…",
+      "metaTitle": "Details",
+      "metaCreated": "Created",
+      "metaUpdated": "Last updated",
+      "metaUsedBy": "Used by",
+      "metaUsedByNone": "Not referenced",
+      "metaUsedByCount": "{count, plural, one {# resource} other {# resources}}",
+      "metaId": "ID",
+      "confirmTitle": "Save changes?",
+      "confirmRename": "Renaming may break {count, plural, =0 {referencing resources} one {# referencing resource} other {# referencing resources}}.",
+      "confirmSecretToPlain": "Switching from Secret to Plain stores the value without encryption — consumers that decrypt it may break.",
+      "confirmViewUsage": "View usage"
+    },
+    "usage": {
+      "title": "Variable usage",
+      "description": "Resources referencing {name}.",
+      "countShort": "{count, plural, one {# resource} other {# resources}}",
+      "previous": "Previous",
+      "next": "Next",
+      "pageOf": "Page {page} of {total}",
+      "range": "Showing {start}–{end} of {total}",
+      "copyId": "Copy ID",
+      "empty": {
+        "title": "Not referenced",
+        "body": "Safe to edit or delete — no resources reference this variable."
+      },
+      "resourceType": {
+        "user": "User",
+        "agent": "Agent",
+        "workflow": "Routine"
+      },
+      "unknownUser": "Unknown user",
+      "unknownAgent": "Unknown agent",
+      "unknownRoutine": "Unknown routine"
+    },
+    "delete": {
+      "title": "Delete variable?",
+      "bodyUnused": "Permanently delete \"{name}\". This cannot be undone.",
+      "bodyInUse": "\"{name}\" is referenced by {count, plural, one {# resource} other {# resources}}. Deleting it may break those resources.",
+      "confirm": "Delete",
+      "success": "Variable deleted.",
+      "error": "Couldn't delete the variable."
+    },
+    "bulkDelete": {
+      "title": "Delete {count} variables?",
+      "body": "Agents, models, and integrations that reference these variables by name will break.",
+      "typeToConfirm": "Type \"delete\" to confirm",
+      "success": "{count, plural, one {# variable} other {# variables}} deleted.",
+      "partialError": "Some variables couldn't be deleted."
+    },
+    "rename": {
+      "title": "Rename this variable?",
+      "body": "Agents reference variables by name. Renaming \"{oldName}\" to \"{newName}\" will break any agent or model that references the old name."
+    },
+    "decrypt": {
+      "title": "Convert to plain text?",
+      "body": "The value will be stored without encryption. Any consumer that decrypts it as a secret may break."
+    },
+    "readOnly": {
+      "banner": "Read-only access — value reveal, edit, and delete require the write permission.",
+      "redirect": "Read-only access — changes require the write permission."
+    },
+    "reveal": {
+      "toast": "Value revealed for 30 seconds."
+    },
+    "copyValue": {
+      "toast": "Value copied."
     }
   }
 }
