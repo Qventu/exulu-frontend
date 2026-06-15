@@ -1,4 +1,260 @@
 {
+  "access": {
+    "title": "Users & access",
+    "description": "Who can sign in, and what they can do.",
+    "tabs": {
+      "users": "Users",
+      "roles": "Roles",
+      "teams": "Teams"
+    },
+    "users": {
+      "searchPlaceholder": "Search by email…",
+      "noRole": "No role",
+      "noTeam": "No team",
+      "verified": "Verified",
+      "pending": "Pending",
+      "columns": {
+        "user": "User",
+        "role": "Role",
+        "team": "Team",
+        "updated": "Updated",
+        "created": "Created"
+      },
+      "view": {
+        "label": "View",
+        "toggleColumns": "Toggle columns"
+      },
+      "filters": {
+        "allRoles": "All roles",
+        "allTeams": "All teams",
+        "clear": "Clear filters"
+      },
+      "superAdmin": {
+        "label": "Super admin",
+        "captionOn": "Has full administrative privileges.",
+        "captionOff": "Standard user permissions.",
+        "grantTitle": "Grant super admin?",
+        "grantDescription": "{email} will gain full administrative privileges across the entire workspace.",
+        "grantConfirm": "Grant super admin",
+        "revokeTitle": "Revoke super admin?",
+        "revokeDescription": "{email} will lose all administrative privileges.",
+        "revokeConfirm": "Revoke super admin",
+        "lastAdminWarning": "Ensure you are not removing super admin from the last super administrator. If you do, nobody will be able to manage users or system settings, and you will need a technical support intervention to restore it via the database.",
+        "selfBlockedTitle": "Can't disable your own super admin",
+        "selfBlockedDescription": "You cannot disable your own super admin privileges. Ask another super admin to do it.",
+        "grantedTitle": "Super admin granted",
+        "grantedDescription": "{email} now has super admin privileges.",
+        "revokedTitle": "Super admin revoked",
+        "revokedDescription": "{email} no longer has super admin privileges.",
+        "failedTitle": "Couldn't update super admin",
+        "failedDescription": "Please try again."
+      },
+      "rowActions": {
+        "resetPassword": "Reset password",
+        "delete": "Delete user",
+        "selfDeleteBlocked": "You can't delete your own user.",
+        "invalidRow": "This row didn't validate — actions disabled."
+      },
+      "bulk": {
+        "remove": "Remove",
+        "successTitle": "{count, plural, one {# user removed} other {# users removed}}",
+        "partialTitle": "{count, plural, one {# user removed — see failures below} other {# users removed — see failures below}}",
+        "selfSkippedWarning": "Your own account is in the selection and will be skipped. You can't delete yourself.",
+        "nothingToRemove": "Nothing to remove — your account was the only row selected."
+      },
+      "confirmRoleChangeTitle": "Change role?",
+      "confirmRoleChangeDescription": "Change the role of {email}? This changes what they can see and do across the workspace.",
+      "confirmRoleChangeConfirm": "Change role",
+      "confirmTeamChangeTitle": "Change team?",
+      "confirmTeamChangeDescription": "Change the team of {email}? Cost attribution and team-shared content reassign immediately.",
+      "confirmTeamChangeConfirm": "Change team",
+      "confirmDeleteTitle": "Delete user?",
+      "confirmDeleteDescription": "{email} will be deleted permanently. They will no longer be able to sign in. This cannot be undone.",
+      "confirmDeleteConfirm": "Delete user",
+      "confirmBulkDeleteTitle": "Delete {count, plural, one {# user} other {# users}}?",
+      "confirmBulkDeleteDescription": "{count, plural, one {This user will be deleted permanently.} other {These # users will be deleted permanently.}} They will no longer be able to sign in. This cannot be undone.",
+      "confirmBulkDeleteConfirm": "Delete",
+      "roleChangedTitle": "Role updated",
+      "roleChangeFailedTitle": "Couldn't update role",
+      "teamChangedTitle": "Team updated",
+      "teamChangeFailedTitle": "Couldn't update team",
+      "deletedTitle": "User deleted",
+      "deletedDescription": "{email} has been deleted.",
+      "deleteFailedTitle": "Couldn't delete user",
+      "detail": {
+        "identity": "Identity",
+        "email": "Email",
+        "userId": "User ID",
+        "status": "Status",
+        "verified": "Verified",
+        "pending": "Pending",
+        "created": "Created",
+        "lastUsed": "Last used",
+        "never": "Never",
+        "access": "Access",
+        "accessDescription": "Choose what this user can see and do.",
+        "role": "Role",
+        "team": "Team",
+        "actions": "Actions",
+        "resetPassword": "Reset password…",
+        "dangerZone": "Danger zone",
+        "deleteUser": "Delete user",
+        "selfDeleteBlocked": "You can't delete your own user.",
+        "raw": "Raw",
+        "rawDescription": "The full row as returned by the API. Secrets are masked.",
+        "rawShow": "Show raw JSON",
+        "rawHide": "Hide raw JSON"
+      },
+      "empty": {
+        "title": "No users yet",
+        "description": "Invite your first user to get started.",
+        "action": "Add user",
+        "filteredTitle": "No users match",
+        "filteredDescription": "Try a different search or clear the filters."
+      },
+      "addUser": {
+        "action": "Add user",
+        "title": "Add user",
+        "description": "Enter the email address for the new user.",
+        "passwordTitle": "Temporary password",
+        "passwordDescription": "A temporary password has been generated. Copy and send it to the user manually.",
+        "emailLabel": "Email address",
+        "emailPlaceholder": "user@example.com",
+        "passwordLabel": "Temporary password",
+        "handoffHint": "Send this password to {email} manually. They should change it on first sign-in.",
+        "cancel": "Cancel",
+        "continue": "Continue",
+        "create": "Add user",
+        "creating": "Creating…",
+        "successTitle": "User added",
+        "successDescription": "{email} has been added.",
+        "successDescriptionTempPassword": "{email} has been added with a temporary password.",
+        "failedTitle": "Couldn't add user",
+        "failedDescription": "Please try again.",
+        "errors": {
+          "emailRequired": "Enter an email address.",
+          "emailInvalid": "Enter a valid email address."
+        }
+      },
+      "resetPassword": {
+        "title": "Reset password",
+        "description": "A temporary password has been generated for {email}. Copy and send it to the user manually.",
+        "passwordLabel": "Temporary password",
+        "handoffHint": "The user should change this on their next sign-in.",
+        "cancel": "Cancel",
+        "confirm": "Reset password",
+        "resetting": "Resetting…",
+        "successTitle": "Password reset",
+        "successDescription": "Password has been reset for {email}.",
+        "failedTitle": "Couldn't reset password",
+        "failedDescription": "Please try again."
+      }
+    },
+    "roles": {
+      "newRole": "New role",
+      "searchPlaceholder": "Search roles…",
+      "systemRole": "System",
+      "noPermissions": "No permissions",
+      "rw": "RW",
+      "r": "R",
+      "columns": {
+        "role": "Role",
+        "permissions": "Permissions",
+        "updated": "Updated"
+      },
+      "permissionAreas": {
+        "agents": "Agents",
+        "workflows": "Routines",
+        "variables": "Variables",
+        "users": "Users",
+        "api": "API",
+        "evals": "Evals",
+        "budgets": "Budgets"
+      },
+      "permissionAreaDescriptions": {
+        "agents": "AI agents and their configurations.",
+        "workflows": "Routines and their runs.",
+        "variables": "Environment variables and secrets.",
+        "users": "User management and roles.",
+        "api": "API access and management.",
+        "evals": "Evaluation sets, test cases, and eval runs.",
+        "budgets": "Spend budgets for users, roles, teams, projects, and agents."
+      },
+      "matrix": {
+        "none": "None",
+        "read": "Read",
+        "write": "Write",
+        "infoLabel": "About this area"
+      },
+      "confirmDeleteTitle": "Delete role?",
+      "confirmDeleteDescription": "The role \"{name}\" will be deleted permanently. Members of this role keep their accounts but lose its grants. This cannot be undone.",
+      "confirmDeleteConfirm": "Delete role",
+      "deletedTitle": "Role deleted",
+      "deleteFailedTitle": "Couldn't delete role",
+      "detail": {
+        "createTitle": "New role",
+        "meta": "Details",
+        "created": "Created",
+        "updated": "Updated",
+        "systemRole": "System role",
+        "nameLabel": "Role name",
+        "namePlaceholder": "e.g. Admin, Developer, Viewer",
+        "reservedNameHint": "System roles cannot be renamed.",
+        "permissions": "Permissions",
+        "permissionsDescription": "Configure access levels for each area.",
+        "blastRadiusInfo": "Members of this role see navigation changes immediately.",
+        "dangerZone": "Danger zone",
+        "deleteRole": "Delete role",
+        "reservedTooltip": "System roles cannot be deleted.",
+        "createdTitle": "Role created",
+        "updatedTitle": "Role updated",
+        "saveFailedTitle": "Couldn't save role",
+        "createSummary": "Ready to create the role.",
+        "unsavedSummary": "You have unsaved changes."
+      },
+      "empty": {
+        "title": "No roles yet",
+        "description": "Roles bundle permissions for groups of users.",
+        "action": "New role",
+        "filteredTitle": "No roles match",
+        "filteredDescription": "Try a different search."
+      }
+    },
+    "teams": {
+      "newTeam": "New team",
+      "searchPlaceholder": "Search teams…",
+      "budgetsLink": "Budgets →",
+      "columns": {
+        "team": "Team",
+        "description": "Description",
+        "updated": "Updated"
+      },
+      "confirmDeleteTitle": "Delete team?",
+      "confirmDeleteDescription": "The team \"{name}\" will be deleted permanently. This cannot be undone.",
+      "confirmDeleteWarning": "Users assigned to {name} lose this grouping; budget attribution for this team stops.",
+      "confirmDeleteConfirm": "Delete team",
+      "deletedTitle": "Team deleted",
+      "deleteFailedTitle": "Couldn't delete team",
+      "detail": {
+        "createTitle": "New team",
+        "meta": "Details",
+        "created": "Created",
+        "updated": "Updated",
+        "dangerZone": "Danger zone",
+        "deleteTeam": "Delete team",
+        "createdTitle": "Team created",
+        "updatedTitle": "Team updated",
+        "saveFailedTitle": "Couldn't save team"
+      },
+      "empty": {
+        "title": "No teams yet",
+        "description": "Teams group people for cost attribution and content sharing.",
+        "action": "New team",
+        "filteredTitle": "No teams match",
+        "filteredDescription": "Try a different search."
+      }
+    }
+  },
   "agentSelection": {
     "newSession": "New session with {agentName}",
     "noAgentsAvailable": "No agents available",

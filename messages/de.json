@@ -1,4 +1,260 @@
 {
+  "access": {
+    "title": "Benutzer & Zugriff",
+    "description": "Wer sich anmelden kann und was er tun darf.",
+    "tabs": {
+      "users": "Benutzer",
+      "roles": "Rollen",
+      "teams": "Teams"
+    },
+    "users": {
+      "searchPlaceholder": "Nach E-Mail suchen…",
+      "noRole": "Keine Rolle",
+      "noTeam": "Kein Team",
+      "verified": "Verifiziert",
+      "pending": "Ausstehend",
+      "columns": {
+        "user": "Benutzer",
+        "role": "Rolle",
+        "team": "Team",
+        "updated": "Aktualisiert",
+        "created": "Erstellt"
+      },
+      "view": {
+        "label": "Ansicht",
+        "toggleColumns": "Spalten umschalten"
+      },
+      "filters": {
+        "allRoles": "Alle Rollen",
+        "allTeams": "Alle Teams",
+        "clear": "Filter löschen"
+      },
+      "superAdmin": {
+        "label": "Super-Admin",
+        "captionOn": "Hat vollständige Administratorrechte.",
+        "captionOff": "Standard-Benutzerberechtigungen.",
+        "grantTitle": "Super-Admin gewähren?",
+        "grantDescription": "{email} erhält vollständige Administratorrechte für den gesamten Arbeitsbereich.",
+        "grantConfirm": "Super-Admin gewähren",
+        "revokeTitle": "Super-Admin entziehen?",
+        "revokeDescription": "{email} verliert alle Administratorrechte.",
+        "revokeConfirm": "Super-Admin entziehen",
+        "lastAdminWarning": "Stellen Sie sicher, dass Sie den Super-Admin-Status nicht vom letzten Super-Administrator entfernen. Andernfalls kann niemand mehr Benutzer oder Systemeinstellungen verwalten, und eine technische Wiederherstellung über die Datenbank wäre erforderlich.",
+        "selfBlockedTitle": "Eigene Super-Admin-Rechte können nicht deaktiviert werden",
+        "selfBlockedDescription": "Sie können Ihre eigenen Super-Admin-Rechte nicht deaktivieren. Bitten Sie einen anderen Super-Admin darum.",
+        "grantedTitle": "Super-Admin gewährt",
+        "grantedDescription": "{email} hat jetzt Super-Admin-Rechte.",
+        "revokedTitle": "Super-Admin entzogen",
+        "revokedDescription": "{email} hat keine Super-Admin-Rechte mehr.",
+        "failedTitle": "Super-Admin konnte nicht aktualisiert werden",
+        "failedDescription": "Bitte erneut versuchen."
+      },
+      "rowActions": {
+        "resetPassword": "Passwort zurücksetzen",
+        "delete": "Benutzer löschen",
+        "selfDeleteBlocked": "Sie können sich nicht selbst löschen.",
+        "invalidRow": "Diese Zeile konnte nicht validiert werden — Aktionen deaktiviert."
+      },
+      "bulk": {
+        "remove": "Entfernen",
+        "successTitle": "{count, plural, one {# Benutzer entfernt} other {# Benutzer entfernt}}",
+        "partialTitle": "{count, plural, one {# Benutzer entfernt — siehe Fehler unten} other {# Benutzer entfernt — siehe Fehler unten}}",
+        "selfSkippedWarning": "Ihr eigenes Konto ist in der Auswahl und wird übersprungen. Sie können sich nicht selbst löschen.",
+        "nothingToRemove": "Nichts zu entfernen — Ihr Konto war die einzige ausgewählte Zeile."
+      },
+      "confirmRoleChangeTitle": "Rolle ändern?",
+      "confirmRoleChangeDescription": "Die Rolle von {email} ändern? Dies ändert, was diese Person im Arbeitsbereich sehen und tun kann.",
+      "confirmRoleChangeConfirm": "Rolle ändern",
+      "confirmTeamChangeTitle": "Team ändern?",
+      "confirmTeamChangeDescription": "Das Team von {email} ändern? Kostenzuweisung und teamgeteilte Inhalte werden sofort neu zugeordnet.",
+      "confirmTeamChangeConfirm": "Team ändern",
+      "confirmDeleteTitle": "Benutzer löschen?",
+      "confirmDeleteDescription": "{email} wird endgültig gelöscht. Diese Person kann sich nicht mehr anmelden. Dies kann nicht rückgängig gemacht werden.",
+      "confirmDeleteConfirm": "Benutzer löschen",
+      "confirmBulkDeleteTitle": "{count, plural, one {# Benutzer löschen?} other {# Benutzer löschen?}}",
+      "confirmBulkDeleteDescription": "{count, plural, one {Dieser Benutzer wird endgültig gelöscht.} other {Diese # Benutzer werden endgültig gelöscht.}} Sie können sich nicht mehr anmelden. Dies kann nicht rückgängig gemacht werden.",
+      "confirmBulkDeleteConfirm": "Löschen",
+      "roleChangedTitle": "Rolle aktualisiert",
+      "roleChangeFailedTitle": "Rolle konnte nicht aktualisiert werden",
+      "teamChangedTitle": "Team aktualisiert",
+      "teamChangeFailedTitle": "Team konnte nicht aktualisiert werden",
+      "deletedTitle": "Benutzer gelöscht",
+      "deletedDescription": "{email} wurde gelöscht.",
+      "deleteFailedTitle": "Benutzer konnte nicht gelöscht werden",
+      "detail": {
+        "identity": "Identität",
+        "email": "E-Mail",
+        "userId": "Benutzer-ID",
+        "status": "Status",
+        "verified": "Verifiziert",
+        "pending": "Ausstehend",
+        "created": "Erstellt",
+        "lastUsed": "Zuletzt verwendet",
+        "never": "Nie",
+        "access": "Zugriff",
+        "accessDescription": "Wählen Sie, was dieser Benutzer sehen und tun kann.",
+        "role": "Rolle",
+        "team": "Team",
+        "actions": "Aktionen",
+        "resetPassword": "Passwort zurücksetzen…",
+        "dangerZone": "Gefahrenzone",
+        "deleteUser": "Benutzer löschen",
+        "selfDeleteBlocked": "Sie können sich nicht selbst löschen.",
+        "raw": "Rohdaten",
+        "rawDescription": "Der vollständige Datensatz, wie er von der API zurückgegeben wird. Geheimnisse sind maskiert.",
+        "rawShow": "Rohes JSON anzeigen",
+        "rawHide": "Rohes JSON ausblenden"
+      },
+      "empty": {
+        "title": "Noch keine Benutzer",
+        "description": "Laden Sie Ihren ersten Benutzer ein, um loszulegen.",
+        "action": "Benutzer hinzufügen",
+        "filteredTitle": "Keine Benutzer gefunden",
+        "filteredDescription": "Andere Suche versuchen oder Filter löschen."
+      },
+      "addUser": {
+        "action": "Benutzer hinzufügen",
+        "title": "Benutzer hinzufügen",
+        "description": "Geben Sie die E-Mail-Adresse des neuen Benutzers ein.",
+        "passwordTitle": "Temporäres Passwort",
+        "passwordDescription": "Ein temporäres Passwort wurde generiert. Kopieren Sie es und senden Sie es dem Benutzer manuell.",
+        "emailLabel": "E-Mail-Adresse",
+        "emailPlaceholder": "user@example.com",
+        "passwordLabel": "Temporäres Passwort",
+        "handoffHint": "Senden Sie dieses Passwort manuell an {email}. Es sollte bei der ersten Anmeldung geändert werden.",
+        "cancel": "Abbrechen",
+        "continue": "Weiter",
+        "create": "Benutzer hinzufügen",
+        "creating": "Erstellen…",
+        "successTitle": "Benutzer hinzugefügt",
+        "successDescription": "{email} wurde hinzugefügt.",
+        "successDescriptionTempPassword": "{email} wurde mit einem temporären Passwort hinzugefügt.",
+        "failedTitle": "Benutzer konnte nicht hinzugefügt werden",
+        "failedDescription": "Bitte erneut versuchen.",
+        "errors": {
+          "emailRequired": "Geben Sie eine E-Mail-Adresse ein.",
+          "emailInvalid": "Geben Sie eine gültige E-Mail-Adresse ein."
+        }
+      },
+      "resetPassword": {
+        "title": "Passwort zurücksetzen",
+        "description": "Für {email} wurde ein temporäres Passwort generiert. Kopieren Sie es und senden Sie es dem Benutzer manuell.",
+        "passwordLabel": "Temporäres Passwort",
+        "handoffHint": "Der Benutzer sollte es bei der nächsten Anmeldung ändern.",
+        "cancel": "Abbrechen",
+        "confirm": "Passwort zurücksetzen",
+        "resetting": "Zurücksetzen…",
+        "successTitle": "Passwort zurückgesetzt",
+        "successDescription": "Das Passwort für {email} wurde zurückgesetzt.",
+        "failedTitle": "Passwort konnte nicht zurückgesetzt werden",
+        "failedDescription": "Bitte erneut versuchen."
+      }
+    },
+    "roles": {
+      "newRole": "Neue Rolle",
+      "searchPlaceholder": "Rollen suchen…",
+      "systemRole": "System",
+      "noPermissions": "Keine Berechtigungen",
+      "rw": "RW",
+      "r": "R",
+      "columns": {
+        "role": "Rolle",
+        "permissions": "Berechtigungen",
+        "updated": "Aktualisiert"
+      },
+      "permissionAreas": {
+        "agents": "Agenten",
+        "workflows": "Routinen",
+        "variables": "Variablen",
+        "users": "Benutzer",
+        "api": "API",
+        "evals": "Evals",
+        "budgets": "Budgets"
+      },
+      "permissionAreaDescriptions": {
+        "agents": "KI-Agenten und ihre Konfigurationen.",
+        "workflows": "Routinen und deren Läufe.",
+        "variables": "Umgebungsvariablen und Geheimnisse.",
+        "users": "Benutzerverwaltung und Rollen.",
+        "api": "API-Zugriff und -Verwaltung.",
+        "evals": "Evaluations-Sets, Testfälle und Eval-Läufe.",
+        "budgets": "Ausgabebudgets für Benutzer, Rollen, Teams, Projekte und Agenten."
+      },
+      "matrix": {
+        "none": "Keine",
+        "read": "Lesen",
+        "write": "Schreiben",
+        "infoLabel": "Über diesen Bereich"
+      },
+      "confirmDeleteTitle": "Rolle löschen?",
+      "confirmDeleteDescription": "Die Rolle \"{name}\" wird endgültig gelöscht. Mitglieder dieser Rolle behalten ihre Konten, verlieren aber deren Berechtigungen. Dies kann nicht rückgängig gemacht werden.",
+      "confirmDeleteConfirm": "Rolle löschen",
+      "deletedTitle": "Rolle gelöscht",
+      "deleteFailedTitle": "Rolle konnte nicht gelöscht werden",
+      "detail": {
+        "createTitle": "Neue Rolle",
+        "meta": "Details",
+        "created": "Erstellt",
+        "updated": "Aktualisiert",
+        "systemRole": "Systemrolle",
+        "nameLabel": "Rollenname",
+        "namePlaceholder": "z. B. Admin, Entwickler, Betrachter",
+        "reservedNameHint": "Systemrollen können nicht umbenannt werden.",
+        "permissions": "Berechtigungen",
+        "permissionsDescription": "Konfigurieren Sie Zugriffsstufen für jeden Bereich.",
+        "blastRadiusInfo": "Mitglieder dieser Rolle sehen Navigationsänderungen sofort.",
+        "dangerZone": "Gefahrenzone",
+        "deleteRole": "Rolle löschen",
+        "reservedTooltip": "Systemrollen können nicht gelöscht werden.",
+        "createdTitle": "Rolle erstellt",
+        "updatedTitle": "Rolle aktualisiert",
+        "saveFailedTitle": "Rolle konnte nicht gespeichert werden",
+        "createSummary": "Bereit, die Rolle zu erstellen.",
+        "unsavedSummary": "Sie haben nicht gespeicherte Änderungen."
+      },
+      "empty": {
+        "title": "Noch keine Rollen",
+        "description": "Rollen bündeln Berechtigungen für Benutzergruppen.",
+        "action": "Neue Rolle",
+        "filteredTitle": "Keine Rollen gefunden",
+        "filteredDescription": "Andere Suche versuchen."
+      }
+    },
+    "teams": {
+      "newTeam": "Neues Team",
+      "searchPlaceholder": "Teams suchen…",
+      "budgetsLink": "Budgets →",
+      "columns": {
+        "team": "Team",
+        "description": "Beschreibung",
+        "updated": "Aktualisiert"
+      },
+      "confirmDeleteTitle": "Team löschen?",
+      "confirmDeleteDescription": "Das Team \"{name}\" wird endgültig gelöscht. Dies kann nicht rückgängig gemacht werden.",
+      "confirmDeleteWarning": "Benutzer, die {name} zugewiesen sind, verlieren diese Gruppierung; die Budgetzuweisung für dieses Team endet.",
+      "confirmDeleteConfirm": "Team löschen",
+      "deletedTitle": "Team gelöscht",
+      "deleteFailedTitle": "Team konnte nicht gelöscht werden",
+      "detail": {
+        "createTitle": "Neues Team",
+        "meta": "Details",
+        "created": "Erstellt",
+        "updated": "Aktualisiert",
+        "dangerZone": "Gefahrenzone",
+        "deleteTeam": "Team löschen",
+        "createdTitle": "Team erstellt",
+        "updatedTitle": "Team aktualisiert",
+        "saveFailedTitle": "Team konnte nicht gespeichert werden"
+      },
+      "empty": {
+        "title": "Noch keine Teams",
+        "description": "Teams gruppieren Personen für Kostenzuweisung und Inhaltsfreigabe.",
+        "action": "Neues Team",
+        "filteredTitle": "Keine Teams gefunden",
+        "filteredDescription": "Andere Suche versuchen."
+      }
+    }
+  },
   "agentSelection": {
     "newSession": "Neue Sitzung mit {agentName}",
     "noAgentsAvailable": "Keine Agenten verfügbar",

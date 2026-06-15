@@ -1,134 +1,129 @@
 "use client";
 
-import { useState, useContext } from "react";
-import { useMutation, useQuery } from "@apollo/client";
-import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { AlertTriangle } from "lucide-react";
-import { GET_USERS, UPDATE_USER_BY_ID } from "@/queries/queries";
-import { UserContext } from "@/app/(application)/authenticated";
+/**
+ * SuperAdminToggle — the Danger-zone super-admin grant/revoke control
+ * (access.md ladder #22/#23). Refactored from the legacy column cell:
+ *
+ * - Replaces the ad-hoc Dialog with the shared ConfirmDialog primitive (U2).
+ * - Replaces hardcoded amber/red classes with semantic warning/destructive
+ *   tokens (U8). The Switch uses Radix's default destructive-state styling
+ *   through the consumer's variant (no hardcoded bg-red-500 anymore).
+ * - Self-demotion still blocked inline with a clear toast.
+ * - Lives logically inside user-detail-panel's Danger zone but stays its own
+ *   file for testability.
+ */
 
-interface SuperAdminToggleProps {
+import { AlertTriangle, ShieldAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
+import * as React from "react";
+import { toast } from "sonner";
+
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
+import { Switch } from "@/components/ui/switch";
+
+export interface SuperAdminToggleProps {
   user: {
-    id: string;
-    super_admin?: boolean;
+    id: string | number;
     email: string;
-    [key: string]: any;
+    super_admin?: boolean;
   };
+  /** Viewer id — self-demotion is blocked inline. */
+  viewerId: string | number | undefined;
+  /** Mutation callback; returns a promise that resolves when the change is committed. */
+  onChange: (next: boolean) => Promise<unknown>;
 }
 
-export function SuperAdminToggle({ user }: SuperAdminToggleProps) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [pendingChange, setPendingChange] = useState<boolean | null>(null);
-  const { user: currentUser } = useContext(UserContext);
-  const [updateUser] = useMutation(UPDATE_USER_BY_ID, {
-    refetchQueries: [
-      GET_USERS,
-      "GetUsers",
-    ],
-  });
+export function SuperAdminToggle({
+  user,
+  viewerId,
+  onChange,
+}: SuperAdminToggleProps) {
+  const t = useTranslations("access.users.superAdmin");
+  const [pendingChange, setPendingChange] = React.useState<boolean | null>(null);
+
   const isSuperAdmin = Boolean(user.super_admin);
-  const isCurrentUser = currentUser?.id === user.id;
+  const isViewer = viewerId !== undefined && String(viewerId) === String(user.id);
+
   const handleToggleChange = (checked: boolean) => {
-    if (isCurrentUser && isSuperAdmin && !checked) {
-      toast.error("Cannot Disable Own Super Admin Rights", { description: "You cannot disable your own super admin privileges for security reasons." });
+    if (isViewer && isSuperAdmin && !checked) {
+      toast.error(t("selfBlockedTitle"), {
+        description: t("selfBlockedDescription"),
+      });
       return;
     }
     setPendingChange(checked);
-    setIsDialogOpen(true);
   };
 
-  const handleConfirm = async () => {
-    if (pendingChange === null) return;
-
-    setIsLoading(true);
-    try {
-      await updateUser({
-        variables: {
-          id: user.id,
-          super_admin: pendingChange,
-        },
-      });
-      
-      setIsDialogOpen(false);
-      setPendingChange(null);
-      toast.success(pendingChange ? "Super Admin Enabled" : "Super Admin Disabled", {
-        description: `Super admin access has been ${pendingChange ? 'granted to' : 'removed from'} ${user.email}.`,
-      });
-    } catch (error: any) {
-      toast.error("Error", { description: error.message || "Failed to update super admin status." });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setIsDialogOpen(false);
-    setPendingChange(null);
-  };
+  const granting = pendingChange === true;
+  const revoking = pendingChange === false;
 
   return (
     <>
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-2">
+          <ShieldAlert
+            aria-hidden="true"
+            className="mt-0.5 size-4 shrink-0 text-warning"
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-medium">{t("label")}</p>
+            <p className="text-xs text-muted-foreground">
+              {isSuperAdmin ? t("captionOn") : t("captionOff")}
+            </p>
+          </div>
+        </div>
         <Switch
           checked={isSuperAdmin}
           onCheckedChange={handleToggleChange}
-          disabled={isLoading}
-          className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+          aria-label={t("label")}
         />
-        <span className="text-sm text-muted-foreground">
-          {isSuperAdmin ? "Yes" : "No"}
-        </span>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[475px]">
-          <DialogHeader>
-            <DialogTitle>
-              {pendingChange ? "Grant" : "Remove"} Super Admin Access
-            </DialogTitle>
-            <DialogDescription>
-              {pendingChange 
-                ? `Are you sure you want to grant super admin access to ${user.email}? This will give them full administrative privileges.`
-                : `Are you sure you want to remove super admin access from ${user.email}? They will lose all administrative privileges.`
-              }
-              {!pendingChange && (
-                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-amber-800">
-                    <strong>Warning:</strong> Ensure you are not removing super admin access from the last super administrator. 
-                    This could prevent anyone from managing users and system settings and requiring a technical support intervention
-                    to set the super admin status again via the database.
-                  </p>
-                </div>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleConfirm}
-              disabled={isLoading}
-              variant={pendingChange ? "destructive" : "default"}
-              className={pendingChange ? "bg-red-500 hover:bg-red-600" : ""}
-            >
-              {isLoading ? "Updating..." : "Confirm"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={pendingChange !== null}
+        onOpenChange={(next) => {
+          if (!next) setPendingChange(null);
+        }}
+        variant="destructive"
+        title={granting ? t("grantTitle") : t("revokeTitle")}
+        description={
+          granting
+            ? t("grantDescription", { email: user.email })
+            : t("revokeDescription", { email: user.email })
+        }
+        confirmLabel={granting ? t("grantConfirm") : t("revokeConfirm")}
+        warning={
+          revoking ? (
+            <span className="flex items-start gap-2">
+              <AlertTriangle
+                aria-hidden="true"
+                className="mt-0.5 size-4 shrink-0"
+              />
+              <span>{t("lastAdminWarning")}</span>
+            </span>
+          ) : undefined
+        }
+        onConfirm={async () => {
+          if (pendingChange === null) return;
+          try {
+            await onChange(pendingChange);
+            toast.success(
+              pendingChange ? t("grantedTitle") : t("revokedTitle"),
+              {
+                description: pendingChange
+                  ? t("grantedDescription", { email: user.email })
+                  : t("revokedDescription", { email: user.email }),
+              },
+            );
+          } catch (error) {
+            toast.error(t("failedTitle"), {
+              description:
+                error instanceof Error ? error.message : t("failedDescription"),
+            });
+            throw error;
+          }
+        }}
+      />
     </>
   );
 }
