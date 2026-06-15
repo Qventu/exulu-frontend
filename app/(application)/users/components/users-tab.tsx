@@ -41,8 +41,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
-  PopoverTrigger,
 } from "@/components/ui/popover";
 import { RoleSelector } from "@/components/widgets/role-selector";
 import {
@@ -404,35 +404,70 @@ export function UsersTab({
         when self-deletion was skipped. Closes the self-lockout hole the row
         OverflowMenu was already guarding against.
       */}
-      <BulkActionBar
-        count={selectedIds.length}
-        onClear={() => setSelectedIds([])}
-        actions={[
-          {
-            label: t("bulk.assignRole"),
-            onClick: () => setAssignRoleOpen(true),
-          },
-          {
-            label: t("bulk.assignTeam"),
-            onClick: () => setAssignTeamOpen(true),
-          },
-          {
-            label: t("bulk.remove"),
-            destructive: true,
-            onClick: () => {
-              setBulkErrors([]);
-              setBulkOpen(true);
-            },
-          },
-        ]}
-      />
-
-      {/* Bulk role/team assign popovers — anchored to a 1x1 invisible
-          trigger so the popover sits roughly center; they are not visually
-          mounted in the page and only render their content via Radix. */}
+      {/* Bulk role/team assign popovers — anchored to the BulkActionBar
+          itself (via PopoverAnchor) so the popover floats above the bar
+          rather than at the top-left of the page (the sr-only trigger
+          version pinned it to the layout flow). Two Popovers nest around
+          the same anchor; only one is open at a time. */}
       <Popover open={assignRoleOpen} onOpenChange={setAssignRoleOpen}>
-        <PopoverTrigger className="sr-only" aria-hidden tabIndex={-1} />
-        <PopoverContent align="center" sideOffset={8} className="w-72 p-2">
+        <Popover open={assignTeamOpen} onOpenChange={setAssignTeamOpen}>
+          <PopoverAnchor asChild>
+            <div>
+              <BulkActionBar
+                count={selectedIds.length}
+                onClear={() => setSelectedIds([])}
+                actions={[
+                  {
+                    label: t("bulk.assignRole"),
+                    onClick: () => setAssignRoleOpen(true),
+                  },
+                  {
+                    label: t("bulk.assignTeam"),
+                    onClick: () => setAssignTeamOpen(true),
+                  },
+                  {
+                    label: t("bulk.remove"),
+                    destructive: true,
+                    onClick: () => {
+                      setBulkErrors([]);
+                      setBulkOpen(true);
+                    },
+                  },
+                ]}
+              />
+            </div>
+          </PopoverAnchor>
+          <PopoverContent
+            side="top"
+            align="end"
+            sideOffset={8}
+            className="w-72 p-2"
+          >
+            <p className="px-1 pb-2 text-xs text-muted-foreground">
+              {t("bulk.assignTeamHint", { count: selectedIds.length })}
+            </p>
+            <TeamSelector
+              value=""
+              onChange={(teamId) =>
+                void runBulkAssign("team", teamId, () =>
+                  setAssignTeamOpen(false),
+                )
+              }
+              placeholder={t("bulk.assignTeamPlaceholder")}
+            />
+            {assigning ? (
+              <p className="px-1 pt-2 text-xs text-muted-foreground">
+                {t("bulk.assigning")}
+              </p>
+            ) : null}
+          </PopoverContent>
+        </Popover>
+        <PopoverContent
+          side="top"
+          align="end"
+          sideOffset={8}
+          className="w-72 p-2"
+        >
           <p className="px-1 pb-2 text-xs text-muted-foreground">
             {t("bulk.assignRoleHint", { count: selectedIds.length })}
           </p>
@@ -444,29 +479,6 @@ export function UsersTab({
               )
             }
             placeholder={t("bulk.assignRolePlaceholder")}
-          />
-          {assigning ? (
-            <p className="px-1 pt-2 text-xs text-muted-foreground">
-              {t("bulk.assigning")}
-            </p>
-          ) : null}
-        </PopoverContent>
-      </Popover>
-
-      <Popover open={assignTeamOpen} onOpenChange={setAssignTeamOpen}>
-        <PopoverTrigger className="sr-only" aria-hidden tabIndex={-1} />
-        <PopoverContent align="center" sideOffset={8} className="w-72 p-2">
-          <p className="px-1 pb-2 text-xs text-muted-foreground">
-            {t("bulk.assignTeamHint", { count: selectedIds.length })}
-          </p>
-          <TeamSelector
-            value=""
-            onChange={(teamId) =>
-              void runBulkAssign("team", teamId, () =>
-                setAssignTeamOpen(false),
-              )
-            }
-            placeholder={t("bulk.assignTeamPlaceholder")}
           />
           {assigning ? (
             <p className="px-1 pt-2 text-xs text-muted-foreground">
