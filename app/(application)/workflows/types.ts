@@ -119,6 +119,11 @@ export interface RoutineComposerStagedFiles {
  *
  * Verifier diff-checks chat/** is byte-untouched; this interface is the
  * contract chat is allowed to depend on.
+ *
+ * After work item 2.13 (RoutineEditorDialog reduced to CREATE-only), the
+ * dialog no longer supports editing an existing routine — `existingWorkflow`
+ * and `isReadOnly` are permanently absent. They are typed as `never` so any
+ * future TS consumer that tries to pass them will fail to compile.
  */
 export interface ChatSaveAsRoutineHandshake {
   isOpen: boolean;
@@ -129,8 +134,8 @@ export interface ChatSaveAsRoutineHandshake {
   agentId: string;
   /** Session title — prefills `name` on first open. */
   sessionTitle?: string;
-  /** Absent in the chat entry point (chat always creates). */
-  existingWorkflow?: undefined;
-  /** Absent / false in the chat entry point. */
-  isReadOnly?: false;
+  /** Permanently absent — edit path lives inline at /workflows/[id]. */
+  existingWorkflow?: never;
+  /** Permanently absent — view path lives inline at /workflows/[id]. */
+  isReadOnly?: never;
 }

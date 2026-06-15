@@ -1,35 +1,56 @@
 "use client";
 
 /**
- * /workflows/[id] — workbench-local state machine.
+ * /workflows/[id] — workbench-local state machine + page-level editor form.
  *
- * useRoutineWorkbench owns the single-overlay invariant that previously lived
- * on the list page (routines-client.tsx). On the subpage there's exactly one
- * routine in focus, so the overlay state is straightforward: 'none' | 'run' |
- * 'queue'. The editor dialog + delete confirm have their own open flags
- * (different lifecycle: editor stays mountable while a run overlay is open is
- * NOT supported — opening the editor closes any overlay first to keep the
- * single-overlay rule).
+ * useRoutineWorkbench owns the single-overlay invariant (run/queue) plus the
+ * Steps Sheet open flag + delete confirm. The legacy editor-dialog state
+ * (editorOpen/editorMode) has been removed: editing now happens inline via
+ * the page-level form (useRoutineEditor) + the wide Steps Sheet.
+ *
+ * useRoutineEditor mirrors the agents `useAgentEditor` pattern:
+ *  - ONE useForm at workbench level (Basics + Access sections share it).
+ *  - Staged non-RHF state for RBAC (RBACControl owns onChange w/ 4 args).
+ *  - Dirty = RHF dirty || staged-RBAC-JSON !== snapshot.
+ *  - save() assembles UPDATE_WORKFLOW_TEMPLATE byte-equivalent to the killed
+ *    dialog (includes steps_json from the parent-held value AND the agent —
+ *    UX #8 requires agent always sent).
+ *  - remove() deletes + routes back to /workflows.
+ *
+ * IMPORTANT: stepsJson lives in the parent workbench component, NOT in this
+ * hook's form. The Steps Sheet has its own form and writes back via callback;
+ * the page-level form just forwards the current value on save.
  *
  * useScrollSpy: copied verbatim from the agents workbench
  * (/agents/edit/[id]/hooks.ts) to satisfy the no-cross-feature-imports lint
  * rule (codebase-structure §1.2). The 2026-06-13 findScrollParent walk MUST
- * remain byte-identical here: walking up to the nearest overflow:auto|scroll
- * ancestor and passing it as the IntersectionObserver root is what makes the
- * spy fire inside the AppShell scroll container instead of the (always-static)
- * window. If this fix changes upstream, mirror it here.
+ * remain byte-identical here.
  */
 
+import { useMutation } from "@apollo/client";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { UIMessage } from "ai";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import * as React from "react";
+import { useForm, type UseFormReturn } from "react-hook-form";
+import { toast } from "sonner";
+import * as z from "zod";
 
 import { UserContext } from "@/app/(application)/authenticated";
 
 import { routineAccess } from "../access";
 import { useAgentsForPage, useRoutineMutations } from "../hooks";
+import {
+  GET_WORKFLOW_TEMPLATES,
+  REMOVE_WORKFLOW_TEMPLATE_BY_ID,
+  UPDATE_WORKFLOW_TEMPLATE,
+} from "../queries";
+import { ROUTINES_RBAC_TEAMS_SUPPORTED } from "../schema-flags";
 import type {
   Routine,
   RoutineAccess,
+  RoutineRightsMode,
   RunRoutineRequest,
 } from "../types";
 
@@ -90,6 +111,10 @@ export function useScrollSpy(sectionIds: string[]): string {
   return activeId;
 }
 
+/* ---------------------------------------------------------------------------
+ * useRoutineWorkbench — overlay + sheet + delete state.
+ * ------------------------------------------------------------------------- */
+
 export type RoutineWorkbenchOverlay =
   | { kind: "none" }
   | { kind: "run"; request: RunRoutineRequest }
@@ -103,10 +128,10 @@ export interface UseRoutineWorkbench {
   openRun: (prefill?: Record<string, string>) => void;
   openQueue: (queueName: string) => void;
   closeOverlay: () => void;
-  editorOpen: boolean;
-  editorMode: "edit" | "view";
-  openEditor: (mode: "edit" | "view") => void;
-  closeEditor: () => void;
+  /** Wide Steps editor Sheet. */
+  stepsSheetOpen: boolean;
+  openStepsSheet: () => void;
+  closeStepsSheet: () => void;
   deleteOpen: boolean;
   setDeleteOpen: (open: boolean) => void;
   confirmDelete: () => Promise<void>;
@@ -162,22 +187,16 @@ export function useRoutineWorkbench(routine: Routine): UseRoutineWorkbench {
     setOverlay({ kind: "none" });
   }, []);
 
-  // Editor (Edit / View) — opening closes any overlay first.
-  const [editorOpen, setEditorOpen] = React.useState(false);
-  const [editorMode, setEditorMode] = React.useState<"edit" | "view">("edit");
-  const openEditor = React.useCallback((mode: "edit" | "view") => {
-    setEditorMode(mode);
+  // Steps editor Sheet (replaces the editor dialog Edit/View path). Opening
+  // dismisses any concurrent overlay to preserve the single-overlay rule.
+  const [stepsSheetOpen, setStepsSheetOpen] = React.useState(false);
+  const openStepsSheet = React.useCallback(() => {
     setOverlay({ kind: "none" });
-    setEditorOpen(true);
+    setStepsSheetOpen(true);
   }, []);
-  const closeEditor = React.useCallback(() => {
-    setEditorOpen(false);
-    // The editor dialog already calls refetchQueries on its CREATE/UPDATE
-    // mutations (GET_WORKFLOW_TEMPLATES); the subpage itself reads from the
-    // server fetch, so navigating away and back is the only "refresh" path.
-    // We use router.refresh() so the user sees their edits without leaving.
-    router.refresh();
-  }, [router]);
+  const closeStepsSheet = React.useCallback(() => {
+    setStepsSheetOpen(false);
+  }, []);
 
   // Delete confirm.
   const { removeRoutine } = useRoutineMutations();
@@ -198,12 +217,246 @@ export function useRoutineWorkbench(routine: Routine): UseRoutineWorkbench {
     openRun,
     openQueue,
     closeOverlay,
-    editorOpen,
-    editorMode,
-    openEditor,
-    closeEditor,
+    stepsSheetOpen,
+    openStepsSheet,
+    closeStepsSheet,
     deleteOpen,
     setDeleteOpen,
     confirmDelete,
+  };
+}
+
+/* ---------------------------------------------------------------------------
+ * useRoutineEditor — page-level RHF form for Basics + Access (the inline
+ * surfaces). Steps live in a separate parent state + the Sheet's own form.
+ * ------------------------------------------------------------------------- */
+
+export const routineEditorSchema = z.object({
+  name: z
+    .string()
+    .min(2, { message: "Routine name must be at least 2 characters." })
+    .max(300, { message: "Routine name must not be longer than 300 characters." }),
+  description: z
+    .string()
+    .max(10000, {
+      message: "Routine description must not be longer than 10.000 characters.",
+    })
+    .nullable()
+    .optional(),
+  agent: z.string().min(1, { message: "An agent is required." }),
+});
+
+export type RoutineFormValues = z.infer<typeof routineEditorSchema>;
+
+type RbacUserEntry = { id: string | number; rights: "read" | "write" };
+type RbacIdEntry = { id: string; rights: "read" | "write" };
+
+export interface RbacState {
+  rights_mode: RoutineRightsMode;
+  users: RbacUserEntry[];
+  roles: RbacIdEntry[];
+  teams: RbacIdEntry[];
+}
+
+function defaultRbac(routine: Routine): RbacState {
+  return {
+    rights_mode: (routine.rights_mode ?? "private") as RoutineRightsMode,
+    users: (routine.RBAC?.users ?? []) as RbacUserEntry[],
+    roles: (routine.RBAC?.roles ?? []) as RbacIdEntry[],
+    teams: (routine.RBAC?.teams ?? []) as RbacIdEntry[],
+  };
+}
+
+/**
+ * Tracks the actually-last-persisted values so dependent surfaces (the Steps
+ * Sheet's save, the header title, the variables list) stay in sync with the
+ * mutation result — the SSR `routine` prop never updates after the initial
+ * server fetch, and we only `refetchQueries: [GET_WORKFLOW_TEMPLATES]` (the
+ * list), so Apollo's by-id cache for THIS routine isn't reactively refreshed
+ * either. Updated whenever the page-level save or the Steps Sheet's save
+ * succeeds; initialized from the SSR snapshot.
+ */
+export interface RoutineLastSaved {
+  name: string;
+  agent: string | null;
+  /** Derived backend-side from `{var}` placeholders in steps_json; we keep
+   *  the SSR list initially and don't try to recompute client-side. */
+  variables: string[];
+}
+
+export interface UseRoutineEditor {
+  form: UseFormReturn<RoutineFormValues>;
+  rbac: RbacState;
+  setRbac: (r: RbacState) => void;
+  dirty: boolean;
+  saving: boolean;
+  /** Current parent-held steps_json — sent on save (byte-equivalent w/ dialog). */
+  stepsJson: UIMessage[];
+  /** Mutated by the Steps Sheet onSaved callback. */
+  setStepsJson: (next: UIMessage[]) => void;
+  /** Last-persisted snapshot — see RoutineLastSaved doc. */
+  lastSaved: RoutineLastSaved;
+  save: () => Promise<void>;
+  discard: () => void;
+  remove: () => Promise<void>;
+}
+
+export function useRoutineEditor(routine: Routine): UseRoutineEditor {
+  const router = useRouter();
+  const t = useTranslations("routines");
+  const tCommon = useTranslations("common");
+
+  const form = useForm<RoutineFormValues>({
+    resolver: zodResolver(routineEditorSchema),
+    mode: "onChange",
+    defaultValues: {
+      name: routine.name ?? "",
+      description: routine.description ?? "",
+      agent: routine.agent ?? "",
+    },
+  });
+
+  // Staged non-RHF state: RBAC (RBACControl onChange has 4 args; cannot live
+  // inside a single FormField cleanly — mirrors the agents access section).
+  const [rbac, setRbac] = React.useState<RbacState>(() => defaultRbac(routine));
+
+  // stepsJson is owned by the parent workbench but stored here so save() can
+  // forward the latest value with the page payload. The Sheet writes back via
+  // setStepsJson when it completes a save.
+  const [stepsJson, setStepsJson] = React.useState<UIMessage[]>(
+    routine.steps_json ?? [],
+  );
+
+  // lastSaved snapshot — see RoutineLastSaved doc. Seeded from SSR; updated
+  // on every successful save (page-level or Sheet) so subsequent operations
+  // (Sheet save, header title, variables list) see the truly-current values.
+  const [lastSaved, setLastSaved] = React.useState<RoutineLastSaved>(() => ({
+    name: routine.name ?? "",
+    agent: routine.agent ?? null,
+    variables: (routine.variables ?? []) as string[],
+  }));
+
+  // Snapshot baseline for staged dirty tracking. Mutated only on save/discard
+  // (event handlers, not render). The `react-hooks/refs` warning is the
+  // acknowledged exception for ref-as-baseline reads.
+  const initialSnapshot = React.useRef({
+    rbac: JSON.stringify(defaultRbac(routine)),
+  });
+
+  const snapshot = initialSnapshot.current;
+  const stagedDirty = JSON.stringify(rbac) !== snapshot.rbac;
+  const dirty = form.formState.isDirty || stagedDirty;
+
+  // Mutations.
+  const [updateMutate, updateState] = useMutation(UPDATE_WORKFLOW_TEMPLATE, {
+    refetchQueries: [GET_WORKFLOW_TEMPLATES, "GetWorkflowTemplates"],
+  });
+  const [removeMutate, removeState] = useMutation(
+    REMOVE_WORKFLOW_TEMPLATE_BY_ID,
+    {
+      refetchQueries: [GET_WORKFLOW_TEMPLATES, "GetWorkflowTemplates"],
+    },
+  );
+
+  const save = React.useCallback(async () => {
+    const isValid = await form.trigger();
+    if (!isValid) {
+      // RHF will surface the first failing message; we still emit a sticky
+      // toast for the no-agent / no-name cases (mirrors dialog behavior).
+      const errs = form.formState.errors;
+      if (errs.agent) {
+        toast.error(t("editor.toast.agentRequired"));
+      } else if (errs.name) {
+        toast.error(t("editor.toast.nameRequired"));
+      } else {
+        toast.error(tCommon("somethingWentWrong"));
+      }
+      return;
+    }
+    const values = form.getValues();
+
+    // Build RBAC payload — gated on the teams flag (workflows.md UX #10).
+    // Mirrors routine-editor-dialog.tsx (CREATE) exactly so the chat handshake
+    // and this inline edit emit byte-equivalent payloads.
+    const RBACPayload: {
+      users: RbacUserEntry[];
+      roles: RbacIdEntry[];
+      teams?: RbacIdEntry[];
+    } = {
+      users: rbac.users,
+      roles: rbac.roles,
+    };
+    if (ROUTINES_RBAC_TEAMS_SUPPORTED) {
+      RBACPayload.teams = rbac.teams;
+    } else if (rbac.teams.length > 0) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[routines] ROUTINES_RBAC_TEAMS_SUPPORTED is false — teams will not be persisted",
+      );
+    }
+
+    try {
+      await updateMutate({
+        variables: {
+          id: routine.id,
+          name: values.name.trim(),
+          description: values.description?.trim() || null,
+          rights_mode: rbac.rights_mode,
+          agent: values.agent,
+          RBAC: RBACPayload,
+          // Forward the parent-held steps_json (byte-equivalent w/ the killed
+          // dialog's UPDATE behavior — it always sent steps_json on update).
+          steps_json: stepsJson,
+        },
+      });
+      toast.success(t("editor.toast.updated", { name: values.name.trim() }));
+      // Re-snapshot so dirty flips off cleanly.
+      initialSnapshot.current = { rbac: JSON.stringify(rbac) };
+      // Reset RHF dirty (keep values).
+      form.reset(values, { keepValues: true });
+      // Update the last-saved snapshot so the header title + Sheet's save
+      // both reflect the freshly-persisted values without waiting for an SSR
+      // refresh. Variables are NOT recomputed here — they derive from
+      // steps_json on the backend; the Sheet's save updates them.
+      setLastSaved((prev) => ({
+        ...prev,
+        name: values.name.trim(),
+        agent: values.agent,
+      }));
+    } catch (err) {
+      toast.error(t("editor.toast.saveFailed"), {
+        description: (err as Error).message,
+      });
+    }
+  }, [form, rbac, routine.id, stepsJson, t, tCommon, updateMutate]);
+
+  const discard = React.useCallback(() => {
+    form.reset({
+      name: routine.name ?? "",
+      description: routine.description ?? "",
+      agent: routine.agent ?? "",
+    });
+    setRbac(defaultRbac(routine));
+    // NB: stepsJson is intentionally untouched — discard only affects Basics
+    // and Access. Steps have their own Sheet-scoped dirty/discard.
+  }, [routine]);
+
+  const remove = React.useCallback(async () => {
+    await removeMutate({ variables: { id: routine.id } });
+    router.push("/workflows");
+  }, [removeMutate, routine.id, router]);
+
+  return {
+    form,
+    rbac,
+    setRbac,
+    dirty,
+    saving: updateState.loading || removeState.loading,
+    stepsJson,
+    setStepsJson,
+    lastSaved,
+    save,
+    discard,
+    remove,
   };
 }

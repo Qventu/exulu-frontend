@@ -1962,7 +1962,58 @@
       "success": "\"{name}\" gelöscht",
       "failed": "Routine konnte nicht gelöscht werden"
     },
+    "steps": {
+      "preview": {
+        "heading": "{count, plural, =0 {Noch keine Schritte} one {# Schritt} other {# Schritte}} in dieser Routine.",
+        "empty": "Noch keine Schritte"
+      },
+      "editAction": "Schritte bearbeiten",
+      "viewAction": "Schritte ansehen",
+      "sheetTitle": {
+        "edit": "Gesprächsschritte bearbeiten",
+        "view": "Gesprächsschritte"
+      },
+      "sheetDescription": {
+        "edit": "Schritte hinzufügen oder entfernen. Verwenden Sie {variable_name}-Syntax für wiederverwendbare Variablen.",
+        "view": "Das Gespräch, das ausgeführt wird, wenn diese Routine startet."
+      },
+      "sheetUnsavedChanges": "Nicht gespeicherte Änderungen an den Schritten",
+      "discardTitle": "Änderungen an den Schritten verwerfen?",
+      "discardDescription": "Ihre Änderungen an den Schritten dieser Routine gehen verloren. Bereits gespeicherte Änderungen sind davon nicht betroffen."
+    },
     "editor": {
+      "unsavedChanges": "Nicht gespeicherte Änderungen an dieser Routine",
+      "sections": {
+        "basics": "Grundlagen",
+        "access": "Zugriff",
+        "steps": "Schritte",
+        "schedule": "Zeitplan",
+        "runs": "Läufe",
+        "queue": "Warteschlange",
+        "danger": "Gefahrenzone"
+      },
+      "basics": {
+        "description": "Geben Sie dieser Routine einen Namen, eine Beschreibung und den ausführenden Agenten.",
+        "nameLabel": "Name",
+        "descriptionLabel": "Beschreibung",
+        "agentLabel": "Agent",
+        "agentPlaceholder": "Agent auswählen…"
+      },
+      "access": {
+        "description": "Wer diese Routine sehen und bearbeiten kann.",
+        "subjectLabel": "Routine",
+        "summaryPrivate": "Privat — nur Sie.",
+        "summaryPublic": "Öffentlich — alle in Ihrem Arbeitsbereich.",
+        "summaryUsers": "Geteilt mit {count} Benutzer(n).",
+        "summaryRoles": "Geteilt mit {count} Rolle(n).",
+        "summaryTeams": "Geteilt mit {count} Team(s).",
+        "summaryTeamsDegraded": "Team-Freigabe erfordert Backend-Unterstützung — derzeit schreibgeschützt."
+      },
+      "danger": {
+        "title": "Gefahrenzone",
+        "description": "Destruktive Aktionen für diese Routine.",
+        "deleteHint": "Entfernt die Routine endgültig. Dies kann nicht rückgängig gemacht werden."
+      },
       "title": {
         "save": "Als Routine speichern",
         "edit": "Routine bearbeiten",

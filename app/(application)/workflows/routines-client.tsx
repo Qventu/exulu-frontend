@@ -3,16 +3,13 @@
 /**
  * RoutinesClient — top-level 'use client' container for /workflows (Routines).
  *
- * After the workbench promotion (work item: routine detail panel → routed
- * subpage at /workflows/[id]): this file no longer owns selection, the
- * detail panel, or the queue sheet. Row click navigates to the subpage;
- * RoutineEditorDialog, DeleteRoutineDialog and RunRoutineDialog stay
- * mounted here because they're still launched from row overflow actions
- * (Edit / View / Delete) and from the Quick-Run cell.
+ * After work item 2.13 (RoutineEditorDialog reduced to CREATE-only), the row
+ * Edit / View actions navigate to the subpage at /workflows/[id]. The list
+ * page no longer hosts the editor dialog at all — chat is the only consumer
+ * of the dialog now, and it imports it via the shared barrel.
  *
- * Single-overlay invariant carried over for the dialogs still hosted here:
- * only one of {run, editor, delete} is active at a time. The Queue Sheet
- * moves to the subpage workbench (only one routine selected there).
+ * Single-overlay invariant still applies to {run, delete}: the Quick-Run cell
+ * and the row overflow "Delete" still launch overlays here.
  *
  * NO primary action on the PageHeader: routines are created exclusively from
  * chat (workflows.md §3). The EmptyState carries the "Open chat" link; the
@@ -32,7 +29,6 @@ import { MobileTopbarAction } from "@/components/shell/mobile-topbar";
 import { Button } from "@/components/ui/button";
 
 import { routineAccess } from "./access";
-import { RoutineEditorDialog } from "./components/routine-editor-dialog";
 import { RoutineList } from "./components/routine-list";
 import { RoutineToolbar } from "./components/routine-toolbar";
 import { RoutinesEmptyState } from "./components/empty-state";
@@ -84,12 +80,6 @@ export function RoutinesClient() {
     null,
   );
 
-  // Editor (Save / Edit / View)
-  const [editorState, setEditorState] = React.useState<
-    | { mode: "edit" | "view"; routine: Routine }
-    | null
-  >(null);
-
   // Delete dialog target
   const [pendingDelete, setPendingDelete] = React.useState<Routine | null>(
     null,
@@ -127,11 +117,14 @@ export function RoutinesClient() {
     [queueNameOf],
   );
 
-  /* ---- Editor wiring ----------------------------------------------------- */
+  /* ---- Edit/View wiring — navigation to the subpage --------------------- */
 
-  const openEditor = (routine: Routine, mode: "edit" | "view") => {
-    setEditorState({ mode, routine });
-  };
+  const openSubpage = React.useCallback(
+    (routine: Routine) => {
+      router.push(`/workflows/${routine.id}`);
+    },
+    [router],
+  );
 
   /* ---- Delete wiring ----------------------------------------------------- */
 
@@ -202,12 +195,10 @@ export function RoutinesClient() {
             lastRunById={lastRunById}
             scheduleById={scheduleById}
             accessFor={accessFor}
-            onRowClick={(routine) =>
-              router.push(`/workflows/${routine.id}`)
-            }
+            onRowClick={openSubpage}
             onRun={(routine) => requestRun(routine)}
-            onEdit={(routine) => openEditor(routine, "edit")}
-            onView={(routine) => openEditor(routine, "view")}
+            onEdit={openSubpage}
+            onView={openSubpage}
             onDelete={(routine) => setPendingDelete(routine)}
             emptyTitle={
               isFiltered ? t("emptyFilteredTitle") : t("emptyTitle")
@@ -232,46 +223,6 @@ export function RoutinesClient() {
           await refetch();
         }}
       />
-
-      {/* Editor dialog */}
-      {editorState ? (
-        <RoutineEditorDialog
-          isOpen={true}
-          onClose={async () => {
-            setEditorState(null);
-            await refetch();
-          }}
-          messages={editorState.routine.steps_json ?? []}
-          agentId={editorState.routine.agent}
-          sessionTitle={editorState.routine.name}
-          existingWorkflow={{
-            id: editorState.routine.id,
-            name: editorState.routine.name,
-            description: editorState.routine.description ?? undefined,
-            rights_mode: editorState.routine.rights_mode,
-            // Domain RBAC -> editor RBAC: the legacy GraphQL schema typed
-            // user ids as numbers; coerce defensively (the API returns
-            // strings here and there). Roles/teams stay as strings.
-            RBAC: {
-              users: (editorState.routine.RBAC?.users ?? []).map((u) => ({
-                id: Number(u.id),
-                rights: u.rights,
-              })),
-              roles: (editorState.routine.RBAC?.roles ?? []).map((r) => ({
-                id: String(r.id),
-                rights: r.rights,
-              })),
-              teams: (editorState.routine.RBAC?.teams ?? []).map((tm) => ({
-                id: String(tm.id),
-                rights: tm.rights,
-              })),
-            },
-            steps_json: editorState.routine.steps_json ?? undefined,
-            agent: editorState.routine.agent,
-          }}
-          isReadOnly={editorState.mode === "view"}
-        />
-      ) : null}
 
       {/* Delete confirm */}
       <DeleteRoutineDialog

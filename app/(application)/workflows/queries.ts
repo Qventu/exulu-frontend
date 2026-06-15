@@ -336,3 +336,24 @@ export const GET_AGENT_BY_ID = gql`
     }
   }
 `;
+
+/**
+ * Lightweight agents listing for the Basics agent dropdown. Bounded page
+ * (limit 100) ordered by name — matches the rest of the platform's agent
+ * picker UX. Standalone op-name keeps Apollo cache separate from the agents
+ * route's index query.
+ */
+export const GET_AGENTS_FOR_ROUTINE = gql`
+  query RoutinesGetAgentsList(
+    $page: Int!
+    $limit: Int!
+    $sort: SortBy = { field: "name", direction: ASC }
+  ) {
+    agentsPagination(page: $page, limit: $limit, sort: $sort) {
+      items {
+        id
+        name
+      }
+    }
+  }
+`;

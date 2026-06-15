@@ -3,47 +3,59 @@
 /**
  * RoutineWorkbench — /workflows/[id] client root.
  *
- * Mirrors the agents EditorView shape exactly:
+ * After the editor-dialog removal, this is the canonical edit surface for a
+ * routine. Mirrors the agents EditorView shape:
  *  PageShell variant="content"
  *    RoutineHeader (PageHeader w/ breadcrumb, leading icon, agent + visibility,
- *                   Run primary + OverflowMenu Edit/View/Copy ID/Delete)
+ *                   Run primary + OverflowMenu Copy-ID-only)
  *    Separator
  *    grid gap-8 lg:grid-cols-[200px_1fr]
  *      SectionNav (sticky lg+, chip row <lg) wired to useScrollSpy
  *      div.min-w-0 > div.mx-auto.max-w-3xl.space-y-12 >
- *        <OverviewSection ... />   (id="overview")
- *        <RunsSection ... />       (id="runs")
- *        <ScheduleSection ... />   (id="schedule")
- *        <QueueSection ... />      (id="queue")
+ *        <BasicsSection />     (id="basics")
+ *        <AccessSection />     (id="access")
+ *        <StepsSection />      (id="steps")  read-only preview + Sheet trigger
+ *        <ScheduleSection />   (id="schedule")
+ *        <RunsSection />       (id="runs")
+ *        <QueueSection />      (id="queue")
+ *        <DangerSection />     (id="danger") — Delete (canDelete only)
+ *    SaveBar + useUnsavedChangesGuard (page-level, for Basics + Access)
  *    Subpage-local overlays (single-overlay invariant):
  *      RunRoutineDialog (Run button + Runs row "Retry")
  *      Queue Sheet (Manage queue)
- *      DeleteRoutineDialog (Overflow Delete)
- *      RoutineEditorDialog (Overflow Edit/View)
+ *      StepsEditorSheet (Steps section "Edit steps")
+ *      DeleteRoutineDialog (Danger Zone Delete)
  *
- * No SaveBar / useUnsavedChangesGuard — routines are not edited in place;
- * the RoutineEditorDialog is the editor surface.
+ * STATE SEPARATION (intentional):
+ * - Page-level form (editor.form): Basics + Access. Dirty triggers the
+ *   page SaveBar AND useUnsavedChangesGuard.
+ * - Parent-held stepsJson + Sheet-local form: Steps. Dirty triggers the
+ *   Sheet's own SaveBar; closing the Sheet while dirty opens its own
+ *   ConfirmDialog. The page-level dirty state is unaffected.
+ * - When the Sheet saves, parent stepsJson updates so the preview reflects
+ *   the saved value; subsequent page-level saves forward this value as
+ *   steps_json (byte-equivalent to the killed dialog's UPDATE payload).
  *
- * useScrollSpy is re-exported from the agents workbench (../hooks.ts) — the
- * 2026-06-13 findScrollParent walk MUST remain the single source of truth.
- *
- * ROUTINE_SECTION_IDS is the authoritative section order. The JSX below
- * MUST render <section id={...}> in the same order so the default activeId
- * (sectionIds[0] = "overview") matches what the user actually sees first.
+ * SECTION ORDER: ROUTINE_SECTION_IDS is the authoritative order; the JSX
+ * below MUST match it so the default activeId aligns with the first visible
+ * section.
  */
 
 import { useMutation } from "@apollo/client";
 import { MessageSquare } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
 
-import { MobileTopbarAction } from "@/components/shell/mobile-topbar";
-import Link from "next/link";
-
 import { PageShell } from "@/components/primitives/page-shell";
 import { QueuePanel } from "@/components/primitives/queue-panel";
+import {
+  SaveBar,
+  useUnsavedChangesGuard,
+} from "@/components/primitives/save-bar";
 import { SectionNav } from "@/components/primitives/section-nav";
+import { MobileTopbarAction } from "@/components/shell/mobile-topbar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -54,25 +66,31 @@ import {
 } from "@/components/ui/sheet";
 
 import { DeleteRoutineDialog } from "../../components/delete-routine-dialog";
-import { RoutineEditorDialog } from "../../components/routine-editor-dialog";
 import { RunRoutineDialog } from "../../components/run-routine-dialog";
 import { RUN_WORKFLOW } from "../../queries";
 import type { Routine } from "../../types";
-import { useRoutineWorkbench, useScrollSpy } from "../hooks";
-import { OverviewSection } from "../sections/overview";
+import { useRoutineEditor, useRoutineWorkbench, useScrollSpy } from "../hooks";
+import { AccessSection } from "../sections/access";
+import { BasicsSection } from "../sections/basics";
+import { DangerSection } from "../sections/danger";
 import { QueueSection } from "../sections/queue";
 import { RunsSection } from "../sections/runs";
 import { ScheduleSection } from "../sections/schedule";
+import { StepsSection } from "../sections/steps";
 import { RoutineHeader } from "./routine-header";
+import { StepsEditorSheet } from "./steps-editor-sheet";
 
 export const ROUTINE_SECTION_IDS = [
-  "overview",
-  "runs",
+  "basics",
+  "access",
+  "steps",
   "schedule",
+  "runs",
   "queue",
+  "danger",
 ] as const;
 export type RoutineSectionId = (typeof ROUTINE_SECTION_IDS)[number];
-export const DEFAULT_ROUTINE_SECTION: RoutineSectionId = "overview";
+export const DEFAULT_ROUTINE_SECTION: RoutineSectionId = "basics";
 
 export interface RoutineWorkbenchProps {
   routine: Routine;
@@ -81,7 +99,29 @@ export interface RoutineWorkbenchProps {
 export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
   const t = useTranslations("routines");
   const workbench = useRoutineWorkbench(routine);
-  const activeId = useScrollSpy(ROUTINE_SECTION_IDS as unknown as string[]);
+  const editor = useRoutineEditor(routine);
+
+  // Surface the Steps Sheet's local dirty state up so the page-level guard
+  // catches cross-page navigation while step edits are pending (Link clicks
+  // would otherwise be discarded silently — the Sheet's own ConfirmDialog
+  // only guards Sheet close).
+  const [stepsSheetDirty, setStepsSheetDirty] = React.useState(false);
+  const { guardDialog } = useUnsavedChangesGuard(
+    editor.dirty || stepsSheetDirty,
+  );
+
+  // Filter out the Danger section from the SectionNav when the user has no
+  // delete access — the section itself returns null, so leaving the nav id
+  // in would link to a non-existent anchor.
+  const sectionIds = React.useMemo(
+    () =>
+      ROUTINE_SECTION_IDS.filter(
+        (id) => id !== "danger" || workbench.access.canDelete,
+      ),
+    [workbench.access.canDelete],
+  );
+
+  const activeId = useScrollSpy(sectionIds as unknown as string[]);
 
   // Subpage-local non-interactive retry for the Queue panel (workflows.md
   // ladder #26 / #33). Inline mutation avoids the dialog-overwrite bug.
@@ -89,21 +129,22 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
 
   const sections = React.useMemo(
     () =>
-      ROUTINE_SECTION_IDS.map((id) => ({
+      sectionIds.map((id) => ({
         id,
-        label: t(`tabs.${id}` as const),
+        label: t(`editor.sections.${id}` as const),
       })),
-    [t],
+    [t, sectionIds],
   );
 
   const handleSelect = React.useCallback((id: string) => {
     const target = document.getElementById(id);
     if (!target) return;
     target.scrollIntoView({ behavior: "smooth", block: "start" });
-    // Move focus to the section heading for keyboard / screen-reader users.
     target.setAttribute("tabindex", "-1");
     (target as HTMLElement).focus({ preventScroll: true });
   }, []);
+
+  const sectionProps = { routine, editor, workbench };
 
   return (
     <PageShell variant="content">
@@ -120,10 +161,8 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
         routine={routine}
         access={workbench.access}
         agentName={workbench.agentName}
+        displayName={editor.lastSaved.name || routine.name}
         onRun={() => workbench.openRun()}
-        onEdit={() => workbench.openEditor("edit")}
-        onView={() => workbench.openEditor("view")}
-        onDelete={() => workbench.setDeleteOpen(true)}
       />
 
       <Separator />
@@ -137,19 +176,39 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
 
         <div className="min-w-0">
           <div className="mx-auto max-w-3xl space-y-12">
-            <OverviewSection routine={routine} />
+            <BasicsSection {...sectionProps} />
+            <AccessSection {...sectionProps} />
+            <StepsSection
+              routine={routine}
+              stepsJson={editor.stepsJson}
+              canWrite={workbench.access.canWrite}
+              onOpenSheet={workbench.openStepsSheet}
+            />
+            <ScheduleSection routine={routine} access={workbench.access} />
             <RunsSection
               routine={routine}
               onRetry={(prefill) => workbench.openRun(prefill)}
             />
-            <ScheduleSection routine={routine} access={workbench.access} />
             <QueueSection
               queueName={workbench.queueName}
               onManageQueue={workbench.openQueue}
             />
+            <DangerSection {...sectionProps} />
           </div>
         </div>
       </div>
+
+      {/* Page-level SaveBar — Basics + Access. Steps Sheet runs its own
+          independent SaveBar inside the sheet panel. */}
+      <SaveBar
+        dirty={editor.dirty}
+        saving={editor.saving}
+        onSave={() => editor.save()}
+        onDiscard={() => editor.discard()}
+        summary={t("editor.unsavedChanges")}
+      />
+
+      {guardDialog}
 
       {/* Run dialog (single overlay invariant) */}
       <RunRoutineDialog
@@ -219,42 +278,21 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
         </SheetContent>
       </Sheet>
 
-      {/* Editor dialog (Edit / View) */}
-      {workbench.editorOpen ? (
-        <RoutineEditorDialog
-          isOpen={true}
-          onClose={workbench.closeEditor}
-          messages={routine.steps_json ?? []}
-          agentId={routine.agent}
-          sessionTitle={routine.name}
-          existingWorkflow={{
-            id: routine.id,
-            name: routine.name,
-            description: routine.description ?? undefined,
-            rights_mode: routine.rights_mode,
-            // Domain RBAC -> editor RBAC: the legacy GraphQL schema typed
-            // user ids as numbers; coerce defensively (the API returns
-            // strings here and there). Roles/teams stay as strings.
-            RBAC: {
-              users: (routine.RBAC?.users ?? []).map((u) => ({
-                id: Number(u.id),
-                rights: u.rights,
-              })),
-              roles: (routine.RBAC?.roles ?? []).map((r) => ({
-                id: String(r.id),
-                rights: r.rights,
-              })),
-              teams: (routine.RBAC?.teams ?? []).map((tm) => ({
-                id: String(tm.id),
-                rights: tm.rights,
-              })),
-            },
-            steps_json: routine.steps_json ?? undefined,
-            agent: routine.agent,
-          }}
-          isReadOnly={workbench.editorMode === "view"}
-        />
-      ) : null}
+      {/* Steps editor Sheet (replaces the killed editor dialog Edit/View). */}
+      <StepsEditorSheet
+        open={workbench.stepsSheetOpen}
+        onOpenChange={(open) =>
+          open ? workbench.openStepsSheet() : workbench.closeStepsSheet()
+        }
+        routine={routine}
+        canWrite={workbench.access.canWrite}
+        initialStepsJson={editor.stepsJson}
+        // Use the actually-last-saved agent (NOT the SSR `routine.agent`),
+        // so a just-saved Basics agent change isn't reverted by the Sheet.
+        lastSavedAgent={editor.lastSaved.agent}
+        onSaved={(nextSteps) => editor.setStepsJson(nextSteps)}
+        onDirtyChange={setStepsSheetDirty}
+      />
 
       {/* Delete confirm — on success the hook router.push('/workflows'). */}
       <DeleteRoutineDialog

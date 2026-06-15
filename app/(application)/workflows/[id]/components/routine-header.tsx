@@ -3,27 +3,18 @@
 /**
  * RoutineHeader — the routine workbench header.
  *
- * Mirrors the agents EditorHeader shape but routines-shaped:
- * - Breadcrumb "Routines / {name}" via PageHeader.
- * - Leading slot = small Workflow icon tile (routines have no avatar; the
- *   tile prevents the title from sitting flush against the breadcrumb).
- * - Meta row = agent link ("Uses {agentName}" → /agents/edit/{routine.agent}
- *   or t("noAgent")) + VisibilityChip.
- * - Action cluster (right): primary Run (Play icon, disabled when noAgent ||
- *   !access.canRun, with Tooltip explaining why), OverflowMenu with Edit
- *   (canWrite) / View (read-only) / Copy ID / Delete destructive.
- * - <sm absorbs everything except Run into OverflowMenu (matches PageHeader's
- *   responsive contract).
+ * After the editor-dialog removal, the overflow menu shrinks to a single
+ * "Copy ID" item:
+ * - Edit / View moved inline (Basics / Access / Steps sections).
+ * - Delete moved to the Danger Zone section (still uses DeleteRoutineDialog).
+ * - Run stays as the primary action next to the menu.
+ *
+ * Breadcrumb is a <Link>, so useUnsavedChangesGuard's capture-phase click
+ * handler intercepts Back-via-breadcrumb natively. The agent meta link is
+ * also a <Link>, same guarantee.
  */
 
-import {
-  Copy,
-  Edit,
-  Eye,
-  Play,
-  Trash2,
-  Workflow,
-} from "lucide-react";
+import { Copy, Play, Workflow } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import * as React from "react";
@@ -46,20 +37,19 @@ export interface RoutineHeaderProps {
   routine: Routine;
   access: RoutineAccess;
   agentName?: string | null;
+  /** Last-saved title — falls back to `routine.name` (SSR). Defined so the
+   *  header reflects a freshly-saved name without waiting for an SSR refresh
+   *  (the page only refetches the routine LIST, not the by-id query). */
+  displayName?: string;
   onRun: () => void;
-  onEdit: () => void;
-  onView: () => void;
-  onDelete: () => void;
 }
 
 export function RoutineHeader({
   routine,
   access,
   agentName,
+  displayName,
   onRun,
-  onEdit,
-  onView,
-  onDelete,
 }: RoutineHeaderProps) {
   const t = useTranslations("routines");
   const tCommon = useTranslations("common");
@@ -77,20 +67,11 @@ export function RoutineHeader({
   };
 
   const overflowItems = [
-    ...(access.canWrite
-      ? [{ label: t("edit"), icon: Edit, onSelect: onEdit }]
-      : [{ label: t("view"), icon: Eye, onSelect: onView }]),
-    { label: t("workbench.copyId"), icon: Copy, onSelect: () => void copyId() },
-    ...(access.canWrite
-      ? [
-          {
-            label: t("delete.action"),
-            icon: Trash2,
-            destructive: true as const,
-            onSelect: onDelete,
-          },
-        ]
-      : []),
+    {
+      label: t("workbench.copyId"),
+      icon: Copy,
+      onSelect: () => void copyId(),
+    },
   ];
 
   const runButton = (
@@ -144,7 +125,7 @@ export function RoutineHeader({
   return (
     <PageHeader
       breadcrumb={{ label: t("title"), href: "/workflows" }}
-      title={routine.name}
+      title={displayName ?? routine.name}
       action={action}
       meta={meta}
       leading={

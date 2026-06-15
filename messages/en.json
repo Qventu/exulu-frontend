@@ -1962,7 +1962,58 @@
       "success": "\"{name}\" deleted",
       "failed": "Could not delete routine"
     },
+    "steps": {
+      "preview": {
+        "heading": "{count, plural, =0 {No steps yet} one {# step} other {# steps}} in this routine.",
+        "empty": "No steps yet"
+      },
+      "editAction": "Edit steps",
+      "viewAction": "View steps",
+      "sheetTitle": {
+        "edit": "Edit conversation steps",
+        "view": "Conversation steps"
+      },
+      "sheetDescription": {
+        "edit": "Add or remove steps. Use {variable_name} syntax to create reusable variables.",
+        "view": "The conversation that runs when this routine is triggered."
+      },
+      "sheetUnsavedChanges": "Unsaved step changes",
+      "discardTitle": "Discard step changes?",
+      "discardDescription": "Your changes to this routine's steps will be lost. This does not affect anything that has already been saved."
+    },
     "editor": {
+      "unsavedChanges": "Unsaved changes to this routine",
+      "sections": {
+        "basics": "Basics",
+        "access": "Access",
+        "steps": "Steps",
+        "schedule": "Schedule",
+        "runs": "Runs",
+        "queue": "Queue",
+        "danger": "Danger zone"
+      },
+      "basics": {
+        "description": "Give this routine a name, description, and the agent that runs it.",
+        "nameLabel": "Name",
+        "descriptionLabel": "Description",
+        "agentLabel": "Agent",
+        "agentPlaceholder": "Select an agent…"
+      },
+      "access": {
+        "description": "Who can see and edit this routine.",
+        "subjectLabel": "routine",
+        "summaryPrivate": "Private — only you.",
+        "summaryPublic": "Public — anyone in your workspace.",
+        "summaryUsers": "Shared with {count} user(s).",
+        "summaryRoles": "Shared with {count} role(s).",
+        "summaryTeams": "Shared with {count} team(s).",
+        "summaryTeamsDegraded": "Team sharing requires backend support — currently read-only."
+      },
+      "danger": {
+        "title": "Danger zone",
+        "description": "Destructive actions for this routine.",
+        "deleteHint": "Permanently removes the routine. This cannot be undone."
+      },
       "title": {
         "save": "Save as routine",
         "edit": "Edit routine",

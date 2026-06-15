@@ -1,28 +1,29 @@
 "use client";
 
 /**
- * RoutineEditorDialog — migrated from `components/save-workflow-modal.tsx`.
+ * RoutineEditorDialog — chat-handshake CREATE-only surface.
  *
- * Public surface (props) MUST match ChatSaveAsRoutineHandshake exactly —
- * the chat header at `components/save-workflow-modal.tsx` re-exports this
- * symbol verbatim so chat's import path keeps resolving.
+ * Public surface (props) MUST match ChatSaveAsRoutineHandshake exactly — the
+ * chat header at `components/save-workflow-modal.tsx` re-exports this symbol
+ * verbatim so chat's import path keeps resolving byte-stable.
  *
- * Bug fixes from workflows.md UX review:
- * - #6 (high): file attachments now actually attach. We convert the
- *   FilePicker's s3 keys into FileUIPart[] (same pattern as
- *   `evals/cases/components/test-case-modal.tsx`) and merge them into the
- *   next message on Add.
- * - #8 (med): `agentId` is required + always sent in the UPDATE payload, so
- *   editing from the table can no longer detach the routine's agent.
- * - #10 (high partial): `teams` are included in the RBAC payload only when
- *   ROUTINES_RBAC_TEAMS_SUPPORTED — otherwise a single dev-warn logs the
- *   silent drop instead of pretending it persists.
- * - #17 (low): emojis removed; the placeholder + pro-tip + warning copy is
- *   plain text with semantic icons where helpful.
- * - #18 (low): the 1-second sleep before adding a message is gone; ids
- *   come from crypto.randomUUID() (collision-free).
+ * HISTORY: this file used to host BOTH create AND edit paths. After the
+ * /workflows/[id] subpage redesign (work item 2.13), the edit path is gone —
+ * routine editing is now inline on the subpage (Basics + Access sections +
+ * StepsEditorSheet). Only the CREATE path remains, because chat opens this
+ * dialog when a user saves a chat session as a routine — that flow has no
+ * obvious inline replacement (chat is its own page).
  *
- * Copy renamed to "Routine" everywhere visible (workflows.md UX #2).
+ * The CREATE behavior is byte-equivalent to before — same mutation, same
+ * payload shape, same toast keys, same RBAC gating.
+ *
+ * Bug fixes retained from the previous (combined) implementation:
+ * - #6 (high): file attachments actually attach (FileUIPart conversion).
+ * - #8 (med): `agentId` required + always sent (kept obvious here too).
+ * - #10 (high partial): teams included only when ROUTINES_RBAC_TEAMS_SUPPORTED;
+ *   dev-warn logs the silent drop otherwise.
+ * - #17 (low): no emojis in copy.
+ * - #18 (low): no 1-second sleep; ids from crypto.randomUUID().
  */
 
 import { useMutation } from "@apollo/client";
@@ -58,7 +59,6 @@ import { cn } from "@/lib/utils";
 import {
   CREATE_WORKFLOW_TEMPLATE,
   GET_WORKFLOW_TEMPLATES,
-  UPDATE_WORKFLOW_TEMPLATE,
 } from "../queries";
 import { ROUTINES_RBAC_TEAMS_SUPPORTED } from "../schema-flags";
 import type { RoutineRightsMode } from "../types";
@@ -67,29 +67,13 @@ type RBACUser = { id: number; rights: "read" | "write" };
 type RBACRole = { id: string; rights: "read" | "write" };
 type RBACTeam = { id: string; rights: "read" | "write" };
 
-interface ExistingRoutine {
-  id: string;
-  name: string;
-  description?: string | null;
-  rights_mode?: RoutineRightsMode;
-  RBAC?: {
-    users?: RBACUser[];
-    roles?: RBACRole[];
-    teams?: RBACTeam[];
-  };
-  steps_json?: UIMessage[] | null;
-  agent?: string;
-}
-
 export interface RoutineEditorDialogProps {
   isOpen: boolean;
   onClose: () => void;
   messages: UIMessage[];
-  /** Required for create AND update — fixes the agent-detach bug (UX #8). */
+  /** Required for create — UX #8 (agent always attached on save). */
   agentId: string;
   sessionTitle?: string;
-  existingWorkflow?: ExistingRoutine;
-  isReadOnly?: boolean;
 }
 
 const newId = () =>
@@ -114,15 +98,11 @@ export function RoutineEditorDialog({
   onClose,
   messages,
   sessionTitle,
-  existingWorkflow,
-  isReadOnly = false,
   agentId,
 }: RoutineEditorDialogProps) {
   const t = useTranslations("routines");
   const tCommon = useTranslations("common");
   const { user } = React.useContext(UserContext);
-
-  const isEditing = Boolean(existingWorkflow);
 
   const [rbac, setRbac] = React.useState<{
     rights_mode: RoutineRightsMode;
@@ -130,20 +110,15 @@ export function RoutineEditorDialog({
     roles: RBACRole[];
     teams: RBACTeam[];
   }>({
-    rights_mode: existingWorkflow?.rights_mode ?? "private",
-    users: existingWorkflow?.RBAC?.users ?? [],
-    roles: existingWorkflow?.RBAC?.roles ?? [],
-    teams: existingWorkflow?.RBAC?.teams ?? [],
+    rights_mode: "private",
+    users: [],
+    roles: [],
+    teams: [],
   });
 
-  const [name, setName] = React.useState(existingWorkflow?.name ?? "");
-  const [description, setDescription] = React.useState(
-    existingWorkflow?.description ?? "",
-  );
+  const [name, setName] = React.useState("");
+  const [description, setDescription] = React.useState("");
   const [steps, setSteps] = React.useState<UIMessage[]>(() => {
-    if (existingWorkflow?.steps_json && existingWorkflow.steps_json.length > 0) {
-      return existingWorkflow.steps_json;
-    }
     const initial: UIMessage[] = [];
     for (const step of messages) {
       if (step.role === "user") initial.push(step);
@@ -184,52 +159,29 @@ export function RoutineEditorDialog({
     };
   }, [currentFiles]);
 
-  // On open / props change, re-seed.
+  // On open / props change, re-seed from the chat-handshake inputs.
   React.useEffect(() => {
     if (!isOpen) return;
-    if (existingWorkflow) {
-      setName(existingWorkflow.name);
-      setDescription(existingWorkflow.description ?? "");
-      setRbac({
-        rights_mode: existingWorkflow.rights_mode ?? "private",
-        users: existingWorkflow.RBAC?.users ?? [],
-        roles: existingWorkflow.RBAC?.roles ?? [],
-        teams: existingWorkflow.RBAC?.teams ?? [],
-      });
-      if (existingWorkflow.steps_json && existingWorkflow.steps_json.length > 0) {
-        setSteps(existingWorkflow.steps_json);
-      }
-    } else {
-      setName(sessionTitle ?? "");
-      const initial: UIMessage[] = [];
-      for (const step of messages) {
-        if (step.role === "user") initial.push(step);
-        else initial.push(createPlaceholderMessage());
-      }
-      setSteps(initial);
+    setName(sessionTitle ?? "");
+    const initial: UIMessage[] = [];
+    for (const step of messages) {
+      if (step.role === "user") initial.push(step);
+      else initial.push(createPlaceholderMessage());
     }
+    setSteps(initial);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  const [createMutation, { loading: creating }] = useMutation(
+  const [createMutation, { loading }] = useMutation(
     CREATE_WORKFLOW_TEMPLATE,
     {
       refetchQueries: [GET_WORKFLOW_TEMPLATES, "GetWorkflowTemplates"],
     },
   );
-  const [updateMutation, { loading: updating }] = useMutation(
-    UPDATE_WORKFLOW_TEMPLATE,
-    {
-      refetchQueries: [GET_WORKFLOW_TEMPLATES, "GetWorkflowTemplates"],
-    },
-  );
-  const loading = creating || updating;
 
   const handleAddMessage = () => {
     if (!currentInput.trim() && currentFileParts.length === 0) return;
 
-    // Mirror the test-case-modal pattern (`any[]` is the project convention
-    // here — UIMessagePart's generic typing is too strict for inline use).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parts: any[] = [];
     if (currentInput.trim()) {
@@ -281,32 +233,17 @@ export function RoutineEditorDialog({
     }
 
     try {
-      if (isEditing && existingWorkflow) {
-        await updateMutation({
-          variables: {
-            id: existingWorkflow.id,
-            name: name.trim(),
-            description: description.trim() || null,
-            rights_mode: rbac.rights_mode,
-            agent: agentId, // BUG FIX (UX #8): always send.
-            RBAC: RBACPayload,
-            steps_json: steps,
-          },
-        });
-        toast.success(t("editor.toast.updated", { name: name.trim() }));
-      } else {
-        await createMutation({
-          variables: {
-            name: name.trim(),
-            description: description.trim() || null,
-            rights_mode: rbac.rights_mode,
-            agent: agentId,
-            RBAC: RBACPayload,
-            steps_json: steps,
-          },
-        });
-        toast.success(t("editor.toast.created", { name: name.trim() }));
-      }
+      await createMutation({
+        variables: {
+          name: name.trim(),
+          description: description.trim() || null,
+          rights_mode: rbac.rights_mode,
+          agent: agentId,
+          RBAC: RBACPayload,
+          steps_json: steps,
+        },
+      });
+      toast.success(t("editor.toast.created", { name: name.trim() }));
       onClose();
     } catch (err) {
       toast.error(t("editor.toast.saveFailed"), {
@@ -343,18 +280,10 @@ export function RoutineEditorDialog({
       <DialogContent className="flex h-dvh max-h-dvh w-full max-w-full flex-col rounded-none p-4 sm:h-auto sm:max-h-[85dvh] sm:max-w-4xl sm:rounded-lg sm:p-6">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-lg">
-            {isEditing
-              ? isReadOnly
-                ? t("editor.title.view")
-                : t("editor.title.edit")
-              : t("editor.title.save")}
+            {t("editor.title.save")}
           </DialogTitle>
           <DialogDescription className="text-sm">
-            {isEditing
-              ? isReadOnly
-                ? t("editor.description.view")
-                : t("editor.description.edit")
-              : t("editor.description.save")}
+            {t("editor.description.save")}
           </DialogDescription>
         </DialogHeader>
 
@@ -384,7 +313,6 @@ export function RoutineEditorDialog({
                         onChange={(e) => setName(e.target.value)}
                         placeholder={t("editor.name.placeholder")}
                         className="mt-2"
-                        readOnly={isReadOnly}
                       />
                       {!name.trim() ? (
                         <p className="mt-1 flex items-center gap-1 text-xs text-destructive">
@@ -408,7 +336,6 @@ export function RoutineEditorDialog({
                         placeholder={t("editor.description.placeholder")}
                         rows={3}
                         className="mt-2 resize-none"
-                        readOnly={isReadOnly}
                       />
                     </div>
                   </div>
@@ -497,99 +424,97 @@ export function RoutineEditorDialog({
                             onUpdate={(next: UIMessage[]) => setSteps(next)}
                             status="ready"
                             showActions={true}
-                            showEdit={!isReadOnly}
-                            showRemove={!isReadOnly}
+                            showEdit={true}
+                            showRemove={true}
                             showTokens={false}
-                            writeAccess={!isReadOnly}
+                            writeAccess={true}
                           />
                         </ConversationContent>
                       </Conversation>
                     )}
 
-                    {!isReadOnly ? (
-                      <div className="space-y-3 pt-2">
-                        <Label
-                          htmlFor="step-input"
-                          className="text-sm font-medium"
-                        >
-                          {t("editor.steps.addMessage")}
-                        </Label>
-                        <Textarea
-                          id="step-input"
-                          placeholder={t("editor.steps.placeholder")}
-                          value={currentInput}
-                          onChange={(e) => setCurrentInput(e.target.value)}
-                          disabled={loading}
-                          rows={2}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              handleAddMessage();
-                            }
-                          }}
+                    <div className="space-y-3 pt-2">
+                      <Label
+                        htmlFor="step-input"
+                        className="text-sm font-medium"
+                      >
+                        {t("editor.steps.addMessage")}
+                      </Label>
+                      <Textarea
+                        id="step-input"
+                        placeholder={t("editor.steps.placeholder")}
+                        value={currentInput}
+                        onChange={(e) => setCurrentInput(e.target.value)}
+                        disabled={loading}
+                        rows={2}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleAddMessage();
+                          }
+                        }}
+                      />
+
+                      <div className="flex items-center gap-2">
+                        <UppyDashboard
+                          id="routine-step-files"
+                          selectionLimit={10}
+                          allowedFileTypes={[
+                            ".png", ".jpg", ".jpeg", ".gif", ".webp",
+                            ".pdf", ".docx", ".xlsx", ".xls", ".csv", ".pptx", ".ppt",
+                            ".mp3", ".wav", ".m4a", ".mp4", ".mpeg",
+                          ]}
+                          dependencies={[]}
+                          onConfirm={(items) => setCurrentFiles(items)}
                         />
-
-                        <div className="flex items-center gap-2">
-                          <UppyDashboard
-                            id="routine-step-files"
-                            selectionLimit={10}
-                            allowedFileTypes={[
-                              ".png", ".jpg", ".jpeg", ".gif", ".webp",
-                              ".pdf", ".docx", ".xlsx", ".xls", ".csv", ".pptx", ".ppt",
-                              ".mp3", ".wav", ".m4a", ".mp4", ".mpeg",
-                            ]}
-                            dependencies={[]}
-                            onConfirm={(items) => setCurrentFiles(items)}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleAddMessage}
-                            disabled={
-                              loading ||
-                              (!currentInput.trim() && currentFileParts.length === 0)
-                            }
-                            className="ml-auto"
-                          >
-                            <Plus aria-hidden="true" className="mr-2 size-4" />
-                            {t("editor.steps.add")}
-                          </Button>
-                        </div>
-
-                        {currentFiles && currentFiles.length > 0 ? (
-                          <>
-                            <div className="grid grid-cols-3 gap-2">
-                              {currentFiles.map((item) => (
-                                <FileItem
-                                  key={item}
-                                  s3Key={item}
-                                  disabled={true}
-                                  active={false}
-                                  onRemove={() =>
-                                    setCurrentFiles(
-                                      currentFiles.filter((i) => i !== item),
-                                    )
-                                  }
-                                />
-                              ))}
-                            </div>
-                            <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3">
-                              <AlertCircle
-                                aria-hidden="true"
-                                className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
-                              />
-                              <p className="text-xs text-amber-900 dark:text-amber-200">
-                                {t("editor.steps.fileTypeWarning")}
-                              </p>
-                            </div>
-                          </>
-                        ) : null}
-
-                        <p className="text-xs text-muted-foreground">
-                          {t("editor.steps.hint")}
-                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleAddMessage}
+                          disabled={
+                            loading ||
+                            (!currentInput.trim() && currentFileParts.length === 0)
+                          }
+                          className="ml-auto"
+                        >
+                          <Plus aria-hidden="true" className="mr-2 size-4" />
+                          {t("editor.steps.add")}
+                        </Button>
                       </div>
-                    ) : null}
+
+                      {currentFiles && currentFiles.length > 0 ? (
+                        <>
+                          <div className="grid grid-cols-3 gap-2">
+                            {currentFiles.map((item) => (
+                              <FileItem
+                                key={item}
+                                s3Key={item}
+                                disabled={true}
+                                active={false}
+                                onRemove={() =>
+                                  setCurrentFiles(
+                                    currentFiles.filter((i) => i !== item),
+                                  )
+                                }
+                              />
+                            ))}
+                          </div>
+                          <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3">
+                            <AlertCircle
+                              aria-hidden="true"
+                              className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                            />
+                            <p className="text-xs text-amber-900 dark:text-amber-200">
+                              {t("editor.steps.fileTypeWarning")}
+                            </p>
+                          </div>
+                        </>
+                      ) : null}
+
+                      <p className="text-xs text-muted-foreground">
+                        {t("editor.steps.hint")}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </TabsContent>
@@ -599,25 +524,21 @@ export function RoutineEditorDialog({
 
         <DialogFooter className="shrink-0 border-t bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4">
           <Button variant="outline" onClick={onClose}>
-            {isReadOnly ? t("editor.close") : tCommon("cancel")}
+            {tCommon("cancel")}
           </Button>
-          {!isReadOnly ? (
-            <Button onClick={handleSave} disabled={loading || !name.trim()}>
-              {loading ? (
-                <>
-                  <Loader2
-                    aria-hidden="true"
-                    className="mr-2 size-4 animate-spin"
-                  />
-                  {isEditing ? t("editor.updating") : t("editor.saving")}
-                </>
-              ) : isEditing ? (
-                t("editor.update")
-              ) : (
-                t("editor.save")
-              )}
-            </Button>
-          ) : null}
+          <Button onClick={handleSave} disabled={loading || !name.trim()}>
+            {loading ? (
+              <>
+                <Loader2
+                  aria-hidden="true"
+                  className="mr-2 size-4 animate-spin"
+                />
+                {t("editor.saving")}
+              </>
+            ) : (
+              t("editor.save")
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -626,8 +547,9 @@ export function RoutineEditorDialog({
 
 /**
  * Chat-handshake compatibility: chat imports `SaveWorkflowModal` from
- * `@/components/save-workflow-modal`. The barrel at that path re-exports
- * the symbol below verbatim — same props, byte-equivalent behavior, no
- * regression risk.
+ * `@/components/save-workflow-modal`. The barrel at that path re-exports the
+ * symbol below verbatim — same props, byte-equivalent behavior, no regression
+ * risk. The CREATE-only signature is a strict subset of the previous one
+ * (chat always created), so chat's call site compiles unchanged.
  */
 export const SaveWorkflowModal = RoutineEditorDialog;
