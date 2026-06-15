@@ -40,12 +40,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { RoleSelector } from "@/components/widgets/role-selector";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TeamSelector } from "@/components/widgets/team-selector";
 import type { User } from "@EXULU_SHARED/models/user";
 
 import {
@@ -54,6 +61,7 @@ import {
 } from "../queries";
 import {
   useRemoveUsers,
+  useUpdateUser,
   useUserRolesQuery,
   useTeamsQuery,
   useUsersQuery,
@@ -138,11 +146,26 @@ export function UsersTab({
 
   const removeUsers = useRemoveUsers();
 
-  // Roles/teams used by the filter selects — ONLY fetch when the respective
-  // schema flag is on, otherwise we'd waste two requests on every render of
-  // the Users tab (the legacy bug the architect flagged).
-  const rolesQuery = useUserRolesQuery({ skip: !ACCESS_FILTER_ROLE_SUPPORTED });
-  const teamsQuery = useTeamsQuery({ skip: !ACCESS_FILTER_TEAM_SUPPORTED });
+  // Roles/teams now ALWAYS load. The filter selects (gated by the
+  // FILTER_*_SUPPORTED flags) still consume them, but so do (a) the table's
+  // role/team columns for id → name lookup (was rendering raw ids — bad UX)
+  // and (b) the bulk-assign popovers. Both queries are a single small page;
+  // the bandwidth was being saved at the cost of an unhelpful UX.
+  const rolesQuery = useUserRolesQuery();
+  const teamsQuery = useTeamsQuery();
+
+  // id → display name maps for the table columns (the row's role/team
+  // field is a foreign-key id; the cell needs the name).
+  const roleNameById = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of rolesQuery.roles ?? []) map.set(String(r.id), r.name);
+    return map;
+  }, [rolesQuery.roles]);
+  const teamNameById = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of teamsQuery.teams ?? []) map.set(String(t.id), t.name);
+    return map;
+  }, [teamsQuery.teams]);
 
   // Column-visibility "View" menu (inventory #15) — local state, persisted in
   // sessionStorage so a tab-switch round-trip keeps the user's preference.
@@ -194,6 +217,53 @@ export function UsersTab({
     Array<{ item: string; message: string }>
   >([]);
 
+  // Bulk role/team assign popover state. Each opens from a BulkActionBar
+  // action, hosts a [Role|Team]Selector, and on pick fans out one
+  // useUpdateUser call per selected id (Promise.allSettled — partial
+  // failures get summarized in a toast, same shape as bulk delete).
+  const [assignRoleOpen, setAssignRoleOpen] = React.useState(false);
+  const [assignTeamOpen, setAssignTeamOpen] = React.useState(false);
+  const [assigning, setAssigning] = React.useState(false);
+  const updateUser = useUpdateUser();
+  const runBulkAssign = React.useCallback(
+    async (
+      field: "role" | "team",
+      value: string,
+      onDone: () => void,
+    ) => {
+      if (selectedIds.length === 0) return;
+      setAssigning(true);
+      try {
+        const results = await Promise.allSettled(
+          selectedIds.map((id) => updateUser({ id, [field]: value })),
+        );
+        const failed = results.filter((r) => r.status === "rejected").length;
+        const ok = results.length - failed;
+        if (failed === 0) {
+          toast.success(
+            t(field === "role" ? "bulk.assignRoleDone" : "bulk.assignTeamDone", {
+              count: ok,
+            }),
+          );
+        } else {
+          toast.error(
+            t(
+              field === "role"
+                ? "bulk.assignRolePartial"
+                : "bulk.assignTeamPartial",
+              { ok, failed },
+            ),
+          );
+        }
+        setSelectedIds([]);
+        onDone();
+      } finally {
+        setAssigning(false);
+      }
+    },
+    [selectedIds, updateUser, t],
+  );
+
   const selectedUser = React.useMemo(
     () =>
       users?.find((user) => String(user.id) === String(selectedUserId)) ?? null,
@@ -206,6 +276,8 @@ export function UsersTab({
     onResetPassword: (user) => setResetUser(user),
     onDelete: (user) => setRowDelete(user),
     hiddenColumns,
+    roleNameById,
+    teamNameById,
   });
 
   const isFiltered =
@@ -337,6 +409,14 @@ export function UsersTab({
         onClear={() => setSelectedIds([])}
         actions={[
           {
+            label: t("bulk.assignRole"),
+            onClick: () => setAssignRoleOpen(true),
+          },
+          {
+            label: t("bulk.assignTeam"),
+            onClick: () => setAssignTeamOpen(true),
+          },
+          {
             label: t("bulk.remove"),
             destructive: true,
             onClick: () => {
@@ -346,6 +426,55 @@ export function UsersTab({
           },
         ]}
       />
+
+      {/* Bulk role/team assign popovers — anchored to a 1x1 invisible
+          trigger so the popover sits roughly center; they are not visually
+          mounted in the page and only render their content via Radix. */}
+      <Popover open={assignRoleOpen} onOpenChange={setAssignRoleOpen}>
+        <PopoverTrigger className="sr-only" aria-hidden tabIndex={-1} />
+        <PopoverContent align="center" sideOffset={8} className="w-72 p-2">
+          <p className="px-1 pb-2 text-xs text-muted-foreground">
+            {t("bulk.assignRoleHint", { count: selectedIds.length })}
+          </p>
+          <RoleSelector
+            value=""
+            onChange={(roleId) =>
+              void runBulkAssign("role", roleId, () =>
+                setAssignRoleOpen(false),
+              )
+            }
+            placeholder={t("bulk.assignRolePlaceholder")}
+          />
+          {assigning ? (
+            <p className="px-1 pt-2 text-xs text-muted-foreground">
+              {t("bulk.assigning")}
+            </p>
+          ) : null}
+        </PopoverContent>
+      </Popover>
+
+      <Popover open={assignTeamOpen} onOpenChange={setAssignTeamOpen}>
+        <PopoverTrigger className="sr-only" aria-hidden tabIndex={-1} />
+        <PopoverContent align="center" sideOffset={8} className="w-72 p-2">
+          <p className="px-1 pb-2 text-xs text-muted-foreground">
+            {t("bulk.assignTeamHint", { count: selectedIds.length })}
+          </p>
+          <TeamSelector
+            value=""
+            onChange={(teamId) =>
+              void runBulkAssign("team", teamId, () =>
+                setAssignTeamOpen(false),
+              )
+            }
+            placeholder={t("bulk.assignTeamPlaceholder")}
+          />
+          {assigning ? (
+            <p className="px-1 pt-2 text-xs text-muted-foreground">
+              {t("bulk.assigning")}
+            </p>
+          ) : null}
+        </PopoverContent>
+      </Popover>
 
       <ListDetail<User>
         detailPresentation="sheet"
@@ -429,9 +558,13 @@ export function UsersTab({
                     </div>
                   </div>
                   <p className="truncate text-xs text-muted-foreground">
-                    {(row.role || t("noRole")) +
+                    {(row.role
+                      ? (roleNameById.get(String(row.role)) ?? row.role)
+                      : t("noRole")) +
                       " · " +
-                      (row.team || t("noTeam"))}
+                      (row.team
+                        ? (teamNameById.get(String(row.team)) ?? row.team)
+                        : t("noTeam"))}
                   </p>
                 </div>
               );

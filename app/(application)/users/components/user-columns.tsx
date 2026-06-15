@@ -47,6 +47,13 @@ export interface UserColumnsContext {
   onDelete: (user: User) => void;
   /** Column ids the consumer (View menu) wants hidden. */
   hiddenColumns?: ReadonlySet<HideableUserColumnId>;
+  /**
+   * Resolves a role/team id → display name so the columns render
+   * "Admin" instead of "5a7b…". Returns the id unchanged when the
+   * map hasn't loaded yet, so the cell never goes blank.
+   */
+  roleNameById?: ReadonlyMap<string, string>;
+  teamNameById?: ReadonlyMap<string, string>;
 }
 
 export function useUserColumns(ctx: UserColumnsContext): ColumnDef<User>[] {
@@ -57,6 +64,8 @@ export function useUserColumns(ctx: UserColumnsContext): ColumnDef<User>[] {
     onResetPassword,
     onDelete,
     hiddenColumns,
+    roleNameById,
+    teamNameById,
   } = ctx;
 
   return React.useMemo<ColumnDef<User>[]>(() => {
@@ -113,13 +122,19 @@ export function useUserColumns(ctx: UserColumnsContext): ColumnDef<User>[] {
       columns.push({
         id: "role",
         header: t("columns.role"),
-        cell: ({ row }) => (
-          <span className="truncate text-sm">
-            {row.original.role || (
-              <span className="text-muted-foreground">{t("noRole")}</span>
-            )}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const id = row.original.role;
+          if (!id)
+            return (
+              <span className="text-sm text-muted-foreground">
+                {t("noRole")}
+              </span>
+            );
+          // Resolve id → name; fall back to the id while the roles
+          // query is still loading (better than a blank cell).
+          const name = roleNameById?.get(String(id)) ?? id;
+          return <span className="truncate text-sm">{name}</span>;
+        },
       });
     }
 
@@ -127,13 +142,17 @@ export function useUserColumns(ctx: UserColumnsContext): ColumnDef<User>[] {
       columns.push({
         id: "team",
         header: t("columns.team"),
-        cell: ({ row }) => (
-          <span className="truncate text-sm">
-            {row.original.team || (
-              <span className="text-muted-foreground">{t("noTeam")}</span>
-            )}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const id = row.original.team;
+          if (!id)
+            return (
+              <span className="text-sm text-muted-foreground">
+                {t("noTeam")}
+              </span>
+            );
+          const name = teamNameById?.get(String(id)) ?? id;
+          return <span className="truncate text-sm">{name}</span>;
+        },
       });
     }
 
@@ -212,5 +231,14 @@ export function useUserColumns(ctx: UserColumnsContext): ColumnDef<User>[] {
     });
 
     return columns;
-  }, [t, viewerId, viewerIsSuperAdmin, onResetPassword, onDelete, hiddenColumns]);
+  }, [
+    t,
+    viewerId,
+    viewerIsSuperAdmin,
+    onResetPassword,
+    onDelete,
+    hiddenColumns,
+    roleNameById,
+    teamNameById,
+  ]);
 }

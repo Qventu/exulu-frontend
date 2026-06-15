@@ -68,6 +68,25 @@ export function AccessSurface() {
   const [createRoleOpen, setCreateRoleOpen] = React.useState(false);
   const [createTeamOpen, setCreateTeamOpen] = React.useState(false);
 
+  // Palette "create" entries deep-link with ?new=1 (palette convention,
+  // navigation.md §1). Open the active tab's create surface, then drop the
+  // flag so a refresh/back doesn't re-open it.
+  React.useEffect(() => {
+    if (searchParams.get("new") !== "1") return;
+    if (activeTab === "users") {
+      if (viewerIsSuperAdmin) setAddUserOpen(true);
+    } else if (activeTab === "roles") {
+      setCreateRoleOpen(true);
+    } else {
+      setCreateTeamOpen(true);
+    }
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("new");
+    const query = next.toString();
+    router.replace(query ? `/users?${query}` : "/users", { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get("new"), activeTab, viewerIsSuperAdmin]);
+
   const handleTabChange = React.useCallback(
     (next: string) => {
       if (!isTab(next)) return;
