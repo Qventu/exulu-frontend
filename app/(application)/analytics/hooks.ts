@@ -51,6 +51,7 @@ export {
   buildTagActivityPath,
   type TagActivityByModelRow,
   type TagActivityByTagRow,
+  type TagActivityByTagByDayRow,
   type TagActivityDailyRow,
   type TagActivityPagination,
   type TagActivityQuery,

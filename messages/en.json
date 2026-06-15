@@ -640,7 +640,10 @@
       "dimensionRoles": "Roles",
       "dimensionRoutines": "Routines",
       "dimensionTeams": "Teams",
-      "dimensionUsers": "Users"
+      "dimensionUsers": "Users",
+      "exportCsv": "Export CSV",
+      "exportCsvAria": "Export the current breakdown as a CSV file",
+      "splitByLabel": "Split by:"
     },
     "kpi": {
       "agentCalls": "Agent calls",

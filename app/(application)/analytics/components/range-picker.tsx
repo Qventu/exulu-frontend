@@ -53,26 +53,23 @@ const PRESET_KEYS: Record<RangePreset, string> = {
   custom: "range.presetCustom",
 };
 
+// The Tabs no longer renders a "Custom" trigger — entering custom range is
+// driven by selecting dates in the date-pill Popover's Calendar (see
+// handleCalendarSelect which flips lens.preset to "custom"). The PRESET_KEYS
+// entry for "custom" still labels the date-pill when preset === "custom".
+const TAB_PRESETS = RANGE_PRESETS.filter((p) => p !== "custom") as Exclude<RangePreset, "custom">[];
+
 export function RangePicker({ lens, onLensChange, fullWidthBelowSm = false }: RangePickerProps) {
   const t = useTranslations("analytics");
   const [open, setOpen] = React.useState(false);
 
   const handlePresetChange = (value: string) => {
     if (!(RANGE_PRESETS as readonly string[]).includes(value)) return;
-    const next = value as RangePreset;
-    if (next === "custom") {
-      // Seed the calendar from the currently-resolved window so the user
-      // sees their context — no jarring jump to "today".
-      const window = resolveWindow(lens);
-      onLensChange({
-        preset: "custom",
-        customFrom: lens.customFrom ?? window.current.from,
-        customTo: lens.customTo ?? window.current.to,
-      });
-      setOpen(true);
-    } else {
-      onLensChange({ preset: next, customFrom: null, customTo: null });
-    }
+    // Defensive — Tabs no longer emits "custom" (no matching trigger), but
+    // Radix could theoretically forward an unmatched value. The custom path
+    // is now reached only via handleCalendarSelect below.
+    if (value === "custom") return;
+    onLensChange({ preset: value as RangePreset, customFrom: null, customTo: null });
   };
 
   const window = resolveWindow(lens);
@@ -111,15 +108,19 @@ export function RangePicker({ lens, onLensChange, fullWidthBelowSm = false }: Ra
 
   return (
     <div className={cn("flex items-center gap-2", fullWidthBelowSm && "w-full sm:w-auto")}>
-      <Tabs value={lens.preset} onValueChange={handlePresetChange} className={cn(fullWidthBelowSm && "w-full sm:w-auto")}>
+      <Tabs
+        value={lens.preset === "custom" ? "" : lens.preset}
+        onValueChange={handlePresetChange}
+        className={cn(fullWidthBelowSm && "w-full sm:w-auto")}
+      >
         <TabsList
           className={cn(
-            "grid w-full grid-cols-5 max-md:h-11 sm:inline-flex sm:w-auto",
+            "grid w-full grid-cols-4 max-md:h-11 sm:inline-flex sm:w-auto",
             fullWidthBelowSm && "w-full",
           )}
           aria-label={t("range.label")}
         >
-          {RANGE_PRESETS.map((preset) => (
+          {TAB_PRESETS.map((preset) => (
             <TabsTrigger
               key={preset}
               value={preset}
@@ -137,10 +138,7 @@ export function RangePicker({ lens, onLensChange, fullWidthBelowSm = false }: Ra
             variant="outline"
             size="sm"
             aria-label={t("range.placeholder")}
-            className={cn(
-              "shrink-0 max-md:h-11",
-              lens.preset !== "custom" && "hidden sm:inline-flex",
-            )}
+            className={cn("shrink-0 max-md:h-11")}
           >
             <CalendarIcon aria-hidden="true" className="mr-2 size-4" />
             <span className="truncate text-xs sm:text-sm">

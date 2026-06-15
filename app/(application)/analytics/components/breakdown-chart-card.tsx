@@ -27,21 +27,27 @@
  */
 
 import { useQuery } from "@apollo/client";
-import { LayoutList, PieChart as PieIcon } from "lucide-react";
+import { eachDayOfInterval, format } from "date-fns";
+import { Download, LayoutList, Loader2, PieChart as PieIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
 import { ChartCard } from "@/components/primitives/chart-card";
 import { EmptyState } from "@/components/primitives/empty-state";
+import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { DonutView, type DonutEntry } from "./donut-view";
 import { RankedList, type RankedListEntry } from "./ranked-list";
 import {
+  DIMENSION_TAG_PREFIX,
   useActivityByTag,
+  useTagActivity,
+  resolveWindow,
   type Dimension,
   type Lens,
+  type TagActivityQuery,
 } from "../hooks";
 import {
   GET_AGENTS_BY_IDS,
@@ -81,10 +87,37 @@ function entityLabel(entity: HydrationEntity, fallback: string): string {
   );
 }
 
+/**
+ * CSV field escape — quotes the value + doubles internal quotes when the
+ * input contains a special character (comma / quote / CR / LF). Otherwise
+ * the value is returned as-is to keep the output readable.
+ */
+function csvEscape(value: string | number): string {
+  const s = String(value);
+  if (/[",\n\r]/.test(s)) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
 export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardProps) {
   const t = useTranslations("analytics");
 
   const { rows, loading, error, refetch } = useActivityByTag(lens);
+
+  // CSV export needs the raw byTagByDay matrix — useActivityByTag projects
+  // to scalar rows. We re-fire the SAME query (path is memoised by lens) so
+  // the network cache reuses the response; the cost is one extra hook here.
+  const rawRange = React.useMemo(() => resolveWindow(lens), [lens]);
+  const rawQuery = React.useMemo<TagActivityQuery>(
+    () => ({
+      start_date: rawRange.current.from,
+      end_date: rawRange.current.to,
+      tag_prefix: DIMENSION_TAG_PREFIX[lens.dimension],
+    }),
+    [rawRange.current.from, rawRange.current.to, lens.dimension],
+  );
+  const rawActivity = useTagActivity(rawQuery);
 
   // Top-10 ids for hydration. The byTag[] is already sorted desc by value
   // in useActivityByTag, so .slice(0, 10) gives the top contributors.
@@ -114,32 +147,39 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
     skip: lens.dimension !== "routines" || topIds.length === 0,
   });
 
-  const entries = React.useMemo(() => {
-    const hydrationList: HydrationEntity[] = (() => {
-      if (lens.dimension === "agents") {
-        return (agentsHydration.data?.agentByIds ?? []) as HydrationEntity[];
-      }
-      if (lens.dimension === "users") {
-        return (usersHydration.data?.userByIds ?? []) as HydrationEntity[];
-      }
-      if (lens.dimension === "projects") {
-        return (projectsHydration.data?.projectByIds ?? []) as HydrationEntity[];
-      }
-      if (lens.dimension === "routines") {
-        return (routinesHydration.data?.workflow_templatesPagination?.items ?? []) as HydrationEntity[];
-      }
-      return [];
-    })();
+  const hydrationList: HydrationEntity[] = React.useMemo(() => {
+    if (lens.dimension === "agents") {
+      return (agentsHydration.data?.agentByIds ?? []) as HydrationEntity[];
+    }
+    if (lens.dimension === "users") {
+      return (usersHydration.data?.userByIds ?? []) as HydrationEntity[];
+    }
+    if (lens.dimension === "projects") {
+      return (projectsHydration.data?.projectByIds ?? []) as HydrationEntity[];
+    }
+    if (lens.dimension === "routines") {
+      return (routinesHydration.data?.workflow_templatesPagination?.items ?? []) as HydrationEntity[];
+    }
+    return [];
+  }, [lens.dimension, agentsHydration.data, usersHydration.data, projectsHydration.data, routinesHydration.data]);
 
+  // Index hydrated entities by id (stringified) for O(1) lookups in both the
+  // ranked entries below AND the CSV-export pivot in handleExport.
+  const hydrationMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const h of hydrationList) {
+      map.set(String(h.id), entityLabel(h, String(h.id)));
+    }
+    return map;
+  }, [hydrationList]);
+
+  const entries = React.useMemo(() => {
     return rows.map((row) => {
       const idStr = row.id ?? row.tag;
-      const match = hydrationList.find((h) =>
-        typeof h.id === "number" ? h.id === Number(idStr) : String(h.id) === idStr,
-      );
-      const name = match ? entityLabel(match, idStr) : idStr;
+      const name = hydrationMap.get(idStr) ?? idStr;
       return { id: idStr, name, value: row.value };
     });
-  }, [rows, lens.dimension, agentsHydration.data, usersHydration.data, projectsHydration.data, routinesHydration.data]);
+  }, [rows, hydrationMap]);
 
   const hydrationLoading =
     (lens.dimension === "agents" &&
@@ -180,8 +220,90 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
     ? { message: error.message || t("errors.generic"), onRetry: () => refetch() }
     : null;
 
+  const handleExport = React.useCallback(() => {
+    const data = rawActivity.data;
+    if (!data) return;
+    const { window: w, byTagByDay, byTag } = data;
+    const prefix = DIMENSION_TAG_PREFIX[lens.dimension];
+    // Sorted-by-value Top-N order for the active dimension.
+    const dimensionTags = byTag
+      .filter((r) => r.tag.startsWith(prefix))
+      .slice(0, 10);
+    // Build a zero-fill date axis from the requested window.
+    const startDate = new Date(`${w.start_date.slice(0, 10)}T00:00:00Z`);
+    const endDate = new Date(`${w.end_date.slice(0, 10)}T00:00:00Z`);
+    const dates = eachDayOfInterval({ start: startDate, end: endDate }).map(
+      (d) => format(d, "yyyy-MM-dd"),
+    );
+    // Index cells by `${tag}|${date}` for O(1) lookup.
+    const cellIndex = new Map(
+      (byTagByDay ?? []).map((r) => [`${r.tag}|${r.date}`, r] as const),
+    );
+    const measureKey: "spend" | "total_tokens" | "successful_requests" =
+      lens.measure === "spend"
+        ? "spend"
+        : lens.measure === "tokens"
+          ? "total_tokens"
+          : "successful_requests";
+    const header = ["Entity", ...dates, "Total"];
+    const lines: string[] = [header.map(csvEscape).join(",")];
+    for (const tagRow of dimensionTags) {
+      const idStr = tagRow.id ?? tagRow.tag;
+      const hydratedName = hydrationMap.get(String(idStr)) ?? idStr;
+      let total = 0;
+      const cells = dates.map((d) => {
+        const cell = cellIndex.get(`${tagRow.tag}|${d}`);
+        const v = cell ? (cell[measureKey] ?? 0) : 0;
+        total += v;
+        return measureKey === "spend" ? v.toFixed(6) : String(v);
+      });
+      lines.push(
+        [
+          csvEscape(hydratedName),
+          ...cells,
+          measureKey === "spend" ? total.toFixed(6) : String(total),
+        ].join(","),
+      );
+    }
+    // BOM prefix so Excel opens UTF-8 cleanly.
+    const blob = new Blob(["﻿" + lines.join("\n")], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `analytics-${lens.dimension}-${lens.measure}-${w.start_date.slice(0, 10)}-${w.end_date.slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [rawActivity.data, lens.dimension, lens.measure, hydrationMap]);
+
+  const exportDisabled =
+    loading ||
+    hydrationLoading ||
+    rawActivity.loading ||
+    !rawActivity.data ||
+    rows.length === 0;
+
   const toolbar = (
     <div className="flex w-full items-center justify-end gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="shrink-0 max-md:h-11"
+        onClick={handleExport}
+        disabled={exportDisabled}
+        aria-label={t("header.exportCsvAria")}
+      >
+        {rawActivity.loading ? (
+          <Loader2 aria-hidden="true" className="mr-2 size-4 animate-spin" />
+        ) : (
+          <Download aria-hidden="true" className="mr-2 size-4" />
+        )}
+        <span className="truncate text-xs sm:text-sm">{t("header.exportCsv")}</span>
+      </Button>
       <TooltipProvider delayDuration={200}>
         <ToggleGroup
           type="single"

@@ -47,28 +47,42 @@ export function DimensionPicker({
 }: DimensionPickerProps) {
   const t = useTranslations("analytics");
   return (
-    <Select
-      value={lens.dimension}
-      onValueChange={(value) =>
-        onLensChange({ dimension: value as Dimension })
-      }
+    <div
+      className={cn(
+        "flex items-center gap-2",
+        fullWidthBelowSm && "w-full sm:w-auto",
+      )}
     >
-      <SelectTrigger
-        aria-label={t("header.dimension")}
-        className={cn(
-          "shrink-0 max-md:h-11 sm:w-[160px]",
-          fullWidthBelowSm && "w-full sm:w-[160px]",
-        )}
+      <label
+        htmlFor="analytics-dimension"
+        className="shrink-0 whitespace-nowrap text-sm text-muted-foreground max-md:hidden"
       >
-        <SelectValue placeholder={t("header.dimension")} />
-      </SelectTrigger>
-      <SelectContent>
-        {DIMENSIONS.map((dim) => (
-          <SelectItem key={dim} value={dim}>
-            {t(DIMENSION_LABEL_KEYS[dim])}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+        {t("header.splitByLabel")}
+      </label>
+      <Select
+        value={lens.dimension}
+        onValueChange={(value) =>
+          onLensChange({ dimension: value as Dimension })
+        }
+      >
+        <SelectTrigger
+          id="analytics-dimension"
+          aria-label={t("header.splitByLabel")}
+          className={cn(
+            "shrink-0 max-md:h-11 sm:w-[160px]",
+            fullWidthBelowSm && "w-full sm:w-[160px]",
+          )}
+        >
+          <SelectValue placeholder={t("header.dimension")} />
+        </SelectTrigger>
+        <SelectContent>
+          {DIMENSIONS.map((dim) => (
+            <SelectItem key={dim} value={dim}>
+              {t(DIMENSION_LABEL_KEYS[dim])}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

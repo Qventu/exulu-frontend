@@ -89,6 +89,21 @@ export interface TagActivityByTagRow {
   api_requests: number;
 }
 
+export interface TagActivityByTagByDayRow {
+  tag: string;
+  prefix: string | null;
+  id: string | null;
+  name: string | null;
+  date: string; // YYYY-MM-DD
+  spend: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  successful_requests: number;
+  failed_requests: number;
+  api_requests: number;
+}
+
 export interface TagActivityByModelRow {
   model: string;
   spend: number;
@@ -109,6 +124,7 @@ export interface TagActivityResponse {
   totals: TagActivityTotals;
   daily: TagActivityDailyRow[];
   byTag: TagActivityByTagRow[];
+  byTagByDay: TagActivityByTagByDayRow[];
   byModel: TagActivityByModelRow[];
   pagination: TagActivityPagination;
   tagPrefix: string | null;

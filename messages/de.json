@@ -640,7 +640,10 @@
       "dimensionRoles": "Rollen",
       "dimensionRoutines": "Routinen",
       "dimensionTeams": "Teams",
-      "dimensionUsers": "Benutzer"
+      "dimensionUsers": "Benutzer",
+      "exportCsv": "CSV exportieren",
+      "exportCsvAria": "Aktuelle Aufschlüsselung als CSV-Datei exportieren",
+      "splitByLabel": "Aufteilen nach:"
     },
     "kpi": {
       "agentCalls": "Agent-Aufrufe",
