@@ -3266,11 +3266,11 @@ export const GET_ROUTINES_BY_IDS = gql`
 // FilterTeam do NOT expose an `id` field (only name/agents/workflows for
 // Role, name/description/... for Team) so we can't id-filter server-side.
 // Fetch the full set instead and match client-side. limit=200 covers any
-// realistic org (revisit when a tenant pushes past it). The $ids variable
-// is accepted but unused, so call sites can pass through the same shape as
-// the other GET_*_BY_IDS queries without branching.
+// realistic org (revisit when a tenant pushes past it). Naming kept as
+// GET_*_BY_IDS for symmetry with the other hydration queries; no $ids
+// variable so the server doesn't reject "unused variable".
 export const GET_ROLES_BY_IDS = gql`
-  query GetRolesByIds($ids: [String]!) {
+  query GetRolesByIds {
     rolesPagination(page: 1, limit: 200) {
       items {
         id
@@ -3281,7 +3281,7 @@ export const GET_ROLES_BY_IDS = gql`
 `;
 
 export const GET_TEAMS_BY_IDS = gql`
-  query GetTeamsByIds($ids: [String]!) {
+  query GetTeamsByIds {
     teamsPagination(page: 1, limit: 200) {
       items {
         id
