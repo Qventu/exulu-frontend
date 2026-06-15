@@ -10,11 +10,13 @@
  *
  * No React. No Apollo. Anything React-touching lives in ./hooks.
  *
- * STATISTICS_TYPE is retired from /analytics — LiteLLM has no event-type
- * taxonomy; spend/tokens/requests already cover what the GraphQL union
- * used to discriminate. URL backwards-compat for legacy ?type=AGENT_RUN /
- * ?type=WORKFLOW_RUN deep links is preserved below via
- * LENS_TYPE_FROM_LEGACY.
+ * LensType is retired — the legacy "scope" axis collapsed into `dimension`
+ * (analytics is global by default; the dimension drives the breakdown).
+ * URL backwards-compat for legacy ?type=AGENT_RUN / ?type=USER_BUDGET deep
+ * links is preserved below: ?type is read on parse and translated to a
+ * `dimension` override; lensToSearchParams NEVER emits ?type so any
+ * round-trip canonicalises the URL on first render (router.replace in
+ * AnalyticsView).
  */
 
 // ---------------------------------------------------------------------------
@@ -33,24 +35,9 @@ export type Dimension = (typeof DIMENSIONS)[number];
 export const BREAKDOWN_VIEWS = ["list", "share"] as const;
 export type BreakdownView = (typeof BREAKDOWN_VIEWS)[number];
 
-/**
- * Lens type — replaces the legacy STATISTICS_TYPE enum. LiteLLM's
- * /tag/daily/activity has no event-type taxonomy; the dimension we pivot on
- * is the *tag prefix family* the backend emits via buildTags() — see
- * src/exulu/tags.ts. Each Exulu LLM call double-tags itself per dimension
- * (id + name); the lens type selects which family to filter / breakdown by.
- *
- * Note: 'workflows' is intentionally absent. buildTags() emits no
- * workflow_/routine_ prefix today (architect plan §HONEST GAP). When the
- * backend ships those prefixes, the dimension joins this union.
- */
-export const LENS_TYPES = ["all", "agents", "users", "projects", "teams", "roles"] as const;
-export type LensType = (typeof LENS_TYPES)[number];
-
 /** Max days a custom range may span (matches legacy DateRangeSelector). */
 export const MAX_RANGE_DAYS = 30;
 export const DEFAULT_PRESET: RangePreset = "14d";
-export const DEFAULT_TYPE: LensType = "all";
 export const DEFAULT_MEASURE: Measure = "spend";
 export const DEFAULT_DIMENSION: Dimension = "agents";
 export const DEFAULT_VIEW: BreakdownView = "list";
@@ -69,7 +56,6 @@ export interface Lens {
   /** Only used when preset === "custom"; otherwise derived from preset. */
   customFrom: string | null;
   customTo: string | null;
-  type: LensType;
   measure: Measure;
   dimension: Dimension;
   view: BreakdownView;
@@ -83,32 +69,46 @@ const DAY_MS = 24 * HOUR_MS;
 // ---------------------------------------------------------------------------
 
 /**
- * Legacy ?type=STATISTICS_TYPE → new LensType. Honored verbatim for deep
- * links. Anything not in the map degrades silently to DEFAULT_TYPE per
- * analytics.md UX#10 (the same fall-back contract the rest of the parser
- * uses — no toast, no crash).
+ * Legacy ?type=* → `dimension` override. Honored verbatim for deep links;
+ * anything not in the map degrades silently to no override (the
+ * DEFAULT_DIMENSION applies). Same fall-back contract the rest of the
+ * parser uses — no toast, no crash.
  *
- * HONEST FALLBACK for WORKFLOW_RUN / CONTEXT_*: buildTags() emits no
- * workflow_/routine_/context_ prefix — "all" is the only honest choice
- * over silently mis-attributing to agents.
+ * HONEST FALLBACK for WORKFLOW_RUN / CONTEXT_* / EMBEDDER_* / SOURCE_UPDATE:
+ * buildTags() emits no workflow_/routine_/context_/embedder_ prefix today,
+ * so the only honest move is to drop the override and let the default
+ * Agents dimension apply. AnalyticsView still fires a one-shot toast so
+ * the deep-link change is visible.
  */
-const LENS_TYPE_FROM_LEGACY: Record<string, LensType> = {
+const LEGACY_TYPE_TO_DIMENSION: Record<string, Dimension | undefined> = {
   AGENT_RUN: "agents",
   TOOL_CALL: "agents",
-  WORKFLOW_RUN: "all",
-  CONTEXT_RETRIEVE: "all",
-  CONTEXT_UPSERT: "all",
-  SOURCE_UPDATE: "all",
-  EMBEDDER_GENERATE: "all",
-  EMBEDDER_UPSERT: "all",
-  EMBEDDER_DELETE: "all",
+  USER_BUDGET: "users",
+  PROJECT_BUDGET: "projects",
+  TEAM_BUDGET: "teams",
+  ROLE_BUDGET: "roles",
+  // Honest drop — no prefix exists in buildTags() yet:
+  WORKFLOW_RUN: undefined,
+  CONTEXT_RETRIEVE: undefined,
+  CONTEXT_UPSERT: undefined,
+  SOURCE_UPDATE: undefined,
+  EMBEDDER_GENERATE: undefined,
+  EMBEDDER_UPSERT: undefined,
+  EMBEDDER_DELETE: undefined,
 };
 
-function parseLensType(value: string | null | undefined): LensType {
-  if (!value) return DEFAULT_TYPE;
-  if ((LENS_TYPES as readonly string[]).includes(value)) return value as LensType;
-  if (value in LENS_TYPE_FROM_LEGACY) return LENS_TYPE_FROM_LEGACY[value]!;
-  return DEFAULT_TYPE;
+function parseDimensionFromLegacyType(
+  value: string | null | undefined,
+): Dimension | null {
+  if (!value) return null;
+  // ?type=agents / ?type=users / … (lowercase dimension values — older URLs
+  // already emit these per the previous LENS_TYPES set).
+  if ((DIMENSIONS as readonly string[]).includes(value)) return value as Dimension;
+  // Legacy STATISTICS_TYPE.
+  if (value in LEGACY_TYPE_TO_DIMENSION) {
+    return LEGACY_TYPE_TO_DIMENSION[value] ?? null;
+  }
+  return null;
 }
 
 function parseMeasure(value: string | null | undefined): Measure {
@@ -178,10 +178,17 @@ export function wasRangeReset(
  *
  * Backwards compat:
  *   - ?measure=count → "requests"
- *   - ?type=AGENT_RUN / ?type=TOOL_CALL → "agents"
- *   - ?type=WORKFLOW_RUN / ?type=CONTEXT_* / ?type=EMBEDDER_* → "all"
- *     (honest fallback per architect §HONEST GAP — buildTags emits no
- *     workflow_/context_/embedder_ prefix today)
+ *   - ?type=AGENT_RUN / ?type=TOOL_CALL → dimension="agents"
+ *   - ?type=USER_BUDGET → dimension="users"
+ *   - ?type=PROJECT_BUDGET → dimension="projects"
+ *   - ?type=TEAM_BUDGET → dimension="teams"
+ *   - ?type=ROLE_BUDGET → dimension="roles"
+ *   - ?type=WORKFLOW_RUN / CONTEXT_* / EMBEDDER_* / SOURCE_UPDATE → dropped
+ *     (no override; honest fallback per architect §HONEST GAP). The view
+ *     still fires a one-shot toast so the change is visible.
+ *   - ?type=agents / users / projects / teams / roles (old canonical) →
+ *     dimension override of the same value.
+ *   - An explicit ?dimension=… ALWAYS wins over the legacy ?type seed.
  */
 export function lensFromSearchParams(
   searchParams: URLSearchParams | ReadonlyURLSearchParamsLike,
@@ -214,18 +221,32 @@ export function lensFromSearchParams(
     effectivePreset = DEFAULT_PRESET;
   }
 
+  // Dimension precedence: explicit ?dimension= wins; otherwise fall back to
+  // the legacy ?type= seed; otherwise DEFAULT_DIMENSION.
+  const dimensionRaw = get("dimension");
+  const explicitDimension =
+    dimensionRaw && (DIMENSIONS as readonly string[]).includes(dimensionRaw)
+      ? (dimensionRaw as Dimension)
+      : null;
+  const legacyDimension = parseDimensionFromLegacyType(get("type"));
+  const dimension: Dimension =
+    explicitDimension ?? legacyDimension ?? DEFAULT_DIMENSION;
+
   return {
     preset: effectivePreset,
     customFrom,
     customTo,
-    type: parseLensType(get("type")),
     measure: parseMeasure(get("measure")),
-    dimension: narrow<Dimension>(get("dimension"), DIMENSIONS, DEFAULT_DIMENSION),
+    dimension,
     view: narrow<BreakdownView>(get("view"), BREAKDOWN_VIEWS, DEFAULT_VIEW),
   };
 }
 
-/** Serialize the lens back to a stable query-string (sorted keys). */
+/**
+ * Serialize the lens back to a stable query-string (sorted keys). Never
+ * emits ?type — the legacy param is read-only (see lensFromSearchParams).
+ * Any roundtrip canonicalises the URL on first render via router.replace.
+ */
 export function lensToSearchParams(lens: Lens): string {
   const params = new URLSearchParams();
   if (lens.preset !== DEFAULT_PRESET) params.set("range", lens.preset);
@@ -233,7 +254,6 @@ export function lensToSearchParams(lens: Lens): string {
     params.set("from", lens.customFrom);
     params.set("to", lens.customTo);
   }
-  if (lens.type !== DEFAULT_TYPE) params.set("type", lens.type);
   if (lens.measure !== DEFAULT_MEASURE) params.set("measure", lens.measure);
   if (lens.dimension !== DEFAULT_DIMENSION) params.set("dimension", lens.dimension);
   if (lens.view !== DEFAULT_VIEW) params.set("view", lens.view);
@@ -309,14 +329,10 @@ export const DIMENSION_TAG_PREFIX: Record<Dimension, string> = {
 };
 
 /**
- * Resolve the LensType to a tag_prefix for the backend's /admin/litellm/
- * tag-activity proxy. 'all' returns null (omit tag_prefix; global view).
- *
- * Lens.type and Lens.dimension can disagree (the type narrows totals; the
- * dimension drives the breakdown). When narrowing totals we use the type;
- * when computing the breakdown we use the dimension.
+ * Canonical dedupe tag prefix sent to /tag-activity for totals + daily
+ * queries. We always slice on user_id_ so the backend can collapse the
+ * double-tag duplication (each Exulu call double-tags itself per dimension
+ * — id + name — and the slice prevents counting both halves). The
+ * breakdown card uses DIMENSION_TAG_PREFIX[lens.dimension] instead.
  */
-export function tagPrefixForType(type: LensType): string | null {
-  if (type === "all") return null;
-  return DIMENSION_TAG_PREFIX[type];
-}
+export const CANONICAL_DEDUPE_TAG_PREFIX = "user_id_";

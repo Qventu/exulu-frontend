@@ -22,11 +22,17 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   const denied = await guardRoute("analytics");
   if (denied) return denied;
 
-  // Parse the five lens-shaping searchParams server-side so the first
-  // paint already reflects the URL (analytics.md deep-link contract;
-  // Home's /analytics?type=AGENT_RUN deep link must hydrate without a
-  // client round-trip). NO server-side getTranslations here — UI copy is
-  // owned by the client view (rule #4, the server-side i18n trap).
+  // Parse the lens-shaping searchParams server-side so the first paint
+  // already reflects the URL (analytics.md deep-link contract; Home's
+  // /analytics?dimension=agents deep link must hydrate without a client
+  // round-trip). NO server-side getTranslations here — UI copy is owned
+  // by the client view (rule #4, the server-side i18n trap).
+  //
+  // The legacy ?type=AGENT_RUN family is still accepted on input —
+  // lensFromSearchParams now translates it to a `dimension` seed
+  // (AGENT_RUN→agents, USER_BUDGET→users, …) instead of an own `type`
+  // field. lensToSearchParams never emits ?type, so the URL canonicalises
+  // on the next router.replace.
   const resolved = (await searchParams) ?? {};
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(resolved)) {

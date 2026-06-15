@@ -1,10 +1,13 @@
 "use client";
 
 /**
- * BreakdownChartCard — one ChartCard with two controls in the header:
- *   - Dimension Tabs [Agents | Users | Projects | Teams | Roles]
- *     (scrollable below md)
+ * BreakdownChartCard — one ChartCard with the view toggle in the header:
  *   - View ToggleGroup [List | Share]
+ *
+ * The dimension picker now lives in the page header (DimensionPicker in
+ * analytics-view.tsx) so the breakdown scope is reachable at-a-glance
+ * regardless of which card the user has focus on. This card still
+ * consumes lens.dimension as before — only the control moved.
  *
  * Source is /admin/litellm/tag-activity (via useActivityByTag). The
  * backend filters byTag[] by tag_prefix matching the active dimension
@@ -29,14 +32,12 @@ import * as React from "react";
 
 import { ChartCard } from "@/components/primitives/chart-card";
 import { EmptyState } from "@/components/primitives/empty-state";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { DonutView, type DonutEntry } from "./donut-view";
 import { RankedList, type RankedListEntry } from "./ranked-list";
 import {
-  DIMENSIONS,
   useActivityByTag,
   type Dimension,
   type Lens,
@@ -151,39 +152,22 @@ export function BreakdownChartCard({ lens, onLensChange }: BreakdownChartCardPro
         ? t("breakdown.valueLabelTokens")
         : t("breakdown.valueLabelRequests");
 
-  const description =
+  const measureLabel =
     lens.measure === "spend"
       ? t("breakdown.subtitleBySpend")
       : lens.measure === "tokens"
         ? t("breakdown.subtitleByTokens")
         : t("breakdown.subtitleByRequests");
 
+  const dimensionLabel = t(DIMENSION_LABEL_KEYS[lens.dimension]);
+  const description = `${dimensionLabel} · ${measureLabel}`;
+
   const cardError = error
     ? { message: error.message || t("errors.generic"), onRetry: () => refetch() }
     : null;
 
   const toolbar = (
-    <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-      <Tabs
-        value={lens.dimension}
-        onValueChange={(value) => onLensChange({ dimension: value as Dimension })}
-        className="w-full sm:w-auto"
-      >
-        <TabsList
-          className="grid w-full grid-cols-5 max-md:h-11 sm:inline-flex sm:w-auto"
-          aria-label={t("breakdown.title")}
-        >
-          {DIMENSIONS.map((dim) => (
-            <TabsTrigger
-              key={dim}
-              value={dim}
-              className="px-2 text-xs max-md:h-full sm:px-3 sm:text-sm"
-            >
-              {t(DIMENSION_LABEL_KEYS[dim])}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+    <div className="flex w-full items-center justify-end gap-2">
       <TooltipProvider delayDuration={200}>
         <ToggleGroup
           type="single"

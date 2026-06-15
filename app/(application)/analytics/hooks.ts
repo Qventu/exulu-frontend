@@ -33,9 +33,9 @@ import {
 } from "@/lib/litellm-activity";
 
 import {
+  CANONICAL_DEDUPE_TAG_PREFIX,
   DIMENSION_TAG_PREFIX,
   resolveWindow,
-  tagPrefixForType,
   type Dimension,
   type Lens,
 } from "./lens";
@@ -63,26 +63,23 @@ export {
 // from "../lens".
 export {
   BREAKDOWN_VIEWS,
+  CANONICAL_DEDUPE_TAG_PREFIX,
   DEFAULT_DIMENSION,
   DEFAULT_MEASURE,
   DEFAULT_PRESET,
-  DEFAULT_TYPE,
   DEFAULT_VIEW,
   DIMENSIONS,
   DIMENSION_TAG_PREFIX,
-  LENS_TYPES,
   MAX_RANGE_DAYS,
   MEASURES,
   RANGE_PRESETS,
   lensFromSearchParams,
   lensToSearchParams,
   resolveWindow,
-  tagPrefixForType,
   wasRangeReset,
   type BreakdownView,
   type Dimension,
   type Lens,
-  type LensType,
   type Measure,
   type RangePreset,
   type RangeWindow,
@@ -121,8 +118,10 @@ export interface RangeTotalsStat {
  * construction.
  *
  * `measure` selects which field from `totals` to project (spend / tokens /
- * requests). Both calls share the same tag_prefix (from lens.type) so the
- * comparison is apples-to-apples.
+ * requests). Both calls always slice on the CANONICAL_DEDUPE_TAG_PREFIX so
+ * the backend collapses the double-tag duplication (each Exulu LLM call
+ * double-tags itself per dimension — id + name); without the slice we'd
+ * count both halves and inflate totals.
  */
 export function useActivityTotals(
   lens: Lens,
@@ -131,23 +130,22 @@ export function useActivityTotals(
   // `range` (not `window`) to avoid shadowing the global — keeps
   // react-hooks/exhaustive-deps from complaining about a phantom dep.
   const range = React.useMemo(() => resolveWindow(lens), [lens]);
-  const tagPrefix = React.useMemo(() => tagPrefixForType(lens.type), [lens.type]);
 
   const currentQuery = React.useMemo<TagActivityQuery>(
     () => ({
       start_date: range.current.from,
       end_date: range.current.to,
-      ...(tagPrefix ? { tag_prefix: tagPrefix } : {}),
+      tag_prefix: CANONICAL_DEDUPE_TAG_PREFIX,
     }),
-    [range.current.from, range.current.to, tagPrefix],
+    [range.current.from, range.current.to],
   );
   const previousQuery = React.useMemo<TagActivityQuery>(
     () => ({
       start_date: range.previous.from,
       end_date: range.previous.to,
-      ...(tagPrefix ? { tag_prefix: tagPrefix } : {}),
+      tag_prefix: CANONICAL_DEDUPE_TAG_PREFIX,
     }),
-    [range.previous.from, range.previous.to, tagPrefix],
+    [range.previous.from, range.previous.to],
   );
 
   const current = useTagActivity(currentQuery);
@@ -180,14 +178,13 @@ export interface DailyTrendStat {
 
 export function useActivityDaily(lens: Lens): DailyTrendStat {
   const range = React.useMemo(() => resolveWindow(lens), [lens]);
-  const tagPrefix = React.useMemo(() => tagPrefixForType(lens.type), [lens.type]);
   const query = React.useMemo<TagActivityQuery>(
     () => ({
       start_date: range.current.from,
       end_date: range.current.to,
-      ...(tagPrefix ? { tag_prefix: tagPrefix } : {}),
+      tag_prefix: CANONICAL_DEDUPE_TAG_PREFIX,
     }),
-    [range.current.from, range.current.to, tagPrefix],
+    [range.current.from, range.current.to],
   );
   const { data, loading, error, refetch } = useTagActivity(query);
   return {
@@ -222,9 +219,10 @@ export interface BreakdownStat {
 
 /**
  * Breakdown rows for the active dimension. The dimension drives the
- * tag_prefix forwarded to the backend — independent of lens.type so the
- * user can pivot {Trend by 'all'} × {Breakdown by 'agents'} without
- * refetching the totals.
+ * tag_prefix forwarded to the backend. Totals/daily slice on the
+ * CANONICAL_DEDUPE_TAG_PREFIX (deduped global view); the breakdown
+ * slices on the dimension's own prefix — so swapping dimensions never
+ * refetches the totals.
  */
 export function useActivityByTag(lens: Lens): BreakdownStat {
   const range = React.useMemo(() => resolveWindow(lens), [lens]);

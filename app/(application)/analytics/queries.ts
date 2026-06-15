@@ -32,7 +32,7 @@ import {
   type TagActivityTotals as Totals,
 } from "@/lib/litellm-activity";
 
-import { type Dimension, type LensType, type Measure } from "./lens";
+import { type Dimension, type Measure } from "./lens";
 
 // ---------------------------------------------------------------------------
 // id → name hydration queries (still GraphQL — Postgres is the source of
@@ -110,4 +110,4 @@ export function measureFromByTag(row: TagActivityByTagRow, measure: Measure): nu
 // for analytics data plumbing.
 // ---------------------------------------------------------------------------
 
-export type { Dimension, LensType, Measure };
+export type { Dimension, Measure };

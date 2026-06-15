@@ -605,8 +605,8 @@
       "viewShare": "Anteil",
       "viewShareAria": "Anteilsansicht"
     },
-    "deepLinkLegacyTypeAgents": "Dieser Link nutzte einen veralteten Filter. Die Ansicht „Agenten“ wird angezeigt.",
-    "deepLinkLegacyTypeAll": "Dieser Link nutzte einen veralteten Filter ohne dedizierte Aufschlüsselung. Die Gesamtansicht wird angezeigt.",
+    "deepLinkLegacyTypeDropped": "Dieser Link nutzte einen veralteten Filter, der nicht mehr greift; das vollständige Dashboard wird angezeigt.",
+    "deepLinkLegacyTypeRemapped": "Dieser Link nutzte einen veralteten Filter. Die Ansicht „{dimension}“ wird angezeigt.",
     "deepLinkLegacyTypeTitle": "Filter aktualisiert",
     "deepLinkRangeReset": "Der verlinkte Zeitraum überschritt 30 Tage und wurde auf die letzten 14 Tage zurückgesetzt.",
     "errors": {
@@ -625,31 +625,20 @@
       "trendDescriptionMeasure": "Tägliche {measure} über den ausgewählten Zeitraum.",
       "trendEmptyHint": "Versuchen Sie einen größeren Zeitraum oder einen anderen Ereignistyp.",
       "trendEmptyTitle": "Keine Aktivität in diesem Zeitraum",
-      "trendTitle": "Verlauf",
-      "type": "Ereignistyp",
-      "typeAgentRun": "Agent-Ausführung",
-      "typeAgents": "Agenten",
-      "typeAll": "Alle",
-      "typeContextRetrieve": "Kontext abrufen",
-      "typeContextUpsert": "Kontext speichern",
-      "typeEmbedderDelete": "Embedder löschen",
-      "typeEmbedderGenerate": "Embedder erzeugen",
-      "typeEmbedderUpsert": "Embedder speichern",
-      "typeGroupAgents": "Agenten",
-      "typeGroupKnowledge": "Wissen",
-      "typeGroupWorkflows": "Workflows",
-      "typeProjects": "Projekte",
-      "typeRoles": "Rollen",
-      "typeSourceUpdate": "Quelle aktualisieren",
-      "typeTeams": "Teams",
-      "typeToolCall": "Tool-Aufruf",
-      "typeUsers": "Benutzer",
-      "typeWorkflowRun": "Workflow-Ausführung"
+      "trendTitle": "Verlauf"
     },
     "footer": {
       "budgets": "Budgets",
       "evals": "Auswertungen",
       "label": "Weitere Analysen"
+    },
+    "header": {
+      "dimension": "Anzeigen nach",
+      "dimensionAgents": "Agenten",
+      "dimensionProjects": "Projekte",
+      "dimensionRoles": "Rollen",
+      "dimensionTeams": "Teams",
+      "dimensionUsers": "Benutzer"
     },
     "kpi": {
       "agentCalls": "Agent-Aufrufe",

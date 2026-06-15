@@ -232,7 +232,7 @@ export function HomeDashboard() {
                 loading={spendStat.loading}
                 href={
                   canAnalytics
-                    ? "/analytics?measure=spend&type=agents"
+                    ? "/analytics?dimension=agents&measure=spend"
                     : undefined
                 }
                 {...trendOf(spendStat, formatCurrency.format)}
@@ -243,7 +243,7 @@ export function HomeDashboard() {
                 loading={tokensStat.loading}
                 href={
                   canAnalytics
-                    ? "/analytics?measure=tokens&type=agents"
+                    ? "/analytics?dimension=agents&measure=tokens"
                     : undefined
                 }
                 {...trendOf(tokensStat)}

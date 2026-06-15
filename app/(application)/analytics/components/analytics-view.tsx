@@ -16,10 +16,14 @@
  * URL is the source of truth for the lens; router.replace writes, the
  * `useSearchParams` hook reads (rule #10a — no parallel local mirror).
  *
- * Deep-link compat: legacy ?type=AGENT_RUN / ?type=WORKFLOW_RUN URLs are
- * remapped by lensFromSearchParams (AGENT_RUN→agents, WORKFLOW_RUN→all per
- * honest fallback). When the user's URL was remapped we surface a quiet
- * one-shot toast so the deep-link is honored AND visible.
+ * Deep-link compat: legacy ?type=AGENT_RUN / ?type=USER_BUDGET / etc URLs
+ * are remapped by lensFromSearchParams to a `dimension` seed (AGENT_RUN→
+ * agents, USER_BUDGET→users, …). Honest-gap types (WORKFLOW_RUN,
+ * CONTEXT_*, EMBEDDER_*, SOURCE_UPDATE) are silently dropped to the
+ * default Agents dimension because buildTags() emits no matching prefix
+ * today. Either way the deep-link is honored AND a quiet one-shot toast
+ * surfaces so the URL change isn't silent. lensToSearchParams never emits
+ * ?type, so the URL canonicalises on the next router.replace.
  *
  * Mobile: PageHeader stacks (title row, RangePicker full-width below sm).
  * The MobileTopbarAction surfaces the same RangePicker in the global top
@@ -42,6 +46,7 @@ import { Button } from "@/components/ui/button";
 import { getLiteLLMAdminUrl } from "@/lib/litellm-admin-url";
 import { can, type RightsUser } from "@/lib/rights";
 
+import { DimensionPicker } from "./dimension-picker";
 import { ExploreRegion } from "./explore-region";
 import { KPIStrip } from "./kpi-strip";
 import { RangePicker } from "./range-picker";
@@ -57,12 +62,22 @@ export interface AnalyticsViewProps {
 }
 
 /**
- * Legacy ?type=* values we remap (kept in-sync with LENS_TYPE_FROM_LEGACY
- * in ./lens). Used only to detect "this deep link was rewritten so we
- * should tell the user" — the actual remap happens in lensFromSearchParams.
+ * Legacy ?type=* values we surface a one-shot toast for (kept in-sync with
+ * LEGACY_TYPE_TO_DIMENSION in ./lens). Used only to detect "this deep link
+ * was rewritten so we should tell the user" — the actual remap happens in
+ * lensFromSearchParams. AnalyticsView's first render then calls
+ * router.replace(lensToSearchParams(...)) which canonicalises the URL (the
+ * serialiser never emits ?type=).
  */
-const LEGACY_TYPES_REMAPPED_TO_AGENTS = new Set(["AGENT_RUN", "TOOL_CALL"]);
-const LEGACY_TYPES_REMAPPED_TO_ALL = new Set([
+const LEGACY_TYPES_REMAPPED_TO_DIMENSION: Record<string, "agents" | "users" | "projects" | "teams" | "roles"> = {
+  AGENT_RUN: "agents",
+  TOOL_CALL: "agents",
+  USER_BUDGET: "users",
+  PROJECT_BUDGET: "projects",
+  TEAM_BUDGET: "teams",
+  ROLE_BUDGET: "roles",
+};
+const LEGACY_TYPES_DROPPED = new Set([
   "WORKFLOW_RUN",
   "CONTEXT_RETRIEVE",
   "CONTEXT_UPSERT",
@@ -116,23 +131,28 @@ export function AnalyticsView({ initialLens }: AnalyticsViewProps) {
   );
 
   // One-shot deep-link toast: if the legacy ?type=AGENT_RUN /
-  // ?type=WORKFLOW_RUN value was remapped, tell the user once so the URL
-  // change isn't silent. The `legacyTypeRaw` ref guards against re-firing
-  // when the user re-toggles the lens.
+  // ?type=USER_BUDGET / etc value was remapped (or silently dropped because
+  // buildTags() emits no matching prefix), tell the user once so the URL
+  // change isn't silent. The ref guards against re-firing when the user
+  // re-toggles the lens.
   const legacyToastFiredRef = React.useRef(false);
   React.useEffect(() => {
     if (legacyToastFiredRef.current) return;
     const raw = searchParams?.get("type");
     if (!raw) return;
-    if (LEGACY_TYPES_REMAPPED_TO_AGENTS.has(raw)) {
+    const remappedDimension = LEGACY_TYPES_REMAPPED_TO_DIMENSION[raw];
+    if (remappedDimension) {
       legacyToastFiredRef.current = true;
+      const dimKey = `header.dimension${remappedDimension.charAt(0).toUpperCase()}${remappedDimension.slice(1)}`;
       toast(t("deepLinkLegacyTypeTitle"), {
-        description: t("deepLinkLegacyTypeAgents"),
+        description: t("deepLinkLegacyTypeRemapped", {
+          dimension: t(dimKey),
+        }),
       });
-    } else if (LEGACY_TYPES_REMAPPED_TO_ALL.has(raw)) {
+    } else if (LEGACY_TYPES_DROPPED.has(raw)) {
       legacyToastFiredRef.current = true;
       toast(t("deepLinkLegacyTypeTitle"), {
-        description: t("deepLinkLegacyTypeAll"),
+        description: t("deepLinkLegacyTypeDropped"),
       });
     }
   }, [searchParams, t]);
@@ -157,6 +177,7 @@ export function AnalyticsView({ initialLens }: AnalyticsViewProps) {
 
   const headerAction = (
     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+      <DimensionPicker lens={lens} onLensChange={updateLens} fullWidthBelowSm />
       <RangePicker lens={lens} onLensChange={updateLens} fullWidthBelowSm />
       {litellmEnabled && (
         <Button
@@ -177,7 +198,10 @@ export function AnalyticsView({ initialLens }: AnalyticsViewProps) {
   return (
     <PageShell variant="content">
       <MobileTopbarAction>
-        <RangePicker lens={lens} onLensChange={updateLens} />
+        <div className="flex flex-col gap-2">
+          <DimensionPicker lens={lens} onLensChange={updateLens} fullWidthBelowSm />
+          <RangePicker lens={lens} onLensChange={updateLens} fullWidthBelowSm />
+        </div>
       </MobileTopbarAction>
 
       <PageHeader

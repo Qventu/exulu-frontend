@@ -605,8 +605,8 @@
       "viewShare": "Share",
       "viewShareAria": "Share view"
     },
-    "deepLinkLegacyTypeAgents": "This link used a legacy filter. Showing the Agents view.",
-    "deepLinkLegacyTypeAll": "This link used a legacy filter that no longer has a dedicated breakdown. Showing the All view.",
+    "deepLinkLegacyTypeDropped": "This link used a legacy filter that no longer applies; showing the full dashboard.",
+    "deepLinkLegacyTypeRemapped": "This link used a legacy filter. Showing the {dimension} view.",
     "deepLinkLegacyTypeTitle": "Filter updated",
     "deepLinkRangeReset": "The deep-linked range exceeded 30 days and was reset to the last 14 days.",
     "errors": {
@@ -625,31 +625,20 @@
       "trendDescriptionMeasure": "Daily {measure} across the selected range.",
       "trendEmptyHint": "Try a wider range or a different event type.",
       "trendEmptyTitle": "No activity in this window",
-      "trendTitle": "Trend",
-      "type": "Event type",
-      "typeAgentRun": "Agent run",
-      "typeAgents": "Agents",
-      "typeAll": "All",
-      "typeContextRetrieve": "Context retrieve",
-      "typeContextUpsert": "Context upsert",
-      "typeEmbedderDelete": "Embedder delete",
-      "typeEmbedderGenerate": "Embedder generate",
-      "typeEmbedderUpsert": "Embedder upsert",
-      "typeGroupAgents": "Agents",
-      "typeGroupKnowledge": "Knowledge",
-      "typeGroupWorkflows": "Workflows",
-      "typeProjects": "Projects",
-      "typeRoles": "Roles",
-      "typeSourceUpdate": "Source update",
-      "typeTeams": "Teams",
-      "typeToolCall": "Tool call",
-      "typeUsers": "Users",
-      "typeWorkflowRun": "Workflow run"
+      "trendTitle": "Trend"
     },
     "footer": {
       "budgets": "Budgets",
       "evals": "Evals",
       "label": "More analytics"
+    },
+    "header": {
+      "dimension": "View by",
+      "dimensionAgents": "Agents",
+      "dimensionProjects": "Projects",
+      "dimensionRoles": "Roles",
+      "dimensionTeams": "Teams",
+      "dimensionUsers": "Users"
     },
     "kpi": {
       "agentCalls": "Agent calls",
