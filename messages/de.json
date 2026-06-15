@@ -630,6 +630,136 @@
       "trustNote": "Verarbeitung und Speicherung in der EU. Niemals für das Training von KI-Modellen verwendet."
     }
   },
+  "budgets": {
+    "title": "Budgets",
+    "description": "Ausgabelimits pro Benutzer, Rolle, Team, Projekt oder Agent — durchgesetzt von LiteLLM.",
+    "allBudgets": {
+      "title": "Alle Budgets"
+    },
+    "atRisk": {
+      "title": "Gefährdete Budgets",
+      "allClear": "Alle Budgets im Plan.",
+      "itemOver": "{scope} · {name} hat das Budget überschritten ({percent}%)",
+      "itemWarn": "{scope} · {name} ist gefährdet ({percent}%)",
+      "counts": "{over} überschritten · {warn} gefährdet",
+      "partialError": "Einige Budgetdaten konnten nicht geladen werden."
+    },
+    "bar": {
+      "detailsAria": "Budgetdetails für {name}",
+      "usedOfMax": "{spend} von {max} verbraucht",
+      "remainingDuration": "{remaining} verbleibend · {duration}",
+      "projected": "Prognose ≈ {amount} bis zum Reset",
+      "projectedOverPace": "Prognose ≈ {amount} bis zum Reset (über Plan)",
+      "resetsOn": "Zurücksetzung am {date}"
+    },
+    "policy": {
+      "loading": "Standardrichtlinie wird geladen…",
+      "summaryDefault": "Standard: {amount} / {period}",
+      "summaryShownInChat": "im Chat sichtbar",
+      "summaryNone": "Kein Standardbudget",
+      "edit": "Bearbeiten",
+      "editAria": "Standard-Budgetrichtlinie bearbeiten",
+      "dialogTitle": "Standard-Budgetrichtlinie",
+      "dialogDescription": "Legen Sie das plattformweite Standardbudget für neue Benutzer fest und entscheiden Sie, ob Benutzer ihr Budget im Chat sehen.",
+      "sectionDefault": "Standardbudget pro Benutzer",
+      "sectionDefaultDescription": "Wird auf Benutzer ohne eigenes Budget angewendet.",
+      "sectionVisibility": "Sichtbarkeit",
+      "sectionVisibilityDescription": "Was Benutzer im Chat-Eingabebereich sehen.",
+      "enableLabel": "Globales Benutzerbudget aktivieren",
+      "amountLabel": "Standardbudget (USD)",
+      "resetLabel": "Zurücksetzungsintervall",
+      "showInChatLabel": "Budgetstatus im Chat anzeigen",
+      "showInChatHelper": "Benutzer sehen ihr eigenes Budget neben dem Chat-Eingabefeld.",
+      "save": "Speichern",
+      "savedTitle": "Einstellungen gespeichert",
+      "saveFailedTitle": "Einstellungen konnten nicht gespeichert werden",
+      "invalidAmountTitle": "Ungültiger Betrag",
+      "invalidAmountDescription": "Legen Sie ein positives Budget fest, um den globalen Standard zu aktivieren.",
+      "amountPlaceholder": "20",
+      "auditUnavailable": "Kein Änderungsprotokoll verfügbar — Wer und wann Änderungen vornimmt, wird noch nicht erfasst.",
+      "duration": {
+        "1d": "Täglich",
+        "7d": "Wöchentlich",
+        "30d": "Monatlich"
+      }
+    },
+    "settings": {
+      "loadError": "Standardrichtlinie konnte nicht geladen werden.",
+      "retry": "Erneut versuchen"
+    },
+    "entityType": {
+      "user": "Benutzer",
+      "role": "Rolle",
+      "team": "Team",
+      "project": "Projekt",
+      "agent": "Agent"
+    },
+    "entityTypePlural": {
+      "user": "Benutzer",
+      "role": "Rollen",
+      "team": "Teams",
+      "project": "Projekte",
+      "agent": "Agenten"
+    },
+    "entityTypeSwitcherAria": "Entitätstyp",
+    "search": {
+      "placeholderByEmail": "Benutzer nach E-Mail suchen…",
+      "placeholderByNameOrEmail": "Benutzer nach Name oder E-Mail suchen…",
+      "placeholderByName": "{type} nach Name suchen…"
+    },
+    "table": {
+      "budgetHeader": "Budget",
+      "resetsHeader": "Setzt zurück",
+      "actionsHeader": "Aktionen",
+      "rowEdit": "Bearbeiten",
+      "rowSet": "Festlegen",
+      "rowEditAria": "Budget für {name} bearbeiten",
+      "rowSetAria": "Budget für {name} festlegen",
+      "loadError": "Budgets konnten nicht geladen werden.",
+      "loadErrorTitle": "Budgets konnten nicht geladen werden"
+    },
+    "empty": {
+      "noMatchTitle": "Keine Treffer",
+      "noMatchDescription": "Keine Einträge entsprechen \"{term}\".",
+      "noneTitle": "Noch keine Budgets",
+      "noneDescription": "Entitäten ohne Budget können unbegrenzt ausgeben. Legen Sie eines fest, um ein Limit zu setzen.",
+      "clearSearch": "Suche zurücksetzen"
+    },
+    "bulk": {
+      "apply": "Budget für {count} {type} festlegen",
+      "selectedAcrossPages": "{count, plural, one {# ausgewählt (seitenübergreifend)} other {# ausgewählt (seitenübergreifend)}}"
+    },
+    "editor": {
+      "titleSet": "Budget festlegen",
+      "titleEdit": "Budget bearbeiten",
+      "titleBulk": "Budget festlegen",
+      "currentStatus": "Aktueller Status",
+      "amountLabel": "Budget (USD)",
+      "amountPlaceholder": "z. B. 20",
+      "resetLabel": "Zurücksetzungsintervall",
+      "remove": "Entfernen",
+      "cancel": "Abbrechen",
+      "saveBudget": "Budget speichern",
+      "applyToAll": "Auf alle anwenden",
+      "savedTitle": "Budget gespeichert",
+      "savedDescription": "Budget für {name} festgelegt.",
+      "saveFailedTitle": "Budget konnte nicht gespeichert werden",
+      "bulkAppliedTitle": "Budgets angewendet",
+      "bulkAllSucceeded": "{ok} erfolgreich.",
+      "bulkPartialSummary": "{ok} erfolgreich, {failed} fehlgeschlagen.",
+      "bulkFailureTitle": "Einige Budgets konnten nicht gesetzt werden",
+      "bulkFailureDescription": "{count, plural, one {# Entität ist fehlgeschlagen} other {# Entitäten sind fehlgeschlagen}} — Details pro Eintrag siehe unten.",
+      "bulkFailureDone": "Fertig",
+      "removeBudget": "Budget entfernen",
+      "removeConfirmTitle": "Dieses Budget entfernen?",
+      "removeConfirmBody": "{name} darf ohne Limit ausgeben, bis ein neues Budget festgelegt wird.",
+      "removeConfirmAction": "Budget entfernen",
+      "removedTitle": "Budget entfernt",
+      "removedDescription": "Budget für {name} entfernt.",
+      "removeFailedTitle": "Budget konnte nicht entfernt werden",
+      "unknownError": "Unbekannter Fehler."
+    }
+  },
   "chat": {
     "agentSelect": {
       "clearSearch": "Suche löschen",

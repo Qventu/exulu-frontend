@@ -41,10 +41,17 @@ export interface BulkActionBarProps {
   onClear: () => void;
   actions: BulkActionBarAction[];
   className?: string;
+  /**
+   * Optional override for the "{count} selected" copy on the left. Pages that
+   * accumulate selection across paginated requests use this to add an
+   * "across pages" framing so admins can tell the selection set spans pages
+   * they're not currently looking at (e.g. budgets.md item 24).
+   */
+  label?: string;
 }
 
 const BulkActionBar = React.forwardRef<HTMLDivElement, BulkActionBarProps>(
-  ({ count, onClear, actions, className }, ref) => {
+  ({ count, onClear, actions, className, label }, ref) => {
     const t = useTranslations();
 
     if (count <= 0) return null;
@@ -65,7 +72,7 @@ const BulkActionBar = React.forwardRef<HTMLDivElement, BulkActionBarProps>(
         )}
       >
         <p aria-atomic="true" aria-live="polite" className="text-sm">
-          {t("common.selectedCount", { count })}
+          {label ?? t("common.selectedCount", { count })}
         </p>
         <Button
           type="button"

@@ -630,6 +630,136 @@
       "trustNote": "Processed and stored in the EU. Never used to train AI models."
     }
   },
+  "budgets": {
+    "title": "Budgets",
+    "description": "Spending limits per user, role, team, project, or agent — enforced by LiteLLM.",
+    "allBudgets": {
+      "title": "All budgets"
+    },
+    "atRisk": {
+      "title": "Budgets at risk",
+      "allClear": "All budgets on track.",
+      "itemOver": "{scope} · {name} is over budget ({percent}%)",
+      "itemWarn": "{scope} · {name} is at risk ({percent}%)",
+      "counts": "{over} over · {warn} at risk",
+      "partialError": "Some budget data couldn't be loaded."
+    },
+    "bar": {
+      "detailsAria": "Budget details for {name}",
+      "usedOfMax": "{spend} of {max} used",
+      "remainingDuration": "{remaining} remaining · {duration}",
+      "projected": "Projected ≈ {amount} by reset",
+      "projectedOverPace": "Projected ≈ {amount} by reset (over pace)",
+      "resetsOn": "Resets {date}"
+    },
+    "policy": {
+      "loading": "Loading default policy…",
+      "summaryDefault": "Default: {amount} / {period}",
+      "summaryShownInChat": "shown in chat",
+      "summaryNone": "No default budget",
+      "edit": "Edit",
+      "editAria": "Edit default budget policy",
+      "dialogTitle": "Default budget policy",
+      "dialogDescription": "Set the platform-wide default budget for new users and choose whether users see their own budget inside chat.",
+      "sectionDefault": "Default per-user budget",
+      "sectionDefaultDescription": "Applied to users without an explicit budget set.",
+      "sectionVisibility": "Visibility",
+      "sectionVisibilityDescription": "What users see inside the chat composer.",
+      "enableLabel": "Enable a global per-user budget",
+      "amountLabel": "Default budget (USD)",
+      "resetLabel": "Reset period",
+      "showInChatLabel": "Show budget status in chat",
+      "showInChatHelper": "Users see their own budget next to the chat composer.",
+      "save": "Save",
+      "savedTitle": "Settings saved",
+      "saveFailedTitle": "Couldn't save settings",
+      "invalidAmountTitle": "Invalid amount",
+      "invalidAmountDescription": "Set a positive budget to enable the global default.",
+      "amountPlaceholder": "20",
+      "auditUnavailable": "Audit trail unavailable — who and when changes are made isn't recorded yet.",
+      "duration": {
+        "1d": "Daily",
+        "7d": "Weekly",
+        "30d": "Monthly"
+      }
+    },
+    "settings": {
+      "loadError": "Couldn't load the default policy.",
+      "retry": "Retry"
+    },
+    "entityType": {
+      "user": "User",
+      "role": "Role",
+      "team": "Team",
+      "project": "Project",
+      "agent": "Agent"
+    },
+    "entityTypePlural": {
+      "user": "Users",
+      "role": "Roles",
+      "team": "Teams",
+      "project": "Projects",
+      "agent": "Agents"
+    },
+    "entityTypeSwitcherAria": "Entity type",
+    "search": {
+      "placeholderByEmail": "Search users by email…",
+      "placeholderByNameOrEmail": "Search users by name or email…",
+      "placeholderByName": "Search {type} by name…"
+    },
+    "table": {
+      "budgetHeader": "Budget",
+      "resetsHeader": "Resets",
+      "actionsHeader": "Actions",
+      "rowEdit": "Edit",
+      "rowSet": "Set",
+      "rowEditAria": "Edit budget for {name}",
+      "rowSetAria": "Set budget for {name}",
+      "loadError": "Couldn't load budgets.",
+      "loadErrorTitle": "Couldn't load budgets"
+    },
+    "empty": {
+      "noMatchTitle": "No matches",
+      "noMatchDescription": "No entities match \"{term}\".",
+      "noneTitle": "No budgets yet",
+      "noneDescription": "Entities without a budget can spend freely. Set one to add a cap.",
+      "clearSearch": "Clear search"
+    },
+    "bulk": {
+      "apply": "Set budget for {count} {type}",
+      "selectedAcrossPages": "{count, plural, one {# selected (across pages)} other {# selected (across pages)}}"
+    },
+    "editor": {
+      "titleSet": "Set budget",
+      "titleEdit": "Edit budget",
+      "titleBulk": "Set budget",
+      "currentStatus": "Current status",
+      "amountLabel": "Budget (USD)",
+      "amountPlaceholder": "e.g. 20",
+      "resetLabel": "Reset period",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "saveBudget": "Save budget",
+      "applyToAll": "Apply to all",
+      "savedTitle": "Budget saved",
+      "savedDescription": "Budget set for {name}.",
+      "saveFailedTitle": "Failed to save budget",
+      "bulkAppliedTitle": "Budgets applied",
+      "bulkAllSucceeded": "{ok} succeeded.",
+      "bulkPartialSummary": "{ok} succeeded, {failed} failed.",
+      "bulkFailureTitle": "Some budgets couldn't be set",
+      "bulkFailureDescription": "{count, plural, one {# entity failed} other {# entities failed}} — review the per-item details below.",
+      "bulkFailureDone": "Done",
+      "removeBudget": "Remove budget",
+      "removeConfirmTitle": "Remove this budget?",
+      "removeConfirmBody": "{name} will be allowed to spend without a cap until a new budget is set.",
+      "removeConfirmAction": "Remove budget",
+      "removedTitle": "Budget removed",
+      "removedDescription": "Budget removed for {name}.",
+      "removeFailedTitle": "Couldn't remove budget",
+      "unknownError": "Unknown error."
+    }
+  },
   "chat": {
     "agentSelect": {
       "clearSearch": "Clear search",

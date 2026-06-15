@@ -1,7 +1,30 @@
 "use client"
 
-import { useState } from "react"
+/**
+ * BudgetEditor — single or bulk budget upsert form.
+ *
+ * Cross-feature stability: BudgetEditor is consumed ONLY by /budgets today, so
+ * internal refactors are fine but the prop API stays additive (no breaking
+ * changes / no renames). The current additive surface area:
+ *  - `hideRemove?: boolean` — suppresses the inner destructive Remove button
+ *    so the route-local wrapper can own the destructive lifecycle behind
+ *    `<ConfirmDialog>` (rule #5 + budgets.md item 39 — the #1 High UX bug).
+ *  - `onBulkComplete?: (results) => void` — surfaces the per-entity bulk
+ *    results (BulkBudgetResult.error) so the wrapper can render a partial-
+ *    failure detail list (budgets.md ladder item 38). When provided, the
+ *    editor SUPPRESSES its own success/error toast for bulk mode and DEFERS
+ *    `onDone()` to the wrapper.
+ *
+ * All copy is i18n'd via the `budgets.editor.*` and `policy.duration.*`
+ * namespaces (budgets.md §4 — German users were seeing English strings).
+ */
+
 import { Loader2, Trash2, Wallet } from "lucide-react"
+import { useTranslations } from "next-intl"
+import { useState } from "react"
+import { toast } from "sonner"
+
+import { BudgetBar } from "@/components/budget-bar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,9 +35,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { toast } from "sonner"
-import { BudgetBar } from "@/components/budget-bar"
-import { budgetsApi } from "@/lib/api/budgets"
+import { budgetsApi, type BulkBudgetResult } from "@/lib/api/budgets"
 import {
     BUDGET_DURATIONS,
     type BudgetDuration,
@@ -29,14 +50,42 @@ type BudgetEditorProps = {
     /** Called after a successful save/delete so the parent can refresh + close. */
     onDone: () => void
     onCancel: () => void
+    /**
+     * Suppress the editor's own inline destructive Remove button. The route-
+     * local wrapper takes ownership of the destructive path so it can gate
+     * the call behind `<ConfirmDialog>` (the page-doc's #1 High UX fix).
+     */
+    hideRemove?: boolean
+    /**
+     * Suppress the inner "Current status" BudgetBar so the wrapper can render
+     * its own keyboard/touch-reachable variant (BudgetBarWithDetails) —
+     * budgets.md ladder item 32 / responsive.md T7.
+     */
+    hideCurrentStatus?: boolean
+    /**
+     * Bulk-only: receive the per-entity results so the wrapper can render a
+     * "View details" partial-failure list (budgets.md item 38). When passed,
+     * the editor will NOT toast on its own for bulk mode.
+     */
+    onBulkComplete?: (results: BulkBudgetResult[]) => void
 } & (
     | { mode: "single"; entityId: string; initial: BudgetInfo | null; entityIds?: never }
     | { mode: "bulk"; entityIds: string[]; entityId?: never; initial?: never }
 )
 
 export function BudgetEditor(props: BudgetEditorProps) {
-    const { entityType, label, mode, onDone, onCancel } = props
+    const {
+        entityType,
+        label,
+        mode,
+        onDone,
+        onCancel,
+        hideRemove,
+        hideCurrentStatus,
+        onBulkComplete,
+    } = props
     const existing = mode === "single" ? props.initial : null
+    const t = useTranslations("budgets")
 
     const [amount, setAmount] = useState<string>(
         existing?.max_budget != null ? String(existing.max_budget) : "",
@@ -60,21 +109,38 @@ export function BudgetEditor(props: BudgetEditorProps) {
                     max_budget: amountValue,
                     budget_duration: duration,
                 })
-                toast.success("Budget saved", { description: `Budget set for ${label}.` })
+                toast.success(t("editor.savedTitle"), {
+                    description: t("editor.savedDescription", { name: label }),
+                })
+                onDone()
             } else {
                 const results = await budgetsApi.bulkUpsert(entityType, props.entityIds, {
                     max_budget: amountValue,
                     budget_duration: duration,
                 })
-                const ok = results.filter((r) => r.ok).length
-                const failed = results.length - ok
-                ;(failed ? toast.error : toast.success)("Budgets applied", {
-                    description: `${ok} succeeded${failed ? `, ${failed} failed` : ""}.`,
-                })
+                if (onBulkComplete) {
+                    // Defer toast + onDone to the wrapper so it can show the
+                    // per-entity failure detail list (budgets.md item 38).
+                    onBulkComplete(results)
+                } else {
+                    const ok = results.filter((r) => r.ok).length
+                    const failed = results.length - ok
+                    if (failed > 0) {
+                        toast.error(t("editor.bulkAppliedTitle"), {
+                            description: t("editor.bulkPartialSummary", { ok, failed }),
+                        })
+                    } else {
+                        toast.success(t("editor.bulkAppliedTitle"), {
+                            description: t("editor.bulkAllSucceeded", { ok }),
+                        })
+                    }
+                    onDone()
+                }
             }
-            onDone()
         } catch (err) {
-            toast.error("Failed to save budget", { description: err instanceof Error ? err.message : "Unknown error." })
+            toast.error(t("editor.saveFailedTitle"), {
+                description: err instanceof Error ? err.message : t("editor.unknownError"),
+            })
         } finally {
             setSaving(false)
         }
@@ -85,33 +151,45 @@ export function BudgetEditor(props: BudgetEditorProps) {
         setDeleting(true)
         try {
             await budgetsApi.remove(entityType, props.entityId)
-            toast.success("Budget removed", { description: `Budget removed for ${label}.` })
+            toast.success(t("editor.removedTitle"), {
+                description: t("editor.removedDescription", { name: label }),
+            })
             onDone()
         } catch (err) {
-            toast.error("Failed to remove budget", { description: err instanceof Error ? err.message : "Unknown error." })
+            toast.error(t("editor.removeFailedTitle"), {
+                description: err instanceof Error ? err.message : t("editor.unknownError"),
+            })
         } finally {
             setDeleting(false)
         }
     }
 
+    const showInnerRemove =
+        mode === "single" &&
+        existing != null &&
+        existing.max_budget != null &&
+        !hideRemove
+
     return (
         <div className="space-y-5">
-            {mode === "single" && existing && existing.max_budget != null && (
+            {mode === "single" && existing && existing.max_budget != null && !hideCurrentStatus && (
                 <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Current status</Label>
+                    <Label className="text-xs text-muted-foreground">
+                        {t("editor.currentStatus")}
+                    </Label>
                     <BudgetBar budget={existing} />
                 </div>
             )}
 
             <div className="space-y-2">
-                <Label htmlFor="budget-amount">Budget (USD)</Label>
+                <Label htmlFor="budget-amount">{t("editor.amountLabel")}</Label>
                 <Input
                     id="budget-amount"
                     type="number"
                     min={0}
                     step="0.01"
                     inputMode="decimal"
-                    placeholder="e.g. 20"
+                    placeholder={t("editor.amountPlaceholder")}
                     value={amount}
                     disabled={busy}
                     onChange={(e) => setAmount(e.target.value)}
@@ -119,7 +197,7 @@ export function BudgetEditor(props: BudgetEditorProps) {
             </div>
 
             <div className="space-y-2">
-                <Label>Reset period</Label>
+                <Label>{t("editor.resetLabel")}</Label>
                 <Select
                     value={duration}
                     onValueChange={(v) => setDuration(v as BudgetDuration)}
@@ -131,7 +209,7 @@ export function BudgetEditor(props: BudgetEditorProps) {
                     <SelectContent>
                         {BUDGET_DURATIONS.map((d) => (
                             <SelectItem key={d.value} value={d.value}>
-                                {d.label}
+                                {t(`policy.duration.${d.value}`)}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -139,7 +217,7 @@ export function BudgetEditor(props: BudgetEditorProps) {
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t pt-4">
-                {mode === "single" && existing && existing.max_budget != null ? (
+                {showInnerRemove ? (
                     <Button
                         type="button"
                         variant="ghost"
@@ -152,14 +230,14 @@ export function BudgetEditor(props: BudgetEditorProps) {
                         ) : (
                             <Trash2 className="mr-2 h-4 w-4" />
                         )}
-                        Remove
+                        {t("editor.remove")}
                     </Button>
                 ) : (
                     <span />
                 )}
                 <div className="flex items-center gap-3">
                     <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
-                        Cancel
+                        {t("editor.cancel")}
                     </Button>
                     <Button type="button" onClick={handleSave} disabled={busy || !amountValid}>
                         {saving ? (
@@ -167,7 +245,7 @@ export function BudgetEditor(props: BudgetEditorProps) {
                         ) : (
                             <Wallet className="mr-2 h-4 w-4" />
                         )}
-                        {mode === "bulk" ? "Apply to all" : "Save budget"}
+                        {mode === "bulk" ? t("editor.applyToAll") : t("editor.saveBudget")}
                     </Button>
                 </div>
             </div>
