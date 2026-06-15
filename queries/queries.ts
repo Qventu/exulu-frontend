@@ -3262,12 +3262,16 @@ export const GET_ROUTINES_BY_IDS = gql`
 `;
 
 // id → name hydration for analytics breakdown card (3.3.5 — closes the
-// "teams/roles shown as raw ids" gap left after 3.3.2). Mirror the routines
-// shape; rolesPagination + teamsPagination both expose id+name with the
-// FilterRole/FilterTeam id-in filter.
+// "teams/roles shown as raw ids" gap left after 3.3.2). FilterRole and
+// FilterTeam do NOT expose an `id` field (only name/agents/workflows for
+// Role, name/description/... for Team) so we can't id-filter server-side.
+// Fetch the full set instead and match client-side. limit=200 covers any
+// realistic org (revisit when a tenant pushes past it). The $ids variable
+// is accepted but unused, so call sites can pass through the same shape as
+// the other GET_*_BY_IDS queries without branching.
 export const GET_ROLES_BY_IDS = gql`
   query GetRolesByIds($ids: [String]!) {
-    rolesPagination(page: 1, limit: 10, filters: [{ id: { in: $ids } }]) {
+    rolesPagination(page: 1, limit: 200) {
       items {
         id
         name
@@ -3278,7 +3282,7 @@ export const GET_ROLES_BY_IDS = gql`
 
 export const GET_TEAMS_BY_IDS = gql`
   query GetTeamsByIds($ids: [String]!) {
-    teamsPagination(page: 1, limit: 10, filters: [{ id: { in: $ids } }]) {
+    teamsPagination(page: 1, limit: 200) {
       items {
         id
         name
