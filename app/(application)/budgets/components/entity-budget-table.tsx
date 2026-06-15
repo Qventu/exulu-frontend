@@ -119,7 +119,7 @@ export function EntityBudgetTable({
                   event.stopPropagation();
                   onEdit(row.original);
                 }}
-                className="size-11 md:size-8 md:px-3"
+                className="size-11 md:h-8 md:w-auto md:px-3"
                 aria-label={
                   row.original.budget
                     ? t("table.rowEditAria", { name: row.original.label })

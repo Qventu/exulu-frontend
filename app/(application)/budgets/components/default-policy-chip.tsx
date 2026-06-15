@@ -10,6 +10,7 @@
  * `.catch(() => {})`). Opens `<DefaultPolicyDialog>` at L3 for editing.
  */
 
+import { User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
@@ -83,10 +84,17 @@ export function DefaultPolicyChip({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-2 text-sm text-muted-foreground",
+        // Foreground (not muted) + User icon so admins don't gloss over the
+        // per-user scope — this is the most important framing on the page
+        // and the legacy chip read as a footnote.
+        "flex flex-wrap items-center gap-2 text-sm text-foreground",
         className,
       )}
     >
+      <User
+        aria-hidden="true"
+        className="size-4 shrink-0 text-muted-foreground"
+      />
       {summary}
       {canWrite ? (
         <Button
