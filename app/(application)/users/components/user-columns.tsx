@@ -178,7 +178,14 @@ export function useUserColumns(ctx: UserColumnsContext): ColumnDef<User>[] {
           viewerId !== undefined && String(viewerId) === String(user.id);
         const disabled = isViewer || parsed === null;
         return (
-          <div className="flex justify-end">
+          // Stop propagation so clicks on the row-actions menu (trigger and
+          // any item) don't also fire the DataTable row.onClick (which opens
+          // the user detail Sheet — would stack on top of e.g. the reset
+          // password dialog launched from "Reset password").
+          <div
+            className="flex justify-end"
+            onClick={(e) => e.stopPropagation()}
+          >
             <OverflowMenu
               items={[
                 {

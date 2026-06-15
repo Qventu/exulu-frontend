@@ -160,8 +160,16 @@ export function TeamsTab({ createOpen, onCreateOpenChange }: TeamsTabProps) {
           <TeamDetailPanel
             team={item.id === CREATE_SENTINEL ? null : item}
             onSaved={(id) => {
-              onCreateOpenChange(false);
-              setSelectedId(id || null);
+              // On CREATE: close the Sheet entirely (don't auto-edit the
+              // new team — the brief flicker into edit mode reads as "the
+              // sheet stays open"). On UPDATE: keep the panel on the just-
+              // saved team so the user sees their changes persisted.
+              if (createOpen) {
+                onCreateOpenChange(false);
+                setSelectedId(null);
+              } else {
+                setSelectedId(id || null);
+              }
               refetch();
             }}
             onDeleted={() => {

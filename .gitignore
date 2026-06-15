@@ -45,3 +45,4 @@ package/dist/*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+shopify-tokens.json
