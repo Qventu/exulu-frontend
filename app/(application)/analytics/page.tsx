@@ -1,5 +1,10 @@
 import { AnalyticsView } from "./components/analytics-view";
-import { lensFromSearchParams } from "./hooks";
+// Import the pure lens helper from `./lens` (NOT `./hooks`). `hooks.ts` is
+// a "use client" module, and any export from it is a client reference that
+// a server component cannot invoke — calling lensFromSearchParams from
+// here would throw "Attempted to call lensFromSearchParams() from the
+// server". `./lens` has no client directive so it is server-safe.
+import { lensFromSearchParams } from "./lens";
 import { guardRoute } from "@/lib/route-guard";
 
 export const dynamic = "force-dynamic";
