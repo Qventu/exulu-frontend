@@ -44,14 +44,20 @@ export function RunRoutineDialog({ request, onClose }: RunRoutineDialogProps) {
   const tCommon = useTranslations("common");
   const { runRoutine, running } = useRoutineMutations();
 
-  const variables = request?.variables ?? [];
+  // Derive `variables` INSIDE the useMemo so the dep is request?.variables
+  // (the array on the request object — stable per request) rather than the
+  // freshly-created `[]` from `?? []` (a new ref every render → infinite
+  // useEffect→reset→rerender loop, since this Dialog is mounted
+  // unconditionally below as `open={request !== null}`).
   const defaultValues = React.useMemo(() => {
+    const vars = request?.variables ?? [];
     const seed: Record<string, string> = {};
-    for (const v of variables) {
+    for (const v of vars) {
       seed[v] = request?.prefill?.[v] ?? "";
     }
     return seed;
-  }, [variables, request?.prefill]);
+  }, [request?.variables, request?.prefill]);
+  const variables = request?.variables ?? [];
 
   const {
     register,
