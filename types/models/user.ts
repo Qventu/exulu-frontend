@@ -21,6 +21,9 @@ export type UserBudgetView = {
   max_budget: number;
   budget_duration: string | null;
   budget_reset_at: string | null;
+  /** "amount" → show exact USD; "percent" → show only a percentage. Mirrors
+   *  the platform `user_budget_display` setting. */
+  display?: "amount" | "percent";
 };
 
 export type UserWithRole = User & {

@@ -64,6 +64,9 @@ export function DefaultPolicyDialog({
   const [amount, setAmount] = React.useState("");
   const [duration, setDuration] = React.useState<BudgetDuration>("30d");
   const [showInChat, setShowInChat] = React.useState(false);
+  const [displayMode, setDisplayMode] = React.useState<"amount" | "percent">(
+    "amount",
+  );
   const [saving, setSaving] = React.useState(false);
 
   // Hydrate from cached settings every time the dialog opens.
@@ -79,6 +82,9 @@ export function DefaultPolicyDialog({
       (settings?.global_user_budget.budget_duration as BudgetDuration) || "30d",
     );
     setShowInChat(settings?.show_user_budget_in_chat ?? false);
+    setDisplayMode(
+      settings?.user_budget_display === "percent" ? "percent" : "amount",
+    );
   }, [open, settings]);
 
   const handleSave = async () => {
@@ -98,6 +104,7 @@ export function DefaultPolicyDialog({
           budget_duration: duration,
         },
         show_user_budget_in_chat: showInChat,
+        user_budget_display: displayMode,
       });
       toast.success(t("policy.savedTitle"));
       onOpenChange(false);
@@ -211,6 +218,32 @@ export function DefaultPolicyDialog({
             <p className="text-xs text-muted-foreground">
               {t("policy.showInChatHelper")}
             </p>
+
+            <div className="space-y-2 pt-2">
+              <Label htmlFor="policy-display-mode">
+                {t("policy.displayModeLabel")}
+              </Label>
+              <Select
+                value={displayMode}
+                onValueChange={(v) => setDisplayMode(v as "amount" | "percent")}
+                disabled={saving || !showInChat}
+              >
+                <SelectTrigger id="policy-display-mode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="amount">
+                    {t("policy.displayAmount")}
+                  </SelectItem>
+                  <SelectItem value="percent">
+                    {t("policy.displayPercent")}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {t("policy.displayModeHelper")}
+              </p>
+            </div>
           </FormSection>
 
           {/*

@@ -56,7 +56,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { computeBudgetProjection, type BudgetInfo } from "@/lib/budget";
+import { type BudgetInfo } from "@/lib/budget";
 import { cn } from "@/lib/utils";
 
 import {
@@ -158,15 +158,11 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
   }).format(tokenCounts.totalTokens);
   const showUsageChip = usagePct !== null && tokenCounts.totalTokens > 0;
 
-  // ── Budget chip ≥80% (item 73, chip half — blocking half is composer's) ──
+  // Budget snapshot — surfaced in the TopBar chrome (TopBarBudget), no longer
+  // as an in-chat chip. Still threaded into the Usage popover/dialog detail
+  // and used by the composer's over-budget send-block (chat/hooks.ts).
   const budget: BudgetInfo | null =
     (user?.budget as BudgetInfo | null | undefined) ?? null;
-  const budgetProjection = budget ? computeBudgetProjection(budget) : null;
-  const budgetPct = budgetProjection
-    ? Math.round(budgetProjection.percentUsed)
-    : 0;
-  const showBudgetChip = !!budgetProjection && budgetProjection.percentUsed >= 80;
-  const budgetOver = !!budgetProjection?.overBudget;
 
   // ── Files chip (item 64 direct opener) ───────────────────────────────────
   // chat.md row 64: the chip appears only when files exist. count === null
@@ -363,28 +359,6 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
             </Badge>
           ) : null}
 
-          {/* Budget chip — only at ≥80% (item 73, chip half). */}
-          {showBudgetChip ? (
-            <UsagePopover
-              tokenCounts={tokenCounts}
-              maxContextLength={maxContext}
-              budget={budget}
-            >
-              <button
-                type="button"
-                aria-label={t("header.budgetAria", { percent: budgetPct })}
-                className={cn(
-                  CHIP,
-                  "hidden shrink-0 sm:inline-flex",
-                  budgetOver
-                    ? "border-destructive text-destructive"
-                    : "border-warning text-warning",
-                )}
-              >
-                {t("header.budgetChip", { percent: budgetPct })}
-              </button>
-            </UsagePopover>
-          ) : null}
         </div>
 
         {/* Right cluster */}

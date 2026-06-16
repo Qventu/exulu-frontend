@@ -37,6 +37,10 @@ export type BudgetInfo = {
   max_budget: number | null;
   budget_duration: string | null;
   budget_reset_at: string | null;
+  /** End-user display preference (only set on the self-view from /me/budget).
+   *  "percent" → render a percentage instead of the exact USD amount. Absent /
+   *  "amount" → show dollars (admin views always show dollars). */
+  display?: "amount" | "percent";
 };
 
 export type BudgetLevel = "ok" | "warn" | "over";

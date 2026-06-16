@@ -28,6 +28,7 @@ import * as React from "react";
 import { Brand } from "@/components/shell/brand";
 import { openCommandPalette } from "@/components/shell/command-palette";
 import { ConfigContext } from "@/components/shell/config-context";
+import { TopBarBudget } from "@/components/shell/top-bar-budget";
 import { UserMenu, type UserMenuUser } from "@/components/shell/user-menu";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -36,6 +37,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { type BudgetInfo } from "@/lib/budget";
 import { cn } from "@/lib/utils";
 
 /** Keyboard glyphs are not translated copy — they are the shortcut itself. */
@@ -44,12 +46,18 @@ const PALETTE_SHORTCUT = "⌘K";
 export interface TopBarProps {
   /** The signed-in account (email feeds the avatar + identity header). */
   user: UserMenuUser | null | undefined;
+  /**
+   * The caller's live budget snapshot, or null when they have none / the
+   * "Show budget status in chat" admin setting is off. Renders the compact
+   * spend indicator next to the search affordance.
+   */
+  budget?: BudgetInfo | null;
   /** Opens the shared FeedbackDialog (owned by the AppShell composition). */
   onSendFeedback?: () => void;
   className?: string;
 }
 
-export function TopBar({ user, onSendFeedback, className }: TopBarProps) {
+export function TopBar({ user, budget, onSendFeedback, className }: TopBarProps) {
   const t = useTranslations();
   const config = React.useContext(ConfigContext);
   const { toggleSidebar } = useSidebar();
@@ -97,6 +105,8 @@ export function TopBar({ user, onSendFeedback, className }: TopBarProps) {
           {t("navigation.sendFeedback")}
         </Button>
       ) : null}
+
+      <TopBarBudget budget={budget ?? null} />
 
       <button
         type="button"

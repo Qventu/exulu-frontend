@@ -1,6 +1,9 @@
 import { request } from "@/lib/api/client";
 import type { BudgetEntityType, BudgetInfo, BudgetDuration } from "@/lib/budget";
 
+/** How the end-user budget indicator renders: exact USD or percentage only. */
+export type UserBudgetDisplay = "amount" | "percent";
+
 export type BudgetSettings = {
     global_user_budget: {
         enabled: boolean;
@@ -8,6 +11,7 @@ export type BudgetSettings = {
         budget_duration: BudgetDuration | string;
     };
     show_user_budget_in_chat: boolean;
+    user_budget_display: UserBudgetDisplay;
 };
 
 export type BulkBudgetResult = {

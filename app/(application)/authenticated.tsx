@@ -86,7 +86,11 @@ const AppShell = ({
             defaultOpen={sidebarDefaultOpen}
             className="bg-sidebar overflow-clip"
           >
-            <TopBar user={shellUser} onSendFeedback={openFeedback} />
+            <TopBar
+              user={shellUser}
+              budget={user.budget ?? null}
+              onSendFeedback={openFeedback}
+            />
             <AppSidebar user={shellUser} onSendFeedback={openFeedback} />
             <div className="flex min-w-0 flex-1 flex-col md:pt-12">
               <MobileTopbar user={shellUser} />

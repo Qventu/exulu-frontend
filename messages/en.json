@@ -739,7 +739,12 @@
       "remainingDuration": "{remaining} remaining · {duration}",
       "projected": "Projected ≈ {amount} by reset",
       "projectedOverPace": "Projected ≈ {amount} by reset (over pace)",
-      "resetsOn": "Resets {date}"
+      "resetsOn": "Resets {date}",
+      "percentLeft": "{percent}% left",
+      "percentUsed": "{percent}% used",
+      "percentRemainingDuration": "{percent}% left · {duration}",
+      "projectedPercent": "Projected ≈ {percent}% by reset",
+      "projectedPercentOverPace": "Projected ≈ {percent}% by reset (over pace)"
     },
     "policy": {
       "loading": "Loading default policy…",
@@ -757,8 +762,12 @@
       "enableLabel": "Enable a global per-user budget",
       "amountLabel": "Default budget (USD)",
       "resetLabel": "Reset period",
-      "showInChatLabel": "Show budget status in chat",
-      "showInChatHelper": "Users see their own budget next to the chat composer.",
+      "showInChatLabel": "Show budget status to users",
+      "showInChatHelper": "Users see their own budget in the app's top bar.",
+      "displayModeLabel": "Budget display",
+      "displayModeHelper": "Choose whether users see the exact amount spent or only a percentage.",
+      "displayAmount": "Exact amount ($)",
+      "displayPercent": "Percentage only",
       "save": "Save",
       "savedTitle": "Settings saved",
       "saveFailedTitle": "Couldn't save settings",
@@ -2243,6 +2252,10 @@
       },
       "fields": {
         "copyValue": "Copy {label}",
+        "notSet": "Not set",
+        "add": "Add",
+        "noFields": "No fields to show.",
+        "emptyFields": "{count, plural, one {# empty field} other {# empty fields}}",
         "description": "Description",
         "descriptionPlaceholder": "Item description",
         "descriptionTooLong": "Description must not exceed 10,000 characters.",
@@ -2418,6 +2431,7 @@
           "empty": "No sources configured.",
           "error": "Couldn't execute source",
           "noParams": "No parameters configured.",
+          "paramDefault": "default: {value}",
           "noQueues": "No queues configured.",
           "parameters": "Parameters",
           "queued": "Source queued",
@@ -2445,6 +2459,15 @@
       "itemDetail": {
         "copyId": "Copy item ID",
         "externalIdLabel": "ext",
+        "details": "Details",
+        "idLabel": "ID",
+        "status": {
+          "ready": "Ready to search",
+          "notReady": "Not searchable yet",
+          "processing": "Processing…",
+          "hint": "Process this item to make it retrievable.",
+          "readyHint": "Indexed and available to agents."
+        },
         "pipeline": {
           "ingested": "Ingested",
           "processed": "Processed",
@@ -2479,6 +2502,14 @@
         "runInBackground": "Run in background"
       },
       "health": {
+        "retrievable": "retrievable",
+        "embeddedOf": "{embedded} of {total} items embedded",
+        "notYet": "{count} not yet",
+        "summary": {
+          "chunks": "{count} chunks",
+          "stale": "{count} stale (>30d)",
+          "sources": "{count, plural, one {# source} other {# sources}} connected"
+        },
         "flow": {
           "sources": "Sources",
           "processor": "Processor",

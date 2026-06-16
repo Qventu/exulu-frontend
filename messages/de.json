@@ -739,7 +739,12 @@
       "remainingDuration": "{remaining} verbleibend · {duration}",
       "projected": "Prognose ≈ {amount} bis zum Reset",
       "projectedOverPace": "Prognose ≈ {amount} bis zum Reset (über Plan)",
-      "resetsOn": "Zurücksetzung am {date}"
+      "resetsOn": "Zurücksetzung am {date}",
+      "percentLeft": "{percent}% übrig",
+      "percentUsed": "{percent}% genutzt",
+      "percentRemainingDuration": "{percent}% übrig · {duration}",
+      "projectedPercent": "Prognose ≈ {percent}% bis zum Reset",
+      "projectedPercentOverPace": "Prognose ≈ {percent}% bis zum Reset (über Plan)"
     },
     "policy": {
       "loading": "Standardrichtlinie wird geladen…",
@@ -757,8 +762,12 @@
       "enableLabel": "Globales Benutzerbudget aktivieren",
       "amountLabel": "Standardbudget (USD)",
       "resetLabel": "Zurücksetzungsintervall",
-      "showInChatLabel": "Budgetstatus im Chat anzeigen",
-      "showInChatHelper": "Benutzer sehen ihr eigenes Budget neben dem Chat-Eingabefeld.",
+      "showInChatLabel": "Budgetstatus für Benutzer anzeigen",
+      "showInChatHelper": "Benutzer sehen ihr eigenes Budget in der oberen Leiste der App.",
+      "displayModeLabel": "Budgetanzeige",
+      "displayModeHelper": "Legen Sie fest, ob Benutzer den genauen verbrauchten Betrag oder nur einen Prozentwert sehen.",
+      "displayAmount": "Genauer Betrag ($)",
+      "displayPercent": "Nur Prozentwert",
       "save": "Speichern",
       "savedTitle": "Einstellungen gespeichert",
       "saveFailedTitle": "Einstellungen konnten nicht gespeichert werden",
@@ -2243,6 +2252,10 @@
       },
       "fields": {
         "copyValue": "{label} kopieren",
+        "notSet": "Nicht gesetzt",
+        "add": "Hinzufügen",
+        "noFields": "Keine Felder vorhanden.",
+        "emptyFields": "{count, plural, one {# leeres Feld} other {# leere Felder}}",
         "description": "Beschreibung",
         "descriptionPlaceholder": "Elementbeschreibung",
         "descriptionTooLong": "Die Beschreibung darf 10.000 Zeichen nicht überschreiten.",
@@ -2418,6 +2431,7 @@
           "empty": "Keine Quellen konfiguriert.",
           "error": "Quelle konnte nicht ausgeführt werden",
           "noParams": "Keine Parameter konfiguriert.",
+          "paramDefault": "Standard: {value}",
           "noQueues": "Keine Queues konfiguriert.",
           "parameters": "Parameter",
           "queued": "Quelle eingereiht",
@@ -2445,6 +2459,15 @@
       "itemDetail": {
         "copyId": "Eintrags-ID kopieren",
         "externalIdLabel": "ext",
+        "details": "Details",
+        "idLabel": "ID",
+        "status": {
+          "ready": "Bereit zur Suche",
+          "notReady": "Noch nicht durchsuchbar",
+          "processing": "Wird verarbeitet…",
+          "hint": "Verarbeiten Sie diesen Eintrag, um ihn durchsuchbar zu machen.",
+          "readyHint": "Indexiert und für Agenten verfügbar."
+        },
         "pipeline": {
           "ingested": "Erfasst",
           "processed": "Verarbeitet",
@@ -2479,6 +2502,14 @@
         "runInBackground": "Im Hintergrund ausführen"
       },
       "health": {
+        "retrievable": "abrufbar",
+        "embeddedOf": "{embedded} von {total} Einträgen eingebettet",
+        "notYet": "{count} noch nicht",
+        "summary": {
+          "chunks": "{count} Chunks",
+          "stale": "{count} veraltet (>30 T)",
+          "sources": "{count, plural, one {# Quelle} other {# Quellen}} verbunden"
+        },
         "flow": {
           "sources": "Quellen",
           "processor": "Prozessor",
