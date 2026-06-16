@@ -130,6 +130,22 @@ export const GET_CONTEXT_BY_ID = gql`
   }
 `;
 
+// Pipeline-health aggregates (knowledge V2 KB-3/KB-4). Kept separate from
+// CONTEXT_FIELDS so the workspace's context fetch never triggers the
+// (lazy, but non-zero) server-side count queries — only the Pipeline tab's
+// health overview requests these.
+export const GET_CONTEXT_HEALTH = gql`
+  query GetContextHealth($id: ID!) {
+    contextById(id: $id) {
+      id
+      item_count
+      chunk_total
+      stuck_count
+      stale_count
+    }
+  }
+`;
+
 // ---------------------------------------------------------------------------
 // Per-context item operations.
 // ---------------------------------------------------------------------------

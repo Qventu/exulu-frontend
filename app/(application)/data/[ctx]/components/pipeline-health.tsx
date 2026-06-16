@@ -150,8 +150,7 @@ export function PipelineHealth({ context, onInspectItems }: PipelineHealthProps)
         <StatCard
           label={t("workspace.health.stats.totalChunks")}
           value={statValue(health.totalChunks)}
-          caption={t("workspace.health.stats.aggregatePending")}
-          loading={false}
+          loading={health.loading && health.totalChunks == null}
         />
         <StatCard
           label={t("workspace.health.stats.stale")}

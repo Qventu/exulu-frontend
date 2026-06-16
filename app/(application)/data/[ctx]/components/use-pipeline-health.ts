@@ -1,56 +1,30 @@
 "use client";
 
 /**
- * usePipelineHealth — per-context health/stats probes for the Pipeline tab
- * overview (knowledge V2 Phase F3 / product ask #4). All numbers come from
- * cheap `limit: 1` pagination count probes that read `pageInfo.itemCount`
- * (no rows fetched), so this never fans out a heavy scan.
- *
- * Available today (backend already exposes these):
- *  - total active items          — filter { archived: false }
- *  - "not embedded" / stuck items — filter { chunks_count: { lte: 0 } }
- *    (the backend special-cases lte:0 to match NULL OR 0 chunks)
- *  - stale items                  — filter { embeddings_updated_at: { lte } }
+ * usePipelineHealth — per-context health/stats for the Pipeline tab overview
+ * (knowledge V2 Phase F3 / product ask #4). One GET_CONTEXT_HEALTH query
+ * reads the server-computed aggregates (KB-3/KB-4): item_count, chunk_total,
+ * stuck_count (items with 0/NULL chunks), stale_count (embeddings older than
+ * 30d). All over non-archived items, computed lazily server-side.
  *
  * Derived: embedded = total − stuck; retrievablePct = embedded / total.
- *
- * Honest-degradation: TOTAL CHUNKS is not summable cheaply (chunk tables
- * aren't GraphQL-registered; no SUM aggregate today — backlog KB-4), so it is
- * reported as `null` and the UI renders "—". When KB-4 ships, wire it here.
  */
 
 import { useMemo } from "react";
 import { useQuery } from "@apollo/client";
-import * as React from "react";
 
 import type { Context } from "@/types/models/context";
 
-import { GET_ITEMS, PAGINATION_POSTFIX } from "../../queries";
+import { GET_CONTEXT_HEALTH } from "../../queries";
 
-const STALE_DAYS = 30;
-
-interface CountData {
-  [key: string]: { pageInfo: { itemCount: number } };
-}
-
-function useCount(
-  context: string,
-  filters: Record<string, unknown>[],
-  skip = false,
-): { count: number | null; loading: boolean } {
-  const { data, loading } = useQuery<CountData>(GET_ITEMS(context, []), {
-    skip,
-    fetchPolicy: "cache-and-network",
-    variables: {
-      context,
-      page: 1,
-      limit: 1,
-      sort: { field: "updatedAt", direction: "DESC" },
-      filters,
-    },
-  });
-  const count = data?.[context + PAGINATION_POSTFIX]?.pageInfo?.itemCount;
-  return { count: typeof count === "number" ? count : null, loading };
+interface HealthData {
+  contextById: {
+    id: string;
+    item_count: number | null;
+    chunk_total: number | null;
+    stuck_count: number | null;
+    stale_count: number | null;
+  } | null;
 }
 
 export interface PipelineHealth {
@@ -58,34 +32,21 @@ export interface PipelineHealth {
   embeddedItems: number | null;
   stuckItems: number | null;
   staleItems: number | null;
-  /** Honest-degraded until backlog KB-4 (no cheap chunk SUM today). */
   totalChunks: number | null;
   retrievablePct: number | null;
   loading: boolean;
 }
 
 export function usePipelineHealth(context: Context): PipelineHealth {
-  // Stale cutoff is stamped once on mount (Date math is impure during render).
-  const [staleCutoff, setStaleCutoff] = React.useState<string | null>(null);
-  React.useEffect(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - STALE_DAYS);
-    setStaleCutoff(d.toISOString());
-  }, []);
-
-  const total = useCount(context.id, [{ archived: { eq: false } }]);
-  const stuck = useCount(context.id, [
-    { archived: { eq: false }, chunks_count: { lte: 0 } },
-  ]);
-  const stale = useCount(
-    context.id,
-    [{ archived: { eq: false }, embeddings_updated_at: { lte: staleCutoff } }],
-    !staleCutoff,
-  );
+  const { data, loading } = useQuery<HealthData>(GET_CONTEXT_HEALTH, {
+    variables: { id: context.id },
+    fetchPolicy: "cache-and-network",
+  });
 
   return useMemo<PipelineHealth>(() => {
-    const totalItems = total.count;
-    const stuckItems = stuck.count;
+    const agg = data?.contextById;
+    const totalItems = agg?.item_count ?? null;
+    const stuckItems = agg?.stuck_count ?? null;
     const embeddedItems =
       totalItems != null && stuckItems != null
         ? Math.max(0, totalItems - stuckItems)
@@ -100,10 +61,10 @@ export function usePipelineHealth(context: Context): PipelineHealth {
       totalItems,
       embeddedItems,
       stuckItems,
-      staleItems: stale.count,
-      totalChunks: null, // KB-4
+      staleItems: agg?.stale_count ?? null,
+      totalChunks: agg?.chunk_total ?? null,
       retrievablePct,
-      loading: total.loading || stuck.loading || stale.loading,
+      loading,
     };
-  }, [total.count, total.loading, stuck.count, stuck.loading, stale.count, stale.loading]);
+  }, [data, loading]);
 }
