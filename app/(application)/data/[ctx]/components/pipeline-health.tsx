@@ -18,10 +18,11 @@ import { AlertTriangle, ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
-import { StatCard } from "@/components/primitives/stat-card";
 import { StatusDot, type StatusDotStatus } from "@/components/primitives/status-dot";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import type { Context } from "@/types/models/context";
 
 import { usePipelineHealth } from "./use-pipeline-health";
@@ -34,8 +35,8 @@ export interface PipelineHealthProps {
 
 const DASH = "—";
 
-function statValue(n: number | null): string | number {
-  return n == null ? DASH : n;
+function fmt(n: number | null): string {
+  return n == null ? DASH : n.toLocaleString();
 }
 
 export function PipelineHealth({ context, onInspectItems }: PipelineHealthProps) {
@@ -48,43 +49,53 @@ export function PipelineHealth({ context, onInspectItems }: PipelineHealthProps)
   const stuck = health.stuckItems ?? 0;
   const stuckStatus: StatusDotStatus = stuck > 0 ? "warning" : "success";
 
-  // Flow chips — only the stages this context configures.
-  const chips: { key: string; label: string; stat: string; status: StatusDotStatus }[] = [
+  // Single headline percentage (= embedded / total). The bar visualises it;
+  // the caption carries the counts — so no number is shown twice.
+  const pct = health.retrievablePct;
+  const barPct = pct == null ? 0 : Math.max(0, Math.min(100, pct));
+  const barColor =
+    health.totalItems == null
+      ? "bg-muted-foreground/30"
+      : stuck > 0
+        ? "bg-amber-500"
+        : "bg-emerald-500";
+  const loadingHeadline = health.loading && pct == null;
+
+  // Compact secondary summary — the figures the stat-card grid used to carry.
+  const secondary: string[] = [];
+  if (health.totalChunks != null) {
+    secondary.push(t("workspace.health.summary.chunks", { count: fmt(health.totalChunks) }));
+  }
+  if (health.staleItems != null) {
+    secondary.push(t("workspace.health.summary.stale", { count: fmt(health.staleItems) }));
+  }
+  secondary.push(t("workspace.health.summary.sources", { count: sourceCount }));
+
+  // Slim status-only flow strip — the at-a-glance pipeline overview that sits
+  // right above the detailed stage cards. Status dots only, no numbers.
+  const stages: { key: string; label: string; status: StatusDotStatus }[] = [
     {
       key: "sources",
       label: t("workspace.health.flow.sources"),
-      stat: t("workspace.health.flow.sourcesStat", {
-        connected: sourceCount,
-        items: health.totalItems ?? 0,
-      }),
       status: sourceCount > 0 ? "success" : "muted",
     },
   ];
   if (hasProcessor) {
-    chips.push({
+    stages.push({
       key: "processor",
       label: t("workspace.health.flow.processor"),
-      stat: context.processor?.name ?? context.processor?.queue ?? "",
       status: "success",
     });
   }
   if (hasEmbedder) {
-    chips.push({
+    stages.push({
       key: "embedder",
       label: t("workspace.health.flow.embedder"),
-      stat: t("workspace.health.flow.embedderStat", {
-        embedded: health.embeddedItems ?? 0,
-        total: health.totalItems ?? 0,
-      }),
       status: stuckStatus,
     });
-    chips.push({
+    stages.push({
       key: "searchable",
       label: t("workspace.health.flow.searchable"),
-      stat:
-        health.retrievablePct == null
-          ? DASH
-          : t("workspace.health.flow.searchableStat", { pct: health.retrievablePct }),
       status: stuckStatus,
     });
   }
@@ -106,58 +117,61 @@ export function PipelineHealth({ context, onInspectItems }: PipelineHealthProps)
         </Alert>
       )}
 
-      {/* Flow strip — Sources → [Processor] → Embedder → Searchable. */}
-      <div className="flex flex-wrap items-stretch gap-2">
-        {chips.map((chip, i) => (
-          <React.Fragment key={chip.key}>
+      {/* Health header — the "is this KB searchable?" answer at a glance. */}
+      {hasEmbedder ? (
+        <div className="rounded-lg border p-4">
+          <div className="flex items-baseline gap-2">
+            {loadingHeadline ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <span className="text-3xl font-semibold tabular-nums">
+                {pct == null ? DASH : `${pct}%`}
+              </span>
+            )}
+            <span className="text-sm text-muted-foreground">
+              {t("workspace.health.retrievable")}
+            </span>
+          </div>
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className={cn(
+                "h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none",
+                barColor,
+              )}
+              style={{ width: `${barPct}%` }}
+            />
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t("workspace.health.embeddedOf", {
+              embedded: fmt(health.embeddedItems),
+              total: fmt(health.totalItems),
+            })}
+            {stuck > 0
+              ? ` · ${t("workspace.health.notYet", { count: fmt(health.stuckItems) })}`
+              : ""}
+          </p>
+          {secondary.length > 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">{secondary.join(" · ")}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Slim status-only flow strip. */}
+      <div className="flex flex-wrap items-center gap-2">
+        {stages.map((stage, i) => (
+          <React.Fragment key={stage.key}>
             {i > 0 && (
               <ArrowRight
                 aria-hidden="true"
-                className="size-4 shrink-0 self-center text-muted-foreground/40"
+                className="size-4 shrink-0 text-muted-foreground/40"
               />
             )}
-            <div className="flex min-w-[8rem] flex-1 flex-col gap-1 rounded-md border p-3">
-              <span className="text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
-                {chip.label}
-              </span>
-              <span className="truncate text-sm" title={chip.stat}>
-                {chip.stat || "—"}
-              </span>
-              <StatusDot status={chip.status} className="mt-0.5" />
+            <div className="inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5">
+              <StatusDot status={stage.status} />
+              <span className="text-xs font-medium">{stage.label}</span>
             </div>
           </React.Fragment>
         ))}
-      </div>
-
-      {/* Stat cards — the core of the ask. */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatCard
-          label={t("workspace.health.stats.totalItems")}
-          value={statValue(health.totalItems)}
-          loading={health.loading && health.totalItems == null}
-        />
-        <StatCard
-          label={t("workspace.health.stats.embedded")}
-          value={statValue(health.embeddedItems)}
-          loading={health.loading && health.embeddedItems == null}
-        />
-        <StatCard
-          label={t("workspace.health.stats.notEmbedded")}
-          value={statValue(health.stuckItems)}
-          caption={stuck > 0 ? t("workspace.health.stats.notEmbeddedHint") : undefined}
-          loading={health.loading && health.stuckItems == null}
-        />
-        <StatCard
-          label={t("workspace.health.stats.totalChunks")}
-          value={statValue(health.totalChunks)}
-          loading={health.loading && health.totalChunks == null}
-        />
-        <StatCard
-          label={t("workspace.health.stats.stale")}
-          value={statValue(health.staleItems)}
-          caption={t("workspace.health.stats.staleHint")}
-          loading={health.loading && health.staleItems == null}
-        />
       </div>
     </section>
   );

@@ -2,26 +2,29 @@
 
 /**
  * ItemFieldsSection — DetailSection "Fields" body. Default open (the
- * primary surface). Core fields + custom typed fields, with per-row copy
- * buttons (visible, keyboard-accessible) and the "Process" action
- * surfaced inline when the context has a processor.
+ * primary surface).
  *
- * Inventory items: 40, 41 (CopyButton per value — keyboard-accessible),
- * 42 (custom typed fields, view + edit), 45 (Process action shown only
- * when context.processor exists).
+ * View mode delegates to the schema-adaptive ItemFieldsView (file hero +
+ * type-aware tiles + an "empty fields" expander) so the page renders whatever
+ * the ExuluContext defines without a fixed layout. Edit mode keeps the shared
+ * ItemFormFields form. The "Process" action surfaces inline when the context
+ * has a processor.
+ *
+ * Inventory items: 40, 41 (per-value copy, keyboard-accessible — now on the
+ * tiles), 42 (custom typed fields, view + edit), 45 (Process action shown
+ * only when context.processor exists).
  */
 
 import { Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
-import * as React from "react";
 import { type UseFormReturn } from "react-hook-form";
 
-import { CopyButton } from "@/components/primitives/copy-button";
 import { DetailSection } from "@/components/primitives/detail-section";
 import { Button } from "@/components/ui/button";
 import type { Item } from "@EXULU_SHARED/models/item";
 import type { Context } from "@/types/models/context";
 
+import { ItemFieldsView } from "./item-fields-view";
 import { ItemFormFields } from "./item-form-fields";
 
 export interface ItemFieldsSectionProps {
@@ -33,45 +36,25 @@ export interface ItemFieldsSectionProps {
   onProcess?: () => void;
   processPending: boolean;
   form: UseFormReturn<Record<string, unknown>>;
+  /** Enter edit mode focused on a specific field (empty-tile click-to-edit). */
+  onEditField?: (fieldName: string) => void;
+  /** Field to focus once edit mode opens. */
+  focusField?: string | null;
 }
 
 export function ItemFieldsSection({
   context,
-  item: _item,
+  item,
   draft,
   editing,
   onDraftChange,
   onProcess,
   processPending,
   form: _form,
+  onEditField,
+  focusField,
 }: ItemFieldsSectionProps) {
   const t = useTranslations("knowledge");
-
-  const fieldEntries: { label: string; value: string }[] = React.useMemo(() => {
-    const out: { label: string; value: string }[] = [];
-    if (draft.name) {
-      out.push({ label: t("workspace.fields.name"), value: draft.name });
-    }
-    if (draft.external_id) {
-      out.push({
-        label: t("workspace.fields.externalId"),
-        value: draft.external_id,
-      });
-    }
-    if (draft.description?.trim()) {
-      out.push({
-        label: t("workspace.fields.description"),
-        value: draft.description,
-      });
-    }
-    if (Array.isArray(draft.tags) && draft.tags.length > 0) {
-      out.push({
-        label: t("workspace.fields.tags"),
-        value: draft.tags.join(", "),
-      });
-    }
-    return out;
-  }, [draft.name, draft.external_id, draft.description, draft.tags, t]);
 
   return (
     <DetailSection
@@ -92,38 +75,24 @@ export function ItemFieldsSection({
         ) : null
       }
     >
-      {/* View-mode copy actions surface above the form when not editing.
-          Description/tags can be longer than name/external_id, so values
-          truncate with max-w + truncate so long strings don't blow out the
-          chip row; the full value is still copied verbatim. */}
-      {!editing && fieldEntries.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
-          {fieldEntries.map((e) => (
-            <div key={e.label} className="flex items-center gap-1 text-xs">
-              <span className="text-muted-foreground">{e.label}:</span>
-              <code
-                className="block max-w-[260px] truncate rounded bg-muted px-1.5 py-0.5"
-                title={e.value}
-              >
-                {e.value}
-              </code>
-              <CopyButton
-                value={e.value}
-                label={t("workspace.fields.copyValue", { label: e.label })}
-                size="icon"
-                className="size-11 md:size-6"
-              />
-            </div>
-          ))}
-        </div>
+      {/* View mode renders the schema-adaptive field view (hero + typed
+          tiles); edit mode keeps the shared form. */}
+      {editing ? (
+        <ItemFormFields
+          context={context}
+          data={draft}
+          newItem={false}
+          editing={editing}
+          onDataChange={onDraftChange}
+          focusField={focusField}
+        />
+      ) : (
+        <ItemFieldsView
+          context={context}
+          values={item}
+          onEditField={onEditField}
+        />
       )}
-      <ItemFormFields
-        context={context}
-        data={draft}
-        newItem={false}
-        editing={editing}
-        onDataChange={onDraftChange}
-      />
     </DetailSection>
   );
 }

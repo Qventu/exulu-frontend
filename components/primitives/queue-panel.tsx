@@ -131,6 +131,13 @@ export interface QueuePanelProps {
    * confirm. Defaults to true (knowledge + evals both want it).
    */
   enableDeleteOriginalAfterRetry?: boolean;
+  /**
+   * Render without the surrounding Card chrome + redundant "Queue: {name}"
+   * heading — for when the panel is already nested inside another card (e.g.
+   * a pipeline stage's "Jobs" expander). The pause/drain controls move to a
+   * compact right-aligned toolbar. Defaults to false (standalone card).
+   */
+  embedded?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -174,6 +181,7 @@ export function QueuePanel({
   retryJob,
   canWrite,
   enableDeleteOriginalAfterRetry = true,
+  embedded = false,
 }: QueuePanelProps) {
   const t = useTranslations("common");
   const isMobile = useIsMobile();
@@ -358,33 +366,38 @@ export function QueuePanel({
   /* ------- loading ------- */
 
   if (loadingQueue && loadingJobs) {
-    return (
+    const loader = (
+      <div className="flex items-center justify-center py-8">
+        <Loader2
+          aria-hidden="true"
+          className="size-6 animate-spin text-muted-foreground"
+        />
+      </div>
+    );
+    return embedded ? (
+      loader
+    ) : (
       <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-center py-8">
-            <Loader2
-              aria-hidden="true"
-              className="size-6 animate-spin text-muted-foreground"
-            />
-          </div>
-        </CardContent>
+        <CardContent className="p-6">{loader}</CardContent>
       </Card>
     );
   }
 
   return (
     <TooltipProvider>
-      <Card>
-        <CardHeader>
+      <Card className={cn(embedded && "border-0 bg-transparent shadow-none")}>
+        <CardHeader className={cn(embedded && "px-0 pb-0 pt-0")}>
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle className="text-base">
-                {t("queue")}: {label}
-              </CardTitle>
-              <CardDescription>{t("queueDescription")}</CardDescription>
-            </div>
+            {!embedded && (
+              <div>
+                <CardTitle className="text-base">
+                  {t("queue")}: {label}
+                </CardTitle>
+                <CardDescription>{t("queueDescription")}</CardDescription>
+              </div>
+            )}
             {queue && canWrite ? (
-              <div className="flex flex-wrap gap-2">
+              <div className={cn("flex flex-wrap gap-2", embedded && "md:ml-auto")}>
                 <Button
                   variant="outline"
                   size="sm"
@@ -414,7 +427,7 @@ export function QueuePanel({
           </div>
         </CardHeader>
 
-        <CardContent className="flex flex-col gap-6">
+        <CardContent className={cn("flex flex-col gap-6", embedded && "px-0 pb-0 pt-4")}>
           {/* Queue health + tabs */}
           {queue ? (
             <div className="flex flex-col gap-4 rounded-lg bg-muted/50 p-4">

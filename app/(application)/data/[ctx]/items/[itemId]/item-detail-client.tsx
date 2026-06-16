@@ -22,7 +22,7 @@
  */
 
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { Archive, Database, PackageOpen, Save, Trash2, XCircle } from "lucide-react";
+import { Archive, Database, Info, PackageOpen, Save, Trash2, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -38,6 +38,11 @@ import { PageHeader } from "@/components/primitives/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadingStates } from "@/components/loading-states";
 import type { Context } from "@/types/models/context";
@@ -46,6 +51,7 @@ import { useItemDetail } from "../../../hooks";
 import { ItemAccessSection } from "../../components/item-access-section";
 import { ItemCalculatedSection } from "../../components/item-calculated-section";
 import { ItemEmbeddingsSection } from "../../components/item-embeddings-section";
+import { ItemDocumentHero } from "../../components/item-fields-view";
 import { ItemFieldsSection } from "../../components/item-fields-section";
 import { useItemEditor } from "../../components/use-item-editor";
 import { ItemPipelineStatus } from "./item-pipeline-status";
@@ -53,6 +59,33 @@ import { ItemPipelineStatus } from "./item-pipeline-status";
 export interface ItemDetailClientProps {
   context: Context;
   itemId: string;
+}
+
+function DetailRow({
+  label,
+  value,
+  copyLabel,
+}: {
+  label: string;
+  value: string;
+  copyLabel: string;
+}) {
+  return (
+    <div className="space-y-0.5">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="flex items-start gap-1">
+        <code className="min-w-0 flex-1 break-all font-mono text-xs">
+          {value}
+        </code>
+        <CopyButton
+          value={value}
+          label={copyLabel}
+          size="icon"
+          className="size-6 shrink-0"
+        />
+      </div>
+    </div>
+  );
 }
 
 export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
@@ -71,6 +104,21 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
     refetch,
     onDeleted: () => router.push(`/data/${context.id}?tab=items`),
   });
+
+  // Click-to-edit: an empty field tile opens edit mode focused on that field.
+  const [focusField, setFocusField] = React.useState<string | null>(null);
+  const handleEditField = React.useCallback(
+    (name: string) => {
+      setFocusField(name);
+      editor.setEditing(true);
+    },
+    [editor],
+  );
+  // Clear the focus target whenever edit mode closes, so the plain Edit button
+  // doesn't re-focus a previously clicked field.
+  React.useEffect(() => {
+    if (!editor.editing) setFocusField(null);
+  }, [editor.editing]);
 
   const backHref = `/data/${context.id}?tab=items`;
 
@@ -178,26 +226,43 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
     </div>
   );
 
+  // Technical identifiers (UUID, external id / source path) are tucked behind
+  // a quiet "Details" popover so the header stays clean for data-stewards;
+  // power users expand to copy them.
   const idLine = (
-    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <span className="inline-flex items-center gap-1">
-        <code className="font-mono text-xs">{item.id}</code>
-        <CopyButton
-          value={item.id ?? ""}
-          label={t("workspace.itemDetail.copyId")}
-          size="icon"
-          className="size-6"
-        />
-      </span>
-      {item.external_id ? (
-        <span className="text-xs">
-          {t("workspace.itemDetail.externalIdLabel")}{" "}
-          <code className="font-mono">{item.external_id}</code>
-        </span>
-      ) : null}
+    <span className="flex flex-wrap items-center gap-2">
       {item.archived ? (
         <Badge variant="outline">{t("workspace.panel.archived")}</Badge>
       ) : null}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 gap-1 px-1.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <Info aria-hidden="true" className="size-3.5" />
+            {t("workspace.itemDetail.details")}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-80 space-y-3">
+          <DetailRow
+            label={t("workspace.itemDetail.idLabel")}
+            value={item.id ?? ""}
+            copyLabel={t("workspace.itemDetail.copyId")}
+          />
+          {item.external_id ? (
+            <DetailRow
+              label={t("workspace.fields.externalId")}
+              value={item.external_id}
+              copyLabel={t("workspace.fields.copyValue", {
+                label: t("workspace.fields.externalId"),
+              })}
+            />
+          ) : null}
+        </PopoverContent>
+      </Popover>
     </span>
   );
 
@@ -228,8 +293,10 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
 
         <div className="border-t" />
 
-        {/* Sections — reused verbatim from the panel. */}
+        {/* Sections. The promoted document hero (first file field, if any)
+            leads the content; renders nothing for file-less contexts. */}
         <div className="space-y-4">
+          <ItemDocumentHero context={context} values={item} />
           <ItemFieldsSection
             context={context}
             item={item}
@@ -239,6 +306,8 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
             onProcess={context.processor ? editor.triggerProcess : undefined}
             processPending={editor.processPending}
             form={editor.form}
+            onEditField={handleEditField}
+            focusField={focusField}
           />
           <ItemEmbeddingsSection
             context={context}

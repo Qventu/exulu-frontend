@@ -48,6 +48,9 @@ export interface ItemFormFieldsProps {
   newItem: boolean;
   editing: boolean;
   onDataChange: (data: Partial<Item>) => void;
+  /** When set (and editing), focus + scroll to this field's input on mount.
+   *  Used by the detail page's "click an empty field to edit it" affordance. */
+  focusField?: string | null;
 }
 
 export function ItemFormFields({
@@ -56,14 +59,27 @@ export function ItemFormFields({
   editing,
   newItem,
   onDataChange,
+  focusField,
 }: ItemFormFieldsProps) {
   const t = useTranslations("knowledge");
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = React.useState<{
     name: string;
     label: string;
     value: string;
     mode: "text" | "markdown";
   } | null>(null);
+
+  // Jump straight to the requested field when edit mode opens from a tile.
+  React.useEffect(() => {
+    if (!editing || !focusField) return;
+    const el = containerRef.current?.querySelector<HTMLElement>(
+      `[data-field="${CSS.escape(focusField)}"] input, [data-field="${CSS.escape(focusField)}"] textarea`,
+    );
+    if (!el) return;
+    el.focus();
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [editing, focusField]);
 
   const handleTags = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const value = e.currentTarget.value;
@@ -83,9 +99,9 @@ export function ItemFormFields({
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={containerRef} className="flex flex-col gap-4">
       {/* Name */}
-      <Row label={t("workspace.fields.name")}>
+      <Row label={t("workspace.fields.name")} fieldName="name">
         {editing ? (
           <Input
             type="text"
@@ -99,7 +115,7 @@ export function ItemFormFields({
       </Row>
 
       {/* Tags */}
-      <Row label={t("workspace.fields.tags")}>
+      <Row label={t("workspace.fields.tags")} fieldName="tags">
         {editing && (
           <Input
             type="text"
@@ -128,7 +144,7 @@ export function ItemFormFields({
       </Row>
 
       {/* Description */}
-      <Row label={t("workspace.fields.description")}>
+      <Row label={t("workspace.fields.description")} fieldName="description">
         {editing ? (
           <div className="relative">
             <Textarea
@@ -164,7 +180,7 @@ export function ItemFormFields({
       </Row>
 
       {/* External ID */}
-      <Row label={t("workspace.fields.externalId")}>
+      <Row label={t("workspace.fields.externalId")} fieldName="external_id">
         {editing ? (
           <Input
             type="text"
@@ -187,7 +203,7 @@ export function ItemFormFields({
         const value = (data as Record<string, unknown>)[field.name];
 
         return (
-          <Row key={index} label={field.label}>
+          <Row key={index} label={field.label} fieldName={field.name}>
             {!editing ? (
               <ReadValue field={field} value={value} />
             ) : (
@@ -235,13 +251,18 @@ export function ItemFormFields({
 
 function Row({
   label,
+  fieldName,
   children,
 }: {
   label: string;
+  fieldName?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-1 md:grid-cols-[140px_1fr] md:items-start md:gap-3">
+    <div
+      data-field={fieldName}
+      className="grid grid-cols-1 gap-1 md:grid-cols-[140px_1fr] md:items-start md:gap-3"
+    >
       <div className="text-sm font-medium capitalize text-muted-foreground md:pt-2">
         {label}
       </div>

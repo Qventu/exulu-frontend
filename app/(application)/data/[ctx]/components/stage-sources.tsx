@@ -100,6 +100,7 @@ export function StageSources({ context, autoOpenJobs }: StageSourcesProps) {
     return (
       <StageCard
         stage="sources"
+        icon={Boxes}
         title={t("workspace.pipeline.sources.title")}
         description={t("workspace.pipeline.sources.description")}
       >
@@ -118,6 +119,7 @@ export function StageSources({ context, autoOpenJobs }: StageSourcesProps) {
         <StageCard
           key={source.id}
           stage="sources"
+          icon={Boxes}
           title={source.name}
           description={source.description ?? undefined}
           queue={source.config.queue ?? undefined}
@@ -167,14 +169,27 @@ export function StageSources({ context, autoOpenJobs }: StageSourcesProps) {
           }
           configuration={
             (source.config.params ?? []).length > 0 ? (
-              <dl className="grid grid-cols-1 gap-2 text-xs md:grid-cols-[200px_1fr]">
+              <dl className="space-y-3">
                 {(source.config.params ?? []).map((p) => (
-                  <React.Fragment key={p.name}>
-                    <dt className="font-medium text-muted-foreground">
-                      {p.name}
+                  <div key={p.name} className="space-y-0.5">
+                    <dt className="flex flex-wrap items-center gap-2">
+                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                        {p.name}
+                      </code>
+                      {p.default ? (
+                        <span className="text-xs text-muted-foreground">
+                          {t("workspace.pipeline.sources.paramDefault", {
+                            value: p.default,
+                          })}
+                        </span>
+                      ) : null}
                     </dt>
-                    <dd>{p.description ?? "—"}</dd>
-                  </React.Fragment>
+                    {p.description ? (
+                      <dd className="text-xs text-muted-foreground">
+                        {p.description}
+                      </dd>
+                    ) : null}
+                  </div>
                 ))}
               </dl>
             ) : (
@@ -189,6 +204,7 @@ export function StageSources({ context, autoOpenJobs }: StageSourcesProps) {
               <QueuePanel
                 queueName={source.config.queue}
                 displayName={source.name}
+                embedded
                 canWrite={true}
                 enableDeleteOriginalAfterRetry={true}
                 retryJob={(job) => {

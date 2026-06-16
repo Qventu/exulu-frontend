@@ -10,7 +10,7 @@
  * "Configuration" + "Jobs (n failed)" — the latter mounts QueuePanel.
  */
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
@@ -31,6 +31,8 @@ import { cn } from "@/lib/utils";
 export interface StageCardProps {
   /** Stage role — for icon + a11y; styling is identical. */
   stage: "sources" | "processor" | "embedder";
+  /** Leading stage icon (ties the card to the flow strip above). */
+  icon?: LucideIcon;
   /** Section heading rendered in the header. */
   title: string;
   /** Optional description rendered below the title. */
@@ -62,6 +64,7 @@ export interface StageCardProps {
 
 export function StageCard({
   stage: _stage,
+  icon: Icon,
   title,
   description,
   queue,
@@ -88,19 +91,26 @@ export function StageCard({
 
   return (
     <Card ref={cardRef} className={cn("border-border bg-card", className)}>
-      <CardHeader className="flex flex-row items-start justify-between gap-3 pb-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-medium">{title}</h3>
-            {queue && (
-              <Badge variant="outline" className="font-mono text-xs">
-                {queue}
-              </Badge>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 border-b pb-4">
+        <div className="flex min-w-0 items-start gap-3">
+          {Icon && (
+            <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border bg-muted/40 text-muted-foreground">
+              <Icon aria-hidden="true" className="size-4" />
+            </span>
+          )}
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-medium">{title}</h3>
+              {queue && (
+                <Badge variant="outline" className="font-mono text-xs">
+                  {queue}
+                </Badge>
+              )}
+            </div>
+            {description && (
+              <p className="text-sm text-muted-foreground">{description}</p>
             )}
           </div>
-          {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {primaryAction}
@@ -112,61 +122,69 @@ export function StageCard({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 pt-0">
+      <CardContent className="space-y-4 pt-4">
         {children}
-        {meta && <div className="text-sm">{meta}</div>}
-        {configuration && (
-          <Collapsible open={configOpen} onOpenChange={setConfigOpen}>
-            <CollapsibleTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-full justify-between"
-              >
-                {t("workspace.pipeline.configuration")}
-                <ChevronDown
-                  aria-hidden="true"
-                  className={cn(
-                    "size-4 transition-transform",
-                    configOpen ? "" : "-rotate-90",
-                  )}
-                />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3">
-              {configuration}
-            </CollapsibleContent>
-          </Collapsible>
+        {meta && (
+          <div className="rounded-md border bg-muted/20 px-3 py-2.5 text-sm">
+            {meta}
+          </div>
         )}
-        {jobs && (
-          <Collapsible open={jobsOpen} onOpenChange={setJobsOpen}>
-            <CollapsibleTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-full justify-between"
-              >
-                <span className="flex items-center gap-2">
-                  {t("workspace.pipeline.jobs")}
-                  {typeof jobsFailedCount === "number" && jobsFailedCount > 0 && (
-                    <Badge variant="destructive" className="text-xs">
-                      {jobsFailedCount}
-                    </Badge>
-                  )}
-                </span>
-                <ChevronDown
-                  aria-hidden="true"
-                  className={cn(
-                    "size-4 transition-transform",
-                    jobsOpen ? "" : "-rotate-90",
-                  )}
-                />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3">{jobs}</CollapsibleContent>
-          </Collapsible>
+        {(configuration || jobs) && (
+          <div className="space-y-1 border-t pt-2">
+            {configuration && (
+              <Collapsible open={configOpen} onOpenChange={setConfigOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-between"
+                  >
+                    {t("workspace.pipeline.configuration")}
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={cn(
+                        "size-4 transition-transform",
+                        configOpen ? "" : "-rotate-90",
+                      )}
+                    />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-3">
+                  {configuration}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+            {jobs && (
+              <Collapsible open={jobsOpen} onOpenChange={setJobsOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-between"
+                  >
+                    <span className="flex items-center gap-2">
+                      {t("workspace.pipeline.jobs")}
+                      {typeof jobsFailedCount === "number" && jobsFailedCount > 0 && (
+                        <Badge variant="destructive" className="text-xs">
+                          {jobsFailedCount}
+                        </Badge>
+                      )}
+                    </span>
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={cn(
+                        "size-4 transition-transform",
+                        jobsOpen ? "" : "-rotate-90",
+                      )}
+                    />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-3">{jobs}</CollapsibleContent>
+              </Collapsible>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>

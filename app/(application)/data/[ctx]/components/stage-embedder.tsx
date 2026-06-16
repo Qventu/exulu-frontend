@@ -17,7 +17,7 @@
  */
 
 import { useMutation, useQuery } from "@apollo/client";
-import { Play, Trash2 } from "lucide-react";
+import { Play, Sparkles, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
@@ -114,6 +114,7 @@ export function StageEmbedder({ context, autoOpenJobs }: StageEmbedderProps) {
     return (
       <StageCard
         stage="embedder"
+        icon={Sparkles}
         title={t("workspace.pipeline.embedder.title")}
         description={t("workspace.pipeline.embedder.description")}
       >
@@ -130,6 +131,7 @@ export function StageEmbedder({ context, autoOpenJobs }: StageEmbedderProps) {
     <>
       <StageCard
         stage="embedder"
+        icon={Sparkles}
         title={embedder.name ?? t("workspace.pipeline.embedder.title")}
         description={t("workspace.pipeline.embedder.identity", {
           id: embedder.id,
@@ -228,6 +230,7 @@ export function StageEmbedder({ context, autoOpenJobs }: StageEmbedderProps) {
             <QueuePanel
               queueName={embedder.queue}
               displayName={embedder.name ?? undefined}
+              embedded
               canWrite={true}
               enableDeleteOriginalAfterRetry={true}
               retryJob={(job) => {

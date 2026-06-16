@@ -66,12 +66,7 @@ export function PipelineTab({ context }: PipelineTabProps) {
   return (
     <div className="flex flex-col gap-8">
       <PipelineHealth context={context} onInspectItems={goToItems} />
-      <div className="relative flex flex-col gap-6">
-        {/* Muted connecting line behind the stages */}
-        <div
-          aria-hidden="true"
-          className="absolute left-6 top-6 bottom-6 hidden w-px bg-muted md:block"
-        />
+      <div className="flex flex-col gap-6">
         <StageSources context={context} autoOpenJobs={stageParam === "sources"} />
         <StageProcessor context={context} autoOpenJobs={stageParam === "processor"} />
         <StageEmbedder context={context} autoOpenJobs={stageParam === "embedder"} />

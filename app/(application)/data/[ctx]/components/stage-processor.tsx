@@ -14,7 +14,7 @@
  */
 
 import { useMutation } from "@apollo/client";
-import { CheckCircle2, CircleSlash, Play } from "lucide-react";
+import { CheckCircle2, CircleSlash, Play, Wand2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
@@ -54,6 +54,7 @@ export function StageProcessor({ context, autoOpenJobs }: StageProcessorProps) {
     return (
       <StageCard
         stage="processor"
+        icon={Wand2}
         title={t("workspace.pipeline.processor.title")}
         description={t("workspace.pipeline.processor.description")}
       >
@@ -73,6 +74,7 @@ export function StageProcessor({ context, autoOpenJobs }: StageProcessorProps) {
     <>
       <StageCard
         stage="processor"
+        icon={Wand2}
         title={p.name ?? t("workspace.pipeline.processor.title")}
         description={p.description ?? undefined}
         queue={p.queue ?? undefined}
@@ -142,6 +144,7 @@ export function StageProcessor({ context, autoOpenJobs }: StageProcessorProps) {
             <QueuePanel
               queueName={p.queue}
               displayName={p.name ?? undefined}
+              embedded
               canWrite={true}
               enableDeleteOriginalAfterRetry={true}
               retryJob={(job) => {
