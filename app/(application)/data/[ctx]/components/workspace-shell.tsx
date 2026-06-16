@@ -24,14 +24,17 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Context } from "@/types/models/context";
 
+import { ContextEntityTypes } from "../../components/entity-types";
 import { ItemsTab } from "./items-tab";
 import { NewItemDialog } from "./new-item-dialog";
 import { PipelineTab } from "./pipeline-tab";
 
+type WorkspaceTab = "items" | "pipeline" | "entities";
+
 export interface WorkspaceShellProps {
   context: Context;
   searchParams: {
-    tab?: "items" | "pipeline";
+    tab?: WorkspaceTab;
     view?: "active" | "archived";
     item?: string;
     page?: string;
@@ -48,13 +51,17 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
   const pathname = usePathname();
   const params = useSearchParams();
 
-  // Tab — Items default. Pipeline only renders (and polls) when active.
-  const tab: "items" | "pipeline" =
-    searchParams.tab === "pipeline" ? "pipeline" : "items";
+  // Tab — Items default. Pipeline/Entities only render (and poll) when active.
+  const tab: WorkspaceTab =
+    searchParams.tab === "pipeline"
+      ? "pipeline"
+      : searchParams.tab === "entities"
+        ? "entities"
+        : "items";
 
   const [newItemOpen, setNewItemOpen] = React.useState(false);
 
-  const setTab = (next: "items" | "pipeline") => {
+  const setTab = (next: WorkspaceTab) => {
     const url = new URLSearchParams(params?.toString() ?? "");
     if (next === "items") url.delete("tab");
     else url.set("tab", next);
@@ -86,16 +93,16 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
           }
         />
 
-        <Tabs
-          value={tab}
-          onValueChange={(v) => setTab(v as "items" | "pipeline")}
-        >
+        <Tabs value={tab} onValueChange={(v) => setTab(v as WorkspaceTab)}>
           <TabsList>
             <TabsTrigger value="items">
               {t("workspace.tabs.items")}
             </TabsTrigger>
             <TabsTrigger value="pipeline">
               {t("workspace.tabs.pipeline")}
+            </TabsTrigger>
+            <TabsTrigger value="entities">
+              {t("workspace.tabs.entities")}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -115,8 +122,10 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
             selectedItemId={searchParams.item ?? null}
             onOpenCreate={() => setNewItemOpen(true)}
           />
-        ) : (
+        ) : tab === "pipeline" ? (
           <PipelineTab context={context} />
+        ) : (
+          <ContextEntityTypes context={context.id} expand actions />
         )}
       </div>
 

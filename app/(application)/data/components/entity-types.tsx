@@ -13,7 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DotsHorizontalIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { Plus, Sparkles } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -61,8 +61,6 @@ type EntityTypeRow = {
 };
 
 export function ContextEntityTypes(props: EntityTypesProps) {
-    const { toast } = useToast();
-
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editing, setEditing] = useState<EntityTypeRow | null>(null);
     const [formName, setFormName] = useState("");
@@ -91,27 +89,27 @@ export function ContextEntityTypes(props: EntityTypesProps) {
         onCompleted: () => {
             refetch();
             refetchStale();
-            toast({ title: "Entity type created", description: "The entity type was added." });
+            toast.success("Entity type created", { description: "The entity type was added." });
         },
-        onError: (e) => toast({ title: "Error creating entity type", description: e.message }),
+        onError: (e) => toast.error("Error creating entity type", { description: e.message }),
     });
 
     const [updateEntityType] = useMutation(UPDATE_ENTITY_TYPE, {
         onCompleted: () => {
             refetch();
             refetchStale();
-            toast({ title: "Entity type updated", description: "The entity type was updated." });
+            toast.success("Entity type updated", { description: "The entity type was updated." });
         },
-        onError: (e) => toast({ title: "Error updating entity type", description: e.message }),
+        onError: (e) => toast.error("Error updating entity type", { description: e.message }),
     });
 
     const [deleteEntityType] = useMutation(DELETE_ENTITY_TYPE, {
         onCompleted: () => {
             refetch();
             refetchStale();
-            toast({ title: "Entity type deleted", description: "The entity type was removed." });
+            toast.success("Entity type deleted", { description: "The entity type was removed." });
         },
-        onError: (e) => toast({ title: "Error deleting entity type", description: e.message }),
+        onError: (e) => toast.error("Error deleting entity type", { description: e.message }),
     });
 
     const [backfillEntities, backfillResult] = useMutation<{
@@ -120,14 +118,13 @@ export function ContextEntityTypes(props: EntityTypesProps) {
         onCompleted: (output) => {
             const result = output[`${props.context}_itemsBackfillEntities`];
             refetchStale();
-            toast({
-                title: "Backfill complete",
+            toast.success("Backfill complete", {
                 description: `Processed ${result?.processed ?? 0} item(s)${
                     result?.skipped ? `, ${result.skipped} skipped (cap reached)` : ""
                 }.`,
             });
         },
-        onError: (e) => toast({ title: "Error running backfill", description: e.message }),
+        onError: (e) => toast.error("Error running backfill", { description: e.message }),
     });
 
     const openCreate = () => {
@@ -148,7 +145,7 @@ export function ContextEntityTypes(props: EntityTypesProps) {
 
     const handleSave = async () => {
         if (!formName.trim()) {
-            toast({ title: "Name required", description: "Please provide an entity type name." });
+            toast.error("Name required", { description: "Please provide an entity type name." });
             return;
         }
         if (editing) {
