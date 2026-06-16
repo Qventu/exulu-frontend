@@ -2012,7 +2012,7 @@ export const GET_PROJECT_BY_ID = gql`
 
 export const UPDATE_USER_FAVOURITE_PROJECTS = gql`
   mutation UpdateUserFavouriteProjects($id: ID!, $favourite_projects: JSON) {
-    userUpdateById(input: { favourite_projects: $favourite_projects }, filter: { id: $id }) {
+    usersUpdateOne(input: { favourite_projects: $favourite_projects }, filter: { id: $id }) {
       item {
         id
         favourite_projects

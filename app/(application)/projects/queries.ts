@@ -117,8 +117,8 @@ export const DELETE_PROJECT = gql`
 
 /** Verbatim copy of UPDATE_USER_FAVOURITE_PROJECTS. */
 export const UPDATE_USER_FAVOURITE_PROJECTS = gql`
-  mutation UpdateUserFavouriteProjects($id: ID!, $favourite_projects: JSON) {
-    userUpdateById(input: { favourite_projects: $favourite_projects }, filter: { id: $id }) {
+  mutation UpdateUserFavouriteProjects($id: Float!, $favourite_projects: JSON) {
+    usersUpdateOne(input: { favourite_projects: $favourite_projects }, where: { id: { eq: $id } }) {
       item {
         id
         favourite_projects

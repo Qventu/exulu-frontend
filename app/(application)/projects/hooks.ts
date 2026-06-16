@@ -178,7 +178,7 @@ export function useFavoriteProjects() {
         const { data: result } = await updateFavorites({
           variables: { id: userId, favourite_projects: next },
         });
-        const confirmed = result?.userUpdateById?.item?.favourite_projects;
+        const confirmed = result?.usersUpdateOne?.item?.favourite_projects;
         // Adopt the server-confirmed array — unless a newer toggle is still
         // in flight (its optimistic state supersedes this response).
         if (Array.isArray(confirmed) && favoriteTogglesInFlight === 1) {
