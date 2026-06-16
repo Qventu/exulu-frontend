@@ -5,8 +5,11 @@
  * button with count, Active|Archived segmented control) and the ListDetail
  * that pairs ItemsTable (list) with ItemPanel (detail).
  *
- * Per knowledge.md the items workspace is "table is the workhorse, panel
- * is metadata" → `detailEmphasis="compact"` (2026-06-13 ListDetail QA).
+ * `detailEmphasis="primary"` — items carry substantive content (custom
+ * typed fields, description, tags, calculated fields, embeddings section,
+ * access section). The earlier "compact" call (knowledge.md 2026-06-13
+ * QA: "panel is metadata") capped the pane at 24-28rem and was too
+ * narrow to render most items. Override per user feedback 2026-06-16.
  * Below md the panel renders as a bottom Sheet via ListDetail.
  *
  * Inventory items handled here: 6 (segmented control), 23 (Filters
@@ -128,7 +131,7 @@ export function ItemsTab({
         }
         detailMode="panel"
         detailPresentation="docked"
-        detailEmphasis="compact"
+        detailEmphasis="primary"
         selected={selected}
         onSelect={(item) => setSelectedItem(item?.id ?? null)}
         items={selected ? [selected] : []}
