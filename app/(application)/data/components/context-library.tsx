@@ -47,14 +47,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useContextLibrary } from "../hooks";
 import { LibraryEmpty } from "./library-empty";
 import { LibraryRow } from "./library-row";
-import { UsagePanel } from "./usage-panel";
 
-export interface ContextLibraryProps {
-  /** Server-fetched super_admin flag from page.tsx. */
-  isSuperAdmin: boolean;
-}
-
-export function ContextLibrary({ isSuperAdmin }: ContextLibraryProps) {
+export function ContextLibrary() {
   const t = useTranslations("knowledge");
   const tCommon = useTranslations("common");
 
@@ -69,17 +63,9 @@ export function ContextLibrary({ isSuperAdmin }: ContextLibraryProps) {
         meta={
           <span className="inline-flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
             <span>{t("library.backendHint")}</span>
-            <Link
-              href="/explorer"
-              className="text-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:underline"
-            >
-              {t("library.backendHintLink")}
-            </Link>
           </span>
         }
       />
-
-      {isSuperAdmin && <UsagePanel />}
 
       <div className="flex flex-col gap-4">
         <Toolbar

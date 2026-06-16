@@ -22,7 +22,6 @@
 import { Suspense } from "react";
 
 import { guardRoute } from "@/lib/route-guard";
-import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 
 import { ContextLibrary } from "./components/context-library";
 import Loading from "./loading";
@@ -33,14 +32,9 @@ export default async function KnowledgePage() {
   const denied = await guardRoute("knowledge");
   if (denied) return denied;
 
-  // serverSideAuthCheck is wrapped in React.cache (route-guard.ts:41), so
-  // this call shares the single round-trip the guard already made.
-  const user = await serverSideAuthCheck();
-  const isSuperAdmin = user !== false && user?.super_admin === true;
-
   return (
     <Suspense fallback={<Loading />}>
-      <ContextLibrary isSuperAdmin={isSuperAdmin} />
+      <ContextLibrary />
     </Suspense>
   );
 }
