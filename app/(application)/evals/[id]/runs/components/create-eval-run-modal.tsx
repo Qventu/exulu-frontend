@@ -1,8 +1,45 @@
 "use client";
 
-import { useState, useEffect } from "react";
+/**
+ * CreateEvalRunModal — create/edit a run config.
+ *
+ * Phase 5.1 redesign (design/pages/evals.md §5.1):
+ * - Fields reorganised into three sections:
+ *     1. Essentials  — Name, Agent, Test cases (multi-select)
+ *     2. Eval functions — multi-select with per-function config textareas
+ *     3. Advanced (Collapsible, closed by default) — Scoring method, Pass
+ *        threshold, Timeout. Trigger summary: "average · pass ≥ 70 · 300s".
+ * - All copy goes through next-intl keys (evals.runs.runConfig.*).
+ * - Data contract is UNCHANGED — `rights_mode`, `RBAC.users/roles`, and
+ *   the scoring-method casing (uppercase on submit) are all preserved.
+ *   The previous mutation shape stays bit-for-bit identical so the BE
+ *   schema doesn't need to move with this redesign.
+ */
+
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import { Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+
+import {
+  CREATE_EVAL_RUN,
+  GET_AGENTS,
+  GET_EVAL_FUNCTIONS,
+  GET_TEST_CASES,
+  UPDATE_EVAL_RUN,
+} from "@/queries/queries";
+import type { Eval } from "@/types/models/eval";
+import type { EvalRun, ScoringMethod } from "@/types/models/eval-run";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -11,10 +48,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -22,14 +58,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { CREATE_EVAL_RUN, UPDATE_EVAL_RUN, GET_AGENTS, GET_EVAL_FUNCTIONS, GET_TEST_CASES } from "@/queries/queries";
-import { toast } from "sonner";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Eval } from "@/types/models/eval";
-import { EvalRun, ScoringMethod } from "@/types/models/eval-run";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 interface CreateEvalRunModalProps {
   modalKey: string;
@@ -48,6 +79,7 @@ export function CreateEvalRunModal({
   open,
   onOpenChange,
 }: CreateEvalRunModalProps) {
+  const t = useTranslations("evals.runs.runConfig");
   const isEditing = !!existingRun && !!existingRun.id;
 
   const [evalRun, setEvalRun] = useState<EvalRun>({
@@ -64,8 +96,8 @@ export function CreateEvalRunModal({
     timeout_in_seconds: 300,
     test_case_ids: [],
   });
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  // Reset form when existingRun changes
   useEffect(() => {
     if (existingRun) {
       setEvalRun(existingRun);
@@ -87,103 +119,102 @@ export function CreateEvalRunModal({
     }
   }, [existingRun, eval_set_id]);
 
-  // Fetch agents
   const { data: agentsData } = useQuery(GET_AGENTS, {
     variables: { page: 1, limit: 100, filters: [] },
     skip: !eval_set_id,
   });
-
   const { data: evalFunctionsData } = useQuery(GET_EVAL_FUNCTIONS, {
     skip: !eval_set_id,
   });
-
-  // Fetch test cases
   const { data: testCasesData } = useQuery(GET_TEST_CASES, {
     variables: {
       page: 1,
       limit: 500,
-      filters: [{ eval_set_id: { eq: eval_set_id } }]
+      filters: [{ eval_set_id: { eq: eval_set_id } }],
     },
     skip: !eval_set_id,
   });
 
   const testCasesList = testCasesData?.test_casesPagination?.items || [];
+  const evalFunctionsList: Eval[] = evalFunctionsData?.evals?.items || [];
 
-  const [createEvalRun, { loading: createLoading }] = useMutation(CREATE_EVAL_RUN, {
-    onCompleted: () => {
-      toast.success("Eval run created", { description: "The eval run has been created successfully. You can now run it." });
-      if (onCreateSuccess) {
-        onCreateSuccess();
-      }
-      onOpenChange(false);
+  const [createEvalRun, { loading: createLoading }] = useMutation(
+    CREATE_EVAL_RUN,
+    {
+      onCompleted: () => {
+        toast.success(t("submit.create"));
+        onCreateSuccess?.();
+        onOpenChange(false);
+      },
+      onError: (error) =>
+        toast.error(t("submit.create"), { description: error.message }),
     },
-    onError: (error) => {
-      toast.error("Failed to create eval run", { description: error.message });
+  );
+  const [updateEvalRun, { loading: updateLoading }] = useMutation(
+    UPDATE_EVAL_RUN,
+    {
+      onCompleted: () => {
+        toast.success(t("submit.update"));
+        onCreateSuccess?.();
+        onOpenChange(false);
+      },
+      onError: (error) =>
+        toast.error(t("submit.update"), { description: error.message }),
     },
-  });
-
-  const [updateEvalRun, { loading: updateLoading }] = useMutation(UPDATE_EVAL_RUN, {
-    onCompleted: () => {
-      toast.success("Eval run updated", { description: "The eval run has been updated successfully." });
-      if (onCreateSuccess) {
-        onCreateSuccess();
-      }
-      onOpenChange(false);
-    },
-    onError: (error) => {
-      toast.error("Failed to update eval run", { description: error.message });
-    },
-  });
-
+  );
   const loading = createLoading || updateLoading;
 
-  const handleToggleTestCase = (testCaseId: string) => {
-    setEvalRun(prev => ({
-      ...prev,
-      test_case_ids: prev.test_case_ids.includes(testCaseId)
-        ? prev.test_case_ids.filter(id => id !== testCaseId)
-        : [...prev.test_case_ids, testCaseId]
-    }))
-  };
-
-  const handleToggleAllTestCases = () => {
-    setEvalRun(prev => ({
-      ...prev,
-      test_case_ids: prev.test_case_ids.length === testCasesList.length
-        ? []
-        : testCasesList.map((tc: any) => tc.id)
-    }))
-  };
-
-  const handleToggleEvalFunction = (evalFunction: { id: string; name: string }) => {
-    setEvalRun(prev => ({
-      ...prev,
-      eval_functions: prev.eval_functions.some(ef => ef.id === evalFunction.id)
-        ? prev.eval_functions.filter(ef => ef.id !== evalFunction.id)
-        : [...prev.eval_functions, { ...evalFunction, config: {} }]
-    }))
-  };
+  const toggleTestCase = (id: string) =>
+    setEvalRun((p) => ({
+      ...p,
+      test_case_ids: p.test_case_ids.includes(id)
+        ? p.test_case_ids.filter((v) => v !== id)
+        : [...p.test_case_ids, id],
+    }));
+  const toggleAllTestCases = () =>
+    setEvalRun((p) => ({
+      ...p,
+      test_case_ids:
+        p.test_case_ids.length === testCasesList.length
+          ? []
+          : testCasesList.map((tc: any) => tc.id),
+    }));
+  const toggleEvalFunction = (fn: { id: string; name: string }) =>
+    setEvalRun((p) => ({
+      ...p,
+      eval_functions: p.eval_functions.some((ef) => ef.id === fn.id)
+        ? p.eval_functions.filter((ef) => ef.id !== fn.id)
+        : [...p.eval_functions, { ...fn, config: {} }],
+    }));
+  const toggleAllEvalFunctions = () =>
+    setEvalRun((p) => ({
+      ...p,
+      eval_functions:
+        p.eval_functions.length === evalFunctionsList.length
+          ? []
+          : evalFunctionsList.map((e) => ({
+              id: e.id,
+              name: e.name,
+              config: {},
+            })),
+    }));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!evalRun.name) {
-      toast.error("Validation error", { description: "Please enter a name for this eval run." });
+      toast.error(t("validation.nameRequired"));
       return;
     }
-
     if (!evalRun.agent_id) {
-      toast.error("Validation error", { description: "Please select an agent." });
+      toast.error(t("validation.agentRequired"));
       return;
     }
-
     if (evalRun.test_case_ids.length === 0) {
-      toast.error("Validation error", { description: "Please select at least one test case." });
+      toast.error(t("validation.casesRequired"));
       return;
     }
-
     if (evalRun.eval_functions.length === 0) {
-      toast.error("Validation error", { description: "Please select at least one eval function." });
+      toast.error(t("validation.functionsRequired"));
       return;
     }
 
@@ -200,181 +231,156 @@ export function CreateEvalRunModal({
       RBAC: {
         users: evalRun.RBAC?.users,
         roles: evalRun.RBAC?.roles,
-        // projects: evalRun.RBAC?.projects,
       },
     };
-
     if (isEditing) {
-      updateEvalRun({
-        variables: {
-          id: evalRun.id,
-          data,
-        },
-      });
+      updateEvalRun({ variables: { id: evalRun.id, data } });
     } else {
-      createEvalRun({
-        variables: {
-          data,
-        },
-      });
-
+      createEvalRun({ variables: { data } });
     }
   };
 
+  const advancedSummary = t("advanced", {
+    summary: t("advancedSummary", {
+      method: t(`scoringMethod.${evalRun.scoring_method}` as const),
+      threshold: evalRun.pass_threshold,
+      timeout: evalRun.timeout_in_seconds,
+    }),
+  });
+
   return (
     <Dialog key={modalKey} open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+      <DialogContent className="flex h-[90vh] max-w-4xl flex-col">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Eval Run" : "Create Eval Run"}</DialogTitle>
-          <DialogDescription>
-            {isEditing ? "Update the configuration for this eval run." : "Configure a new evaluation run for this eval set."}
+          <DialogTitle>
+            {isEditing ? t("editTitle") : t("createTitle")}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {isEditing ? t("editTitle") : t("createTitle")}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
-          <ScrollArea className="flex-1 -mx-6 px-6">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <ScrollArea className="-mx-6 flex-1 px-6">
             <div className="space-y-6 pb-4">
-              {/* Name Input */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div>
-                    <h3 className="font-semibold text-sm">Name</h3>
-                    <p className="text-xs text-muted-foreground">Give this eval run a descriptive name</p>
-                  </div>
+              {/* ─── Essentials ───────────────────────────────────────── */}
+              <section className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="eval-run-name" className="text-sm font-semibold">
+                    {t("nameLabel")}
+                  </Label>
+                  <Input
+                    id="eval-run-name"
+                    type="text"
+                    placeholder="e.g., GPT-4 baseline evaluation"
+                    value={evalRun.name}
+                    onChange={(e) =>
+                      setEvalRun((p) => ({ ...p, name: e.target.value }))
+                    }
+                    className="h-11"
+                  />
                 </div>
-                <Input
-                  type="text"
-                  placeholder="e.g., GPT-4 baseline evaluation"
-                  value={evalRun.name}
-                  onChange={(e) => setEvalRun(prev => ({ ...prev, name: e.target.value }))}
-                  className="h-11"
-                />
-              </div>
-              <Separator />
-              {/* Agent Selection */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div>
-                    <h3 className="font-semibold text-sm">Agent</h3>
-                    <p className="text-xs text-muted-foreground">Choose which agent to evaluate</p>
-                  </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">
+                    {t("agentLabel")}
+                  </Label>
+                  <Select
+                    value={evalRun.agent_id}
+                    onValueChange={(value) =>
+                      setEvalRun((p) => ({ ...p, agent_id: value }))
+                    }
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select an agent…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {agentsData?.agentsPagination?.items?.map((a: any) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Select value={evalRun.agent_id} onValueChange={(value: string) => setEvalRun(prev => ({ ...prev, agent_id: value }))}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Select an agent..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {agentsData?.agentsPagination?.items?.map((agent: any) => (
-                      <SelectItem key={agent.id} value={agent.id}>
-                        {agent.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Separator />
-              {/* Eval Functions Selection */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-sm">Eval Functions</h3>
+                      <Label className="text-sm font-semibold">
+                        {t("testCasesLabel")}
+                      </Label>
                       <p className="text-xs text-muted-foreground">
-                        {evalRun.eval_functions.length} of {evalFunctionsData?.evals?.items?.length || 0} selected
+                        {evalRun.test_case_ids.length} of {testCasesList.length}
                       </p>
                     </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleAllTestCases();
+                      }}
+                    >
+                      {evalRun.test_case_ids.length === testCasesList.length
+                        ? t("deselectAll")
+                        : t("selectAll")}
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (evalRun.eval_functions.length === evalFunctionsData?.evals?.items?.length) {
-                        setEvalRun(prev => ({
-                          ...prev,
-                          eval_functions: []
-                        }));
-                      } else {
-                        setEvalRun(prev => ({
-                          ...prev,
-                          eval_functions: evalFunctionsData?.evals?.items?.map((e: Eval) => ({ id: e.id, name: e.name, config: {} })) || []
-                        }));
-                      }
-                    }}
-                  >
-                    {evalRun.eval_functions.length === evalFunctionsData?.evals?.items?.length ? "Deselect All" : "Select All"}
-                  </Button>
-                </div>
-                <div className="border rounded-lg bg-card">
-                  <div className="p-3 space-y-2">
-                    {evalFunctionsData?.evals?.items?.map((_eval: Eval) => (
-                      <label
-                        key={_eval.id}
-                        htmlFor={`eval-${_eval.id}`}
-                        className="flex items-start gap-3 p-3 rounded-md hover:bg-accent transition-colors cursor-pointer border border-transparent hover:border-border"
-                      >
-                        <Checkbox
-                          id={`eval-${_eval.id}`}
-                          checked={evalRun.eval_functions.some(ef => ef.id === _eval.id)}
-                          onCheckedChange={() => handleToggleEvalFunction({ id: _eval.id, name: _eval.name })}
-                          className="mt-0.5"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">{_eval.name}</span>
-                          </div>
-                          {_eval.description && (
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                              {_eval.description}
-                            </p>
-                          )}
-                          {_eval.config && _eval.config.length > 0 && evalRun.eval_functions.some(ef => ef.id === _eval.id) && (
-                            <div className="mt-3 space-y-3 pt-3 border-t">
-                              <p className="text-xs font-medium text-muted-foreground">Configuration</p>
-                              {_eval.config.map((config: any) => (
-                                <div key={config.name} className="space-y-1.5">
-                                  <Label htmlFor={`${_eval.id}-${config.name}`} className="text-xs font-medium">
-                                    {config.name}
-                                  </Label>
-                                  <Textarea
-                                    id={`${_eval.id}-${config.name}`}
-                                    placeholder={config.description}
-                                    value={evalRun.eval_functions.find(ef => ef.id === _eval.id)?.config?.[config.name] || ''}
-                                    onChange={(e) => {
-                                      e.stopPropagation();
-                                      setEvalRun(prev => ({ ...prev, eval_functions: prev.eval_functions.map(ef => ef.id === _eval.id ? { ...ef, config: { ...ef.config, [config.name]: e.target.value } } : ef) }));
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="min-h-[80px] text-xs resize-none"
-                                  />
-                                  {config.description && (
-                                    <p className="text-xs text-muted-foreground leading-relaxed">
-                                      {config.description}
-                                    </p>
-                                  )}
-                                </div>
-                              ))}
+                  <div className="rounded-lg border bg-card">
+                    <ScrollArea className="h-[250px]">
+                      <div className="space-y-2 p-3">
+                        {testCasesList.map((tc: any) => (
+                          <label
+                            key={tc.id}
+                            htmlFor={`tc-${tc.id}`}
+                            className="flex cursor-pointer items-start gap-3 rounded-md border border-transparent p-3 transition-colors hover:border-border hover:bg-accent"
+                          >
+                            <Checkbox
+                              id={`tc-${tc.id}`}
+                              checked={evalRun.test_case_ids.includes(tc.id)}
+                              onCheckedChange={() => toggleTestCase(tc.id)}
+                              className="mt-0.5"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-medium">
+                                  {tc.name}
+                                </span>
+                                <Badge
+                                  variant="secondary"
+                                  className="shrink-0 text-[10px]"
+                                >
+                                  {tc.inputs?.length || 0} msgs
+                                </Badge>
+                              </div>
+                              {tc.description ? (
+                                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                                  {tc.description}
+                                </p>
+                              ) : null}
                             </div>
-                          )}
-                        </div>
-                      </label>
-                    ))}
+                          </label>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </div>
                 </div>
-              </div>
+              </section>
 
               <Separator />
 
-              {/* Test Cases Selection */}
-              <div className="space-y-3">
+              {/* ─── Eval functions ──────────────────────────────────── */}
+              <section className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div>
-                      <h3 className="font-semibold text-sm">Test Cases</h3>
-                      <p className="text-xs text-muted-foreground">
-                        {evalRun.test_case_ids.length} of {testCasesList.length} selected
-                      </p>
-                    </div>
+                  <div>
+                    <Label className="text-sm font-semibold">
+                      {t("evalFunctionsLabel")}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {evalRun.eval_functions.length} of{" "}
+                      {evalFunctionsList.length}
+                    </p>
                   </div>
                   <Button
                     type="button"
@@ -382,119 +388,236 @@ export function CreateEvalRunModal({
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleToggleAllTestCases();
+                      toggleAllEvalFunctions();
                     }}
                   >
-                    {evalRun.test_case_ids.length === testCasesList.length ? "Deselect All" : "Select All"}
+                    {evalRun.eval_functions.length === evalFunctionsList.length
+                      ? t("deselectAll")
+                      : t("selectAll")}
                   </Button>
                 </div>
-                <div className="border rounded-lg bg-card">
-                  <ScrollArea className="h-[250px]">
-                    <div className="p-3 space-y-2">
-                      {testCasesList.map((testCase: any) => (
+                <div className="rounded-lg border bg-card">
+                  <div className="space-y-2 p-3">
+                    {evalFunctionsList.map((_eval: Eval) => {
+                      const checked = evalRun.eval_functions.some(
+                        (ef) => ef.id === _eval.id,
+                      );
+                      return (
                         <label
-                          key={testCase.id}
-                          htmlFor={`test-case-${testCase.id}`}
-                          className="flex items-start gap-3 p-3 rounded-md hover:bg-accent transition-colors cursor-pointer border border-transparent hover:border-border"
+                          key={_eval.id}
+                          htmlFor={`eval-${_eval.id}`}
+                          className="flex cursor-pointer items-start gap-3 rounded-md border border-transparent p-3 transition-colors hover:border-border hover:bg-accent"
                         >
                           <Checkbox
-                            id={`test-case-${testCase.id}`}
-                            checked={evalRun.test_case_ids.includes(testCase.id)}
-                            onCheckedChange={() => handleToggleTestCase(testCase.id)}
+                            id={`eval-${_eval.id}`}
+                            checked={checked}
+                            onCheckedChange={() =>
+                              toggleEvalFunction({
+                                id: _eval.id,
+                                name: _eval.name,
+                              })
+                            }
                             className="mt-0.5"
                           />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-medium text-sm">{testCase.name}</span>
-                              <Badge variant="secondary" className="text-[10px] shrink-0">
-                                {testCase.inputs?.length || 0} msgs
-                              </Badge>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">
+                                {_eval.name}
+                              </span>
                             </div>
-                            {testCase.description && (
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                {testCase.description}
+                            {_eval.description ? (
+                              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                                {_eval.description}
                               </p>
-                            )}
+                            ) : null}
+                            {_eval.config &&
+                            _eval.config.length > 0 &&
+                            checked ? (
+                              <div className="mt-3 space-y-3 border-t pt-3">
+                                <p className="text-xs font-medium text-muted-foreground">
+                                  Configuration
+                                </p>
+                                {_eval.config.map((cfg: any) => (
+                                  <div
+                                    key={cfg.name}
+                                    className="space-y-1.5"
+                                  >
+                                    <Label
+                                      htmlFor={`${_eval.id}-${cfg.name}`}
+                                      className="text-xs font-medium"
+                                    >
+                                      {cfg.name}
+                                    </Label>
+                                    <Textarea
+                                      id={`${_eval.id}-${cfg.name}`}
+                                      placeholder={cfg.description}
+                                      value={
+                                        evalRun.eval_functions.find(
+                                          (ef) => ef.id === _eval.id,
+                                        )?.config?.[cfg.name] || ""
+                                      }
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        setEvalRun((prev) => ({
+                                          ...prev,
+                                          eval_functions:
+                                            prev.eval_functions.map((ef) =>
+                                              ef.id === _eval.id
+                                                ? {
+                                                    ...ef,
+                                                    config: {
+                                                      ...ef.config,
+                                                      [cfg.name]:
+                                                        e.target.value,
+                                                    },
+                                                  }
+                                                : ef,
+                                            ),
+                                        }));
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="min-h-[80px] resize-none text-xs"
+                                    />
+                                    {cfg.description ? (
+                                      <p className="text-xs leading-relaxed text-muted-foreground">
+                                        {cfg.description}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
                           </div>
                         </label>
-                      ))}
-                    </div>
-                  </ScrollArea>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              </section>
+
               <Separator />
-              {/* Scoring Configuration */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div>
-                    <h3 className="font-semibold text-sm">Scoring</h3>
-                    <p className="text-xs text-muted-foreground">Configure how scores are calculated</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/30">
-                  <div className="space-y-2">
-                    <Label htmlFor="scoringMethod" className="text-xs font-semibold">Scoring Method</Label>
-                    <Select
-                      value={evalRun.scoring_method}
-                      onValueChange={(value: any) => setEvalRun(prev => ({ ...prev, scoring_method: value as ScoringMethod }))}>
-                      <SelectTrigger id="scoringMethod" className="h-10">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="median">Median</SelectItem>
-                        <SelectItem value="average">Average</SelectItem>
-                        <SelectItem value="sum">Sum</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      How to combine multiple eval function scores
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="passThreshold" className="text-xs font-semibold">Pass Threshold</Label>
-                    <Input
-                      id="passThreshold"
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={evalRun.pass_threshold}
-                      onChange={(e) => setEvalRun(prev => ({ ...prev, pass_threshold: Number(e.target.value) }))}
-                      className="h-10"
+
+              {/* ─── Advanced (collapsible) ──────────────────────────── */}
+              <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-md border p-3 text-left text-sm transition-colors hover:bg-accent"
+                  >
+                    <span className="font-medium">{advancedSummary}</span>
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={cn(
+                        "h-4 w-4 text-muted-foreground transition-transform",
+                        advancedOpen && "rotate-180",
+                      )}
                     />
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Minimum score (0-100) to pass
-                    </p>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-3">
+                  <div className="grid grid-cols-1 gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="scoringMethod"
+                        className="text-xs font-semibold"
+                      >
+                        {t("scoringMethodLabel")}
+                      </Label>
+                      <Select
+                        value={evalRun.scoring_method}
+                        onValueChange={(v) =>
+                          setEvalRun((p) => ({
+                            ...p,
+                            scoring_method: v as ScoringMethod,
+                          }))
+                        }
+                      >
+                        <SelectTrigger id="scoringMethod" className="h-10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="average">
+                            {t("scoringMethod.average")}
+                          </SelectItem>
+                          <SelectItem value="median">
+                            {t("scoringMethod.median")}
+                          </SelectItem>
+                          <SelectItem value="sum">
+                            {t("scoringMethod.sum")}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="passThreshold"
+                        className="text-xs font-semibold"
+                      >
+                        {t("passThresholdLabel")}
+                      </Label>
+                      <Input
+                        id="passThreshold"
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={evalRun.pass_threshold}
+                        onChange={(e) =>
+                          setEvalRun((p) => ({
+                            ...p,
+                            pass_threshold: Number(e.target.value),
+                          }))
+                        }
+                        className="h-10"
+                      />
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label
+                        htmlFor="timeoutInSeconds"
+                        className="text-xs font-semibold"
+                      >
+                        {t("timeoutLabel")}
+                      </Label>
+                      <Input
+                        id="timeoutInSeconds"
+                        type="number"
+                        min={1}
+                        value={evalRun.timeout_in_seconds}
+                        onChange={(e) =>
+                          setEvalRun((p) => ({
+                            ...p,
+                            timeout_in_seconds: Number(e.target.value),
+                          }))
+                        }
+                        className="h-10"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="timeoutInSeconds" className="text-xs font-semibold">Timeout (seconds)</Label>
-                    <Input
-                      id="timeoutInSeconds"
-                      type="number"
-                      min="1"
-                      value={evalRun.timeout_in_seconds}
-                      onChange={(e) => setEvalRun(prev => ({ ...prev, timeout_in_seconds: Number(e.target.value) }))}
-                      className="h-10"
-                    />
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Max time per test case execution
-                    </p>
-                  </div>
-                </div>
-              </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           </ScrollArea>
+
           <Separator className="my-4" />
           <DialogFooter className="shrink-0">
             <Button
               type="submit"
-              disabled={loading || !evalRun.name || !evalRun.agent_id || evalRun.test_case_ids.length === 0 || evalRun.eval_functions.length === 0}
-              className="w-full h-11">
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Update Eval Run" : "Create Eval Run"}
+              disabled={
+                loading ||
+                !evalRun.name ||
+                !evalRun.agent_id ||
+                evalRun.test_case_ids.length === 0 ||
+                evalRun.eval_functions.length === 0
+              }
+              className="h-11 w-full"
+            >
+              {loading ? (
+                <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {isEditing ? t("submit.update") : t("submit.create")}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog >
+    </Dialog>
   );
 }
