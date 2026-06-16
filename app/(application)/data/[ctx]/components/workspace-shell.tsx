@@ -125,7 +125,7 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
         ) : tab === "pipeline" ? (
           <PipelineTab context={context} />
         ) : (
-          <ContextEntityTypes context={context.id} expand actions />
+          <ContextEntityTypes context={context.id} />
         )}
       </div>
 

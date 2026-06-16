@@ -2456,6 +2456,53 @@
         "pipeline": "Pipeline",
         "entities": "Entitäten"
       },
+      "entities": {
+        "description": "Aus Dokumenten dieses Kontexts extrahierte Entitätstypen. Sie werden mit den im Code definierten Typen zusammengeführt und ermöglichen entitätsbewusstes Retrieval.",
+        "addType": "Typ hinzufügen",
+        "empty": "Noch keine Entitätstypen",
+        "emptyDescription": "Fügen Sie einen Entitätstyp hinzu, um strukturierte Entitäten aus diesem Kontext zu extrahieren.",
+        "inactive": "Inaktiv",
+        "loadErrorTitle": "Entitätstypen konnten nicht geladen werden",
+        "loadError": "Fehler beim Laden der Entitätstypen.",
+        "backfill": {
+          "title": "Nachverarbeitung empfohlen",
+          "description": "{count} Eintrag/Einträge wurden vor den aktuellen Entitätstypen verarbeitet. Führen Sie die Extraktion aus, um die Änderungen anzuwenden.",
+          "cta": "Jetzt nachverarbeiten",
+          "running": "Wird nachverarbeitet…"
+        },
+        "menu": {
+          "label": "Aktionen für Entitätstyp",
+          "edit": "Bearbeiten",
+          "activate": "Aktivieren",
+          "deactivate": "Deaktivieren",
+          "delete": "Löschen"
+        },
+        "dialog": {
+          "addTitle": "Entitätstyp hinzufügen",
+          "editTitle": "Entitätstyp bearbeiten",
+          "description": "Name und Beschreibung leiten den Extraktor an, was in Dokumenten zu erkennen ist.",
+          "nameLabel": "Name",
+          "namePlaceholder": "z. B. Person, Firma, Produkt",
+          "descriptionLabel": "Beschreibung",
+          "descriptionPlaceholder": "Was zählt als dieser Entitätstyp?",
+          "activeLabel": "Aktiv",
+          "cancel": "Abbrechen",
+          "save": "Speichern"
+        },
+        "toasts": {
+          "created": "Entitätstyp erstellt",
+          "createError": "Fehler beim Erstellen des Entitätstyps",
+          "updated": "Entitätstyp aktualisiert",
+          "updateError": "Fehler beim Aktualisieren des Entitätstyps",
+          "deleted": "Entitätstyp gelöscht",
+          "deleteError": "Fehler beim Löschen des Entitätstyps",
+          "backfillDone": "Nachverarbeitung abgeschlossen",
+          "backfillProcessed": "{count} Eintrag/Einträge verarbeitet.",
+          "backfillSkipped": "· {count} übersprungen (Limit erreicht).",
+          "backfillError": "Fehler bei der Nachverarbeitung",
+          "nameRequired": "Bitte geben Sie einen Namen für den Entitätstyp an."
+        }
+      },
       "backToItems": "Zurück zu den Einträgen",
       "itemDetail": {
         "copyId": "Eintrags-ID kopieren",

@@ -2456,6 +2456,53 @@
         "pipeline": "Pipeline",
         "entities": "Entities"
       },
+      "entities": {
+        "description": "Entity types extracted from documents in this context. They're merged with any types declared in code and power entity-aware retrieval.",
+        "addType": "Add type",
+        "empty": "No entity types yet",
+        "emptyDescription": "Add an entity type to start extracting structured entities from this context.",
+        "inactive": "Inactive",
+        "loadErrorTitle": "Couldn't load entity types",
+        "loadError": "Error loading entity types.",
+        "backfill": {
+          "title": "Backfill recommended",
+          "description": "{count} item(s) were processed before the current entity types. Run extraction to apply the changes.",
+          "cta": "Backfill now",
+          "running": "Backfilling…"
+        },
+        "menu": {
+          "label": "Entity type actions",
+          "edit": "Edit",
+          "activate": "Activate",
+          "deactivate": "Deactivate",
+          "delete": "Delete"
+        },
+        "dialog": {
+          "addTitle": "Add entity type",
+          "editTitle": "Edit entity type",
+          "description": "The name and description guide the extractor on what to identify in documents.",
+          "nameLabel": "Name",
+          "namePlaceholder": "e.g. Person, Company, Product",
+          "descriptionLabel": "Description",
+          "descriptionPlaceholder": "What counts as this entity type?",
+          "activeLabel": "Active",
+          "cancel": "Cancel",
+          "save": "Save"
+        },
+        "toasts": {
+          "created": "Entity type created",
+          "createError": "Error creating entity type",
+          "updated": "Entity type updated",
+          "updateError": "Error updating entity type",
+          "deleted": "Entity type deleted",
+          "deleteError": "Error deleting entity type",
+          "backfillDone": "Backfill complete",
+          "backfillProcessed": "Processed {count} item(s).",
+          "backfillSkipped": "· {count} skipped (cap reached).",
+          "backfillError": "Error running backfill",
+          "nameRequired": "Please provide an entity type name."
+        }
+      },
       "backToItems": "Back to items",
       "itemDetail": {
         "copyId": "Copy item ID",
