@@ -44,6 +44,10 @@ export function PipelineTab({ context }: PipelineTabProps) {
     router.push(`${pathname}?${url.toString()}`);
   };
 
+  // Deep-link target: `?stage=processor|embedder|sources` opens + scrolls to
+  // that stage's Jobs (the item page's "Open queue" link points here).
+  const stageParam = params?.get("stage") ?? null;
+
   const hasAnyStage =
     (context.sources?.length ?? 0) > 0 ||
     !!context.processor ||
@@ -68,9 +72,9 @@ export function PipelineTab({ context }: PipelineTabProps) {
           aria-hidden="true"
           className="absolute left-6 top-6 bottom-6 hidden w-px bg-muted md:block"
         />
-        <StageSources context={context} />
-        <StageProcessor context={context} />
-        <StageEmbedder context={context} />
+        <StageSources context={context} autoOpenJobs={stageParam === "sources"} />
+        <StageProcessor context={context} autoOpenJobs={stageParam === "processor"} />
+        <StageEmbedder context={context} autoOpenJobs={stageParam === "embedder"} />
       </div>
       <ActivityList context={context} active={true} />
     </div>

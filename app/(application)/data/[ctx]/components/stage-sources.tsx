@@ -46,9 +46,11 @@ type Source = Context["sources"][number];
 
 export interface StageSourcesProps {
   context: Context;
+  /** Open + scroll this stage's Jobs when deep-linked (?stage=). */
+  autoOpenJobs?: boolean;
 }
 
-export function StageSources({ context }: StageSourcesProps) {
+export function StageSources({ context, autoOpenJobs }: StageSourcesProps) {
   const t = useTranslations("knowledge");
   const [selected, setSelected] = React.useState<Source | null>(null);
   const [paramValues, setParamValues] = React.useState<Record<string, string>>(
@@ -181,7 +183,8 @@ export function StageSources({ context }: StageSourcesProps) {
               </p>
             )
           }
-          jobs={
+          autoOpenJobs={autoOpenJobs}
+        jobs={
             source.config.queue ? (
               <QueuePanel
                 queueName={source.config.queue}

@@ -88,12 +88,16 @@ export function useItemEditor({
   const [editing, setEditing] = React.useState(false);
   const [confirm, setConfirm] = React.useState<ItemConfirmKind | null>(null);
 
-  // Post-save pipeline progress (V2 Phase F2). `preSaveSnap` is set ONLY by
-  // the explicit Save path, so archive toggles / bulk updates that reuse the
-  // same mutation never trigger the progress view. It's consumed (cleared)
-  // in the update onCompleted.
+  // Post-save pipeline activity (V2 Phase F2, reworked F4-followup). On an
+  // explicit Save that schedules downstream work, we emit a `saveActivity`
+  // signal (token + pre-save snapshot) the interactive pipeline stepper
+  // watches to enter its "running" state. `preSaveSnap` is set ONLY by the
+  // explicit Save path so archive toggles / bulk updates that reuse the same
+  // mutation never trigger it; it's consumed in the update onCompleted.
   const preSaveSnap = React.useRef<PipelineSnapshot | null>(null);
-  const [progress, setProgress] = React.useState<{
+  const activityToken = React.useRef(0);
+  const [saveActivity, setSaveActivity] = React.useState<{
+    token: number;
     snapshot: PipelineSnapshot;
   } | null>(null);
 
@@ -150,7 +154,10 @@ export function useItemEditor({
       if (preSaveSnap.current) {
         const job = data?.[`${context.id}_itemsUpdateOneById`]?.job;
         if (job || schedulesOnUpdate(context)) {
-          setProgress({ snapshot: preSaveSnap.current });
+          setSaveActivity({
+            token: ++activityToken.current,
+            snapshot: preSaveSnap.current,
+          });
         }
         preSaveSnap.current = null;
       }
@@ -327,6 +334,15 @@ export function useItemEditor({
     if (item?.id) void processItem({ variables: { item: item.id } });
   };
 
+  // Direct embed re-run (no confirm) for the interactive pipeline stepper.
+  // Regenerating embeddings is non-destructive (it replaces chunks); the
+  // destructive "Delete embeddings" keeps its confirm in the overflow menu.
+  const triggerGenerate = () => {
+    if (item?.id) {
+      void generateChunks({ variables: { where: [{ id: { eq: item.id } }] } });
+    }
+  };
+
   const overlayVariant: LoadingStatesVariant | null = updateItemResult.loading
     ? "save"
     : processItemResult.loading
@@ -354,14 +370,15 @@ export function useItemEditor({
     overlayVariant,
     saving: updateItemResult.loading,
     processPending: processItemResult.loading,
-    // post-save progress (V2 Phase F2)
-    progress,
-    dismissProgress: () => setProgress(null),
+    generatePending: generateChunksResult.loading,
+    // post-save pipeline activity signal (watched by the stepper)
+    saveActivity,
     // handlers
     handleSave,
     cancelEdit,
     handleArchiveToggle,
     triggerProcess,
+    triggerGenerate,
     runConfirm,
   };
 }

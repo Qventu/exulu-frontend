@@ -31,9 +31,11 @@ import { StageCard } from "./stage-card";
 
 export interface StageProcessorProps {
   context: Context;
+  /** Open + scroll this stage's Jobs when deep-linked (?stage=). */
+  autoOpenJobs?: boolean;
 }
 
-export function StageProcessor({ context }: StageProcessorProps) {
+export function StageProcessor({ context, autoOpenJobs }: StageProcessorProps) {
   const t = useTranslations("knowledge");
   const [bulkOpen, setBulkOpen] = React.useState(false);
 
@@ -134,6 +136,7 @@ export function StageProcessor({ context }: StageProcessorProps) {
             <dd>{p.description ?? "—"}</dd>
           </dl>
         }
+        autoOpenJobs={autoOpenJobs}
         jobs={
           p.queue ? (
             <QueuePanel

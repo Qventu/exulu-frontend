@@ -2450,7 +2450,13 @@
           "processed": "Verarbeitet",
           "embedded": "Eingebettet",
           "retrievable": "Abrufbar"
-        }
+        },
+        "run": "Ausführen",
+        "rerun": "Erneut ausführen",
+        "runProcess": "Diesen Eintrag verarbeiten",
+        "rerunProcess": "Eintrag erneut verarbeiten",
+        "runEmbed": "Embeddings erzeugen",
+        "rerunEmbed": "Embeddings neu erzeugen"
       },
       "progress": {
         "title": "Eintrag wird aktualisiert",

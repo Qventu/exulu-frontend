@@ -42,9 +42,11 @@ import { StageCard } from "./stage-card";
 
 export interface StageEmbedderProps {
   context: Context;
+  /** Open + scroll this stage's Jobs when deep-linked (?stage=). */
+  autoOpenJobs?: boolean;
 }
 
-export function StageEmbedder({ context }: StageEmbedderProps) {
+export function StageEmbedder({ context, autoOpenJobs }: StageEmbedderProps) {
   const t = useTranslations("knowledge");
 
   const [generateOpen, setGenerateOpen] = React.useState(false);
@@ -220,6 +222,7 @@ export function StageEmbedder({ context }: StageEmbedderProps) {
             </p>
           )
         }
+        autoOpenJobs={autoOpenJobs}
         jobs={
           embedder.queue ? (
             <QueuePanel

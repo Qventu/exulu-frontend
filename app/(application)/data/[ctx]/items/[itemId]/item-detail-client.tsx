@@ -22,17 +22,7 @@
  */
 
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import {
-  Archive,
-  Check,
-  Database,
-  PackageOpen,
-  Save,
-  Sparkles,
-  Trash2,
-  XCircle,
-  Zap,
-} from "lucide-react";
+import { Archive, Database, PackageOpen, Save, Trash2, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -45,15 +35,11 @@ import {
   type OverflowMenuItem,
 } from "@/components/primitives/overflow-menu";
 import { PageHeader } from "@/components/primitives/page-header";
-import { RelativeTime } from "@/components/primitives/relative-time";
-import { StatusDot } from "@/components/primitives/status-dot";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadingStates } from "@/components/loading-states";
-import { cn } from "@/lib/utils";
-import type { Item } from "@EXULU_SHARED/models/item";
 import type { Context } from "@/types/models/context";
 
 import { useItemDetail } from "../../../hooks";
@@ -62,48 +48,11 @@ import { ItemCalculatedSection } from "../../components/item-calculated-section"
 import { ItemEmbeddingsSection } from "../../components/item-embeddings-section";
 import { ItemFieldsSection } from "../../components/item-fields-section";
 import { useItemEditor } from "../../components/use-item-editor";
-import { ItemUpdateProgress } from "./item-update-progress";
+import { ItemPipelineStatus } from "./item-pipeline-status";
 
 export interface ItemDetailClientProps {
   context: Context;
   itemId: string;
-}
-
-/** Derive the four pipeline-stage checks from the item + context config. */
-function pipelineSteps(
-  item: Item,
-  context: Context,
-  t: (k: string) => string,
-): { key: string; label: string; done: boolean }[] {
-  const hasProcessor = Boolean(context.processor);
-  const hasEmbedder = Boolean(context.embedder);
-  const embedded =
-    (typeof item.chunks_count === "number" && item.chunks_count > 0) ||
-    Boolean(item.embeddings_updated_at);
-
-  const steps: { key: string; label: string; done: boolean }[] = [
-    { key: "ingested", label: t("workspace.itemDetail.pipeline.ingested"), done: true },
-  ];
-  if (hasProcessor) {
-    steps.push({
-      key: "processed",
-      label: t("workspace.itemDetail.pipeline.processed"),
-      done: Boolean(item.last_processed_at),
-    });
-  }
-  if (hasEmbedder) {
-    steps.push({
-      key: "embedded",
-      label: t("workspace.itemDetail.pipeline.embedded"),
-      done: embedded,
-    });
-    steps.push({
-      key: "retrievable",
-      label: t("workspace.itemDetail.pipeline.retrievable"),
-      done: embedded && !item.archived,
-    });
-  }
-  return steps;
 }
 
 export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
@@ -170,25 +119,13 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
   // ---- Derived header bits ------------------------------------------
 
   const title = item.name ?? item.external_id ?? t("workspace.items.untitled");
-  const chunkCount = typeof item.chunks_count === "number" ? item.chunks_count : 0;
-  const steps = pipelineSteps(item, context, t);
 
   // ---- Overflow menu ------------------------------------------------
+  // Process + Generate embeddings now live on the interactive pipeline
+  // stepper (as per-step Run / Re-run); the menu keeps the rarer + the
+  // destructive actions.
 
   const overflowItems: OverflowMenuItem[] = [];
-  if (context.processor) {
-    overflowItems.push({
-      label: t("workspace.panel.menu.process"),
-      icon: Zap,
-      onSelect: editor.triggerProcess,
-      description: context.processor.queue,
-    });
-  }
-  overflowItems.push({
-    label: t("workspace.panel.menu.generateEmbeddings"),
-    icon: Sparkles,
-    onSelect: () => editor.setConfirm("generate-embeddings"),
-  });
   overflowItems.push({
     label: t("workspace.panel.menu.deleteEmbeddings"),
     icon: Database,
@@ -273,54 +210,21 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
         meta={idLine}
       />
 
-      {editor.progress ? (
-        <div className="mt-6">
-          <ItemUpdateProgress
-            context={context}
-            item={item}
-            snapshot={editor.progress.snapshot}
-            workersConfigured={workersConfigured}
-            refetch={refetch}
-            onViewItem={editor.dismissProgress}
-          />
-        </div>
-      ) : (
       <div className="mt-6 space-y-6">
-        {/* Pipeline status line — the "did it work?" answer. */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          {steps.map((step, i) => (
-            <React.Fragment key={step.key}>
-              {i > 0 && (
-                <span aria-hidden="true" className="text-muted-foreground/50">
-                  ·
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1.5 text-sm">
-                {step.done ? (
-                  <Check aria-hidden="true" className="size-4 text-success" />
-                ) : (
-                  <StatusDot status="muted" />
-                )}
-                <span
-                  className={cn(
-                    step.done ? "text-foreground" : "text-muted-foreground",
-                  )}
-                >
-                  {step.label}
-                </span>
-              </span>
-            </React.Fragment>
-          ))}
-          <span className="ml-auto inline-flex items-center gap-2 font-mono text-xs text-muted-foreground">
-            {t("workspace.items.chunks", { count: chunkCount })}
-            {item.embeddings_updated_at ? (
-              <>
-                <span aria-hidden="true">·</span>
-                <RelativeTime date={item.embeddings_updated_at} />
-              </>
-            ) : null}
-          </span>
-        </div>
+        {/* Persistent interactive pipeline stepper — live state + per-step
+            Run / Re-run; replaces the static status line and the hidden
+            ⋯ process/embed actions. */}
+        <ItemPipelineStatus
+          context={context}
+          item={item}
+          refetch={refetch}
+          onProcess={editor.triggerProcess}
+          onGenerate={editor.triggerGenerate}
+          processPending={editor.processPending}
+          generatePending={editor.generatePending}
+          saveActivity={editor.saveActivity}
+          workersConfigured={workersConfigured}
+        />
 
         <div className="border-t" />
 
@@ -339,7 +243,7 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
           <ItemEmbeddingsSection
             context={context}
             item={item}
-            onGenerate={() => editor.setConfirm("generate-embeddings")}
+            onGenerate={editor.triggerGenerate}
             onDelete={() => editor.setConfirm("delete-embeddings")}
           />
           <ItemAccessSection
@@ -353,7 +257,6 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
           <ItemCalculatedSection context={context} item={item} />
         </div>
       </div>
-      )}
 
       {editor.confirm && editor.confirmCfg && (
         <ConfirmDialog

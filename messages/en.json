@@ -2450,7 +2450,13 @@
           "processed": "Processed",
           "embedded": "Embedded",
           "retrievable": "Retrievable"
-        }
+        },
+        "run": "Run",
+        "rerun": "Re-run",
+        "runProcess": "Process this item",
+        "rerunProcess": "Re-process this item",
+        "runEmbed": "Generate embeddings",
+        "rerunEmbed": "Regenerate embeddings"
       },
       "progress": {
         "title": "Updating item",

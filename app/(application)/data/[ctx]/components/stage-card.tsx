@@ -49,6 +49,12 @@ export interface StageCardProps {
   jobs?: React.ReactNode;
   /** Optional failed-job badge count for the Jobs expander. */
   jobsFailedCount?: number;
+  /**
+   * Open the Jobs expander on mount + scroll into view. Set by the pipeline
+   * tab when deep-linked with `?stage=<this stage>` (e.g. the item page's
+   * "Open queue" link). Knowledge V2 Phase F4 follow-up.
+   */
+  autoOpenJobs?: boolean;
   /** Optional fallback body content (e.g. empty state when no processor/embedder/sources). */
   children?: React.ReactNode;
   className?: string;
@@ -65,15 +71,23 @@ export function StageCard({
   configuration,
   jobs,
   jobsFailedCount,
+  autoOpenJobs = false,
   children,
   className,
 }: StageCardProps) {
   const t = useTranslations("knowledge");
   const [configOpen, setConfigOpen] = React.useState(false);
-  const [jobsOpen, setJobsOpen] = React.useState(false);
+  const [jobsOpen, setJobsOpen] = React.useState(autoOpenJobs);
+  const cardRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (autoOpenJobs) {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [autoOpenJobs]);
 
   return (
-    <Card className={cn("border-border bg-card", className)}>
+    <Card ref={cardRef} className={cn("border-border bg-card", className)}>
       <CardHeader className="flex flex-row items-start justify-between gap-3 pb-3">
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex items-center gap-2">
