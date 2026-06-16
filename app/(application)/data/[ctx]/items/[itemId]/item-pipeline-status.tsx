@@ -3,20 +3,16 @@
 /**
  * ItemPipelineStatus — the persistent, interactive pipeline stepper at the
  * top of the item detail page. Replaces the old static status line + the
- * post-save takeover, and surfaces the Process / Generate-embeddings actions
- * here (as per-step "Re-run") instead of hiding them in the ⋯ menu.
+ * post-save takeover, and surfaces Process / Generate-embeddings here (as
+ * per-step "Run" / "Re-run") instead of hiding them in the ⋯ menu.
  *
- * For each stage the context configures (Ingested · Processed · Embedded ·
- * Retrievable) it shows live state:
- *  - done    — the item's timestamp/chunks are present
- *  - running — a re-run was triggered (or a save scheduled work); polls the
- *              item until the relevant timestamp advances
- *  - pending — configured but not done (with a Run/Re-run affordance)
- *
- * "Running" is honest: we only enter it from an action taken on this page (a
- * Re-run click, or a Save that scheduled work — via `saveActivity`). On a
- * fresh visit a not-yet-complete stage reads "pending" with a Run button — we
- * don't fake background activity we can't observe per-item.
+ * "Running" is detected from the QUEUE, not just from on-page actions: a
+ * stage reads running whenever this item has a waiting/active/delayed job in
+ * that stage's queue (useItemActiveJobs). So the running state survives a
+ * page refresh — if the scheduled jobs haven't finished, the stepper still
+ * shows them running. A short optimistic flag bridges the gap between an
+ * action and the next queue poll. While anything runs we also poll the item
+ * so its done-state flips the moment a job completes.
  */
 
 import { Check, Loader2, RefreshCw, Sparkles } from "lucide-react";
@@ -30,7 +26,7 @@ import { cn } from "@/lib/utils";
 import type { Item } from "@EXULU_SHARED/models/item";
 import type { Context } from "@/types/models/context";
 
-import type { PipelineSnapshot } from "../../components/use-item-editor";
+import { useItemActiveJobs } from "./use-item-active-jobs";
 
 export interface ItemPipelineStatusProps {
   context: Context;
@@ -41,20 +37,15 @@ export interface ItemPipelineStatusProps {
   processPending: boolean;
   generatePending: boolean;
   /** Emitted by the editor after a Save that scheduled downstream work. */
-  saveActivity: { token: number; snapshot: PipelineSnapshot } | null;
+  saveActivity: { token: number; snapshot: unknown } | null;
   workersConfigured: boolean;
 }
 
 type StepKey = "ingested" | "processed" | "embedded" | "retrievable";
 type StepState = "done" | "running" | "pending";
 
-const POLL_MS = 2500;
-const POLL_CAP_MS = 60_000;
-
-function advanced(now: unknown, before: unknown): boolean {
-  if (now === null || now === undefined || now === "") return false;
-  return now !== before;
-}
+const ITEM_POLL_MS = 3000;
+const OPTIMISTIC_MS = 8000;
 
 export function ItemPipelineStatus({
   context,
@@ -72,92 +63,53 @@ export function ItemPipelineStatus({
   const hasProcessor = Boolean(context.processor);
   const hasEmbedder = Boolean(context.embedder);
 
-  const [watch, setWatch] = React.useState<{
-    steps: StepKey[];
-    snap: PipelineSnapshot;
-  } | null>(null);
-  const startedAt = React.useRef<number | null>(null);
+  const activeJobs = useItemActiveJobs(context, item.id ?? "");
 
-  // Start watching when a Save scheduled work.
+  // Optimistic "running" right after an action, until the queue poll catches
+  // the new job (avoids a flash of "pending").
+  const [optimistic, setOptimistic] = React.useState<Set<StepKey>>(new Set());
+  const timers = React.useRef<Record<string, number>>({});
+  const markOptimistic = React.useCallback((key: StepKey) => {
+    setOptimistic((prev) => new Set(prev).add(key));
+    window.clearTimeout(timers.current[key]);
+    timers.current[key] = window.setTimeout(() => {
+      setOptimistic((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }, OPTIMISTIC_MS);
+  }, []);
+  React.useEffect(() => {
+    const t = timers.current;
+    return () => Object.values(t).forEach((id) => window.clearTimeout(id));
+  }, []);
+
+  // Bridge a save that scheduled work into optimistic-running.
   const lastToken = React.useRef<number | null>(null);
   React.useEffect(() => {
     if (!saveActivity || saveActivity.token === lastToken.current) return;
     lastToken.current = saveActivity.token;
-    const steps: StepKey[] = [];
-    if (hasProcessor) steps.push("processed");
-    if (hasEmbedder) steps.push("embedded");
-    if (steps.length) {
-      startedAt.current = Date.now();
-      setWatch({ steps, snap: saveActivity.snapshot });
-    }
+    if (hasProcessor) markOptimistic("processed");
+    if (hasEmbedder) markOptimistic("embedded");
+    activeJobs.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveActivity, hasProcessor, hasEmbedder]);
 
-  // Whether a given watched step has advanced past the snapshot.
-  const stepAdvanced = React.useCallback(
-    (key: StepKey): boolean => {
-      if (!watch) return true;
-      if (key === "processed") {
-        return advanced(item.last_processed_at, watch.snap.last_processed_at);
-      }
-      if (key === "embedded") {
-        return (
-          advanced(item.embeddings_updated_at, watch.snap.embeddings_updated_at) ||
-          (typeof item.chunks_count === "number" &&
-            item.chunks_count !== watch.snap.chunks_count &&
-            item.chunks_count > 0)
-        );
-      }
-      return true;
-    },
-    [watch, item.last_processed_at, item.embeddings_updated_at, item.chunks_count],
-  );
+  const isRunning = (key: StepKey): boolean => {
+    if (key === "processed") return activeJobs.processorRunning || optimistic.has("processed");
+    if (key === "embedded") return activeJobs.embedderRunning || optimistic.has("embedded");
+    return false;
+  };
+  const anyRunning = isRunning("processed") || isRunning("embedded");
 
-  const pendingWatched = watch
-    ? watch.steps.filter((s) => !stepAdvanced(s))
-    : [];
-  const watching = pendingWatched.length > 0;
-
-  // Poll while watching; clear when all advance or the cap is hit.
+  // Poll the item while anything runs, so done-state updates when jobs finish.
   React.useEffect(() => {
-    if (!watch) return;
-    if (pendingWatched.length === 0) {
-      setWatch(null);
-      return;
-    }
-    const id = window.setInterval(() => {
-      const since = startedAt.current ?? Date.now();
-      if (Date.now() - since > POLL_CAP_MS) {
-        setWatch(null);
-        return;
-      }
-      refetch();
-    }, POLL_MS);
+    if (!anyRunning) return;
+    const id = window.setInterval(refetch, ITEM_POLL_MS);
     return () => window.clearInterval(id);
-  }, [watch, pendingWatched.length, refetch]);
+  }, [anyRunning, refetch]);
 
-  const beginWatch = (key: StepKey) => {
-    startedAt.current = Date.now();
-    setWatch((prev) => {
-      const snap: PipelineSnapshot = {
-        last_processed_at: item.last_processed_at,
-        embeddings_updated_at: item.embeddings_updated_at,
-        chunks_count: typeof item.chunks_count === "number" ? item.chunks_count : null,
-      };
-      const steps = Array.from(new Set([...(prev?.steps ?? []), key]));
-      return { steps, snap: prev?.snap ?? snap };
-    });
-  };
-
-  const rerunProcessed = () => {
-    beginWatch("processed");
-    onProcess();
-  };
-  const rerunEmbedded = () => {
-    beginWatch("embedded");
-    onGenerate();
-  };
-
-  // ── Per-step done/running/pending ────────────────────────────────────────
   const embeddedDone =
     (typeof item.chunks_count === "number" && item.chunks_count > 0) ||
     Boolean(item.embeddings_updated_at);
@@ -168,8 +120,19 @@ export function ItemPipelineStatus({
     return embeddedDone && !item.archived; // retrievable
   };
   const stepState = (key: StepKey): StepState => {
-    if (watch?.steps.includes(key) && !stepAdvanced(key)) return "running";
+    if (isRunning(key)) return "running";
     return isDone(key) ? "done" : "pending";
+  };
+
+  const rerunProcessed = () => {
+    markOptimistic("processed");
+    onProcess();
+    activeJobs.refetch();
+  };
+  const rerunEmbedded = () => {
+    markOptimistic("embedded");
+    onGenerate();
+    activeJobs.refetch();
   };
 
   const steps: { key: StepKey; label: string; action?: "process" | "generate" }[] = [
@@ -195,11 +158,9 @@ export function ItemPipelineStatus({
   }
 
   const chunkCount = typeof item.chunks_count === "number" ? item.chunks_count : 0;
-
-  // Which stage is actively running → deep-link the queue to it.
-  const runningStage = pendingWatched.includes("processed")
+  const runningStage = isRunning("processed")
     ? "processor"
-    : pendingWatched.includes("embedded")
+    : isRunning("embedded")
       ? "embedder"
       : null;
 
@@ -274,7 +235,7 @@ export function ItemPipelineStatus({
         </span>
       </div>
 
-      {watching && (
+      {anyRunning && (
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <StatusDot status="info" pulse />
           <span>
