@@ -2467,6 +2467,32 @@
         "openQueue": "Warteschlange öffnen",
         "viewItem": "Eintrag ansehen",
         "runInBackground": "Im Hintergrund ausführen"
+      },
+      "health": {
+        "flow": {
+          "sources": "Quellen",
+          "processor": "Prozessor",
+          "embedder": "Embedder",
+          "searchable": "Durchsuchbar",
+          "sourcesStat": "{connected} verbunden · {items} Einträge",
+          "embedderStat": "{embedded} / {total} eingebettet",
+          "searchableStat": "{pct}% abrufbar"
+        },
+        "stuck": {
+          "title": "{count, plural, one {# Eintrag ohne Embeddings} other {# Einträge ohne Embeddings}}",
+          "description": "Erfasst, aber nie eingebettet — diese Einträge werden vom Agenten-Retrieval nicht zurückgegeben.",
+          "inspect": "Einträge prüfen"
+        },
+        "stats": {
+          "totalItems": "Einträge gesamt",
+          "embedded": "Eingebettet",
+          "notEmbedded": "Nicht eingebettet",
+          "notEmbeddedHint": "Keine Chunks erzeugt",
+          "totalChunks": "Chunks gesamt",
+          "aggregatePending": "Aggregat ausstehend",
+          "stale": "Veraltet",
+          "staleHint": "Älter als 30 Tage"
+        }
       }
     }
   },

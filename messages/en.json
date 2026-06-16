@@ -2467,6 +2467,32 @@
         "openQueue": "Open queue",
         "viewItem": "View item",
         "runInBackground": "Run in background"
+      },
+      "health": {
+        "flow": {
+          "sources": "Sources",
+          "processor": "Processor",
+          "embedder": "Embedder",
+          "searchable": "Searchable",
+          "sourcesStat": "{connected} connected · {items} items",
+          "embedderStat": "{embedded} / {total} embedded",
+          "searchableStat": "{pct}% retrievable"
+        },
+        "stuck": {
+          "title": "{count, plural, one {# item has no embeddings} other {# items have no embeddings}}",
+          "description": "Ingested but never embedded — these items won't be returned by agent retrieval.",
+          "inspect": "Inspect items"
+        },
+        "stats": {
+          "totalItems": "Total items",
+          "embedded": "Embedded",
+          "notEmbedded": "Not embedded",
+          "notEmbeddedHint": "No chunks generated",
+          "totalChunks": "Total chunks",
+          "aggregatePending": "Aggregate pending",
+          "stale": "Stale",
+          "staleHint": "Older than 30 days"
+        }
       }
     }
   },

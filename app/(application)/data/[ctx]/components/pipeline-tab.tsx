@@ -14,6 +14,7 @@
  */
 
 import { useTranslations } from "next-intl";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import { EmptyState } from "@/components/primitives/empty-state";
@@ -21,6 +22,7 @@ import { Boxes } from "lucide-react";
 import type { Context } from "@/types/models/context";
 
 import { ActivityList } from "./activity-list";
+import { PipelineHealth } from "./pipeline-health";
 import { StageEmbedder } from "./stage-embedder";
 import { StageProcessor } from "./stage-processor";
 import { StageSources } from "./stage-sources";
@@ -31,6 +33,16 @@ export interface PipelineTabProps {
 
 export function PipelineTab({ context }: PipelineTabProps) {
   const t = useTranslations("knowledge");
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+
+  const goToItems = () => {
+    const url = new URLSearchParams(params?.toString() ?? "");
+    url.set("tab", "items");
+    url.delete("item");
+    router.push(`${pathname}?${url.toString()}`);
+  };
 
   const hasAnyStage =
     (context.sources?.length ?? 0) > 0 ||
@@ -48,7 +60,8 @@ export function PipelineTab({ context }: PipelineTabProps) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
+      <PipelineHealth context={context} onInspectItems={goToItems} />
       <div className="relative flex flex-col gap-6">
         {/* Muted connecting line behind the stages */}
         <div
