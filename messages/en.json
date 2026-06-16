@@ -2137,10 +2137,9 @@
   "knowledge": {
     "library": {
       "backendHint": "Contexts are defined in your backend.",
-      "backendHintLink": "View docs",
       "description": "Contexts your agents retrieve from.",
       "empty": {
-        "description": "Contexts are defined in code by your backend team. See the docs to learn how to add one.",
+        "description": "Contexts are defined in code by your software development team. See the docs to learn how to add one.",
         "title": "No knowledge contexts yet",
         "viewDocs": "View docs"
       },
@@ -2435,6 +2434,17 @@
       "tabs": {
         "items": "Items",
         "pipeline": "Pipeline"
+      },
+      "backToItems": "Back to items",
+      "itemDetail": {
+        "copyId": "Copy item ID",
+        "externalIdLabel": "ext",
+        "pipeline": {
+          "ingested": "Ingested",
+          "processed": "Processed",
+          "embedded": "Embedded",
+          "retrievable": "Retrievable"
+        }
       }
     }
   },

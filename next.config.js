@@ -73,11 +73,13 @@ const baseConfig = {
         destination: '/data/:ctx?view=archived',
         permanent: true,
       },
-      // Item deep link → ?item=... (kept last so it doesn't shadow the
-      // segment-named routes above).
+      // Legacy item deep link → dedicated detail page (knowledge V2 Phase
+      // F1). Kept last so it doesn't shadow the segment-named routes above.
+      // Note: `/data/:ctx/items/:itemId` is now a real route, so this only
+      // catches the old single-segment shape.
       {
         source: '/data/:ctx/:item',
-        destination: '/data/:ctx?item=:item',
+        destination: '/data/:ctx/items/:item',
         permanent: true,
       },
     ];

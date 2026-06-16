@@ -66,10 +66,8 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
 
   const onCreated = (newItemId: string) => {
     setNewItemOpen(false);
-    const url = new URLSearchParams(params?.toString() ?? "");
-    url.delete("tab");
-    url.set("item", newItemId);
-    router.push(`${pathname}?${url.toString()}`, { scroll: false });
+    // New items open in edit mode on the dedicated detail page (V2 Phase F1).
+    router.push(`/data/${context.id}/items/${newItemId}`);
   };
 
   return (

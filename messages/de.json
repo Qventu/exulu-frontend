@@ -2136,11 +2136,10 @@
   },
   "knowledge": {
     "library": {
-      "backendHint": "Kontexte werden in deinem Backend definiert.",
-      "backendHintLink": "Doku ansehen",
+      "backendHint": "Kontexte werden in deinem Backend durch Entwickler definiert.",
       "description": "Kontexte, aus denen deine Agenten abrufen.",
       "empty": {
-        "description": "Kontexte werden im Code von deinem Backend-Team definiert. In der Doku erfährst du, wie du einen hinzufügst.",
+        "description": "Kontexte werden im Code von deinem Entwickler-Team definiert.",
         "title": "Noch keine Wissens-Kontexte",
         "viewDocs": "Doku ansehen"
       },
@@ -2435,6 +2434,17 @@
       "tabs": {
         "items": "Elemente",
         "pipeline": "Pipeline"
+      },
+      "backToItems": "Zurück zu den Einträgen",
+      "itemDetail": {
+        "copyId": "Eintrags-ID kopieren",
+        "externalIdLabel": "ext",
+        "pipeline": {
+          "ingested": "Erfasst",
+          "processed": "Verarbeitet",
+          "embedded": "Eingebettet",
+          "retrievable": "Abrufbar"
+        }
       }
     }
   },

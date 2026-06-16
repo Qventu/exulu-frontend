@@ -1,17 +1,14 @@
 "use client";
 
 /**
- * ItemsTab — body of the Items tab. Hosts the Toolbar (search, Filters
- * button with count, Active|Archived segmented control) and the ListDetail
- * that pairs ItemsTable (list) with ItemPanel (detail).
+ * ItemsTab — body of the Items tab. Hosts the items table (search, Filters,
+ * Active|Archived segmented control, selection, bulk actions, pagination)
+ * and the BulkFilterDialog.
  *
- * Detail uses a Sheet (overlay) instead of a docked column. Items carry
- * substantive content — custom typed fields, description, tags,
- * calculated fields, embeddings section, access section — and neither
- * the original compact docked column (24-28rem) nor the wide-docked
- * variant felt right alongside the table. Sheet at sm:max-w-2xl (42rem)
- * gives the detail room without permanently squeezing the list.
- * User feedback 2026-06-16. Below md it's a bottom Sheet (unchanged).
+ * Selecting a row NAVIGATES to the dedicated item detail page
+ * `/data/[ctx]/items/[itemId]` (knowledge V2 Phase F1) — the wide Sheet/
+ * ListDetail it used to open is retired. A legacy `?item=` deep link is
+ * redirected to the new route here so old bookmarks keep working.
  *
  * Inventory items handled here: 6 (segmented control), 23 (Filters
  * entry), 24 (URL-driven search/page), 26 (list error / keep-prev data,
@@ -19,15 +16,14 @@
  */
 
 import { useTranslations } from "next-intl";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import * as React from "react";
 
-import { ListDetail } from "@/components/primitives/list-detail";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Context } from "@/types/models/context";
 
 import { BulkFilterDialog } from "./bulk-filter-dialog";
-import { ItemPanel } from "./item-panel";
 import { ItemsTable } from "./items-table";
 
 export interface ItemsTabProps {
@@ -55,6 +51,14 @@ export function ItemsTab({
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [advancedFilters, setAdvancedFilters] = React.useState<unknown[]>([]);
 
+  // Legacy deep link: `/data/[ctx]?item=<id>` opened the old Sheet. Redirect
+  // it to the dedicated detail page so bookmarks/toasts keep resolving.
+  React.useEffect(() => {
+    if (selectedItemId) {
+      router.replace(`/data/${context.id}/items/${selectedItemId}`);
+    }
+  }, [selectedItemId, context.id, router]);
+
   const setParam = (mutator: (url: URLSearchParams) => void) => {
     const url = new URLSearchParams(params?.toString() ?? "");
     mutator(url);
@@ -71,13 +75,6 @@ export function ItemsTab({
     });
   };
 
-  const setSelectedItem = (id: string | null) => {
-    setParam((url) => {
-      if (id === null) url.delete("item");
-      else url.set("item", id);
-    });
-  };
-
   const setPage = (next: number) => {
     setParam((url) => {
       if (next <= 1) url.delete("page");
@@ -85,61 +82,37 @@ export function ItemsTab({
     });
   };
 
-  // The selected item value passed into ListDetail is a thin {id} object so
-  // ListDetail.getItemId() reads it without needing the full item record
-  // (which is fetched separately by ItemPanel).
-  const selected = selectedItemId ? { id: selectedItemId } : null;
+  const openItem = (id: string | null) => {
+    if (id) router.push(`/data/${context.id}/items/${id}`);
+  };
 
   return (
     <>
-      <ListDetail
-        list={
-          <ItemsTable
-            context={context}
-            archived={view === "archived"}
-            page={page}
-            search={search}
-            advancedFilters={advancedFilters}
-            selectedItemId={selectedItemId}
-            activeFiltersCount={advancedFilters.length}
-            onSelect={setSelectedItem}
-            onPageChange={setPage}
-            onOpenFilters={() => setFiltersOpen(true)}
-            onClearFilters={() => setAdvancedFilters([])}
-            onOpenCreate={onOpenCreate}
-            viewSwitch={
-              <Tabs value={view} onValueChange={(v) => setView(v as "active" | "archived")}>
-                <TabsList>
-                  <TabsTrigger value="active">
-                    {t("workspace.items.viewActive")}
-                  </TabsTrigger>
-                  <TabsTrigger value="archived">
-                    {t("workspace.items.viewArchived")}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            }
-          />
+      <ItemsTable
+        context={context}
+        archived={view === "archived"}
+        page={page}
+        search={search}
+        advancedFilters={advancedFilters}
+        selectedItemId={null}
+        activeFiltersCount={advancedFilters.length}
+        onSelect={openItem}
+        onPageChange={setPage}
+        onOpenFilters={() => setFiltersOpen(true)}
+        onClearFilters={() => setAdvancedFilters([])}
+        onOpenCreate={onOpenCreate}
+        viewSwitch={
+          <Tabs value={view} onValueChange={(v) => setView(v as "active" | "archived")}>
+            <TabsList>
+              <TabsTrigger value="active">
+                {t("workspace.items.viewActive")}
+              </TabsTrigger>
+              <TabsTrigger value="archived">
+                {t("workspace.items.viewArchived")}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         }
-        detail={() =>
-          selectedItemId ? (
-            <ItemPanel
-              context={context}
-              itemId={selectedItemId}
-              onClose={() => setSelectedItem(null)}
-            />
-          ) : null
-        }
-        detailMode="panel"
-        detailPresentation="sheet"
-        detailSheetClassName="sm:max-w-2xl"
-        selected={selected}
-        onSelect={(item) => setSelectedItem(item?.id ?? null)}
-        items={selected ? [selected] : []}
-        getItemId={(i) => i.id}
-        paramName="item"
-        syncUrl={false}
-        detailTitle={() => t("workspace.itemPanel.title")}
       />
 
       <BulkFilterDialog
@@ -151,11 +124,9 @@ export function ItemsTab({
         onApply={(next) => {
           setAdvancedFilters(next);
           setFiltersOpen(false);
-          // jump to page 1 on filter change
           setPage(1);
         }}
       />
-
     </>
   );
 }
