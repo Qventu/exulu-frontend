@@ -88,6 +88,13 @@ export interface ListDetailProps<T> {
    * @default "compact"
    */
   detailEmphasis?: "compact" | "primary";
+  /**
+   * Override the Sheet width class at `md+` (right-side variant). Default is
+   * `sm:max-w-md` — fits credentials/keys, but content-rich detail surfaces
+   * (knowledge items, agents) want more room. Pass e.g. `sm:max-w-2xl` to
+   * widen. Ignored at `<md` (bottom Sheet always full-width).
+   */
+  detailSheetClassName?: string;
   /** Quiet EmptyState shown in the `"static"` pane when nothing is selected. */
   emptyDetail?: React.ReactNode;
   /** Items backing URL deep-link resolution and keyboard navigation. */
@@ -154,6 +161,7 @@ export function ListDetail<T>({
   detailMode = "panel",
   detailPresentation = "docked",
   detailEmphasis = "compact",
+  detailSheetClassName,
   emptyDetail,
   items,
   getItemId,
@@ -407,6 +415,7 @@ export function ListDetail<T>({
               breakpoint === "base"
                 ? "max-h-[85dvh] rounded-t-lg"
                 : "h-full w-full sm:max-w-md",
+              breakpoint !== "base" && detailSheetClassName,
             )}
           >
             <SheetHeader className="border-b border-border px-4 py-3 pr-12 text-left">

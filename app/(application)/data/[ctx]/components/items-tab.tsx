@@ -5,12 +5,13 @@
  * button with count, Active|Archived segmented control) and the ListDetail
  * that pairs ItemsTable (list) with ItemPanel (detail).
  *
- * `detailEmphasis="primary"` — items carry substantive content (custom
- * typed fields, description, tags, calculated fields, embeddings section,
- * access section). The earlier "compact" call (knowledge.md 2026-06-13
- * QA: "panel is metadata") capped the pane at 24-28rem and was too
- * narrow to render most items. Override per user feedback 2026-06-16.
- * Below md the panel renders as a bottom Sheet via ListDetail.
+ * Detail uses a Sheet (overlay) instead of a docked column. Items carry
+ * substantive content — custom typed fields, description, tags,
+ * calculated fields, embeddings section, access section — and neither
+ * the original compact docked column (24-28rem) nor the wide-docked
+ * variant felt right alongside the table. Sheet at sm:max-w-2xl (42rem)
+ * gives the detail room without permanently squeezing the list.
+ * User feedback 2026-06-16. Below md it's a bottom Sheet (unchanged).
  *
  * Inventory items handled here: 6 (segmented control), 23 (Filters
  * entry), 24 (URL-driven search/page), 26 (list error / keep-prev data,
@@ -130,8 +131,8 @@ export function ItemsTab({
           ) : null
         }
         detailMode="panel"
-        detailPresentation="docked"
-        detailEmphasis="primary"
+        detailPresentation="sheet"
+        detailSheetClassName="sm:max-w-2xl"
         selected={selected}
         onSelect={(item) => setSelectedItem(item?.id ?? null)}
         items={selected ? [selected] : []}
