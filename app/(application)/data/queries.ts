@@ -130,6 +130,27 @@ export const GET_CONTEXT_BY_ID = gql`
   }
 `;
 
+// In-flight pipeline jobs for ONE item (knowledge V2 KB-7). job_results now
+// carries indexed item + type columns and a "waiting" row written at enqueue
+// time, so this one indexed query tells us which stages are queued/running
+// for an item — and it survives a page refresh (unlike scanning the live
+// BullMQ queue). `state in [waiting, active, delayed]` = not yet terminal.
+export const GET_ITEM_ACTIVE_JOBS = gql`
+  query GetItemActiveJobs($item: String!, $states: [String]) {
+    job_resultsPagination(
+      page: 1
+      limit: 100
+      filters: [{ item: { eq: $item }, state: { in: $states } }]
+    ) {
+      items {
+        id
+        type
+        state
+      }
+    }
+  }
+`;
+
 // Pipeline-health aggregates (knowledge V2 KB-3/KB-4). Kept separate from
 // CONTEXT_FIELDS so the workspace's context fetch never triggers the
 // (lazy, but non-zero) server-side count queries — only the Pipeline tab's
