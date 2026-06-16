@@ -58,8 +58,20 @@ export function ItemFieldsSection({
         value: draft.external_id,
       });
     }
+    if (draft.description?.trim()) {
+      out.push({
+        label: t("workspace.fields.description"),
+        value: draft.description,
+      });
+    }
+    if (Array.isArray(draft.tags) && draft.tags.length > 0) {
+      out.push({
+        label: t("workspace.fields.tags"),
+        value: draft.tags.join(", "),
+      });
+    }
     return out;
-  }, [draft.name, draft.external_id, t]);
+  }, [draft.name, draft.external_id, draft.description, draft.tags, t]);
 
   return (
     <DetailSection
@@ -80,13 +92,21 @@ export function ItemFieldsSection({
         ) : null
       }
     >
-      {/* View-mode copy actions surface above the form when not editing. */}
+      {/* View-mode copy actions surface above the form when not editing.
+          Description/tags can be longer than name/external_id, so values
+          truncate with max-w + truncate so long strings don't blow out the
+          chip row; the full value is still copied verbatim. */}
       {!editing && fieldEntries.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-2">
           {fieldEntries.map((e) => (
             <div key={e.label} className="flex items-center gap-1 text-xs">
               <span className="text-muted-foreground">{e.label}:</span>
-              <code className="rounded bg-muted px-1.5 py-0.5">{e.value}</code>
+              <code
+                className="block max-w-[260px] truncate rounded bg-muted px-1.5 py-0.5"
+                title={e.value}
+              >
+                {e.value}
+              </code>
               <CopyButton
                 value={e.value}
                 label={t("workspace.fields.copyValue", { label: e.label })}
