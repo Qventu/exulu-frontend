@@ -1312,7 +1312,9 @@
     "upload": "Upload",
     "uploadNewFiles": "Upload new files",
     "uploadToGetStarted": "Upload some files to get started",
-    "view": "View"
+    "view": "View",
+    "running": "Running",
+    "queued": "Queued"
   },
   "evals": {
     "cases": {
@@ -2445,6 +2447,26 @@
           "embedded": "Embedded",
           "retrievable": "Retrievable"
         }
+      },
+      "progress": {
+        "title": "Updating item",
+        "titleDone": "Update complete",
+        "pillRunning": "In progress",
+        "pillDone": "Done",
+        "savedEyebrow": "Saved",
+        "saved": "Item updated",
+        "processing": "Processing content",
+        "embedding": "Generating embeddings",
+        "bannerQueued": "Your changes were saved. Pipeline jobs were scheduled — you can leave this page; they'll keep running.",
+        "bannerSync": "Your changes were saved and are being applied — no queues are configured for this context.",
+        "bannerDone": "Your changes were saved and the pipeline finished.",
+        "footerQueued": "Polling for updates…",
+        "footerSync": "Running inline…",
+        "footerStalled": "Still working — check the queue for details.",
+        "footerDone": "All steps complete.",
+        "openQueue": "Open queue",
+        "viewItem": "View item",
+        "runInBackground": "Run in background"
       }
     }
   },

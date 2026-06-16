@@ -37,6 +37,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
+import { ConfigContext } from "@/components/shell/config-context";
 import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { CopyButton } from "@/components/primitives/copy-button";
 import {
@@ -61,6 +62,7 @@ import { ItemCalculatedSection } from "../../components/item-calculated-section"
 import { ItemEmbeddingsSection } from "../../components/item-embeddings-section";
 import { ItemFieldsSection } from "../../components/item-fields-section";
 import { useItemEditor } from "../../components/use-item-editor";
+import { ItemUpdateProgress } from "./item-update-progress";
 
 export interface ItemDetailClientProps {
   context: Context;
@@ -107,6 +109,10 @@ function pipelineSteps(
 export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
   const t = useTranslations("knowledge");
   const router = useRouter();
+  const config = React.useContext(ConfigContext);
+  const workersConfigured = Boolean(
+    config?.workers?.enabled && config?.workers?.redisHost,
+  );
 
   const { item, loading, error, refetch } = useItemDetail({ context, itemId });
 
@@ -267,6 +273,18 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
         meta={idLine}
       />
 
+      {editor.progress ? (
+        <div className="mt-6">
+          <ItemUpdateProgress
+            context={context}
+            item={item}
+            snapshot={editor.progress.snapshot}
+            workersConfigured={workersConfigured}
+            refetch={refetch}
+            onViewItem={editor.dismissProgress}
+          />
+        </div>
+      ) : (
       <div className="mt-6 space-y-6">
         {/* Pipeline status line — the "did it work?" answer. */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -335,6 +353,7 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
           <ItemCalculatedSection context={context} item={item} />
         </div>
       </div>
+      )}
 
       {editor.confirm && editor.confirmCfg && (
         <ConfirmDialog

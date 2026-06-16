@@ -1312,7 +1312,9 @@
     "upload": "Hochladen",
     "uploadNewFiles": "Neue Dateien hochladen",
     "uploadToGetStarted": "Laden Sie Dateien hoch, um loszulegen",
-    "view": "Ansehen"
+    "view": "Ansehen",
+    "running": "Läuft",
+    "queued": "In Warteschlange"
   },
   "evals": {
     "cases": {
@@ -2445,6 +2447,26 @@
           "embedded": "Eingebettet",
           "retrievable": "Abrufbar"
         }
+      },
+      "progress": {
+        "title": "Eintrag wird aktualisiert",
+        "titleDone": "Aktualisierung abgeschlossen",
+        "pillRunning": "Läuft",
+        "pillDone": "Fertig",
+        "savedEyebrow": "Gespeichert",
+        "saved": "Eintrag aktualisiert",
+        "processing": "Inhalt wird verarbeitet",
+        "embedding": "Embeddings werden erzeugt",
+        "bannerQueued": "Ihre Änderungen wurden gespeichert. Pipeline-Jobs wurden eingeplant — Sie können diese Seite verlassen; sie laufen weiter.",
+        "bannerSync": "Ihre Änderungen wurden gespeichert und werden angewendet — für diesen Kontext sind keine Warteschlangen konfiguriert.",
+        "bannerDone": "Ihre Änderungen wurden gespeichert und die Pipeline ist abgeschlossen.",
+        "footerQueued": "Aktualisierungen werden abgefragt…",
+        "footerSync": "Läuft direkt…",
+        "footerStalled": "Wird noch verarbeitet — Details in der Warteschlange.",
+        "footerDone": "Alle Schritte abgeschlossen.",
+        "openQueue": "Warteschlange öffnen",
+        "viewItem": "Eintrag ansehen",
+        "runInBackground": "Im Hintergrund ausführen"
       }
     }
   },

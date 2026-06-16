@@ -39,6 +39,24 @@ export type ItemConfirmKind =
   | "generate-embeddings"
   | "delete-embeddings";
 
+export interface PipelineSnapshot {
+  last_processed_at?: string | null;
+  embeddings_updated_at?: string | null;
+  chunks_count?: number | null;
+}
+
+/** Does saving this context's item schedule processor/embedder work? */
+function schedulesOnUpdate(context: Context): boolean {
+  const calc = context.configuration?.calculateVectors;
+  const embedderOnUpdate =
+    Boolean(context.embedder) && (calc === "onUpdate" || calc === "always");
+  const procTrigger = context.processor?.trigger;
+  const processorOnUpdate =
+    Boolean(context.processor) &&
+    (procTrigger === "onUpdate" || procTrigger === "always");
+  return embedderOnUpdate || processorOnUpdate;
+}
+
 interface RbacState {
   rights_mode?: "private" | "users" | "roles" | "teams" | "public";
   users?: { id: number; rights: "read" | "write" }[];
@@ -69,6 +87,15 @@ export function useItemEditor({
   const [rbac, setRbac] = React.useState<RbacState>({});
   const [editing, setEditing] = React.useState(false);
   const [confirm, setConfirm] = React.useState<ItemConfirmKind | null>(null);
+
+  // Post-save pipeline progress (V2 Phase F2). `preSaveSnap` is set ONLY by
+  // the explicit Save path, so archive toggles / bulk updates that reuse the
+  // same mutation never trigger the progress view. It's consumed (cleared)
+  // in the update onCompleted.
+  const preSaveSnap = React.useRef<PipelineSnapshot | null>(null);
+  const [progress, setProgress] = React.useState<{
+    snapshot: PipelineSnapshot;
+  } | null>(null);
 
   // Re-seed local draft / rbac whenever a new item loads.
   React.useEffect(() => {
@@ -113,15 +140,28 @@ export function useItemEditor({
   // ---- Mutations -----------------------------------------------------
 
   const [updateItem, updateItemResult] = useMutation(UPDATE_ITEM(context.id), {
-    onCompleted: () => {
+    onCompleted: (data) => {
       toast.success(t("workspace.panel.toasts.updated"));
       onMutated?.();
+      // Surface the pipeline progress view only for an explicit Save (which
+      // set preSaveSnap) AND only when work was actually scheduled — either
+      // the mutation returned a `job`, or the context config schedules work
+      // on update.
+      if (preSaveSnap.current) {
+        const job = data?.[`${context.id}_itemsUpdateOneById`]?.job;
+        if (job || schedulesOnUpdate(context)) {
+          setProgress({ snapshot: preSaveSnap.current });
+        }
+        preSaveSnap.current = null;
+      }
       refetch();
     },
-    onError: (e) =>
+    onError: (e) => {
+      preSaveSnap.current = null;
       toast.error(t("workspace.panel.toasts.updateError"), {
         description: e.message,
-      }),
+      });
+    },
   });
 
   const [deleteItem, deleteItemResult] = useMutation(DELETE_ITEM(context.id, []), {
@@ -238,6 +278,14 @@ export function useItemEditor({
       });
       return;
     }
+    // Snapshot pre-save pipeline state so the progress view can detect when
+    // each downstream stage advances. Set here (not in archive/bulk paths)
+    // so only an explicit Save can open the progress view.
+    preSaveSnap.current = {
+      last_processed_at: item.last_processed_at,
+      embeddings_updated_at: item.embeddings_updated_at,
+      chunks_count: typeof item.chunks_count === "number" ? item.chunks_count : null,
+    };
     await updateItem({
       variables: {
         id: item.id,
@@ -306,6 +354,9 @@ export function useItemEditor({
     overlayVariant,
     saving: updateItemResult.loading,
     processPending: processItemResult.loading,
+    // post-save progress (V2 Phase F2)
+    progress,
+    dismissProgress: () => setProgress(null),
     // handlers
     handleSave,
     cancelEdit,
