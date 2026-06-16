@@ -1314,7 +1314,11 @@
     "uploadToGetStarted": "Upload some files to get started",
     "view": "View",
     "running": "Running",
-    "queued": "Queued"
+    "queued": "Queued",
+    "queueFailure": "Failure",
+    "queueInputs": "Inputs",
+    "queueNoInputs": "No inputs",
+    "copyId": "Copy ID"
   },
   "evals": {
     "cases": {

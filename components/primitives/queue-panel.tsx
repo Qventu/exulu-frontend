@@ -57,6 +57,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
   Table,
   TableBody,
   TableCell,
@@ -84,6 +90,7 @@ import {
 import { JobStatus } from "@/types/models/job-result";
 
 import { ConfirmDialog } from "./confirm-dialog";
+import { CopyButton } from "./copy-button";
 
 import { DoubleArrowLeftIcon } from "@radix-ui/react-icons";
 
@@ -94,6 +101,7 @@ export interface QueuePanelJob {
   attemptsMade?: number;
   data?: unknown;
   failedReason?: string | null;
+  stacktrace?: string[] | string | null;
   processedOn?: number | string | null;
   finishedOn?: number | string | null;
   timestamp?: number | string | null;
@@ -182,6 +190,8 @@ export function QueuePanel({
   const [drainOpen, setDrainOpen] = React.useState(false);
   const [jobsToDelete, setJobsToDelete] = React.useState<QueuePanelJob[]>([]);
   const [jobsToRetry, setJobsToRetry] = React.useState<QueuePanelJob[]>([]);
+  // Failure-first job-detail drawer (knowledge V2 Phase F4).
+  const [detailJob, setDetailJob] = React.useState<QueuePanelJob | null>(null);
 
   const label = displayName ?? queueName;
   const resolveName = React.useCallback(
@@ -570,6 +580,7 @@ export function QueuePanel({
                   selectedJobs={selectedJobs}
                   toggleJob={toggleJob}
                   canWrite={canWrite}
+                  onOpen={setDetailJob}
                   onDelete={(j) => setJobsToDelete([j])}
                   onRetry={(j) => setJobsToRetry([j])}
                 />
@@ -581,6 +592,7 @@ export function QueuePanel({
                   toggleJob={toggleJob}
                   toggleAll={toggleAll}
                   canWrite={canWrite}
+                  onOpen={setDetailJob}
                   onDelete={(j) => setJobsToDelete([j])}
                   onRetry={(j) => setJobsToRetry([j])}
                 />
@@ -709,6 +721,26 @@ export function QueuePanel({
         }
         onConfirm={handleRetryConfirm}
       />
+
+      {/* Failure-first job-detail drawer (F4). Opening a confirm from here
+          would stack overlays, so the action handlers close the drawer first
+          (state batches → confirm renders as the drawer unmounts). */}
+      <JobDetailSheet
+        job={detailJob}
+        resolveName={resolveName}
+        canWrite={canWrite}
+        onOpenChange={(open) => {
+          if (!open) setDetailJob(null);
+        }}
+        onRetry={(j) => {
+          setDetailJob(null);
+          setJobsToRetry([j]);
+        }}
+        onDelete={(j) => {
+          setDetailJob(null);
+          setJobsToDelete([j]);
+        }}
+      />
     </TooltipProvider>
   );
 }
@@ -731,6 +763,7 @@ function JobTable({
   toggleJob,
   toggleAll,
   canWrite,
+  onOpen,
   onDelete,
   onRetry,
 }: {
@@ -740,6 +773,7 @@ function JobTable({
   toggleJob: (id: string) => void;
   toggleAll: () => void;
   canWrite: boolean;
+  onOpen: (j: QueuePanelJob) => void;
   onDelete: (j: QueuePanelJob) => void;
   onRetry: (j: QueuePanelJob) => void;
 }) {
@@ -785,8 +819,14 @@ function JobTable({
                 />
               </TableCell>
             ) : null}
-            <TableCell className="max-w-[220px] truncate font-medium">
-              {resolveName(job)}
+            <TableCell className="max-w-[220px] font-medium">
+              <button
+                type="button"
+                onClick={() => onOpen(job)}
+                className="block max-w-full truncate text-left hover:underline"
+              >
+                {resolveName(job)}
+              </button>
             </TableCell>
             <TableCell className="max-w-[140px] truncate font-mono text-xs">
               <Tooltip>
@@ -853,6 +893,7 @@ function JobCards({
   selectedJobs,
   toggleJob,
   canWrite,
+  onOpen,
   onDelete,
   onRetry,
 }: {
@@ -861,6 +902,7 @@ function JobCards({
   selectedJobs: Set<string>;
   toggleJob: (id: string) => void;
   canWrite: boolean;
+  onOpen: (j: QueuePanelJob) => void;
   onDelete: (j: QueuePanelJob) => void;
   onRetry: (j: QueuePanelJob) => void;
 }) {
@@ -879,19 +921,25 @@ function JobCards({
             />
           ) : null}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-sm font-medium">
-                {resolveName(job)}
+            <button
+              type="button"
+              onClick={() => onOpen(job)}
+              className="block w-full text-left"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="truncate text-sm font-medium">
+                  {resolveName(job)}
+                </p>
+                <StatusBadge state={job.state} />
+              </div>
+              <p className="truncate font-mono text-xs text-muted-foreground">
+                {job.id}
               </p>
-              <StatusBadge state={job.state} />
-            </div>
-            <p className="truncate font-mono text-xs text-muted-foreground">
-              {job.id}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t("queueAttempts")}: {job.attemptsMade ?? 0} ·{" "}
-              {fmtTime(job.finishedOn)}
-            </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("queueAttempts")}: {job.attemptsMade ?? 0} ·{" "}
+                {fmtTime(job.finishedOn)}
+              </p>
+            </button>
             {canWrite ? (
               <div className="mt-2 flex gap-2">
                 {job.state === "failed" ? (
@@ -925,5 +973,133 @@ function JobCards({
         </li>
       ))}
     </ul>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function CodeBlock({
+  children,
+  tone = "muted",
+}: {
+  children: React.ReactNode;
+  tone?: "muted" | "destructive";
+}) {
+  return (
+    <pre
+      className={cn(
+        "max-h-64 overflow-auto rounded-md p-3 font-mono text-xs leading-relaxed",
+        tone === "destructive"
+          ? "bg-destructive/10 text-destructive"
+          : "bg-muted text-muted-foreground",
+      )}
+    >
+      {children}
+    </pre>
+  );
+}
+
+/** Failure-first job-detail drawer (knowledge V2 Phase F4). */
+function JobDetailSheet({
+  job,
+  resolveName,
+  canWrite,
+  onOpenChange,
+  onRetry,
+  onDelete,
+}: {
+  job: QueuePanelJob | null;
+  resolveName: (j: QueuePanelJob) => string;
+  canWrite: boolean;
+  onOpenChange: (open: boolean) => void;
+  onRetry: (j: QueuePanelJob) => void;
+  onDelete: (j: QueuePanelJob) => void;
+}) {
+  const t = useTranslations("common");
+  if (!job) return null;
+
+  const stack = Array.isArray(job.stacktrace)
+    ? job.stacktrace.join("\n")
+    : (job.stacktrace ?? "");
+  const hasFailure = Boolean(job.failedReason || stack);
+  const inputs =
+    job.data == null ? "" : JSON.stringify(job.data, null, 2);
+
+  return (
+    <Sheet open={!!job} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-xl"
+        aria-describedby={undefined}
+      >
+        <SheetHeader className="border-b px-4 py-3 pr-12 text-left">
+          <SheetTitle className="truncate font-mono text-base">
+            {resolveName(job)}
+          </SheetTitle>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground">
+              {job.id}
+              <CopyButton value={job.id} label={t("copyId")} size="icon" className="size-6" />
+            </span>
+            <StatusBadge state={job.state} />
+            <Badge variant="outline" className="font-normal">
+              {t("queueAttempts")}: {job.attemptsMade ?? 0}
+            </Badge>
+          </div>
+        </SheetHeader>
+
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
+          {hasFailure && (
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold text-destructive">
+                {t("queueFailure")}
+              </h3>
+              <CodeBlock tone="destructive">
+                {job.failedReason ? `${job.failedReason}\n` : ""}
+                {stack}
+              </CodeBlock>
+            </section>
+          )}
+
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">{t("queueInputs")}</h3>
+            {inputs ? (
+              <CodeBlock>{inputs}</CodeBlock>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t("queueNoInputs")}</p>
+            )}
+          </section>
+
+          <section className="grid grid-cols-2 gap-3 text-sm">
+            <Meta label={t("queueStatus")} value={<StatusBadge state={job.state} />} />
+            <Meta label={t("queueAttempts")} value={job.attemptsMade ?? 0} />
+            <Meta label={t("queueCreated")} value={fmtTime(job.timestamp)} />
+            <Meta label={t("queueFinished")} value={fmtTime(job.finishedOn)} />
+          </section>
+        </div>
+
+        {canWrite && (job.state === "failed" || job.state !== "active") && (
+          <div className="flex items-center justify-end gap-2 border-t p-4">
+            {job.state === "failed" && (
+              <Button type="button" onClick={() => onRetry(job)}>
+                <RefreshCcw aria-hidden="true" className="mr-2 size-4" />
+                {t("retry")}
+              </Button>
+            )}
+            {job.state !== "active" && (
+              <Button
+                type="button"
+                variant="outline"
+                className="text-destructive"
+                onClick={() => onDelete(job)}
+              >
+                <Trash2 aria-hidden="true" className="mr-2 size-4" />
+                {t("delete")}
+              </Button>
+            )}
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -1314,7 +1314,11 @@
     "uploadToGetStarted": "Laden Sie Dateien hoch, um loszulegen",
     "view": "Ansehen",
     "running": "Läuft",
-    "queued": "In Warteschlange"
+    "queued": "In Warteschlange",
+    "queueFailure": "Fehler",
+    "queueInputs": "Eingaben",
+    "queueNoInputs": "Keine Eingaben",
+    "copyId": "ID kopieren"
   },
   "evals": {
     "cases": {
