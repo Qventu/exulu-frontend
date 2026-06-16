@@ -1314,6 +1314,481 @@
     "uploadToGetStarted": "Upload some files to get started",
     "view": "View"
   },
+  "evals": {
+    "cases": {
+      "columns": {
+        "description": "Description",
+        "messages": "Messages",
+        "messagesCount": "{count, plural, one {# message} other {# messages}}",
+        "name": "Name",
+        "updated": "Updated"
+      },
+      "deleteConfirm": {
+        "description": "This will permanently delete the test case \"{name}\". This action cannot be undone.",
+        "title": "Delete test case?"
+      },
+      "deleteError": {
+        "title": "Failed to delete test case"
+      },
+      "deleteSuccess": {
+        "title": "Test case deleted"
+      },
+      "empty": {
+        "action": "New test case",
+        "description": "Create a test case to start building eval sets.",
+        "noResults": "No test cases match your filter.",
+        "title": "No test cases yet"
+      },
+      "list": {
+        "breadcrumb": "Evals / Test cases",
+        "description": "Create and manage test cases for evaluating agent performance.",
+        "primaryAction": "New test case",
+        "searchPlaceholder": "Filter by name…",
+        "title": "Test cases"
+      },
+      "modal": {
+        "conversation": {
+          "addButton": "Add message",
+          "addLabel": "Add user message",
+          "addPlaceholder": "Type the user's message…",
+          "description": "Add user messages in order. The agent will respond between each message automatically.",
+          "emptyDescription": "Start building your test conversation by adding user messages below.",
+          "emptyTitle": "No messages yet",
+          "fileWarning": "Ensure the selected agent supports the file types you've attached (images, documents, audio, etc.).",
+          "helper": "Press Enter to add, Shift+Enter for new line. You can attach files to messages.",
+          "title": "Conversation flow"
+        },
+        "create": {
+          "errorTitle": "Failed to create test case",
+          "submit": "Create test case",
+          "successTitle": "Test case created"
+        },
+        "createDescription": "Create a new test case with conversation inputs and expected outputs.",
+        "createTitle": "Create test case",
+        "createTitleForSet": "Create test case for {setName}",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Describe what this test case evaluates…",
+        "edit": {
+          "errorTitle": "Failed to update test case",
+          "submit": "Update test case",
+          "successTitle": "Test case updated"
+        },
+        "editDescription": "Update the test case details.",
+        "editTitle": "Edit test case",
+        "editTitleForSet": "Edit test case in {setName}",
+        "expectedOutputHelp": "This can be an exact expected response or a description of what the output should contain.",
+        "expectedOutputLabel": "Expected output *",
+        "expectedOutputPlaceholder": "Describe the expected final output…",
+        "nameLabel": "Name *",
+        "namePlaceholder": "e.g., Customer Support — Refund Request",
+        "placeholderMessage": "💬 Placeholder, generated agent response will be added here when the test case is run…",
+        "tabs": {
+          "basic": "Basic info",
+          "conversation": "Conversation"
+        },
+        "validationError": "Name, at least one input message, and expected output are required."
+      },
+      "rowActions": {
+        "delete": "Delete",
+        "edit": "Edit",
+        "menu": "Open menu"
+      }
+    },
+    "common": {
+      "accessDenied": {
+        "description": "You don't have permission to access Evals. Contact your administrator to request access.",
+        "title": "Access denied"
+      },
+      "cancel": "Cancel",
+      "columnHeader": {
+        "asc": "Asc",
+        "desc": "Desc",
+        "hide": "Hide"
+      },
+      "columns": {
+        "toggleTitle": "Toggle columns",
+        "toggleTrigger": "View"
+      },
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "empty": {},
+      "errors": {
+        "loadTitle": "Couldn't load data",
+        "retry": "Retry"
+      },
+      "pagination": {
+        "first": "Go to first page",
+        "last": "Go to last page",
+        "next": "Go to next page",
+        "previous": "Go to previous page",
+        "summary": "Page {currentPage} of {pageCount} ({itemCount} total)"
+      },
+      "save": "Save",
+      "saving": "Saving…",
+      "workersWarning": {
+        "configureLink": "Configuration →",
+        "description": "Eval sets are viewable but runs can't execute. Configure Redis to enable evaluation runs.",
+        "title": "Background workers are not configured"
+      }
+    },
+    "detail": {
+      "back": "Back to evals",
+      "bulkAdd": {
+        "errorTitle": "Some test cases couldn't be added",
+        "progress": "Adding {done} of {total}…",
+        "success": "Added {count} test case(s) to this set."
+      },
+      "editDialog": {
+        "description": "Update the set's name and description.",
+        "descriptionLabel": "Description",
+        "errorTitle": "Failed to update eval set",
+        "nameLabel": "Name *",
+        "save": "Save changes",
+        "successTitle": "Eval set updated",
+        "title": "Edit eval set",
+        "validation": {
+          "nameRequired": "Name is required."
+        }
+      },
+      "overflow": {
+        "editDetails": "Edit details",
+        "menu": "More actions",
+        "newRunConfig": "New run config"
+      },
+      "removeCaseConfirm": {
+        "confirm": "Remove",
+        "description": "The test case itself will not be deleted and can be added back later.",
+        "title": "Remove test case from this set?"
+      },
+      "removeCaseSuccess": {
+        "title": "Test case removed"
+      },
+      "runEval": "Run eval",
+      "runEvalDisabledTooltip": "Add test cases first",
+      "selectExisting": {
+        "description": "Pick from unassigned test cases. A case can belong to only one set.",
+        "empty": "No unassigned test cases available.",
+        "searchPlaceholder": "Search by name…",
+        "selectAll": "Select all",
+        "selectedCount": "{count} selected",
+        "submit": "Add {count} test case(s)",
+        "title": "Add existing test cases"
+      },
+      "tabs": {
+        "results": "Results",
+        "testCases": "Test cases",
+        "testCasesWithCount": "Test cases · {count}"
+      },
+      "testCases": {
+        "capReached": "This set has reached the 500-case limit.",
+        "empty": {
+          "description": "Add test cases to this set before running evaluations.",
+          "title": "No test cases yet"
+        },
+        "row": {
+          "edit": "Edit test case",
+          "remove": "Remove from set"
+        },
+        "toolbar": {
+          "addExisting": "Add existing",
+          "count": "{count}/500 cases",
+          "newCase": "New case"
+        }
+      }
+    },
+    "list": {
+      "columns": {
+        "cases": "Cases",
+        "description": "Description",
+        "lastRun": "Last run",
+        "name": "Name",
+        "updated": "Updated"
+      },
+      "create": {
+        "description": "Create a new evaluation set. You can add test cases after creation.",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Describe what this eval set tests…",
+        "errorTitle": "Failed to create eval set",
+        "nameLabel": "Name *",
+        "namePlaceholder": "e.g., Customer Support Scenarios",
+        "submit": "Create eval set",
+        "title": "Create eval set",
+        "trigger": "New eval set"
+      },
+      "deleteConfirm": {
+        "description": "This will permanently delete the eval set \"{name}\". This action cannot be undone.",
+        "title": "Delete eval set?"
+      },
+      "deleteError": {
+        "title": "Failed to delete eval set"
+      },
+      "deleteSuccess": {
+        "description": "The eval set has been removed.",
+        "title": "Eval set deleted"
+      },
+      "description": "Test agents against expected behavior and track scores across runs.",
+      "empty": {
+        "action": "New eval set",
+        "description": "Create your first eval set to start testing agents.",
+        "noResults": "No eval sets match your filter.",
+        "title": "No eval sets yet"
+      },
+      "primaryAction": "New eval set",
+      "rowActions": {
+        "delete": "Delete",
+        "menu": "Open menu",
+        "open": "Open"
+      },
+      "title": "Evals",
+      "toolbar": {
+        "searchPlaceholder": "Filter by name…",
+        "testCaseLibrary": "Test case library"
+      }
+    },
+    "queue": {
+      "chip": {
+        "label": "Queue:",
+        "active": "{count} active",
+        "failed": "{count} failed",
+        "open": "Open queue"
+      },
+      "panel": {
+        "title": "Queue: {queueName}",
+        "description": "Manage the {queueName} job queue and view all jobs."
+      },
+      "stats": {
+        "status": "Status",
+        "paused": "Paused",
+        "maxed": "Maxed",
+        "active": "Active",
+        "queueConcurrency": "Max queue concurrency",
+        "workerConcurrency": "Max worker concurrency",
+        "jobTimeout": "Job timeout",
+        "rateLimit": "Max rate limit",
+        "rateLimitUnit": "jobs/sec",
+        "none": "None"
+      },
+      "tabs": {
+        "active": "Active",
+        "waiting": "Waiting",
+        "failed": "Failed",
+        "stuck": "Stuck",
+        "completed": "Completed"
+      },
+      "retentionFootnote": "Only the last 5,000 successful and failed jobs are kept.",
+      "jobs": {
+        "title": "Queue jobs",
+        "description": "All jobs currently in the {queueName} queue.",
+        "pageSize": "Show",
+        "columns": {
+          "name": "Name",
+          "id": "ID",
+          "attempts": "Attempts",
+          "created": "Created",
+          "processed": "Processed on",
+          "finished": "Finished on",
+          "inputs": "Inputs",
+          "outputs": "Outputs",
+          "actions": "Actions"
+        },
+        "selectAll": "Select all jobs",
+        "selectOne": "Select job {name}",
+        "copyId": "Copy job ID",
+        "copySuccess": {
+          "title": "Copied to clipboard",
+          "description": "Job ID \"{id}\" was copied."
+        },
+        "retry": "Retry",
+        "delete": "Delete",
+        "bulkRetry": "Retry {count} job(s)",
+        "bulkDelete": "Delete {count} job(s)",
+        "empty": {
+          "title": "No jobs in queue",
+          "description": "Nothing scheduled or in flight for this status."
+        }
+      },
+      "pause": {
+        "trigger": "Pause queue"
+      },
+      "resume": {
+        "trigger": "Resume queue"
+      },
+      "drain": {
+        "trigger": "Drain queue"
+      },
+      "pauseConfirm": {
+        "title": "Pause queue?",
+        "description": "No jobs in {queueName} will be processed until the queue is resumed."
+      },
+      "resumeConfirm": {
+        "title": "Resume queue?",
+        "description": "The {queueName} queue will start processing scheduled jobs again."
+      },
+      "drainConfirm": {
+        "title": "Drain queue?",
+        "description": "This removes all waiting and delayed jobs from {queueName}. Active, completed, and failed jobs are not removed. This action cannot be undone."
+      },
+      "pauseSuccess": {
+        "title": "Queue paused"
+      },
+      "resumeSuccess": {
+        "title": "Queue resumed"
+      },
+      "drainSuccess": {
+        "title": "Queue drained"
+      },
+      "pauseError": {
+        "title": "Failed to pause queue"
+      },
+      "resumeError": {
+        "title": "Failed to resume queue"
+      },
+      "drainError": {
+        "title": "Failed to drain queue"
+      },
+      "deleteJobsConfirm": {
+        "title": "{count, plural, one {Delete job?} other {Delete # jobs?}}",
+        "descriptionSingle": "Are you sure you want to delete the job \"{name}\"? This action cannot be undone.",
+        "descriptionMany": "Are you sure you want to delete {count} jobs? This action cannot be undone."
+      },
+      "deleteJobsSuccess": {
+        "title": "{count, plural, one {Job deleted} other {Jobs deleted}}"
+      },
+      "deleteJobsError": {
+        "title": "Failed to delete jobs"
+      },
+      "retryJobsConfirm": {
+        "title": "{count, plural, one {Retry job?} other {Retry # jobs?}}",
+        "descriptionSingle": "This creates a new job with the same inputs as the original.",
+        "descriptionMany": "This creates {count} new jobs with the same inputs as the originals.",
+        "deleteOriginal": "Delete the original {count, plural, one {job} other {jobs}} after retrying",
+        "confirm": "Retry"
+      },
+      "retryJobsSuccess": {
+        "title": "{count, plural, one {Job retried} other {Jobs retried}}"
+      },
+      "retryJobsError": {
+        "missingData": "Job data is missing."
+      }
+    },
+    "runs": {
+      "matrix": {
+        "caseColumnHeader": "Test case",
+        "averageRow": "Average",
+        "noResults": "No results yet",
+        "showOlder": "Show older runs",
+        "notIncluded": "Not in this run",
+        "notStarted": "Not started",
+        "status": {
+          "waiting": "Waiting",
+          "active": "Running",
+          "failed": "Failed",
+          "delayed": "Delayed",
+          "paused": "Paused",
+          "stuck": "Stuck",
+          "completed": "Completed"
+        }
+      },
+      "column": {
+        "menu": "Run actions",
+        "start": "Start run",
+        "copy": "Copy run",
+        "edit": "Edit run",
+        "refresh": "Refresh results",
+        "delete": "Delete run"
+      },
+      "startConfirm": {
+        "title": "Start eval run?",
+        "description": "This will schedule {count} test cases in \"{name}\" to run against the configured agent and eval functions.",
+        "confirm": "Start run"
+      },
+      "startSuccess": {
+        "title": "Eval run started",
+        "description": "Scheduled {count} test cases to run."
+      },
+      "startError": {
+        "title": "Failed to start eval run"
+      },
+      "deleteConfirm": {
+        "title": "Delete eval run?",
+        "description": "This will permanently delete the eval run \"{name}\" and all results. This action cannot be undone.",
+        "queueNote": "Already-scheduled queue jobs are not removed. Check the queue panel to manage them.",
+        "confirm": "Delete run"
+      },
+      "deleteSuccess": {
+        "title": "Eval run deleted"
+      },
+      "deleteError": {
+        "title": "Failed to delete eval run"
+      },
+      "empty": {
+        "title": "No runs yet",
+        "description": "Create a run config to start evaluating this set.",
+        "action": "New run config"
+      },
+      "noCases": {
+        "title": "No test cases in this set yet",
+        "description": "Add cases before running evals.",
+        "action": "Go to test cases"
+      },
+      "runConfig": {
+        "createTitle": "New run config",
+        "editTitle": "Edit run config",
+        "nameLabel": "Name *",
+        "agentLabel": "Agent *",
+        "evalFunctionsLabel": "Eval functions *",
+        "testCasesLabel": "Test cases *",
+        "selectAll": "Select all",
+        "deselectAll": "Deselect all",
+        "advanced": "Advanced — {summary}",
+        "advancedSummary": "{method} · pass ≥ {threshold} · {timeout}s",
+        "scoringMethodLabel": "Scoring method",
+        "scoringMethod": {
+          "average": "Average",
+          "median": "Median",
+          "sum": "Sum"
+        },
+        "passThresholdLabel": "Pass threshold (0–100)",
+        "timeoutLabel": "Timeout (seconds)",
+        "submit": {
+          "create": "Create run config",
+          "update": "Update run config"
+        },
+        "validation": {
+          "nameRequired": "Name is required.",
+          "agentRequired": "Agent is required.",
+          "casesRequired": "Select at least one test case.",
+          "functionsRequired": "Select at least one eval function."
+        }
+      },
+      "resultSheet": {
+        "title": "Test result details",
+        "tabs": {
+          "overview": "Overview",
+          "messages": "Messages",
+          "functions": "Functions",
+          "raw": "Raw"
+        },
+        "overview": {
+          "score": "Score",
+          "duration": "Duration",
+          "status": "Status",
+          "jobId": "Job ID",
+          "errorTitle": "Error details",
+          "tokensTitle": "Token usage",
+          "tokensTotal": "Total tokens",
+          "tokensInput": "Input",
+          "tokensOutput": "Output"
+        },
+        "functions": {
+          "empty": "No eval function results available."
+        },
+        "raw": {
+          "empty": "No metadata available."
+        }
+      }
+    }
+  },
   "configuration": {
     "description": "White-label Exulu for your organization — changes apply to every user.",
     "editor": {

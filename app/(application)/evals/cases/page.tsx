@@ -1,65 +1,77 @@
 "use client";
 
-import { useContext, useState } from "react";
+import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useContext, useMemo, useRef, useState } from "react";
+
 import { createColumns } from "./components/columns";
 import { DataTable } from "./components/data-table";
+import { EvalsAccessDenied } from "../_shared/access-denied";
 import { UserContext } from "@/app/(application)/authenticated";
-import { ArrowLeft, Brain } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { TestCase } from "@/types/models/test-case";
+import { PageHeader } from "@/components/primitives/page-header";
+import { PageShell } from "@/components/primitives/page-shell";
 import { can } from "@/lib/rights";
+import { TestCase } from "@/types/models/test-case";
 
 export const dynamic = "force-dynamic";
 
 export default function TestCasesPage() {
-
   const { user } = useContext(UserContext);
+  const t = useTranslations("evals.cases.list");
+  const tCases = useTranslations("evals.cases");
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
-  const columns = createColumns(user, (testCase) => {
-    setEditingTestCase(testCase);
-  });
-  const router = useRouter();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const refetchRef = useRef<() => void>(() => {});
 
-  // Check if user has evals access (shared RBAC predicate — same source as
-  // the nav entry and the /evals route guard, which catches this server-side)
   const hasEvalsAccess = can(user, { area: "evals", level: "read" });
+  const canWrite = user.super_admin || user.role?.evals === "write";
+
+  const columns = useMemo(
+    () =>
+      createColumns(
+        user,
+        tCases,
+        (testCase) => setEditingTestCase(testCase),
+        () => refetchRef.current?.(),
+      ),
+    [user, tCases],
+  );
 
   if (!hasEvalsAccess) {
     return (
-      <div className="flex h-full flex-1 flex-col space-y-8 p-8">
-        <Alert variant="destructive">
-          <Brain className="h-4 w-4" />
-          <AlertDescription>
-            You don't have permission to access Test Cases. Contact your administrator to request access.
-          </AlertDescription>
-        </Alert>
-      </div>
+      <PageShell>
+        <EvalsAccessDenied />
+      </PageShell>
     );
   }
 
   return (
-    <>
-      <div className="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
-        <div className="flex items-center justify-between space-y-2">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push("/evals")}>
-              <ArrowLeft className="h-4 w-4" />
+    <PageShell>
+      <PageHeader
+        title={t("title")}
+        description={t("description")}
+        breadcrumb={{ label: "Evals", href: "/evals" }}
+        action={
+          canWrite ? (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus aria-hidden="true" className="mr-2 size-4" />
+              {t("primaryAction")}
             </Button>
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight">Test Cases</h2>
-              <p className="text-muted-foreground">
-              Create and manage test cases for evaluating agent performance.
-              </p>
-            </div>
-          </div>
-        </div>
-        <DataTable columns={columns} testCase={editingTestCase || undefined} />
-      </div>
-    </>
+          ) : undefined
+        }
+      />
+      <DataTable
+        columns={columns}
+        testCase={editingTestCase || undefined}
+        createOpen={createOpen}
+        onCreateOpenChange={setCreateOpen}
+        refreshNonce={refreshNonce}
+        refetchRef={refetchRef}
+        onSuccess={() => setRefreshNonce((n) => n + 1)}
+        onEditingChange={setEditingTestCase}
+      />
+    </PageShell>
   );
 }

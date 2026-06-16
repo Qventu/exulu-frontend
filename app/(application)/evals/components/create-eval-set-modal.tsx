@@ -1,9 +1,12 @@
 "use client";
 
-import { Plus } from "lucide-react";
-import { useState } from "react";
 import { useMutation } from "@apollo/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,18 +16,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CREATE_EVAL_SET } from "@/queries/queries";
+
 interface CreateEvalSetModalProps {
   onSuccess: () => void;
 }
 
-export function CreateEvalSetModal({
-  onSuccess,
-}: CreateEvalSetModalProps) {
+export function CreateEvalSetModal({ onSuccess }: CreateEvalSetModalProps) {
+  const t = useTranslations("evals.list");
+  const tCommon = useTranslations("evals.common");
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState("");
@@ -36,46 +39,43 @@ export function CreateEvalSetModal({
       onSuccess();
       setOpen(false);
     },
-    onError: (error: any) => {
-      console.error("Mutation error:", error);
+    onError: (error) => {
+      toast.error(t("create.errorTitle"), { description: error.message });
     },
   });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="default"
-          size="sm"
-          className="ml-auto h-8">
+        <Button variant="default" size="sm">
           <Plus className="mr-2 h-4 w-4" />
-          New Eval Set
+          {t("create.trigger")}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle>Create Eval Set</DialogTitle>
-          <DialogDescription>
-            Create a new evaluation set. You can add test cases after creation.
-          </DialogDescription>
+          <DialogTitle>{t("create.title")}</DialogTitle>
+          <DialogDescription>{t("create.description")}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={(e: any) => {
-          e.preventDefault();
-          createEvalSet({
-            variables: {
-              data: {
-                name: name.trim(),
-                description: description.trim() || null,
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            createEvalSet({
+              variables: {
+                data: {
+                  name: name.trim(),
+                  description: description.trim() || null,
+                },
               },
-            },
-          });
-        }}>
+            });
+          }}
+        >
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">{t("create.nameLabel")}</Label>
               <Input
                 id="name"
-                placeholder="e.g., Customer Support Scenarios"
+                placeholder={t("create.namePlaceholder")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={loading}
@@ -83,10 +83,10 @@ export function CreateEvalSetModal({
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t("create.descriptionLabel")}</Label>
               <Textarea
                 id="description"
-                placeholder="Describe what this eval set tests..."
+                placeholder={t("create.descriptionPlaceholder")}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={loading}
@@ -101,15 +101,15 @@ export function CreateEvalSetModal({
               onClick={() => setOpen(false)}
               disabled={loading}
             >
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={loading || !name.trim()}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Eval Set
+              {t("create.submit")}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
-};
+}

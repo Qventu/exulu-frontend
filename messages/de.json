@@ -1314,6 +1314,481 @@
     "uploadToGetStarted": "Laden Sie Dateien hoch, um loszulegen",
     "view": "Ansehen"
   },
+  "evals": {
+    "cases": {
+      "columns": {
+        "description": "Beschreibung",
+        "messages": "Nachrichten",
+        "messagesCount": "{count, plural, one {# Nachricht} other {# Nachrichten}}",
+        "name": "Name",
+        "updated": "Aktualisiert"
+      },
+      "deleteConfirm": {
+        "description": "Dadurch wird der Testfall \"{name}\" dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+        "title": "Testfall löschen?"
+      },
+      "deleteError": {
+        "title": "Testfall konnte nicht gelöscht werden"
+      },
+      "deleteSuccess": {
+        "title": "Testfall gelöscht"
+      },
+      "empty": {
+        "action": "Neuer Testfall",
+        "description": "Erstellen Sie einen Testfall, um mit dem Aufbau von Eval-Sets zu beginnen.",
+        "noResults": "Keine Testfälle entsprechen Ihrem Filter.",
+        "title": "Noch keine Testfälle"
+      },
+      "list": {
+        "breadcrumb": "Evals / Testfälle",
+        "description": "Erstellen und verwalten Sie Testfälle zur Auswertung der Agentenleistung.",
+        "primaryAction": "Neuer Testfall",
+        "searchPlaceholder": "Nach Name filtern…",
+        "title": "Testfälle"
+      },
+      "modal": {
+        "conversation": {
+          "addButton": "Nachricht hinzufügen",
+          "addLabel": "Benutzernachricht hinzufügen",
+          "addPlaceholder": "Geben Sie die Nachricht des Benutzers ein…",
+          "description": "Fügen Sie Benutzernachrichten in der richtigen Reihenfolge hinzu. Der Agent antwortet automatisch zwischen jeder Nachricht.",
+          "emptyDescription": "Beginnen Sie mit dem Aufbau Ihrer Testkonversation, indem Sie unten Benutzernachrichten hinzufügen.",
+          "emptyTitle": "Noch keine Nachrichten",
+          "fileWarning": "Stellen Sie sicher, dass der ausgewählte Agent die angehängten Dateitypen unterstützt (Bilder, Dokumente, Audio usw.).",
+          "helper": "Drücken Sie Enter zum Hinzufügen, Umschalt+Enter für eine neue Zeile. Sie können Dateien an Nachrichten anhängen.",
+          "title": "Konversationsablauf"
+        },
+        "create": {
+          "errorTitle": "Testfall konnte nicht erstellt werden",
+          "submit": "Testfall erstellen",
+          "successTitle": "Testfall erstellt"
+        },
+        "createDescription": "Erstellen Sie einen neuen Testfall mit Konversationseingaben und erwarteten Ausgaben.",
+        "createTitle": "Testfall erstellen",
+        "createTitleForSet": "Testfall für {setName} erstellen",
+        "descriptionLabel": "Beschreibung",
+        "descriptionPlaceholder": "Beschreiben Sie, was dieser Testfall auswertet…",
+        "edit": {
+          "errorTitle": "Testfall konnte nicht aktualisiert werden",
+          "submit": "Testfall aktualisieren",
+          "successTitle": "Testfall aktualisiert"
+        },
+        "editDescription": "Aktualisieren Sie die Details des Testfalls.",
+        "editTitle": "Testfall bearbeiten",
+        "editTitleForSet": "Testfall in {setName} bearbeiten",
+        "expectedOutputHelp": "Dies kann eine exakte erwartete Antwort oder eine Beschreibung des erwarteten Inhalts sein.",
+        "expectedOutputLabel": "Erwartete Ausgabe *",
+        "expectedOutputPlaceholder": "Beschreiben Sie die erwartete Endausgabe…",
+        "nameLabel": "Name *",
+        "namePlaceholder": "z. B. Kundensupport — Rückerstattungsanfrage",
+        "placeholderMessage": "💬 Platzhalter, die generierte Agentenantwort wird hier eingefügt, sobald der Testfall ausgeführt wird…",
+        "tabs": {
+          "basic": "Allgemein",
+          "conversation": "Konversation"
+        },
+        "validationError": "Name, mindestens eine Eingabenachricht und erwartete Ausgabe sind erforderlich."
+      },
+      "rowActions": {
+        "delete": "Löschen",
+        "edit": "Bearbeiten",
+        "menu": "Menü öffnen"
+      }
+    },
+    "common": {
+      "accessDenied": {
+        "description": "Sie haben keine Berechtigung für den Zugriff auf Evals. Wenden Sie sich an Ihren Administrator, um Zugriff zu beantragen.",
+        "title": "Zugriff verweigert"
+      },
+      "cancel": "Abbrechen",
+      "columnHeader": {
+        "asc": "Aufst.",
+        "desc": "Abst.",
+        "hide": "Ausblenden"
+      },
+      "columns": {
+        "toggleTitle": "Spalten umschalten",
+        "toggleTrigger": "Ansicht"
+      },
+      "delete": "Löschen",
+      "deleting": "Wird gelöscht…",
+      "empty": {},
+      "errors": {
+        "loadTitle": "Daten konnten nicht geladen werden",
+        "retry": "Wiederholen"
+      },
+      "pagination": {
+        "first": "Zur ersten Seite",
+        "last": "Zur letzten Seite",
+        "next": "Zur nächsten Seite",
+        "previous": "Zur vorherigen Seite",
+        "summary": "Seite {currentPage} von {pageCount} ({itemCount} insgesamt)"
+      },
+      "save": "Speichern",
+      "saving": "Wird gespeichert…",
+      "workersWarning": {
+        "configureLink": "Konfiguration →",
+        "description": "Eval-Sets können angezeigt, aber nicht ausgeführt werden. Konfigurieren Sie Redis, um Auswertungen zu aktivieren.",
+        "title": "Hintergrund-Worker sind nicht konfiguriert"
+      }
+    },
+    "detail": {
+      "back": "Zurück zu Evals",
+      "bulkAdd": {
+        "errorTitle": "Einige Testfälle konnten nicht hinzugefügt werden",
+        "progress": "{done} von {total} werden hinzugefügt…",
+        "success": "{count} Testfall/Testfälle zu diesem Set hinzugefügt."
+      },
+      "editDialog": {
+        "description": "Aktualisieren Sie Name und Beschreibung des Sets.",
+        "descriptionLabel": "Beschreibung",
+        "errorTitle": "Eval-Set konnte nicht aktualisiert werden",
+        "nameLabel": "Name *",
+        "save": "Änderungen speichern",
+        "successTitle": "Eval-Set aktualisiert",
+        "title": "Eval-Set bearbeiten",
+        "validation": {
+          "nameRequired": "Name ist erforderlich."
+        }
+      },
+      "overflow": {
+        "editDetails": "Details bearbeiten",
+        "menu": "Weitere Aktionen",
+        "newRunConfig": "Neue Lauf-Konfiguration"
+      },
+      "removeCaseConfirm": {
+        "confirm": "Entfernen",
+        "description": "Der Testfall selbst wird nicht gelöscht und kann später wieder hinzugefügt werden.",
+        "title": "Testfall aus diesem Set entfernen?"
+      },
+      "removeCaseSuccess": {
+        "title": "Testfall entfernt"
+      },
+      "runEval": "Eval ausführen",
+      "runEvalDisabledTooltip": "Fügen Sie zuerst Testfälle hinzu",
+      "selectExisting": {
+        "description": "Wählen Sie aus nicht zugewiesenen Testfällen. Ein Fall kann nur einem Set angehören.",
+        "empty": "Keine nicht zugewiesenen Testfälle verfügbar.",
+        "searchPlaceholder": "Nach Name suchen…",
+        "selectAll": "Alle auswählen",
+        "selectedCount": "{count} ausgewählt",
+        "submit": "{count} Testfall/Testfälle hinzufügen",
+        "title": "Vorhandene Testfälle hinzufügen"
+      },
+      "tabs": {
+        "results": "Ergebnisse",
+        "testCases": "Testfälle",
+        "testCasesWithCount": "Testfälle · {count}"
+      },
+      "testCases": {
+        "capReached": "Dieses Set hat das Limit von 500 Fällen erreicht.",
+        "empty": {
+          "description": "Fügen Sie diesem Set Testfälle hinzu, bevor Sie Auswertungen ausführen.",
+          "title": "Noch keine Testfälle"
+        },
+        "row": {
+          "edit": "Testfall bearbeiten",
+          "remove": "Aus Set entfernen"
+        },
+        "toolbar": {
+          "addExisting": "Vorhandenen hinzufügen",
+          "count": "{count}/500 Fälle",
+          "newCase": "Neuer Fall"
+        }
+      }
+    },
+    "list": {
+      "columns": {
+        "cases": "Fälle",
+        "description": "Beschreibung",
+        "lastRun": "Letzter Lauf",
+        "name": "Name",
+        "updated": "Aktualisiert"
+      },
+      "create": {
+        "description": "Erstellen Sie ein neues Eval-Set. Sie können danach Testfälle hinzufügen.",
+        "descriptionLabel": "Beschreibung",
+        "descriptionPlaceholder": "Beschreiben Sie, was dieses Eval-Set testet…",
+        "errorTitle": "Eval-Set konnte nicht erstellt werden",
+        "nameLabel": "Name *",
+        "namePlaceholder": "z. B. Kundensupport-Szenarien",
+        "submit": "Eval-Set erstellen",
+        "title": "Eval-Set erstellen",
+        "trigger": "Neues Eval-Set"
+      },
+      "deleteConfirm": {
+        "description": "Dadurch wird das Eval-Set \"{name}\" dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+        "title": "Eval-Set löschen?"
+      },
+      "deleteError": {
+        "title": "Eval-Set konnte nicht gelöscht werden"
+      },
+      "deleteSuccess": {
+        "description": "Das Eval-Set wurde entfernt.",
+        "title": "Eval-Set gelöscht"
+      },
+      "description": "Testen Sie Agenten gegen erwartetes Verhalten und verfolgen Sie Werte über Läufe hinweg.",
+      "empty": {
+        "action": "Neues Eval-Set",
+        "description": "Erstellen Sie Ihr erstes Eval-Set, um mit dem Testen von Agenten zu beginnen.",
+        "noResults": "Keine Eval-Sets entsprechen Ihrem Filter.",
+        "title": "Noch keine Eval-Sets"
+      },
+      "primaryAction": "Neues Eval-Set",
+      "rowActions": {
+        "delete": "Löschen",
+        "menu": "Menü öffnen",
+        "open": "Öffnen"
+      },
+      "title": "Evals",
+      "toolbar": {
+        "searchPlaceholder": "Nach Name filtern…",
+        "testCaseLibrary": "Testfallbibliothek"
+      }
+    },
+    "queue": {
+      "chip": {
+        "label": "Queue:",
+        "active": "{count} aktiv",
+        "failed": "{count} fehlgeschlagen",
+        "open": "Queue öffnen"
+      },
+      "panel": {
+        "title": "Queue: {queueName}",
+        "description": "Verwalten Sie die {queueName}-Job-Queue und sehen Sie alle Jobs."
+      },
+      "stats": {
+        "status": "Status",
+        "paused": "Pausiert",
+        "maxed": "Ausgelastet",
+        "active": "Aktiv",
+        "queueConcurrency": "Max. Queue-Parallelität",
+        "workerConcurrency": "Max. Worker-Parallelität",
+        "jobTimeout": "Job-Zeitlimit",
+        "rateLimit": "Max. Rate-Limit",
+        "rateLimitUnit": "Jobs/Sek.",
+        "none": "Keine"
+      },
+      "tabs": {
+        "active": "Aktiv",
+        "waiting": "Wartend",
+        "failed": "Fehlgeschlagen",
+        "stuck": "Hängend",
+        "completed": "Abgeschlossen"
+      },
+      "retentionFootnote": "Es werden nur die letzten 5.000 erfolgreichen und fehlgeschlagenen Jobs aufbewahrt.",
+      "jobs": {
+        "title": "Queue-Jobs",
+        "description": "Alle Jobs aktuell in der {queueName}-Queue.",
+        "pageSize": "Anzeigen",
+        "columns": {
+          "name": "Name",
+          "id": "ID",
+          "attempts": "Versuche",
+          "created": "Erstellt",
+          "processed": "Verarbeitet am",
+          "finished": "Beendet am",
+          "inputs": "Eingaben",
+          "outputs": "Ausgaben",
+          "actions": "Aktionen"
+        },
+        "selectAll": "Alle Jobs auswählen",
+        "selectOne": "Job {name} auswählen",
+        "copyId": "Job-ID kopieren",
+        "copySuccess": {
+          "title": "In die Zwischenablage kopiert",
+          "description": "Job-ID \"{id}\" wurde kopiert."
+        },
+        "retry": "Wiederholen",
+        "delete": "Löschen",
+        "bulkRetry": "{count} Job(s) wiederholen",
+        "bulkDelete": "{count} Job(s) löschen",
+        "empty": {
+          "title": "Keine Jobs in der Queue",
+          "description": "Nichts geplant oder in Bearbeitung für diesen Status."
+        }
+      },
+      "pause": {
+        "trigger": "Queue pausieren"
+      },
+      "resume": {
+        "trigger": "Queue fortsetzen"
+      },
+      "drain": {
+        "trigger": "Queue leeren"
+      },
+      "pauseConfirm": {
+        "title": "Queue pausieren?",
+        "description": "Bis zur Fortsetzung werden keine Jobs in {queueName} verarbeitet."
+      },
+      "resumeConfirm": {
+        "title": "Queue fortsetzen?",
+        "description": "Die {queueName}-Queue beginnt erneut, geplante Jobs zu verarbeiten."
+      },
+      "drainConfirm": {
+        "title": "Queue leeren?",
+        "description": "Dies entfernt alle wartenden und verzögerten Jobs aus {queueName}. Aktive, abgeschlossene und fehlgeschlagene Jobs bleiben erhalten. Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "pauseSuccess": {
+        "title": "Queue pausiert"
+      },
+      "resumeSuccess": {
+        "title": "Queue fortgesetzt"
+      },
+      "drainSuccess": {
+        "title": "Queue geleert"
+      },
+      "pauseError": {
+        "title": "Queue konnte nicht pausiert werden"
+      },
+      "resumeError": {
+        "title": "Queue konnte nicht fortgesetzt werden"
+      },
+      "drainError": {
+        "title": "Queue konnte nicht geleert werden"
+      },
+      "deleteJobsConfirm": {
+        "title": "{count, plural, one {Job löschen?} other {# Jobs löschen?}}",
+        "descriptionSingle": "Möchten Sie den Job \"{name}\" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "descriptionMany": "Möchten Sie {count} Jobs wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "deleteJobsSuccess": {
+        "title": "{count, plural, one {Job gelöscht} other {Jobs gelöscht}}"
+      },
+      "deleteJobsError": {
+        "title": "Jobs konnten nicht gelöscht werden"
+      },
+      "retryJobsConfirm": {
+        "title": "{count, plural, one {Job wiederholen?} other {# Jobs wiederholen?}}",
+        "descriptionSingle": "Dadurch wird ein neuer Job mit denselben Eingaben wie das Original erstellt.",
+        "descriptionMany": "Dadurch werden {count} neue Jobs mit denselben Eingaben wie die Originale erstellt.",
+        "deleteOriginal": "{count, plural, one {Original-Job} other {Original-Jobs}} nach Wiederholung löschen",
+        "confirm": "Wiederholen"
+      },
+      "retryJobsSuccess": {
+        "title": "{count, plural, one {Job wiederholt} other {Jobs wiederholt}}"
+      },
+      "retryJobsError": {
+        "missingData": "Job-Daten fehlen."
+      }
+    },
+    "runs": {
+      "matrix": {
+        "caseColumnHeader": "Testfall",
+        "averageRow": "Durchschnitt",
+        "noResults": "Noch keine Ergebnisse",
+        "showOlder": "Ältere Läufe anzeigen",
+        "notIncluded": "Nicht in diesem Lauf",
+        "notStarted": "Nicht gestartet",
+        "status": {
+          "waiting": "Wartend",
+          "active": "Läuft",
+          "failed": "Fehlgeschlagen",
+          "delayed": "Verzögert",
+          "paused": "Pausiert",
+          "stuck": "Hängend",
+          "completed": "Abgeschlossen"
+        }
+      },
+      "column": {
+        "menu": "Lauf-Aktionen",
+        "start": "Lauf starten",
+        "copy": "Lauf kopieren",
+        "edit": "Lauf bearbeiten",
+        "refresh": "Ergebnisse aktualisieren",
+        "delete": "Lauf löschen"
+      },
+      "startConfirm": {
+        "title": "Eval-Lauf starten?",
+        "description": "Damit werden {count} Testfälle in \"{name}\" gegen den konfigurierten Agenten und die Eval-Funktionen geplant.",
+        "confirm": "Lauf starten"
+      },
+      "startSuccess": {
+        "title": "Eval-Lauf gestartet",
+        "description": "{count} Testfälle wurden zum Ausführen geplant."
+      },
+      "startError": {
+        "title": "Eval-Lauf konnte nicht gestartet werden"
+      },
+      "deleteConfirm": {
+        "title": "Eval-Lauf löschen?",
+        "description": "Dadurch werden der Eval-Lauf \"{name}\" und alle Ergebnisse dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+        "queueNote": "Bereits geplante Queue-Jobs werden nicht entfernt. Verwalten Sie sie im Queue-Bereich.",
+        "confirm": "Lauf löschen"
+      },
+      "deleteSuccess": {
+        "title": "Eval-Lauf gelöscht"
+      },
+      "deleteError": {
+        "title": "Eval-Lauf konnte nicht gelöscht werden"
+      },
+      "empty": {
+        "title": "Noch keine Läufe",
+        "description": "Erstellen Sie eine Lauf-Konfiguration, um dieses Set auszuwerten.",
+        "action": "Neue Lauf-Konfiguration"
+      },
+      "noCases": {
+        "title": "Noch keine Testfälle in diesem Set",
+        "description": "Fügen Sie Fälle hinzu, bevor Sie Evals ausführen.",
+        "action": "Zu Testfällen"
+      },
+      "runConfig": {
+        "createTitle": "Neue Lauf-Konfiguration",
+        "editTitle": "Lauf-Konfiguration bearbeiten",
+        "nameLabel": "Name *",
+        "agentLabel": "Agent *",
+        "evalFunctionsLabel": "Eval-Funktionen *",
+        "testCasesLabel": "Testfälle *",
+        "selectAll": "Alle auswählen",
+        "deselectAll": "Auswahl aufheben",
+        "advanced": "Erweitert — {summary}",
+        "advancedSummary": "{method} · bestanden ≥ {threshold} · {timeout}s",
+        "scoringMethodLabel": "Bewertungsmethode",
+        "scoringMethod": {
+          "average": "Durchschnitt",
+          "median": "Median",
+          "sum": "Summe"
+        },
+        "passThresholdLabel": "Bestehensgrenze (0–100)",
+        "timeoutLabel": "Zeitüberschreitung (Sekunden)",
+        "submit": {
+          "create": "Lauf-Konfiguration erstellen",
+          "update": "Lauf-Konfiguration aktualisieren"
+        },
+        "validation": {
+          "nameRequired": "Name ist erforderlich.",
+          "agentRequired": "Agent ist erforderlich.",
+          "casesRequired": "Wählen Sie mindestens einen Testfall aus.",
+          "functionsRequired": "Wählen Sie mindestens eine Eval-Funktion aus."
+        }
+      },
+      "resultSheet": {
+        "title": "Details des Testergebnisses",
+        "tabs": {
+          "overview": "Übersicht",
+          "messages": "Nachrichten",
+          "functions": "Funktionen",
+          "raw": "Roh"
+        },
+        "overview": {
+          "score": "Wert",
+          "duration": "Dauer",
+          "status": "Status",
+          "jobId": "Job-ID",
+          "errorTitle": "Fehlerdetails",
+          "tokensTitle": "Token-Verbrauch",
+          "tokensTotal": "Tokens gesamt",
+          "tokensInput": "Eingabe",
+          "tokensOutput": "Ausgabe"
+        },
+        "functions": {
+          "empty": "Keine Eval-Funktionsergebnisse verfügbar."
+        },
+        "raw": {
+          "empty": "Keine Metadaten verfügbar."
+        }
+      }
+    }
+  },
   "configuration": {
     "description": "Gestalten Sie Exulu im Stil Ihrer Organisation — Änderungen gelten für alle Benutzer.",
     "editor": {

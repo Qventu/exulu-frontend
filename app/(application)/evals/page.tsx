@@ -1,60 +1,63 @@
 "use client";
 
-import { useContext } from "react";
+import { useContext, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+
 import { createColumns } from "./components/columns";
 import { DataTable } from "./components/data-table";
+import { CreateEvalSetModal } from "./components/create-eval-set-modal";
+import { EvalsAccessDenied } from "./_shared/access-denied";
+import { WorkersWarning } from "./_shared/workers-warning";
 import { UserContext } from "@/app/(application)/authenticated";
-import { Brain } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ConfigContext } from "@/components/shell/config-context";
+import { PageHeader } from "@/components/primitives/page-header";
+import { PageShell } from "@/components/primitives/page-shell";
 import { can } from "@/lib/rights";
 
 export const dynamic = "force-dynamic";
 
 export default function EvalsPage() {
   const { user } = useContext(UserContext);
-  const config = useContext(ConfigContext);
-  const columns = createColumns(user);
+  const t = useTranslations("evals.list");
   // Shared RBAC predicate — same source as the nav entry and the /evals
   // route guard (which catches this server-side; kept as defense in depth)
   const hasEvalsAccess = can(user, { area: "evals", level: "read" });
 
+  // refetch ref is set by DataTable on mount so row-actions can request a
+  // refresh after a delete without prop-drilling refs through tanstack.
+  const refetchRef = useRef<() => void>(() => {});
+  // Bumped by the modal's onSuccess to force the table to refetch.
+  const [refreshNonce, setRefreshNonce] = useState(0);
+
+  const columns = useMemo(
+    () => createColumns(user, t, () => refetchRef.current?.()),
+    [user, t],
+  );
+
   if (!hasEvalsAccess) {
     return (
-      <div className="flex h-full flex-1 flex-col space-y-8 p-8">
-        <Alert variant="destructive">
-          <Brain className="h-4 w-4" />
-          <AlertDescription>
-            You don't have permission to access Evals. Contact your administrator to request access.
-          </AlertDescription>
-        </Alert>
-      </div>
+      <PageShell>
+        <EvalsAccessDenied />
+      </PageShell>
     );
   }
 
   return (
-    <div className="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
-      <div className="flex items-center justify-between space-y-2">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Eval Sets</h2>
-          <p className="text-muted-foreground">
-            Create and manage evaluation sets for testing your agents' performance.
-          </p>
-        </div>
-      </div>
-
-      {(!config?.workers?.enabled || !config?.workers?.redisHost) && (
-        <Alert variant="destructive">
-          <Brain className="h-4 w-4" />
-          <AlertDescription>
-            Workers are not enabled. You can view eval sets but cannot run evaluations.
-            Configure Redis to enable running eval runs.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Eval Sets Table */}
-      <DataTable columns={columns} />
-    </div>
+    <PageShell>
+      <PageHeader
+        title={t("title")}
+        description={t("description")}
+        action={
+          <CreateEvalSetModal
+            onSuccess={() => setRefreshNonce((n) => n + 1)}
+          />
+        }
+      />
+      <WorkersWarning />
+      <DataTable
+        columns={columns}
+        refreshNonce={refreshNonce}
+        refetchRef={refetchRef}
+      />
+    </PageShell>
   );
 }

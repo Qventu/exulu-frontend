@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { useMutation, useQuery } from "@apollo/client";
+import { useState, useEffect } from "react";
+import { useMutation } from "@apollo/client";
 import { Loader2, Plus, MessageSquare, Info, Sparkles, AlertCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -15,10 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CREATE_TEST_CASE, UPDATE_TEST_CASE, GET_TOOLS } from "@/queries/queries";
+import { CREATE_TEST_CASE, UPDATE_TEST_CASE } from "@/queries/queries";
 import { toast } from "sonner";
 import { TestCase } from "@/types/models/test-case";
-import { ExuluTool as Tool } from "@EXULU_SHARED/models/tool";
 import { UIMessage, FileUIPart } from "ai";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,35 +34,22 @@ interface TestCaseModalProps {
   onSuccess: () => void;
   testCase?: TestCase | null;
   evalSetId?: string;
+  /** Human-readable eval-set name shown in the dialog title (replaces the
+   * old behavior of leaking the eval-set UUID into the title). */
+  evalSetName?: string;
 }
 
 export function TestCaseModal({
   open,
   onClose,
   evalSetId,
+  evalSetName,
   onSuccess,
   testCase,
 }: TestCaseModalProps) {
+  const tc = useTranslations("evals.cases.modal");
+  const tCommon = useTranslations("evals.common");
   const isEditing = !!testCase;
-
-  // Fetch tools from server
-  const { data: toolsData } = useQuery<{
-    tools: {
-      items: Tool[]
-    }
-  }>(GET_TOOLS, {
-    variables: { page: 1, limit: 100 },
-  });
-
-  // Split tools by type
-  const { regularTools, agentTools, knowledgeSourceTools } = useMemo(() => {
-    const tools = toolsData?.tools?.items || [];
-    return {
-      regularTools: tools.filter(t => t.type === "function"),
-      agentTools: tools.filter(t => t.type === "agent"),
-      knowledgeSourceTools: tools.filter(t => t.type === "context"),
-    };
-  }, [toolsData]);
 
   // Basic fields
   const [name, setName] = useState("");
@@ -75,15 +62,13 @@ export function TestCaseModal({
   const [currentFiles, setCurrentFiles] = useState<string[] | null>(null);
   const [currentFileParts, setCurrentFileParts] = useState<FileUIPart[]>([]);
 
-  // Optional expected fields
+  // Optional expected fields — state arrays + serialization passthrough are
+  // retained so existing test-case records round-trip through edit/save
+  // without losing data, even though the UI to author them is intentionally
+  // deferred this phase (see comment near handleSubmit / TabsContent).
   const [expectedTools, setExpectedTools] = useState<string[]>([]);
   const [expectedKnowledgeSources, setExpectedKnowledgeSources] = useState<string[]>([]);
   const [expectedAgentTools, setExpectedAgentTools] = useState<string[]>([]);
-
-  // Temp selectors
-  const [selectedTool, setSelectedTool] = useState<string>("");
-  const [selectedContext, setSelectedContext] = useState<string>("");
-  const [selectedAgent, setSelectedAgent] = useState<string>("");
 
   useEffect(() => {
     if (testCase && open) {
@@ -106,9 +91,6 @@ export function TestCaseModal({
       setExpectedTools([]);
       setExpectedKnowledgeSources([]);
       setExpectedAgentTools([]);
-      setSelectedTool("");
-      setSelectedContext("");
-      setSelectedAgent("");
     }
   }, [testCase, open]);
 
@@ -149,21 +131,21 @@ export function TestCaseModal({
 
   const [createTestCase, { loading: creating }] = useMutation(CREATE_TEST_CASE, {
     onCompleted: () => {
-      toast.success("Test case created", { description: "The test case has been successfully created." });
+      toast.success(tc("create.successTitle"));
       onSuccess();
     },
     onError: (error) => {
-      toast.error("Failed to create test case", { description: error.message });
+      toast.error(tc("create.errorTitle"), { description: error.message });
     },
   });
 
   const [updateTestCase, { loading: updating }] = useMutation(UPDATE_TEST_CASE, {
     onCompleted: () => {
-      toast.success("Test case updated", { description: "The test case has been successfully updated." });
+      toast.success(tc("edit.successTitle"));
       onSuccess();
     },
     onError: (error) => {
-      toast.error("Failed to update test case", { description: error.message });
+      toast.error(tc("edit.errorTitle"), { description: error.message });
     },
   });
 
@@ -185,23 +167,23 @@ export function TestCaseModal({
     }
 
     const newMessage: UIMessage = {
-      id: `msg-${Date.now()}`,
+      // crypto.randomUUID() guarantees uniqueness without needing the old
+      // 1-second sleep that paired with `Date.now()` ids — the sleep was a
+      // workaround for collisions that should never exist with real uuids.
+      id: `msg-${crypto.randomUUID()}`,
       role: "user",
       parts,
     };
 
-    // wait 1 second to avoid the new message and the placeholder message having the same id to avoid the issue of the placeholder message being deleted when the new message is added
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
     const placeholderMessage: UIMessage = {
-      id: `msg-${Date.now()}`,
+      id: `msg-${crypto.randomUUID()}`,
       role: "assistant",
       metadata: {
         type: "placeholder",
       },
       parts: [{
         type: "text",
-        text: "💬 Placeholder, generated agent response will be added here when the test case is run...",
+        text: tc("placeholderMessage"),
       }],
     };
 
@@ -215,31 +197,10 @@ export function TestCaseModal({
     setInputs(inputs.filter((_, i) => i !== index));
   };
 
-  const handleAddTool = () => {
-    if (selectedTool && !expectedTools.includes(selectedTool)) {
-      setExpectedTools([...expectedTools, selectedTool]);
-      setSelectedTool("");
-    }
-  };
-
-  const handleAddContext = () => {
-    if (selectedContext && !expectedKnowledgeSources.includes(selectedContext)) {
-      setExpectedKnowledgeSources([...expectedKnowledgeSources, selectedContext]);
-      setSelectedContext("");
-    }
-  };
-
-  const handleAddAgent = () => {
-    if (selectedAgent && !expectedAgentTools.includes(selectedAgent)) {
-      setExpectedAgentTools([...expectedAgentTools, selectedAgent]);
-      setSelectedAgent("");
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !expectedOutput.trim() || inputs.length === 0) {
-      toast.error("Validation error", { description: "Name, at least one input message, and expected output are required." });
+      toast.error(tc("validationError"));
       return;
     }
 
@@ -272,32 +233,33 @@ export function TestCaseModal({
 
   const loading = creating || updating;
 
-  const getToolName = (id: string) => {
-    const tool = regularTools.find(t => t.id === id);
-    return tool?.name || id;
-  };
-
-  const getContextName = (id: string) => {
-    const context = knowledgeSourceTools.find(t => t.id === id);
-    return context?.name || id;
-  };
-
-  const getAgentName = (id: string) => {
-    const agent = agentTools.find(t => t.id === id);
-    return agent?.name || id;
-  };
-
-  const getFileCount = (message: UIMessage) => {
-    return message.parts?.filter(part => part.type === "file").length || 0;
-  };
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      {/* `<md` (≤768px) becomes a full-bleed sheet — the original max-w-4xl
+          centered dialog clipped the conversation tab on small viewports.
+          We override the base DialogContent fixed-center positioning (which
+          assumes a centered card) at the mobile breakpoint and reset it at
+          `md+`. */}
+      <DialogContent
+        className={
+          // mobile full-screen
+          "inset-0 left-0 top-0 max-h-[100dvh] w-screen max-w-full translate-x-0 translate-y-0 overflow-hidden rounded-none p-4 sm:rounded-none flex flex-col" +
+          // md+ centered modal
+          " md:inset-auto md:left-[50%] md:top-[50%] md:h-auto md:max-h-[90dvh] md:w-full md:max-w-4xl md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-lg md:p-6"
+        }
+      >
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Test Case" : "Create Test Case"} {evalSetId ? `for Eval Set: ${evalSetId}` : ""}</DialogTitle>
+          <DialogTitle>
+            {isEditing
+              ? evalSetName
+                ? tc("editTitleForSet", { setName: evalSetName })
+                : tc("editTitle")
+              : evalSetName
+                ? tc("createTitleForSet", { setName: evalSetName })
+                : tc("createTitle")}
+          </DialogTitle>
           <DialogDescription>
-            {isEditing ? "Update the test case details." : "Create a new test case with conversation inputs and expected outputs."}
+            {isEditing ? tc("editDescription") : tc("createDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -306,26 +268,22 @@ export function TestCaseModal({
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="basic" className="gap-2">
                 <Info className="h-4 w-4" />
-                Basic Info
+                {tc("tabs.basic")}
               </TabsTrigger>
               <TabsTrigger value="conversation" className="gap-2">
                 <MessageSquare className="h-4 w-4" />
-                Conversation
+                {tc("tabs.conversation")}
               </TabsTrigger>
-              {/* <TabsTrigger value="expected" className="gap-2">
-                <Settings2 className="h-4 w-4" />
-                Expected Tools
-              </TabsTrigger> */}
             </TabsList>
 
             <ScrollArea className="flex-1">
               <TabsContent value="basic" className="space-y-4 p-1 mt-4">
                 <div className="grid gap-5">
                   <div className="grid gap-2">
-                    <Label htmlFor="name">Name *</Label>
+                    <Label htmlFor="name">{tc("nameLabel")}</Label>
                     <Input
                       id="name"
-                      placeholder="e.g., Customer Support - Refund Request"
+                      placeholder={tc("namePlaceholder")}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       disabled={loading}
@@ -333,10 +291,10 @@ export function TestCaseModal({
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description">{tc("descriptionLabel")}</Label>
                     <Textarea
                       id="description"
-                      placeholder="Describe what this test case evaluates..."
+                      placeholder={tc("descriptionPlaceholder")}
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       disabled={loading}
@@ -344,10 +302,10 @@ export function TestCaseModal({
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="expectedOutput">Expected Output *</Label>
+                    <Label htmlFor="expectedOutput">{tc("expectedOutputLabel")}</Label>
                     <Textarea
                       id="expectedOutput"
-                      placeholder="Describe the expected final output (e.g., 'A JSON object containing refund details', 'An empathetic response offering alternatives')"
+                      placeholder={tc("expectedOutputPlaceholder")}
                       value={expectedOutput}
                       onChange={(e) => setExpectedOutput(e.target.value)}
                       disabled={loading}
@@ -355,9 +313,17 @@ export function TestCaseModal({
                       required
                     />
                     <p className="text-xs text-muted-foreground">
-                      This can be an exact expected response or a description of what the output should contain.
+                      {tc("expectedOutputHelp")}
                     </p>
                   </div>
+
+                  {/* Advanced expectations (expected tools / knowledge / agents)
+                     are intentionally not surfaced in Phase 5.1 — design notes
+                     flag the affordance as needing product confirmation
+                     (see design/pages/evals.md). State + serialization for the
+                     three `expected_*` fields remain wired (see handleSubmit)
+                     so existing test-case records round-trip without loss.
+                     Track as future work. */}
                 </div>
               </TabsContent>
 
@@ -368,15 +334,15 @@ export function TestCaseModal({
                       <div>
                         <CardTitle className="text-sm flex items-center gap-2">
                           <MessageSquare className="h-4 w-4" />
-                          Conversation Flow
+                          {tc("conversation.title")}
                           {inputs.length > 0 && (
                             <Badge variant="secondary" className="ml-2">
-                              {inputs.length} {inputs.length === 1 ? 'message' : 'messages'}
+                              {inputs.length}
                             </Badge>
                           )}
                         </CardTitle>
                         <CardDescription className="mt-1.5">
-                          Add user messages in order. The agent will run through this conversation flow and respond between each message automatically.
+                          {tc("conversation.description")}
                         </CardDescription>
                       </div>
                     </div>
@@ -386,9 +352,11 @@ export function TestCaseModal({
                     {inputs?.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 px-4 text-center border-2 border-dashed border-muted rounded-lg">
                         <Sparkles className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                        <h3 className="font-semibold text-lg mb-2">No messages yet</h3>
+                        <h3 className="font-semibold text-lg mb-2">
+                          {tc("conversation.emptyTitle")}
+                        </h3>
                         <p className="text-sm text-muted-foreground max-w-sm">
-                          Start building your test conversation by adding user messages below.
+                          {tc("conversation.emptyDescription")}
                         </p>
                       </div>
                     ) : (
@@ -419,11 +387,13 @@ export function TestCaseModal({
                     )}
 
                     <div className="space-y-3 pt-2">
-                      <Label htmlFor="currentInput" className="text-sm font-semibold">Add User Message</Label>
+                      <Label htmlFor="currentInput" className="text-sm font-semibold">
+                        {tc("conversation.addLabel")}
+                      </Label>
                       <div className="space-y-3">
                         <Textarea
                           id="currentInput"
-                          placeholder="Type the user's message..."
+                          placeholder={tc("conversation.addPlaceholder")}
                           value={currentInput}
                           onChange={(e) => setCurrentInput(e.target.value)}
                           disabled={loading}
@@ -462,7 +432,7 @@ export function TestCaseModal({
                             size="default"
                           >
                             <Plus className="h-4 w-4 mr-2" />
-                            Add Message
+                            {tc("conversation.addButton")}
                           </Button>
                         </div>
 
@@ -483,14 +453,14 @@ export function TestCaseModal({
                             <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
                               <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
                               <p className="text-xs text-amber-900 dark:text-amber-200">
-                                <strong>Note:</strong> When running this test case, ensure the selected agent supports the file types you've attached here (images, documents, audio, etc.).
+                                {tc("conversation.fileWarning")}
                               </p>
                             </div>
                           </>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Press Enter to add, Shift+Enter for new line. You can attach files to messages.
+                        {tc("conversation.helper")}
                       </p>
                     </div>
                   </CardContent>
@@ -689,7 +659,7 @@ export function TestCaseModal({
               onClick={onClose}
               disabled={loading}
             >
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button
               type="submit"
@@ -697,7 +667,7 @@ export function TestCaseModal({
               className="shadow-sm hover:shadow-md transition-all"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Update Test Case" : "Create Test Case"}
+              {isEditing ? tc("edit.submit") : tc("create.submit")}
             </Button>
           </DialogFooter>
         </form>
