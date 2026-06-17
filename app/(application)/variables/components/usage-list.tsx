@@ -85,33 +85,15 @@ export function UsageList({ usedBy, pageSize = 10, className }: UsageListProps) 
   const t = useTranslations("variables");
   const [page, setPage] = React.useState(1);
 
-  // Backend hasn't shipped the field at all → "unavailable" (never "0").
-  if (usedBy === null || usedBy === undefined) {
-    return (
-      <div className={cn("rounded-md border border-dashed p-6", className)}>
-        <p className="text-sm text-muted-foreground">
-          {t("usedBy.unavailable")}
-        </p>
-      </div>
-    );
-  }
-
-  if (usedBy.length === 0) {
-    return (
-      <EmptyState
-        variant="quiet"
-        title={t("usage.empty.title")}
-        description={t("usage.empty.body")}
-        className={className}
-      />
-    );
-  }
-
-  const totalPages = Math.max(1, Math.ceil(usedBy.length / pageSize));
+  // Pagination is computed null-safely (treat missing/empty `usedBy` as []) so
+  // the data hooks below ALWAYS run in the same order — the unavailable/empty
+  // early returns happen AFTER every hook (react-hooks/rules-of-hooks).
+  const list = usedBy ?? [];
+  const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const startIndex = (safePage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, usedBy.length);
-  const currentPage = usedBy.slice(startIndex, endIndex).map(parseResource);
+  const endIndex = Math.min(startIndex + pageSize, list.length);
+  const currentPage = list.slice(startIndex, endIndex).map(parseResource);
 
   // Single hook per resource family — never inside a loop (U5).
   const userIds = currentPage.filter((r) => r.type === "user").map((r) => r.id);
@@ -159,6 +141,29 @@ export function UsageList({ usedBy, pageSize = 10, className }: UsageListProps) 
     }
     return map;
   }, [agentsQuery.data]);
+
+  // Early returns AFTER all hooks (rules-of-hooks). Backend hasn't shipped the
+  // field at all → "unavailable" (never "0").
+  if (usedBy === null || usedBy === undefined) {
+    return (
+      <div className={cn("rounded-md border border-dashed p-6", className)}>
+        <p className="text-sm text-muted-foreground">
+          {t("usedBy.unavailable")}
+        </p>
+      </div>
+    );
+  }
+
+  if (usedBy.length === 0) {
+    return (
+      <EmptyState
+        variant="quiet"
+        title={t("usage.empty.title")}
+        description={t("usage.empty.body")}
+        className={className}
+      />
+    );
+  }
 
   const resolveName = (parsed: ParsedResource): {
     name: string;

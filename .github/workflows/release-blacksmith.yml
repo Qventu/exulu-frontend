@@ -50,10 +50,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Run semantic-release and capture the output
+          # Run semantic-release and capture the output. Disable -e around the
+          # capture so we ALWAYS print the output (and the real error) before
+          # deciding to fail — otherwise `OUTPUT=$(...)` under `bash -e` aborts
+          # the step silently and the failure reason is lost.
+          set +e
           OUTPUT=$(HUSKY=0 npm run semantic-release 2>&1)
+          STATUS=$?
+          set -e
           echo "$OUTPUT"
-          
+          if [ "$STATUS" -ne 0 ]; then
+            echo "::error::semantic-release failed with exit code $STATUS"
+            exit "$STATUS"
+          fi
+
           # Extract version from the output (look for "Created tag" or similar)
           VERSION=$(echo "$OUTPUT" | grep -o 'Created tag v[0-9]*\.[0-9]*\.[0-9]*' | grep -o '[0-9]*\.[0-9]*\.[0-9]*' || echo "0.0.0")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
