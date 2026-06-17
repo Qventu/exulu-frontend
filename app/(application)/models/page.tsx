@@ -1,40 +1,39 @@
 "use client";
 
+import { ExternalLink } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useContext } from "react";
-import { createColumns } from "./components/columns";
-import { DataTable } from "./components/data-table";
+
+import { ConfigContext } from "@/components/shell/config-context";
+import { PageHeader } from "@/components/primitives/page-header";
+import { PageShell } from "@/components/primitives/page-shell";
+import { Button } from "@/components/ui/button";
+import { getLiteLLMAdminUrl } from "@/lib/litellm-admin-url";
+
 import { LiteLLMCatalogView } from "./components/litellm-catalog-view";
-import { UserContext } from "@/app/(application)/authenticated";
-import { ConfigContext } from "@/components/config-context";
 
 export const dynamic = "force-dynamic";
 
 export default function ModelsPage() {
-  const { user } = useContext(UserContext);
+  const t = useTranslations("models");
   const configContext = useContext(ConfigContext);
-  const litellmEnabled = configContext?.liteLLM?.enabled === true;
-
-  const columns = createColumns(user);
+  const adminUiUrl = getLiteLLMAdminUrl(configContext?.backend);
 
   return (
-    <>
-      <div className="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
-        <div className="flex items-center justify-between space-y-2">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Models</h2>
-            <p className="text-muted-foreground">
-              {litellmEnabled
-                ? "This page is a read-only view of configured language models for this instance."
-                : "Manage the language models available to your agents. Each model pairs a code-defined provider with an encrypted authentication variable and optional rate / budget limits."}
-            </p>
-          </div>
-        </div>
-        {litellmEnabled ? (
-          <LiteLLMCatalogView />
-        ) : (
-          <DataTable columns={columns} />
-        )}
-      </div>
-    </>
+    <PageShell>
+      <PageHeader
+        title={t("title")}
+        description={t("description")}
+        action={
+          <Button asChild variant="outline">
+            <a href={adminUiUrl} target="_blank" rel="noreferrer">
+              <ExternalLink aria-hidden="true" className="mr-2 size-4" />
+              {t("openAdminUi")}
+            </a>
+          </Button>
+        }
+      />
+      <LiteLLMCatalogView />
+    </PageShell>
   );
 }

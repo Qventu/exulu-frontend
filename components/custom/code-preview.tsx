@@ -12,7 +12,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { CopyIcon, DownloadIcon, InfoIcon } from "lucide-react";
 
@@ -20,6 +20,12 @@ SyntaxHighlighter.registerLanguage("json", json);
 SyntaxHighlighter.registerLanguage("javascript", javascript);
 
 const LARGE_CODE_THRESHOLD = 50000; // Characters threshold for automatic download
+
+// Single token-driven code-block surface (design-system R6). Fallbacks match the
+// previous hardcoded dracula values (#282a36 / #f8f8f2) until --code-surface /
+// --code-surface-foreground are defined in globals.css for both themes.
+const CODE_SURFACE_CLASS =
+    "!bg-[hsl(var(--code-surface,231_15%_18%))] !text-[hsl(var(--code-surface-foreground,60_30%_96%))]";
 
 export function CodePreview({
                                 className = null,
@@ -32,7 +38,6 @@ export function CodePreview({
     language?: string;
     slice?: number | null;
 }) {
-    const { toast } = useToast();
     const [code, setCode] = useState<string | null>(null);
 
     const format = (code: any) => {
@@ -68,7 +73,7 @@ export function CodePreview({
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        toast({ title: "Downloaded as file" });
+        toast.success("Downloaded as file");
     };
 
     if (isVeryLarge && code?.length) {
@@ -79,7 +84,7 @@ export function CodePreview({
                     className="w-full rounded-lg border border-border hover:border-border/80 hover:shadow-md transition-all overflow-hidden"
                 >
                     <SyntaxHighlighter
-                        className={cn("cursor-pointer !bg-[#282a36] !m-0", className)}
+                        className={cn("cursor-pointer !m-0", CODE_SURFACE_CLASS, className)}
                         showLineNumbers={true}
                         wrapLines={true}
                         lineProps={{
@@ -106,7 +111,7 @@ export function CodePreview({
                     <div className="relative group">
                         <div className="rounded-lg border border-border hover:border-border/80 hover:shadow-md transition-all overflow-hidden">
                             <SyntaxHighlighter
-                                className={cn("cursor-pointer !bg-[#282a36] !m-0", className)}
+                                className={cn("cursor-pointer !m-0", CODE_SURFACE_CLASS, className)}
                                 showLineNumbers={true}
                                 wrapLines={true}
                                 lineProps={{
@@ -140,7 +145,7 @@ export function CodePreview({
                             className="text-sm px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors font-medium"
                             onClick={async () => {
                                 await navigator.clipboard.writeText(code ?? "");
-                                toast({ title: "Copied to clipboard" });
+                                toast.success("Copied to clipboard");
                             }}
                         >
                             <div className="flex items-center gap-2">
@@ -153,7 +158,7 @@ export function CodePreview({
                 <div className="flex-1 overflow-hidden mt-4">
                     <div className="h-full overflow-y-auto rounded-lg border border-border max-h-[500px]">
                         <SyntaxHighlighter
-                            className={cn("!m-0 !bg-[#282a36]", className)}
+                            className={cn("!m-0", CODE_SURFACE_CLASS, className)}
                             showLineNumbers={true}
                             wrapLines={true}
                             lineProps={{

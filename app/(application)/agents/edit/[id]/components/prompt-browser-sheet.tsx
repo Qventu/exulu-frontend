@@ -18,7 +18,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Search, Folder, ArrowLeft, Plus, X as XIcon, Check } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
+// Cross-feature reuse — see instructions.tsx note. Promotion is scoped to the
+// prompts redesign, not this work item.
 import { PromptEditorModal } from "@/app/(application)/prompts/components/prompt-editor-modal";
 
 interface PromptBrowserSheetProps {
@@ -40,6 +42,7 @@ export function PromptBrowserSheet({
   user,
   onUpdate,
 }: PromptBrowserSheetProps) {
+  const t = useTranslations("agents");
   const [viewMode, setViewMode] = useState<ViewMode>("folders");
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -140,14 +143,14 @@ export function PromptBrowserSheet({
       });
       toast.success(
         isAssigned
-          ? `Removed from ${agentName}`
-          : `Added to ${agentName}`
+          ? t("promptBrowser.removedFromAgent", { name: agentName })
+          : t("promptBrowser.addedToAgent", { name: agentName })
       );
       // Refetch to update the UI
       await refetch();
       onUpdate();
     } catch (error) {
-      toast.error("Failed to update prompt");
+      toast.error(t("promptBrowser.updateFailed"));
       console.error(error);
     }
   };
@@ -156,11 +159,13 @@ export function PromptBrowserSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Browse Prompt Templates</SheetTitle>
+          <SheetTitle>{t("promptBrowser.title")}</SheetTitle>
           <SheetDescription>
             {viewMode === "folders"
-              ? "Select a folder to view its prompts"
-              : `Prompts in "${selectedFolder}"`}
+              ? t("promptBrowser.foldersSubtitle")
+              : t("promptBrowser.promptsSubtitle", {
+                  folder: selectedFolder ?? "",
+                })}
           </SheetDescription>
         </SheetHeader>
 
@@ -170,7 +175,7 @@ export function PromptBrowserSheet({
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder={"Search prompts..."}
+                placeholder={t("promptBrowser.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -186,7 +191,7 @@ export function PromptBrowserSheet({
               className="ml-2"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Create Prompt
+              {t("promptBrowser.createPrompt")}
             </Button>
           </div>
 
@@ -199,7 +204,7 @@ export function PromptBrowserSheet({
               className="mb-2"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Folders
+              {t("promptBrowser.backToFolders")}
             </Button>
           )}
 
@@ -210,7 +215,7 @@ export function PromptBrowserSheet({
             <div className="space-y-2">
               {tagsLoading ? (
                 <div className="text-sm text-muted-foreground text-center py-8">
-                  Loading folders...
+                  {t("promptBrowser.loadingFolders")}
                 </div>
               ) : (
                 <>
@@ -227,7 +232,7 @@ export function PromptBrowserSheet({
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <Folder className="h-5 w-5 text-blue-500" />
+                              <Folder className="h-5 w-5 text-primary" />
                               <span className="font-medium">{folder}</span>
                             </div>
                             <Badge variant="secondary">
@@ -246,8 +251,8 @@ export function PromptBrowserSheet({
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <Folder className="h-5 w-5 text-gray-400" />
-                            <span className="font-medium text-muted-foreground">All</span>
+                            <Folder className="h-5 w-5 text-muted-foreground" />
+                            <span className="font-medium text-muted-foreground">{t('promptBrowser.untagged')}</span>
                           </div>
                           <Badge variant="outline">{untaggedCount}</Badge>
                         </div>
@@ -264,17 +269,19 @@ export function PromptBrowserSheet({
             <div className="space-y-2">
               {promptsLoading ? (
                 <div className="text-sm text-muted-foreground text-center py-8">
-                  Loading prompts...
+                  {t("promptBrowser.loadingPrompts")}
                 </div>
               ) : prompts.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  {searchQuery ? "No prompts found" : "No prompts in this folder"}
+                  {searchQuery
+                    ? t("promptBrowser.noPromptsFound")
+                    : t("promptBrowser.noPromptsInFolder")}
                 </div>
               ) : (
                 <>
                   {!searchQuery && prompts.some(p => isPromptAssigned(p)) && (
                     <div className="text-xs font-medium text-muted-foreground px-1 py-2">
-                      Assigned to {agentName}
+                      {t("promptBrowser.assignedToAgent", { name: agentName })}
                     </div>
                   )}
                   {prompts.map((prompt, index) => {
@@ -288,7 +295,7 @@ export function PromptBrowserSheet({
                       <div key={prompt.id}>
                         {showDivider && (
                           <div className="text-xs font-medium text-muted-foreground px-1 py-2 mt-4">
-                            Other Prompts
+                            {t("promptBrowser.otherPrompts")}
                           </div>
                         )}
                         <Card className="hover:shadow-sm transition-shadow">
@@ -318,22 +325,19 @@ export function PromptBrowserSheet({
                               </div>
                               <Button
                                 size="sm"
-                                variant={isAssigned ? "outline" : "default"}
+                                variant={isAssigned ? "destructive" : "default"}
                                 onClick={() => handleTogglePrompt(prompt)}
-                                className={cn(
-                                  "shrink-0",
-                                  isAssigned && "border-red-500 text-red-600 hover:bg-red-50"
-                                )}
+                                className="shrink-0"
                               >
                                 {isAssigned ? (
                                   <>
                                     <XIcon className="h-4 w-4 mr-2" />
-                                    Remove
+                                    {t("promptBrowser.remove")}
                                   </>
                                 ) : (
                                   <>
                                     <Plus className="h-4 w-4 mr-2" />
-                                    Add
+                                    {t("promptBrowser.add")}
                                   </>
                                 )}
                               </Button>

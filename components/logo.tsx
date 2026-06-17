@@ -1,6 +1,6 @@
 "use client";
 
-import { ConfigContext } from "./config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 import { useContext } from "react";
 import { useTheme } from "next-themes";
 
@@ -13,10 +13,15 @@ interface LogoProps {
 
 const Logo = ({ width = 64, height = 32, className = "", alt = "Logo" }: LogoProps) => {
     const configContext = useContext(ConfigContext);
-    const { theme } = useTheme()
+    // resolvedTheme (not theme): with the "system" preference, `theme` is the
+    // literal string "system" and never "dark", so the light logo was served
+    // to system-dark users (shell audit H5). resolvedTheme is always the
+    // effective "light" | "dark" (undefined on the server → light fallback,
+    // matching the previous first-paint behavior).
+    const { resolvedTheme } = useTheme()
     return (
         <>
-            {theme !== "dark" && (
+            {resolvedTheme !== "dark" && (
                 <img
                     src={configContext?.backend + "/logo_light.png"}
                     alt={alt}
@@ -25,7 +30,7 @@ const Logo = ({ width = 64, height = 32, className = "", alt = "Logo" }: LogoPro
                     className={className}
                 />
             )}
-            {theme === "dark" && (
+            {resolvedTheme === "dark" && (
                 <img
                     src={configContext?.backend + "/logo_dark.png"}
                     alt={alt}

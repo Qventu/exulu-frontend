@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -21,14 +21,14 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import * as React from "react";
-import {
-  GET_EVAL_SETS,
-} from "@/queries/queries";
-import { DataTableViewOptions } from "./data-table-view-options";
+import { useState } from "react";
+
+import { GET_EVAL_SETS } from "@/queries/queries";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -38,9 +38,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CreateEvalSetModal } from "./create-eval-set-modal";
-import { useRouter } from "next/navigation";
+import { EmptyState } from "@/components/primitives/empty-state";
+import { RelativeTime } from "@/components/primitives/relative-time";
+import { Toolbar } from "@/components/primitives/toolbar";
+import { AlertCircle } from "lucide-react";
+import Link from "next/link";
 import { FilterOperator } from "@/types/models/filter";
+
+import { DataTableViewOptions } from "./data-table-view-options";
 
 export type EvalSetFilters = {
   name?: FilterOperator;
@@ -50,13 +55,25 @@ export type EvalSetFilters = {
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
+  /** Bumped by the parent to force a refetch (e.g. after creation). */
+  refreshNonce?: number;
+  /**
+   * Optional ref the table writes its `refetch` callback into so row-level
+   * actions (e.g. delete) can request a refresh through the parent without
+   * prop-drilling refs through tanstack rows.
+   */
+  refetchRef?: React.MutableRefObject<() => void>;
 }
 
 export function DataTable<TData, TValue>({
   columns,
+  refreshNonce,
+  refetchRef,
 }: DataTableProps<TData, TValue>) {
-
   const router = useRouter();
+  const t = useTranslations("evals.list");
+  const tCommon = useTranslations("evals.common");
+
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -106,59 +123,122 @@ export function DataTable<TData, TValue>({
 
   React.useEffect(() => {
     refetch();
-  }, [name]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, refreshNonce]);
+
+  React.useEffect(() => {
+    if (refetchRef) {
+      refetchRef.current = () => {
+        refetch();
+      };
+    }
+  }, [refetchRef, refetch]);
+
+  const rows = table.getRowModel().rows;
+  const hasResults = rows.length > 0;
+  const pageCount = pageInfo?.pageCount ?? 1;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-1 items-center space-x-2">
-          <Input
-            placeholder="Filter by name..."
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-            }}
-            className="h-8 w-[150px] lg:w-[250px]"
-          />
-        </div>
-        <div className="flex items-center space-x-2">
-          <DataTableViewOptions table={table} />
+      <Toolbar
+        search={{
+          value: name,
+          onChange: setName,
+          placeholder: t("toolbar.searchPlaceholder"),
+          debounceMs: 200,
+        }}
+        view={
+          <>
+            <DataTableViewOptions table={table} />
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/evals/cases">{t("toolbar.testCaseLibrary")}</Link>
+            </Button>
+          </>
+        }
+      />
 
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              router.push("/evals/cases");
-            }}
-            className="mr-2 h-8">
-            Test cases
-          </Button>
+      {/* Inline error surface — previously the dropped `error` left the table
+         silently empty. Now we render the failure explicitly with Retry. */}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{tCommon("errors.loadTitle")}</AlertTitle>
+          <AlertDescription className="flex flex-col gap-3">
+            <span>{error.message}</span>
+            <div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => refetch()}
+                disabled={loading}
+              >
+                {tCommon("errors.retry")}
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
-          <CreateEvalSetModal
-            onSuccess={() => {
-              console.log("Eval set created, refetching");
-              refetch();
-            }}
+      {/* Mobile (<md): card list. Bypasses table rendering — responsive.md T1. */}
+      <div className="md:hidden">
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-lg" />
+            ))}
+          </div>
+        ) : hasResults ? (
+          <ul className="divide-y rounded-md border">
+            {rows.map((row) => {
+              const evalSet = row.original as any;
+              return (
+                <li key={row.id}>
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/evals/${evalSet.id}`)}
+                    className="flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span className="font-medium">{evalSet.name}</span>
+                    {evalSet.description ? (
+                      <span className="truncate text-sm text-muted-foreground">
+                        {evalSet.description}
+                      </span>
+                    ) : null}
+                    {evalSet.updatedAt ? (
+                      <RelativeTime
+                        date={evalSet.updatedAt}
+                        className="text-xs text-muted-foreground"
+                      />
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : !error ? (
+          <EmptyState
+            title={name ? t("empty.noResults") : t("empty.title")}
+            description={name ? undefined : t("empty.description")}
           />
-        </div>
+        ) : null}
       </div>
-      <div className="rounded-md border">
+
+      {/* md+ : the existing TanStack table. */}
+      <div className="hidden rounded-md border md:block">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                    </TableHead>
-                  );
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
@@ -173,8 +253,8 @@ export function DataTable<TData, TValue>({
                   ))}
                 </TableRow>
               ))
-            ) : table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+            ) : hasResults ? (
+              rows.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
@@ -196,11 +276,12 @@ export function DataTable<TData, TValue>({
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No eval sets found.
+                <TableCell colSpan={columns.length} className="h-24">
+                  <EmptyState
+                    variant="quiet"
+                    title={name ? t("empty.noResults") : t("empty.title")}
+                    description={name ? undefined : t("empty.description")}
+                  />
                 </TableCell>
               </TableRow>
             )}
@@ -208,55 +289,63 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      <div className="flex items-center justify-between px-2">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {pageInfo && (
-            <>
-              Page {pageInfo.currentPage} of {pageInfo.pageCount} ({pageInfo.itemCount} total)
-            </>
-          )}
-        </div>
-        <div className="flex items-center space-x-6 lg:space-x-8">
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => setPage(1)}
-              disabled={!pageInfo?.hasPreviousPage}
-            >
-              <span className="sr-only">Go to first page</span>
-              <DoubleArrowLeftIcon className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => setPage(page - 1)}
-              disabled={!pageInfo?.hasPreviousPage}
-            >
-              <span className="sr-only">Go to previous page</span>
-              <ChevronLeftIcon className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => setPage(page + 1)}
-              disabled={!pageInfo?.hasNextPage}
-            >
-              <span className="sr-only">Go to next page</span>
-              <ChevronRightIcon className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => setPage(pageInfo?.pageCount || 1)}
-              disabled={!pageInfo?.hasNextPage}
-            >
-              <span className="sr-only">Go to last page</span>
-              <DoubleArrowRightIcon className="h-4 w-4" />
-            </Button>
+      {pageCount > 1 ? (
+        <div className="flex items-center justify-between px-2">
+          <div className="flex-1 text-sm text-muted-foreground">
+            {pageInfo && (
+              <>
+                {tCommon("pagination.summary", {
+                  currentPage: pageInfo.currentPage,
+                  pageCount: pageInfo.pageCount,
+                  itemCount: pageInfo.itemCount,
+                })}
+              </>
+            )}
+          </div>
+          <div className="flex items-center space-x-6 lg:space-x-8">
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => setPage(1)}
+                disabled={!pageInfo?.hasPreviousPage}
+              >
+                <span className="sr-only">{tCommon("pagination.first")}</span>
+                <DoubleArrowLeftIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => setPage(page - 1)}
+                disabled={!pageInfo?.hasPreviousPage}
+              >
+                <span className="sr-only">
+                  {tCommon("pagination.previous")}
+                </span>
+                <ChevronLeftIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => setPage(page + 1)}
+                disabled={!pageInfo?.hasNextPage}
+              >
+                <span className="sr-only">{tCommon("pagination.next")}</span>
+                <ChevronRightIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => setPage(pageInfo?.pageCount || 1)}
+                disabled={!pageInfo?.hasNextPage}
+              >
+                <span className="sr-only">{tCommon("pagination.last")}</span>
+                <DoubleArrowRightIcon className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

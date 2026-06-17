@@ -8,9 +8,9 @@ import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai
 import { RefreshCcwIcon, CopyIcon, ChevronDown, ChevronRight, Search, FileText, Database, ListChecks, LayoutList, EditIcon, Trash2Icon, DownloadIcon, ThumbsUp, ThumbsDown, Terminal, FileEdit, HelpCircle, Wrench, Globe, List, FolderOpen, GitBranch, Code2, Volume2, Pause, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { TodoList } from "./ai-elements/todo-list"
-import { FileItem } from "./uppy-dashboard"
+import { FileItem } from "./primitives/file-picker"
 import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation"
 import { AgenticKnowledgeSourceSearchResults, KnowledgeSourceSearchResultChunk } from "@/types/models/knowledge-source-search-results"
@@ -18,19 +18,19 @@ import { Badge } from "@/components/ui/badge"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useState, useEffect, useContext, useRef } from "react"
-import { ConfigContext } from "@/components/config-context"
+import { ConfigContext } from "@/components/shell/config-context"
 import { UserContext } from "@/app/(application)/authenticated"
-import { getToken } from "@/util/api"
+import { getToken } from "@/lib/api/client"
 import { preprocessForTTS, chunkForTTS, TTS_MAX_CONCURRENT } from "@/lib/tts-text"
 import { MessageActions, MessageAction } from '@/components/ai-elements/message'
-import { Skeleton } from "./ui/skeleton"
 import { ChatAddToolApproveResponseFunction } from "ai"
-import { GradientText } from "./ui/shadcn-io/gradient-text"
+import { Shimmer } from "@/components/ai-elements/shimmer"
+import { useReducedMotion } from "motion/react"
+import type { CSSProperties } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea";
 import { CheckIcon, XIcon } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ToolCallApproval } from "./tool-call-approval"
 import { Agent } from "@/types/models/agent"
 import { ImageGenerationWidget, type ImageGenerationWidgetConfig } from "./image-generation/image-generation-widget"
 
@@ -120,7 +120,6 @@ export function MessageRenderer({
   setMessages,
   handleFeedback
 }: MessageRendererProps) {
-  const { toast } = useToast()
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [editedText, setEditedText] = useState<string>("")
 
@@ -246,11 +245,11 @@ export function MessageRenderer({
     const raw = message.parts?.map((p: any) => p?.text ?? "").join("\n") ?? ""
     const { text, truncated } = preprocessForTTS(raw)
     if (!text) {
-      toast({ title: "Nothing to read", description: "Message has no readable text.", variant: "destructive" })
+      toast.error("Nothing to read", { description: "Message has no readable text." })
       return
     }
     if (truncated) {
-      toast({ title: "Long message truncated", description: "Only the first 4000 characters will be read." })
+      toast("Long message truncated", { description: "Only the first 4000 characters will be read." })
     }
     const chunks = chunkForTTS(text)
     const cached = ttsCacheRef.current.get(message.id) ?? new Array<Blob | undefined>(chunks.length)
@@ -348,11 +347,7 @@ export function MessageRenderer({
       })
       .catch((err) => {
         console.error("[TTS] playback failed", err)
-        toast({
-          title: "Couldn't play message",
-          description: err instanceof Error ? err.message : "Audio playback failed.",
-          variant: "destructive",
-        })
+        toast.error("Couldn't play message", { description: err instanceof Error ? err.message : "Audio playback failed." })
         setTtsStateByMessage((s) => ({ ...s, [message.id]: "idle" }))
         playingMessageIdRef.current = null
         abortController.abort()
@@ -459,6 +454,9 @@ export function MessageRenderer({
   ]
 
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
+  // Streaming placeholder (item 39 / U10): the ai-elements Shimmer animates
+  // continuously, so honor prefers-reduced-motion with a static line instead.
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -492,9 +490,7 @@ export function MessageRenderer({
         )?.flatMap((part) => {
           const fileParts = (part as any).text.match(/<file name="([^"]+)">([^<]+)<\/file>/g);
           return fileParts?.map((filePart) => {
-            console.log("filePart", filePart);
             const s3Key = filePart.match(/<file name="([^"]+)">/)?.[1] ?? '';
-            console.log("s3Key", s3Key);
             const content = filePart.match(/<file name="([^"]+)">([^<]+)<\/file>/)?.[2] ?? '';
             return { s3Key, content } as { s3Key: string, content: string };
           }) ?? []
@@ -649,7 +645,7 @@ export function MessageRenderer({
                             value={editedText}
                             rows={3}
                             onChange={(e) => setEditedText(e.target.value)}
-                            className="flex-1 w-full min-w-[500px] resize-none"
+                            className="flex-1 w-full max-w-full resize-none"
                             autoFocus
                           />
                         </div>
@@ -757,18 +753,17 @@ export function MessageRenderer({
                   return null;
                 }
 
-                if (part.type?.toLowerCase().includes('context_search')) {
-
-                  if (
-                    (
-                      (part as any)?.state === 'approval-requested' ||
-                      (part as any)?.state === 'approval-responded'
-                    ) && agent && addToolApprovalResponse
-                  ) {
-                    return (
-                      <ToolCallApproval agent={agent} part={part as any} addToolApprovalResponse={addToolApprovalResponse} />
-                    )
-                  }
+                if (
+                  part.type?.toLowerCase().includes('context_search') &&
+                  // Approval states deliberately fall through to the generic
+                  // tool branch below: UntypedToolPartComponent renders the
+                  // rebuilt tool-call approval card (theme tokens, corrected
+                  // button hierarchy, controller-backed "Allow for this chat"
+                  // — design/pages/chat.md item 50 / U4). The legacy
+                  // components/tool-call-approval.tsx is retired.
+                  (part as any)?.state !== 'approval-requested' &&
+                  (part as any)?.state !== 'approval-responded'
+                ) {
 
                   const dynamicToolPart = part as any;
                   let output = dynamicToolPart.output as {
@@ -1004,7 +999,7 @@ export function MessageRenderer({
               })}
 
               {files.length > 0 && (
-                <div className="grid grid-cols-6 min-w-[500px] gap-2 mt-3 mb-3">
+                <div className="grid w-full max-w-full grid-cols-2 gap-2 mt-3 mb-3 sm:grid-cols-4">
                   {files.map((file) => (
                     <FileItem key={file.s3Key + "_file_item_" + message.id} s3Key={file.s3Key} onRemove={() => { }} active={false} disabled={false} />
                   ))}
@@ -1012,14 +1007,25 @@ export function MessageRenderer({
               )}
 
               {status !== "ready" && status !== "error" && isLastMessage && message.role === 'assistant' && (
-                <div className="pointer-events-none">
-                  <Skeleton className="w-[500px] rounded h-[35px] rounded-lg">
-                    <GradientText
-                      text={streamingTexts[currentTextIndex]}
-                      gradient="linear-gradient(90deg, #404040 0%, #a3a3a3 50%, #d4d4d4 100%)"
-                      className="my-auto w-full h-full flex"
-                    />
-                  </Skeleton>
+                <div
+                  className="pointer-events-none py-1"
+                  // The vendored Shimmer (read-only) paints with the Tailwind v4
+                  // `--color-*` variable names; bridge them to this app's theme
+                  // tokens locally so the line stays theme-correct in both modes.
+                  style={{
+                    "--color-background": "hsl(var(--background))",
+                    "--color-muted-foreground": "hsl(var(--muted-foreground))",
+                  } as CSSProperties}
+                >
+                  {prefersReducedMotion ? (
+                    <span className="text-sm text-muted-foreground">
+                      {streamingTexts[currentTextIndex]}
+                    </span>
+                  ) : (
+                    <Shimmer as="span" className="text-sm">
+                      {streamingTexts[currentTextIndex]}
+                    </Shimmer>
+                  )}
                 </div>
               )}
 
@@ -1028,7 +1034,17 @@ export function MessageRenderer({
                 !editingMessageId &&
                 (message.metadata as any)?.type !== 'placeholder'
               ) && (
-                  <MessageActions className="mt-2">
+                  // T7 / item 55: hover-reveal is an enhancement only —
+                  // gated behind hover-capable pointers; touch devices and
+                  // the last assistant message keep the row always visible,
+                  // and keyboard focus reveals it (focus-within).
+                  <MessageActions
+                    className={cn(
+                      "mt-2 transition-opacity duration-150 motion-reduce:transition-none",
+                      message.role === 'assistant' && !isLastAssistantMessage &&
+                      "[@media(hover:hover)_and_(pointer:fine)]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-focus-within:opacity-100"
+                    )}
+                  >
                     {(showActions && message.role === 'assistant' && onRegenerate) && (
                       <MessageAction
                         className="mr-1"
@@ -1046,10 +1062,7 @@ export function MessageRenderer({
                           navigator.clipboard.writeText(
                             message.parts?.map((part: any) => part?.text || "").join('\n')
                           )
-                          toast({
-                            title: "Copied message",
-                            description: "The message was copied to your clipboard.",
-                          })
+                          toast.success("Copied message", { description: "The message was copied to your clipboard." })
                         }}
                         label="Copy"
                       >
@@ -1094,10 +1107,7 @@ export function MessageRenderer({
                           document.body.removeChild(a)
                           URL.revokeObjectURL(url)
 
-                          toast({
-                            title: "Downloaded message",
-                            description: "The message was downloaded as a text file.",
-                          })
+                          toast.success("Downloaded message", { description: "The message was downloaded as a text file." })
                         }}
                         label="Download"
                       >
@@ -1130,14 +1140,14 @@ export function MessageRenderer({
                         <>
                           <MessageAction
                             className="mr-1"
-                            label="Feedback"
+                            label="Good response"
                             onClick={() => handleFeedback?.(message.id, 'positive')}
                           >
                             <ThumbsUp className="size-3" />
                           </MessageAction>
                           <MessageAction
                             className="mr-1"
-                            label="Feedback"
+                            label="Bad response"
                             onClick={() => handleFeedback?.(message.id, 'negative')}
                           >
                             <ThumbsDown className="size-3" />
@@ -1261,7 +1271,7 @@ const ToolCallChip = ({ tool }: { tool: { name: string; id: string; input: any; 
         )}
       >
         <div className="p-1 rounded bg-primary/10 shrink-0">
-          <Icon className="h-3 w-3 text-primary" strokeWidth={1.5} />
+          <Icon className="size-3 text-primary" />
         </div>
         <div className="flex-1 min-w-0 flex items-center gap-2">
           <span className="text-xs font-medium text-foreground shrink-0">
@@ -1276,10 +1286,9 @@ const ToolCallChip = ({ tool }: { tool: { name: string; id: string; input: any; 
         {expandable && (
           <ChevronDown
             className={cn(
-              "h-3 w-3 text-muted-foreground shrink-0 transition-transform duration-200",
+              "size-3 text-muted-foreground shrink-0 transition-transform duration-200",
               isOpen && "rotate-180"
             )}
-            strokeWidth={1.5}
           />
         )}
       </button>
@@ -1571,7 +1580,9 @@ const SearchResultItem = ({ item }: { item: ItemWithChunks }) => {
   };
 
   return (<Card className="group relative overflow-hidden hover:shadow-md transition-all duration-200 hover:border-primary/50 cursor-pointer" onClick={() => {
-    router.push(`/data/${item.context.id}/${item.id}`);
+    // /data/[ctx] workspace opens the item via the `?item=` searchParam; the
+    // legacy `/data/[ctx]/[item]` path was retired with the 2.11 redesign.
+    router.push(`/data/${item.context.id}?item=${item.id}`);
   }}>
     <CardContent className="p-4">
       {/* Item Name */}

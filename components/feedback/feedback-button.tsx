@@ -4,7 +4,7 @@ import { useContext, useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 import {
   SidebarMenuButton,
   SidebarMenuItem,
@@ -26,7 +26,7 @@ export function FeedbackButton() {
           tooltip={t("feedback.label")}
           aria-label={t("feedback.openButton")}
         >
-          <MessageSquarePlus className="h-4 w-4" strokeWidth={1.5} />
+          <MessageSquarePlus className="size-4" />
           <span className="group-data-[collapsible=icon]:hidden">
             {t("feedback.label")}
           </span>

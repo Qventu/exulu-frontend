@@ -7,7 +7,7 @@
  * entity that is on track to exceed its budget before the window resets.
  */
 
-export type BudgetEntityType = "user" | "role" | "team" | "project" | "agent";
+export type BudgetEntityType = "user" | "role" | "team" | "project" | "agent" | "routine";
 
 export const BUDGET_ENTITY_TYPES: {
   type: BudgetEntityType;
@@ -19,6 +19,7 @@ export const BUDGET_ENTITY_TYPES: {
   { type: "team", label: "Team", labelPlural: "Teams" },
   { type: "project", label: "Project", labelPlural: "Projects" },
   { type: "agent", label: "Agent", labelPlural: "Agents" },
+  { type: "routine", label: "Routine", labelPlural: "Routines" },
 ];
 
 export type BudgetDuration = "1d" | "7d" | "30d";
@@ -36,6 +37,10 @@ export type BudgetInfo = {
   max_budget: number | null;
   budget_duration: string | null;
   budget_reset_at: string | null;
+  /** End-user display preference (only set on the self-view from /me/budget).
+   *  "percent" → render a percentage instead of the exact USD amount. Absent /
+   *  "amount" → show dollars (admin views always show dollars). */
+  display?: "amount" | "percent";
 };
 
 export type BudgetLevel = "ok" | "warn" | "over";

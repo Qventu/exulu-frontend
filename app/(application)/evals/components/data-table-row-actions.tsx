@@ -3,8 +3,11 @@
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { Row } from "@tanstack/react-table";
 import { useMutation } from "@apollo/client";
-import { Pencil, Trash2, Play } from "lucide-react";
+import { ExternalLink, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,62 +17,42 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { DELETE_EVAL_SET } from "@/queries/queries";
-import { useToast } from "@/components/ui/use-toast";
-import { User, UserWithRole } from "@EXULU_SHARED/models/user";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useState } from "react";
+import { UserWithRole } from "@EXULU_SHARED/models/user";
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
   user: UserWithRole;
+  /** Called after a successful delete so the parent table can refetch. */
+  onDeleted?: () => void;
 }
 
 export function DataTableRowActions<TData>({
   row,
   user,
+  onDeleted,
 }: DataTableRowActionsProps<TData>) {
   const router = useRouter();
-  const { toast } = useToast();
+  const t = useTranslations("evals.list");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const evalSet = row.original as any;
 
   const canWrite = user.super_admin || user.role?.evals === "write";
 
-  const [deleteEvalSet, { loading: deleteLoading }] = useMutation(DELETE_EVAL_SET, {
-    onCompleted: () => {
-      toast({
-        title: "Eval set deleted",
-        description: "The eval set has been successfully deleted.",
-      });
-      setShowDeleteDialog(false);
-      window.location.reload();
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to delete eval set",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  const [deleteEvalSet] = useMutation(DELETE_EVAL_SET);
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    deleteEvalSet({
-      variables: {
-        id: evalSet.id,
-      },
-    });
+  const handleDelete = async () => {
+    try {
+      await deleteEvalSet({ variables: { id: evalSet.id } });
+      toast.success(t("deleteSuccess.title"), {
+        description: t("deleteSuccess.description"),
+      });
+      onDeleted?.();
+    } catch (error: any) {
+      toast.error(t("deleteError.title"), { description: error?.message });
+      throw error; // keeps the ConfirmDialog open on failure
+    }
   };
 
   return (
@@ -82,7 +65,7 @@ export function DataTableRowActions<TData>({
             onClick={(e) => e.stopPropagation()}
           >
             <DotsHorizontalIcon className="h-4 w-4" />
-            <span className="sr-only">Open menu</span>
+            <span className="sr-only">{t("rowActions.menu")}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[160px]">
@@ -92,17 +75,8 @@ export function DataTableRowActions<TData>({
               router.push(`/evals/${evalSet.id}`);
             }}
           >
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/evals/${evalSet.id}`);
-            }}
-          >
-            <Play className="mr-2 h-4 w-4" />
-            View Runs
+            <ExternalLink className="mr-2 h-4 w-4" />
+            {t("rowActions.open")}
           </DropdownMenuItem>
           {canWrite && (
             <>
@@ -115,34 +89,21 @@ export function DataTableRowActions<TData>({
                 className="text-destructive"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                {t("rowActions.delete")}
               </DropdownMenuItem>
             </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the eval set "{evalSet.name}".
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteLoading}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteLoading ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title={t("deleteConfirm.title")}
+        description={t("deleteConfirm.description", { name: evalSet.name })}
+        variant="destructive"
+        onConfirm={handleDelete}
+      />
     </>
   );
 }

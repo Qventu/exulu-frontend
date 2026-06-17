@@ -1,0 +1,266 @@
+"use client";
+
+/**
+ * One queue row (inventory items 33–40): identity, per-state status line
+ * (incl. the live elapsed/remaining estimate), and exactly one right-aligned
+ * action. Destructive actions (cancel a running job, dismiss a failed one)
+ * confirm via the shared ConfirmDialog — no more unconfirmed mutations.
+ */
+import { useMutation } from "@apollo/client";
+import { ExternalLink, FileAudio } from "lucide-react";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
+import * as React from "react";
+import { toast } from "sonner";
+
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
+import { RelativeTime } from "@/components/primitives/relative-time";
+import { StatusDot } from "@/components/primitives/status-dot";
+import { Button } from "@/components/ui/button";
+
+import { useTicker } from "../hooks";
+import { CANCEL_TRANSCRIPTION_JOB, REMOVE_TRANSCRIPTION_JOB } from "../queries";
+import {
+  displayTitle,
+  formatDuration,
+  PROCESSING_FACTOR,
+  type Job,
+} from "../types";
+
+const RECENT_MS = 60 * 60 * 1000; // live-tick RelativeTime only for fresh rows
+
+export interface JobRowProps {
+  job: Job;
+  onReview: (jobId: string) => void;
+  onChanged: () => void;
+}
+
+export function JobRow({ job, onReview, onChanged }: JobRowProps) {
+  const t = useTranslations("transcriptions");
+  const tCommon = useTranslations("common");
+
+  const [cancelJob] = useMutation(CANCEL_TRANSCRIPTION_JOB);
+  const [removeJob] = useMutation(REMOVE_TRANSCRIPTION_JOB);
+  const [confirmCancelOpen, setConfirmCancelOpen] = React.useState(false);
+  const [confirmDismissOpen, setConfirmDismissOpen] = React.useState(false);
+
+  const title = displayTitle(job);
+  const isRunning = job.status === "queued" || job.status === "transcribing";
+
+  // Row-scoped 1s ticker — only transcribing rows re-render every second
+  // (replaces the old whole-page tick, inventory 5 / page-doc risk 1).
+  const now = useTicker(job.status === "transcribing");
+
+  const audioLengthLabel = job.duration_seconds
+    ? formatDuration(job.duration_seconds)
+    : null;
+
+  const statusLine = (() => {
+    switch (job.status) {
+      case "queued":
+        return t("row.queued");
+      case "transcribing": {
+        const elapsedSeconds =
+          (now - new Date(job.createdAt).getTime()) / 1000;
+        const parts = [
+          audioLengthLabel
+            ? t("row.transcribingWithLength", { length: audioLengthLabel })
+            : t("row.transcribing"),
+          t("row.elapsed", { elapsed: formatDuration(elapsedSeconds) }),
+        ];
+        if (job.duration_seconds) {
+          const remaining =
+            job.duration_seconds * PROCESSING_FACTOR - elapsedSeconds;
+          parts.push(
+            remaining <= 0
+              ? t("row.wrappingUp")
+              : t("row.remaining", { remaining: formatDuration(remaining) }),
+          );
+        }
+        return parts.join(" · ");
+      }
+      case "awaiting_review":
+        return audioLengthLabel
+          ? t("row.awaitingReviewWithLength", { length: audioLengthLabel })
+          : t("row.awaitingReview");
+      case "failed":
+        return t("row.failed");
+      case "cancelled":
+        return t("row.cancelled");
+      case "saved":
+        return null; // composed below with RelativeTime
+    }
+  })();
+
+  // "Saved … / Updated …" — re-saves bump updatedAt; ignore the sub-2s jitter
+  // between the initial insert and finalize (unchanged heuristic).
+  const wasEdited =
+    new Date(job.updatedAt).getTime() - new Date(job.createdAt).getTime() >
+    2000;
+
+  const onConfirmCancel = async () => {
+    try {
+      await cancelJob({ variables: { id: job.id } });
+      // Cancelled jobs leave both lists on refetch — the toast is the visible
+      // feedback the old flow lacked (page-doc "cancelled jobs vanish").
+      toast.success(t("toasts.cancelled"));
+      onChanged();
+    } catch (err: unknown) {
+      toast.error(t("toasts.cancelFailed"), {
+        description: err instanceof Error ? err.message : undefined,
+      });
+      throw err; // keep the ConfirmDialog open
+    }
+  };
+
+  const onConfirmDismiss = async () => {
+    try {
+      await removeJob({ variables: { id: job.id } });
+      onChanged();
+    } catch (err: unknown) {
+      toast.error(t("toasts.dismissFailed"), {
+        description: err instanceof Error ? err.message : undefined,
+      });
+      throw err;
+    }
+  };
+
+  return (
+    <li className="relative overflow-hidden rounded-lg border">
+      <div className="flex items-center gap-3 p-3">
+        <FileAudio
+          aria-hidden="true"
+          className="size-4 shrink-0 text-muted-foreground"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate font-medium">{title}</span>
+            {isRunning && (
+              <StatusDot
+                status="muted"
+                pulse={job.status === "transcribing"}
+                className="shrink-0"
+              />
+            )}
+            {job.status === "failed" && (
+              <StatusDot status="error" className="shrink-0" />
+            )}
+          </div>
+          <div className="line-clamp-2 text-xs text-muted-foreground">
+            {job.status === "saved" ? (
+              <>
+                {wasEdited ? t("row.updated") : t("row.saved")}{" "}
+                <RelativeTime
+                  date={job.updatedAt}
+                  live={now - new Date(job.updatedAt).getTime() < RECENT_MS}
+                />
+                {audioLengthLabel ? <> · {audioLengthLabel}</> : null}
+              </>
+            ) : (
+              statusLine
+            )}
+            {job.error && (
+              <span className="ml-2 text-destructive">— {job.error}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          {isRunning && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="max-md:h-11"
+              onClick={() => setConfirmCancelOpen(true)}
+            >
+              {tCommon("cancel")}
+            </Button>
+          )}
+          {job.status === "awaiting_review" && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="max-md:h-11"
+              onClick={() => onReview(job.id)}
+            >
+              {t("row.review")}
+            </Button>
+          )}
+          {job.status === "saved" && (
+            <>
+              {/* L1 on the saved row at every width (inventory 48): icon-only
+                  with a 44px target below sm, text label from sm up. */}
+              {job.saved_item_id && (
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="max-md:h-11 max-sm:w-11 max-sm:px-0"
+                >
+                  <Link
+                    href={`/data/transcriptions/${job.saved_item_id}`}
+                    aria-label={t("row.openInLibrary")}
+                  >
+                    <span className="hidden sm:inline">
+                      {t("row.openInLibrary")}
+                    </span>
+                    <ExternalLink
+                      aria-hidden="true"
+                      className="size-4 sm:ml-1 sm:size-3.5"
+                    />
+                  </Link>
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="max-md:h-11"
+                onClick={() => onReview(job.id)}
+              >
+                {tCommon("edit")}
+              </Button>
+            </>
+          )}
+          {job.status === "failed" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="max-md:h-11"
+              onClick={() => setConfirmDismissOpen(true)}
+            >
+              {t("row.dismiss")}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {job.status === "transcribing" && (
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary/10 via-primary/60 to-primary/10 motion-safe:animate-pulse"
+        />
+      )}
+
+      <ConfirmDialog
+        open={confirmCancelOpen}
+        onOpenChange={setConfirmCancelOpen}
+        title={t("confirmCancel.title")}
+        description={t("confirmCancel.description")}
+        confirmLabel={t("confirmCancel.confirm")}
+        onConfirm={onConfirmCancel}
+      />
+      <ConfirmDialog
+        open={confirmDismissOpen}
+        onOpenChange={setConfirmDismissOpen}
+        title={t("confirmDismiss.title")}
+        description={t("confirmDismiss.description")}
+        confirmLabel={t("confirmDismiss.confirm")}
+        onConfirm={onConfirmDismiss}
+      />
+    </li>
+  );
+}

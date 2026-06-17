@@ -1,206 +1,3902 @@
 {
-  "navigation": {
-    "dashboard": "Dashboard",
-    "feedback": "Feedback",
-    "knowledge": "Knowledge",
-    "agents": "Agents",
-    "prompts": "Prompts",
-    "skills": "Skills",
-    "projects": "Projects",
-    "chat": "Chat",
-    "transcriptions": "Transcripts",
-    "templates": "Templates",
-    "routines": "Routines",
-    "evals": "Evals",
-    "automation": "Automation",
-    "admin": "Admin",
-    "analytics": "Analytics",
-    "users": "Users",
-    "keys": "Keys",
-    "variables": "Variables",
-    "api": "API",
-    "apiPlayground": "Playground",
-    "apiKeys": "Keys",
-    "systemVariables": "Vault",
-    "themeSettings": "Theme",
-    "theme": "Theme",
-    "settings": "Settings",
-    "logout": "Logout",
-    "terms": "Terms"
-  },
-  "language": {
-    "switchTo": "Switch to {language}",
-    "german": "German",
-    "english": "English"
-  },
-  "agentSelection": {
-    "searchPlaceholder": "Search agents...",
-    "noAgentsFound": "No agents found matching your search",
-    "noAgentsAvailable": "No agents available",
-    "sessionCreated": "Session created successfully! Sessions started in a project are accessible for viewing by project members.",
-    "sessionError": "Failed to create session. Please try again.",
-    "newSession": "New session with {agentName}"
-  },
-  "common": {
-    "success": "Success",
-    "error": "Error",
-    "loading": "Loading...",
-    "cancel": "Cancel",
-    "save": "Save",
-    "delete": "Delete",
-    "edit": "Edit",
-    "create": "Create",
-    "search": "Search",
-    "active": "Active",
-    "inactive": "Inactive",
-    "enabled": "Enabled",
-    "name": "Name",
-    "description": "Description",
-    "backend": "Backend"
-  },
-  "agents": {
-    "title": "Agents",
-    "subtitle": "Manage your AI agents and create new ones.",
-    "searchPlaceholder": "Search agents...",
-    "errorLoading": "Error loading agents",
-    "errorLoadingDescription": "There was an error loading your agents. Please try again.",
-    "createNewAgent": "Create New Agent",
-    "noDescriptionAvailable": "No description available",
-    "createDialog": {
-      "title": "Create a new agent",
-      "description": "Give your new agent a name and a description (optional).",
-      "generateImageLabel": "Generate AI image for this agent",
-      "imageStyle": "Image Style",
-      "imageStylePlaceholder": "Select image style",
-      "generatingImages": "Generating your agent images...",
-      "generatingProgress": "Creating {current}/4 image options",
-      "complete": "Complete",
-      "generating": "Generating...",
-      "buttonCreate": "Create Agent",
-      "buttonGenerating": "Generating...",
-      "buttonGenerateImages": "Generate Images",
-      "fillAllFields": "Please fill in all fields",
-      "imageGenerationFailed": "Failed to generate images. Please try again.",
-      "createFailed": "Failed to create agent. Please try again.",
-      "imageInfoAlert": "Exulu can generate a cool image for your agent if an OPENAI_IMAGE_GENERATION_API_KEY has been added to your variables page."
+  "access": {
+    "title": "Users & access",
+    "description": "Who can sign in, and what they can do.",
+    "tabs": {
+      "users": "Users",
+      "roles": "Roles",
+      "teams": "Teams"
     },
-    "detailsSheet": {
-      "noModelSelected": "No model selected",
-      "description": "Description",
-      "noDescriptionAvailable": "No description available.",
-      "capabilities": "Capabilities",
-      "tools": "Tools",
-      "noToolsEnabled": "No tools enabled",
-      "security": "Security",
-      "protected": "Protected",
-      "unprotected": "Unprotected",
-      "active": "Active",
-      "accessControl": "Access Control",
-      "scanners": {
-        "promptGuard": "Prompt Guard",
-        "codeShield": "Code Shield",
-        "agentAlignment": "Agent Alignment",
-        "hiddenAscii": "Hidden ASCII Detection",
-        "piiDetection": "PII Detection"
+    "users": {
+      "searchPlaceholder": "Search by email…",
+      "noRole": "No role",
+      "noTeam": "No team",
+      "verified": "Verified",
+      "pending": "Pending",
+      "columns": {
+        "user": "User",
+        "role": "Role",
+        "team": "Team",
+        "updated": "Updated",
+        "created": "Created"
       },
-      "capabilityLabels": {
-        "images": "Images",
-        "files": "Files",
-        "audio": "Audio",
-        "video": "Video",
-        "none": "None"
+      "view": {
+        "label": "View",
+        "toggleColumns": "Toggle columns"
+      },
+      "filters": {
+        "allRoles": "All roles",
+        "allTeams": "All teams",
+        "clear": "Clear filters"
+      },
+      "superAdmin": {
+        "label": "Super admin",
+        "captionOn": "Has full administrative privileges.",
+        "captionOff": "Standard user permissions.",
+        "grantTitle": "Grant super admin?",
+        "grantDescription": "{email} will gain full administrative privileges across the entire workspace.",
+        "grantConfirm": "Grant super admin",
+        "revokeTitle": "Revoke super admin?",
+        "revokeDescription": "{email} will lose all administrative privileges.",
+        "revokeConfirm": "Revoke super admin",
+        "lastAdminWarning": "Ensure you are not removing super admin from the last super administrator. If you do, nobody will be able to manage users or system settings, and you will need a technical support intervention to restore it via the database.",
+        "selfBlockedTitle": "Can't disable your own super admin",
+        "selfBlockedDescription": "You cannot disable your own super admin privileges. Ask another super admin to do it.",
+        "grantedTitle": "Super admin granted",
+        "grantedDescription": "{email} now has super admin privileges.",
+        "revokedTitle": "Super admin revoked",
+        "revokedDescription": "{email} no longer has super admin privileges.",
+        "failedTitle": "Couldn't update super admin",
+        "failedDescription": "Please try again."
+      },
+      "rowActions": {
+        "resetPassword": "Reset password",
+        "delete": "Delete user",
+        "selfDeleteBlocked": "You can't delete your own user.",
+        "invalidRow": "This row didn't validate — actions disabled."
+      },
+      "bulk": {
+        "remove": "Remove",
+        "successTitle": "{count, plural, one {# user removed} other {# users removed}}",
+        "partialTitle": "{count, plural, one {# user removed — see failures below} other {# users removed — see failures below}}",
+        "selfSkippedWarning": "Your own account is in the selection and will be skipped. You can't delete yourself.",
+        "nothingToRemove": "Nothing to remove — your account was the only row selected.",
+        "assignRole": "Assign role…",
+        "assignRoleHint": "{count, plural, one {Assign a role to # selected user} other {Assign a role to # selected users}}",
+        "assignRolePlaceholder": "Pick a role…",
+        "assignRoleDone": "{count, plural, one {Role assigned to # user} other {Role assigned to # users}}",
+        "assignRolePartial": "Role assigned to {ok}, failed for {failed}",
+        "assignTeam": "Assign team…",
+        "assignTeamHint": "{count, plural, one {Assign a team to # selected user} other {Assign a team to # selected users}}",
+        "assignTeamPlaceholder": "Pick a team…",
+        "assignTeamDone": "{count, plural, one {Team assigned to # user} other {Team assigned to # users}}",
+        "assignTeamPartial": "Team assigned to {ok}, failed for {failed}",
+        "assigning": "Assigning…"
+      },
+      "confirmRoleChangeTitle": "Change role?",
+      "confirmRoleChangeDescription": "Change the role of {email}? This changes what they can see and do across the workspace.",
+      "confirmRoleChangeConfirm": "Change role",
+      "confirmTeamChangeTitle": "Change team?",
+      "confirmTeamChangeDescription": "Change the team of {email}? Cost attribution and team-shared content reassign immediately.",
+      "confirmTeamChangeConfirm": "Change team",
+      "confirmDeleteTitle": "Delete user?",
+      "confirmDeleteDescription": "{email} will be deleted permanently. They will no longer be able to sign in. This cannot be undone.",
+      "confirmDeleteConfirm": "Delete user",
+      "confirmBulkDeleteTitle": "Delete {count, plural, one {# user} other {# users}}?",
+      "confirmBulkDeleteDescription": "{count, plural, one {This user will be deleted permanently.} other {These # users will be deleted permanently.}} They will no longer be able to sign in. This cannot be undone.",
+      "confirmBulkDeleteConfirm": "Delete",
+      "roleChangedTitle": "Role updated",
+      "roleChangeFailedTitle": "Couldn't update role",
+      "teamChangedTitle": "Team updated",
+      "teamChangeFailedTitle": "Couldn't update team",
+      "deletedTitle": "User deleted",
+      "deletedDescription": "{email} has been deleted.",
+      "deleteFailedTitle": "Couldn't delete user",
+      "detail": {
+        "identity": "Identity",
+        "email": "Email",
+        "userId": "User ID",
+        "status": "Status",
+        "verified": "Verified",
+        "pending": "Pending",
+        "created": "Created",
+        "lastUsed": "Last used",
+        "never": "Never",
+        "access": "Access",
+        "accessDescription": "Choose what this user can see and do.",
+        "role": "Role",
+        "team": "Team",
+        "actions": "Actions",
+        "resetPassword": "Reset password…",
+        "dangerZone": "Danger zone",
+        "deleteUser": "Delete user",
+        "selfDeleteBlocked": "You can't delete your own user.",
+        "raw": "Raw",
+        "rawDescription": "The full row as returned by the API. Secrets are masked.",
+        "rawShow": "Show raw JSON",
+        "rawHide": "Hide raw JSON"
+      },
+      "empty": {
+        "title": "No users yet",
+        "description": "Invite your first user to get started.",
+        "action": "Add user",
+        "filteredTitle": "No users match",
+        "filteredDescription": "Try a different search or clear the filters."
+      },
+      "addUser": {
+        "action": "Add user",
+        "title": "Add user",
+        "description": "Enter the email address for the new user.",
+        "passwordTitle": "Temporary password",
+        "passwordDescription": "A temporary password has been generated. Copy and send it to the user manually.",
+        "emailLabel": "Email address",
+        "emailPlaceholder": "user@example.com",
+        "passwordLabel": "Temporary password",
+        "handoffHint": "Send this password to {email} manually. They should change it on first sign-in.",
+        "cancel": "Cancel",
+        "continue": "Continue",
+        "create": "Add user",
+        "creating": "Creating…",
+        "successTitle": "User added",
+        "successDescription": "{email} has been added.",
+        "successDescriptionTempPassword": "{email} has been added with a temporary password.",
+        "failedTitle": "Couldn't add user",
+        "failedDescription": "Please try again.",
+        "errors": {
+          "emailRequired": "Enter an email address.",
+          "emailInvalid": "Enter a valid email address."
+        }
+      },
+      "resetPassword": {
+        "title": "Reset password",
+        "description": "A temporary password has been generated for {email}. Copy and send it to the user manually.",
+        "passwordLabel": "Temporary password",
+        "handoffHint": "The user should change this on their next sign-in.",
+        "cancel": "Cancel",
+        "confirm": "Reset password",
+        "resetting": "Resetting…",
+        "successTitle": "Password reset",
+        "successDescription": "Password has been reset for {email}.",
+        "failedTitle": "Couldn't reset password",
+        "failedDescription": "Please try again."
       }
     },
-    "deleteDialog": {
-      "title": "Delete this agent",
-      "confirmationPrompt": "Type \"{confirmation}\" to confirm",
-      "confirmationText": "delete this agent",
-      "buttonDelete": "Delete"
+    "roles": {
+      "newRole": "New role",
+      "searchPlaceholder": "Search roles…",
+      "systemRole": "System",
+      "noPermissions": "No permissions",
+      "rw": "RW",
+      "r": "R",
+      "columns": {
+        "role": "Role",
+        "permissions": "Permissions",
+        "updated": "Updated"
+      },
+      "permissionAreas": {
+        "agents": "Agents",
+        "workflows": "Routines",
+        "variables": "Variables",
+        "users": "Users",
+        "api": "API",
+        "evals": "Evals",
+        "budgets": "Budgets"
+      },
+      "permissionAreaDescriptions": {
+        "agents": "AI agents and their configurations.",
+        "workflows": "Routines and their runs.",
+        "variables": "Environment variables and secrets.",
+        "users": "User management and roles.",
+        "api": "API access and management.",
+        "evals": "Evaluation sets, test cases, and eval runs.",
+        "budgets": "Spend budgets for users, roles, teams, projects, and agents."
+      },
+      "matrix": {
+        "none": "None",
+        "read": "Read",
+        "write": "Write",
+        "infoLabel": "About this area"
+      },
+      "confirmDeleteTitle": "Delete role?",
+      "confirmDeleteDescription": "The role \"{name}\" will be deleted permanently. Members of this role keep their accounts but lose its grants. This cannot be undone.",
+      "confirmDeleteConfirm": "Delete role",
+      "deletedTitle": "Role deleted",
+      "deleteFailedTitle": "Couldn't delete role",
+      "detail": {
+        "createTitle": "New role",
+        "meta": "Details",
+        "created": "Created",
+        "updated": "Updated",
+        "systemRole": "System role",
+        "nameLabel": "Role name",
+        "namePlaceholder": "e.g. Admin, Developer, Viewer",
+        "reservedNameHint": "System roles cannot be renamed.",
+        "permissions": "Permissions",
+        "permissionsDescription": "Configure access levels for each area.",
+        "blastRadiusInfo": "Members of this role see navigation changes immediately.",
+        "dangerZone": "Danger zone",
+        "deleteRole": "Delete role",
+        "reservedTooltip": "System roles cannot be deleted.",
+        "createdTitle": "Role created",
+        "updatedTitle": "Role updated",
+        "saveFailedTitle": "Couldn't save role",
+        "createSummary": "Ready to create the role.",
+        "unsavedSummary": "You have unsaved changes."
+      },
+      "empty": {
+        "title": "No roles yet",
+        "description": "Roles bundle permissions for groups of users.",
+        "action": "New role",
+        "filteredTitle": "No roles match",
+        "filteredDescription": "Try a different search."
+      }
     },
-    "imageStyles": {
-      "origami": "Origami",
-      "anime": "Anime",
-      "japanese_anime": "Japanese Anime",
-      "vaporwave": "Vaporwave",
-      "lego": "Lego",
-      "paper_cut": "Paper Cut",
-      "felt_puppet": "Felt Puppet",
-      "3d": "3D",
-      "app_icon": "App Icon",
-      "pixel_art": "Pixel Art",
-      "isometric": "Isometric"
+    "teams": {
+      "newTeam": "New team",
+      "searchPlaceholder": "Search teams…",
+      "budgetsLink": "Budgets →",
+      "columns": {
+        "team": "Team",
+        "description": "Description",
+        "updated": "Updated"
+      },
+      "confirmDeleteTitle": "Delete team?",
+      "confirmDeleteDescription": "The team \"{name}\" will be deleted permanently. This cannot be undone.",
+      "confirmDeleteWarning": "Users assigned to {name} lose this grouping; budget attribution for this team stops.",
+      "confirmDeleteConfirm": "Delete team",
+      "deletedTitle": "Team deleted",
+      "deleteFailedTitle": "Couldn't delete team",
+      "detail": {
+        "createTitle": "New team",
+        "meta": "Details",
+        "created": "Created",
+        "updated": "Updated",
+        "dangerZone": "Danger zone",
+        "deleteTeam": "Delete team",
+        "createdTitle": "Team created",
+        "updatedTitle": "Team updated",
+        "saveFailedTitle": "Couldn't save team"
+      },
+      "empty": {
+        "title": "No teams yet",
+        "description": "Teams group people for cost attribution and content sharing.",
+        "action": "New team",
+        "filteredTitle": "No teams match",
+        "filteredDescription": "Try a different search."
+      }
     }
   },
-  "dashboard": {
-    "title": "Analytics Dashboard",
-    "subtitle": "Monitor your AI workflows and performance metrics.",
-    "summary": "Summary",
-    "summaryCards": {
-      "agentSessions": "Agent Sessions",
-      "agentCalls": "Agent Calls",
-      "tokenUsage": "Token Usage",
-      "workflowRuns": "Workflow Runs",
-      "functionCalls": "Function Calls"
+  "agentSelection": {
+    "newSession": "New session with {agentName}",
+    "noAgentsAvailable": "No agents available",
+    "noAgentsFound": "No agents found matching your search",
+    "searchPlaceholder": "Search agents...",
+    "sessionCreated": "Session created successfully! Sessions started in a project are accessible for viewing by project members.",
+    "sessionError": "Failed to create session. Please try again."
+  },
+  "agents": {
+    "chatAction": "Chat",
+    "copyId": "Copy ID",
+    "createDialog": {
+      "buttonCreate": "Create Agent",
+      "buttonGenerateImages": "Generate Images",
+      "buttonGenerating": "Generating...",
+      "complete": "Complete",
+      "createFailed": "Failed to create agent. Please try again.",
+      "creating": "Creating…",
+      "description": "Give your new agent a name and a description (optional).",
+      "fillAllFields": "Please fill in all fields",
+      "generateImageLabel": "Generate AI image for this agent",
+      "generating": "Generating...",
+      "generatingImages": "Generating your agent images...",
+      "generatingProgress": "Creating {current}/4 image options",
+      "imageGenerationFailed": "Failed to generate images. Please try again.",
+      "imageInfoAlert": "Exulu can generate a cool image for your agent if an OPENAI_IMAGE_GENERATION_API_KEY has been added to your variables page.",
+      "imageStyle": "Image Style",
+      "imageStylePlaceholder": "Select image style",
+      "instructionsLabel": "Instructions",
+      "instructionsPlaceholder": "What should this agent do? (you can refine later)",
+      "instructionsSaveFailed": "The agent was created, but its instructions couldn't be saved — add them in the editor.",
+      "modelLabel": "Model",
+      "nameRequired": "Give your agent a name.",
+      "optional": "optional",
+      "subtitle": "Give it a name, confirm the model, and optionally tell it what to do — everything else can be refined in the editor.",
+      "title": "Create a new agent"
     },
+    "createNewAgent": "Create New Agent",
+    "deleteDialog": {
+      "buttonDelete": "Delete",
+      "confirmationPrompt": "Type \"{confirmation}\" to confirm",
+      "confirmationText": "delete this agent",
+      "title": "Delete this agent"
+    },
+    "detailPanel": {
+      "firewallUnsupported": "Firewall status isn't available on this backend."
+    },
+    "detailsSheet": {
+      "accessControl": "Access Control",
+      "active": "Active",
+      "capabilities": "Capabilities",
+      "capabilityLabels": {
+        "audio": "Audio",
+        "files": "Files",
+        "images": "Images",
+        "none": "None",
+        "text": "Text",
+        "video": "Video"
+      },
+      "description": "Description",
+      "noDescriptionAvailable": "No description available.",
+      "noModelSelected": "No model selected",
+      "noToolsEnabled": "No tools enabled",
+      "protected": "Protected",
+      "scanners": {
+        "agentAlignment": "Agent Alignment",
+        "codeShield": "Code Shield",
+        "hiddenAscii": "Hidden ASCII Detection",
+        "piiDetection": "PII Detection",
+        "promptGuard": "Prompt Guard"
+      },
+      "security": "Security",
+      "tools": "Tools",
+      "unprotected": "Unprotected"
+    },
+    "duplicate": "Duplicate",
+    "duplicateFailed": "Couldn't duplicate the agent. Please try again.",
+    "duplicateSuccess": "Agent duplicated",
+    "editAgent": "Edit agent",
+    "editor": {
+      "access": {
+        "description": "Who can see and edit this agent.",
+        "subjectLabel": "agent",
+        "summaryPrivate": "Private — only you.",
+        "summaryPublic": "Public — anyone in your workspace.",
+        "summaryRoles": "Shared with {count} role(s).",
+        "summaryTeams": "Shared with {count} team(s).",
+        "summaryUsers": "Shared with {count} user(s)."
+      },
+      "appearance": {
+        "avatarDescription": "Shown next to this agent everywhere it appears.",
+        "avatarTitle": "Avatar",
+        "description": "Avatar and idle/responding animations shown in chat.",
+        "generateButton": "Generate with AI",
+        "generateDescription": "Pick a style and we'll create four options for you.",
+        "generateTitle": "Generate an avatar",
+        "idleDescription": "Played while the agent is waiting.",
+        "idleLabel": "Idle animation",
+        "optionLabel": "Option",
+        "preview": "Preview:",
+        "respondingDescription": "Played while the agent is generating a reply.",
+        "respondingLabel": "Responding animation",
+        "useImage": "Use selected image"
+      },
+      "basics": {
+        "categoryLabel": "Category",
+        "categoryPlaceholder": "Select a category",
+        "description": "Who this agent is and what it talks to.",
+        "descriptionLabel": "Description",
+        "modelBadge": "{model} from {provider}",
+        "modelLabel": "Model",
+        "nameLabel": "Name"
+      },
+      "chatExperience": {
+        "defaultDescription": "Loads this agent by default on the chat page.",
+        "defaultLabel": "Set as default agent",
+        "description": "How the agent shows up inside chat.",
+        "feedbackDescription": "Allow users to send feedback during chat.",
+        "feedbackLabel": "Feedback collection",
+        "suggestionsDescription": "After each reply, suggest up to 3 messages the user might send next. Uses the agent’s model; tokens count toward limits.",
+        "suggestionsLabel": "Follow-up suggestions",
+        "welcomeDescription": "Shown when the agent is first loaded in chat.",
+        "welcomeLabel": "Welcome message"
+      },
+      "developer": {
+        "curlLabel": "curl",
+        "description": "Identifiers and copy-pasteable snippets for calling this agent.",
+        "endpointLabel": "Endpoint",
+        "idLabel": "Agent ID",
+        "noSlugHint": "Save the agent once so a slug is generated, then snippets will appear here.",
+        "slugLabel": "Slug",
+        "tsLabel": "TypeScript (fetch)"
+      },
+      "duplicated": "Agent duplicated",
+      "header": {
+        "activeAria": "Active",
+        "copyId": "Copy agent ID",
+        "copySlug": "Copy slug",
+        "delete": "Delete agent",
+        "duplicate": "Duplicate",
+        "testInChat": "Test in chat"
+      },
+      "instructions": {
+        "customDescription": "These instructions are sent with every conversation. Up to 40,000 characters.",
+        "customLabel": "Custom instructions",
+        "description": "What the agent should do, included with every session.",
+        "loadingPrompts": "Loading prompts…",
+        "manage": "Manage",
+        "noPromptsAssigned": "No prompts assigned yet — open Manage to browse and add some.",
+        "promptsDescription": "{count} prompt(s) assigned to this agent.",
+        "promptsTitle": "Prompt templates",
+        "systemDescription": "Set by a developer — read-only here.",
+        "systemTitle": "System instructions"
+      },
+      "knowledge": {
+        "agenticDescription": "A tool loop that searches knowledge contexts intelligently when needed.",
+        "agenticTitle": "Agentic retrieval",
+        "description": "What the agent can read, remember and retrieve.",
+        "disabled": "disabled",
+        "enabled": "enabled",
+        "memoryDescription": "Choose a context for the agent to store and recall items per user.",
+        "memoryTitle": "Long-term memory",
+        "noContexts": "No contexts found.",
+        "none": "None",
+        "searchContexts": "Search contexts…",
+        "selectContext": "Select context…"
+      },
+      "notFoundDescription": "This agent could not be loaded. It may have been deleted, or you may not have access.",
+      "notFoundTitle": "Agent not found",
+      "safety": {
+        "description": "Firewall and content scanners protecting this agent's traffic.",
+        "enableDescription": "Turn on the safety firewall for messages exchanged with this agent.",
+        "enableLabel": "Enable firewall",
+        "scanners": {
+          "agentAlignment": {
+            "description": "Checks tool calls against the agent's declared role.",
+            "label": "Agent Alignment"
+          },
+          "codeShield": {
+            "description": "Detects unsafe code patterns in inputs and outputs.",
+            "label": "Code Shield"
+          },
+          "hiddenAscii": {
+            "description": "Catches invisible characters used to hide instructions.",
+            "label": "Hidden ASCII detection"
+          },
+          "piiDetection": {
+            "description": "Flags personal data in messages and tool outputs.",
+            "label": "PII detection"
+          },
+          "promptGuard": {
+            "description": "Blocks prompt-injection and jailbreak attempts.",
+            "label": "Prompt Guard"
+          }
+        },
+        "unsupportedDescription": "Firewall configuration is not exposed by the connected GraphQL schema yet.",
+        "unsupportedTitle": "Not available on this backend"
+      },
+      "saved": "Agent saved",
+      "sections": {
+        "access": "Access",
+        "appearance": "Appearance",
+        "basics": "Basics",
+        "chatExperience": "Chat experience",
+        "developer": "Developer",
+        "instructions": "Instructions",
+        "knowledge": "Knowledge & memory",
+        "safety": "Safety",
+        "tools": "Tools & skills"
+      },
+      "tools": {
+        "allCategories": "All categories",
+        "available": "available",
+        "categoryPlaceholder": "Filter by category",
+        "clearFilters": "Clear filters",
+        "clearFiltersAria": "Clear filters",
+        "clearSearchAria": "Clear search",
+        "collapseAll": "Collapse all",
+        "configuration": "Configuration",
+        "configureAria": "Configure {name}",
+        "enabledCount": "{enabled}/{total} enabled",
+        "expandAll": "Expand all",
+        "found": "found",
+        "infoAria": "About {name}",
+        "noResults": "No tools match your filters.",
+        "resultCount": "{count} tool(s) {suffix}.",
+        "searchPlaceholder": "Search tools by name or description…",
+        "showSubAgent": "Show this agent's tools & sub-agents",
+        "skills": "Skills",
+        "skillsHint": "Instruction sets that guide behavior for specific tasks.",
+        "subAgentCapabilities": "{count} capabilit(y/ies)",
+        "subAgentDelegates": "{count} sub-agent(s)",
+        "subAgentDelegatesHint": "This agent can delegate to {count} other agent(s).",
+        "subAgentSheetDescription": "Details for this sub-agent.",
+        "subAgentTools": "{count} tool(s)",
+        "subAgentToolsHint": "This agent has access to {count} tool(s).",
+        "subAgents": "Sub-Agents",
+        "subAgentsHint": "Other agents this one can call as tools.",
+        "summary": "{count} tool(s) enabled for this agent.",
+        "toggleAria": "Enable {name}",
+        "tools": "Tools",
+        "toolsHint": "Standard tools with specific functionalities.",
+        "typeAgent": "Agent",
+        "typeTool": "Tool"
+      },
+      "unsavedChanges": "Unsaved changes to this agent"
+    },
+    "emptyDescription": "Agents are AI assistants configured for your team's work.",
+    "emptyReadOnlyDescription": "No agents are available to you yet — ask your workspace admin.",
+    "emptyReadOnlyTitle": "No agents available",
+    "emptyTitle": "No agents yet",
+    "errorLoading": "Error loading agents",
+    "errorLoadingDescription": "There was an error loading your agents. Please try again.",
+    "filters": {
+      "statusAll": "All statuses",
+      "statusLabel": "Status"
+    },
+    "imageStyles": {
+      "3d": "3D",
+      "anime": "Anime",
+      "app_icon": "App Icon",
+      "felt_puppet": "Felt Puppet",
+      "isometric": "Isometric",
+      "japanese_anime": "Japanese Anime",
+      "lego": "Lego",
+      "origami": "Origami",
+      "paper_cut": "Paper Cut",
+      "pixel_art": "Pixel Art",
+      "vaporwave": "Vaporwave"
+    },
+    "newAgent": "New agent",
+    "noDescriptionAvailable": "No description available",
+    "openInChat": "Open in chat",
+    "pageDescription": "Build and manage the AI agents your organization talks to.",
+    "promptBrowser": {
+      "add": "Add",
+      "addedToAgent": "Added to {name}",
+      "assignedToAgent": "Assigned to {name}",
+      "backToFolders": "Back to folders",
+      "createPrompt": "New prompt",
+      "foldersSubtitle": "Browse prompts by folder.",
+      "loadingFolders": "Loading folders…",
+      "loadingPrompts": "Loading prompts…",
+      "noPromptsFound": "No prompts match your search.",
+      "noPromptsInFolder": "No prompts in this folder yet.",
+      "otherPrompts": "Other prompts",
+      "promptsSubtitle": "Prompts in {folder}.",
+      "remove": "Remove",
+      "removedFromAgent": "Removed from {name}",
+      "searchPlaceholder": "Search prompts…",
+      "title": "Browse prompts",
+      "untagged": "Untagged",
+      "updateFailed": "Couldn't update the prompt assignment. Please try again."
+    },
+    "rightsMode": {
+      "private": "Private",
+      "public": "Public",
+      "roles": "Shared with roles",
+      "teams": "Shared with teams",
+      "unknown": "Restricted",
+      "users": "Shared with users"
+    },
+    "searchEmptyDescription": "Try a different name, or clear the search and filters.",
+    "searchEmptyTitle": "No agents match your search",
+    "searchPlaceholder": "Search agents...",
+    "sort": {
+      "label": "Sort by",
+      "lastUpdated": "Last updated",
+      "nameAsc": "Name A–Z",
+      "nameDesc": "Name Z–A",
+      "newest": "Newest first"
+    },
+    "subtitle": "Manage your AI agents and create new ones.",
+    "title": "Agents"
+  },
+  "analytics": {
+    "breakdown": {
+      "dimAgents": "Agents",
+      "dimProjects": "Projects",
+      "dimRoles": "Roles",
+      "dimRoutines": "Routines",
+      "dimTeams": "Teams",
+      "dimUsers": "Users",
+      "emptyHint": "Try a wider range or a different event type.",
+      "emptyTitle": "No data for this lens",
+      "subtitleByCalls": "by agent calls",
+      "subtitleByRequests": "by requests",
+      "subtitleBySpend": "by spend",
+      "subtitleByTokens": "by token usage",
+      "title": "Breakdown",
+      "valueLabelCalls": "calls",
+      "valueLabelRequests": "requests",
+      "valueLabelSpend": "spend",
+      "valueLabelTokens": "tokens",
+      "viewList": "List",
+      "viewListAria": "List view",
+      "viewShare": "Share",
+      "viewShareAria": "Share view"
+    },
+    "deepLinkLegacyTypeDropped": "This link used a legacy filter that no longer applies; showing the full dashboard.",
+    "deepLinkLegacyTypeRemapped": "This link used a legacy filter. Showing the {dimension} view.",
+    "deepLinkLegacyTypeTitle": "Filter updated",
+    "deepLinkRangeReset": "The deep-linked range exceeded 30 days and was reset to the last 14 days.",
+    "errors": {
+      "generic": "We couldn't load this chart.",
+      "reload": "Reload",
+      "retry": "Retry",
+      "technicalDetails": "Technical details"
+    },
+    "explore": {
+      "measure": "Measure",
+      "measureCount": "Count",
+      "measureRequests": "Requests",
+      "measureSpend": "Spend",
+      "measureTokens": "Tokens",
+      "trendDescription": "Daily totals across the selected range.",
+      "trendDescriptionMeasure": "Daily {measure} across the selected range.",
+      "trendEmptyHint": "Try a wider range or a different event type.",
+      "trendEmptyTitle": "No activity in this window",
+      "trendTitle": "Trend"
+    },
+    "footer": {
+      "budgets": "Budgets",
+      "evals": "Evals",
+      "label": "More analytics"
+    },
+    "header": {
+      "dimension": "View by",
+      "dimensionAgents": "Agents",
+      "dimensionProjects": "Projects",
+      "dimensionRoles": "Roles",
+      "dimensionRoutines": "Routines",
+      "dimensionTeams": "Teams",
+      "dimensionUsers": "Users",
+      "exportCsv": "Export CSV",
+      "exportCsvAria": "Export the current breakdown as a CSV file",
+      "splitByLabel": "Split by:"
+    },
+    "kpi": {
+      "agentCalls": "Agent calls",
+      "requests": "Requests",
+      "sessions": "Sessions",
+      "spend": "Spend",
+      "toolCalls": "Tool calls",
+      "tokens": "Tokens",
+      "vsPrevious": "vs previous: {value}",
+      "workflowRuns": "Workflow runs"
+    },
+    "openLiteLLMAdmin": "Open LiteLLM admin",
+    "purpose": "Usage across agents, users, and projects.",
+    "range": {
+      "footnote": "Maximum range: {days} days",
+      "label": "Date range",
+      "placeholder": "Pick a date range",
+      "preset24h": "24h",
+      "preset7d": "7d",
+      "preset14d": "14d",
+      "preset30d": "30d",
+      "presetCustom": "Custom",
+      "tooLargeDescription": "Please select a date range of {days} days or less.",
+      "tooLargeTitle": "Date range too large"
+    },
+    "title": "Analytics"
+  },
+  "auth": {
+    "boundary": {
+      "description": "The sign-in page hit an unexpected error. Please try again.",
+      "retry": "Try again",
+      "title": "Something went wrong"
+    },
+    "errors": {
+      "AccessDenied": "You don't have permission to sign in. Contact your administrator if you think this is a mistake.",
+      "Configuration": "Sign-in is not configured correctly. Please contact your administrator.",
+      "CredentialsSignin": "Incorrect email or password.",
+      "Default": "Something went wrong while signing you in. Please try again.",
+      "EmailSignin": "The sign-in code could not be sent. Check the address and try again.",
+      "OAuthAccountNotLinked": "This email is already linked to a different sign-in method. Use that method instead.",
+      "OAuthCallback": "Google sign-in did not complete. Please try again.",
+      "OAuthSignin": "Google sign-in could not be started. Please try again.",
+      "SessionRequired": "Please sign in to continue.",
+      "Verification": "That code is invalid or has expired. Request a new one and try again.",
+      "title": "Sign-in failed"
+    },
+    "footer": {
+      "copyright": "© {year}",
+      "languageLabel": "Language",
+      "terms": "Terms & Conditions"
+    },
+    "otp": {
+      "changeEmail": "Use a different email",
+      "codeLabel": "One-time code",
+      "resend": "Resend code",
+      "resendCooldown": "Resend code ({seconds}s)",
+      "resent": "A new code is on its way.",
+      "submit": "Submit code",
+      "subtitle": "We sent a 6-digit code to <strong>{email}</strong>. It expires in 3 minutes.",
+      "title": "Check your email"
+    },
+    "signIn": {
+      "continueWithGoogle": "Continue with Google",
+      "emailLabel": "Email",
+      "emailPlaceholder": "m@example.com",
+      "noAccount": "No account? Ask your administrator.",
+      "or": "or",
+      "passwordLabel": "Password",
+      "submitOtp": "Email me a code",
+      "submitPassword": "Sign in",
+      "subtitleOtp": "We'll email you a one-time code.",
+      "subtitlePassword": "Enter your email and password.",
+      "title": "Sign in",
+      "trustNote": "Processed and stored in the EU. Never used to train AI models."
+    }
+  },
+  "budgets": {
+    "title": "Budgets",
+    "description": "Spending limits per user, role, team, project, or agent — enforced by LiteLLM.",
+    "allBudgets": {
+      "title": "All budgets"
+    },
+    "atRisk": {
+      "title": "Budgets at risk",
+      "allClear": "All budgets on track.",
+      "itemOver": "{scope} · {name} is over budget ({percent}%)",
+      "itemWarn": "{scope} · {name} is at risk ({percent}%)",
+      "counts": "{over} over · {warn} at risk",
+      "partialError": "Some budget data couldn't be loaded."
+    },
+    "bar": {
+      "detailsAria": "Budget details for {name}",
+      "usedOfMax": "{spend} of {max} used",
+      "remainingDuration": "{remaining} remaining · {duration}",
+      "projected": "Projected ≈ {amount} by reset",
+      "projectedOverPace": "Projected ≈ {amount} by reset (over pace)",
+      "resetsOn": "Resets {date}",
+      "percentLeft": "{percent}% left",
+      "percentUsed": "{percent}% used",
+      "percentRemainingDuration": "{percent}% left · {duration}",
+      "projectedPercent": "Projected ≈ {percent}% by reset",
+      "projectedPercentOverPace": "Projected ≈ {percent}% by reset (over pace)"
+    },
+    "policy": {
+      "loading": "Loading default policy…",
+      "summaryDefault": "Per user: {amount} / {period}",
+      "summaryShownInChat": "shown in chat",
+      "summaryNone": "No per-user default budget",
+      "edit": "Edit",
+      "editAria": "Edit per-user default budget policy",
+      "dialogTitle": "Default budget policy",
+      "dialogDescription": "Set the platform-wide default budget for new users and choose whether users see their own budget inside chat.",
+      "sectionDefault": "Default per-user budget",
+      "sectionDefaultDescription": "Applied to users without an explicit budget set.",
+      "sectionVisibility": "Visibility",
+      "sectionVisibilityDescription": "What users see inside the chat composer.",
+      "enableLabel": "Enable a global per-user budget",
+      "amountLabel": "Default budget (USD)",
+      "resetLabel": "Reset period",
+      "showInChatLabel": "Show budget status to users",
+      "showInChatHelper": "Users see their own budget in the app's top bar.",
+      "displayModeLabel": "Budget display",
+      "displayModeHelper": "Choose whether users see the exact amount spent or only a percentage.",
+      "displayAmount": "Exact amount ($)",
+      "displayPercent": "Percentage only",
+      "save": "Save",
+      "savedTitle": "Settings saved",
+      "saveFailedTitle": "Couldn't save settings",
+      "invalidAmountTitle": "Invalid amount",
+      "invalidAmountDescription": "Set a positive budget to enable the global default.",
+      "amountPlaceholder": "20",
+      "auditUnavailable": "Audit trail unavailable — who and when changes are made isn't recorded yet.",
+      "duration": {
+        "1d": "Daily",
+        "7d": "Weekly",
+        "30d": "Monthly"
+      }
+    },
+    "settings": {
+      "loadError": "Couldn't load the default policy.",
+      "retry": "Retry"
+    },
+    "entityType": {
+      "user": "User",
+      "role": "Role",
+      "team": "Team",
+      "project": "Project",
+      "agent": "Agent",
+      "routine": "Routine"
+    },
+    "entityTypePlural": {
+      "user": "Users",
+      "role": "Roles",
+      "team": "Teams",
+      "project": "Projects",
+      "agent": "Agents",
+      "routine": "Routines"
+    },
+    "entityTypeSwitcherAria": "Entity type",
+    "search": {
+      "placeholderByEmail": "Search users by email…",
+      "placeholderByNameOrEmail": "Search users by name or email…",
+      "placeholderByName": "Search {type} by name…"
+    },
+    "table": {
+      "budgetHeader": "Budget",
+      "resetsHeader": "Resets",
+      "actionsHeader": "Actions",
+      "rowEdit": "Edit",
+      "rowSet": "Set",
+      "rowEditAria": "Edit budget for {name}",
+      "rowSetAria": "Set budget for {name}",
+      "loadError": "Couldn't load budgets.",
+      "loadErrorTitle": "Couldn't load budgets"
+    },
+    "empty": {
+      "noMatchTitle": "No matches",
+      "noMatchDescription": "No entities match \"{term}\".",
+      "noneTitle": "No budgets yet",
+      "noneDescription": "Entities without a budget can spend freely. Set one to add a cap.",
+      "clearSearch": "Clear search"
+    },
+    "bulk": {
+      "apply": "Set budget for {count} {type}",
+      "selectedAcrossPages": "{count, plural, one {# selected (across pages)} other {# selected (across pages)}}"
+    },
+    "editor": {
+      "titleSet": "Set budget",
+      "titleEdit": "Edit budget",
+      "titleBulk": "Set budget",
+      "currentStatus": "Current status",
+      "amountLabel": "Budget (USD)",
+      "amountPlaceholder": "e.g. 20",
+      "resetLabel": "Reset period",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "saveBudget": "Save budget",
+      "applyToAll": "Apply to all",
+      "savedTitle": "Budget saved",
+      "savedDescription": "Budget set for {name}.",
+      "saveFailedTitle": "Failed to save budget",
+      "bulkAppliedTitle": "Budgets applied",
+      "bulkAllSucceeded": "{ok} succeeded.",
+      "bulkPartialSummary": "{ok} succeeded, {failed} failed.",
+      "bulkFailureTitle": "Some budgets couldn't be set",
+      "bulkFailureDescription": "{count, plural, one {# entity failed} other {# entities failed}} — review the per-item details below.",
+      "bulkFailureDone": "Done",
+      "removeBudget": "Remove budget",
+      "removeConfirmTitle": "Remove this budget?",
+      "removeConfirmBody": "{name} will be allowed to spend without a cap until a new budget is set.",
+      "removeConfirmAction": "Remove budget",
+      "removedTitle": "Budget removed",
+      "removedDescription": "Budget removed for {name}.",
+      "removeFailedTitle": "Couldn't remove budget",
+      "unknownError": "Unknown error."
+    }
+  },
+  "chat": {
+    "agentSelect": {
+      "clearSearch": "Clear search",
+      "description": "Pick the agent you want to talk to. You can switch at any time.",
+      "noAgentsDescription": "You don't have access to any agents yet. Please contact your administrator.",
+      "noAgentsTitle": "No agents available",
+      "noResultsDescription": "Try a different search term.",
+      "title": "Choose an agent"
+    },
+    "approval": {
+      "allowForChat": "Allow for this chat",
+      "allowOnce": "Allow once",
+      "approved": "Approved: {tool}",
+      "denied": "Denied: {tool}",
+      "deny": "Deny",
+      "description": "The agent wants to run this tool. Review the request and choose how to proceed.",
+      "title": "Run {tool}?"
+    },
+    "attach": {
+      "addKnowledge": "Add knowledge",
+      "addKnowledgeDescription": "Pin contexts or items for this chat",
+      "addKnowledgeManagedNote": "Managed context: the agent only searches what you add here.",
+      "disabledCount": "{count} off",
+      "insertPrompt": "Insert prompt",
+      "insertPromptDescription": "Use a template from the library",
+      "open": "Add to conversation",
+      "sessionFiles": "Session files",
+      "sessionFilesDescription": "View and upload files for this session",
+      "skillsAndTools": "Skills & tools",
+      "skillsAndToolsDescription": "Choose what the agent may use"
+    },
+    "capabilities": {
+      "approvedDescription": "Tools allowed to run without asking again in this conversation.",
+      "approvedForChat": "Approved for this chat",
+      "disableAll": "Disable all",
+      "disableItem": "Disable {name}",
+      "enableAll": "Enable all",
+      "enableItem": "Enable {name}",
+      "revoke": "Revoke",
+      "skills": "Skills",
+      "title": "Skills & tools",
+      "tools": "Tools"
+    },
+    "composer": {
+      "attachmentsLabel": "Attachments",
+      "budgetReachedNotice": "You've reached your budget for this period. Messaging is paused until it resets.",
+      "budgetReachedToastDescription": "You've used your full budget for this period. Messaging is paused until it resets.",
+      "budgetReachedToastTitle": "Budget reached",
+      "charCount": "{count} / {max} characters",
+      "disclaimer": "AI can make mistakes. Check important info.",
+      "dismissHint": "Dismiss",
+      "inputAriaLabel": "Chat message input",
+      "managedContextHint": "This agent only searches contexts and items you add to this session.",
+      "managedContextTitle": "Managed context",
+      "maxLengthReached": "Maximum length reached",
+      "micBlocked": "Microphone access blocked by the page's permissions policy.",
+      "micInUse": "The microphone is in use by another application.",
+      "micInsecureContext": "Recording requires HTTPS or localhost. Current origin: {origin}",
+      "micNoGetUserMedia": "This browser doesn't expose getUserMedia. Try a recent Chrome, Firefox, or Safari over HTTPS.",
+      "micNotFound": "No microphone was found on this device.",
+      "micPermissionDenied": "Microphone permission was denied. Click the lock/permissions icon next to the URL and allow microphone access for this site.",
+      "micUnavailableTitle": "Microphone unavailable",
+      "pinnedContextLabel": "Pinned knowledge for this chat",
+      "placeholder": "Ask me anything...",
+      "placeholderBudgetReached": "Budget reached — messaging is paused.",
+      "readOnly": "Read-only — shared by {email}. Ask them for write access.",
+      "readOnlyNoCreator": "Read-only — you don't have write access to this conversation.",
+      "send": "Send message",
+      "startRecording": "Start recording",
+      "stop": "Stop generating response",
+      "stopRecording": "Stop recording",
+      "suggestionsLabel": "Suggested follow-ups",
+      "transcribing": "Transcribing",
+      "transcriptionFailedDescription": "Please try again.",
+      "transcriptionFailedTitle": "Transcription failed"
+    },
+    "empty": {
+      "greeting": "How can I help you today?"
+    },
+    "errors": {
+      "agentNotFound": "Agent not found",
+      "agentNotFoundDescription": "This agent doesn't exist or you don't have access to it.",
+      "backToAgents": "Back to agents",
+      "budgetReachedDescription": "You've used your full budget for this period. Messaging is paused until it resets.",
+      "budgetReachedTitle": "Budget reached",
+      "details": "Details",
+      "dismiss": "Dismiss",
+      "loadTitle": "Chat couldn't be loaded",
+      "newChat": "Start a new chat",
+      "sessionCreateFailed": "Failed to create the conversation. Please try again.",
+      "sessionCreateTitle": "Session creation failed",
+      "sessionNotFound": "Conversation not found",
+      "sessionNotFoundDescription": "This conversation doesn't exist or you don't have access to it.",
+      "title": "Something went wrong",
+      "tryAgain": "Try again",
+      "unexpected": "An unexpected error occurred. Please try again."
+    },
+    "feedbackDialog": {
+      "confirmDeactivate": "Confirm deactivate",
+      "deactivate": "Deactivate",
+      "deactivateFailed": "Failed to deactivate source",
+      "deactivateFailedDescription": "Please try again.",
+      "deactivateHint": "Deactivating archives the item globally — it will no longer appear in any user's chat or search results.",
+      "deactivateWarning": "Archives \"{item}\" globally for every user.",
+      "deactivated": "Deactivated",
+      "deactivatedToast": "Source deactivated",
+      "deactivatedToastDescription": "{item} has been archived globally.",
+      "descriptionNegative": "Help us understand what went wrong so we can improve.",
+      "descriptionPositive": "Let us know what worked well in this response.",
+      "placeholder": "Enter your feedback here...",
+      "sourcesTitle": "Sources referenced in this response",
+      "submit": "Submit feedback",
+      "submitFailed": "Error submitting feedback",
+      "submitFailedDescription": "Failed to submit feedback. Please check your connection and try again.",
+      "submitted": "Feedback submitted",
+      "submittedDescription": "Thank you for your feedback!",
+      "submitting": "Submitting...",
+      "titleNegative": "What could be improved?",
+      "titlePositive": "What did you like?"
+    },
+    "files": {
+      "backToFiles": "Back to files",
+      "browse": "Upload files",
+      "count": "{count, plural, one {# file} other {# files}}",
+      "deleteDescription": "\"{name}\" will be permanently deleted from this session. This cannot be undone.",
+      "deleteFailed": "Failed to delete: {message}",
+      "deleteTitle": "Delete file?",
+      "download": "Download",
+      "downloadNamed": "Download {name}",
+      "dropOrClick": "Drop files or click to upload",
+      "emptyDescription": "Upload a file, or wait for the agent to produce one.",
+      "emptyTitle": "No files yet",
+      "errorTitle": "Couldn't load files",
+      "loadingPreview": "Loading preview…",
+      "maxPerFile": "Max {limit} per file",
+      "noInlinePreview": "No inline preview available for this file type.",
+      "preview": "Preview",
+      "previewFailed": "Could not load preview: {message}",
+      "privacyNote": "Files in this session aren't shared with other sessions, projects, or knowledge bases.",
+      "renderingPreview": "Rendering preview…",
+      "title": "Session files",
+      "tooLargeToPreview": "File is {size} — too large to preview inline. Use Download to view.",
+      "uploadFailed": "Failed to upload \"{name}\": {message}",
+      "uploadSyncWarning": "\"{name}\" uploaded, but the agent may not see it until the next session restart.",
+      "uploadTooBig": "\"{name}\" is {size} — limit is {limit}",
+      "uploadingCount": "{count, plural, one {Uploading # file…} other {Uploading # files…}}"
+    },
+    "header": {
+      "budgetAria": "Budget {percent}% used — view details",
+      "budgetChip": "Budget {percent}%",
+      "clearModelOverride": "Clear model override",
+      "deleteConfirm": "Delete conversation",
+      "deleteDescription": "“{title}” and all its messages will be permanently deleted for everyone it is shared with.",
+      "deleteTitle": "Delete this conversation?",
+      "filesAria": "Open session files",
+      "filesChip": "{count, plural, one {# file} other {# files}}",
+      "menuDelete": "Delete conversation",
+      "menuLabel": "Conversation actions",
+      "menuModel": "Model…",
+      "menuModelWithName": "Model… ({name})",
+      "menuSaveAsRoutine": "Save as Routine",
+      "menuSaveAsRoutineHint": "Available after the agent's first reply",
+      "menuShare": "Share",
+      "menuUsage": "Usage",
+      "modelOverride": "Model: {name}",
+      "newChat": "New chat",
+      "renameLabel": "Conversation title",
+      "renameTitled": "Rename “{title}”",
+      "toggleHistory": "Conversation history",
+      "untitled": "Untitled conversation",
+      "usageAria": "Context usage {percent}% — view details"
+    },
+    "history": {
+      "createFailed": "Couldn't create the chat. Please try again.",
+      "created": "Chat created",
+      "deleteDescription": "This permanently deletes \"{title}\" for everyone with access. This can't be undone.",
+      "deleteFailed": "Couldn't delete the chat. Please try again.",
+      "deleteTitle": "Delete chat?",
+      "deleted": "Chat deleted",
+      "emptyDescription": "Start a new chat and it will appear here.",
+      "emptyTitle": "No conversations yet",
+      "filterPlaceholder": "Search chats",
+      "menuLabel": "History options",
+      "namedChatDescription": "Name the conversation before you start it.",
+      "namedChatPlaceholder": "Chat name",
+      "namedChatTitle": "New named chat",
+      "newChat": "New chat",
+      "newNamedChat": "New named chat…",
+      "noMatches": "No chats match your search.",
+      "recents": "Recents",
+      "rename": "Rename",
+      "renameDescription": "Enter a new name for this conversation.",
+      "renameFailed": "Couldn't rename the chat. Please try again.",
+      "renameTitle": "Rename chat",
+      "renamed": "Chat renamed",
+      "rowMenuLabel": "Chat actions",
+      "seeAll": "See all",
+      "seeAllCount": "See all ({count})",
+      "sheetDescription": "Browse, start, and manage your conversations with this agent.",
+      "switchAgent": "Switch agent",
+      "switchAgentDescription": "Choose an agent to start a new chat with.",
+      "switchAgentTitle": "Switch agent",
+      "title": "Chat history",
+      "untitled": "Untitled chat"
+    },
+    "imageGen": {
+      "confirmDeleteStyle": "Confirm delete",
+      "decreaseCount": "Decrease image count",
+      "download": "Download image",
+      "editStyle": "Edit style",
+      "increaseCount": "Increase image count",
+      "newStyle": "New style",
+      "removeReference": "Remove reference image",
+      "settings": "Settings",
+      "useAsReference": "Use as reference"
+    },
+    "messages": {
+      "scrollToBottom": "Scroll to bottom"
+    },
+    "model": {
+      "default": "(default)",
+      "description": "Choose which AI model answers in this conversation.",
+      "empty": "No models available",
+      "listLabel": "Available models",
+      "noMatch": "No models match your search",
+      "note": "Applies to new messages in this conversation only.",
+      "searchPlaceholder": "Search models…",
+      "title": "Model"
+    },
+    "presets": {
+      "addTag": "Add",
+      "contextCount": "{count, plural, one {# context} other {# contexts}}",
+      "createdToastDescription": "\"{name}\" has been saved successfully.",
+      "createdToastTitle": "Preset created",
+      "defaultPermissions": "Using default permissions (private to you)",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Describe when to use this preset...",
+      "editDescription": "Update your context preset configuration.",
+      "editTitle": "Edit context preset",
+      "errorToastDescription": "There was an error saving your preset. Please try again.",
+      "errorToastTitle": "Error saving preset",
+      "hideAdvanced": "Hide",
+      "itemCount": "{count, plural, one {# specific item} other {# specific items}}",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g., Customer Support Knowledge Base",
+      "nameRequired": "Name is required",
+      "nameRequiredToastDescription": "Please enter a name for your preset.",
+      "nameRequiredToastTitle": "Name required",
+      "removeTag": "Remove {tag}",
+      "save": "Save preset",
+      "saveDescription": "Save your current context selection as a reusable preset.",
+      "savePresetAction": "Save context preset",
+      "saveTitle": "Save as context preset",
+      "saving": "Saving...",
+      "selectedItems": "Selected items",
+      "sharingDescription": "Control who can view and use this preset",
+      "sharingTitle": "Sharing & permissions",
+      "showAdvanced": "Show",
+      "tagsLabel": "Tags",
+      "tagsPlaceholder": "Add tags (press Enter)",
+      "totalCount": "{count} total",
+      "update": "Update preset",
+      "updatedToastDescription": "\"{name}\" has been updated successfully.",
+      "updatedToastTitle": "Preset updated",
+      "updating": "Updating..."
+    },
+    "prompts": {
+      "allTemplates": "All templates",
+      "back": "Back",
+      "categories": "Categories",
+      "copied": "Copied",
+      "copy": "Copy",
+      "fillVariables": "Fill in all variables to continue",
+      "noTemplates": "No templates found",
+      "preview": "Preview",
+      "searchPlaceholder": "Search prompt templates...",
+      "selectToPreview": "Select a template to preview",
+      "template": "Template",
+      "title": "Prompt templates",
+      "useTemplate": "Use template",
+      "usedCount": "used {count}×",
+      "variables": "Variables"
+    },
+    "search": {
+      "deleteCta": "Delete {count, plural, one {# chat} other {# chats}}",
+      "deleteDescription": "This permanently deletes {count, plural, one {the selected conversation} other {the # selected conversations}} for everyone with access. This can't be undone.",
+      "deletePartial": "Deleted {deleted}, {failed} failed.",
+      "deleteSuccess": "Deleted {count, plural, one {# chat} other {# chats}}.",
+      "deleteTitle": "Delete {count, plural, one {# conversation} other {# conversations}}?",
+      "emptyDescription": "Start a chat with this agent and it will appear here.",
+      "emptyTitle": "No conversations yet",
+      "minChars": "Type at least 3 characters to search.",
+      "noMatchesDescription": "Nothing matches \"{query}\". Try a different title.",
+      "noMatchesTitle": "No matching conversations",
+      "placeholder": "Search by title…",
+      "select": "Select",
+      "showMore": "Show more ({shown} of {total})",
+      "title": "Search conversations"
+    },
+    "share": {
+      "access": "Access",
+      "copyLink": "Copy conversation link",
+      "createdBy": "Created by {email}",
+      "description": "Anyone with access can open this conversation at the link below.",
+      "linkLabel": "Conversation link",
+      "save": "Save access rights",
+      "saveFailed": "Failed to save access rights",
+      "saved": "Access rights saved",
+      "subjectLabel": "conversation",
+      "title": "Share conversation"
+    },
+    "usage": {
+      "budgetTitle": "Your budget",
+      "description": "Token and budget usage for this conversation.",
+      "title": "Usage",
+      "tokensExplainer": "Tokens are the units AI usage is measured in — roughly ¾ of a word each.",
+      "total": "Total tokens"
+    }
+  },
+  "common": {
+    "accessDenied": {
+      "back": "Go back",
+      "description": "Your account doesn't include the permission needed to view this page. If you think you should have access, ask your workspace administrator.",
+      "requiredRight": "Required permission: {right}",
+      "title": "You don't have access to this page"
+    },
+    "actions": "Actions",
+    "active": "Active",
+    "activeFilters": "{count, plural, one {# active filter} other {# active filters}}",
+    "add": "Add",
+    "allowedTypes": "Allowed types",
+    "backend": "Backend",
+    "bulkErrorSummary": "{count, plural, one {# item failed} other {# items failed}}",
+    "cancel": "Cancel",
+    "clear": "Clear",
+    "clearFilters": "Clear filters",
+    "clearSelection": "Clear selection",
+    "close": "Close",
+    "collapse": "Collapse",
+    "confirm": "Confirm",
+    "confirmSelection": "Confirm selection",
+    "copied": "Copied to clipboard",
+    "copy": "Copy",
+    "copyFailed": "Couldn't copy to clipboard",
+    "create": "Create",
+    "created": "Created",
+    "delete": "Delete",
+    "deleteFileDescription": "\"{name}\" will be permanently removed. It may be referenced by other items, agents, or chat sessions — those references will break. This cannot be undone.",
+    "deleteFileTitle": "Delete this file?",
+    "deleteJobDescription": "The job \"{name}\" will be removed from the queue. This cannot be undone.",
+    "deleteJobTitle": "Delete job?",
+    "deleteJobsDescription": "{count} jobs will be removed from the queue. This cannot be undone.",
+    "deleteJobsTitle": "Delete {count} jobs?",
+    "deleteOriginalJobAfterRetry": "Delete the original job after retrying",
+    "deleteOriginalJobsAfterRetry": "Delete the original jobs after retrying",
+    "description": "Description",
+    "details": "Details",
+    "discard": "Discard",
+    "done": "Done",
+    "drainQueue": "Drain queue",
+    "drainQueueDescription": "All waiting and delayed jobs in the {queue} queue will be removed. Active and finished jobs are kept. This cannot be undone.",
+    "drainQueueTitle": "Drain queue?",
+    "edit": "Edit",
+    "enabled": "Enabled",
+    "error": "Error",
+    "expand": "Expand",
+    "fileGallery": "File gallery",
+    "fileGalleryDescription": "Browse your previously uploaded files or upload new ones.",
+    "filesSelected": "files selected",
+    "filters": "Filters",
+    "filtersDescription": "Adjust the active filters.",
+    "finished": "Finished",
+    "gallery": "Gallery",
+    "goToFirstPage": "Go to first page",
+    "goToLastPage": "Go to last page",
+    "goToNextPage": "Go to next page",
+    "goToPreviousPage": "Go to previous page",
+    "hide": "Hide",
+    "id": "ID",
+    "inactive": "Inactive",
+    "leaveWithoutSaving": "Leave without saving",
+    "leaveWithoutSavingDescription": "Your changes will be lost if you leave this page.",
+    "limit": "Limit",
+    "loading": "Loading...",
+    "name": "Name",
+    "noFileSelected": "No file selected",
+    "noFilesYet": "Nothing to see here yet",
+    "none": "None",
+    "pageOf": "Page {page} of {count}",
+    "pauseQueue": "Pause queue",
+    "pauseQueueDescription": "No new jobs will be processed in the {queue} queue until it's resumed.",
+    "pauseQueueTitle": "Pause queue?",
+    "preview": "Preview",
+    "previouslyUploadedFiles": "Previously uploaded files",
+    "publish": "Publish",
+    "queue": "Queue",
+    "queueAttempts": "Attempts",
+    "queueCreated": "Created",
+    "queueDeleteFailed": "Couldn't delete job",
+    "queueDescription": "Manage the job queue and view all jobs.",
+    "queueDrainFailed": "Couldn't drain queue",
+    "queueDrained": "Queue drained",
+    "queueFinished": "Finished",
+    "queueJobDeleted": "Job deleted",
+    "queueJobId": "Job ID",
+    "queueJobRetried": "Job retried",
+    "queueJobs": "Queue jobs",
+    "queueJobsDeleted": "Jobs deleted",
+    "queueJobsDescription": "All jobs currently in the {queue} queue.",
+    "queueJobsRetried": "Jobs retried",
+    "queueMaxConcurrency": "Max queue concurrency",
+    "queueNoJobs": "No jobs in queue",
+    "queuePauseFailed": "Couldn't pause queue",
+    "queuePaused": "Queue paused",
+    "queueRateLimit": "Rate limit",
+    "queueResumeFailed": "Couldn't resume queue",
+    "queueResumed": "Queue resumed",
+    "queueRetentionNote": "Only the last 5,000 successful and failed jobs are kept.",
+    "queueStatus": "Status",
+    "queueTimeout": "Job timeout",
+    "queueWorkerConcurrency": "Max worker concurrency",
+    "remove": "Remove",
+    "reset": "Reset",
+    "resizePanel": "Resize panel",
+    "resumeQueue": "Resume queue",
+    "resumeQueueDescription": "The {queue} queue will start processing jobs again.",
+    "resumeQueueTitle": "Resume queue?",
+    "retry": "Retry",
+    "retryJobDescription": "This will create a new job with the same inputs as the original. The original remains unless you also delete it below.",
+    "retryJobTitle": "Retry job?",
+    "retryJobsDescription": "This will create {count} new jobs with the same inputs as the originals. The originals remain unless you also delete them below.",
+    "retryJobsTitle": "Retry {count} jobs?",
+    "reveal": "Reveal",
+    "save": "Save",
+    "search": "Search",
+    "searchFiles": "Search files…",
+    "sections": "Sections",
+    "select": "Select",
+    "selectAll": "Select all",
+    "selectFiles": "Select files",
+    "selectItemToViewDetails": "Select an item to view its details",
+    "selectRow": "Select row",
+    "selectedCount": "{count} selected",
+    "show": "Show",
+    "somethingWentWrong": "Something went wrong",
+    "status": {
+      "error": "Error",
+      "info": "Info",
+      "muted": "Neutral",
+      "success": "Success",
+      "warning": "Warning"
+    },
+    "stay": "Stay on page",
+    "success": "Success",
+    "totalItems": "total items",
+    "typeToConfirmLabel": "Type \"{name}\" to confirm",
+    "unsavedChanges": "Unsaved changes",
+    "unsavedChangesTitle": "You have unsaved changes",
+    "upload": "Upload",
+    "uploadNewFiles": "Upload new files",
+    "uploadToGetStarted": "Upload some files to get started",
+    "view": "View",
+    "running": "Running",
+    "queued": "Queued",
+    "queueFailure": "Failure",
+    "queueInputs": "Inputs",
+    "queueNoInputs": "No inputs",
+    "copyId": "Copy ID"
+  },
+  "evals": {
+    "cases": {
+      "columns": {
+        "description": "Description",
+        "messages": "Messages",
+        "messagesCount": "{count, plural, one {# message} other {# messages}}",
+        "name": "Name",
+        "updated": "Updated"
+      },
+      "deleteConfirm": {
+        "description": "This will permanently delete the test case \"{name}\". This action cannot be undone.",
+        "title": "Delete test case?"
+      },
+      "deleteError": {
+        "title": "Failed to delete test case"
+      },
+      "deleteSuccess": {
+        "title": "Test case deleted"
+      },
+      "empty": {
+        "action": "New test case",
+        "description": "Create a test case to start building eval sets.",
+        "noResults": "No test cases match your filter.",
+        "title": "No test cases yet"
+      },
+      "list": {
+        "breadcrumb": "Evals / Test cases",
+        "description": "Create and manage test cases for evaluating agent performance.",
+        "primaryAction": "New test case",
+        "searchPlaceholder": "Filter by name…",
+        "title": "Test cases"
+      },
+      "modal": {
+        "conversation": {
+          "addButton": "Add message",
+          "addLabel": "Add user message",
+          "addPlaceholder": "Type the user's message…",
+          "description": "Add user messages in order. The agent will respond between each message automatically.",
+          "emptyDescription": "Start building your test conversation by adding user messages below.",
+          "emptyTitle": "No messages yet",
+          "fileWarning": "Ensure the selected agent supports the file types you've attached (images, documents, audio, etc.).",
+          "helper": "Press Enter to add, Shift+Enter for new line. You can attach files to messages.",
+          "title": "Conversation flow"
+        },
+        "create": {
+          "errorTitle": "Failed to create test case",
+          "submit": "Create test case",
+          "successTitle": "Test case created"
+        },
+        "createDescription": "Create a new test case with conversation inputs and expected outputs.",
+        "createTitle": "Create test case",
+        "createTitleForSet": "Create test case for {setName}",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Describe what this test case evaluates…",
+        "edit": {
+          "errorTitle": "Failed to update test case",
+          "submit": "Update test case",
+          "successTitle": "Test case updated"
+        },
+        "editDescription": "Update the test case details.",
+        "editTitle": "Edit test case",
+        "editTitleForSet": "Edit test case in {setName}",
+        "expectedOutputHelp": "This can be an exact expected response or a description of what the output should contain.",
+        "expectedOutputLabel": "Expected output *",
+        "expectedOutputPlaceholder": "Describe the expected final output…",
+        "nameLabel": "Name *",
+        "namePlaceholder": "e.g., Customer Support — Refund Request",
+        "placeholderMessage": "💬 Placeholder, generated agent response will be added here when the test case is run…",
+        "tabs": {
+          "basic": "Basic info",
+          "conversation": "Conversation"
+        },
+        "validationError": "Name, at least one input message, and expected output are required."
+      },
+      "rowActions": {
+        "delete": "Delete",
+        "edit": "Edit",
+        "menu": "Open menu"
+      }
+    },
+    "common": {
+      "accessDenied": {
+        "description": "You don't have permission to access Evals. Contact your administrator to request access.",
+        "title": "Access denied"
+      },
+      "cancel": "Cancel",
+      "columnHeader": {
+        "asc": "Asc",
+        "desc": "Desc",
+        "hide": "Hide"
+      },
+      "columns": {
+        "toggleTitle": "Toggle columns",
+        "toggleTrigger": "View"
+      },
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "empty": {},
+      "errors": {
+        "loadTitle": "Couldn't load data",
+        "retry": "Retry"
+      },
+      "pagination": {
+        "first": "Go to first page",
+        "last": "Go to last page",
+        "next": "Go to next page",
+        "previous": "Go to previous page",
+        "summary": "Page {currentPage} of {pageCount} ({itemCount} total)"
+      },
+      "save": "Save",
+      "saving": "Saving…",
+      "workersWarning": {
+        "configureLink": "Configuration →",
+        "description": "Eval sets are viewable but runs can't execute. Configure Redis to enable evaluation runs.",
+        "title": "Background workers are not configured"
+      }
+    },
+    "detail": {
+      "back": "Back to evals",
+      "bulkAdd": {
+        "errorTitle": "Some test cases couldn't be added",
+        "progress": "Adding {done} of {total}…",
+        "success": "Added {count} test case(s) to this set."
+      },
+      "editDialog": {
+        "description": "Update the set's name and description.",
+        "descriptionLabel": "Description",
+        "errorTitle": "Failed to update eval set",
+        "nameLabel": "Name *",
+        "save": "Save changes",
+        "successTitle": "Eval set updated",
+        "title": "Edit eval set",
+        "validation": {
+          "nameRequired": "Name is required."
+        }
+      },
+      "overflow": {
+        "editDetails": "Edit details",
+        "menu": "More actions",
+        "newRunConfig": "New run config"
+      },
+      "removeCaseConfirm": {
+        "confirm": "Remove",
+        "description": "The test case itself will not be deleted and can be added back later.",
+        "title": "Remove test case from this set?"
+      },
+      "removeCaseSuccess": {
+        "title": "Test case removed"
+      },
+      "runEval": "Run eval",
+      "runEvalDisabledTooltip": "Add test cases first",
+      "selectExisting": {
+        "description": "Pick from unassigned test cases. A case can belong to only one set.",
+        "empty": "No unassigned test cases available.",
+        "searchPlaceholder": "Search by name…",
+        "selectAll": "Select all",
+        "selectedCount": "{count} selected",
+        "submit": "Add {count} test case(s)",
+        "title": "Add existing test cases"
+      },
+      "tabs": {
+        "results": "Results",
+        "testCases": "Test cases",
+        "testCasesWithCount": "Test cases · {count}"
+      },
+      "testCases": {
+        "capReached": "This set has reached the 500-case limit.",
+        "empty": {
+          "description": "Add test cases to this set before running evaluations.",
+          "title": "No test cases yet"
+        },
+        "row": {
+          "edit": "Edit test case",
+          "remove": "Remove from set"
+        },
+        "toolbar": {
+          "addExisting": "Add existing",
+          "count": "{count}/500 cases",
+          "newCase": "New case"
+        }
+      }
+    },
+    "list": {
+      "columns": {
+        "cases": "Cases",
+        "description": "Description",
+        "lastRun": "Last run",
+        "name": "Name",
+        "updated": "Updated"
+      },
+      "create": {
+        "description": "Create a new evaluation set. You can add test cases after creation.",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Describe what this eval set tests…",
+        "errorTitle": "Failed to create eval set",
+        "nameLabel": "Name *",
+        "namePlaceholder": "e.g., Customer Support Scenarios",
+        "submit": "Create eval set",
+        "title": "Create eval set",
+        "trigger": "New eval set"
+      },
+      "deleteConfirm": {
+        "description": "This will permanently delete the eval set \"{name}\". This action cannot be undone.",
+        "title": "Delete eval set?"
+      },
+      "deleteError": {
+        "title": "Failed to delete eval set"
+      },
+      "deleteSuccess": {
+        "description": "The eval set has been removed.",
+        "title": "Eval set deleted"
+      },
+      "description": "Test agents against expected behavior and track scores across runs.",
+      "empty": {
+        "action": "New eval set",
+        "description": "Create your first eval set to start testing agents.",
+        "noResults": "No eval sets match your filter.",
+        "title": "No eval sets yet"
+      },
+      "primaryAction": "New eval set",
+      "rowActions": {
+        "delete": "Delete",
+        "menu": "Open menu",
+        "open": "Open"
+      },
+      "title": "Evals",
+      "toolbar": {
+        "searchPlaceholder": "Filter by name…",
+        "testCaseLibrary": "Test case library"
+      }
+    },
+    "queue": {
+      "chip": {
+        "label": "Queue:",
+        "active": "{count} active",
+        "failed": "{count} failed",
+        "open": "Open queue"
+      },
+      "panel": {
+        "title": "Queue: {queueName}",
+        "description": "Manage the {queueName} job queue and view all jobs."
+      },
+      "stats": {
+        "status": "Status",
+        "paused": "Paused",
+        "maxed": "Maxed",
+        "active": "Active",
+        "queueConcurrency": "Max queue concurrency",
+        "workerConcurrency": "Max worker concurrency",
+        "jobTimeout": "Job timeout",
+        "rateLimit": "Max rate limit",
+        "rateLimitUnit": "jobs/sec",
+        "none": "None"
+      },
+      "tabs": {
+        "active": "Active",
+        "waiting": "Waiting",
+        "failed": "Failed",
+        "stuck": "Stuck",
+        "completed": "Completed"
+      },
+      "retentionFootnote": "Only the last 5,000 successful and failed jobs are kept.",
+      "jobs": {
+        "title": "Queue jobs",
+        "description": "All jobs currently in the {queueName} queue.",
+        "pageSize": "Show",
+        "columns": {
+          "name": "Name",
+          "id": "ID",
+          "attempts": "Attempts",
+          "created": "Created",
+          "processed": "Processed on",
+          "finished": "Finished on",
+          "inputs": "Inputs",
+          "outputs": "Outputs",
+          "actions": "Actions"
+        },
+        "selectAll": "Select all jobs",
+        "selectOne": "Select job {name}",
+        "copyId": "Copy job ID",
+        "copySuccess": {
+          "title": "Copied to clipboard",
+          "description": "Job ID \"{id}\" was copied."
+        },
+        "retry": "Retry",
+        "delete": "Delete",
+        "bulkRetry": "Retry {count} job(s)",
+        "bulkDelete": "Delete {count} job(s)",
+        "empty": {
+          "title": "No jobs in queue",
+          "description": "Nothing scheduled or in flight for this status."
+        }
+      },
+      "pause": {
+        "trigger": "Pause queue"
+      },
+      "resume": {
+        "trigger": "Resume queue"
+      },
+      "drain": {
+        "trigger": "Drain queue"
+      },
+      "pauseConfirm": {
+        "title": "Pause queue?",
+        "description": "No jobs in {queueName} will be processed until the queue is resumed."
+      },
+      "resumeConfirm": {
+        "title": "Resume queue?",
+        "description": "The {queueName} queue will start processing scheduled jobs again."
+      },
+      "drainConfirm": {
+        "title": "Drain queue?",
+        "description": "This removes all waiting and delayed jobs from {queueName}. Active, completed, and failed jobs are not removed. This action cannot be undone."
+      },
+      "pauseSuccess": {
+        "title": "Queue paused"
+      },
+      "resumeSuccess": {
+        "title": "Queue resumed"
+      },
+      "drainSuccess": {
+        "title": "Queue drained"
+      },
+      "pauseError": {
+        "title": "Failed to pause queue"
+      },
+      "resumeError": {
+        "title": "Failed to resume queue"
+      },
+      "drainError": {
+        "title": "Failed to drain queue"
+      },
+      "deleteJobsConfirm": {
+        "title": "{count, plural, one {Delete job?} other {Delete # jobs?}}",
+        "descriptionSingle": "Are you sure you want to delete the job \"{name}\"? This action cannot be undone.",
+        "descriptionMany": "Are you sure you want to delete {count} jobs? This action cannot be undone."
+      },
+      "deleteJobsSuccess": {
+        "title": "{count, plural, one {Job deleted} other {Jobs deleted}}"
+      },
+      "deleteJobsError": {
+        "title": "Failed to delete jobs"
+      },
+      "retryJobsConfirm": {
+        "title": "{count, plural, one {Retry job?} other {Retry # jobs?}}",
+        "descriptionSingle": "This creates a new job with the same inputs as the original.",
+        "descriptionMany": "This creates {count} new jobs with the same inputs as the originals.",
+        "deleteOriginal": "Delete the original {count, plural, one {job} other {jobs}} after retrying",
+        "confirm": "Retry"
+      },
+      "retryJobsSuccess": {
+        "title": "{count, plural, one {Job retried} other {Jobs retried}}"
+      },
+      "retryJobsError": {
+        "missingData": "Job data is missing."
+      }
+    },
+    "runs": {
+      "matrix": {
+        "caseColumnHeader": "Test case",
+        "averageRow": "Average",
+        "noResults": "No results yet",
+        "showOlder": "Show older runs",
+        "notIncluded": "Not in this run",
+        "notStarted": "Not started",
+        "status": {
+          "waiting": "Waiting",
+          "active": "Running",
+          "failed": "Failed",
+          "delayed": "Delayed",
+          "paused": "Paused",
+          "stuck": "Stuck",
+          "completed": "Completed"
+        }
+      },
+      "column": {
+        "menu": "Run actions",
+        "start": "Start run",
+        "copy": "Copy run",
+        "edit": "Edit run",
+        "refresh": "Refresh results",
+        "delete": "Delete run"
+      },
+      "startConfirm": {
+        "title": "Start eval run?",
+        "description": "This will schedule {count} test cases in \"{name}\" to run against the configured agent and eval functions.",
+        "confirm": "Start run"
+      },
+      "startSuccess": {
+        "title": "Eval run started",
+        "description": "Scheduled {count} test cases to run."
+      },
+      "startError": {
+        "title": "Failed to start eval run"
+      },
+      "deleteConfirm": {
+        "title": "Delete eval run?",
+        "description": "This will permanently delete the eval run \"{name}\" and all results. This action cannot be undone.",
+        "queueNote": "Already-scheduled queue jobs are not removed. Check the queue panel to manage them.",
+        "confirm": "Delete run"
+      },
+      "deleteSuccess": {
+        "title": "Eval run deleted"
+      },
+      "deleteError": {
+        "title": "Failed to delete eval run"
+      },
+      "empty": {
+        "title": "No runs yet",
+        "description": "Create a run config to start evaluating this set.",
+        "action": "New run config"
+      },
+      "noCases": {
+        "title": "No test cases in this set yet",
+        "description": "Add cases before running evals.",
+        "action": "Go to test cases"
+      },
+      "runConfig": {
+        "createTitle": "New run config",
+        "editTitle": "Edit run config",
+        "nameLabel": "Name *",
+        "agentLabel": "Agent *",
+        "evalFunctionsLabel": "Eval functions *",
+        "testCasesLabel": "Test cases *",
+        "selectAll": "Select all",
+        "deselectAll": "Deselect all",
+        "advanced": "Advanced — {summary}",
+        "advancedSummary": "{method} · pass ≥ {threshold} · {timeout}s",
+        "scoringMethodLabel": "Scoring method",
+        "scoringMethod": {
+          "average": "Average",
+          "median": "Median",
+          "sum": "Sum"
+        },
+        "passThresholdLabel": "Pass threshold (0–100)",
+        "timeoutLabel": "Timeout (seconds)",
+        "submit": {
+          "create": "Create run config",
+          "update": "Update run config"
+        },
+        "validation": {
+          "nameRequired": "Name is required.",
+          "agentRequired": "Agent is required.",
+          "casesRequired": "Select at least one test case.",
+          "functionsRequired": "Select at least one eval function."
+        }
+      },
+      "resultSheet": {
+        "title": "Test result details",
+        "tabs": {
+          "overview": "Overview",
+          "messages": "Messages",
+          "functions": "Functions",
+          "raw": "Raw"
+        },
+        "overview": {
+          "score": "Score",
+          "duration": "Duration",
+          "status": "Status",
+          "jobId": "Job ID",
+          "errorTitle": "Error details",
+          "tokensTitle": "Token usage",
+          "tokensTotal": "Total tokens",
+          "tokensInput": "Input",
+          "tokensOutput": "Output"
+        },
+        "functions": {
+          "empty": "No eval function results available."
+        },
+        "raw": {
+          "empty": "No metadata available."
+        }
+      }
+    }
+  },
+  "configuration": {
+    "description": "White-label Exulu for your organization — changes apply to every user.",
+    "editor": {
+      "defaultValue": "Default: {value}",
+      "invalidValue": "Not a recognized color value — it will be published exactly as typed.",
+      "modified": "Modified",
+      "modifiedOnly": "Modified only",
+      "noMatches": "No variables match your filter.",
+      "resetToken": "Reset to default",
+      "searchPlaceholder": "Filter variables…"
+    },
+    "exportCopied": "CSS copied to clipboard",
+    "groups": {
+      "brand": "Brand",
+      "charts": "Charts",
+      "custom": "Custom",
+      "semantic": "Semantic",
+      "shape": "Shape & typography",
+      "sidebar": "Sidebar",
+      "surfaces": "Surfaces",
+      "text": "Text"
+    },
+    "import": {
+      "action": "Import",
+      "description": "Paste a full CSS theme with :root and .dark blocks. Detected variables merge into your draft — nothing changes for users until you publish.",
+      "detected": "{lightCount} light · {darkCount} dark variables detected",
+      "noBlocks": "No :root or .dark block found — paste a complete CSS theme.",
+      "placeholder": ":root {\n  --primary: 258 100% 60%;\n}\n\n.dark {\n  --primary: 258 100% 68%;\n}",
+      "skipped": "{count, plural, one {# line couldn't be read and will be skipped:} other {# lines couldn't be read and will be skipped:}}",
+      "successDescription": "{count, plural, one {# variable} other {# variables}} merged into your draft — review, then publish.",
+      "successTitle": "Theme imported",
+      "title": "Import theme CSS"
+    },
+    "loadErrorDescription": "Check your connection and try again.",
+    "loadErrorTitle": "Couldn't load the theme configuration",
+    "menu": {
+      "export": "Export CSS",
+      "hideRaw": "Hide raw configuration",
+      "import": "Import CSS…",
+      "reset": "Reset to defaults…",
+      "showRaw": "Show raw configuration"
+    },
+    "preview": "Preview",
+    "publish": "Publish theme",
+    "publishConfirmDescription": "{lightCount} light / {darkCount} dark overrides — this applies to every user.",
+    "publishConfirmTitle": "Publish this theme?",
+    "publishErrorDescription": "Nothing was changed. Check your connection and try again.",
+    "publishErrorTitle": "Couldn't publish the theme",
+    "publishSuccessDescription": "It's live for you now — other users get it the next time they load the app.",
+    "publishSuccessTitle": "Theme published",
+    "raw": {
+      "copyCss": "Copy CSS",
+      "copyJson": "Copy JSON",
+      "css": "Generated CSS (published theme)",
+      "json": "Stored configuration (JSON)",
+      "title": "Raw configuration"
+    },
+    "resetConfirmAction": "Reset and publish",
+    "resetConfirmDescription": "Removes all overrides ({count}) and immediately publishes the stock theme to every user.",
+    "resetConfirmTitle": "Reset to defaults?",
+    "resetSuccessDescription": "The stock theme is live again.",
+    "resetSuccessTitle": "Theme reset",
+    "sampler": {
+      "agentBubble": "Here's a summary of the key points…",
+      "cardDescription": "A short supporting description.",
+      "cardTitle": "Card title",
+      "charts": "Chart colors",
+      "outline": "Outline",
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "userBubble": "Summarize this document for me."
+    },
+    "unsavedChanges": "Unsaved changes"
+  },
+  "dashboard": {
     "leaderboards": {
       "title": "Leaderboards",
-      "viewToggle": {
-        "count": "Count",
-        "tokens": "Tokens"
-      },
-      "topUsers": {
-        "title": "Top Users",
-        "subtitleCount": "Most active users by agent calls",
-        "subtitleTokens": "Most active users by token usage"
+      "topAgents": {
+        "subtitleCount": "Most used agents by call count",
+        "subtitleTokens": "Most used agents by token usage",
+        "title": "Top Agents"
       },
       "topProjects": {
-        "title": "Top Projects",
         "subtitleCount": "Most active projects by agent calls",
-        "subtitleTokens": "Most active projects by token usage"
+        "subtitleTokens": "Most active projects by token usage",
+        "title": "Top Projects"
       },
-      "topAgents": {
-        "title": "Top Agents",
-        "subtitleCount": "Most used agents by call count",
-        "subtitleTokens": "Most used agents by token usage"
+      "topUsers": {
+        "subtitleCount": "Most active users by agent calls",
+        "subtitleTokens": "Most active users by token usage",
+        "title": "Top Users"
       },
       "valueLabels": {
         "calls": "calls",
         "tokens": "tokens"
+      },
+      "viewToggle": {
+        "count": "Count",
+        "tokens": "Tokens"
       }
     },
+    "subtitle": "Monitor your AI routines and performance metrics.",
+    "summary": "Summary",
+    "summaryCards": {
+      "agentCalls": "Agent Calls",
+      "agentSessions": "Agent Sessions",
+      "functionCalls": "Function Calls",
+      "tokenUsage": "Token Usage",
+      "workflowRuns": "Routine runs"
+    },
     "timeSeriesAnalytics": {
-      "title": "Time Series Analytics",
-      "unitOptions": {
-        "tokens": "Tokens",
-        "count": "Count"
-      },
       "groupByOptions": {
         "label": "Label",
-        "user": "User",
-        "role": "Role"
+        "role": "Role",
+        "user": "User"
+      },
+      "title": "Time Series Analytics",
+      "unitOptions": {
+        "count": "Count",
+        "tokens": "Tokens"
+      }
+    },
+    "title": "Analytics Dashboard"
+  },
+  "feedback": {
+    "back": "Back",
+    "bugTitle": "Bug report",
+    "choiceBug": {
+      "desc": "Report something that's not working",
+      "title": "Bug report"
+    },
+    "choiceFeature": {
+      "desc": "Suggest a new feature or improvement",
+      "title": "Feature request"
+    },
+    "emptyStateBug": "Tell me about the bug you'd like to report.",
+    "emptyStateFeature": "Tell me about the feature you'd like to suggest.",
+    "errorFallback": "An unexpected error occurred. Please try again.",
+    "errorTitle": "Error",
+    "featureTitle": "Feature request",
+    "label": "Feedback",
+    "openButton": "Open feedback",
+    "placeholderBug": "Describe the bug...",
+    "placeholderFeature": "Describe the feature...",
+    "send": "Send",
+    "stop": "Stop",
+    "title": "Send feedback"
+  },
+  "feedbackReview": {
+    "columns": {
+      "agent": "Agent",
+      "date": "Date",
+      "feedback": "Feedback",
+      "type": "Type",
+      "user": "User"
+    },
+    "confirmDelete": {
+      "bulkDescription": "This permanently removes {count} feedback records. The chat sessions themselves are not affected. This cannot be undone.",
+      "bulkTitle": "Delete {count} feedback items?",
+      "singleDescription": "This permanently removes the feedback record. The chat session itself is not affected. This cannot be undone.",
+      "singleTitle": "Delete this feedback?"
+    },
+    "description": "What users said about agent responses.",
+    "detailPanel": {
+      "conversationEmpty": "No messages found for this session.",
+      "conversationHeading": "Conversation",
+      "copyAgentId": "Copy agent id",
+      "copySessionId": "Copy session id",
+      "copyUserId": "Copy user id",
+      "deleteAction": "Delete feedback",
+      "feedbackHeading": "Feedback",
+      "metaAgent": "Agent",
+      "metaSession": "Session",
+      "metaUser": "User",
+      "openInChat": "Open in Chat"
+    },
+    "emptyState": {
+      "action": "Review agent settings",
+      "description": "Thumbs up or down in chat land here once an agent has feedback enabled.",
+      "title": "No feedback yet"
+    },
+    "filteredEmpty": {
+      "action": "Reset filters",
+      "description": "Try widening the type, agent, or user, or clear the search.",
+      "title": "Nothing matches these filters"
+    },
+    "selectionBar": {
+      "deleteN": "Delete {count}"
+    },
+    "summaryStat": "{percent}% positive · {negative} negative",
+    "title": "Feedback",
+    "toasts": {
+      "deleteFailure": "Failed to delete feedback",
+      "deleteSuccessBulk": "Deleted {count} feedback items",
+      "deleteSuccessSingle": "Feedback deleted"
+    },
+    "toolbar": {
+      "agentEmpty": "No agents match",
+      "agentPlaceholder": "Filter by agent",
+      "filterButton": "Filter",
+      "resetChip": "Reset",
+      "searchPlaceholder": "Search feedback…",
+      "typeAll": "All",
+      "typeNegative": "Negative",
+      "typePositive": "Positive",
+      "userEmpty": "No users match",
+      "userPlaceholder": "Filter by user"
+    },
+    "typeNegative": "Negative feedback",
+    "typePositive": "Positive feedback"
+  },
+  "home": {
+    "attention": {
+      "allClear": "All clear — nothing needs your attention.",
+      "budgetOver": "{name} is over budget ({percent}% used)",
+      "budgetWarn": "{name} is nearing its budget ({percent}% used)",
+      "evalFailed": "Eval job failed: {label}",
+      "evalFailedNoLabel": "An eval job failed",
+      "evalStuck": "Eval job stuck: {label}",
+      "evalStuckNoLabel": "An eval job is stuck",
+      "partialError": "Some checks could not be loaded.",
+      "runFailed": "Run failed: {label}",
+      "runFailedNoLabel": "A run failed",
+      "runStuck": "Run stuck: {label}",
+      "runStuckNoLabel": "A run is stuck",
+      "title": "Needs attention"
+    },
+    "description": "Where you left off, and what needs you.",
+    "footer": {
+      "analytics": "Open analytics",
+      "label": "More areas"
+    },
+    "newChat": "New chat",
+    "onboarding": {
+      "createAgent": "Create your first agent",
+      "description": "Create an agent and start a conversation — your activity will show up here.",
+      "title": "Get started"
+    },
+    "resume": {
+      "emptyAction": "Start a conversation",
+      "emptyDescription": "Your recent conversations will appear here.",
+      "emptyTitle": "No conversations yet",
+      "error": "Your recent conversations could not be loaded.",
+      "title": "Pick up where you left off",
+      "untitled": "Untitled conversation"
+    },
+    "vitals": {
+      "agentCalls": "Agent calls",
+      "budgetsAtRisk": "Budgets at risk",
+      "evalRuns": "Eval runs",
+      "noChange": "No change",
+      "routineRuns": "Routine runs",
+      "sessions": "Sessions",
+      "spend": "Spend",
+      "title": "Last 24 hours",
+      "tokens": "Tokens",
+      "vsAvg": "vs 7-day avg: {value}"
+    }
+  },
+  "keys": {
+    "adminRoleNotice": "Admin keys currently act as a super admin — the selected role does not restrict them yet.",
+    "columns": {
+      "created": "Created",
+      "lastUsed": "Last used",
+      "name": "Name",
+      "scope": "Scope"
+    },
+    "create": {
+      "addAgent": "Add agent…",
+      "agentsLabel": "Allowed agents",
+      "agentsRequired": "Add at least one agent.",
+      "copyKey": "Copy key",
+      "createFailed": "Couldn't create the key",
+      "creating": "Creating…",
+      "description": "Name the key and choose how much access it gets.",
+      "nameLabel": "Name",
+      "namePlaceholder": "Production, Development…",
+      "nameRequired": "Enter a name for this key.",
+      "removeAgent": "Remove {name}",
+      "revealDescription": "This key is shown only once — copy it now and store it securely. You won't be able to view it again.",
+      "revealTitle": "Your new API key",
+      "roleIgnoredForAgents": "Role is ignored for agents-scoped keys.",
+      "roleLabel": "Role",
+      "rolePlaceholder": "Select role…",
+      "scopeAdminDescription": "Full access. Currently acts as a super admin, regardless of the selected role.",
+      "scopeAdminTitle": "Admin",
+      "scopeAgentsDescription": "Read-only access to the agents on the allowlist.",
+      "scopeAgentsTitle": "Agents",
+      "scopeLabel": "Scope",
+      "submit": "Create key",
+      "title": "Create API key"
+    },
+    "createKey": "Create key",
+    "description": "Service credentials for this organization.",
+    "detail": {
+      "activity": "Activity",
+      "adminScopeNote": "This key has full access — it currently acts as a super admin.",
+      "changeRoleConfirm": "Change role",
+      "changeRoleDescription": "Change the role of “{name}” to “{role}”? This changes what the key can access.",
+      "changeRoleTitle": "Change role?",
+      "copyAgentId": "Copy agent ID",
+      "created": "Created",
+      "dangerZone": "Danger zone",
+      "deleteConfirm": "Delete key",
+      "deleteDescription": "“{name}” will be deleted permanently. Requests using this key stop working immediately. This action cannot be undone.",
+      "deleteFailed": "Couldn't delete the key",
+      "deleteKey": "Delete key…",
+      "deleteTitle": "Delete API key?",
+      "deleted": "API key deleted",
+      "identity": "Identity",
+      "keyId": "Key ID",
+      "keyMaskHint": "The suffix after “sk_…/” identifies this key in logs.",
+      "keyMaskLegacyNote": "If this key was created before suffix sanitization, it appears in logs as {legacyMask} instead.",
+      "lastUsed": "Last used",
+      "role": "Role",
+      "roleNotUsed": "Not used",
+      "roleNotUsedCaption": "Roles are not used for agents-scoped keys.",
+      "roleUpdateFailed": "Couldn't update the role",
+      "roleUpdated": "Role updated",
+      "scope": "Scope"
+    },
+    "emptyDescription": "Create one to call the Exulu API from your services.",
+    "emptyTitle": "No API keys yet",
+    "neverUsed": "Never",
+    "roles": {
+      "areaAgents": "Agents",
+      "areaUsers": "Users",
+      "areaVariables": "Variables",
+      "areaWorkflows": "Routines",
+      "empty": "No roles found.",
+      "loading": "Loading roles…",
+      "noPermissions": "No specific permissions configured",
+      "read": "Read",
+      "readWrite": "Read/Write",
+      "searchPlaceholder": "Search roles…"
+    },
+    "scopeAdmin": "Admin",
+    "scopeAgents": "Agents ({count})",
+    "searchEmptyDescription": "No keys match your search. Try a different name.",
+    "searchEmptyTitle": "No matching keys",
+    "searchPlaceholder": "Search keys…",
+    "title": "API keys",
+    "tokenCrossLink": "Looking for your personal token?",
+    "tokenCrossLinkAction": "Personal token"
+  },
+  "knowledge": {
+    "library": {
+      "backendHint": "Contexts are defined in your backend.",
+      "description": "Contexts your agents retrieve from.",
+      "empty": {
+        "description": "Contexts are defined in code by your software development team. See the docs to learn how to add one.",
+        "title": "No knowledge contexts yet",
+        "viewDocs": "View docs"
+      },
+      "noMatches": {
+        "description": "Try a different name or clear the search to see all contexts.",
+        "title": "No contexts match your search"
+      },
+      "row": {
+        "failedJobs": "{count, plural, one {# failed job} other {# failed jobs}}",
+        "ingested": "ingested",
+        "itemCount": "{count, plural, one {# item} other {# items}}",
+        "statusFailed": "{count, plural, one {# failed job — needs attention} other {# failed jobs — needs attention}}"
+      },
+      "searchPlaceholder": "Search contexts",
+      "stats": {
+        "itemsTotal": "Items total",
+        "last7Days": "vs previous 7 days",
+        "retrievals7d": "Retrievals (7 days)",
+        "upserts7d": "Upserts (7 days)"
+      },
+      "title": "Knowledge",
+      "usage": {
+        "count": "Count",
+        "donutDescription": "Distribution by label.",
+        "donutTitle": "By context",
+        "hide": "Hide usage",
+        "region": "Usage",
+        "timeSeriesDescription": "Upserts and retrievals across all contexts.",
+        "timeSeriesTitle": "Activity over time",
+        "view": "View usage"
+      }
+    },
+    "workspace": {
+      "access": {
+        "modePrivate": "Private",
+        "modePublic": "Public",
+        "modeRoles": "Roles",
+        "modeTeams": "Teams",
+        "modeUsers": "Users",
+        "subjectLabel": "item"
+      },
+      "activity": {
+        "empty": "No recent processing or embedding activity.",
+        "stageEmbedded": "Embedded",
+        "stageProcessed": "Processed",
+        "title": "Recent activity"
+      },
+      "backToLibrary": "Back to library",
+      "bulk": {
+        "cancel": "Cancel",
+        "delete-embeddings": {
+          "cta": "Confirm and delete",
+          "description": "Configure filters to select which items lose their embeddings.",
+          "title": "Delete embeddings in bulk"
+        },
+        "deleteError": "Couldn't schedule deletion",
+        "deleteScheduled": "Deletion scheduled",
+        "filter-list": {
+          "cta": "Apply filters",
+          "description": "Narrow the items table to a focused view.",
+          "title": "Filter items"
+        },
+        "generate-embeddings": {
+          "cta": "Confirm and generate",
+          "description": "Configure filters to select which items to embed.",
+          "title": "Generate embeddings in bulk"
+        },
+        "generateError": "Couldn't schedule embeddings",
+        "generateScheduled": "Embedding generation scheduled",
+        "jobsScheduled": "{count} job(s) scheduled",
+        "process": {
+          "cta": "Confirm and process",
+          "description": "Configure filters to select which items to process.",
+          "title": "Process items in bulk"
+        },
+        "processError": "Couldn't schedule processing",
+        "processScheduled": "Processing scheduled"
+      },
+      "calculated": {
+        "lastProcessedAt": "Last processed at"
+      },
+      "embeddings": {
+        "columns": {
+          "content": "Content",
+          "created": "Created",
+          "index": "#",
+          "updated": "Updated"
+        },
+        "empty": "No embeddings yet.",
+        "fallbackNote": "Showing all {count} chunks — backend pagination not yet supported.",
+        "pageOf": "Page {current} of {total}"
+      },
+      "expandEditor": {
+        "title": "Edit {label}"
+      },
+      "fields": {
+        "copyValue": "Copy {label}",
+        "notSet": "Not set",
+        "add": "Add",
+        "noFields": "No fields to show.",
+        "emptyFields": "{count, plural, one {# empty field} other {# empty fields}}",
+        "description": "Description",
+        "descriptionPlaceholder": "Item description",
+        "descriptionTooLong": "Description must not exceed 10,000 characters.",
+        "descriptionTooShort": "Description must be at least 2 characters.",
+        "expand": "Expand editor",
+        "externalId": "External ID",
+        "name": "Name",
+        "namePlaceholder": "Item name",
+        "process": "Process item",
+        "removeTag": "Remove tag",
+        "selectPlaceholder": "Select a value",
+        "tags": "Tags",
+        "tagsPlaceholder": "Type and press enter to add"
+      },
+      "filterPreview": {
+        "copyExternalId": "Copy external ID",
+        "copyMainId": "Copy main ID",
+        "created": "Created",
+        "embeddingsUpdated": "Embeddings updated",
+        "empty": "No items match the current filters.",
+        "externalId": "External ID",
+        "lastProcessed": "Last processed",
+        "loading": "Loading…",
+        "mainId": "Main ID",
+        "matchCount": "{count, plural, one {# match} other {# matches}}",
+        "subtitle": "First 3 matches sorted by most recently updated.",
+        "subtitleAffecting": "First 3 matches · this operation affects up to {count} items.",
+        "title": "Preview",
+        "updated": "Updated"
+      },
+      "itemPanel": {
+        "title": "Item details"
+      },
+      "items": {
+        "action": {
+          "archive": "Archive",
+          "clearSelection": "Clear selection",
+          "delete": "Delete",
+          "selected": "{count, plural, one {# item selected} other {# items selected}}",
+          "unarchive": "Unarchive"
+        },
+        "addFirst": "Add your first item",
+        "chunks": "{count, plural, one {# chunk} other {# chunks}}",
+        "clearFilters": "Clear filters",
+        "columns": {
+          "embeddings": "Embeddings",
+          "name": "Name",
+          "processed": "Processed",
+          "tags": "Tags",
+          "updated": "Updated"
+        },
+        "confirmDelete": {
+          "confirm": "Delete items",
+          "description": "This will permanently delete the selected items and their embeddings.",
+          "title": "Delete {count} items?"
+        },
+        "errorDescription": "An unexpected error occurred while loading items.",
+        "errorTitle": "Couldn't load items",
+        "filters": "Filters",
+        "firstPage": "First page",
+        "footer": {
+          "summary": "{selected} of {shown} selected · {total} total"
+        },
+        "never": "Never",
+        "nextPage": "Next page",
+        "noItemsDescription": "Add your first item to start ingesting content for retrieval.",
+        "noItemsTitle": "No items yet",
+        "noMatchesDescription": "Try a different search term or clear the active filters.",
+        "noMatchesTitle": "No items match",
+        "notEmbedded": "Not embedded",
+        "pageOf": "Page {current} of {total}",
+        "previousPage": "Previous page",
+        "searchPlaceholder": "Search items by name…",
+        "selectAll": "Select all",
+        "selectRow": "Select row",
+        "untitled": "Untitled",
+        "viewActive": "Active",
+        "viewArchived": "Archived"
+      },
+      "newItem": "New item",
+      "newItemDialog": {
+        "cancel": "Cancel",
+        "create": "Create item",
+        "created": "Item created",
+        "creating": "Creating…",
+        "error": "Couldn't create item",
+        "nameRequired": "Name is required",
+        "title": "New item"
+      },
+      "notFoundDescription": "The context you are looking for does not exist or was removed.",
+      "notFoundTitle": "Context not found",
+      "panel": {
+        "archived": "Archived",
+        "cancel": "Cancel",
+        "confirm": {
+          "deleteEmbeddings": {
+            "confirm": "Delete embeddings",
+            "description": "This removes all stored vectors for this item. It can be regenerated later.",
+            "title": "Delete this item's embeddings?"
+          },
+          "deleteItem": {
+            "confirm": "Delete item",
+            "description": "This permanently deletes the item and its embeddings. This action cannot be undone.",
+            "title": "Delete this item?"
+          },
+          "generate": {
+            "confirm": "Generate",
+            "description": "This will recompute embedding vectors for this item.",
+            "title": "Generate embeddings?"
+          }
+        },
+        "edit": "Edit",
+        "errorDescription": "An unexpected error occurred.",
+        "errorTitle": "Couldn't load item",
+        "menu": {
+          "archive": "Archive",
+          "delete": "Delete item",
+          "deleteEmbeddings": "Delete embeddings",
+          "generateEmbeddings": "Generate embeddings",
+          "label": "Item actions",
+          "process": "Process item",
+          "unarchive": "Unarchive"
+        },
+        "notFound": "Item not found.",
+        "save": "Save",
+        "toasts": {
+          "deleteError": "Couldn't delete",
+          "deleted": "Item deleted",
+          "embeddingsDeleted": "Embeddings deleted",
+          "generateError": "Couldn't generate embeddings",
+          "generateStarted": "Embedding generation started",
+          "processError": "Couldn't process item",
+          "processed": "Item processed",
+          "updateError": "Couldn't update item",
+          "updated": "Item updated",
+          "validation": "Form has errors"
+        }
+      },
+      "pipeline": {
+        "configuration": "Configuration",
+        "embedder": {
+          "bindingCreated": "Binding created",
+          "bindingError": "Couldn't update binding",
+          "bindingUpdated": "Binding updated",
+          "deleteEmbeddings": "Delete embeddings (bulk)",
+          "description": "The embedder generates retrieval vectors for items.",
+          "empty": "No embedder configured.",
+          "identity": "Embedder · {id}",
+          "identityLabel": "Embedder",
+          "noBindings": "No variable bindings configured.",
+          "title": "Embedder",
+          "trigger": "Trigger"
+        },
+        "emptyDescription": "This context has no sources, processor, or embedder defined in code.",
+        "emptyTitle": "No pipeline configured",
+        "jobs": "Jobs",
+        "processor": {
+          "description": "The processor transforms items before they are embedded.",
+          "descriptionLabel": "Description",
+          "embeddings": "Embeddings",
+          "embeddingsOffLabel": "Manual only",
+          "embeddingsOnLabel": "Generated automatically",
+          "empty": "No processor configured.",
+          "name": "Name",
+          "timeout": "Timeout",
+          "title": "Processor",
+          "trigger": "Trigger"
+        },
+        "run": "Run",
+        "sources": {
+          "backoff": "Backoff",
+          "description": "Sources ingest external data into this context.",
+          "empty": "No sources configured.",
+          "error": "Couldn't execute source",
+          "noParams": "No parameters configured.",
+          "paramDefault": "default: {value}",
+          "noQueues": "No queues configured.",
+          "parameters": "Parameters",
+          "queued": "Source queued",
+          "retries": "Retries",
+          "schedule": "Schedule",
+          "title": "Sources",
+          "triggerCta": "Trigger source",
+          "triggerImmediate": "The source will execute immediately without queueing.",
+          "triggerQueued": "A job will be scheduled in the {queue} queue.",
+          "triggerTitle": "Trigger {name}"
+        },
+        "stageMenuLabel": "{stage} actions"
+      },
+      "sections": {
+        "access": "Access",
+        "calculated": "Calculated",
+        "embeddings": "Embeddings",
+        "fields": "Fields"
+      },
+      "tabs": {
+        "items": "Items",
+        "pipeline": "Pipeline",
+        "entities": "Entities"
+      },
+      "entities": {
+        "description": "Entity types extracted from documents in this context. They're merged with any types declared in code and power entity-aware retrieval.",
+        "addType": "Add type",
+        "empty": "No entity types yet",
+        "emptyDescription": "Add an entity type to start extracting structured entities from this context.",
+        "inactive": "Inactive",
+        "loadErrorTitle": "Couldn't load entity types",
+        "loadError": "Error loading entity types.",
+        "backfill": {
+          "title": "Backfill recommended",
+          "description": "{count} item(s) were processed before the current entity types. Run extraction to apply the changes.",
+          "cta": "Backfill now",
+          "running": "Backfilling…"
+        },
+        "menu": {
+          "label": "Entity type actions",
+          "edit": "Edit",
+          "activate": "Activate",
+          "deactivate": "Deactivate",
+          "delete": "Delete"
+        },
+        "dialog": {
+          "addTitle": "Add entity type",
+          "editTitle": "Edit entity type",
+          "description": "The name and description guide the extractor on what to identify in documents.",
+          "nameLabel": "Name",
+          "namePlaceholder": "e.g. Person, Company, Product",
+          "descriptionLabel": "Description",
+          "descriptionPlaceholder": "What counts as this entity type?",
+          "activeLabel": "Active",
+          "cancel": "Cancel",
+          "save": "Save"
+        },
+        "toasts": {
+          "created": "Entity type created",
+          "createError": "Error creating entity type",
+          "updated": "Entity type updated",
+          "updateError": "Error updating entity type",
+          "deleted": "Entity type deleted",
+          "deleteError": "Error deleting entity type",
+          "backfillDone": "Backfill complete",
+          "backfillProcessed": "Processed {count} item(s).",
+          "backfillSkipped": "· {count} skipped (cap reached).",
+          "backfillError": "Error running backfill",
+          "nameRequired": "Please provide an entity type name."
+        }
+      },
+      "backToItems": "Back to items",
+      "itemDetail": {
+        "copyId": "Copy item ID",
+        "externalIdLabel": "ext",
+        "details": "Details",
+        "idLabel": "ID",
+        "status": {
+          "ready": "Ready to search",
+          "notReady": "Not searchable yet",
+          "processing": "Processing…",
+          "hint": "Process this item to make it retrievable.",
+          "readyHint": "Indexed and available to agents."
+        },
+        "pipeline": {
+          "ingested": "Ingested",
+          "processed": "Processed",
+          "embedded": "Embedded",
+          "retrievable": "Retrievable"
+        },
+        "run": "Run",
+        "rerun": "Re-run",
+        "runProcess": "Process this item",
+        "rerunProcess": "Re-process this item",
+        "runEmbed": "Generate embeddings",
+        "rerunEmbed": "Regenerate embeddings"
+      },
+      "progress": {
+        "title": "Updating item",
+        "titleDone": "Update complete",
+        "pillRunning": "In progress",
+        "pillDone": "Done",
+        "savedEyebrow": "Saved",
+        "saved": "Item updated",
+        "processing": "Processing content",
+        "embedding": "Generating embeddings",
+        "bannerQueued": "Your changes were saved. Pipeline jobs were scheduled — you can leave this page; they'll keep running.",
+        "bannerSync": "Your changes were saved and are being applied — no queues are configured for this context.",
+        "bannerDone": "Your changes were saved and the pipeline finished.",
+        "footerQueued": "Polling for updates…",
+        "footerSync": "Running inline…",
+        "footerStalled": "Still working — check the queue for details.",
+        "footerDone": "All steps complete.",
+        "openQueue": "Open queue",
+        "viewItem": "View item",
+        "runInBackground": "Run in background"
+      },
+      "health": {
+        "retrievable": "retrievable",
+        "embeddedOf": "{embedded} of {total} items embedded",
+        "notYet": "{count} not yet",
+        "summary": {
+          "chunks": "{count} chunks",
+          "stale": "{count} stale (>30d)",
+          "sources": "{count, plural, one {# source} other {# sources}} connected"
+        },
+        "flow": {
+          "sources": "Sources",
+          "processor": "Processor",
+          "embedder": "Embedder",
+          "searchable": "Searchable",
+          "sourcesStat": "{connected} connected · {items} items",
+          "embedderStat": "{embedded} / {total} embedded",
+          "searchableStat": "{pct}% retrievable"
+        },
+        "stuck": {
+          "title": "{count, plural, one {# item has no embeddings} other {# items have no embeddings}}",
+          "description": "Ingested but never embedded — these items won't be returned by agent retrieval.",
+          "inspect": "Inspect items"
+        },
+        "stats": {
+          "totalItems": "Total items",
+          "embedded": "Embedded",
+          "notEmbedded": "Not embedded",
+          "notEmbeddedHint": "No chunks generated",
+          "totalChunks": "Total chunks",
+          "aggregatePending": "Aggregate pending",
+          "stale": "Stale",
+          "staleHint": "Older than 30 days"
+        }
       }
     }
   },
-  "feedback": {
-    "label": "Feedback",
-    "openButton": "Open feedback",
-    "title": "Send feedback",
-    "bugTitle": "Bug report",
-    "featureTitle": "Feature request",
-    "choiceFeature": {
-      "title": "Feature request",
-      "desc": "Suggest a new feature or improvement"
+  "language": {
+    "english": "English",
+    "german": "German",
+    "switchTo": "Switch to {language}"
+  },
+  "models": {
+    "title": "Models",
+    "description": "Read-only — models are managed in LiteLLM.",
+    "openAdminUi": "Open LiteLLM Admin UI",
+    "banner": {
+      "title": "Configured in LiteLLM",
+      "body": "Models live in LiteLLM's config.yaml. Edit it on the host and restart the server to pick up changes."
     },
-    "choiceBug": {
-      "title": "Bug report",
-      "desc": "Report something that's not working"
+    "search": {
+      "placeholder": "Search models…"
     },
-    "back": "Back",
-    "placeholderBug": "Describe the bug...",
-    "placeholderFeature": "Describe the feature...",
-    "emptyStateBug": "Tell me about the bug you'd like to report.",
-    "emptyStateFeature": "Tell me about the feature you'd like to suggest.",
-    "send": "Send",
-    "stop": "Stop"
+    "table": {
+      "model": "Model",
+      "context": "Context (in / out)",
+      "modalities": "Modalities",
+      "cost": "Cost (in / out)",
+      "status": "Status",
+      "tags": "Tags"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "modality": {
+      "vision": "Vision",
+      "pdf": "PDF",
+      "audio": "Audio",
+      "tools": "Tools"
+    },
+    "cost": {
+      "perMillion": "{amount}/M"
+    },
+    "empty": {
+      "title": "No models configured",
+      "body": "Edit LiteLLM's config.yaml on the host and restart the server to expose models here."
+    },
+    "emptyFiltered": {
+      "title": "No models match your search",
+      "reset": "Clear search"
+    },
+    "error": {
+      "title": "Couldn't load models",
+      "body": "The LiteLLM proxy may be unreachable from the Exulu backend.",
+      "retry": "Retry",
+      "details": "Show error details"
+    },
+    "detail": {
+      "capabilities": "Capabilities",
+      "contextWindow": "Context window",
+      "maxInput": "Max input tokens",
+      "maxOutput": "Max output tokens",
+      "cost": "Cost",
+      "inputCost": "Input",
+      "outputCost": "Output",
+      "routing": "Routing",
+      "upstreamModel": "Upstream model",
+      "tags": "Tags",
+      "rawJson": "Raw JSON",
+      "close": "Close",
+      "copy": "Copy",
+      "copied": "Copied",
+      "notSupported": "—"
+    }
+  },
+  "n8n": {
+    "title": "Automation",
+    "description": "Build and run automations in the embedded n8n editor.",
+    "openInNewTab": "Open in new tab",
+    "iframeTitle": "n8n automation editor",
+    "notConfiguredTitle": "Automation is not configured",
+    "notConfiguredDescription": "Set N8N_URL on the server to enable the embedded editor.",
+    "mobileTitle": "The n8n editor needs a larger screen",
+    "mobileDescription": "Open the editor in a new tab on desktop to build and debug automations."
+  },
+  "navigation": {
+    "agents": "Agents",
+    "analytics": "Analytics",
+    "apiExplorer": "API Explorer",
+    "apiKeys": "API keys",
+    "automation": "Automation",
+    "brand": {
+      "mark": "AI",
+      "productName": "AI Studio"
+    },
+    "budgets": "Budgets",
+    "chat": "Chat",
+    "collapseSidebar": "Collapse sidebar — ⌘B",
+    "configuration": "Theme",
+    "error": {
+      "description": "Something went wrong loading the navigation. Please refresh the page.",
+      "refresh": "Refresh page",
+      "title": "Navigation error"
+    },
+    "evals": "Evals",
+    "feedback": "Feedback",
+    "groups": {
+      "administration": "Administration",
+      "build": "Build",
+      "develop": "Develop",
+      "personal": "Personal",
+      "workspace": "Workspace"
+    },
+    "home": "Home",
+    "knowledge": "Knowledge",
+    "logout": "Logout",
+    "models": "Models",
+    "openNavigation": "Open navigation",
+    "personalToken": "Personal token",
+    "projects": "Projects",
+    "prompts": "Prompts",
+    "routines": "Routines",
+    "search": "Search…",
+    "sendFeedback": "Send feedback",
+    "settings": "Settings",
+    "skills": "Skills",
+    "transcriptions": "Transcripts",
+    "userMenu": {
+      "fallbackName": "User",
+      "label": "User menu",
+      "language": "Language",
+      "theme": "Theme",
+      "themeDark": "Dark",
+      "themeLight": "Light",
+      "themeSystem": "System"
+    },
+    "usersAccess": "Users",
+    "variables": "Variables"
+  },
+  "palette": {
+    "create": {
+      "agent": "New agent",
+      "apiKey": "New API key",
+      "chat": "New chat",
+      "eval": "New eval",
+      "inviteUser": "Invite user",
+      "model": "New model",
+      "project": "New project",
+      "prompt": "New prompt",
+      "routine": "New routine",
+      "skill": "New skill",
+      "uploadAudio": "Upload audio",
+      "variable": "New variable"
+    },
+    "empty": "No results found.",
+    "groups": {
+      "create": "Create",
+      "navigate": "Navigate",
+      "preferences": "Preferences",
+      "recent": "Recent",
+      "search": "Search"
+    },
+    "inGroup": "— {group}",
+    "placeholder": "Type a command or search…",
+    "preferences": {
+      "themeDark": "Theme: Dark",
+      "themeLight": "Theme: Light",
+      "themeSystem": "Theme: System",
+      "toggleSidebar": "Toggle sidebar"
+    },
+    "search": {
+      "agents": "Agents",
+      "chatSessions": "Chat sessions",
+      "knowledgeContexts": "Knowledge contexts",
+      "projects": "Projects",
+      "prompts": "Prompts",
+      "skills": "Skills"
+    },
+    "searching": "Searching…",
+    "title": "Command palette",
+    "untitledSession": "Untitled session"
+  },
+  "projects": {
+    "allProjects": "All projects",
+    "create": {
+      "advanced": "Advanced",
+      "creating": "Creating...",
+      "description": "A project groups chat sessions and shared files in one place.",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Describe what this project is about...",
+      "error": "Failed to create project. Please try again.",
+      "instructionsHint": "Added to every conversation in this project.",
+      "instructionsLabel": "Custom instructions",
+      "instructionsPlaceholder": "Instructions every chat session in this project will follow...",
+      "nameLabel": "Name",
+      "namePlaceholder": "Enter project name",
+      "nameRequired": "Project name is required.",
+      "privateHint": "Private — only you can see this project until you share it.",
+      "submit": "Create project",
+      "success": "Project created.",
+      "title": "Create new project"
+    },
+    "danger": {
+      "deleteError": "Failed to delete the project. Please try again.",
+      "deleteProject": "Delete project",
+      "deleted": "Project \"{name}\" has been deleted.",
+      "description": "Deleting a project is permanent. Its files and sessions can optionally be deleted with it.",
+      "dialogDescription": "\"{name}\" will be permanently deleted. This cannot be undone. Sessions you don't delete are kept and detached from the project.",
+      "dialogTitle": "Delete project?",
+      "optionItems": "Also delete all files",
+      "optionSessions": "Also delete all sessions",
+      "title": "Danger zone",
+      "warningBoth": "{items, plural, one {# file} other {# files}} and {sessions, plural, one {# session} other {# sessions}} will be permanently deleted with the project.",
+      "warningItems": "{count, plural, one {# file} other {# files}} will be permanently deleted with the project.",
+      "warningSessions": "{count, plural, one {# session} other {# sessions}} will be permanently deleted with the project."
+    },
+    "detail": {
+      "actions": "Project actions",
+      "backToProjects": "Back to projects",
+      "deleteProject": "Delete project...",
+      "editDetails": "Edit details",
+      "errorTitle": "Couldn't load this project",
+      "instructionsActive": "Instructions active",
+      "newSession": "New session",
+      "notFoundDescription": "It may have been deleted, or you no longer have access to it.",
+      "notFoundTitle": "Project not found",
+      "viewInstructions": "View"
+    },
+    "emptyDescription": "Projects keep related conversations and files together.",
+    "emptyTitle": "No projects yet",
+    "favoriteAdd": "Add to favorites",
+    "favoriteError": "Couldn't update favorites. Please try again.",
+    "favoriteRemove": "Remove from favorites",
+    "favorites": "Favorites",
+    "files": {
+      "addError": "Couldn't add the files. Please try again.",
+      "addFiles": "Add files",
+      "addedToast": "{count, plural, =0 {Already in this project — nothing new was added.} one {# file added to the project.} other {# files added to the project.}}",
+      "chunks": "{count, plural, one {# chunk} other {# chunks}}",
+      "counter": "{count} / {max} files",
+      "emptyDescription": "Pin knowledge items to share them with every session in this project.",
+      "emptyTitle": "No files yet",
+      "entireContext": "Entire context",
+      "limitToast": "{remaining, plural, =0 {No slots left — remove a file first. Nothing was added.} one {Only # slot left — nothing was added.} other {Only # slots left — nothing was added.}}",
+      "limitTooltip": "This project has reached the limit of {max} files. Remove one to add another.",
+      "orphanDescription": "It was deleted from its knowledge context. Remove it to free a slot.",
+      "orphanTitle": "Item no longer exists",
+      "removeError": "Couldn't remove the file. Please try again.",
+      "removeItem": "Remove from project"
+    },
+    "loadErrorTitle": "Couldn't load projects",
+    "loadMore": "Load more",
+    "newProject": "New project",
+    "newSessionDialog": {
+      "description": "Choose an agent for the conversation. Sessions started in a project can be viewed by project members.",
+      "title": "Start a new session"
+    },
+    "pageDescription": "Workspaces that group your conversations and shared context.",
+    "searchEmptyDescription": "Try a different search term.",
+    "searchEmptyTitle": "No projects found",
+    "searchPlaceholder": "Search projects...",
+    "sessions": {
+      "actions": "Session actions",
+      "deleteDescription": "\"{title}\" will be permanently deleted. This cannot be undone.",
+      "deleteError": "Couldn't delete the session. Please try again.",
+      "deleteSession": "Delete session...",
+      "deleteTitle": "Delete session?",
+      "emptyDescription": "Start the first conversation in this project.",
+      "emptyTitle": "No sessions yet",
+      "noWriteAccess": "You don't have write access to this session",
+      "removeError": "Couldn't remove the session. Please try again.",
+      "removeFromProject": "Remove from project",
+      "removed": "Session removed from project.",
+      "restoreError": "Couldn't restore the session to the project.",
+      "undo": "Undo",
+      "untitled": "Untitled session"
+    },
+    "settings": {
+      "accessDescription": "Control who can see and work in this project.",
+      "accessError": "Failed to save access rights. Please try again.",
+      "accessSaved": "Access rights saved.",
+      "accessTitle": "Access",
+      "descriptionLabel": "Description",
+      "detailsDescription": "Name, description and the instructions every session inherits.",
+      "detailsTitle": "Details",
+      "edit": "Edit",
+      "instructionsLabel": "Custom instructions",
+      "nameLabel": "Name",
+      "nameRequired": "Project name is required.",
+      "noDescription": "No description provided.",
+      "noInstructions": "No custom instructions set.",
+      "save": "Save changes",
+      "saveAccess": "Save access rights",
+      "updateError": "Failed to update the project. Please try again.",
+      "updateSuccess": "Project updated."
+    },
+    "tabs": {
+      "files": "Files",
+      "sessions": "Sessions",
+      "settings": "Settings"
+    },
+    "title": "Projects",
+    "updatedLabel": "Updated",
+    "visibility": {
+      "label": "Project visibility",
+      "private": "Private",
+      "privateTooltip": "Only you can see this project.",
+      "shared": "Shared",
+      "sharedGeneric": "Shared with others.",
+      "sharedWithRoles": "Shared with {count, plural, one {# role} other {# roles}}.",
+      "sharedWithUsers": "Shared with {count, plural, one {# user} other {# users}}."
+    }
+  },
+  "prompts": {
+    "access": {
+      "private": "Private",
+      "public": "Public",
+      "roles": "Shared with roles",
+      "teams": "Shared with teams",
+      "unknown": "Restricted",
+      "users": "Shared with users"
+    },
+    "addToFavorites": "Add to favorites",
+    "agentsHeading": "Agents",
+    "agentsPlaceholder": "Search agents…",
+    "assignedAgents": "Assigned agents",
+    "backToPrompts": "Back to prompts",
+    "copiedReady": "Prompt copied to clipboard.",
+    "copyContent": "Copy content",
+    "copyLink": "Copy link",
+    "copyToClipboard": "Copy to clipboard",
+    "createdBy": "Created by {name}",
+    "deleteDescription": "This prompt is removed for everyone who can see it. This can't be undone.",
+    "deleteTitle": "Delete \"{name}\"?",
+    "deleted": "Prompt deleted.",
+    "description": "Reusable prompt templates with variables — shared with your team and surfaced in chat.",
+    "detailEmptyTitle": "Select a prompt to preview",
+    "diff": {
+      "compareFrom": "Compare from",
+      "compareTo": "Compare to",
+      "currentLabel": "Current",
+      "description": "View the differences between prompt versions.",
+      "metaDescription": "Description",
+      "metaName": "Name",
+      "metaTags": "Tags",
+      "metadataChanges": "Metadata changes",
+      "noContentChanges": "No content changes between these versions.",
+      "none": "(none)",
+      "title": "Compare versions"
+    },
+    "editor": {
+      "agentsCount": "{count, plural, one {# agent} other {# agents}} selected",
+      "agentsHint": "Assigned prompts appear as recommendations in chat.",
+      "agentsLabel": "Assigned agents",
+      "agentsPlaceholder": "Select agents…",
+      "changeMessageHint": "A short note helps teammates understand what changed in this version.",
+      "changeMessageLabel": "What changed? (optional)",
+      "changeMessagePlaceholder": "e.g. Fixed typo, added safety check, updated for clarity…",
+      "contentHint": "Use {syntax} for dynamic content. Variable names can contain letters, numbers, and underscores.",
+      "contentLabel": "Content",
+      "contentPlaceholder": "You are helping {{customer_name}} with their {{issue}}…",
+      "contentRequired": "Add some prompt content before saving.",
+      "create": "Create prompt",
+      "createFailed": "Couldn't create the prompt. Please try again.",
+      "createSubtitle": "Create a reusable prompt template with variables.",
+      "createSuccess": "Prompt created.",
+      "createTitle": "New prompt",
+      "descriptionPlaceholder": "Short description of this prompt.",
+      "detectedVariables": "Detected variables:",
+      "editSubtitle": "Update your prompt template.",
+      "editTitle": "Edit prompt",
+      "essentialsTitle": "Essentials",
+      "invalidVariables": "Invalid variable names: {names}. Use letters, numbers, and underscores only.",
+      "markdownHint": "Markdown formatting is supported.",
+      "namePlaceholder": "Customer support template",
+      "nameRequired": "Give the prompt a name before saving.",
+      "noAgentsFound": "No agents found.",
+      "organizeTitle": "Organize",
+      "plainText": "Plain text",
+      "removeAgent": "Remove {name}",
+      "richText": "Rich text",
+      "saving": "Saving…",
+      "searchAgentsPlaceholder": "Search agents…",
+      "sharingTitle": "Sharing & access",
+      "subjectLabel": "prompt",
+      "summary": {
+        "roles": "{count, plural, one {# role} other {# roles}}",
+        "teams": "{count, plural, one {# team} other {# teams}}",
+        "users": "{count, plural, one {# user} other {# users}}"
+      },
+      "tagsHint": "Up to {max} tags. Use them as folders (e.g. \"marketing\", \"support\").",
+      "tagsLabel": "Tags",
+      "tagsPlaceholder": "Add or create tags…",
+      "tooManyTags": "Use no more than {max} tags."
+    },
+    "emptyDescription": "Create your first reusable prompt — use {syntax} for the parts that change.",
+    "emptyReadOnlyDescription": "There are no prompts you can see yet. Ask a teammate with write access to create one.",
+    "emptyReadOnlyTitle": "No prompts to show",
+    "emptyTitle": "No prompts yet",
+    "errorDescription": "There was an error loading your prompt library. Please try again.",
+    "errorTitle": "Couldn't load prompts",
+    "favoriteAdded": "Added to favorites.",
+    "favoriteFailed": "Couldn't update favorite.",
+    "favoriteRemoved": "Removed from favorites.",
+    "favorited": "Favorited",
+    "favoritesCount": "{count, plural, one {# favorite} other {# favorites}}",
+    "favoritesOnly": "Favorites only",
+    "history": {
+      "compare": "Compare",
+      "empty": "No previous versions yet.",
+      "emptyHint": "Changes are tracked automatically when you edit.",
+      "latest": "Latest",
+      "restore": "Restore",
+      "showAll": "Show all ({count} more)",
+      "showLess": "Show less",
+      "title": "Version history",
+      "unnamedChange": "Untitled change",
+      "versionCount": "{count, plural, one {# version} other {# versions}}"
+    },
+    "linkCopied": "Link copied to clipboard.",
+    "newPrompt": "New prompt",
+    "noAgents": "No agents found.",
+    "noTags": "No tags yet.",
+    "notFoundDescription": "The prompt you're looking for doesn't exist or you don't have permission to view it.",
+    "notFoundTitle": "Prompt not found",
+    "rangeOfTotal": "{from}–{to} of {total}",
+    "removeFilter": "Remove {name}",
+    "removeFromFavorites": "Remove from favorites",
+    "restore": {
+      "changesPreview": "The following will be restored:",
+      "charCount": "{count} characters",
+      "confirm": "Restore version",
+      "defaultMessage": "Restored from v{version}",
+      "description": "Apply the content from version {version}. A new version will be created with your current state first.",
+      "failDescription": "An error occurred while restoring. Please try again.",
+      "failTitle": "Couldn't restore version",
+      "noChangesDescription": "This version is identical to the current one.",
+      "noChangesTitle": "Nothing to restore",
+      "noteHint": "This appears in the version history to help track changes.",
+      "noteLabel": "Restoration note (optional)",
+      "notePlaceholder": "Why are you restoring this version?",
+      "restoring": "Restoring…",
+      "successDescription": "Restored to v{version}. A new version has been created.",
+      "successTitle": "Version restored",
+      "title": "Restore version {version}",
+      "warningDescription": "Your current prompt is saved in version history before restoring. No history is deleted.",
+      "warningTitle": "Current version will be preserved"
+    },
+    "searchEmptyDescription": "Try a different search, or clear the filters.",
+    "searchEmptyTitle": "No prompts match your filters",
+    "searchPlaceholder": "Search prompts…",
+    "sort": {
+      "alphabetical": "Alphabetical",
+      "mostFavorited": "Most favorited",
+      "mostUsed": "Most used",
+      "recentlyCreated": "Recently created",
+      "recentlyUpdated": "Recently updated"
+    },
+    "sortLabel": "Sort",
+    "tagsHeading": "Tags",
+    "tagsPlaceholder": "Search tags…",
+    "title": "Prompts",
+    "unknownUser": "Unknown",
+    "usePrompt": "Use prompt",
+    "usedCount": "Used {count, plural, one {# time} other {# times}}",
+    "variables": {
+      "description": "Complete the following fields for \"{name}\".",
+      "placeholder": "Enter {name}…",
+      "title": "Fill in variables"
+    },
+    "varsCount": "{count, plural, one {# var} other {# vars}}"
+  },
+  "routines": {
+    "title": "Routines",
+    "description": "Saved conversations that run on demand or on a schedule.",
+    "searchPlaceholder": "Search routines…",
+    "countLabel": "{count, plural, =0 {No routines} one {# routine} other {# routines}}",
+    "openChat": "Open chat",
+    "clearSearch": "Clear search",
+    "emptyTitle": "No routines yet",
+    "emptyDescription": "Save any chat conversation as a routine to run it again — on demand or on a schedule.",
+    "emptyFilteredTitle": "No matching routines",
+    "emptyFilteredDescription": "No routines match your search. Try a different term or clear the filter.",
+    "columns": {
+      "name": "Name",
+      "lastRun": "Last run",
+      "schedule": "Schedule",
+      "actions": "Actions"
+    },
+    "run": {
+      "title": "Run routine",
+      "titleNamed": "Run {name}",
+      "immediate": "Runs immediately",
+      "queuedOn": "Queued on {queue}",
+      "noVariables": "No input variables required for this routine.",
+      "placeholder": "Enter {variable}…",
+      "required": "Required",
+      "now": "Run now",
+      "queue": "Queue routine",
+      "starting": "Starting…"
+    },
+    "edit": "Edit",
+    "view": "View",
+    "noAgent": "No agent attached",
+    "noWriteAccess": "You don't have permission to run this routine",
+    "rowActions": "Routine actions",
+    "panelActions": "Routine actions",
+    "lastRun": {
+      "never": "Never run"
+    },
+    "visibility": {
+      "public": "Public",
+      "users": "Users ({count})",
+      "roles": "Roles ({count})",
+      "teams": "Teams ({count})",
+      "tooltip": "Visibility: {label}"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "runs": "Runs",
+      "schedule": "Schedule",
+      "queue": "Queue"
+    },
+    "overview": {
+      "title": "Overview",
+      "noDescription": "No description provided.",
+      "variables": "Variables",
+      "noVariables": "No variables defined.",
+      "sharing": {
+        "heading": "Sharing",
+        "private": "Private — only you can access this routine.",
+        "public": "Public — everyone can access this routine.",
+        "users": "Shared with {count, plural, one {# user} other {# users}}.",
+        "roles": "Shared with {count, plural, one {# role} other {# roles}}.",
+        "teams": "Shared with {count, plural, one {# team} other {# teams}}.",
+        "teamsDegraded": "Team sharing is not enabled — this routine is currently read-only."
+      },
+      "created": "Created",
+      "updated": "Updated"
+    },
+    "runs": {
+      "title": "Runs",
+      "count": "{count, plural, =0 {no runs} one {# run} other {# runs}}",
+      "emptyTitle": "No runs yet",
+      "emptyDescription": "Press Run to try this routine.",
+      "selectPrompt": "Select a run to view details",
+      "backToList": "Back",
+      "errorHeading": "Error",
+      "metadataHeading": "Metadata",
+      "metadataKey": "Key",
+      "metadataValue": "Value",
+      "showRaw": "Show raw payload",
+      "hideRaw": "Hide raw payload",
+      "retry": "Retry with edits"
+    },
+    "schedule": {
+      "title": "Schedule",
+      "none": "No schedule",
+      "loading": "Loading schedule…",
+      "nextRun": "Next run",
+      "save": "Save schedule",
+      "update": "Update schedule",
+      "saving": "Saving…",
+      "remove": "Remove schedule",
+      "delete": {
+        "title": "Remove schedule?",
+        "description": "Remove the cron schedule for \"{name}\". The routine stays — only the automatic schedule is removed.",
+        "confirmLabel": "Remove"
+      },
+      "toast": {
+        "saved": "Schedule saved",
+        "saveFailed": "Could not save schedule",
+        "deleted": "Schedule removed",
+        "deleteFailed": "Could not remove schedule",
+        "invalidCron": "Invalid CRON expression"
+      },
+      "editor": {
+        "presets": "Presets",
+        "custom": "Custom CRON",
+        "selectPreset": "Select a preset",
+        "chooseAPreset": "Choose a preset…",
+        "expression": "CRON expression",
+        "cronExpression": "CRON expression",
+        "invalid": "Invalid CRON expression. Format: minute hour day month weekday",
+        "formatHelp": "Format help",
+        "formatLine": "minute hour day month weekday",
+        "minute": "minute: 0–59",
+        "hour": "hour: 0–23",
+        "day": "day: 1–31",
+        "month": "month: 1–12",
+        "weekday": "weekday: 0–7 (0 and 7 are Sunday)"
+      }
+    },
+    "queue": {
+      "title": "Queue",
+      "none": "No queue configured for this routine's agent.",
+      "manage": "Manage queue",
+      "sheetTitle": "Queue: {name}",
+      "runPrefix": "Routine run:",
+      "toast": {
+        "cannotRetry": "Cannot retry — original routine reference missing"
+      }
+    },
+    "toast": {
+      "queued": "Routine queued",
+      "started": "Routine run started",
+      "runFailed": "Could not run routine"
+    },
+    "workbench": {
+      "notFoundTitle": "Routine not found",
+      "notFoundDescription": "This routine could not be loaded. It may have been deleted, or you may not have access.",
+      "usesAgent": "Uses",
+      "copyId": "Copy routine ID"
+    },
+    "delete": {
+      "action": "Delete",
+      "title": "Delete \"{name}\"?",
+      "descriptionBefore": "This permanently deletes the routine. To confirm, type its name",
+      "descriptionAfter": "below. Click the name to copy it.",
+      "confirmLabel": "Delete routine",
+      "success": "\"{name}\" deleted",
+      "failed": "Could not delete routine"
+    },
+    "steps": {
+      "preview": {
+        "heading": "{count, plural, =0 {No steps yet} one {# step} other {# steps}} in this routine.",
+        "empty": "No steps yet"
+      },
+      "editAction": "Edit steps",
+      "viewAction": "View steps",
+      "sheetTitle": {
+        "edit": "Edit conversation steps",
+        "view": "Conversation steps"
+      },
+      "sheetDescription": {
+        "edit": "Add or remove steps. Use {variable_name} syntax to create reusable variables.",
+        "view": "The conversation that runs when this routine is triggered."
+      },
+      "sheetUnsavedChanges": "Unsaved step changes",
+      "discardTitle": "Discard step changes?",
+      "discardDescription": "Your changes to this routine's steps will be lost. This does not affect anything that has already been saved."
+    },
+    "editor": {
+      "unsavedChanges": "Unsaved changes to this routine",
+      "sections": {
+        "basics": "Basics",
+        "access": "Access",
+        "steps": "Steps",
+        "schedule": "Schedule",
+        "runs": "Runs",
+        "queue": "Queue",
+        "danger": "Danger zone"
+      },
+      "basics": {
+        "description": "Give this routine a name, description, and the agent that runs it.",
+        "nameLabel": "Name",
+        "descriptionLabel": "Description",
+        "agentLabel": "Agent",
+        "agentPlaceholder": "Select an agent…"
+      },
+      "access": {
+        "description": "Who can see and edit this routine.",
+        "subjectLabel": "routine",
+        "summaryPrivate": "Private — only you.",
+        "summaryPublic": "Public — anyone in your workspace.",
+        "summaryUsers": "Shared with {count} user(s).",
+        "summaryRoles": "Shared with {count} role(s).",
+        "summaryTeams": "Shared with {count} team(s).",
+        "summaryTeamsDegraded": "Team sharing requires backend support — currently read-only."
+      },
+      "danger": {
+        "title": "Danger zone",
+        "description": "Destructive actions for this routine.",
+        "deleteHint": "Permanently removes the routine. This cannot be undone."
+      },
+      "title": {
+        "save": "Save as routine",
+        "edit": "Edit routine",
+        "view": "View routine"
+      },
+      "description": {
+        "save": "Convert this conversation into a reusable routine. Use {variable_name} syntax to create variables.",
+        "edit": "Edit this routine. Use {variable_name} syntax to create variables.",
+        "view": "View this routine's configuration.",
+        "label": "Description",
+        "placeholder": "Describe what this routine does and when to use it…"
+      },
+      "name": {
+        "label": "Routine name",
+        "placeholder": "My routine",
+        "required": "A name is required."
+      },
+      "tabs": {
+        "setup": "Setup",
+        "steps": "Steps"
+      },
+      "sharing": {
+        "heading": "Sharing & permissions",
+        "show": "Show advanced",
+        "hide": "Hide advanced",
+        "collapsed": {
+          "private": "Private — only you",
+          "public": "Public — everyone",
+          "users": "Shared with {count, plural, one {# user} other {# users}}",
+          "roles": "Shared with {count, plural, one {# role} other {# roles}}",
+          "teams": "Shared with {count, plural, one {# team} other {# teams}}",
+          "teamsDegraded": "Team sharing requires backend support — assignments will not persist."
+        }
+      },
+      "steps": {
+        "heading": "Conversation steps",
+        "tip": "Use {variable_name} syntax to create reusable variables (e.g. {company_name}).",
+        "addMessage": "Add user message",
+        "add": "Add message",
+        "placeholder": "Type the user's message…",
+        "hint": "Press Enter to add, Shift+Enter for a new line. You can attach files.",
+        "fileTypeWarning": "Make sure the selected agent supports these file types (images, documents, audio).",
+        "emptyTitle": "No messages yet",
+        "emptyDescription": "Start building your routine by adding a user message below."
+      },
+      "save": "Save routine",
+      "saving": "Saving…",
+      "update": "Update routine",
+      "updating": "Updating…",
+      "close": "Close",
+      "toast": {
+        "created": "\"{name}\" created",
+        "updated": "\"{name}\" updated",
+        "saveFailed": "Could not save routine",
+        "nameRequired": "Routine name is required",
+        "agentRequired": "Routines must have an agent attached"
+      }
+    },
+    "runActionLabel": "Run"
+  },
+  "settings": {
+    "account": {
+      "description": "Who you are on this platform.",
+      "email": "Email",
+      "role": "Role",
+      "superAdmin": "Super admin",
+      "title": "Account",
+      "token": "Personal API token"
+    },
+    "appearance": {
+      "description": "Choose how the interface is themed. System follows your device setting.",
+      "title": "Appearance"
+    },
+    "description": "How Exulu looks, speaks, and responds to you.",
+    "language": {
+      "confirmAction": "Change language",
+      "confirmDescription": "Changing the language reloads the page — your unsaved system prompt edits will be lost.",
+      "confirmTitle": "Discard unsaved changes?",
+      "description": "The language of the interface.",
+      "hint": "Changing the language reloads the page.",
+      "placeholder": "Select a language",
+      "title": "Language"
+    },
+    "prompt": {
+      "charCount": "{count, plural, one {# character} other {# characters}}",
+      "description": "Added to the system prompt of every chat you start. Tell the AI who you are and how it should respond — it applies across all agents.",
+      "errorTitle": "Couldn't save your settings",
+      "placeholder": "e.g. I'm a backend engineer working in TypeScript. Keep answers concise and include code examples.",
+      "savedDescription": "Your personal system prompt now applies to new chats.",
+      "savedTitle": "Settings saved",
+      "saving": "Saving…",
+      "title": "Personal system prompt"
+    }
+  },
+  "skills": {
+    "access": {
+      "private": "Private",
+      "public": "Public",
+      "roles": "Shared with roles",
+      "rolesCount": "{count, plural, one {# role} other {# roles}}",
+      "teams": "Shared with teams",
+      "unknown": "Restricted",
+      "users": "Shared with users",
+      "usersCount": "{count, plural, one {# user} other {# users}}"
+    },
+    "clearSearch": "Clear search",
+    "countLabel": "{count, plural, =0 {No skills} one {# skill} other {# skills}}",
+    "create": {
+      "accessLabel": "Access",
+      "bundleLabel": "Skill bundle",
+      "chooseDifferent": "Choose a different file",
+      "creating": "Creating…",
+      "description": "Create a skill package. You'll be taken to the editor where you can add files and scripts.",
+      "descriptionPlaceholder": "What does this skill do? When should an agent use it?",
+      "dropzoneHint": ".zip (full skill folder) or single .md file",
+      "dropzoneLabel": "Drag & drop or click to choose",
+      "failed": "Couldn't create skill",
+      "fileRequired": "Choose a .zip or .md file to upload",
+      "modes": {
+        "blank": "Create blank",
+        "upload": "Create from upload"
+      },
+      "namePlaceholder": "e.g. Data analysis",
+      "nameRequired": "Name is required",
+      "submit": "Create & open",
+      "success": "Skill \"{name}\" created",
+      "tagsLabel": "Tags",
+      "tagsPlaceholder": "analysis, python, data (comma separated)",
+      "title": "New skill",
+      "unsupportedFile": "Only .zip and .md files are supported",
+      "uploading": "Uploading…"
+    },
+    "delete": {
+      "deleting": "Deleting…",
+      "description": "This skill and all its versions will be permanently removed. This cannot be undone.",
+      "failed": "Couldn't delete skill",
+      "success": "Skill \"{name}\" deleted",
+      "title": "Delete \"{name}\"?"
+    },
+    "description": "Reusable skill packages your agents can load.",
+    "detail": {
+      "accessControl": "Access control",
+      "accessFailed": "Couldn't update access",
+      "accessSaved": "Access control updated",
+      "current": "current",
+      "openEditor": "Open editor",
+      "saving": "Saving…",
+      "showLess": "Show less",
+      "showMoreLines": "Show {count} more lines",
+      "skillMd": "SKILL.md",
+      "skillMdMissingDescription": "Open the editor to create SKILL.md and document this skill.",
+      "skillMdMissingTitle": "SKILL.md not found",
+      "subjectLabel": "skill",
+      "tags": "Tags",
+      "usesLabel": "Uses",
+      "usesTooltip": "How many times this skill has been loaded by an agent.",
+      "usesTooltipLabel": "What counts as a use?",
+      "versionHistory": "Version history",
+      "versionsLabel": "Versions",
+      "viewAllAndCompare": "View all & compare"
+    },
+    "detailEmptyTitle": "Select a skill to preview",
+    "editor": {
+      "confirm": {
+        "deleteConfirm": "Delete",
+        "deleteFileDescription": "This file will be removed from the current version. This cannot be undone.",
+        "deleteFileTitle": "Delete file \"{name}\"?",
+        "deleteFolderDescription": "The folder and all its contents will be removed from the current version. This cannot be undone.",
+        "deleteFolderTitle": "Delete folder \"{name}\"?",
+        "discardSwitchConfirm": "Discard and switch",
+        "discardSwitchDescription": "Your unsaved edits to this file will be lost when you switch.",
+        "discardSwitchTitle": "Discard unsaved changes?"
+      },
+      "diff": {
+        "changedCount": "{count, plural, one {# changed} other {# changed}}",
+        "description": "View file-level differences between two skill versions.",
+        "fileAdded": "File added in v{version}",
+        "fileRemoved": "File removed in v{version}",
+        "files": "Files",
+        "from": "From",
+        "noChanges": "No changes in this file.",
+        "noFiles": "No files found for this comparison.",
+        "selectDifferent": "Select different versions to compare.",
+        "selectFile": "Select a file to view its diff.",
+        "title": "Compare versions",
+        "to": "To",
+        "unchangedCount": "· {count} unchanged",
+        "versionLabelCurrent": "v{version} (current)",
+        "versionLabelPlain": "v{version}",
+        "versionLabelTagged": "v{version} — {label}"
+      },
+      "emptyState": "Select a file from the tree to edit.",
+      "fileContent": "Contents of {name}",
+      "history": {
+        "compare": "Compare",
+        "currentBadge": "Current",
+        "currentLabel": "Current",
+        "emptyHint": "Save a version to snapshot the current state.",
+        "emptyTitle": "No previous versions yet",
+        "title": "Version history"
+      },
+      "input": {
+        "createConfirm": "Create",
+        "errorNoSlashes": "Names can't contain / or \\.",
+        "fileNameHelper": "Use .md for Markdown files.",
+        "fileNameLabel": "File name",
+        "fileNamePlaceholder": "e.g. guide.md",
+        "folderNameLabel": "Folder name",
+        "folderNamePlaceholder": "e.g. docs",
+        "newFileDescription": "Inside {path}",
+        "newFileDescriptionRoot": "In the root folder",
+        "newFileTitle": "New file",
+        "newFolderDescription": "Inside {path}",
+        "newFolderDescriptionRoot": "In the root folder",
+        "newFolderTitle": "New folder",
+        "renameConfirm": "Rename",
+        "renameDescription": "Rename \"{name}\"",
+        "renameFileTitle": "Rename file",
+        "renameFolderTitle": "Rename folder",
+        "renameLabel": "New name",
+        "saveVersionConfirm": "Save version",
+        "saveVersionDescription": "Snapshot the current state into a new version slot. You keep editing the next version.",
+        "saveVersionHelper": "Snapshots v{current}; you keep editing as v{next}.",
+        "saveVersionLabel": "Label (optional)",
+        "saveVersionPlaceholder": "e.g. Tightened safety prompt",
+        "saveVersionTitle": "Save version"
+      },
+      "notFound": {
+        "back": "Back to Skills",
+        "description": "This skill doesn't exist or you no longer have access to it.",
+        "title": "Skill not found"
+      },
+      "readOnly": "Read-only",
+      "save": "Save",
+      "sidebar": {
+        "fileCount": "{count, plural, one {# file} other {# files}}",
+        "files": "Files",
+        "versionLabel": "Version {version}"
+      },
+      "toasts": {
+        "copyFailed": "Couldn't copy to clipboard",
+        "deleteFailed": "Delete failed: {error}",
+        "deleted": "Deleted",
+        "fileCreated": "File created",
+        "fileSaved": "File saved",
+        "folderCreated": "Folder created",
+        "folderRenamePartial": "Folder rename partially failed ({count} files). Refresh and retry the affected files.",
+        "folderRenaming": "Renaming folder…",
+        "idCopied": "Skill ID copied",
+        "loadFailed": "Failed to load file: {error}",
+        "opFailed": "Operation failed: {error}",
+        "renamed": "Renamed",
+        "saveFailed": "Save failed: {error}",
+        "versionFailed": "Couldn't save version: {error}",
+        "versionSaved": "New version saved"
+      },
+      "topbar": {
+        "backToSkills": "Back to Skills",
+        "collapseFiles": "Collapse files",
+        "copyId": "Copy skill ID",
+        "expandFiles": "Expand files",
+        "history": "History",
+        "moreActions": "More actions",
+        "refresh": "Refresh",
+        "saveVersion": "Save version",
+        "versionLabel": "Version {version}"
+      },
+      "tree": {
+        "delete": "Delete",
+        "emptyHint": "No files yet. Use the + buttons above or right-click to create one.",
+        "emptyReadOnly": "This skill has no files yet.",
+        "emptyTitle": "No files yet",
+        "fileActions": "Actions for {name}",
+        "folderActions": "Actions for folder {name}",
+        "newFile": "New file",
+        "newFolder": "New folder",
+        "rename": "Rename"
+      },
+      "unsaved": "Unsaved"
+    },
+    "emptyDescription": "Package knowledge and scripts your agents can reuse.",
+    "emptySearchDescription": "Try a different search term, or clear the search.",
+    "emptySearchTitle": "No matches",
+    "emptyTitle": "No skills yet",
+    "errorDescription": "Something went wrong while fetching the skills list.",
+    "errorTitle": "Couldn't load skills",
+    "newSkill": "New skill",
+    "rangeOfTotal": "{from}–{to} of {total}",
+    "row": {
+      "actionsLabel": "Actions for {name}",
+      "copyId": "Copy skill ID",
+      "openEditor": "Open editor",
+      "versionsCount": "{count, plural, one {# version} other {# versions}}"
+    },
+    "searchPlaceholder": "Search skills",
+    "title": "Skills"
+  },
+  "token": {
+    "authRequiredDescription": "Sign in to view your personal token.",
+    "authRequiredTitle": "Authentication required",
+    "cardTitle": "Token",
+    "copySnippet": "Copy example",
+    "copyToken": "Copy token",
+    "description": "Your bearer token for the Exulu API.",
+    "expired": "Expired — sign in again",
+    "expiresInHours": "Expires in {hours} h",
+    "expiresInMinutes": "Expires in {minutes} min",
+    "keysCrossLink": "Need an org-level key?",
+    "keysCrossLinkAction": "API keys",
+    "noTokenDescription": "Your session has no token. Sign in again to get a fresh one.",
+    "noTokenTitle": "No token available",
+    "securityNote": "This token acts as you. Keep it private.",
+    "sentAs": "Sent as",
+    "signInAgain": "Sign in again",
+    "title": "Personal token",
+    "usageExample": "Usage example (cURL)"
+  },
+  "transcriptions": {
+    "composer": {
+      "audioFile": "Audio file",
+      "autoDetect": "Auto-detect",
+      "autoLanguage": "Auto-detect language",
+      "autoSpeakers": "Auto-detect speakers",
+      "dropHint": "mp3, wav, m4a, mp4, mpeg",
+      "dropLabel": "Drop an audio file or browse",
+      "language": "Language",
+      "noProject": "No project",
+      "noProjectSummary": "No project",
+      "options": "Options",
+      "project": "Project",
+      "removeFile": "Remove file",
+      "sharing": "Sharing",
+      "speakerCount": "{count, plural, one {# speaker} other {# speakers}}",
+      "speakers": "Speakers",
+      "start": "Start",
+      "titleLabel": "Title",
+      "titlePlaceholder": "Transcript title",
+      "uploading": "Uploading…"
+    },
+    "confirmCancel": {
+      "confirm": "Stop transcription",
+      "description": "Progress will be lost. The audio file stays in your files.",
+      "title": "Stop transcribing?"
+    },
+    "confirmDiscard": {
+      "confirm": "Discard",
+      "description": "The audio stays in your files; the transcription job will be cancelled.",
+      "title": "Discard this transcript?"
+    },
+    "confirmDismiss": {
+      "confirm": "Dismiss",
+      "description": "This removes the job from the list. The audio file stays in your files.",
+      "title": "Dismiss failed job?"
+    },
+    "description": "Turn audio into speaker-labeled transcripts you can use in chats and projects.",
+    "empty": {
+      "description": "Upload a meeting or voice memo and get back a speaker-labeled transcript.",
+      "title": "No transcripts yet"
+    },
+    "gallery": {
+      "allowedTypes": "Allowed file types: {types}",
+      "browseTitle": "Previously uploaded files",
+      "confirmDelete": {
+        "confirm": "Delete file",
+        "description": "\"{name}\" will be permanently deleted from your files. Transcripts already created from it are not affected.",
+        "title": "Delete this file?"
+      },
+      "delete": "Delete file",
+      "deleteFailed": "Couldn't delete the file",
+      "description": "Browse your previously uploaded files or upload new ones.",
+      "empty": {
+        "description": "Upload some files to get started",
+        "title": "Nothing to see here… yet!"
+      },
+      "notAudio": "Not an audio file",
+      "searchPlaceholder": "Search files…",
+      "selectedCount": "{selected} / {limit} files selected",
+      "title": "File gallery",
+      "uploadTitle": "Upload new files",
+      "view": "View / download",
+      "viewFailed": "Couldn't open the file"
+    },
+    "lang": {
+      "de": "German",
+      "en": "English",
+      "es": "Spanish",
+      "fr": "French",
+      "it": "Italian",
+      "nl": "Dutch",
+      "pt": "Portuguese"
+    },
+    "mode": {
+      "private": "Private",
+      "public": "Public",
+      "roles": "Shared with roles",
+      "users": "Shared with users"
+    },
+    "new": "New transcription",
+    "newShort": "New",
+    "queue": {
+      "library": "Transcript library",
+      "loadMore": "Load more",
+      "needsReview": "Needs review",
+      "noResults": "No transcripts match your search.",
+      "noSaved": "No saved transcripts yet.",
+      "nothingProcessing": "Nothing processing right now.",
+      "processing": "Processing",
+      "processingAndFailed": "Processing & failed",
+      "saved": "Saved",
+      "savedHint": "Re-open a saved transcript to rename speakers; saving will update the existing library item.",
+      "savedHintLabel": "About saved transcripts"
+    },
+    "review": {
+      "audioLoading": "Loading audio…",
+      "audioUnavailable": "Audio preview unavailable.",
+      "diarizationDisabled": "Speaker detection was disabled for this recording, so all segments share one speaker. Type a single name to label the whole transcript.",
+      "discard": "Discard",
+      "emptyTranscript": "No transcript segments found.",
+      "fallbackTitle": "Untitled transcript",
+      "keepRawLabel": "(keep raw label)",
+      "loadFailed": "Couldn't load the transcript",
+      "notReady": "This job isn't ready for review.",
+      "saveChanges": "Save changes",
+      "speakers": "Speakers",
+      "speakersHint": "Type names to replace the raw labels",
+      "title": "Review transcript",
+      "transcript": "Transcript"
+    },
+    "row": {
+      "awaitingReview": "Awaiting review",
+      "awaitingReviewWithLength": "Awaiting review ({length})",
+      "cancelled": "Cancelled",
+      "dismiss": "Dismiss",
+      "elapsed": "{elapsed} elapsed",
+      "failed": "Failed",
+      "openInLibrary": "Open in library",
+      "queued": "Queued…",
+      "remaining": "~{remaining} remaining",
+      "review": "Review",
+      "saved": "Saved",
+      "transcribing": "Transcribing…",
+      "transcribingWithLength": "Transcribing {length} of audio…",
+      "updated": "Updated",
+      "wrappingUp": "wrapping up…"
+    },
+    "searchPlaceholder": "Search transcripts…",
+    "sharing": {
+      "subject": "transcript"
+    },
+    "title": "Transcripts",
+    "toasts": {
+      "cancelFailed": "Couldn't cancel the job",
+      "cancelled": "Transcription cancelled",
+      "discardFailed": "Couldn't discard the transcript",
+      "dismissFailed": "Couldn't dismiss the job",
+      "saveFailed": "Couldn't save the transcript",
+      "saved": "Transcript saved",
+      "startFailed": "Couldn't start the transcription",
+      "started": "Transcription started",
+      "updated": "Transcript updated",
+      "uploadFailed": "Upload failed",
+      "viewInLibrary": "View in library"
+    }
+  },
+  "variables": {
+    "title": "Variables",
+    "description": "Secrets and environment variables your models, agents, and integrations depend on.",
+    "actions": {
+      "add": "Add variable",
+      "edit": "Edit",
+      "delete": "Delete",
+      "viewUsage": "View usage",
+      "cancel": "Cancel",
+      "save": "Save changes",
+      "create": "Create variable",
+      "retry": "Retry",
+      "back": "Back to Variables",
+      "showCurrent": "Show current value"
+    },
+    "toolbar": {
+      "searchPlaceholder": "Search variables…",
+      "filterType": "Type",
+      "typeAll": "All",
+      "typeSecrets": "Secrets",
+      "typePlain": "Plain text",
+      "reset": "Reset filters"
+    },
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "usedBy": "Used by",
+      "updated": "Updated",
+      "created": "Created"
+    },
+    "type": {
+      "secret": "Secret",
+      "plain": "Plain text",
+      "plainWarning": "Stored without encryption. Use only for non-sensitive values."
+    },
+    "usedBy": {
+      "count": "{count, plural, one {# resource} other {# resources}}",
+      "none": "—",
+      "unavailable": "Usage unavailable",
+      "unavailableBody": "Usage tracking is not yet available from the backend."
+    },
+    "list": {
+      "empty": {
+        "title": "No variables yet",
+        "body": "Store API keys and config values once — agents, models, and integrations reference them by name."
+      },
+      "error": {
+        "title": "Couldn't load variables",
+        "body": "The vault is unreachable — your variables are unaffected.",
+        "details": "Show error details"
+      },
+      "bulkSelected": "{count} selected",
+      "clearSelection": "Clear"
+    },
+    "detail": {
+      "value": "Value",
+      "reveal": "Reveal",
+      "hide": "Hide",
+      "copyValue": "Copy value",
+      "copyId": "Copy ID",
+      "copyName": "Copy name",
+      "usage": "Usage",
+      "meta": "Details",
+      "id": "ID",
+      "created": "Created",
+      "updated": "Last updated",
+      "createdBy": "Created by",
+      "updatedBy": "Last updated by"
+    },
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "e.g. ANTHROPIC_API_KEY",
+      "nameHelper": "A unique identifier. Use UPPERCASE with underscores.",
+      "value": "Value",
+      "valuePlaceholder": "Paste the value…",
+      "valueHelperSecret": "Will be encrypted at rest.",
+      "valueHelperPlain": "Will be stored as plain text.",
+      "type": "Type",
+      "typeSecret": "Secret — encrypted at rest",
+      "typePlain": "Plain text — stored as-is",
+      "typeSecretDescription": "Encrypted at rest. Recommended for API keys, tokens, and passwords.",
+      "typePlainDescription": "Stored as-is. Use for non-sensitive values like base URLs.",
+      "required": "{field} is required.",
+      "nameRequired": "Name is required.",
+      "valueRequired": "Value is required."
+    },
+    "create": {
+      "title": "Add variable",
+      "description": "Store a new secret or configuration value.",
+      "success": "Variable \"{name}\" added.",
+      "error": "Couldn't add the variable.",
+      "submit": "Create variable",
+      "submitting": "Creating…",
+      "errorGeneric": "Couldn't create the variable. Please try again."
+    },
+    "edit": {
+      "title": "Edit variable",
+      "description": "Modify {name}.",
+      "success": "Variable \"{name}\" updated.",
+      "error": "Couldn't update the variable.",
+      "errorGeneric": "Couldn't update the variable. Please try again.",
+      "notFoundTitle": "Variable not found",
+      "notFoundBody": "This variable may have been deleted.",
+      "loadErrorTitle": "Couldn't load this variable",
+      "loadErrorBody": "Please retry, or go back to the list.",
+      "submit": "Save changes",
+      "submitting": "Saving…",
+      "revealFailed": "Couldn't reveal the current value.",
+      "replaceValueShow": "Show current value",
+      "replaceValueHide": "Hide current value",
+      "replaceValueLoading": "Loading…",
+      "metaTitle": "Details",
+      "metaCreated": "Created",
+      "metaUpdated": "Last updated",
+      "metaUsedBy": "Used by",
+      "metaUsedByNone": "Not referenced",
+      "metaUsedByCount": "{count, plural, one {# resource} other {# resources}}",
+      "metaId": "ID",
+      "confirmTitle": "Save changes?",
+      "confirmRename": "Renaming may break {count, plural, =0 {referencing resources} one {# referencing resource} other {# referencing resources}}.",
+      "confirmSecretToPlain": "Switching from Secret to Plain stores the value without encryption — consumers that decrypt it may break.",
+      "confirmViewUsage": "View usage",
+      "valuePlaceholderUnchanged": "Leave empty to keep the current value",
+      "valueHintUnchanged": "Leave empty to keep the current value; type a new value to replace it."
+    },
+    "usage": {
+      "title": "Variable usage",
+      "description": "Resources referencing {name}.",
+      "countShort": "{count, plural, one {# resource} other {# resources}}",
+      "previous": "Previous",
+      "next": "Next",
+      "pageOf": "Page {page} of {total}",
+      "range": "Showing {start}–{end} of {total}",
+      "copyId": "Copy ID",
+      "empty": {
+        "title": "Not referenced",
+        "body": "Safe to edit or delete — no resources reference this variable."
+      },
+      "resourceType": {
+        "user": "User",
+        "agent": "Agent",
+        "workflow": "Routine"
+      },
+      "unknownUser": "Unknown user",
+      "unknownAgent": "Unknown agent",
+      "unknownRoutine": "Unknown routine"
+    },
+    "delete": {
+      "title": "Delete variable?",
+      "bodyUnused": "Permanently delete \"{name}\". This cannot be undone.",
+      "bodyInUse": "\"{name}\" is referenced by {count, plural, one {# resource} other {# resources}}. Deleting it may break those resources.",
+      "confirm": "Delete",
+      "success": "Variable deleted.",
+      "error": "Couldn't delete the variable."
+    },
+    "bulkDelete": {
+      "title": "Delete {count} variables?",
+      "body": "Agents, models, and integrations that reference these variables by name will break.",
+      "typeToConfirm": "Type \"delete\" to confirm",
+      "success": "{count, plural, one {# variable} other {# variables}} deleted.",
+      "partialError": "Some variables couldn't be deleted."
+    },
+    "rename": {
+      "title": "Rename this variable?",
+      "body": "Agents reference variables by name. Renaming \"{oldName}\" to \"{newName}\" will break any agent or model that references the old name."
+    },
+    "decrypt": {
+      "title": "Convert to plain text?",
+      "body": "The value will be stored without encryption. Any consumer that decrypts it as a secret may break."
+    },
+    "readOnly": {
+      "banner": "Read-only access — value reveal, edit, and delete require the write permission.",
+      "redirect": "Read-only access — changes require the write permission."
+    },
+    "reveal": {
+      "toast": "Value revealed for 30 seconds."
+    },
+    "copyValue": {
+      "toast": "Value copied."
+    }
   }
 }

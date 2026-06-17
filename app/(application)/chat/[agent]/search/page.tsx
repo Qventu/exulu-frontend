@@ -1,310 +1,344 @@
-"use client"
+"use client";
 
-import { useMutation, useQuery } from "@apollo/client";
-import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
-import { ArrowLeft, Trash2, Search as SearchIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
-import React, { useContext, useEffect, useState } from "react";
-import { UserContext } from "@/app/(application)/authenticated";
-import { Agent } from "@EXULU_SHARED/models/agent";
-import { AgentSession } from "@EXULU_SHARED/models/agent-session";
-import {
-  GET_AGENT_SESSIONS,
-  REMOVE_AGENT_SESSION_BY_ID,
-} from "@/queries/queries";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
-import { cn } from "@/lib/utils";
+/**
+ * /chat/[agent]/search — "Search conversations" (chat.md ladder rows 19–25;
+ * "The Quiet Column", work item 2.3, owner "sessions").
+ *
+ * PageShell (content) + PageHeader with a breadcrumb back to
+ * /chat/[agent]/new (item 19) + Toolbar (debounced ≥3-char title-contains
+ * search via useChatSessions — same GET_AGENT_SESSIONS filters, item 20;
+ * "Select" toggle entering selection mode, item 22; destructive bulk-delete
+ * when rows are selected) + click-to-open rows with title + always-visible
+ * RelativeTime (item 21) + bulk delete through the shared ConfirmDialog using
+ * useSessionMutations.deleteSessions (item 23 — replaces the ad-hoc
+ * AlertDialog) + "Show more (N of M)" (item 24) + skeletons and contextual
+ * EmptyStates (item 25). Checkboxes render ONLY in select mode; select-all
+ * spans writable rows only.
+ *
+ * The shell MobileTopbar stays on this route (suppression applies to chat
+ * sessions only — navigation.md §5.3). The history rail/sheet renders beside
+ * this page from the [agent] layout's ChatShell.
+ */
+
+import { ChevronRight, MessagesSquare, SearchX, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
-import { Skeleton } from "@/components/ui/skeleton";
+import * as React from "react";
+import { toast } from "sonner";
+
+import { UserContext } from "@/app/(application)/authenticated";
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
+import { EmptyState } from "@/components/primitives/empty-state";
+import { PageHeader } from "@/components/primitives/page-header";
+import { PageShell } from "@/components/primitives/page-shell";
+import { RelativeTime } from "@/components/primitives/relative-time";
+import { Toolbar } from "@/components/primitives/toolbar";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
+import { cn } from "@/lib/utils";
+import type { AgentSession } from "@/types/models/agent-session";
 
-export default function SearchPage({ params }: { params: Promise<{ agent: string }> }) {
-  const resolvedParams = React.use(params);
-  const agentId = resolvedParams.agent;
-  const { toast } = useToast();
-  const { user } = useContext(UserContext);
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [limit, setLimit] = useState(50);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+import { useChatShell } from "../../components/chat-shell";
+import type { SessionListItem } from "../../components/session-row";
+import { useChatSessions, useSessionMutations } from "../../hooks";
 
-  const sessionsQuery = useQuery(GET_AGENT_SESSIONS, {
-    returnPartialData: true,
-    fetchPolicy: "network-only",
-    nextFetchPolicy: "network-only",
-    variables: {
-      page: 1,
-      limit: limit,
-      filters: {
-        agent: {
-          eq: agentId
-        },
-        ...(searchQuery.length > 2 && {
-          title: {
-            contains: searchQuery
-          }
-        })
-      }
-    },
-    onCompleted: () => {
-      setIsInitialLoad(false);
-    },
+/** Same page size as the legacy search page. */
+const PAGE_SIZE = 50;
+/** Server title-contains search engages from 3 characters (item 20). */
+const MIN_SEARCH_CHARS = 3;
+
+export default function SearchPage({
+  params,
+}: {
+  params: Promise<{ agent: string }>;
+}) {
+  const { agent: agentId } = React.use(params);
+  const t = useTranslations("chat");
+  const tCommon = useTranslations("common");
+  const { user } = React.useContext(UserContext);
+  // The [agent] layout wraps this route in ChatShell — the agent object backs
+  // the breadcrumb label without an extra fetch.
+  const { agent } = useChatShell();
+
+  const [query, setQuery] = React.useState("");
+  const [limit, setLimit] = React.useState(PAGE_SIZE);
+  const [selectionMode, setSelectionMode] = React.useState(false);
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+
+  const { sessions, itemCount, loading, initialLoading } = useChatSessions({
+    agentId,
+    search: query,
+    limit,
   });
+  const mutations = useSessionMutations(agentId);
 
-  const [removeSession] = useMutation(
-    REMOVE_AGENT_SESSION_BY_ID,
-    {
-      refetchQueries: [
-        GET_AGENT_SESSIONS,
-        "GetAgentSessions",
-      ],
+  const items = sessions as unknown as SessionListItem[];
+
+  const isWritable = React.useCallback(
+    (session: SessionListItem) => {
+      if (!user) return false;
+      const sessionAgentId =
+        typeof session.agent === "string" ? session.agent : session.agent?.id;
+      return checkChatSessionWriteAccess(
+        { ...session, agent: sessionAgentId } as AgentSession,
+        user,
+      );
     },
+    [user],
   );
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      sessionsQuery.refetch();
-    }, 300);
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery, limit]);
+  const writableIds = React.useMemo(
+    () => items.filter(isWritable).map((session) => session.id),
+    [items, isWritable],
+  );
 
-  const handleSessionClick = (sessionId: string) => {
-    router.push(`/chat/${agentId}/${sessionId}`);
-  };
-
-  const toggleSessionSelection = (sessionId: string) => {
-    const newSelected = new Set(selectedSessions);
-    if (newSelected.has(sessionId)) {
-      newSelected.delete(sessionId);
-    } else {
-      newSelected.add(sessionId);
-    }
-    setSelectedSessions(newSelected);
-  };
-
-  const toggleSelectAll = () => {
-    const writableItems = items.filter((item: any) => {
-      const writeAccess = checkChatSessionWriteAccess({
-        ...item,
-        agent: item.agent
-      }, user);
-      return writeAccess;
+  // Selection only ever references rows that still exist (deletes/refetches
+  // prune it automatically).
+  React.useEffect(() => {
+    setSelected((prev) => {
+      const next = new Set(
+        Array.from(prev).filter((id) =>
+          items.some((session) => session.id === id),
+        ),
+      );
+      return next.size === prev.size ? prev : next;
     });
+  }, [items]);
 
-    if (selectedSessions.size === writableItems.length) {
-      setSelectedSessions(new Set());
-    } else {
-      setSelectedSessions(new Set(writableItems.map((item: any) => item.id)));
-    }
+  const toggleSelectionMode = () => {
+    if (selectionMode) setSelected(new Set());
+    setSelectionMode(!selectionMode);
   };
 
-  const handleBulkDelete = async () => {
-    const deletionPromises = Array.from(selectedSessions).map(sessionId =>
-      removeSession({
-        variables: {
-          id: sessionId,
-        },
-      })
-    );
-
-    try {
-      await Promise.all(deletionPromises);
-      toast({
-        title: "Sessions deleted",
-        description: `${selectedSessions.size} session(s) have been deleted.`,
-      });
-      setSelectedSessions(new Set());
-      setDeleteDialogOpen(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete some sessions.",
-        variant: "destructive",
-      });
-    }
+  const toggleOne = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
-  const items = sessionsQuery?.data?.agent_sessionsPagination?.items ||
-                sessionsQuery?.previousData?.agent_sessionsPagination?.items || [];
-  const pageInfo = sessionsQuery?.data?.agent_sessionsPagination?.pageInfo || {};
+  const allSelected =
+    writableIds.length > 0 && selected.size === writableIds.length;
+  const toggleAll = () => {
+    setSelected(allSelected ? new Set() : new Set(writableIds));
+  };
 
-  const writableItems = items.filter((item: any) => {
-    const writeAccess = checkChatSessionWriteAccess({
-      ...item,
-      agent: item.agent
-    }, user);
-    return writeAccess;
-  });
+  const trimmedQuery = query.trim();
+  const searching = trimmedQuery.length >= MIN_SEARCH_CHARS;
 
   return (
-    <div className="flex flex-col w-full h-full">
-      <div className="flex flex-col gap-4 p-6 border-b">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={`/chat/${agentId}`}>
-              <ArrowLeft className="size-4" />
-              <span className="ml-2">Back to chat</span>
-            </Link>
-          </Button>
+    <div className="min-h-0 w-full flex-1 overflow-y-auto">
+      <PageShell variant="content" className="max-w-3xl">
+        {/* Item 19 — back to chat via the PageHeader breadcrumb. */}
+        <PageHeader
+          title={t("search.title")}
+          breadcrumb={{
+            label: agent.name,
+            href: `/chat/${agentId}/new`,
+          }}
+        />
+
+        <div className="space-y-2">
+          {/* Item 20 (search, 300 ms debounce inside Toolbar) + item 22 (Select). */}
+          <Toolbar
+            search={{
+              value: query,
+              onChange: setQuery,
+              placeholder: t("search.placeholder"),
+            }}
+            selection={
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-pressed={selectionMode}
+                  onClick={toggleSelectionMode}
+                  className="max-md:h-11"
+                >
+                  {selectionMode ? tCommon("cancel") : t("search.select")}
+                </Button>
+                {selectionMode && writableIds.length > 0 ? (
+                  <div className="flex min-h-11 items-center gap-2 md:min-h-9">
+                    <Checkbox
+                      id="select-all-sessions"
+                      checked={allSelected}
+                      onCheckedChange={toggleAll}
+                      aria-label={tCommon("selectAll")}
+                    />
+                    <Label
+                      htmlFor="select-all-sessions"
+                      className="cursor-pointer text-sm font-normal text-muted-foreground"
+                    >
+                      {tCommon("selectAll")}
+                    </Label>
+                  </div>
+                ) : null}
+                {selectionMode && selected.size > 0 ? (
+                  <>
+                    <span className="text-sm text-muted-foreground">
+                      {tCommon("selectedCount", { count: selected.size })}
+                    </span>
+                    {/* Item 23 — bulk delete opens the shared ConfirmDialog. */}
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setConfirmOpen(true)}
+                      className="max-md:h-11"
+                    >
+                      <Trash2 aria-hidden="true" className="mr-2 size-4" />
+                      {t("search.deleteCta", { count: selected.size })}
+                    </Button>
+                  </>
+                ) : null}
+              </div>
+            }
+          />
+          {trimmedQuery.length > 0 &&
+          trimmedQuery.length < MIN_SEARCH_CHARS ? (
+            <p className="text-xs text-muted-foreground">
+              {t("search.minChars")}
+            </p>
+          ) : null}
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1">
-            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search chat sessions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          {selectedSessions.size > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              <Trash2 className="size-4 mr-2" />
-              Delete {selectedSessions.size} session{selectedSessions.size !== 1 ? 's' : ''}
-            </Button>
-          )}
-        </div>
-
-        {writableItems.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="select-all"
-              checked={selectedSessions.size === writableItems.length && writableItems.length > 0}
-              onCheckedChange={toggleSelectAll}
-            />
-            <label
-              htmlFor="select-all"
-              className="text-sm text-muted-foreground cursor-pointer"
-            >
-              Select all
-            </label>
-          </div>
-        )}
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-6">
-        {isInitialLoad && sessionsQuery.loading && (
-          <div className="w-full flex flex-col gap-4">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <Skeleton key={i} className="w-full h-[80px] rounded-md" />
+        {/* Item 25 — skeletons mirror the row anatomy; empty states are contextual. */}
+        {initialLoading ? (
+          <div className="flex flex-col gap-2" aria-hidden="true">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <Skeleton key={index} className="h-14 w-full rounded-lg" />
             ))}
           </div>
-        )}
-
-        {!isInitialLoad && !items?.length && (
-          <div className="w-full flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground">
-              {searchQuery.length > 0 ? "No sessions found matching your search." : "No sessions found."}
-            </p>
-          </div>
-        )}
-
-        {!isInitialLoad && items?.length > 0 && (
+        ) : items.length === 0 ? (
+          searching ? (
+            <EmptyState
+              icon={SearchX}
+              title={t("search.noMatchesTitle")}
+              description={t("search.noMatchesDescription", {
+                query: trimmedQuery,
+              })}
+            />
+          ) : (
+            <EmptyState
+              icon={MessagesSquare}
+              title={t("search.emptyTitle")}
+              description={t("search.emptyDescription")}
+              action={{
+                label: t("history.newChat"),
+                href: `/chat/${agentId}/new`,
+              }}
+            />
+          )
+        ) : (
           <div className="flex flex-col gap-2">
-            {items.map((item: Omit<AgentSession, "agent"> & { agent: Agent }) => {
-              const writeAccess = checkChatSessionWriteAccess({
-                ...item,
-                agent: item.agent.id
-              }, user);
-
-              const isSelected = selectedSessions.has(item.id);
-
-              return (
-                <div
-                  key={item.id}
-                  className={cn(
-                    "flex items-center gap-4 p-4 rounded-lg border transition-all hover:bg-accent cursor-pointer",
-                    isSelected && "bg-muted border-primary"
-                  )}
-                  onClick={() => handleSessionClick(item.id)}
-                >
-                  {writeAccess && (
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => toggleSessionSelection(item.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex-shrink-0"
-                    />
-                  )}
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium truncate">
-                          {item.title || "Untitled Session"}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {item.updatedAt
-                            ? `Updated ${formatDistanceToNow(new Date(item.updatedAt), { addSuffix: true })}`
-                            : "No update time"}
-                        </p>
-                      </div>
-                    </div>
+            {/* Item 21 — title + RelativeTime, click-to-open. */}
+            <ul className="flex flex-col gap-2">
+              {items.map((session) => {
+                const writable = isWritable(session);
+                const isSelected = selected.has(session.id);
+                const rowContent = (
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {session.title || t("history.untitled")}
+                    </p>
+                    {session.updatedAt ? (
+                      <RelativeTime
+                        date={session.updatedAt}
+                        className="text-xs text-muted-foreground"
+                      />
+                    ) : null}
                   </div>
-                </div>
-              );
-            })}
+                );
+
+                return (
+                  <li key={session.id}>
+                    {selectionMode && writable ? (
+                      // Item 22 — checkboxes exist only in select mode; the
+                      // whole row is the toggle target (T1 bulk selection).
+                      <button
+                        type="button"
+                        onClick={() => toggleOne(session.id)}
+                        aria-pressed={isSelected}
+                        className={cn(
+                          "flex min-h-11 w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                          isSelected ? "bg-muted" : "hover:bg-accent",
+                        )}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          tabIndex={-1}
+                          aria-hidden="true"
+                          className="pointer-events-none shrink-0"
+                        />
+                        {rowContent}
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/chat/${agentId}/${session.id}`}
+                        className="flex min-h-11 w-full items-center gap-3 rounded-lg border p-3 transition-colors duration-150 hover:bg-accent motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        {rowContent}
+                        <ChevronRight
+                          aria-hidden="true"
+                          className="size-4 shrink-0 text-muted-foreground"
+                        />
+                      </Link>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Item 24 — "Show more (N of M)". */}
+            {items.length < itemCount ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full max-md:h-11"
+                disabled={loading}
+                onClick={() => setLimit((previous) => previous + PAGE_SIZE)}
+              >
+                {loading
+                  ? tCommon("loading")
+                  : t("search.showMore", {
+                      shown: items.length,
+                      total: itemCount,
+                    })}
+              </Button>
+            ) : null}
           </div>
         )}
 
-        {!isInitialLoad &&
-          items?.length > 0 &&
-          items?.length < pageInfo?.itemCount && (
-            <div className="w-full mt-6">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setLimit(prevLimit => prevLimit + 50)}
-                disabled={sessionsQuery.loading}
-              >
-                {sessionsQuery.loading ? 'Loading...' : `Show more (${items?.length} of ${pageInfo?.itemCount})`}
-              </Button>
-            </div>
-          )}
-      </div>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Sessions</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete {selectedSessions.size} session{selectedSessions.size !== 1 ? 's' : ''}?
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleBulkDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {/* Item 23 — the shared ConfirmDialog (replaces the AlertDialog). */}
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title={t("search.deleteTitle", { count: selected.size })}
+          description={t("search.deleteDescription", { count: selected.size })}
+          confirmLabel={tCommon("delete")}
+          onConfirm={async () => {
+            const ids = Array.from(selected);
+            const { deleted, failed } = await mutations.deleteSessions(ids);
+            if (failed > 0) {
+              toast.error(t("search.deletePartial", { deleted, failed }));
+            } else {
+              toast.success(t("search.deleteSuccess", { count: deleted }));
+            }
+            setSelected(new Set());
+            setSelectionMode(false);
+          }}
+        />
+      </PageShell>
     </div>
   );
 }

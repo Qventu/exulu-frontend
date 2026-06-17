@@ -1,48 +1,23 @@
 "use client";
 
-import * as React from "react";
+/**
+ * /projects/[project] — thin route shell; the surface lives in
+ * components/project-detail-view.tsx (projects.md §4). Suspense boundary for
+ * the view's useSearchParams (URL-backed ?tab=) during prerender.
+ */
+
 import { useParams } from "next/navigation";
-import { ProjectDetails } from "@/components/project-details";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useQuery } from "@apollo/client";
-import { GET_PROJECT_BY_ID } from "@/queries/queries";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import * as React from "react";
+
+import { ProjectDetailView } from "../components/project-detail-view";
 
 export default function ProjectPage() {
-    const params = useParams();
-    const projectId = params?.project as string;
+  const params = useParams();
+  const projectId = params?.project as string;
 
-    const { data, loading, error } = useQuery(GET_PROJECT_BY_ID, {
-        variables: { id: projectId }
-    });
-
-
-    if (loading) {
-        return <div>
-            <Skeleton className="w-full h-full" />
-        </div>
-    }
-
-    if (error) {
-        return <Alert variant="destructive">
-            <ExclamationTriangleIcon className="size-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-                Error loading project.
-            </AlertDescription>
-        </Alert>
-    }
-
-    if (!data?.projectById) {
-        return <Alert variant="destructive">
-            <ExclamationTriangleIcon className="size-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-                Project not found.
-            </AlertDescription>
-        </Alert>
-    }
-
-    return <ProjectDetails project={data.projectById} />;
+  return (
+    <React.Suspense fallback={null}>
+      <ProjectDetailView projectId={projectId} />
+    </React.Suspense>
+  );
 }

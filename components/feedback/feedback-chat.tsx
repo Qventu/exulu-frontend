@@ -8,7 +8,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import { ArrowLeft, ArrowUp } from "lucide-react";
 import { StopIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
 
-import { ConfigContext } from "@/components/config-context";
+import { ConfigContext } from "@/components/shell/config-context";
 import { UserContext } from "@/app/(application)/authenticated";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -35,9 +35,9 @@ export function FeedbackChat({ kind, sessionId, onBack }: Props) {
   const fb = config?.feedback;
   if (!fb?.enabled) return null;
 
-  const agentSlug = kind === "bug" ? fb.bugAgentSlug : fb.featureAgentSlug;
-  const agentId = kind === "bug" ? fb.bugAgentId : fb.featureAgentId;
-  const api = `${fb.backend}/agents/${agentSlug}/run/${agentId}`;
+  // Same-origin proxy route; FEEDBACK_TOKEN is injected server-side there and
+  // never reaches the browser.
+  const api = `/api/feedback/${kind}`;
 
   const feedbackContext = useMemo(
     () => ({
@@ -56,9 +56,7 @@ export function FeedbackChat({ kind, sessionId, onBack }: Props) {
         const parsed = JSON.parse(e?.message);
         setError(parsed?.detail ?? parsed?.message ?? e?.message);
       } catch {
-        setError(
-          e?.message ?? "An unexpected error occurred. Please try again."
-        );
+        setError(e?.message ?? t("feedback.errorFallback"));
       }
     },
     transport: new DefaultChatTransport({
@@ -72,7 +70,6 @@ export function FeedbackChat({ kind, sessionId, onBack }: Props) {
           feedbackContext,
         },
         headers: {
-          'exulu-api-key': `${fb.token}`,
           User: user?.id ?? "anonymous",
           Session: sessionId,
           Stream: "true",
@@ -116,7 +113,7 @@ export function FeedbackChat({ kind, sessionId, onBack }: Props) {
           onClick={onBack}
           className="h-8 px-2 -ml-2 text-muted-foreground"
         >
-          <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
+          <ArrowLeft className="size-4" />
           <span className="ml-1">{t("feedback.back")}</span>
         </Button>
       </div>
@@ -145,7 +142,7 @@ export function FeedbackChat({ kind, sessionId, onBack }: Props) {
         <div className="px-6 pb-2">
           <Alert variant="destructive">
             <ExclamationTriangleIcon className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>{t("feedback.errorTitle")}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         </div>
@@ -181,7 +178,7 @@ export function FeedbackChat({ kind, sessionId, onBack }: Props) {
               disabled={!input.trim()}
               aria-label={t("feedback.send")}
             >
-              <ArrowUp className="h-4 w-4" strokeWidth={1.5} />
+              <ArrowUp className="size-4" />
             </Button>
           )}
         </div>

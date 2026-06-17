@@ -1,149 +1,139 @@
 "use client";
 
-import { Skill } from "@/types/models/skill";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Trash2, Lock, Globe, Users, Shield, GitBranch, ExternalLink } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useDeleteSkill } from "@/hooks/use-skills";
-import { toast } from "sonner";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { formatDistanceToNow } from "date-fns";
+/**
+ * SkillListItem — slim list row for /skills (work item 2.10; skills.md §3
+ * "List rows" + inventory items 12-19). Replaces the legacy hover-only row.
+ *
+ * Anatomy (skills.md §3):
+ *   line 1: name (truncated) + secondary mono badge `vN` + OverflowMenu kebab
+ *           (visible always — touch path, fixes H2/H3).
+ *   line 2: <AccessBadge variant="row" /> · "N versions" · RelativeTime.
+ *           Tags are NOT on the row (moved to detail panel per item #17).
+ *
+ * NO nested interactives (fixes H2 — legacy row was a <button> containing
+ * inner <Button>s, invalid HTML + broken keyboard semantics). The row IS the
+ * single click target; the kebab is the only nested interactive.
+ *
+ * OverflowMenu items (skills.md item #19/#20 + additive Copy ID):
+ *   - Open editor → /skills/[id]
+ *   - Copy skill ID (additive — P4 use)
+ *   - Delete… (only when canWrite, opens parent's ConfirmDialog)
+ */
 
-interface SkillListItemProps {
+import { ExternalLink, GitBranch, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import * as React from "react";
+
+import {
+  OverflowMenu,
+  type OverflowMenuItem,
+} from "@/components/primitives/overflow-menu";
+import { RelativeTime } from "@/components/primitives/relative-time";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+import type { Skill } from "../types";
+import { AccessBadge } from "./access-badge";
+
+export interface SkillListItemProps {
   skill: Skill;
   isSelected: boolean;
-  onClick: () => void;
-  onDelete?: () => void;
+  canWrite: boolean;
+  onSelect: () => void;
+  /** Navigate to /skills/[id]. */
+  onOpenEditor: () => void;
+  /** Bubble to the library page, which hosts the single ConfirmDialog. */
+  onRequestDelete: () => void;
+  onCopyId: () => void;
 }
 
-const getRightsMode = (mode: string) => {
-  switch (mode) {
-    case "private":
-      return { icon: Lock, color: "text-red-600 dark:text-red-500", label: "Private" };
-    case "public":
-      return { icon: Globe, color: "text-green-600 dark:text-green-500", label: "Public" };
-    case "users":
-      return { icon: Users, color: "text-blue-600 dark:text-blue-500", label: "Users" };
-    case "roles":
-      return { icon: Shield, color: "text-purple-600 dark:text-purple-500", label: "Roles" };
-    default:
-      return { icon: Globe, color: "text-muted-foreground", label: "Public" };
-  }
-};
+export function SkillListItem({
+  skill,
+  isSelected,
+  canWrite,
+  onSelect,
+  onOpenEditor,
+  onRequestDelete,
+  onCopyId,
+}: SkillListItemProps) {
+  const t = useTranslations("skills");
+  const tCommon = useTranslations("common");
 
-export function SkillListItem({ skill, isSelected, onClick, onDelete }: SkillListItemProps) {
-  const [deleteSkill] = useDeleteSkill();
-  const [isDeleting, setIsDeleting] = useState(false);
-  const router = useRouter();
-  const rightsMode = getRightsMode(skill.rights_mode);
-  const RightsModeIcon = rightsMode.icon;
+  const versionCount = (skill.history?.length ?? 0) + 1;
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm(`Delete "${skill.name}"? This cannot be undone.`)) return;
-    setIsDeleting(true);
-    try {
-      await deleteSkill({ variables: { id: skill.id } });
-      toast.success("Skill deleted");
-      onDelete?.();
-    } catch {
-      toast.error("Failed to delete skill");
-    } finally {
-      setIsDeleting(false);
+  const overflowItems = React.useMemo<OverflowMenuItem[]>(() => {
+    const items: OverflowMenuItem[] = [
+      {
+        label: t("row.openEditor"),
+        icon: ExternalLink,
+        onSelect: onOpenEditor,
+      },
+      {
+        label: t("row.copyId"),
+        onSelect: onCopyId,
+      },
+    ];
+    if (canWrite) {
+      items.push({
+        label: tCommon("delete"),
+        icon: Trash2,
+        destructive: true,
+        onSelect: onRequestDelete,
+      });
     }
-  };
-
-  const handleOpen = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    router.push(`/skills/${skill.id}`);
-  };
+    return items;
+  }, [canWrite, onCopyId, onOpenEditor, onRequestDelete, t, tCommon]);
 
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "w-full text-left px-3 py-2.5 border-l-2 transition-all duration-200 hover:bg-accent/50 group relative",
-        isSelected
-          ? "bg-primary/10 border-l-primary shadow-sm"
-          : "border-l-transparent hover:border-l-border",
-      )}
-    >
-      <div className="space-y-1.5">
-        {/* Title and actions row */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <h3
-              className={cn(
-                "font-semibold text-sm leading-tight transition-colors truncate",
-                isSelected ? "text-foreground" : "text-foreground group-hover:text-primary",
-              )}
-            >
-              {skill.name}
-            </h3>
-            <Badge
-              variant="secondary"
-              className="font-mono text-[10px] px-1.5 py-0 flex-shrink-0"
-            >
-              v{skill.current_version ?? 1}
-            </Badge>
-          </div>
-
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent"
-              onClick={handleOpen}
-              title="Open editor"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive",
-                isDeleting && "opacity-100",
-              )}
-              onClick={handleDelete}
-              disabled={isDeleting}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Metadata row */}
-        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-          <div className={cn("flex items-center gap-1 font-medium", rightsMode.color)}>
-            <RightsModeIcon className="h-3 w-3" />
-            <span>{rightsMode.label}</span>
-          </div>
-
-          <span className="text-muted-foreground/50">·</span>
-
-          <div className="flex items-center gap-1">
-            <GitBranch className="h-3 w-3" />
-            <span>{(skill.history?.length ?? 0) + 1} version{((skill.history?.length ?? 0) + 1) !== 1 ? "s" : ""}</span>
-          </div>
-
-          {skill.tags && skill.tags.length > 0 && (
-            <>
-              <span className="text-muted-foreground/50">·</span>
-              <span className="truncate max-w-[100px]">{skill.tags[0]}</span>
-              {skill.tags.length > 1 && (
-                <span className="text-muted-foreground/70">+{skill.tags.length - 1}</span>
-              )}
-            </>
+    <li>
+      <div
+        className={cn(
+          "group flex min-h-11 w-full items-start gap-2 border-l-2 px-3 py-2.5 transition-colors duration-150",
+          isSelected
+            ? "border-l-primary bg-muted/50"
+            : "border-l-transparent hover:bg-muted/50",
+        )}
+      >
+        <button
+          type="button"
+          onClick={onSelect}
+          onDoubleClick={onOpenEditor}
+          aria-current={isSelected || undefined}
+          className={cn(
+            "min-w-0 flex-1 text-left",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           )}
-
-          <span className="text-muted-foreground/50 ml-auto">
-            {formatDistanceToNow(new Date(skill.updatedAt), { addSuffix: true })}
-          </span>
-        </div>
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                {skill.name}
+              </span>
+              <Badge
+                variant="secondary"
+                className="shrink-0 font-mono text-xs"
+              >
+                v{skill.current_version ?? 1}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <AccessBadge mode={skill.rights_mode} variant="row" />
+              <span aria-hidden="true">·</span>
+              <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                <GitBranch aria-hidden="true" className="size-3" />
+                {t("row.versionsCount", { count: versionCount })}
+              </span>
+              <span aria-hidden="true">·</span>
+              <RelativeTime date={skill.updatedAt} className="truncate" />
+            </div>
+          </div>
+        </button>
+        <OverflowMenu
+          items={overflowItems}
+          label={t("row.actionsLabel", { name: skill.name })}
+          className="size-11 md:size-8"
+        />
       </div>
-    </button>
+    </li>
   );
 }

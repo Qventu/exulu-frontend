@@ -48,6 +48,12 @@
     --accent-foreground: 216.3158 76% 49.0196%;
     --destructive: 358.4416 74.7573% 59.6078%;
     --destructive-foreground: 0 0% 100%;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 0 0% 100%;
+    --warning: 32.1 94.6% 43.7%;
+    --warning-foreground: 0 0% 100%;
+    --info: 221.2 83.2% 53.3%;
+    --info-foreground: 0 0% 100%;
     --border: 240 17.0732% 91.9608%;
     --input: 0 0% 92.1569%;
     --ring: 0 0% 0%;
@@ -56,6 +62,11 @@
     --chart-3: 24.8571 98.1308% 58.0392%;
     --chart-4: 217.0787 76.7241% 54.5098%;
     --chart-5: 0 0% 45.4902%;
+    --chart-6: 173 80% 40%;
+    --chart-7: 330 81% 60%;
+    --chart-8: 45 93% 47%;
+    --chart-9: 292 84% 61%;
+    --chart-10: 84 81% 44%;
     --sidebar: 210 42.8571% 97.2549%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -63,7 +74,9 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: var(--ring);
+    --code-surface: 231 15% 18%;
+    --code-surface-foreground: 60 30% 96%;
     --font-sans: 'Inter', system-ui, sans-serif;
     --font-serif: 'Merriweather', serif;
     --font-mono: 'JetBrains Mono', monospace;
@@ -77,8 +90,6 @@
     --shadow-xl: 0px 2px 3px 0px hsl(0 0% 0% / 0.16), 0px 8px 10px -1px hsl(0 0% 0% / 0.16);
     --shadow-2xl: 0px 2px 3px 0px hsl(0 0% 0% / 0.40);
     --tracking-normal: -0.025em;
-    --spacing: 0.27rem;
-    --sidebar-background: 0 0% 98%;
   }
 
   .dark {
@@ -98,14 +109,25 @@
     --accent-foreground: 208.2090 100.0000% 73.7255%;
     --destructive: 0 90.6040% 70.7843%;
     --destructive-foreground: 0 0% 100%;
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 0 0% 100%;
+    --warning: 37.7 92.1% 50.2%;
+    --warning-foreground: 25.7 90% 9.8%;
+    --info: 217.2 91.2% 59.8%;
+    --info-foreground: 0 0% 100%;
     --border: 222.8571 6.4220% 21.3725%;
     --input: 222.8571 6.4220% 21.3725%;
     --ring: 257.6687 100% 68.0392%;
     --chart-1: 141.8919 69.1589% 58.0392%;
     --chart-2: 257.6687 100% 68.0392%;
-    --chart-3: 0 93.5484% 81.7647%;
+    --chart-3: 24.8571 98.1308% 66%;
     --chart-4: 217.5484 87.5706% 65.2941%;
     --chart-5: 0 0% 62.7451%;
+    --chart-6: 172 66% 50%;
+    --chart-7: 329 86% 70%;
+    --chart-8: 48 96% 53%;
+    --chart-9: 292 91% 73%;
+    --chart-10: 83 78% 55%;
     --sidebar: 240 4.3478% 9.0196%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -113,7 +135,9 @@
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: var(--ring);
+    --code-surface: 231 15% 18%;
+    --code-surface-foreground: 60 30% 96%;
     --font-sans: 'Inter', system-ui, sans-serif;
     --font-serif: 'Merriweather', serif;
     --font-mono: 'JetBrains Mono', monospace;
@@ -126,7 +150,6 @@
     --shadow-lg: 0px 2px 3px 0px hsl(0 0% 0% / 0.16), 0px 4px 6px -1px hsl(0 0% 0% / 0.16);
     --shadow-xl: 0px 2px 3px 0px hsl(0 0% 0% / 0.16), 0px 8px 10px -1px hsl(0 0% 0% / 0.16);
     --shadow-2xl: 0px 2px 3px 0px hsl(0 0% 0% / 0.40);
-    --sidebar-background: 240 5.9% 10%;
   }
 
   html {
@@ -152,13 +175,10 @@
   ;
 }
 
+/* `background` is not paintable on SVG bar geometry, so the old hardcoded
+   `background: #0c85d0` here was a silent no-op; only the cursor matters (R6). */
 .recharts-active-bar {
-  background: #0c85d0;
   cursor: pointer;
-}
-
-.bg-sidebar {
-  background-color: hsl(var(--sidebar));
 }
 
 .text-wrap {
@@ -257,15 +277,6 @@
 }
 
 
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
 
 .chat-response-container p {
   margin-bottom: 0.5rem;
@@ -370,4 +381,31 @@
 
 .wmde-markdown a:hover {
   text-decoration: none;
+}
+
+/* Subtle, token-driven scrollbars for shell/app surfaces (navigation.md §2).
+   Thin, transparent track, rounded thumb off the border token — quiet until
+   hovered. Apply via the `scrollbar-subtle` class; pages adopt it as they
+   migrate to the new shell. */
+@layer utilities {
+  .scrollbar-subtle {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-subtle::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-subtle::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-subtle::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background-color: hsl(var(--border));
+    background-clip: content-box;
+  }
+  .scrollbar-subtle::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.35);
+  }
 }

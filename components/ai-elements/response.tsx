@@ -17,10 +17,11 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DocumentNode, useMutation, useQuery } from '@apollo/client';
 import { GET_CHUNK_BY_ID, UPDATE_ITEM } from '@/queries/queries';
-import { getPresignedUrl } from '../uppy-dashboard';
+import { getPresignedUrl } from '../primitives/file-picker';
+import { ConfirmDialog } from '../primitives/confirm-dialog';
 import Link from 'next/link';
 import { AlertTriangle, LinkIcon, CopyIcon } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from "sonner";
 
 /**
  * Parses markdown text and removes incomplete tokens to prevent partial rendering
@@ -192,7 +193,6 @@ const WebSearchCitationBadge = ({ url, title, snippet }: {
   snippet: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { toast } = useToast();
 
   if (!url) {
     return null;
@@ -279,10 +279,7 @@ const WebSearchCitationBadge = ({ url, title, snippet }: {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(snippet);
-                    toast({
-                      title: "Copied to clipboard",
-                      description: "The citation snippet has been copied.",
-                    });
+                    toast.success("Copied to clipboard", { description: "The citation snippet has been copied." });
                   }}
                   className="flex-shrink-0 p-1.5 rounded hover:bg-muted transition-colors"
                   title="Copy snippet to clipboard"
@@ -331,7 +328,6 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
   context: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { toast } = useToast();
 
   if (!context) {
     return null;
@@ -355,23 +351,20 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
   });
 
   const [deactivated, setDeactivated] = useState(false);
+  const [confirmDeactivateOpen, setConfirmDeactivateOpen] = useState(false);
   const [updateItem, { loading: deactivating }] = useMutation(UPDATE_ITEM(context));
 
+  // ConfirmDialog enforces the destructive-confirmation flow (design-system audit
+  // R5; primitives/confirm-dialog.tsx). Reject onConfirm to keep the dialog open.
   const handleDeactivate = async () => {
     if (!itemId) return;
     try {
       await updateItem({ variables: { id: itemId, input: { archived: true } } });
       setDeactivated(true);
-      toast({
-        title: 'Source deactivated',
-        description: `${itemName} has been archived globally.`,
-      });
+      toast.success('Source deactivated', { description: `${itemName} has been archived globally.` });
     } catch (error) {
-      toast({
-        title: 'Failed to deactivate source',
-        description: error instanceof Error ? error.message : 'Please try again.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to deactivate source', { description: error instanceof Error ? error.message : 'Please try again.' });
+      throw error;
     }
   };
 
@@ -393,7 +386,6 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
 
   useEffect(() => {
     async function loadPdfUrl() {
-      console.log("Loading PDF URL for chunk", chunk);
       let pdfUrl: string | null = null;
       if (chunk?.chunk_metadata?.pdf) {
         pdfUrl = chunk?.chunk_metadata?.pdf;
@@ -460,7 +452,7 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {(itemId && context) ? (
-                <Link className="flex items-center gap-1" href={`/data/${context}/${itemId}`} target="_blank">
+                <Link className="flex items-center gap-1" href={`/data/${context}?item=${itemId}`} target="_blank">
                   <span className="max-w-[400px] truncate hover:underline cursor-pointer">{itemName}</span>
                   <LinkIcon className="size-4" />
                 </Link>
@@ -573,11 +565,20 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
             <Button
               variant={deactivated ? 'outline' : 'destructive'}
               size="sm"
-              onClick={handleDeactivate}
+              onClick={() => setConfirmDeactivateOpen(true)}
               disabled={deactivating || deactivated}
             >
               {deactivated ? 'Deactivated' : deactivating ? 'Deactivating…' : 'Deactivate this source'}
             </Button>
+            <ConfirmDialog
+              open={confirmDeactivateOpen}
+              onOpenChange={setConfirmDeactivateOpen}
+              title="Deactivate this source?"
+              description={`This archives "${itemName}" globally — it will no longer appear in any user's chat or search results.`}
+              confirmLabel="Deactivate"
+              variant="destructive"
+              onConfirm={handleDeactivate}
+            />
           </div>
         )}
       </DialogContent>
@@ -822,7 +823,6 @@ const components = {
         language={language as BundledLanguage}
       >
         <CodeBlockCopyButton
-          onCopy={() => console.log('Copied code to clipboard')}
           onError={() => console.error('Failed to copy code to clipboard')}
         />
       </CodeBlock>

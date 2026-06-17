@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-
-const LOCALE_COOKIE = 'NEXT_LOCALE';
-const defaultLocale = 'en';
-const locales = ['en', 'de'];
+import { LOCALE_COOKIE, defaultLocale, locales, type Locale } from './i18n/config';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -112,7 +109,7 @@ export default function proxy(request: NextRequest) {
     requestHeaders.set('x-next-pathname', encodeURIComponent(request.nextUrl.pathname));
 
     const locale = request.cookies.get(LOCALE_COOKIE)?.value || defaultLocale;
-    const validLocale = locales.includes(locale) ? locale : defaultLocale;
+    const validLocale = locales.includes(locale as Locale) ? locale : defaultLocale;
     requestHeaders.set('x-locale', validLocale);
 
     const response = NextResponse.next({

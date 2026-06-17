@@ -51,6 +51,7 @@ export function RBACControl({
   allowedModes,
   initialRightsMode,
   modalMode = false,
+  subjectLabel = 'agent',
   initialUsers,
   initialRoles,
   initialTeams,
@@ -59,6 +60,13 @@ export function RBACControl({
 }: {
   allowedModes?: Modes[],
   modalMode?: boolean,
+  /**
+   * What the visibility copy refers to ("agent", "transcript", …) — fixes the
+   * context-blind "Only you can see this agent" on non-agent consumers
+   * (design/pages/transcriptions.md §4). Defaults to the legacy "agent" so
+   * existing call sites render byte-identical copy.
+   */
+  subjectLabel?: string,
   initialRightsMode: 'private' | 'users' | 'roles' | 'teams' | 'public' /* | 'projects' */ | undefined,
   initialUsers: { id: number, rights: 'read' | 'write' }[] | undefined,
   initialRoles: { id: string, rights: 'read' | 'write' }[] | undefined,
@@ -74,14 +82,23 @@ export function RBACControl({
   const [visibilitySelectorOpen, setVisibilitySelectorOpen] = useState(false)
   const [userFilters, setUserFilters] = useState<any[]>([])
   const [userSearchValue, setUserSearchValue] = useState('')
+  const [debouncedUserSearch, setDebouncedUserSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [modalLoading, setModalLoading] = useState(false)
   const client = useApolloClient()
 
+  // ADDITIVE (work item 2.8 / agents.md item 45): 300 ms debounce on the
+  // user-search refetch so we don't fire a query per keystroke. No prop/API
+  // change; only the internal trigger of `refetchUsers` is delayed.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedUserSearch(userSearchValue), 300)
+    return () => clearTimeout(timer)
+  }, [userSearchValue])
+
   // GraphQL queries for RBAC
   const { data: usersData, loading: usersLoading, refetch: refetchUsers } = useQuery(GET_USERS, {
     variables: { page: 1, limit: 5, filters: userFilters },
-    skip: visibility !== 'users' || !userSearchValue
+    skip: visibility !== 'users' || !debouncedUserSearch
   })
 
   const roles = useQuery(GET_USER_ROLES, {
@@ -113,24 +130,17 @@ export function RBACControl({
   // User search function
   const searchUsers = useCallback((value: string) => {
     setUserSearchValue(value)
-    const copy = [...userFilters, {
-      type: {
-        ne: "api"
-      }
-    }]
-    const exists = copy.find((filter) => filter.email)
-    if (exists?.email) {
-      exists.email.contains = value
-    } else {
-      copy.push({
-        email: {
-          contains: value,
-        },
-      })
-    }
+  }, [])
+
+  // ADDITIVE: build filters + refetch on the DEBOUNCED value rather than per
+  // keystroke. Preserves the prior filter shape (email.contains + type.ne).
+  useEffect(() => {
+    if (!debouncedUserSearch) return
+    const copy: any[] = [{ type: { ne: "api" } }]
+    copy.push({ email: { contains: debouncedUserSearch } })
     setUserFilters(copy)
     refetchUsers()
-  }, [userFilters, refetchUsers])
+  }, [debouncedUserSearch, refetchUsers])
 
   const hydrateUsers = async (max: number  = 5) => {
     setModalLoading(true)
@@ -167,9 +177,12 @@ export function RBACControl({
 
   const filteredUsers = hydratedUsers?.slice(0, 5).filter(user => !!user?.id)
 
-  let visibilityOptions = VISIBILITY_OPTIONS
+  let visibilityOptions = VISIBILITY_OPTIONS.map(option => ({
+    ...option,
+    description: option.description.replace('agent', subjectLabel),
+  }))
   if (allowedModes?.length) {
-    visibilityOptions = VISIBILITY_OPTIONS.filter(option => allowedModes.includes(option.value as Modes))
+    visibilityOptions = visibilityOptions.filter(option => allowedModes.includes(option.value as Modes))
   }
 
   return (

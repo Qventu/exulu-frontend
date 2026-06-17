@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useContext } from "react";
 import {
   Select,
   SelectContent,
@@ -10,9 +9,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useQuery } from "@apollo/client";
-import { GET_LITELLM_CATALOG, GET_MODELS_LITE } from "@/queries/queries";
+import { useTranslations } from "next-intl";
+import { GET_AGENT_LITELLM_CATALOG } from "@/app/(application)/agents/queries";
 import { Input } from "@/components/ui/input";
-import { ConfigContext } from "@/components/config-context";
 import { ProviderLogo } from "@/components/provider-logo";
 import { Badge } from "@/components/ui/badge";
 
@@ -32,59 +31,69 @@ type ModelOption = {
   region?: string | null;
 };
 
+export interface AgentModelSelectorProps {
+  value?: string;
+  onSelect: (id: string) => void;
+  /**
+   * NEW (additive, work item 2.8 contracts §2): when no value is set,
+   * auto-select the first ACTIVE catalog/model entry once options load and
+   * report it via `onSelect` — the create dialog's "pre-selected model"
+   * (agents.md create flow: decision 2 is a confirmation, not a hunt).
+   * Default false → existing call sites behave byte-identically.
+   */
+  autoSelectDefault?: boolean;
+}
+
 export function AgentModelSelector({
   value,
   onSelect,
-}: {
-  value?: string;
-  onSelect: (id: string) => void;
-}) {
+  autoSelectDefault = false,
+}: AgentModelSelectorProps) {
 
+  const t = useTranslations("agents.modelSelector");
   const [searchTerm, setSearchTerm] = React.useState("");
   const searchInputRef = React.useRef<HTMLInputElement>(null);
-  const configContext = useContext(ConfigContext);
-  const litellmEnabled = configContext?.liteLLM?.enabled === true;
 
-  // Source the dropdown from either the 
-  // LiteLLM catalog or our DB Models table.
-  const litellmQuery = useQuery(GET_LITELLM_CATALOG, {
+  // Source the dropdown from the LiteLLM catalog (Phase 4.2 — the legacy
+  // Models-table path is gone; LiteLLM is the single source of truth).
+  const litellmQuery = useQuery(GET_AGENT_LITELLM_CATALOG, {
     fetchPolicy: "cache-and-network",
-    skip: !litellmEnabled,
-  });
-
-  const modelsQuery = useQuery(GET_MODELS_LITE, {
-    fetchPolicy: "no-cache",
-    nextFetchPolicy: "network-only",
-    variables: { page: 1, limit: 100 },
-    skip: litellmEnabled,
   });
 
   const options: ModelOption[] = React.useMemo(() => {
-    if (litellmEnabled) {
-      const items = litellmQuery.data?.litellmCatalog ?? [];
-      return items.map((m: any) => ({
-        id: m.model_name,
-        label: m.model_name,
-        provider: m.upstream_model ?? "",
-        description: m.upstream_model ?? "",
-        active: true,
-        tags: m.tags ?? [],
-        brand: m.brand ?? null,
-        region: m.region ?? null,
-      }));
-    }
-    const items = modelsQuery.data?.modelsPagination?.items ?? [];
+    const items = litellmQuery.data?.litellmCatalog ?? [];
     return items.map((m: any) => ({
-      id: m.id,
-      label: m.name,
-      provider: m.provider,
-      description: m.description,
-      active: m.active,
-      tags: m.tags,
+      id: m.model_name,
+      label: m.model_name,
+      provider: m.upstream_model ?? "",
+      description: m.upstream_model ?? "",
+      active: true,
+      tags: m.tags ?? [],
+      brand: m.brand ?? null,
+      region: m.region ?? null,
     }));
-  }, [litellmEnabled, litellmQuery.data, modelsQuery.data]);
+  }, [litellmQuery.data]);
 
-  const isLoading = litellmEnabled ? litellmQuery.loading : modelsQuery.loading;
+  const isLoading = litellmQuery.loading;
+
+  // autoSelectDefault (additive): once options are loaded and nothing is
+  // selected, pick the first active entry and report it upward. Fires at most
+  // once per mount; never competes with an existing value, and never touches
+  // the stale-value armor below.
+  const autoSelectedRef = React.useRef(false);
+  const onSelectRef = React.useRef(onSelect);
+  React.useEffect(() => {
+    onSelectRef.current = onSelect;
+  });
+  React.useEffect(() => {
+    if (!autoSelectDefault || autoSelectedRef.current) return;
+    if (value || isLoading) return;
+    const firstActive = options.find((option) => option.active !== false);
+    if (firstActive) {
+      autoSelectedRef.current = true;
+      onSelectRef.current(firstActive.id);
+    }
+  }, [autoSelectDefault, value, isLoading, options]);
 
   // If the agent's stored model value doesn't appear in the current catalog,
   // surface it as a stale entry so the user sees why their dropdown shows
@@ -98,13 +107,13 @@ export function AgentModelSelector({
     return [
       {
         id: value,
-        label: `(unknown — re-select): ${value}`,
+        label: t("staleLabel", { value }),
         stale: true,
         active: false,
       },
       ...options,
     ];
-  }, [options, value, isLoading]);
+  }, [options, value, isLoading, t]);
 
   const selected = optionsWithStale.find((m) => m.id === value);
 
@@ -125,13 +134,13 @@ export function AgentModelSelector({
       onValueChange={(v) => onSelect(v)}
     >
       <SelectTrigger
-        className={selected?.stale ? "border-red-500 text-red-600" : undefined}
+        className={selected?.stale ? "border-destructive text-destructive" : undefined}
       >
-        <SelectValue placeholder={selected?.label ?? "Select a model"}>
+        <SelectValue placeholder={selected?.label ?? t("placeholder")}>
           {selected ? (
             <span className="flex items-center gap-2">
               <ProviderLogo brand={selected.brand} region={selected.region} />
-              <span className={selected.stale ? "text-red-600" : undefined}>
+              <span className={selected.stale ? "text-destructive" : undefined}>
                 {selected.label}
               </span>
             </span>
@@ -142,9 +151,7 @@ export function AgentModelSelector({
         <div className="p-2">
           <Input
             ref={searchInputRef}
-            placeholder={
-              litellmEnabled ? "Search LiteLLM models..." : "Search models..."
-            }
+            placeholder={t("searchLitellm")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => e.stopPropagation()}
@@ -153,13 +160,11 @@ export function AgentModelSelector({
         </div>
         {isLoading ? (
           <SelectItem key="loading" value="loading" disabled>
-            Loading...
+            {t("loading")}
           </SelectItem>
         ) : filtered.length === 0 ? (
           <SelectItem value="__none" disabled>
-            {litellmEnabled
-              ? "No LiteLLM models configured. Edit config.yaml on the host."
-              : "No models found. Create one in the Models page."}
+            {t("emptyLitellm")}
           </SelectItem>
         ) : (
           filtered.map((m) => (
@@ -170,17 +175,19 @@ export function AgentModelSelector({
             >
               <div className="flex items-center gap-2">
                 <ProviderLogo brand={m.brand} region={m.region} />
-                <span className={m.stale ? "text-red-600" : undefined + " uppercase"}>
-                  {m.label} 
+                <span className={m.stale ? "text-destructive" : "uppercase"}>
+                  {m.label}
                 </span>
                 {/* Show a badge for each tag */}
-                {m.tags?.map((t) => (
-                  <Badge key={t} variant="secondary">
-                    {t}
+                {m.tags?.map((tag) => (
+                  <Badge key={tag} variant="secondary">
+                    {tag}
                   </Badge>
                 ))}
                 {m.active === false && !m.stale && (
-                  <span className="text-xs text-amber-600">(inactive)</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t("inactive")}
+                  </span>
                 )}
               </div>
             </SelectItem>

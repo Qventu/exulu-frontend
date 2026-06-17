@@ -16,10 +16,7 @@ export function FeedbackChoice({ onSelect }: Props) {
         onClick={() => onSelect("feature")}
         className="group flex flex-col items-start gap-3 rounded-lg border bg-card p-6 text-left transition-colors hover:border-primary hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
-        <Lightbulb
-          className="h-6 w-6 text-primary"
-          strokeWidth={1.5}
-        />
+        <Lightbulb className="size-6 text-primary" />
         <div className="space-y-1">
           <div className="text-lg font-semibold">
             {t("feedback.choiceFeature.title")}
@@ -34,10 +31,7 @@ export function FeedbackChoice({ onSelect }: Props) {
         onClick={() => onSelect("bug")}
         className="group flex flex-col items-start gap-3 rounded-lg border bg-card p-6 text-left transition-colors hover:border-primary hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
-        <Bug
-          className="h-6 w-6 text-primary"
-          strokeWidth={1.5}
-        />
+        <Bug className="size-6 text-primary" />
         <div className="space-y-1">
           <div className="text-lg font-semibold">
             {t("feedback.choiceBug.title")}

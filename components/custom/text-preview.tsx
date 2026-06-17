@@ -4,7 +4,7 @@ import {
     DialogContent,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { Response } from '@/components/ai-elements/response';
 import { CopyIcon, DownloadIcon, InfoIcon } from "lucide-react";
 
@@ -19,7 +19,6 @@ export function TextPreview({
     sliceLength?: number;
     metadata?: Record<string, any>;
 }) {
-    const { toast } = useToast();
     const displayLength = sliceLength ?? 200;
     if (!text) {
         text = ""
@@ -37,7 +36,7 @@ export function TextPreview({
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        toast({ title: "Downloaded as .txt file" });
+        toast.success("Downloaded as .txt file");
     };
 
     if (isVeryLarge) {
@@ -81,7 +80,7 @@ export function TextPreview({
                     </div>
                     <span className="text-xs text-muted-foreground flex items-center gap-1 cursor-pointer" onClick={async () => {
                         await navigator.clipboard.writeText(text);
-                        toast({ title: "Copied to clipboard" });
+                        toast.success("Copied to clipboard");
                     }}>
                         <span className="text-muted-foreground">Copy value to clipboard</span>
                         <CopyIcon className="size-4" />

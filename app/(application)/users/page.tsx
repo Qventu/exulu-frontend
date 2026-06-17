@@ -1,56 +1,26 @@
-"use client";
+/**
+ * /users — the canonical "Users & access" surface (access.md §3).
+ *
+ * Server component (no getTranslations / t() — rule 5, the 7-times-bitten
+ * trap). The active tab is read CLIENT-side from `?tab` inside AccessSurface;
+ * this file only mounts the client wrapper inside a Suspense boundary (the
+ * AccessSurface tree uses `useSearchParams`, which the Next.js App Router
+ * requires to be Suspense-wrapped at the page level).
+ *
+ * /roles and /teams server-redirect to /users?tab=roles|teams (alias routes
+ * are preserved for deep links and the existing nav-config alias array).
+ * The route guard lives in layout.tsx (guardRoute('users')).
+ */
+import { Suspense } from "react";
 
-import { useContext } from "react";
-import { createColumns } from "./components/columns";
-import { DataTable } from "./components/data-table";
-import { UserContext } from "@/app/(application)/authenticated";
-import { GET_USERS, UPDATE_USER_BY_ID } from "@/queries/queries";
-import { useMutation } from "@apollo/client";
+import { AccessSurface } from "./components/access-surface";
 
 export const dynamic = "force-dynamic";
 
 export default function UsersPage() {
-  const { user: currentUser } = useContext(UserContext);
-  const columns = createColumns(
-    currentUser,
-    (user, role) => {
-      updateUser({
-        variables: {
-          id: user.id,
-          role,
-        },
-      });
-    },
-    (user, team) => {
-      updateUser({
-        variables: {
-          id: user.id,
-          team,
-        },
-      });
-    },
-  );
-
-  const [updateUser, updateUserResult] = useMutation(UPDATE_USER_BY_ID, {
-    refetchQueries: [
-      GET_USERS, // DocumentNode object parsed with gql
-      "GetUsers", // Query name
-    ],
-  });
-
   return (
-    <>
-      <div className="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
-        <div className="flex items-center justify-between space-y-2">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Users</h2>
-            <p className="text-muted-foreground">
-              Here's a list of all the users.
-            </p>
-          </div>
-        </div>
-        <DataTable columns={columns} />
-      </div>
-    </>
+    <Suspense fallback={null}>
+      <AccessSurface />
+    </Suspense>
   );
 }

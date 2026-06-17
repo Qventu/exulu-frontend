@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getServerSession } from "next-auth";
 import { getAuthOptions, pool } from "@/app/api/auth/[...nextauth]/options";
 import { UserBudgetView, UserWithRole } from "@/types/models/user";
@@ -30,14 +31,22 @@ const fetchUserBudget = async (
   }
 };
 
-export const serverSideAuthCheck = async (): Promise<UserWithRole | false> => {
-  const authOptions = await getAuthOptions()
-  const session: any = await getServerSession(authOptions);
-  if (!session?.user) return false;
+/**
+ * Wrapped in React.cache (per-request memo): the (application) layout, the
+ * Home page and every route guard (lib/route-guard.tsx) in the same render
+ * pass share ONE users+roles query and /me/budget fetch instead of repeating
+ * the round-trips per caller.
+ */
+export const serverSideAuthCheck = cache(
+  async (): Promise<UserWithRole | false> => {
+    const authOptions = await getAuthOptions();
+    const session: any = await getServerSession(authOptions);
+    if (!session?.user) return false;
 
-  const client = await pool.connect();
-  try {
-    const res = await client.query(`
+    const client = await pool.connect();
+    try {
+      const res = await client.query(
+        `
           SELECT
             users.*,
             json_build_object(
@@ -47,26 +56,30 @@ export const serverSideAuthCheck = async (): Promise<UserWithRole | false> => {
               'workflows', roles.workflows,
               'variables', roles.variables,
               'users', roles.users,
+              'api', roles.api,
               'evals', roles.evals,
               'budget_management', roles.budget_management
             ) as role
           FROM users
           LEFT JOIN roles ON users.role = roles.id
           WHERE users.email = $1
-        `, [session.user.email])
-    const user: any = res.rows[0];
-    if (!user) {
-      return false;
+        `,
+        [session.user.email],
+      );
+      const user: any = res.rows[0];
+      if (!user) {
+        return false;
+      }
+
+      // Attach the live budget snapshot for the in-chat indicator. The backend
+      // gates this on the "show user budget in chat" setting and returns null
+      // otherwise; it's backed by a short cache so this stays cheap across the
+      // server-side navigations that re-run this check.
+      user.budget = await fetchUserBudget(session.user.jwt);
+
+      return user;
+    } finally {
+      client.release();
     }
-
-    // Attach the live budget snapshot for the in-chat indicator. The backend
-    // gates this on the "show user budget in chat" setting and returns null
-    // otherwise; it's backed by a short cache so this stays cheap across the
-    // server-side navigations that re-run this check.
-    user.budget = await fetchUserBudget(session.user.jwt);
-
-    return user;
-  } finally {
-    client.release();
-  }
-}
+  },
+);

@@ -1,120 +1,174 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+/**
+ * EvalRunsTable — the redesigned runs matrix.
+ *
+ * Phase 5.1 redesign (design/pages/evals.md §5.1):
+ * - Switched from a `flex grid-cols-N` hybrid (broken Tailwind class) to a
+ *   real CSS grid: `minmax(200px,280px) repeat(N, minmax(140px,1fr))`.
+ *   The sticky first column lists cases; each subsequent column is a single
+ *   self-contained <EvalRunColumn /> lane that owns its own GET_JOB_RESULTS
+ *   subscription. Lanes-as-components keeps Rules-of-Hooks intact as the
+ *   visible-runs count changes.
+ * - Average row pinned at the top of the data rows; computed completed-only
+ *   per lane (never NaN — see eval-run-column.tsx).
+ * - Last 3 runs by default; a quiet text "Show older runs" button reveals
+ *   five more at a time.
+ * - Empty test-case set surfaces the shared EmptyState with a deep-link
+ *   into the parent's Test cases tab (via the `onSwitchToCasesTab` prop).
+ * - `canWrite` is RESPECTED here and propagated to <EvalRunColumn />. The
+ *   original component destructured this prop and discarded it, leaking
+ *   write actions to readers — fixed.
+ * - All confirmation flows now go through the shared <ConfirmDialog />
+ *   primitive (variant=default for Start, variant=destructive for Delete).
+ *   The "scheduled queue jobs are NOT removed" note is preserved as a
+ *   `warning` inside the Delete dialog.
+ * - The sticky-column TestCaseModal now refetches the case list on success
+ *   (original code had a comment where the call should have been — bug fix).
+ */
+
+import { useMemo, useState } from "react";
+import { useMutation, useQuery } from "@apollo/client";
+import { format } from "date-fns";
+import {
+  CheckCircle,
+  ChevronsLeft,
+  Clock,
+  ListChecks,
+  Loader2,
+  XCircle,
+  Zap,
+} from "lucide-react";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ChevronLeft, Clock, Zap, CheckCircle, XCircle, AlertCircle } from "lucide-react";
-import { format } from "date-fns";
-import { EvalRun } from "@/types/models/eval-run";
-import { GET_TEST_CASES, RUN_EVAL, GET_AGENTS_BY_IDS, DELETE_EVAL_RUN_BY_ID } from "@/queries/queries";
-import { JobResult } from "@/types/models/job-result";
-import { EvalSet } from "@/types/models/eval-set";
-import { useQuery, useMutation } from "@apollo/client";
-import { CreateEvalRunModal } from "./create-eval-run-modal";
-import { useToast } from "@/components/ui/use-toast";
-import { EvalRunColumn } from "./eval-run-column";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
+import { EmptyState } from "@/components/primitives/empty-state";
 import { CodePreview } from "@/components/custom/code-preview";
 import { formatDuration } from "@/lib/utils";
 import { Conversation, ConversationContent } from "@/components/ai-elements/conversation";
 import { MessageRenderer } from "@/components/message-renderer";
-import { type Agent } from "@/types/models/agent";
+
+import {
+  DELETE_EVAL_RUN_BY_ID,
+  GET_AGENTS_BY_IDS,
+  GET_TEST_CASES,
+  RUN_EVAL,
+} from "@/queries/queries";
+import type { Agent } from "@/types/models/agent";
+import type { EvalRun } from "@/types/models/eval-run";
+import type { EvalSet } from "@/types/models/eval-set";
+import type { JobResult } from "@/types/models/job-result";
+import type { TestCase } from "@/types/models/test-case";
+
 import { TestCaseModal } from "../../../cases/components/test-case-modal";
-import { TestCase } from "@/types/models/test-case";
-import { Alert } from "@/components/ui/alert";
+import { CreateEvalRunModal } from "./create-eval-run-modal";
+import { EvalRunColumn } from "./eval-run-column";
 
 interface EvalRunsTableProps {
   evalRuns: EvalRun[];
   evalSet: EvalSet;
   canWrite: boolean;
   onRefetch: () => void;
+  /** Parent-provided callback to flip the page-level Tabs into the cases tab. */
+  onSwitchToCasesTab?: () => void;
 }
 
-export function EvalRunsTable({ evalRuns, evalSet, onRefetch }: EvalRunsTableProps) {
-  const { toast } = useToast();
-  const [visibleRuns, setVisibleRuns] = useState(3);
+const INITIAL_VISIBLE = 3;
+const PAGE_SIZE = 5;
+
+export function EvalRunsTable({
+  evalRuns,
+  evalSet,
+  canWrite,
+  onRefetch,
+  onSwitchToCasesTab,
+}: EvalRunsTableProps) {
+  const t = useTranslations("evals.runs");
+  const tMatrix = useTranslations("evals.runs.matrix");
+
+  const [visibleRuns, setVisibleRuns] = useState(INITIAL_VISIBLE);
   const [selectedResult, setSelectedResult] = useState<JobResult | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalRun, setModalRun] = useState<EvalRun | null>(null);
-  const [startConfirmOpen, setStartConfirmOpen] = useState(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [runToDelete, setRunToDelete] = useState<EvalRun | null>(null);
-  const [runToStart, setRunToStart] = useState<EvalRun | null>(null);
+  const [startTarget, setStartTarget] = useState<EvalRun | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<EvalRun | null>(null);
   const [viewingTestCase, setViewingTestCase] = useState<TestCase | null>(null);
 
-  console.log("[EXULU] Eval set", evalSet);
-  const { data: testCasesData, loading: loadingTestCases } = useQuery(GET_TEST_CASES, {
+  const {
+    data: testCasesData,
+    loading: loadingTestCases,
+    refetch: refetchTestCases,
+  } = useQuery(GET_TEST_CASES, {
     variables: {
       page: 1,
       limit: 500,
       filters: [{ eval_set_id: { eq: evalSet.id } }],
     },
     skip: !evalSet.id,
-    pollInterval: 10000, // Poll every 10 seconds to update test case statuses
+    pollInterval: 10000,
   });
 
-  const testCasesList = testCasesData?.test_casesPagination?.items || [];
+  const testCasesList: TestCase[] =
+    testCasesData?.test_casesPagination?.items || [];
 
-  // Fetch agents for all eval runs
-  const uniqueAgentIds = Array.from(new Set(evalRuns.map(run => run.agent_id).filter(Boolean)));
+  const uniqueAgentIds = useMemo(
+    () => Array.from(new Set(evalRuns.map((run) => run.agent_id).filter(Boolean))),
+    [evalRuns],
+  );
   const { data: agentsData } = useQuery(GET_AGENTS_BY_IDS, {
     variables: { ids: uniqueAgentIds },
     skip: uniqueAgentIds.length === 0,
   });
+  const agentsMap = useMemo(
+    () =>
+      new Map<string, Agent>(
+        (agentsData?.agentByIds || []).map((agent: Agent) => [agent.id, agent]),
+      ),
+    [agentsData],
+  );
 
-  const agentsMap: Map<string, Agent> = new Map((agentsData?.agentByIds || []).map((agent: any) => [agent.id, agent]));
-
-  const [runEval, { loading: runningEval }] = useMutation(RUN_EVAL, {
+  const [runEval] = useMutation(RUN_EVAL, {
     onCompleted: (data) => {
-      toast({
-        title: "Eval run started",
-        description: `Scheduled ${data.runEval.count} test cases to run.`,
+      toast.success(t("startSuccess.title"), {
+        description: t("startSuccess.description", { count: data.runEval.count }),
       });
       onRefetch();
     },
     onError: (error) => {
-      toast({
-        title: "Failed to start eval run",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error(t("startError.title"), { description: error.message });
     },
   });
 
-  const [deleteEvalRun, { loading: deletingRun }] = useMutation(DELETE_EVAL_RUN_BY_ID, {
+  const [deleteEvalRun] = useMutation(DELETE_EVAL_RUN_BY_ID, {
     onCompleted: () => {
-      toast({
-        title: "Eval run deleted",
-        description: "The eval run has been successfully deleted.",
-      });
+      toast.success(t("deleteSuccess.title"));
       onRefetch();
     },
     onError: (error) => {
-      toast({
-        title: "Failed to delete eval run",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error(t("deleteError.title"), { description: error.message });
     },
   });
 
-  const sortedEvalRuns = [...evalRuns].sort((a, b) =>
-    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  const sortedEvalRuns = useMemo(
+    () =>
+      [...evalRuns].sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      ),
+    [evalRuns],
   );
   const displayedRuns = sortedEvalRuns.slice(-visibleRuns);
   const hasMoreRuns = sortedEvalRuns.length > visibleRuns;
@@ -126,53 +180,29 @@ export function EvalRunsTable({ evalRuns, evalSet, onRefetch }: EvalRunsTablePro
     }
   };
 
-  const handleLoadMore = () => {
-    setVisibleRuns(prev => Math.min(prev + 5, sortedEvalRuns.length));
-  };
+  const handleLoadMore = () =>
+    setVisibleRuns((prev) => Math.min(prev + PAGE_SIZE, sortedEvalRuns.length));
 
   const handleEditRun = (run: EvalRun) => {
     setModalRun(run);
     setModalOpen(true);
   };
-
   const handleCopyRun = (run: EvalRun) => {
-    // Remove the ID so it creates a new run instead of updating
     setModalRun({ ...run, id: "", name: `${run.name} (Copy)` });
     setModalOpen(true);
   };
+  const handleStartRun = (run: EvalRun) => setStartTarget(run);
+  const handleDeleteRun = (run: EvalRun) => setDeleteTarget(run);
 
-  const handleStartRun = (run: EvalRun) => {
-    setRunToStart(run);
-    setStartConfirmOpen(true);
+  const confirmStartRun = async () => {
+    if (!startTarget) return;
+    await runEval({ variables: { id: startTarget.id } });
+    setStartTarget(null);
   };
-
-  const handleDeleteRun = (run: EvalRun) => {
-    setRunToDelete(run);
-    setDeleteConfirmOpen(true);
-  };
-
-  const confirmDeleteRun = () => {
-    if (runToDelete) {
-      deleteEvalRun({
-        variables: {
-          id: runToDelete.id,
-        },
-      });
-    }
-    setDeleteConfirmOpen(false);
-    setRunToDelete(null);
-  };
-
-  const confirmStartRun = () => {
-    if (runToStart) {
-      runEval({
-        variables: {
-          id: runToStart.id,
-        },
-      });
-    }
-    setStartConfirmOpen(false);
-    setRunToStart(null);
+  const confirmDeleteRun = async () => {
+    if (!deleteTarget) return;
+    await deleteEvalRun({ variables: { id: deleteTarget.id } });
+    setDeleteTarget(null);
   };
 
   if (loadingTestCases) {
@@ -187,87 +217,114 @@ export function EvalRunsTable({ evalRuns, evalSet, onRefetch }: EvalRunsTablePro
 
   if (testCasesList.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        No test cases in this eval set.
-      </div>
+      <EmptyState
+        icon={ListChecks}
+        title={t("noCases.title")}
+        description={t("noCases.description")}
+        action={
+          onSwitchToCasesTab
+            ? { label: t("noCases.action"), onClick: onSwitchToCasesTab }
+            : undefined
+        }
+      />
     );
   }
 
+  // Grid template:
+  //   - first column: sticky test-case names (220–280px)
+  //   - optional "show older runs" rail (60px) when there are hidden runs
+  //   - one column per visible run (140px min, 1fr each)
+  const gridTemplateColumns = [
+    "minmax(220px, 280px)",
+    hasMoreRuns ? "60px" : null,
+    `repeat(${displayedRuns.length}, minmax(140px, 1fr))`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div className="w-full overflow-hidden">
-      <div className={`flex grid-cols-${3 + (hasMoreRuns ? 1 : 0) + 1} overflow-x-auto`}>
-        {/* Test Cases Column (Sticky) */}
-        <div className="sticky left-0 z-10 bg-background flex-shrink-0 min-w-[200px] col-span-1">
-          {/* Header */}
-          <div className="p-3 border-r border-b text-left font-medium text-sm h-[120px] flex">
-            <span className="text-xs text-muted-foreground m-auto">Test Case \ Eval Run</span>
+    <div className="w-full overflow-x-auto">
+      <div className="grid w-full min-w-fit" style={{ gridTemplateColumns }}>
+        {/* Sticky first column — cases list */}
+        <div className="sticky left-0 z-10 bg-background">
+          <div className="flex h-[60px] items-center border-b border-r p-3">
+            <span className="text-xs text-muted-foreground">
+              {tMatrix("caseColumnHeader")}
+            </span>
           </div>
-          {/* Rows */}
-          <div key={"average_result"} className="p-3 border-b border-b-[5px] border-r h-[60px] flex items-center bg-muted">
-            <div>
-              <div className="font-bold text-sm max-w-[500px] truncate ml-3">Average Result</div>
+          <div className="flex h-[60px] items-center border-b-[5px] border-r border-b bg-muted p-3">
+            <div className="ml-3 truncate text-sm font-bold">
+              {tMatrix("averageRow")}
             </div>
           </div>
-          {testCasesList.map((testCase: any) => (
-            <div key={testCase.id} className="p-3 border-b border-r h-[60px] flex items-center">
-              <div className="cursor-pointer hover:underline" onClick={() => setViewingTestCase(testCase)}>
-                <div className="font-medium text-sm max-w-[500px] truncate">{testCase.name}</div>
-                <div className="text-xs text-muted-foreground mt-1 line-clamp-1 truncate max-w-[100px]">
+          {testCasesList.map((testCase) => (
+            <div
+              key={testCase.id}
+              className="flex h-[60px] items-center border-b border-r p-3"
+            >
+              <button
+                type="button"
+                onClick={() => setViewingTestCase(testCase)}
+                className="rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 hover:underline"
+              >
+                <div className="max-w-[260px] truncate text-sm font-medium">
+                  {testCase.name}
+                </div>
+                <div className="mt-1 max-w-[120px] truncate text-xs text-muted-foreground">
                   {testCase.id}
                 </div>
-              </div>
+              </button>
             </div>
           ))}
         </div>
 
-        {/* Load More Button Column */}
-        {hasMoreRuns && (
-          <div className="flex-shrink-0 min-w-[60px] col-span-1">
-            <div className="px-2 py-1.5 text-center font-medium text-sm border-r border-b bg-muted/30 h-[120px]">
-              <div className="space-y-0.5 h-full flex my-auto mx-auto">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLoadMore}
-                  className="h-8 w-8 p-0 my-auto mx-auto"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-              </div>
+        {/* "Show older runs" rail */}
+        {hasMoreRuns ? (
+          <div>
+            <div className="flex h-[60px] items-center justify-center border-b border-r bg-muted/30 p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLoadMore}
+                aria-label={tMatrix("showOlder")}
+                className="h-7 px-2 text-xs"
+              >
+                <ChevronsLeft aria-hidden="true" className="mr-1 h-3 w-3" />
+                {tMatrix("showOlder")}
+              </Button>
             </div>
-
-            {/* Average Result Column */}
-            <div key={"average_result_has_more_placeholder"} className="p-3 border-r bg-muted/20 min-h-[60px] striped-background" />
-
-            {testCasesList.map((testCase: any) => (
-              <div key={testCase.id} className="p-3 border-r bg-muted/20 min-h-[60px] striped-background" />
+            <div className="h-[60px] border-b-[5px] border-r border-b bg-muted/20 striped-background" />
+            {testCasesList.map((testCase) => (
+              <div
+                key={testCase.id}
+                className="h-[60px] border-b border-r bg-muted/20 striped-background"
+              />
             ))}
           </div>
-        )}
+        ) : null}
 
-        {/* Eval Run Columns */}
+        {/* Lanes — one per visible run */}
         {displayedRuns.map((run) => (
-          <div key={run.id} className="flex-1 grow col-span-1">
-            {/* Column Header */}
-            <div className="px-2 py-1.5 text-center font-medium text-sm border-r bg-muted/30 h-[60px]">
-              <div className="space-y-0.5 mt-2">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="flex-1 text-xs font-semibold text-foreground truncate">
-                    {run.name}
-                  </div>
-                </div>
-                <div className="text-[10px] text-muted-foreground font-normal leading-tight">
-                  {format(new Date(run.createdAt), "MMM d, yyyy · HH:mm")}
-                </div>
-                <div className="text-[10px] text-muted-foreground font-normal leading-tight truncate max-w-[100px] text-center m-auto">
-                  {agentsMap.get(run.agent_id)?.name || run.agent_id}
-                </div>
+          <div key={run.id} className="flex flex-col">
+            {/* The lane header (label) lives here; the lane component owns
+                the action menu + average row + cells. We split the visual
+                header from the lane so we can show metadata (name / agent
+                / date) without re-querying. */}
+            <div className="border-b border-r bg-muted/30 px-2 py-1.5 text-center">
+              <div className="truncate text-xs font-semibold text-foreground">
+                {run.name}
+              </div>
+              <div className="text-[10px] leading-tight text-muted-foreground">
+                {format(new Date(run.createdAt), "MMM d, yyyy · HH:mm")}
+              </div>
+              <div className="mx-auto max-w-[120px] truncate text-[10px] leading-tight text-muted-foreground">
+                {agentsMap.get(run.agent_id)?.name || run.agent_id}
               </div>
             </div>
-            {/* Column Data */}
             <EvalRunColumn
               evalRun={run}
               testCases={testCasesList}
+              canWrite={canWrite}
               onCellClick={handleCellClick}
               handleEditRun={handleEditRun}
               handleCopyRun={handleCopyRun}
@@ -278,130 +335,175 @@ export function EvalRunsTable({ evalRuns, evalSet, onRefetch }: EvalRunsTablePro
         ))}
       </div>
 
+      {/* Result detail Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="sm:max-w-2xl overflow-y-auto">
+        <SheetContent className="overflow-y-auto sm:max-w-2xl">
           <SheetHeader>
-            <SheetTitle>Test Result Details</SheetTitle>
+            <SheetTitle>{t("resultSheet.title")}</SheetTitle>
           </SheetHeader>
-
-          {selectedResult && (
+          {selectedResult ? (
             <Tabs defaultValue="overview" className="mt-6">
               <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="messages">Messages</TabsTrigger>
-                <TabsTrigger value="functions">Functions</TabsTrigger>
-                <TabsTrigger value="raw">Raw Data</TabsTrigger>
+                <TabsTrigger value="overview">
+                  {t("resultSheet.tabs.overview")}
+                </TabsTrigger>
+                <TabsTrigger value="messages">
+                  {t("resultSheet.tabs.messages")}
+                </TabsTrigger>
+                <TabsTrigger value="functions">
+                  {t("resultSheet.tabs.functions")}
+                </TabsTrigger>
+                <TabsTrigger value="raw">
+                  {t("resultSheet.tabs.raw")}
+                </TabsTrigger>
               </TabsList>
 
-              {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-4">
-                {/* Key Metrics Cards */}
                 <div className="grid grid-cols-2 gap-4">
                   <Card>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">Score</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold">{selectedResult.result?.toFixed(1) ?? 'N/A'}</div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        Duration
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        {t("resultSheet.overview.score")}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-semibold">{formatDuration((selectedResult.metadata?.duration / 1000) || 0)}</div>
+                      <div className="text-3xl font-bold">
+                        {selectedResult.result?.toFixed?.(1) ?? "N/A"}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <Clock aria-hidden="true" className="h-4 w-4" />
+                        {t("resultSheet.overview.duration")}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-semibold">
+                        {formatDuration(
+                          (selectedResult.metadata?.duration / 1000) || 0,
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
 
-                {/* Status and Job ID */}
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">Status & Job Information</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                      {t("resultSheet.overview.status")}
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Status</span>
+                      <span className="text-sm text-muted-foreground">
+                        {t("resultSheet.overview.status")}
+                      </span>
                       <Badge
-                        variant={selectedResult.state === 'completed' ? 'default' : selectedResult.state === 'failed' ? 'destructive' : 'secondary'}
+                        variant={
+                          selectedResult.state === "completed"
+                            ? "default"
+                            : selectedResult.state === "failed"
+                              ? "destructive"
+                              : "secondary"
+                        }
                         className="flex items-center gap-1"
                       >
-                        {selectedResult.state === 'completed' && <CheckCircle className="h-3 w-3" />}
-                        {selectedResult.state === 'failed' && <XCircle className="h-3 w-3" />}
-                        {selectedResult.state !== 'completed' && selectedResult.state !== 'failed' && <AlertCircle className="h-3 w-3" />}
+                        {selectedResult.state === "completed" ? (
+                          <CheckCircle aria-hidden="true" className="h-3 w-3" />
+                        ) : selectedResult.state === "failed" ? (
+                          <XCircle aria-hidden="true" className="h-3 w-3" />
+                        ) : null}
                         <span className="capitalize">{selectedResult.state}</span>
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Job ID</span>
-                      <span className="text-sm font-mono">{selectedResult.job_id}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {t("resultSheet.overview.jobId")}
+                      </span>
+                      <span className="font-mono text-sm">
+                        {selectedResult.job_id}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Error Display */}
-                {selectedResult.error && typeof selectedResult.error === 'object' && Object.keys(selectedResult.error).length > 0 && (
+                {selectedResult.error &&
+                typeof selectedResult.error === "object" &&
+                Object.keys(selectedResult.error).length > 0 ? (
                   <Card className="border-destructive">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-destructive flex items-center gap-2">
-                        <XCircle className="h-4 w-4" />
-                        Error Details
+                      <CardTitle className="flex items-center gap-2 text-sm font-medium text-destructive">
+                        <XCircle aria-hidden="true" className="h-4 w-4" />
+                        {t("resultSheet.overview.errorTitle")}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <CodePreview code={JSON.stringify(selectedResult.error, null, 2)} />
+                      <CodePreview
+                        code={JSON.stringify(selectedResult.error, null, 2)}
+                      />
                     </CardContent>
                   </Card>
-                )}
+                ) : null}
 
-                {/* Token Usage */}
-                {selectedResult.metadata?.tokens && (
+                {selectedResult.metadata?.tokens ? (
                   <Card>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Zap className="h-4 w-4" />
-                        Token Usage
+                      <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                        <Zap aria-hidden="true" className="h-4 w-4" />
+                        {t("resultSheet.overview.tokensTitle")}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Total Tokens</span>
-                        <span className="text-lg font-semibold">{selectedResult.metadata.tokens.totalTokens?.toLocaleString() ?? 'N/A'}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {t("resultSheet.overview.tokensTotal")}
+                        </span>
+                        <span className="text-lg font-semibold">
+                          {selectedResult.metadata.tokens.totalTokens?.toLocaleString() ??
+                            "N/A"}
+                        </span>
                       </div>
                       <div className="h-px bg-border" />
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Input</div>
-                          <div className="text-base font-medium">{selectedResult.metadata.tokens.inputTokens?.toLocaleString() ?? 'N/A'}</div>
+                          <div className="mb-1 text-xs text-muted-foreground">
+                            {t("resultSheet.overview.tokensInput")}
+                          </div>
+                          <div className="text-base font-medium">
+                            {selectedResult.metadata.tokens.inputTokens?.toLocaleString() ??
+                              "N/A"}
+                          </div>
                         </div>
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Output</div>
-                          <div className="text-base font-medium">{selectedResult.metadata.tokens.outputTokens?.toLocaleString() ?? 'N/A'}</div>
+                          <div className="mb-1 text-xs text-muted-foreground">
+                            {t("resultSheet.overview.tokensOutput")}
+                          </div>
+                          <div className="text-base font-medium">
+                            {selectedResult.metadata.tokens.outputTokens?.toLocaleString() ??
+                              "N/A"}
+                          </div>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                )}
+                ) : null}
               </TabsContent>
 
-              {/* Messages Tab */}
               <TabsContent value="messages" className="space-y-4">
                 <Card>
                   <CardContent className="p-0">
                     {/* @ts-ignore */}
-                    <Conversation className="max-h-[600px] overflow-y-auto border-0 rounded-lg bg-muted/30">
+                    <Conversation className="max-h-[600px] overflow-y-auto rounded-lg border-0 bg-muted/30">
                       {/* @ts-ignore */}
                       <ConversationContent className="px-6 py-4">
                         <MessageRenderer
                           messages={selectedResult.metadata?.messages || []}
                           config={{
-                            marginTopFirstMessage: 'mt-0',
-                            customAssistantClassnames: 'bg-secondary/50 rounded-lg px-3 py-1 border-l-2 border-primary/30'
+                            marginTopFirstMessage: "mt-0",
+                            customAssistantClassnames:
+                              "bg-secondary/50 rounded-lg px-3 py-1 border-l-2 border-primary/30",
                           }}
                           status={"ready"}
                           showActions={false}
@@ -414,129 +516,139 @@ export function EvalRunsTable({ evalRuns, evalSet, onRefetch }: EvalRunsTablePro
                 </Card>
               </TabsContent>
 
-              {/* Eval Functions Tab */}
               <TabsContent value="functions" className="space-y-4">
-                {selectedResult.metadata?.function_results && selectedResult.metadata.function_results.length > 0 ? (
+                {selectedResult.metadata?.function_results &&
+                selectedResult.metadata.function_results.length > 0 ? (
                   <div className="space-y-3">
-                    {selectedResult.metadata.function_results.map((result: any) => (
-                      <Card key={result.id}>
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-base font-medium">{result.eval_function_name}</CardTitle>
-                          <p className="text-xs text-muted-foreground font-mono mt-1">{result.eval_function_id}</p>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">Result</span>
-                            <span className="text-2xl font-bold">{result.result?.toFixed(2) ?? 'N/A'}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            {
-                              Object.keys(result.eval_function_config || {}).map((key: string) => (
-                                <div key={key} className="flex flex-col">
-                                  <span className="text-sm text-muted-foreground capitalize">{key}:</span>
-                                  <p className="text-xs text-muted-foreground font-mono mt-1">{result.eval_function_config[key]}</p>
-                                </div>
-                              ))
-                            }
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                    {selectedResult.metadata.function_results.map(
+                      (result: any) => (
+                        <Card key={result.id}>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-medium">
+                              {result.eval_function_name}
+                            </CardTitle>
+                            <p className="mt-1 font-mono text-xs text-muted-foreground">
+                              {result.eval_function_id}
+                            </p>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">
+                                {t("resultSheet.overview.score")}
+                              </span>
+                              <span className="text-2xl font-bold">
+                                {result.result?.toFixed?.(2) ?? "N/A"}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              {Object.keys(result.eval_function_config || {}).map(
+                                (key: string) => (
+                                  <div key={key} className="flex flex-col">
+                                    <span className="text-sm capitalize text-muted-foreground">
+                                      {key}:
+                                    </span>
+                                    <p className="mt-1 font-mono text-xs text-muted-foreground">
+                                      {result.eval_function_config[key]}
+                                    </p>
+                                  </div>
+                                ),
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ),
+                    )}
                   </div>
                 ) : (
                   <Card>
-                    <CardContent className="py-8 text-center text-muted-foreground">
-                      No eval function results available
+                    <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                      {t("resultSheet.functions.empty")}
                     </CardContent>
                   </Card>
                 )}
               </TabsContent>
 
-              {/* Raw Data Tab */}
               <TabsContent value="raw" className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Metadata (JSON)</CardTitle>
+                    <CardTitle className="text-base">
+                      {t("resultSheet.tabs.raw")}
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {selectedResult.metadata ? (
-                      <CodePreview code={JSON.stringify(selectedResult.metadata, null, 2)} />
+                      <CodePreview
+                        code={JSON.stringify(selectedResult.metadata, null, 2)}
+                      />
                     ) : (
-                      <div className="text-sm text-muted-foreground">No metadata available</div>
+                      <div className="text-sm text-muted-foreground">
+                        {t("resultSheet.raw.empty")}
+                      </div>
                     )}
                   </CardContent>
                 </Card>
               </TabsContent>
             </Tabs>
-          )}
+          ) : null}
         </SheetContent>
       </Sheet>
 
+      {/* Create / edit / copy modal */}
       <CreateEvalRunModal
         modalKey={`eval-run-modal-table-${evalSet.id}`}
         eval_set_id={evalSet.id}
         open={modalOpen}
         onOpenChange={(open) => {
           setModalOpen(open);
-          if (!open) {
-            setModalRun(null);
-          }
+          if (!open) setModalRun(null);
         }}
         existingRun={modalRun}
         onCreateSuccess={onRefetch}
       />
 
-      <AlertDialog open={startConfirmOpen} onOpenChange={setStartConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Start Eval Run?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will schedule all {runToStart?.test_case_ids.length || 0} test cases in "{runToStart?.name}" to be run.
-              The eval run will execute each test case against the configured agent and eval functions.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setRunToStart(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmStartRun} disabled={runningEval}>
-              {runningEval && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Start Run
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Start run — informational (default) confirm */}
+      <ConfirmDialog
+        open={!!startTarget}
+        onOpenChange={(open) => !open && setStartTarget(null)}
+        title={t("startConfirm.title")}
+        description={
+          startTarget
+            ? t("startConfirm.description", {
+                name: startTarget.name,
+                count: startTarget.test_case_ids.length,
+              })
+            : ""
+        }
+        variant="default"
+        confirmLabel={t("startConfirm.confirm")}
+        onConfirm={confirmStartRun}
+      />
 
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Eval Run?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the eval run "{runToDelete?.name}"
-              and all associated results.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {/* Highlight that this will not remove or pause any already scheduled jobs */}
-          <Alert className="mt-4">
-             This will not remove or pause any already scheduled jobs. If you have job queues
-             enabled check the queue below.
-          </Alert>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setRunToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteRun} disabled={deletingRun}>
-              {deletingRun && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete Run
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete run — destructive confirm with the queue-jobs warning */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title={t("deleteConfirm.title")}
+        description={
+          deleteTarget
+            ? t("deleteConfirm.description", { name: deleteTarget.name })
+            : ""
+        }
+        variant="destructive"
+        confirmLabel={t("deleteConfirm.confirm")}
+        warning={t("deleteConfirm.queueNote")}
+        onConfirm={confirmDeleteRun}
+      />
 
+      {/* Sticky-column case modal — the original code had a comment where
+          refetchTestCases() should have been called. Bug fix. */}
       <TestCaseModal
         open={!!viewingTestCase}
         onClose={() => setViewingTestCase(null)}
         evalSetId={evalSet.id}
         onSuccess={() => {
           setViewingTestCase(null);
-          // Refetch to get the new test case in the list
+          refetchTestCases();
         }}
         testCase={viewingTestCase}
       />

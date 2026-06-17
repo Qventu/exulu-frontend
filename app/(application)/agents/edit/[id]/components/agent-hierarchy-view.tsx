@@ -1,19 +1,37 @@
 "use client";
 
-import { useState, useMemo } from "react";
+/**
+ * AgentHierarchyView — Sub-Agents / Tools / Skills groups.
+ *
+ * Changes vs legacy:
+ * - Accepts `collapsedCategories` + `onCategoryToggle` from the consumer and
+ *   renders tool categories as Accordion groups — this is what makes item 59
+ *   ("Expand all / Collapse all") REAL (it was dead in the legacy form, since
+ *   the state was created but never consumed here — agents.md review #5).
+ * - Uses the editor-local GET_SUB_AGENT_SUMMARY (not the monolith
+ *   GET_AGENT_BY_ID — the editor stops importing from queries/queries.ts).
+ *   Behavior identical: a lite agentById fetch per enabled sub-agent.
+ * - Drill-down now goes through AgentDetailPanel (item 61) inside the tool
+ *   card's responsive Sheet.
+ */
+
 import { useQuery } from "@apollo/client";
-import { GET_AGENT_BY_ID } from "@/queries/queries";
-import { ExuluTool } from "@EXULU_SHARED/models/tool";
-import { AgentToolCard } from "./agent-tool-card";
-import { Badge } from "@/components/ui/badge";
-import { Network, Layers, BookOpen } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { BookOpen, Layers, Network } from "lucide-react";
+import { useTranslations } from "next-intl";
+import * as React from "react";
+
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import type { ExuluTool } from "@/types/models/tool";
+
+import { GET_SUB_AGENT_SUMMARY } from "../queries";
+import { AgentToolCard } from "./agent-tool-card";
 
 interface AgentHierarchyViewProps {
   tools: ExuluTool[];
@@ -23,16 +41,22 @@ interface AgentHierarchyViewProps {
   sheetOpen: boolean | string;
   setSheetOpen: (open: boolean | string) => void;
   variables: any[];
-  renderConfigElement: (tool: ExuluTool, config: any[], update: (value: any, name: string) => void) => React.ReactNode;
+  renderConfigElement: (
+    tool: ExuluTool,
+    config: any[],
+    update: (value: any, name: string) => void,
+  ) => React.ReactNode;
   skills?: { id: string; name: string; description?: string }[];
   enabledSkills?: { id: string; name: string }[];
-  onSkillToggle?: (skill: { id: string; name: string; description?: string }, enabled: boolean) => void;
+  onSkillToggle?: (
+    skill: { id: string; name: string; description?: string },
+    enabled: boolean,
+  ) => void;
+  /** Category names currently collapsed (item 59 — wired). */
+  collapsedCategories: Set<string>;
+  onCategoryToggle: (category: string, collapsed: boolean) => void;
 }
 
-/**
- * Component to display tools with special handling for agents,
- * showing their hierarchical capabilities
- */
 export function AgentHierarchyView({
   tools,
   enabledTools,
@@ -45,161 +69,223 @@ export function AgentHierarchyView({
   skills = [],
   enabledSkills = [],
   onSkillToggle,
+  collapsedCategories,
+  onCategoryToggle,
 }: AgentHierarchyViewProps) {
-  // Separate agents from regular tools
-  const { agentTools, regularTools } = useMemo(() => {
-    const agents: ExuluTool[] = [];
-    const regular: ExuluTool[] = [];
+  const t = useTranslations("agents");
 
-    tools.forEach(tool => {
-      if (tool.id === "agentic_context_search") {
-        return;
-      }
+  // Item 68: exclusions kept (agentic_context_search has its own section).
+  const { agentTools, regularToolsByCategory } = React.useMemo(() => {
+    const agents: ExuluTool[] = [];
+    const grouped: Record<string, ExuluTool[]> = {};
+    tools.forEach((tool) => {
+      if (tool.id === "agentic_context_search") return;
       if (tool.category === "agents") {
         agents.push(tool);
-      } else {
-        regular.push(tool);
+        return;
       }
+      const cat = tool.category || "other";
+      (grouped[cat] = grouped[cat] || []).push(tool);
     });
-
-    return {
-      agentTools: agents,
-      regularTools: regular,
-    };
+    return { agentTools: agents, regularToolsByCategory: grouped };
   }, [tools]);
+
+  const categoryNames = Object.keys(regularToolsByCategory).sort();
+  // Accordion's `value` is the OPEN list — invert collapsed.
+  const openCategories = categoryNames.filter(
+    (c) => !collapsedCategories.has(c),
+  );
 
   return (
     <div className="space-y-6">
-      {/* Agent Tools Section */}
+      {/* Sub-Agents (item 61) */}
       {agentTools.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 pb-2 border-b">
-            <div className="p-1.5 rounded-md bg-primary/10">
-              <Network className="h-4 w-4 text-primary" />
+          <div className="flex items-center gap-2 border-b pb-2">
+            <div className="rounded-md bg-primary/10 p-1.5">
+              <Network className="size-4 text-primary" />
             </div>
             <div>
-              <h3 className="text-sm font-medium">Sub-Agents</h3>
+              <h3 className="text-sm font-medium">
+                {t("editor.tools.subAgents")}
+              </h3>
               <p className="text-xs text-muted-foreground">
-                These agents can be called as tools, each with their own capabilities and sub-tools
+                {t("editor.tools.subAgentsHint")}
               </p>
             </div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge variant="secondary" className="ml-auto">
-                    {agentTools.filter(t => enabledTools.some(et => et.id === t.id)).length}/{agentTools.length} enabled
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Agent tools can delegate tasks to specialized sub-agents</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-
-          <div className="space-y-2">
-            {agentTools.map((tool) => {
-              const isEnabled = enabledTools.some(et => et.id === tool.id);
-              const config = enabledTools.find(et => et.id === tool.id)?.config || [];
-
-              return (
-                <AgentToolWithDetails
-                  key={tool.id}
-                  tool={tool}
-                  isEnabled={isEnabled}
-                  config={config}
-                  onToggle={(enabled) => onToggle(tool, enabled)}
-                  onConfigUpdate={(value, name) => onConfigUpdate(tool.id, value, name)}
-                  sheetOpen={sheetOpen}
-                  setSheetOpen={setSheetOpen}
-                  variables={variables}
-                  renderConfigElement={renderConfigElement}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Regular Tools Section */}
-      {regularTools.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 pb-2 border-b">
-            <div className="p-1.5 rounded-md bg-muted">
-              <Layers className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <h3 className="text-sm font-medium">Tools</h3>
-              <p className="text-xs text-muted-foreground">
-                Standard tools with specific functionalities
-              </p>
-            </div>
-            <Badge variant="outline" className="ml-auto">
-              {regularTools.filter(t => enabledTools.some(et => et.id === t.id)).length}/{regularTools.length} enabled
+            <Badge variant="secondary" className="ml-auto">
+              {t("editor.tools.enabledCount", {
+                enabled: agentTools.filter((t) =>
+                  enabledTools.some((et) => et.id === t.id),
+                ).length,
+                total: agentTools.length,
+              })}
             </Badge>
           </div>
 
           <div className="space-y-2">
-            {regularTools.map((tool) => {
-              const isEnabled = enabledTools.some(et => et.id === tool.id);
-              const config = enabledTools.find(et => et.id === tool.id)?.config || [];
-
-              return (
-                <AgentToolCard
-                  key={tool.id}
-                  tool={tool}
-                  isEnabled={isEnabled}
-                  config={config}
-                  onToggle={(enabled) => onToggle(tool, enabled)}
-                  onConfigUpdate={(value, name) => onConfigUpdate(tool.id, value, name)}
-                  sheetOpen={sheetOpen}
-                  setSheetOpen={setSheetOpen}
-                  variables={variables}
-                  renderConfigElement={renderConfigElement}
-                />
-              );
-            })}
+            {agentTools.map((tool) => (
+              <AgentToolWithDetails
+                key={tool.id}
+                tool={tool}
+                isEnabled={enabledTools.some((et) => et.id === tool.id)}
+                config={
+                  enabledTools.find((et) => et.id === tool.id)?.config || []
+                }
+                onToggle={(enabled) => onToggle(tool, enabled)}
+                onConfigUpdate={(value, name) =>
+                  onConfigUpdate(tool.id, value, name)
+                }
+                sheetOpen={sheetOpen}
+                setSheetOpen={setSheetOpen}
+                variables={variables}
+                renderConfigElement={renderConfigElement}
+              />
+            ))}
           </div>
         </div>
       )}
 
-      {/* Skills Section */}
-      {skills.length > 0 && (
+      {/* Tools — Accordion groups, one per category (item 59 wired) */}
+      {categoryNames.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 pb-2 border-b">
-            <div className="p-1.5 rounded-md bg-muted">
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 border-b pb-2">
+            <div className="rounded-md bg-muted p-1.5">
+              <Layers className="size-4 text-muted-foreground" />
             </div>
             <div>
-              <h3 className="text-sm font-medium">Skills</h3>
+              <h3 className="text-sm font-medium">{t("editor.tools.tools")}</h3>
               <p className="text-xs text-muted-foreground">
-                Instruction sets that guide agent behavior for specific tasks
+                {t("editor.tools.toolsHint")}
               </p>
             </div>
             <Badge variant="outline" className="ml-auto">
-              {enabledSkills.length}/{skills.length} enabled
+              {t("editor.tools.enabledCount", {
+                enabled: Object.values(regularToolsByCategory)
+                  .flat()
+                  .filter((t) => enabledTools.some((et) => et.id === t.id))
+                  .length,
+                total: Object.values(regularToolsByCategory).flat().length,
+              })}
+            </Badge>
+          </div>
+
+          <Accordion
+            type="multiple"
+            value={openCategories}
+            onValueChange={(open) => {
+              // Translate the OPEN list back to per-category toggles.
+              const openSet = new Set(open);
+              categoryNames.forEach((cat) => {
+                const isCollapsed = !openSet.has(cat);
+                const wasCollapsed = collapsedCategories.has(cat);
+                if (isCollapsed !== wasCollapsed) {
+                  onCategoryToggle(cat, isCollapsed);
+                }
+              });
+            }}
+            className="space-y-2"
+          >
+            {categoryNames.map((category) => {
+              const catTools = regularToolsByCategory[category];
+              return (
+                <AccordionItem
+                  key={category}
+                  value={category}
+                  className="rounded-lg border"
+                >
+                  <AccordionTrigger className="px-4 py-3 text-sm font-medium capitalize hover:no-underline">
+                    <span className="flex items-center gap-2">
+                      <span>{category}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {
+                          catTools.filter((t) =>
+                            enabledTools.some((et) => et.id === t.id),
+                          ).length
+                        }
+                        /{catTools.length}
+                      </Badge>
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4">
+                    <div className="space-y-2">
+                      {catTools.map((tool) => (
+                        <AgentToolCard
+                          key={tool.id}
+                          tool={tool}
+                          isEnabled={enabledTools.some(
+                            (et) => et.id === tool.id,
+                          )}
+                          config={
+                            enabledTools.find((et) => et.id === tool.id)
+                              ?.config || []
+                          }
+                          onToggle={(enabled) => onToggle(tool, enabled)}
+                          onConfigUpdate={(value, name) =>
+                            onConfigUpdate(tool.id, value, name)
+                          }
+                          sheetOpen={sheetOpen}
+                          setSheetOpen={setSheetOpen}
+                          variables={variables}
+                          renderConfigElement={renderConfigElement}
+                        />
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+        </div>
+      )}
+
+      {/* Skills (item 66) */}
+      {skills.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 border-b pb-2">
+            <div className="rounded-md bg-muted p-1.5">
+              <BookOpen className="size-4 text-muted-foreground" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium">
+                {t("editor.tools.skills")}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {t("editor.tools.skillsHint")}
+              </p>
+            </div>
+            <Badge variant="outline" className="ml-auto">
+              {t("editor.tools.enabledCount", {
+                enabled: enabledSkills.length,
+                total: skills.length,
+              })}
             </Badge>
           </div>
 
           <div className="space-y-2">
             {skills.map((skill) => {
-              const isEnabled = enabledSkills.some(es => es.id === skill.id);
+              const isEnabled = enabledSkills.some((es) => es.id === skill.id);
               return (
                 <div
                   key={skill.id}
-                  className="flex items-center justify-between rounded-lg border p-3 border-l-4 border-l-purple-900"
+                  className="flex items-center justify-between rounded-lg border border-l-4 border-l-primary/60 p-3"
                 >
-                  <div className="flex flex-col gap-0.5 min-w-0 mr-3">
-                    <span className="text-sm font-medium truncate">{skill.name}</span>
+                  <div className="mr-3 flex min-w-0 flex-col gap-0.5">
+                    <span className="truncate text-sm font-medium">
+                      {skill.name}
+                    </span>
                     {skill.description && (
-                      <span className="text-xs text-muted-foreground line-clamp-1">
+                      <span className="line-clamp-1 text-xs text-muted-foreground">
                         {skill.description}
                       </span>
                     )}
                   </div>
                   <Switch
                     checked={isEnabled}
-                    onCheckedChange={(enabled) => onSkillToggle?.(skill, enabled)}
+                    onCheckedChange={(enabled) =>
+                      onSkillToggle?.(skill, enabled)
+                    }
+                    aria-label={skill.name}
                   />
                 </div>
               );
@@ -212,7 +298,8 @@ export function AgentHierarchyView({
 }
 
 /**
- * Wrapper component that fetches agent details and passes them to AgentToolCard
+ * Wrapper that fetches per-sub-agent summary via the editor-local query
+ * (replaces monolith GET_AGENT_BY_ID — work-item route-colocation rule).
  */
 function AgentToolWithDetails({
   tool,
@@ -233,39 +320,34 @@ function AgentToolWithDetails({
   sheetOpen: boolean | string;
   setSheetOpen: (open: boolean | string) => void;
   variables: any[];
-  renderConfigElement: (tool: ExuluTool, config: any[], update: (value: any, name: string) => void) => React.ReactNode;
+  renderConfigElement: (
+    tool: ExuluTool,
+    config: any[],
+    update: (value: any, name: string) => void,
+  ) => React.ReactNode;
 }) {
-  // Fetch agent details only if this is an enabled agent
-  const { data, loading } = useQuery(GET_AGENT_BY_ID, {
+  const { data } = useQuery(GET_SUB_AGENT_SUMMARY, {
     variables: { id: tool.id },
     skip: !isEnabled || tool.category !== "agents",
   });
 
-  // Parse agent details to extract tool/sub-agent counts
-  const agentDetails = useMemo(() => {
+  const agentDetails = React.useMemo(() => {
     if (!data?.agentById) return undefined;
-
     const agentData = data.agentById;
     let toolsArray: any[] = [];
-
     try {
-      // Handle both string and object formats for tools
-      toolsArray = typeof agentData.tools === "string"
-        ? JSON.parse(agentData.tools)
-        : agentData.tools || [];
-    } catch (e) {
-      console.error("Failed to parse agent tools:", e);
+      toolsArray =
+        typeof agentData.tools === "string"
+          ? JSON.parse(agentData.tools)
+          : agentData.tools || [];
+    } catch {
+      // ignore
     }
-
-    // Count sub-agents (tools with category "agents")
-    const subAgentCount = toolsArray.filter(t => {
-      // Handle different possible formats
+    const subAgentCount = toolsArray.filter((t: any) => {
       if (typeof t === "string") return false;
       return t.category === "agents" || t.type === "agent";
     }).length;
-
     const toolCount = toolsArray.length - subAgentCount;
-
     return {
       toolCount,
       subAgentCount,

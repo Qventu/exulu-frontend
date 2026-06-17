@@ -77,14 +77,11 @@ const providers: Provider[] = [
           return null;
         }
         const res = await client.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [credentials.email])
-        console.log("[NEXT AUTH] authorize res rows count:", res.rows.length)
-        console.log("[NEXT AUTH] Full user object:", JSON.stringify(res.rows[0], null, 2))
         if (!res?.rows?.length) {
           return null;
         }
         for (const user of res.rows) {
           const isMatch = await bcrypt.compare(credentials.password, user.password)
-          console.log("[NEXT AUTH] isMatch", isMatch)
           if (isMatch) {
             await client.query('UPDATE users SET last_used = $1 WHERE email = $2', [new Date(), user.email])
             return user;
@@ -175,8 +172,6 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
         try {
           let email = user.email;
 
-          console.log("[EXULU] Sign in callback", account, profile, user)
-
           if (account?.provider === "google") {
             email = profile?.email;
             if (!email) {
@@ -189,7 +184,6 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
             email = String(email).trim().toLowerCase();
           }
 
-          console.log("[EXULU] ALLOWED_EMAIL_DOMAINS", process.env.ALLOWED_EMAIL_DOMAINS)
           if (process.env.ALLOWED_EMAIL_DOMAINS) {
             let allowedDomains = process.env.ALLOWED_EMAIL_DOMAINS.split(",");
             allowedDomains.push("exulu.com")
@@ -235,7 +229,6 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
 
           const existingUserQueryResult = await client.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email])
           let existingUser = existingUserQueryResult?.rows[0];
-          console.log("[EXULU] Sign in callback user query result", existingUser)
 
           if (existingUser) {
             await client.query('UPDATE users SET last_used = $1 WHERE LOWER(email) = LOWER($2)', [new Date(), email])
@@ -255,21 +248,17 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
             const defaultRole = defaultRoleQueryResult?.rows[0];
             const insertResult = await client.query('INSERT INTO users ("email", "name", "createdAt", "updatedAt", "emailVerified", "last_used", "type", "super_admin", "role") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *', [email, name, new Date(), new Date(), new Date(), new Date(), "user", false, defaultRole?.id])
             existingUser = insertResult?.rows[0];
-            console.log("[EXULU] Sign in callback new user query result", existingUser)
           }
 
           if (existingUser) {
             if (account?.provider === "google") {
 
-              console.log("[EXULU] Checking for existing account (provider account id: ", account.providerAccountId)
               const queryResult = await client.query('SELECT * FROM accounts WHERE provider = $1 AND "providerAccountId" = $2', [
                 'google',
                 account.providerAccountId
               ])
 
               const existingAccount = queryResult.rows[0];
-
-              console.log("[EXULU] Existing account query result", existingAccount)
 
               if (existingAccount) {
                 await client.query('UPDATE accounts SET access_token = $1, refresh_token = $2, expires_at = $3, id_token = $4, scope = $5, session_state = $6, token_type = $7, "userId" = $8 WHERE id = $9', [

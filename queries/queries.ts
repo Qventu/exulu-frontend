@@ -280,7 +280,6 @@ export const GET_CONTEXT_BY_ID = gql`
 `;
 
 export const GET_ITEMS = (context: string, fields: string[]) => {
-  console.log("context", context);
   const upperCaseContext = context.charAt(0).toUpperCase() + context.slice(1)
   return gql`
     query ${context}Pagination($page: Int!, $limit: Int!, $filters: [Filter${upperCaseContext}_items], $sort: SortBy = { field: "updatedAt", direction: DESC }) {
@@ -1172,199 +1171,6 @@ export const RESET_USER_PASSWORD = gql`
   }
 `;
 
-export const GET_PROVIDERS = gql`
-  query GetProviders {
-    providers {
-      items {
-        id
-        name
-        description
-        provider
-        modelName
-        providerName
-        authenticationInformation
-        maxContextLength
-        capabilities
-      }
-    }
-  }
-`;
-
-export const GET_MODELS = gql`
-  query GetModels(
-    $page: Int!
-    $limit: Int!
-    $filters: [FilterModel]
-    $sort: SortBy = { field: "updatedAt", direction: DESC }
-  ) {
-    modelsPagination(
-      page: $page
-      limit: $limit
-      sort: $sort
-      filters: $filters
-    ) {
-      pageInfo {
-        pageCount
-        itemCount
-        currentPage
-        hasPreviousPage
-        hasNextPage
-      }
-      items {
-        id
-        name
-        description
-        provider
-        authvariable
-        active
-        requests_per_window
-        window_seconds
-        token_budget
-        cost_budget_usd
-        budget_window
-        rights_mode
-        created_by
-        createdAt
-        updatedAt
-      }
-    }
-  }
-`;
-
-export const GET_MODEL_BY_ID = gql`
-  query GetModelById($id: ID!) {
-    modelById(id: $id) {
-      id
-      name
-      description
-      provider
-      authvariable
-      active
-      requests_per_window
-      window_seconds
-      token_budget
-      cost_budget_usd
-      budget_window
-      rights_mode
-      created_by
-      RBAC {
-        type
-        users {
-          id
-          rights
-        }
-        roles {
-          id
-          rights
-        }
-      }
-      createdAt
-      updatedAt
-    }
-  }
-`;
-
-export const GET_MODELS_LITE = gql`
-  query GetModelsLite($page: Int!, $limit: Int!) {
-    modelsPagination(page: $page, limit: $limit, sort: { field: "name", direction: ASC }) {
-      items {
-        id
-        name
-        description
-        provider
-        active
-      }
-    }
-  }
-`;
-
-export const CREATE_MODEL = gql`
-  mutation CreateModel(
-    $name: String!
-    $description: String
-    $provider: String!
-    $authvariable: String
-    $active: Boolean
-    $requests_per_window: Float
-    $window_seconds: Float
-    $token_budget: Float
-    $cost_budget_usd: Float
-    $budget_window: String
-    $rights_mode: String
-    $RBAC: RBACInput
-  ) {
-    modelsCreateOne(
-      input: {
-        name: $name
-        description: $description
-        provider: $provider
-        authvariable: $authvariable
-        active: $active
-        requests_per_window: $requests_per_window
-        window_seconds: $window_seconds
-        token_budget: $token_budget
-        cost_budget_usd: $cost_budget_usd
-        budget_window: $budget_window
-        rights_mode: $rights_mode
-        RBAC: $RBAC
-      }
-    ) {
-      item {
-        id
-        name
-      }
-    }
-  }
-`;
-
-export const UPDATE_MODEL = gql`
-  mutation UpdateModel(
-    $id: ID!
-    $name: String
-    $description: String
-    $provider: String
-    $authvariable: String
-    $active: Boolean
-    $requests_per_window: Float
-    $window_seconds: Float
-    $token_budget: Float
-    $cost_budget_usd: Float
-    $budget_window: String
-    $rights_mode: String
-    $RBAC: RBACInput
-  ) {
-    modelsUpdateOneById(
-      id: $id
-      input: {
-        name: $name
-        description: $description
-        provider: $provider
-        authvariable: $authvariable
-        active: $active
-        requests_per_window: $requests_per_window
-        window_seconds: $window_seconds
-        token_budget: $token_budget
-        cost_budget_usd: $cost_budget_usd
-        budget_window: $budget_window
-        rights_mode: $rights_mode
-        RBAC: $RBAC
-      }
-    ) {
-      item {
-        id
-      }
-    }
-  }
-`;
-
-export const REMOVE_MODEL_BY_ID = gql`
-  mutation RemoveModelById($id: ID!) {
-    modelsRemoveOneById(id: $id) {
-      id
-    }
-  }
-`;
-
 export const GET_LITELLM_CATALOG = gql`
   query GetLiteLLMCatalog {
     litellmCatalog {
@@ -1443,8 +1249,20 @@ export const GET_JOB_STATISTICS = gql`
   }
 `;
 
-export const GET_VARIABLES = gql`
-  query GetVariables(
+/**
+ * GET_VARIABLES_LIST — the list page query (Phase 4.5 redesign).
+ *
+ * Deliberately omits `value` from the selection set: secrets MUST NOT travel
+ * to the browser to render rows (variables.md §3 / philosophy §9). The
+ * detail-panel reveal fetches the value on demand through
+ * GET_VARIABLE_VALUE with fetchPolicy: "no-cache".
+ *
+ * NOTE: `used_by` / `used_by_count` are not exposed by the backend yet
+ * (Backend Backlog BE-1); the detail panel queries the optional
+ * GET_VARIABLE_USAGE and degrades to "Usage unavailable" on field-missing.
+ */
+export const GET_VARIABLES_LIST = gql`
+  query GetVariablesList(
     $page: Int!
     $limit: Int!
     $filters: [FilterVariable]
@@ -1466,7 +1284,6 @@ export const GET_VARIABLES = gql`
       items {
         id
         name
-        value
         encrypted
         createdAt
         updatedAt
@@ -1475,15 +1292,82 @@ export const GET_VARIABLES = gql`
   }
 `;
 
+/**
+ * GET_VARIABLES_LITE — slim list for downstream consumers (stage-embedder,
+ * agents editor) that need `{ id, name, encrypted }` to populate selects.
+ * No pageInfo, no value, alphabetical sort.
+ */
+export const GET_VARIABLES_LITE = gql`
+  query GetVariablesLite(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterVariable]
+  ) {
+    variablesPagination(
+      page: $page
+      limit: $limit
+      sort: { field: "name", direction: ASC }
+      filters: $filters
+    ) {
+      items {
+        id
+        name
+        encrypted
+      }
+    }
+  }
+`;
+
+/**
+ * Back-compat alias — kept until the consumer-builder migrates the
+ * stage-embedder + agents-editor over to GET_VARIABLES_LITE. Avoids a
+ * stranded import on a partial PR (Phase 4.5 plan, point 7).
+ */
+export const GET_VARIABLES = GET_VARIABLES_LIST;
+
+/**
+ * GET_VARIABLE_BY_ID — meta-only fetch for the detail panel + edit-page form
+ * prefill (name + type). `value` is deliberately absent — values flow only
+ * through GET_VARIABLE_VALUE under no-cache fetch policy.
+ */
 export const GET_VARIABLE_BY_ID = gql`
   query GetVariableById($id: ID!) {
     variableById(id: $id) {
       id
       name
-      value
       encrypted
       createdAt
       updatedAt
+    }
+  }
+`;
+
+/**
+ * GET_VARIABLE_VALUE — value-on-demand for SecretField reveal + copy and the
+ * edit page's "Show current value" affordance. Consumers MUST pass
+ * fetchPolicy: "no-cache" so the value never lands in Apollo's normalized
+ * store between reveals.
+ */
+export const GET_VARIABLE_VALUE = gql`
+  query GetVariableValue($id: ID!) {
+    variableById(id: $id) {
+      id
+      value
+    }
+  }
+`;
+
+/**
+ * GET_VARIABLE_USAGE — guarded by backend availability flag (Backend Backlog
+ * BE-1). Until BE-1 lands the resolver returns null/errors on `used_by`; the
+ * UI catches and renders the "Usage unavailable" state — never a fake "0
+ * resources".
+ */
+export const GET_VARIABLE_USAGE = gql`
+  query GetVariableUsage($id: ID!) {
+    variableById(id: $id) {
+      id
+      used_by
     }
   }
 `;
@@ -1558,6 +1442,88 @@ export const UPDATE_EMBEDDER_CONFIG = gql`
   }
 `;
 
+// ───────────────────────── entity types (graph retrieval) ─────────────────────────
+
+export const GET_ENTITY_TYPES = gql`
+  query GetEntityTypes($context: String!) {
+    entity_type_settingsPagination(page: 1, limit: 200, filters: { context: { eq: $context } }) {
+      items {
+        id
+        name
+        description
+        active
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+export const CREATE_ENTITY_TYPE = gql`
+  mutation CreateEntityType($name: String!, $description: String, $context: String!, $active: Boolean) {
+    entity_type_settingsCreateOne(
+      input: { name: $name, description: $description, context: $context, active: $active }
+    ) {
+      item {
+        id
+      }
+    }
+  }
+`;
+
+export const UPDATE_ENTITY_TYPE = gql`
+  mutation UpdateEntityType($id: ID!, $name: String, $description: String, $active: Boolean) {
+    entity_type_settingsUpdateOneById(
+      id: $id
+      input: { name: $name, description: $description, active: $active }
+    ) {
+      item {
+        id
+      }
+    }
+  }
+`;
+
+export const DELETE_ENTITY_TYPE = gql`
+  mutation DeleteEntityType($id: ID!) {
+    entity_type_settingsRemoveOneById(id: $id) {
+      id
+    }
+  }
+`;
+
+export const GET_STALE_ENTITY_COUNT = (context: string) => gql`
+  query StaleEntityCount${context} {
+    ${context}_itemsStaleEntityCount
+  }
+`;
+
+export const BACKFILL_ENTITIES = (context: string) => gql`
+  mutation BackfillEntities${context}($onlyStale: Boolean, $limit: Int) {
+    ${context}_itemsBackfillEntities(onlyStale: $onlyStale, limit: $limit) {
+      processed
+      skipped
+    }
+  }
+`;
+
+export const PURGE_ENTITY_TYPE = (context: string) => gql`
+  mutation PurgeEntityType${context}($type: String!) {
+    ${context}_itemsPurgeEntityType(type: $type) {
+      removed
+    }
+  }
+`;
+
+/**
+ * UPDATE_VARIABLE — explicitly nullable `value` for value-unchanged semantics
+ * (Phase 4.5 plan, point 6). When the user has not toggled "Replace value" the
+ * frontend omits the `$value` variable; the backend treats undefined as
+ * "unchanged" because the GraphQL `String` input has no bang.
+ *
+ * Selection set drops `value` — we never echo the secret back to the browser
+ * on save (mirrors the cleanup of GET_VARIABLE_BY_ID).
+ */
 export const UPDATE_VARIABLE = gql`
   mutation UpdateVariable(
     $id: ID!
@@ -1576,7 +1542,6 @@ export const UPDATE_VARIABLE = gql`
       item {
         id
         name
-        value
         encrypted
         createdAt
         updatedAt
@@ -1857,8 +1822,8 @@ export const GET_AGENT_RUN_STATISTICS = gql`
   }
 `;
 
-export const GET_TOKEN_USAGE_STATISTICS = gql`  
-  query AgentCallsStatistics($from: Date!, $to: Date!) {
+export const GET_TOKEN_USAGE_STATISTICS = gql`
+  query TokenUsageStatistics($from: Date!, $to: Date!) {
     trackingStatistics(limit: 10, filters: {
       name: { in: ["inputTokens", "outputTokens"] }
       createdAt: { and: [{ gte: $from }, { lte: $to }] }
@@ -1871,11 +1836,14 @@ export const GET_TOKEN_USAGE_STATISTICS = gql`
 
 
 // Time Series Chart Query
+// limit: 31 covers up to a 30-day range at day granularity (legacy — the
+// redesigned /analytics is LiteLLM-driven; this query stays for any
+// pre-redesign consumers still in tree).
 export const GET_TIME_SERIES_STATISTICS = gql`
   query TimeSeriesStatistics($type: typeEnum!, $from: Date!, $to: Date!, $names: [String!]) {
     trackingStatistics(
       groupBy: "createdAt"
-      limit: 12
+      limit: 31
       filters: {
         type: { eq: $type }
         createdAt: { and: [{ gte: $from }, { lte: $to }] }
@@ -1888,11 +1856,13 @@ export const GET_TIME_SERIES_STATISTICS = gql`
   }
 `;
 
+// limit: 10 — the leaderboard rows now match the doc's "top 10" promise
+// (analytics.md bug 2.f / UX#8; RankedList default maxEntries = 10).
 export const GET_USER_STATISTICS = gql`
 query UserStatistics($from: Date!, $to: Date!, $names: [String!]) {
   trackingStatistics(
     groupBy: "user"
-    limit: 4
+    limit: 10
     filters: {
       type: { eq: AGENT_RUN }
       createdAt: { and: [{ gte: $from }, { lte: $to }] }
@@ -1909,7 +1879,7 @@ export const GET_PROJECT_STATISTICS = gql`
 query ProjectStatistics($from: Date!, $to: Date!, $names: [String!]) {
   trackingStatistics(
     groupBy: "project"
-    limit: 4
+    limit: 10
     filters: {
       type: { eq: AGENT_RUN }
       createdAt: { and: [{ gte: $from }, { lte: $to }] }
@@ -1926,7 +1896,7 @@ export const GET_AGENT_STATISTICS = gql`
 query AgentStatistics($from: Date!, $to: Date!, $names: [String!]) {
   trackingStatistics(
     groupBy: "label"
-    limit: 4
+    limit: 10
     filters: {
       type: { eq: AGENT_RUN }
       name: { in: $names }
@@ -2042,7 +2012,7 @@ export const GET_PROJECT_BY_ID = gql`
 
 export const UPDATE_USER_FAVOURITE_PROJECTS = gql`
   mutation UpdateUserFavouriteProjects($id: ID!, $favourite_projects: JSON) {
-    userUpdateById(input: { favourite_projects: $favourite_projects }, filter: { id: $id }) {
+    usersUpdateOne(input: { favourite_projects: $favourite_projects }, filter: { id: $id }) {
       item {
         id
         favourite_projects
@@ -3217,6 +3187,71 @@ export const GET_AGENTS_WITH_BUDGETS = gql`
         id
         name
         budget
+      }
+    }
+  }
+`;
+
+export const GET_WORKFLOW_TEMPLATES_WITH_BUDGETS = gql`
+  query GetWorkflowTemplatesWithBudgets(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterWorkflow_template]
+  ) {
+    workflow_templatesPagination(page: $page, limit: $limit, filters: $filters) {
+      ${BUDGET_PAGE_INFO}
+      items {
+        id
+        name
+        budget
+      }
+    }
+  }
+`;
+
+// id → name hydration for analytics breakdown card (Phase 3.3.2 — routines
+// dimension). Slice to limit=10 server-side; the breakdown only renders the
+// top contributors anyway.
+export const GET_ROUTINES_BY_IDS = gql`
+  query GetRoutinesByIds($ids: [String]!) {
+    workflow_templatesPagination(
+      page: 1
+      limit: 10
+      filters: [{ id: { in: $ids } }]
+    ) {
+      items {
+        id
+        name
+      }
+    }
+  }
+`;
+
+// id → name hydration for analytics breakdown card (3.3.5 — closes the
+// "teams/roles shown as raw ids" gap left after 3.3.2). FilterRole and
+// FilterTeam do NOT expose an `id` field (only name/agents/workflows for
+// Role, name/description/... for Team) so we can't id-filter server-side.
+// Fetch the full set instead and match client-side. limit=200 covers any
+// realistic org (revisit when a tenant pushes past it). Naming kept as
+// GET_*_BY_IDS for symmetry with the other hydration queries; no $ids
+// variable so the server doesn't reject "unused variable".
+export const GET_ROLES_BY_IDS = gql`
+  query GetRolesByIds {
+    rolesPagination(page: 1, limit: 200) {
+      items {
+        id
+        name
+      }
+    }
+  }
+`;
+
+export const GET_TEAMS_BY_IDS = gql`
+  query GetTeamsByIds {
+    teamsPagination(page: 1, limit: 200) {
+      items {
+        id
+        name
       }
     }
   }

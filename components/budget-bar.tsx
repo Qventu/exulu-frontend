@@ -64,7 +64,7 @@ export function BudgetBar({
                         >
                             <div
                                 className={cn(
-                                    "h-full rounded-full transition-[width] duration-700 ease-out",
+                                    "h-full rounded-full transition-[width] duration-500 ease-out",
                                     FILL_COLORS[p.level],
                                 )}
                                 style={{ width: `${usedPct}%` }}

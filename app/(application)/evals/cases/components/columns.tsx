@@ -1,33 +1,56 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { DataTableColumnHeader } from "./data-table-column-header";
-import { DataTableRowActions } from "./data-table-row-actions";
+import { useTranslations } from "next-intl";
+
+import { Badge } from "@/components/ui/badge";
+import { RelativeTime } from "@/components/primitives/relative-time";
 import { TestCase } from "@/types/models/test-case";
 import { UserWithRole } from "@EXULU_SHARED/models/user";
-import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow } from "date-fns";
 
-export const createColumns = (user: UserWithRole, edit: (test: TestCase) => void): ColumnDef<TestCase>[] => [
+import { DataTableColumnHeader } from "./data-table-column-header";
+import { DataTableRowActions } from "./data-table-row-actions";
+
+export type CasesListTranslator = (key: string) => string;
+
+/** Cell that renders the user-message count via ICU plural so the unit
+ * agrees with the count. Lives as a component so we can call hooks. */
+function MessagesCountCell({ inputs }: { inputs: any[] | undefined }) {
+  const t = useTranslations("evals.cases.columns");
+  // Test cases store [user, placeholder-assistant, user, ...] — counting all
+  // entries inflates the number (a 2-turn case shows 4). We only care about
+  // the user turns the author actually authored.
+  const count = inputs?.filter((m) => m?.role === "user").length ?? 0;
+  return (
+    <Badge variant="secondary">
+      {t("messagesCount", { count })}
+    </Badge>
+  );
+}
+
+export const createColumns = (
+  user: UserWithRole,
+  t: CasesListTranslator,
+  edit: (test: TestCase) => void,
+  onDeleted?: () => void,
+): ColumnDef<TestCase>[] => [
   {
     accessorKey: "name",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Name" />
+      <DataTableColumnHeader column={column} title={t("columns.name")} />
     ),
-    cell: ({ row }) => {
-      return (
-        <div className="flex space-x-2">
-          <span className="max-w-[400px] truncate font-medium">
-            {row.getValue("name")}
-          </span>
-        </div>
-      );
-    },
+    cell: ({ row }) => (
+      <div className="flex space-x-2">
+        <span className="max-w-[400px] truncate font-medium">
+          {row.getValue("name")}
+        </span>
+      </div>
+    ),
   },
   {
     accessorKey: "description",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Description" />
+      <DataTableColumnHeader column={column} title={t("columns.description")} />
     ),
     cell: ({ row }) => {
       const description = row.getValue("description") as string;
@@ -43,83 +66,34 @@ export const createColumns = (user: UserWithRole, edit: (test: TestCase) => void
   {
     accessorKey: "inputs",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Messages" />
+      <DataTableColumnHeader column={column} title={t("columns.messages")} />
     ),
-    cell: ({ row }) => {
-      const inputs = row.getValue("inputs") as any[];
-      return (
-        <Badge variant="secondary">
-          {inputs?.length || 0} messages
-        </Badge>
-      );
-    },
+    cell: ({ row }) => (
+      <MessagesCountCell inputs={row.getValue("inputs") as any[]} />
+    ),
   },
-  /* {
-    accessorKey: "expected_tools",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Expected Tools" />
-    ),
-    cell: ({ row }) => {
-      const tools = row.getValue("expected_tools") as string[];
-      if (!tools || tools.length === 0) return <span className="text-muted-foreground">—</span>;
-      return (
-        <Badge variant="outline">
-          {tools.length} tools
-        </Badge>
-      );
-    },
-  },
-  {
-    accessorKey: "expected_knowledge_sources",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Expected Contexts" />
-    ),
-    cell: ({ row }) => {
-      const contexts = row.getValue("expected_knowledge_sources") as string[];
-      if (!contexts || contexts.length === 0) return <span className="text-muted-foreground">—</span>;
-      return (
-        <Badge variant="outline">
-          {contexts.length} contexts
-        </Badge>
-      );
-    },
-  },
-  {
-    accessorKey: "expected_agent_tools",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Expected Agents" />
-    ),
-    cell: ({ row }) => {
-      const agents = row.getValue("expected_agent_tools") as string[];
-      if (!agents || agents.length === 0) return <span className="text-muted-foreground">—</span>;
-      return (
-        <Badge variant="outline">
-          {agents.length} agents
-        </Badge>
-      );
-    },
-  }, */
   {
     accessorKey: "updatedAt",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Updated" />
+      <DataTableColumnHeader column={column} title={t("columns.updated")} />
     ),
     cell: ({ row }) => {
       const date = row.getValue("updatedAt") as string;
+      if (!date) return <span className="text-muted-foreground">—</span>;
       return (
-        <div className="flex w-[100px] items-center">
-          <span className="text-sm text-muted-foreground">
-            {formatDistanceToNow(new Date(date), { addSuffix: true })}
-          </span>
-        </div>
+        <RelativeTime date={date} className="text-sm text-muted-foreground" />
       );
     },
   },
   {
     id: "actions",
-    cell: ({ row }) => <DataTableRowActions row={row} user={user} edit={() => {
-      const testCase = row.original as TestCase;
-      edit(testCase);
-    }} />,
+    cell: ({ row }) => (
+      <DataTableRowActions
+        row={row}
+        user={user}
+        onDeleted={onDeleted}
+        edit={() => edit(row.original as TestCase)}
+      />
+    ),
   },
 ];

@@ -1,8 +1,0 @@
-{
-    "client": {
-      "service": {
-        "name": "Exulu",
-        "url": "http://localhost:9001/graphql/introspection"
-      }
-    }
-  }

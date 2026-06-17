@@ -1,3 +1,8 @@
+// OWNERSHIP (Phase 0, codebase-structure D6): hand-maintained GraphQL model types.
+// This directory is the explicit type source until GraphQL codegen lands
+// (lib/graphql/__generated__/, see codegen.ts); then features migrate to generated
+// types per-feature and this file is deleted. Keep in sync with the backend schema.
+
 export type User = {
   id: number;
   email: string;
@@ -16,6 +21,9 @@ export type UserBudgetView = {
   max_budget: number;
   budget_duration: string | null;
   budget_reset_at: string | null;
+  /** "amount" → show exact USD; "percent" → show only a percentage. Mirrors
+   *  the platform `user_budget_display` setting. */
+  display?: "amount" | "percent";
 };
 
 export type UserWithRole = User & {

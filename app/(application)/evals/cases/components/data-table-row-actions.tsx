@@ -4,6 +4,9 @@ import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { Row } from "@tanstack/react-table";
 import { useMutation } from "@apollo/client";
 import { Pencil, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,63 +16,40 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { DELETE_TEST_CASE } from "@/queries/queries";
-import { useToast } from "@/components/ui/use-toast";
-import { User, UserWithRole } from "@EXULU_SHARED/models/user";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useState } from "react";
+import { UserWithRole } from "@EXULU_SHARED/models/user";
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
   user: UserWithRole;
   edit: () => void;
+  onDeleted?: () => void;
 }
 
 export function DataTableRowActions<TData>({
   row,
   user,
-  edit
+  edit,
+  onDeleted,
 }: DataTableRowActionsProps<TData>) {
-  const { toast } = useToast();
+  const t = useTranslations("evals.cases");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const testCase = row.original as any;
 
   const canWrite = user.super_admin || user.role?.evals === "write";
 
-  const [deleteTestCase, { loading: deleteLoading }] = useMutation(DELETE_TEST_CASE, {
-    onCompleted: () => {
-      toast({
-        title: "Test case deleted",
-        description: "The test case has been successfully deleted.",
-      });
-      setShowDeleteDialog(false);
-      window.location.reload();
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to delete test case",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  const [deleteTestCase] = useMutation(DELETE_TEST_CASE);
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    deleteTestCase({
-      variables: {
-        id: testCase.id,
-      },
-    });
+  const handleDelete = async () => {
+    try {
+      await deleteTestCase({ variables: { id: testCase.id } });
+      toast.success(t("deleteSuccess.title"));
+      onDeleted?.();
+    } catch (error: any) {
+      toast.error(t("deleteError.title"), { description: error?.message });
+      throw error;
+    }
   };
 
   return (
@@ -82,19 +62,18 @@ export function DataTableRowActions<TData>({
             onClick={(e) => e.stopPropagation()}
           >
             <DotsHorizontalIcon className="h-4 w-4" />
-            <span className="sr-only">Open menu</span>
+            <span className="sr-only">{t("rowActions.menu")}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[160px]">
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
-              edit()
-              // Edit is handled by the row click in data-table.tsx
+              edit();
             }}
           >
             <Pencil className="mr-2 h-4 w-4" />
-            Edit
+            {t("rowActions.edit")}
           </DropdownMenuItem>
           {canWrite && (
             <>
@@ -107,34 +86,21 @@ export function DataTableRowActions<TData>({
                 className="text-destructive"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                {t("rowActions.delete")}
               </DropdownMenuItem>
             </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the test case "{testCase.name}".
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteLoading}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteLoading ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title={t("deleteConfirm.title")}
+        description={t("deleteConfirm.description", { name: testCase.name })}
+        variant="destructive"
+        onConfirm={handleDelete}
+      />
     </>
   );
 }

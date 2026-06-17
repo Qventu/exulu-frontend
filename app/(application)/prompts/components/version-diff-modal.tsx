@@ -1,7 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { PromptLibrary, PromptVersion } from "@/types/models/prompt-library";
+/**
+ * VersionDiffModal — side-by-side or unified diff between two prompt
+ * versions (work item 2.9; prompts.md inventory item 42).
+ *
+ * Responsive (prompts.md §3 "Diff modal (< md): splitView={false}"; T8):
+ * split view at `md+` ONLY — unified inline at phones via a media-query
+ * watcher (the dialog stays `max-w-5xl` so it fills the desktop pane; below
+ * md the diff component itself goes inline rather than shrinking columns to
+ * slivers).
+ *
+ * All copy is i18n; diff colors and version-picker labels unchanged.
+ */
+
+import { ArrowRight, GitCompare } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
+import ReactDiffViewer, { DiffMethod } from "react-diff-viewer-continued";
+
+import { RelativeTime } from "@/components/primitives/relative-time";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -17,10 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import ReactDiffViewer, { DiffMethod } from "react-diff-viewer-continued";
-import { useTheme } from "next-themes";
-import { formatDistanceToNow } from "date-fns";
-import { GitCompare, ArrowRight } from "lucide-react";
+import type { PromptLibrary, PromptVersion } from "@/types/models/prompt-library";
 
 interface VersionDiffModalProps {
   open: boolean;
@@ -30,6 +45,19 @@ interface VersionDiffModalProps {
   compareVersion?: PromptVersion | null;
 }
 
+function useIsMdUp(): boolean {
+  const [isMdUp, setIsMdUp] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(min-width: 768px)");
+    const update = () => setIsMdUp(mql.matches);
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, []);
+  return isMdUp;
+}
+
 export function VersionDiffModal({
   open,
   onOpenChange,
@@ -37,14 +65,45 @@ export function VersionDiffModal({
   version,
   compareVersion: initialCompareVersion,
 }: VersionDiffModalProps) {
+  // Derived from the parent's version. When the parent passes a different
+  // `version` prop (selected from history), the seed key flips and React
+  // re-mounts the selectors — preferable to the legacy useEffect→setState
+  // pattern (react-hooks/set-state-in-effect).
+  return (
+    <DiffDialog
+      key={`diff-${version.version}`}
+      open={open}
+      onOpenChange={onOpenChange}
+      prompt={prompt}
+      initialLeft={initialCompareVersion ?? null}
+      initialRight={version}
+    />
+  );
+}
+
+function DiffDialog({
+  open,
+  onOpenChange,
+  prompt,
+  initialLeft,
+  initialRight,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  prompt: PromptLibrary;
+  initialLeft: PromptVersion | null;
+  initialRight: PromptVersion;
+}) {
+  const t = useTranslations("prompts");
   const { theme } = useTheme();
-  const [leftVersion, setLeftVersion] = useState<PromptVersion | null>(initialCompareVersion || null);
-  const [rightVersion, setRightVersion] = useState<PromptVersion>(version);
+  const isMdUp = useIsMdUp();
+  const [leftVersion, setLeftVersion] = useState<PromptVersion | null>(initialLeft);
+  const [rightVersion, setRightVersion] = useState<PromptVersion>(initialRight);
 
-  const history = prompt.history || [];
-
-  // Create version options (including current)
-  const currentVersionNum = history.length > 0 ? Math.max(...history.map(v => v.version)) + 1 : 1;
+  const history = prompt.history ?? [];
+  const currentVersionNum = history.length > 0
+    ? Math.max(...history.map((v) => v.version)) + 1
+    : 1;
   const currentVersion: PromptVersion = {
     version: currentVersionNum,
     content: prompt.content,
@@ -56,44 +115,50 @@ export function VersionDiffModal({
     change_message: undefined,
   };
 
-  const allVersions = [currentVersion, ...history].sort((a, b) => b.version - a.version);
+  const allVersions = [currentVersion, ...history].sort(
+    (a, b) => b.version - a.version,
+  );
 
-  // Determine what to compare
-  const leftContent = leftVersion?.content || prompt.content;
+  const leftContent = leftVersion?.content ?? prompt.content;
   const rightContent = rightVersion.content;
 
-  // Check for metadata changes
-  const nameChanged = leftVersion && leftVersion.name !== rightVersion.name;
-  const descriptionChanged = leftVersion && leftVersion.description !== rightVersion.description;
-  const tagsChanged = leftVersion && JSON.stringify(leftVersion.tags) !== JSON.stringify(rightVersion.tags);
+  const nameChanged =
+    leftVersion !== null && leftVersion.name !== rightVersion.name;
+  const descriptionChanged =
+    leftVersion !== null &&
+    (leftVersion.description ?? "") !== (rightVersion.description ?? "");
+  const tagsChanged =
+    leftVersion !== null &&
+    JSON.stringify(leftVersion.tags ?? []) !==
+      JSON.stringify(rightVersion.tags ?? []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
+      <DialogContent className="flex max-h-[90dvh] max-w-5xl flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <GitCompare className="h-5 w-5 text-primary" />
-            Compare Versions
+            <GitCompare aria-hidden="true" className="size-5 text-primary" />
+            {t("diff.title")}
           </DialogTitle>
-          <DialogDescription>
-            View the differences between prompt versions
-          </DialogDescription>
+          <DialogDescription>{t("diff.description")}</DialogDescription>
         </DialogHeader>
 
-        {/* Version Selectors */}
-        <div className="flex items-center gap-3 pb-4 border-b">
-          <div className="flex-1">
-            <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">
-              Compare from
+        {/* Version Selectors — stack at phone widths so they fit. */}
+        <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-end">
+          <div className="flex-1 space-y-1.5">
+            <label className="block text-xs font-semibold text-muted-foreground">
+              {t("diff.compareFrom")}
             </label>
             <Select
-              value={leftVersion?.version.toString() || "current"}
+              value={leftVersion?.version.toString() ?? "current"}
               onValueChange={(value) => {
                 if (value === "current") {
                   setLeftVersion(null);
                 } else {
-                  const selected = allVersions.find(v => v.version.toString() === value);
-                  if (selected) setLeftVersion(selected);
+                  const found = allVersions.find(
+                    (v) => v.version.toString() === value,
+                  );
+                  if (found) setLeftVersion(found);
                 }
               }}
             >
@@ -103,32 +168,36 @@ export function VersionDiffModal({
               <SelectContent>
                 {allVersions.map((v) => (
                   <SelectItem key={v.version} value={v.version.toString()}>
-                    <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-2">
                       <span className="font-mono text-xs">v{v.version}</span>
-                      {v.version === currentVersionNum && (
-                        <Badge variant="secondary" className="text-xs">Current</Badge>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        ({formatDistanceToNow(new Date(v.timestamp), { addSuffix: true })})
-                      </span>
-                    </div>
+                      {v.version === currentVersionNum ? (
+                        <Badge variant="secondary" className="text-xs">
+                          {t("diff.currentLabel")}
+                        </Badge>
+                      ) : null}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <ArrowRight className="h-4 w-4 text-muted-foreground mt-5" />
+          <ArrowRight
+            aria-hidden="true"
+            className="mb-2 hidden size-4 text-muted-foreground sm:block"
+          />
 
-          <div className="flex-1">
-            <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">
-              Compare to
+          <div className="flex-1 space-y-1.5">
+            <label className="block text-xs font-semibold text-muted-foreground">
+              {t("diff.compareTo")}
             </label>
             <Select
               value={rightVersion.version.toString()}
               onValueChange={(value) => {
-                const selected = allVersions.find(v => v.version.toString() === value);
-                if (selected) setRightVersion(selected);
+                const found = allVersions.find(
+                  (v) => v.version.toString() === value,
+                );
+                if (found) setRightVersion(found);
               }}
             >
               <SelectTrigger className="h-9">
@@ -137,15 +206,14 @@ export function VersionDiffModal({
               <SelectContent>
                 {allVersions.map((v) => (
                   <SelectItem key={v.version} value={v.version.toString()}>
-                    <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-2">
                       <span className="font-mono text-xs">v{v.version}</span>
-                      {v.version === currentVersionNum && (
-                        <Badge variant="secondary" className="text-xs">Current</Badge>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        ({formatDistanceToNow(new Date(v.timestamp), { addSuffix: true })})
-                      </span>
-                    </div>
+                      {v.version === currentVersionNum ? (
+                        <Badge variant="secondary" className="text-xs">
+                          {t("diff.currentLabel")}
+                        </Badge>
+                      ) : null}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -153,113 +221,118 @@ export function VersionDiffModal({
           </div>
         </div>
 
-        {/* Metadata Changes */}
-        {(nameChanged || descriptionChanged || tagsChanged) && (
-          <div className="space-y-2 py-3 border-b">
-            <p className="text-xs font-semibold text-muted-foreground">Metadata Changes</p>
-            {nameChanged && (
-              <div className="text-sm space-y-1">
-                <span className="font-semibold">Name:</span>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="font-mono text-xs line-through text-muted-foreground">
-                    {leftVersion?.name}
-                  </Badge>
-                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                  <Badge variant="outline" className="font-mono text-xs">
-                    {rightVersion.name}
-                  </Badge>
-                </div>
-              </div>
-            )}
-            {descriptionChanged && (
-              <div className="text-sm space-y-1">
-                <span className="font-semibold">Description:</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground line-through">
-                    {leftVersion?.description || "(none)"}
-                  </span>
-                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-xs">
-                    {rightVersion.description || "(none)"}
-                  </span>
-                </div>
-              </div>
-            )}
-            {tagsChanged && (
-              <div className="text-sm space-y-1">
-                <span className="font-semibold">Tags:</span>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {leftVersion?.tags?.map(tag => (
-                    <Badge key={tag} variant="outline" className="text-xs line-through">
+        {/* Metadata changes summary */}
+        {nameChanged || descriptionChanged || tagsChanged ? (
+          <div className="space-y-2 border-b border-border py-3">
+            <p className="text-xs font-semibold text-muted-foreground">
+              {t("diff.metadataChanges")}
+            </p>
+            {nameChanged ? (
+              <DiffMetaRow
+                label={t("diff.metaName")}
+                left={leftVersion?.name ?? "—"}
+                right={rightVersion.name ?? "—"}
+              />
+            ) : null}
+            {descriptionChanged ? (
+              <DiffMetaRow
+                label={t("diff.metaDescription")}
+                left={leftVersion?.description ?? t("diff.none")}
+                right={rightVersion.description ?? t("diff.none")}
+              />
+            ) : null}
+            {tagsChanged ? (
+              <div className="text-sm">
+                <span className="mr-2 font-semibold">
+                  {t("diff.metaTags")}
+                </span>
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  {leftVersion?.tags?.map((tag) => (
+                    <Badge
+                      key={`l-${tag}`}
+                      variant="outline"
+                      className="text-xs line-through"
+                    >
                       {tag}
                     </Badge>
                   ))}
-                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                  {rightVersion.tags?.map(tag => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
+                  <ArrowRight
+                    aria-hidden="true"
+                    className="size-3 text-muted-foreground"
+                  />
+                  {rightVersion.tags?.map((tag) => (
+                    <Badge
+                      key={`r-${tag}`}
+                      variant="secondary"
+                      className="text-xs"
+                    >
                       {tag}
                     </Badge>
                   ))}
-                </div>
+                </span>
               </div>
-            )}
+            ) : null}
           </div>
-        )}
+        ) : null}
 
-        {/* Content Diff */}
-        <div className="flex-1 overflow-auto rounded-lg border">
+        {/* Content diff */}
+        <div className="min-h-0 flex-1 overflow-auto rounded-md border">
           <ReactDiffViewer
             oldValue={leftContent}
             newValue={rightContent}
-            splitView={true}
+            splitView={isMdUp}
             useDarkTheme={theme === "dark"}
             compareMethod={DiffMethod.WORDS}
-            leftTitle={`v${leftVersion?.version || currentVersionNum} (${leftVersion ? formatDistanceToNow(new Date(leftVersion.timestamp), { addSuffix: true }) : "current"})`}
-            rightTitle={`v${rightVersion.version} (${formatDistanceToNow(new Date(rightVersion.timestamp), { addSuffix: true })})`}
-            styles={{
-              variables: {
-                light: {
-                  diffViewerBackground: "hsl(var(--background))",
-                  addedBackground: "hsl(142, 76%, 90%)",
-                  addedColor: "hsl(142, 76%, 20%)",
-                  removedBackground: "hsl(0, 84%, 90%)",
-                  removedColor: "hsl(0, 84%, 30%)",
-                  wordAddedBackground: "hsl(142, 76%, 75%)",
-                  wordRemovedBackground: "hsl(0, 84%, 75%)",
-                  addedGutterBackground: "hsl(142, 76%, 85%)",
-                  removedGutterBackground: "hsl(0, 84%, 85%)",
-                  gutterBackground: "hsl(var(--muted))",
-                  gutterBackgroundDark: "hsl(var(--muted))",
-                  highlightBackground: "hsl(var(--accent))",
-                  highlightGutterBackground: "hsl(var(--accent))",
-                },
-                dark: {
-                  diffViewerBackground: "hsl(var(--background))",
-                  addedBackground: "hsl(142, 76%, 15%)",
-                  addedColor: "hsl(142, 76%, 80%)",
-                  removedBackground: "hsl(0, 84%, 15%)",
-                  removedColor: "hsl(0, 84%, 80%)",
-                  wordAddedBackground: "hsl(142, 76%, 25%)",
-                  wordRemovedBackground: "hsl(0, 84%, 25%)",
-                  addedGutterBackground: "hsl(142, 76%, 20%)",
-                  removedGutterBackground: "hsl(0, 84%, 20%)",
-                  gutterBackground: "hsl(var(--muted))",
-                  gutterBackgroundDark: "hsl(var(--muted))",
-                  highlightBackground: "hsl(var(--accent))",
-                  highlightGutterBackground: "hsl(var(--accent))",
-                },
-              },
-            }}
+            leftTitle={`v${leftVersion?.version ?? currentVersionNum}`}
+            rightTitle={`v${rightVersion.version}`}
           />
         </div>
 
-        {/* No changes message */}
-        {leftContent === rightContent && (
-          <div className="text-center py-8 text-muted-foreground">
-            <p className="text-sm">No content changes between these versions</p>
-          </div>
-        )}
+        {leftContent === rightContent ? (
+          <p className="py-3 text-center text-sm text-muted-foreground">
+            {t("diff.noContentChanges")}
+          </p>
+        ) : null}
+
+        {/* Footer hint: absolute timestamps via the shared RelativeTime tooltip. */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>
+            v{leftVersion?.version ?? currentVersionNum} —{" "}
+            <RelativeTime
+              date={leftVersion?.timestamp ?? prompt.updatedAt}
+              className="text-xs"
+            />
+          </span>
+          <span>
+            v{rightVersion.version} —{" "}
+            <RelativeTime date={rightVersion.timestamp} className="text-xs" />
+          </span>
+        </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function DiffMetaRow({
+  label,
+  left,
+  right,
+}: {
+  label: string;
+  left: string;
+  right: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="font-semibold">{label}</span>
+      <span className="font-mono text-xs text-muted-foreground line-through">
+        {left}
+      </span>
+      <ArrowRight
+        aria-hidden="true"
+        className="size-3 text-muted-foreground"
+      />
+      <span className="font-mono text-xs">{right}</span>
+    </div>
   );
 }

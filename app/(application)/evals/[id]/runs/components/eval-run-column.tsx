@@ -1,20 +1,53 @@
 "use client";
 
+/**
+ * EvalRunColumn — one column of the runs matrix.
+ *
+ * Phase 5.1 redesign:
+ * - The five outline icon buttons (refresh / copy / edit / start / delete)
+ *   collapsed into a SINGLE MoreVertical dropdown in the column header.
+ *   Refresh is always visible; Start / Copy / Edit / Delete are gated on
+ *   `canWrite` (RBAC leak fix — the original component took the
+ *   convenience-by-default approach and showed Delete to readers).
+ * - The lane component owns its own GET_JOB_RESULTS query so adding /
+ *   removing visible runs doesn't violate Rules-of-Hooks in the parent.
+ * - Score colors are semantic tokens via <ScoreCell />.
+ * - Average math: only completed numeric results contribute; never NaN.
+ *   When there are no completed results we surface the i18n "No results
+ *   yet" copy in muted text instead of crashing the cell into "NaN".
+ */
+
 import { NetworkStatus, useQuery } from "@apollo/client";
-import { GET_JOB_RESULTS } from "@/queries/queries";
-import { JobResult } from "@/types/models/job-result";
-import { EvalRun } from "@/types/models/eval-run";
-import { TestCase } from "@/types/models/test-case";
-import { Clock, XCircle, Pause, AlertTriangle, Loader2, MoreVertical, Edit, Play, Square, Copy, RefreshCcw, Trash } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+  Copy,
+  Edit,
+  MoreVertical,
+  Play,
+  RefreshCcw,
+  Trash,
+} from "lucide-react";
+import { useTranslations } from "next-intl";
+
 import { Button } from "@/components/ui/button";
-import { Loading } from "@/components/ui/loading";
-import { TooltipProvider } from "@radix-ui/react-tooltip";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { GET_JOB_RESULTS } from "@/queries/queries";
+import type { EvalRun } from "@/types/models/eval-run";
+import type { JobResult } from "@/types/models/job-result";
+import type { TestCase } from "@/types/models/test-case";
+
+import { ScoreCell, type ScoreCellState } from "./score-cell";
 
 interface EvalRunColumnProps {
   evalRun: EvalRun;
   testCases: TestCase[];
+  canWrite: boolean;
   onCellClick: (result: JobResult | null) => void;
   handleEditRun: (run: EvalRun) => void;
   handleCopyRun: (run: EvalRun) => void;
@@ -22,259 +55,170 @@ interface EvalRunColumnProps {
   handleDeleteRun: (run: EvalRun) => void;
 }
 
-const statusIcons = {
-  waiting: <Clock className="h-3 w-3" />,
-  active: <Loader2 className="h-3 w-3 animate-spin" />,
-  completed: null,
-  failed: <XCircle className="h-3 w-3" />,
-  delayed: <Clock className="h-3 w-3" />,
-  paused: <Pause className="h-3 w-3" />,
-  stuck: <AlertTriangle className="h-3 w-3" />,
-};
-
-const statusColors = {
-  waiting: "text-yellow-600 border-yellow-200",
-  active: "text-blue-600 border-blue-200",
-  completed: "",
-  failed: "text-red-600 border-red-200",
-  delayed: "text-orange-600 border-orange-200",
-  paused: "text-gray-600 border-gray-200",
-  stuck: "text-red-600 border-red-200",
-};
+function toCellState(result: JobResult | null, isIncluded: boolean): ScoreCellState {
+  if (!isIncluded) return "empty";
+  if (!result) return "not-started";
+  return result.state as ScoreCellState;
+}
 
 export function EvalRunColumn({
   evalRun,
   testCases,
+  canWrite,
   onCellClick,
   handleEditRun,
   handleCopyRun,
   handleStartRun,
   handleDeleteRun,
 }: EvalRunColumnProps) {
+  const t = useTranslations("evals.runs");
 
-  const { data: jobResultsData, loading: loadingJobResults, refetch: refetchJobResults, networkStatus: jobsNetworkStatus } = useQuery(GET_JOB_RESULTS, {
+  const {
+    data: jobResultsData,
+    loading: loadingJobResults,
+    refetch: refetchJobResults,
+    networkStatus: jobsNetworkStatus,
+  } = useQuery(GET_JOB_RESULTS, {
     variables: {
       page: 1,
       limit: 500,
       filters: [{ label: { contains: "eval-run-" + evalRun.id } }],
     },
-    skip: !evalRun.id
+    skip: !evalRun.id,
   });
 
-  const jobResults = jobResultsData?.job_resultsPagination?.items || [];
+  const jobResults: JobResult[] = jobResultsData?.job_resultsPagination?.items || [];
 
   const getCellData = (test_case_id: string): JobResult | null => {
-    const result = jobResults.find((jr: JobResult) =>
-      jr.label?.includes(test_case_id) && jr.label?.includes(evalRun.id)
+    const result = jobResults.find(
+      (jr: JobResult) =>
+        jr.label?.includes(test_case_id) && jr.label?.includes(evalRun.id),
     );
-
-    if (result === null || result === undefined) return null;
-
-    return result;
+    return result ?? null;
   };
 
-  const getCellColor = (result: JobResult | null): string => {
-    console.log("[EXULU] result", result?.result);
-    if (!result || result.state !== "completed" || result.result === undefined) {
-      return "";
-    }
+  // Average over COMPLETED numeric results only. Never produce NaN; if there
+  // is nothing to average, the average row falls back to "No results yet".
+  const completedResults = jobResults.filter(
+    (jr) =>
+      jr.state === "completed" &&
+      typeof jr.result === "number" &&
+      !Number.isNaN(jr.result),
+  );
+  const averageResult: number | null =
+    completedResults.length > 0
+      ? completedResults.reduce((acc, jr) => acc + (jr.result as number), 0) /
+        completedResults.length
+      : null;
+  const averageColor =
+    averageResult === null
+      ? "text-muted-foreground"
+      : averageResult >= evalRun.pass_threshold
+        ? "text-success"
+        : averageResult >= evalRun.pass_threshold - 20
+          ? "text-warning"
+          : "text-destructive";
 
-    const score = result.result;
-    const threshold = evalRun.pass_threshold;
+  const isRefreshBusy =
+    loadingJobResults ||
+    jobsNetworkStatus === NetworkStatus.refetch ||
+    jobsNetworkStatus === NetworkStatus.fetchMore ||
+    jobsNetworkStatus === NetworkStatus.loading;
 
-    if (score >= threshold) {
-      return "text-green-500";
-    } else if (score >= threshold - 20) {
-      return "text-orange-500";
-    } else {
-      return "text-red-500";
-    }
-  };
-
-  const numberOfResultsAvailable = jobResults.filter((jr: JobResult) => jr.label?.includes(evalRun.id)).length;
-  const averageResult = jobResults.filter((jr: JobResult) => jr.label?.includes(evalRun.id)).reduce((acc: number, jr: JobResult) => acc + jr.result, 0) / numberOfResultsAvailable;
   return (
-    <>
-      <div className="flex-shrink-0">
+    <div className="flex flex-col">
+      {/* Header — single overflow menu */}
+      <div className="flex h-[60px] items-center justify-center border-b border-r bg-muted/20 p-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              aria-label={t("column.menu")}
+            >
+              <MoreVertical aria-hidden="true" className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onSelect={() => {
+                refetchJobResults();
+              }}
+              disabled={isRefreshBusy}
+            >
+              <RefreshCcw aria-hidden="true" className="mr-2 h-4 w-4" />
+              {t("column.refresh")}
+            </DropdownMenuItem>
+            {canWrite ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => handleStartRun(evalRun)}>
+                  <Play aria-hidden="true" className="mr-2 h-4 w-4" />
+                  {t("column.start")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => handleCopyRun(evalRun)}>
+                  <Copy aria-hidden="true" className="mr-2 h-4 w-4" />
+                  {t("column.copy")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => handleEditRun(evalRun)}>
+                  <Edit aria-hidden="true" className="mr-2 h-4 w-4" />
+                  {t("column.edit")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={() => handleDeleteRun(evalRun)}
+                >
+                  <Trash aria-hidden="true" className="mr-2 h-4 w-4" />
+                  {t("column.delete")}
+                </DropdownMenuItem>
+              </>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Average row */}
+      <div className="flex h-[60px] items-center justify-center border-b-[5px] border-r border-b p-3 text-center">
         <div
-          className="p-3 text-center border-r bg-muted/20 h-[60px] flex items-center justify-center border-b border-r">
-          <span className="text-xs text-muted-foreground space-x-2 flex items-center justify-center">
-            {/* Refetch action */}
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={
-                      loadingJobResults ||
-                      jobsNetworkStatus === NetworkStatus.refetch ||
-                      jobsNetworkStatus === NetworkStatus.fetchMore ||
-                      jobsNetworkStatus === NetworkStatus.loading
-                    }
-                    onClick={() => {
-                      refetchJobResults()
-                    }}>
-                    {
-                      loadingJobResults && <Loading />
-                    }
-                    <RefreshCcw className="h-3 w-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Refetch job results
-                </TooltipContent>
-              </Tooltip>
-
-              {/* Copy, edit, start buttons */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      handleCopyRun(evalRun)
-                    }}>
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Copy eval run
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      handleEditRun(evalRun)
-                    }}>
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Edit eval run
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      handleStartRun(evalRun)
-                    }}>
-                    <Play className="h-3 w-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Start eval run
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      handleDeleteRun(evalRun)
-                    }}>
-                    <Trash className="h-3 w-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Delete eval run
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
+          className={cn(
+            "flex h-full w-full min-h-[48px] items-center justify-center rounded text-sm",
+            averageColor,
+          )}
+        >
+          <span className={averageResult === null ? "text-xs" : "font-semibold"}>
+            {averageResult === null
+              ? t("matrix.noResults")
+              : averageResult.toFixed(1)}
           </span>
         </div>
       </div>
-      <div className="flex-shrink-0">
-        <div
-          key={"average_result_" + evalRun.id}
-          className="p-3 text-center border-b border-b-[5px] border-r h-[60px] flex items-center justify-center"
-        >
+
+      {/* Per-case cells */}
+      {testCases.map((testCase) => {
+        const isIncluded = evalRun.test_case_ids.includes(testCase.id);
+        const result = getCellData(testCase.id);
+        const state = toCellState(result, isIncluded);
+
+        return (
           <div
-            className={cn(
-              "w-full h-full min-h-[48px] rounded transition-colors flex items-center justify-center gap-2",
-              averageResult >= evalRun.pass_threshold ? "text-green-500 border-green-200"
-                : averageResult >= evalRun.pass_threshold - 20 ? "text-orange-500 border-orange-200"
-                  : "text-red-500 border-red-200"
-            )}
+            key={testCase.id}
+            className="flex h-[60px] items-center justify-center border-b border-r p-3"
           >
-            <span className={`${numberOfResultsAvailable > 0 ? "font-semibold" : "text-muted-foreground"} text-sm`}>
-              {numberOfResultsAvailable > 0 ? averageResult.toFixed(1) : "No results available."}
-            </span>
+            <ScoreCell
+              state={state}
+              score={
+                typeof result?.result === "number" ? result.result : undefined
+              }
+              threshold={evalRun.pass_threshold}
+              onClick={
+                state === "completed" ? () => onCellClick(result) : undefined
+              }
+            />
           </div>
-        </div>
-        {testCases.map((testCase) => {
-          const isIncluded = evalRun.test_case_ids.includes(testCase.id);
-          const result = getCellData(testCase.id);
-
-          if (!isIncluded) {
-            return (
-              <div
-                key={testCase.id}
-                className="p-3 text-center border-r bg-muted/20 h-[60px] flex items-center justify-center border-b border-r"
-              >
-                <span className="text-xs text-muted-foreground">—</span>
-              </div>
-            );
-          }
-
-          const cellColor = getCellColor(result);
-          const statusColor = result?.state ? statusColors[result.state] : "bg-transparent";
-
-          return (
-            <div
-              key={testCase.id}
-              className="p-3 text-center border-b border-r h-[60px] flex items-center justify-center"
-            >
-              <div
-                onClick={() => onCellClick(result)}
-                className={cn(
-                  "w-full h-full min-h-[48px] rounded transition-colors flex items-center justify-center gap-2",
-                  cellColor || statusColor || "border-gray-200 bg-gray-50",
-                  result?.state === "completed" && "cursor-pointer hover:opacity-80",
-                  (!result || result.state !== "completed") && "cursor-default"
-                )}
-              >
-                {loadingJobResults ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : result ? (
-                  <>
-                    {result.state === "completed" && result.result !== undefined ? (
-                      <span className="font-semibold text-sm hover:underline">
-                        {result.result.toFixed(1)}
-                      </span>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        {statusIcons[result.state]}
-                        <span className="text-xs capitalize">
-                          {result.state}
-                        </span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    {statusIcons["waiting"]}
-                    <span className="text-xs capitalize">
-                      Not started
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </>
+        );
+      })}
+    </div>
   );
 }
