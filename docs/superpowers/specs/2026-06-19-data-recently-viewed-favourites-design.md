@@ -88,10 +88,12 @@ Trade-off accepted: names are always fresh, at the cost of N extra queries on
 ## Frontend changes (`exulu/frontend`)
 
 ### Queries — `app/(application)/data/queries.ts`
-- `GET_USER_DATA_PINS` — reads `favourite_items` + `recently_viewed_items` off
-  the current user (mirrors `GET_USER_FAVOURITE_PROJECTS`).
-- `UPDATE_USER_DATA_PINS` — `usersUpdateOne` writing the full arrays (mirrors
-  `UpdateUserFavouriteProjects`).
+- `GET_USER_CONTEXT_ITEM_FAVOURITES` — reads `favourite_items` +
+  `recently_viewed_items` off the current user (mirrors
+  `GET_USER_FAVOURITE_PROJECTS`). Note: despite the name it also reads the
+  recents array, since both are fetched in one round-trip off the user object.
+- `UPDATE_USER_CONTEXT_ITEM_FAVOURITES` — `usersUpdateOne` writing the full
+  arrays (mirrors `UpdateUserFavouriteProjects`).
 - A reusable `GET_ITEMS_BY_IDS` shape: one `{context}ItemsPagination` call with
   an `id IN` filter, issued once per distinct context.
 
@@ -101,7 +103,7 @@ Trade-off accepted: names are always fresh, at the cost of N extra queries on
   Exposes `isFavorite(globalId)` and `toggleFavorite(globalId)`.
 - `useRecentlyViewedItems()` — reads the recents array; exposes
   `recordView(globalId)` that prepends, de-dupes by id, caps at 5, and persists
-  via `UPDATE_USER_DATA_PINS` (debounced).
+  via `UPDATE_USER_CONTEXT_ITEM_FAVOURITES` (debounced).
 - `useResolvedPinnedItems(ids)` — groups IDs by context and resolves names live
   via `GET_ITEMS_BY_IDS`; returns `{ items, loading }` and the list of unresolved
   IDs to prune.
