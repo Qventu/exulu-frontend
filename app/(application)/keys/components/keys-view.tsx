@@ -44,6 +44,7 @@ import {
   keyDisplayName,
   useAgentNames,
   useApiKeys,
+  useKeyEntities,
 } from "../hooks";
 import { KeyCreateDialog } from "./key-create-dialog";
 import { KeyDetailPanel } from "./key-detail-panel";
@@ -64,9 +65,21 @@ export function KeysView() {
     setPage,
     createKey,
     updateRole,
+    updateAttribution,
     deleteKey,
   } = useApiKeys();
   const { agents } = useAgentNames();
+  const { teams, projects } = useKeyEntities();
+
+  // id → name lookups for the Team / Project columns.
+  const teamName = React.useCallback(
+    (id?: string | null) => teams.find((tm) => tm.id === id)?.name ?? null,
+    [teams],
+  );
+  const projectName = React.useCallback(
+    (id?: string | null) => projects.find((p) => p.id === id)?.name ?? null,
+    [projects],
+  );
 
   const [query, setQuery] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
@@ -117,6 +130,30 @@ export function KeysView() {
         cell: ({ row }) => <ScopeBadge apiKey={row.original} />,
       },
       {
+        id: "team",
+        header: t("columns.team"),
+        cell: ({ row }) => {
+          const name = teamName(row.original.team);
+          return name ? (
+            <span className="text-sm">{name}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          );
+        },
+      },
+      {
+        id: "project",
+        header: t("columns.project"),
+        cell: ({ row }) => {
+          const name = projectName(row.original.project);
+          return name ? (
+            <span className="text-sm">{name}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          );
+        },
+      },
+      {
         id: "lastUsed",
         header: t("columns.lastUsed"),
         cell: ({ row }) =>
@@ -152,7 +189,7 @@ export function KeysView() {
         ),
       },
     ],
-    [t, createdFormatter],
+    [t, createdFormatter, teamName, projectName],
   );
 
   const openCreate = React.useCallback(() => setCreateOpen(true), []);
@@ -213,6 +250,7 @@ export function KeysView() {
             <KeyDetailPanel
               apiKey={item}
               onChangeRole={updateRole}
+              onChangeAttribution={updateAttribution}
               onDelete={deleteKey}
               onDeleted={() => setSelectedId(null)}
             />

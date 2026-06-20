@@ -27,6 +27,13 @@ const TRANSCRIPTION_JOB_FIELDS = `
   created_by
   createdAt
   updatedAt
+  source
+  meeting_url
+  recall_bot_id
+  bot_status
+  join_at
+  post_processing_prompts
+  post_processing_outputs
 `;
 
 export const GET_TRANSCRIPTION_JOBS = gql`
@@ -82,6 +89,80 @@ export const REMOVE_TRANSCRIPTION_JOB = gql`
   mutation RemoveTranscriptionJob($id: ID!) {
     transcription_jobsRemoveOneById(id: $id) {
       id
+    }
+  }
+`;
+
+/* ----------------------- Recall meeting-bot operations ----------------------- */
+
+/** Send a Recall bot to a meeting URL and create a recall transcription job. */
+export const MEETING_BOT_START = gql`
+  mutation MeetingBotStart($input: MeetingBotStartInput!) {
+    meetingBotStart(input: $input) {
+      ${TRANSCRIPTION_JOB_FIELDS}
+    }
+  }
+`;
+
+/** Manually (re-)run a single {prompt, agent} post-processing pair. */
+export const RUN_TRANSCRIPT_POST_PROCESSING = gql`
+  mutation RunTranscriptPostProcessing($id: ID!, $prompt_id: ID!, $agent_id: ID!) {
+    runTranscriptPostProcessing(id: $id, prompt_id: $prompt_id, agent_id: $agent_id) {
+      ${TRANSCRIPTION_JOB_FIELDS}
+    }
+  }
+`;
+
+/** Current month's meeting-recording usage against the optional monthly cap. */
+export const GET_MEETING_RECORDING_USAGE = gql`
+  query GetMeetingRecordingUsage {
+    meetingRecordingUsage {
+      enabled
+      used_seconds
+      limit_seconds
+      percent
+      exceeded
+    }
+  }
+`;
+
+/** Prompt library entries for the post-processing picker. */
+export const GET_PROMPT_LIBRARY = gql`
+  query GetPromptLibraryForTranscriptions(
+    $page: Int = 1
+    $limit: Int = 100
+    $filters: [FilterPrompt_library_item]
+    $sort: SortBy = { field: "name", direction: ASC }
+  ) {
+    prompt_libraryPagination(page: $page, limit: $limit, sort: $sort, filters: $filters) {
+      pageInfo {
+        itemCount
+      }
+      items {
+        id
+        name
+        description
+      }
+    }
+  }
+`;
+
+/** Agents for the post-processing picker. */
+export const GET_PICKER_AGENTS = gql`
+  query GetAgentsForTranscriptions(
+    $page: Int = 1
+    $limit: Int = 200
+    $filters: [FilterAgent]
+    $sort: SortBy = { field: "name", direction: ASC }
+  ) {
+    agentsPagination(page: $page, limit: $limit, sort: $sort, filters: $filters) {
+      pageInfo {
+        itemCount
+      }
+      items {
+        id
+        name
+      }
     }
   }
 `;

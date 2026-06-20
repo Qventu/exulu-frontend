@@ -35,13 +35,28 @@ import { PageHeader } from "@/components/primitives/page-header";
 import { PageShell } from "@/components/primitives/page-shell";
 import { Toolbar } from "@/components/primitives/toolbar";
 import { MobileTopbarAction } from "@/components/shell/mobile-topbar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import {
   SKILLS_PAGE_SIZE,
   useDeleteSkillLocal,
   useSkillsIndex,
+  useUniqueSkillTagsLocal,
 } from "../hooks";
 import { hasSkillWriteAccess, type Skill } from "../types";
 import { CreateSkillDialog } from "./create-skill-dialog";
@@ -67,7 +82,15 @@ export function SkillsView() {
     setPage,
     search,
     setSearch,
+    tags,
+    setTags,
   } = useSkillsIndex();
+
+  const { data: tagsData } = useUniqueSkillTagsLocal();
+  const availableTags = React.useMemo(
+    () => tagsData?.getUniqueSkillTags ?? [],
+    [tagsData],
+  );
 
   const [deleteSkill, { loading: deleting }] = useDeleteSkillLocal();
 
@@ -169,14 +192,25 @@ export function SkillsView() {
   const showSkeleton = loading && items.length === 0;
   const showError = !!error && items.length === 0;
   const showEmpty = !loading && !showError && items.length === 0;
-  const isFiltered = search.trim().length > 0;
+  const isFiltered = search.trim().length > 0 || tags.length > 0;
+
+  const activeFilterCount = tags.length > 0 ? 1 : 0;
+  const handleResetFilters = React.useCallback(() => {
+    setTags([]);
+  }, [setTags]);
 
   const emptyState = isFiltered ? (
     <EmptyState
       icon={Sparkles}
       title={t("emptySearchTitle")}
       description={t("emptySearchDescription")}
-      action={{ label: t("clearSearch"), onClick: () => setSearch("") }}
+      action={{
+        label: t("clearSearch"),
+        onClick: () => {
+          setSearch("");
+          setTags([]);
+        },
+      }}
     />
   ) : (
     <EmptyState
@@ -310,8 +344,39 @@ export function SkillsView() {
             placeholder: t("searchPlaceholder"),
             debounceMs: 0, // debounce lives in useSkillsIndex
           }}
+          filters={
+            <SkillsFiltersPopover
+              availableTags={availableTags}
+              tags={tags}
+              onTagsChange={setTags}
+              activeCount={activeFilterCount}
+            />
+          }
+          activeFilterCount={activeFilterCount}
+          onResetFilters={handleResetFilters}
           view={countSlot}
         />
+
+        {/* Active tag-filter chips (only while filtering). */}
+        {tags.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {tags.map((tag) => (
+              <Badge key={`tag-${tag}`} variant="secondary" className="gap-1">
+                <span>{tag}</span>
+                <button
+                  type="button"
+                  className="ml-0.5 inline-flex size-4 items-center justify-center rounded hover:bg-muted"
+                  aria-label={t("removeFilter", { name: tag })}
+                  onClick={() =>
+                    setTags(tags.filter((entry) => entry !== tag))
+                  }
+                >
+                  ×
+                </button>
+              </Badge>
+            ))}
+          </div>
+        ) : null}
 
         <div className="flex min-h-[60vh] overflow-hidden rounded-md border bg-card lg:min-h-[calc(100dvh-18rem)]">
           <ListDetail<Skill>
@@ -363,5 +428,80 @@ export function SkillsView() {
         confirmLabel={deleting ? t("delete.deleting") : tCommon("delete")}
       />
     </PageShell>
+  );
+}
+
+interface SkillsFiltersPopoverProps {
+  availableTags: string[];
+  tags: string[];
+  onTagsChange: (next: string[]) => void;
+  activeCount: number;
+}
+
+function SkillsFiltersPopover({
+  availableTags,
+  tags,
+  onTagsChange,
+  activeCount,
+}: SkillsFiltersPopoverProps) {
+  const t = useTranslations("skills");
+  const tCommon = useTranslations("common");
+  const [open, setOpen] = React.useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full md:w-auto">
+          {tCommon("filters")}
+          {activeCount > 0 ? (
+            <Badge variant="secondary" className="ml-2 px-1.5">
+              {activeCount}
+            </Badge>
+          ) : null}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-0 md:w-80">
+        <Command>
+          <CommandInput placeholder={t("filterTagsPlaceholder")} />
+          <CommandList className="max-h-56">
+            <CommandEmpty>{t("filterNoTags")}</CommandEmpty>
+            <CommandGroup heading={t("filterTagsHeading")}>
+              {availableTags.map((tag) => {
+                const checked = tags.includes(tag);
+                return (
+                  <CommandItem
+                    key={tag}
+                    value={tag}
+                    onSelect={() =>
+                      onTagsChange(
+                        checked
+                          ? tags.filter((entry) => entry !== tag)
+                          : [...tags, tag],
+                      )
+                    }
+                  >
+                    <span className="mr-2 inline-flex size-3 items-center justify-center">
+                      {checked ? "✓" : ""}
+                    </span>
+                    <span className="truncate">{tag}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+        {activeCount > 0 ? (
+          <div className="flex items-center justify-end border-t border-border p-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onTagsChange([])}
+            >
+              {tCommon("reset")}
+            </Button>
+          </div>
+        ) : null}
+      </PopoverContent>
+    </Popover>
   );
 }

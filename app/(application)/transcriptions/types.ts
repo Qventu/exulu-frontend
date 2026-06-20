@@ -16,6 +16,23 @@ export type JobStatus =
 export type RbacUser = { id: number; rights: "read" | "write" };
 export type RbacRole = { id: string; rights: "read" | "write" };
 
+/** Where a job came from: on-server Whisper upload, or a Recall meeting bot. */
+export type JobSource = "whisper" | "recall";
+
+/** A selected post-processing pair (prompt from the library + chosen agent). */
+export type PostProcessingPrompt = { prompt_id: string; agent_id: string };
+
+/** A post-processing result stored on the job/transcript record. */
+export type PostProcessingOutput = {
+  prompt_id: string;
+  agent_id: string;
+  prompt_name: string | null;
+  status: "done" | "failed";
+  output: string | null;
+  error: string | null;
+  ran_at: string;
+};
+
 export type Job = {
   id: string;
   audio_s3key: string;
@@ -35,6 +52,14 @@ export type Job = {
   created_by: number;
   createdAt: string;
   updatedAt: string;
+  // Recall meeting-bot fields (null/"whisper" for upload jobs).
+  source?: JobSource | null;
+  meeting_url?: string | null;
+  recall_bot_id?: string | null;
+  bot_status?: string | null;
+  join_at?: string | null;
+  post_processing_prompts?: PostProcessingPrompt[] | string | null;
+  post_processing_outputs?: PostProcessingOutput[] | string | null;
 };
 
 export type Segment = {
@@ -109,9 +134,57 @@ export function decodeFilename(s3Key: string): string {
   return last.includes("_EXULU_") ? (last.split("_EXULU_").pop() ?? last) : last;
 }
 
-/** Row display name: title, falling back to the decoded filename. */
-export function displayTitle(job: Pick<Job, "title" | "audio_s3key">): string {
-  return job.title || decodeFilename(job.audio_s3key);
+/** Row display name: title, falling back to the decoded filename / meeting URL. */
+export function displayTitle(
+  job: Pick<Job, "title" | "audio_s3key"> &
+    Partial<Pick<Job, "source" | "meeting_url">>,
+): string {
+  if (job.title) return job.title;
+  if (job.audio_s3key) return decodeFilename(job.audio_s3key);
+  if (job.meeting_url) return job.meeting_url;
+  return "Meeting recording";
+}
+
+/** True when the job is a Recall meeting-bot recording (vs a Whisper upload). */
+export function isMeetingJob(job: Pick<Job, "source">): boolean {
+  return job.source === "recall";
+}
+
+/** Parse post_processing_outputs (JSON string or array) tolerantly. */
+export function parsePostProcessingOutputs(
+  raw: Job["post_processing_outputs"],
+): PostProcessingOutput[] {
+  if (!raw) return [];
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw) as PostProcessingOutput[];
+    } catch {
+      return [];
+    }
+  }
+  return raw;
+}
+
+/**
+ * Humanize a Recall bot lifecycle code (e.g. "in_call_recording") into a short
+ * status line. Falls back to a title-cased version of the code.
+ */
+export function humanizeBotStatus(code: string | null | undefined): string | null {
+  if (!code) return null;
+  const map: Record<string, string> = {
+    joining_call: "Joining the call…",
+    in_waiting_room: "Waiting to be admitted…",
+    in_call_not_recording: "In the call…",
+    in_call_recording: "In the call — recording",
+    recording_permission_allowed: "Recording allowed",
+    call_ended: "Call ended",
+    done: "Recording finished",
+    fatal: "Bot failed to join",
+  };
+  return (
+    map[code] ??
+    code.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())
+  );
 }
 
 export function stripExtension(filename: string): string {

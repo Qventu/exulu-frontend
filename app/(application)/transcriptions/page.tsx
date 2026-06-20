@@ -34,10 +34,20 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+import { ConfigContext } from "@/components/shell/config-context";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group";
+
+import { Progress } from "@/components/ui/progress";
+
 import { Composer } from "./components/composer";
+import { MeetingComposer } from "./components/meeting-composer";
 import { JobRow } from "./components/job-row";
+import { formatDuration } from "./types";
 import { ReviewSheet } from "./components/review-sheet";
-import { useTranscriptionJobs } from "./hooks";
+import { useRecordingUsage, useTranscriptionJobs } from "./hooks";
 import { displayTitle, type Job } from "./types";
 
 export default function TranscriptionsPage() {
@@ -69,6 +79,25 @@ function TranscriptionsPageInner() {
   const closeReview = () => router.replace(pathname, { scroll: false });
 
   const [query, setQuery] = React.useState("");
+
+  // Composer mode: audio upload (Whisper) vs Recall meeting bot. Each is gated
+  // by its own backend feature flag; the toggle only appears when BOTH are on.
+  const config = React.useContext(ConfigContext);
+  const recallEnabled = !!config?.recall?.enabled;
+  const audioEnabled = !!config?.transcription?.enabled;
+  const showModeToggle = recallEnabled && audioEnabled;
+  const [composerMode, setComposerMode] = React.useState<"audio" | "meeting">(
+    "audio",
+  );
+  // Force the only available mode when just one flow is enabled.
+  const effectiveMode: "audio" | "meeting" = !audioEnabled
+    ? "meeting"
+    : !recallEnabled
+      ? "audio"
+      : composerMode;
+
+  // Monthly recording usage (only queried when Recall is enabled).
+  const { usage, refetch: refetchUsage } = useRecordingUsage(!recallEnabled);
 
   const {
     activeJobs,
@@ -150,14 +179,68 @@ function TranscriptionsPageInner() {
         />
       )}
 
+      {/* Monthly recording budget — shown only when a cap is configured. */}
+      {usage?.enabled && (
+        <div className="space-y-1.5 rounded-lg border p-3">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <span className="font-medium text-muted-foreground">
+              {t("usage.label")}
+            </span>
+            <span className="text-muted-foreground">
+              {t("usage.summary", {
+                used: formatDuration(usage.used_seconds),
+                limit: formatDuration(usage.limit_seconds ?? 0),
+                percent: Math.round(usage.percent ?? 0),
+              })}
+            </span>
+          </div>
+          <Progress value={Math.min(100, usage.percent ?? 0)} />
+          {usage.exceeded && (
+            <p className="text-xs text-destructive">{t("usage.exceeded")}</p>
+          )}
+        </div>
+      )}
+
       {composerOpen && (
-        <Composer
-          onCancel={closeComposer}
-          onStarted={() => {
-            closeComposer();
-            refetchAll();
-          }}
-        />
+        <div className="space-y-3">
+          {/* Mode switch only when BOTH flows are configured; otherwise the
+              single enabled composer stands alone. */}
+          {showModeToggle && (
+            <ToggleGroup
+              type="single"
+              value={effectiveMode}
+              onValueChange={(value) =>
+                value && setComposerMode(value as "audio" | "meeting")
+              }
+              className="justify-start"
+            >
+              <ToggleGroupItem value="audio" className="max-md:h-11">
+                {t("composer.modeAudio")}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="meeting" className="max-md:h-11">
+                {t("composer.modeMeeting")}
+              </ToggleGroupItem>
+            </ToggleGroup>
+          )}
+          {effectiveMode === "meeting" ? (
+            <MeetingComposer
+              onCancel={closeComposer}
+              onStarted={() => {
+                closeComposer();
+                refetchAll();
+                refetchUsage();
+              }}
+            />
+          ) : (
+            <Composer
+              onCancel={closeComposer}
+              onStarted={() => {
+                closeComposer();
+                refetchAll();
+              }}
+            />
+          )}
+        </div>
       )}
 
       {initialLoading && totalJobs === 0 ? (

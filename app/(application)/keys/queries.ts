@@ -42,6 +42,8 @@ export const GET_API_KEYS = gql`
         scope_mode
         agent_ids
         role
+        team
+        project
       }
     }
   }
@@ -59,6 +61,30 @@ export const GET_KEY_AGENTS = gql`
     $sort: SortBy = { field: "updatedAt", direction: DESC }
   ) {
     agentsPagination(page: $page, limit: $limit, sort: $sort) {
+      items {
+        id
+        name
+      }
+    }
+  }
+`;
+
+/** Teams for the optional attribution selector (id + name). */
+export const GET_KEY_TEAMS = gql`
+  query GetKeyTeams($page: Int!, $limit: Int!) {
+    teamsPagination(page: $page, limit: $limit) {
+      items {
+        id
+        name
+      }
+    }
+  }
+`;
+
+/** Projects for the optional attribution selector (id + name). */
+export const GET_KEY_PROJECTS = gql`
+  query GetKeyProjects($page: Int!, $limit: Int!) {
+    projectsPagination(page: $page, limit: $limit) {
       items {
         id
         name
@@ -93,6 +119,8 @@ export const CREATE_API_KEY = gql`
     $super_admin: Boolean
     $scope_mode: String
     $agent_ids: JSON
+    $team: String
+    $project: String
   ) {
     usersCreateOne(
       input: {
@@ -104,10 +132,29 @@ export const CREATE_API_KEY = gql`
         super_admin: $super_admin
         scope_mode: $scope_mode
         agent_ids: $agent_ids
+        team: $team
+        project: $project
       }
     ) {
       item {
         id
+      }
+    }
+  }
+`;
+
+/**
+ * Update an API key's optional attribution targets (team / project). Pass
+ * `null` to clear. Separate from the role update so each control saves
+ * independently from the detail panel.
+ */
+export const UPDATE_API_KEY_ATTRIBUTION = gql`
+  mutation UpdateApiKeyAttribution($id: ID!, $team: String, $project: String) {
+    usersUpdateOneById(id: $id, input: { team: $team, project: $project }) {
+      item {
+        id
+        team
+        project
       }
     }
   }

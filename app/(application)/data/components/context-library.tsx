@@ -35,8 +35,8 @@
 
 import { CircleAlert, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import * as React from "react";
+import { toast } from "sonner";
 
 import { PageHeader } from "@/components/primitives/page-header";
 import { PageShell } from "@/components/primitives/page-shell";
@@ -44,7 +44,10 @@ import { Toolbar } from "@/components/primitives/toolbar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { useContextLibrary } from "../hooks";
+import { UserContext } from "@/app/(application)/authenticated";
+
+import { useContextIcons, useContextLibrary } from "../hooks";
+import { ContextItemFavourites } from "./context-item-favourites";
 import { LibraryEmpty } from "./library-empty";
 import { LibraryRow } from "./library-row";
 
@@ -54,6 +57,30 @@ export function ContextLibrary() {
 
   const [search, setSearch] = React.useState("");
   const { rows, loading, error } = useContextLibrary({ search });
+
+  // contextId → name for the favourites/recents card badges. With no search
+  // `rows` is the full context list, which is the only time the pins render.
+  const contextNames = React.useMemo(
+    () => Object.fromEntries(rows.map((row) => [row.id, row.name])),
+    [rows],
+  );
+
+  // Shared, admin-managed glyphs (platform_configurations). All users see the
+  // icons; only super admins get the picker affordance.
+  const { icons, setIcon } = useContextIcons();
+  const userCtx = React.useContext(UserContext);
+  const canEditIcons = userCtx?.user?.super_admin === true;
+
+  const handleSetIcon = React.useCallback(
+    async (contextId: string, name: string | null) => {
+      try {
+        await setIcon(contextId, name);
+      } catch {
+        toast.error(t("library.iconPicker.saveError"));
+      }
+    },
+    [setIcon, t],
+  );
 
   return (
     <PageShell variant="content">
@@ -77,6 +104,9 @@ export function ContextLibrary() {
           }}
         />
 
+        {/* Favourites + Recently Viewed — hidden while filtering contexts. */}
+        {search === "" && <ContextItemFavourites contextNames={contextNames} />}
+
         {error && (
           <Alert variant="destructive" role="alert">
             <CircleAlert className="size-4" aria-hidden="true" />
@@ -93,9 +123,9 @@ export function ContextLibrary() {
               {Array.from({ length: 6 }).map((_, index) => (
                 <li
                   key={index}
-                  className="flex items-center gap-3 px-3 py-4 md:px-4"
+                  className="flex items-center gap-3 px-3 py-4 md:gap-4 md:px-4"
                 >
-                  <Skeleton className="size-2 shrink-0 rounded-full" />
+                  <Skeleton className="size-9 shrink-0 rounded-md" />
                   <div className="min-w-0 flex-1 space-y-1.5">
                     <Skeleton className="h-4 w-48 max-w-full" />
                     <Skeleton className="hidden h-3 w-64 max-w-full md:block" />
@@ -129,7 +159,13 @@ export function ContextLibrary() {
           <div className="rounded-md border">
             <ul className="divide-y divide-border">
               {rows.map((row) => (
-                <LibraryRow key={row.id} row={row} />
+                <LibraryRow
+                  key={row.id}
+                  row={row}
+                  icon={icons[row.id]}
+                  canEdit={canEditIcons}
+                  onSetIcon={handleSetIcon}
+                />
               ))}
             </ul>
           </div>

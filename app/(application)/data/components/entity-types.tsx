@@ -18,6 +18,7 @@ import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
 
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { EmptyState } from "@/components/primitives/empty-state";
 import {
   OverflowMenu,
@@ -41,12 +42,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
+import { AgentModelSelector } from "@/app/(application)/agents/components/agent-model-selector";
 import {
   BACKFILL_ENTITIES,
   CREATE_ENTITY_TYPE,
   DELETE_ENTITY_TYPE,
+  GET_ENTITY_MODEL,
   GET_ENTITY_TYPES,
   GET_STALE_ENTITY_COUNT,
+  PROMOTE_ENTITY_TYPE,
+  SET_ENTITY_MODEL,
   UPDATE_ENTITY_TYPE,
 } from "@/queries/queries";
 
@@ -59,6 +64,7 @@ type EntityTypeRow = {
   name: string;
   description: string;
   active: boolean;
+  status?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -67,6 +73,12 @@ export function ContextEntityTypes({ context }: ContextEntityTypesProps) {
   const t = useTranslations("knowledge");
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
+  // "stale" → only items that predate the current type set; "all" → re-extract
+  // every item (e.g. after editing a type's description, which doesn't bump the
+  // stale count). null → dialog closed.
+  const [backfillMode, setBackfillMode] = React.useState<"stale" | "all" | null>(
+    null,
+  );
   const [editing, setEditing] = React.useState<EntityTypeRow | null>(null);
   const [formName, setFormName] = React.useState("");
   const [formDescription, setFormDescription] = React.useState("");
@@ -81,12 +93,46 @@ export function ContextEntityTypes({ context }: ContextEntityTypesProps) {
     () => GET_STALE_ENTITY_COUNT(context),
     [context],
   );
+  const entityModelQueryDoc = React.useMemo(
+    () => GET_ENTITY_MODEL(context),
+    [context],
+  );
+  const setEntityModelDoc = React.useMemo(
+    () => SET_ENTITY_MODEL(context),
+    [context],
+  );
+
+  type EntityModelInfo = {
+    effectiveModel: string | null;
+    source: "database" | "code" | "env" | null;
+    databaseModel: string | null;
+    codeModel: string | null;
+  };
+  const { data: modelData, refetch: refetchModel } = useQuery<{
+    [key: string]: EntityModelInfo;
+  }>(entityModelQueryDoc);
+  const modelInfo = modelData?.[`${context}_itemsEntityModel`] ?? null;
+
+  const [setEntityModel, setEntityModelResult] = useMutation(setEntityModelDoc, {
+    onCompleted: () => {
+      refetchModel();
+      toast.success(t("workspace.entities.model.saved"));
+    },
+    onError: (e) =>
+      toast.error(t("workspace.entities.model.saveError"), {
+        description: e.message,
+      }),
+  });
 
   const { data, loading, error, refetch } = useQuery<{
     entity_type_settingsPagination: { items: EntityTypeRow[] };
   }>(GET_ENTITY_TYPES, { variables: { context } });
 
-  const types = data?.entity_type_settingsPagination?.items ?? [];
+  const allTypes = data?.entity_type_settingsPagination?.items ?? [];
+  // Configured (active or manually-deactivated) types vs auto-discovered
+  // suggestions awaiting promotion.
+  const types = allTypes.filter((row) => row.status !== "suggested");
+  const suggestedTypes = allTypes.filter((row) => row.status === "suggested");
 
   const { data: staleData, refetch: refetchStale } = useQuery<{
     [key: string]: number;
@@ -125,6 +171,18 @@ export function ContextEntityTypes({ context }: ContextEntityTypesProps) {
     },
     onError: (e) =>
       toast.error(t("workspace.entities.toasts.deleteError"), {
+        description: e.message,
+      }),
+  });
+
+  const [promoteEntityType] = useMutation(PROMOTE_ENTITY_TYPE, {
+    onCompleted: () => {
+      refetch();
+      refetchStale();
+      toast.success(t("workspace.entities.toasts.promoted"));
+    },
+    onError: (e) =>
+      toast.error(t("workspace.entities.toasts.promoteError"), {
         description: e.message,
       }),
   });
@@ -235,10 +293,76 @@ export function ContextEntityTypes({ context }: ContextEntityTypesProps) {
         <p className="max-w-2xl text-sm text-muted-foreground">
           {t("workspace.entities.description")}
         </p>
-        <Button size="sm" onClick={openCreate} className="shrink-0">
-          <Plus aria-hidden="true" className="mr-2 size-4" />
-          {t("workspace.entities.addType")}
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          {/* Always available — re-extract entities for every item (handy after
+              editing a type's name/description, which doesn't mark items stale). */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={backfillResult.loading}
+            onClick={() => setBackfillMode("all")}
+          >
+            <Sparkles aria-hidden="true" className="mr-2 size-4" />
+            {t("workspace.entities.backfill.runAll")}
+          </Button>
+          <Button size="sm" onClick={openCreate}>
+            <Plus aria-hidden="true" className="mr-2 size-4" />
+            {t("workspace.entities.addType")}
+          </Button>
+        </div>
+      </div>
+
+      {/* Extraction model — required for extraction; surfaces the effective
+          model + where it's configured, with a picker to set/override it. */}
+      <div className="space-y-3 rounded-lg border p-4">
+        <div className="space-y-0.5">
+          <h3 className="text-sm font-medium">
+            {t("workspace.entities.model.title")}
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            {t("workspace.entities.model.caption")}
+          </p>
+        </div>
+
+        {modelInfo && !modelInfo.effectiveModel ? (
+          <Alert variant="destructive">
+            <ExclamationTriangleIcon className="size-4" />
+            <AlertTitle>{t("workspace.entities.model.noneTitle")}</AlertTitle>
+            <AlertDescription>
+              {t("workspace.entities.model.noneDescription")}
+            </AlertDescription>
+          </Alert>
+        ) : modelInfo?.effectiveModel ? (
+          <p className="text-xs text-muted-foreground">
+            {t("workspace.entities.model.usingFrom", {
+              model: modelInfo.effectiveModel,
+              source: t(
+                `workspace.entities.model.source.${modelInfo.source ?? "code"}`,
+              ),
+            })}
+          </p>
+        ) : null}
+
+        <div className="max-w-md">
+          <AgentModelSelector
+            value={modelInfo?.effectiveModel ?? undefined}
+            onSelect={(id) => void setEntityModel({ variables: { model: id } })}
+          />
+        </div>
+
+        {modelInfo?.databaseModel ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            disabled={setEntityModelResult.loading}
+            onClick={() => void setEntityModel({ variables: { model: null } })}
+          >
+            {t("workspace.entities.model.reset")}
+          </Button>
+        ) : null}
       </div>
 
       {/* Backfill prompt — items predate the current type set. */}
@@ -256,7 +380,7 @@ export function ContextEntityTypes({ context }: ContextEntityTypesProps) {
               size="sm"
               variant="outline"
               disabled={backfillResult.loading}
-              onClick={() => backfillEntities({ variables: { onlyStale: true } })}
+              onClick={() => setBackfillMode("stale")}
             >
               {backfillResult.loading
                 ? t("workspace.entities.backfill.running")
@@ -336,6 +460,69 @@ export function ContextEntityTypes({ context }: ContextEntityTypesProps) {
         </div>
       )}
 
+      {/* Suggested types — discovered by the extractor; promote or dismiss. */}
+      {suggestedTypes.length > 0 ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium">
+              {t("workspace.entities.suggested.title")}
+            </h3>
+            <Badge variant="secondary">{suggestedTypes.length}</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t("workspace.entities.suggested.caption")}
+          </p>
+          <div className="rounded-md border border-dashed">
+            <ul className="divide-y divide-border">
+              {suggestedTypes.map((row) => (
+                <li
+                  key={row.id}
+                  className="flex items-center gap-3 px-3 py-3 md:gap-4 md:px-4"
+                >
+                  <Sparkles
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-primary"
+                  />
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <p className="truncate text-sm font-medium md:text-base">
+                      {row.name}
+                    </p>
+                    {row.description ? (
+                      <p className="truncate text-sm text-muted-foreground">
+                        {row.description}
+                      </p>
+                    ) : null}
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0"
+                    onClick={() =>
+                      void promoteEntityType({ variables: { id: row.id } })
+                    }
+                  >
+                    <Plus aria-hidden="true" className="mr-2 size-4" />
+                    {t("workspace.entities.suggested.add")}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="shrink-0 text-muted-foreground"
+                    onClick={() =>
+                      void deleteEntityType({ variables: { id: row.id } })
+                    }
+                  >
+                    {t("workspace.entities.suggested.dismiss")}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
+
       {/* Create / edit dialog. */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -395,6 +582,29 @@ export function ContextEntityTypes({ context }: ContextEntityTypesProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Backfill can re-extract entities across thousands of items (an LLM
+          call per item), so confirm the blast radius before running. */}
+      <ConfirmDialog
+        open={backfillMode !== null}
+        onOpenChange={(open) => !open && setBackfillMode(null)}
+        variant="default"
+        title={t("workspace.entities.backfill.confirmTitle")}
+        description={
+          backfillMode === "all"
+            ? t("workspace.entities.backfill.confirmAllDescription")
+            : t("workspace.entities.backfill.confirmDescription", {
+                count: staleCount.toLocaleString(),
+              })
+        }
+        warning={t("workspace.entities.backfill.confirmWarning")}
+        confirmLabel={t("workspace.entities.backfill.confirmCta")}
+        onConfirm={async () => {
+          await backfillEntities({
+            variables: { onlyStale: backfillMode === "stale" },
+          });
+        }}
+      />
     </div>
   );
 }

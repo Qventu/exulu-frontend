@@ -20,10 +20,6 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
-import {
-  OverflowMenu,
-  type OverflowMenuItem,
-} from "@/components/primitives/overflow-menu";
 import { StatusDot } from "@/components/primitives/status-dot";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -155,9 +151,11 @@ export function ItemPipelineStatus({
       label: t("workspace.itemDetail.pipeline.embedded"),
       action: "generate",
     });
+    // Terminal checkpoint: the plain-language end state ("Ready to search")
+    // lives inline as the last step rather than as a separate summary line.
     steps.push({
       key: "retrievable",
-      label: t("workspace.itemDetail.pipeline.retrievable"),
+      label: t("workspace.itemDetail.status.ready"),
     });
   }
 
@@ -167,149 +165,107 @@ export function ItemPipelineStatus({
       ? "embedder"
       : null;
 
-  // ---- Humanized summary + single primary action --------------------
-  const allDone = steps.every((s) => isDone(s.key));
-
-  // The next incomplete actionable stage drives the one primary CTA.
+  // ---- Single primary action ----------------------------------------
+  // The next incomplete actionable stage drives the one primary CTA; re-running
+  // already-complete stages happens inline on the stepper (no second menu).
   const nextAction: "process" | "generate" | null = hasProcessor && !isDone("processed")
     ? "process"
     : hasEmbedder && !isDone("embedded")
       ? "generate"
       : null;
 
-  // Re-run options for already-complete stages live in a quiet menu, so the
-  // stepper itself stays free of inline buttons.
-  const rerunItems: OverflowMenuItem[] = [];
-  if (hasProcessor && isDone("processed")) {
-    rerunItems.push({
-      label: t("workspace.itemDetail.rerunProcess"),
-      icon: RefreshCw,
-      onSelect: rerunProcessed,
-    });
-  }
-  if (hasEmbedder && isDone("embedded")) {
-    rerunItems.push({
-      label: t("workspace.itemDetail.rerunEmbed"),
-      icon: Sparkles,
-      onSelect: rerunEmbedded,
-    });
-  }
-
-  const summaryTone: "success" | "info" | "muted" = anyRunning
-    ? "info"
-    : allDone
-      ? "success"
-      : "muted";
-  const summaryLabel = anyRunning
-    ? t("workspace.itemDetail.status.processing")
-    : allDone
-      ? t("workspace.itemDetail.status.ready")
-      : t("workspace.itemDetail.status.notReady");
-  const summaryHint = anyRunning
-    ? null
-    : allDone
-      ? t("workspace.itemDetail.status.readyHint")
-      : t("workspace.itemDetail.status.hint");
-
   const primaryBusy =
     (nextAction === "process" && processPending) ||
     (nextAction === "generate" && generatePending);
 
+  const rerunFor = (action?: "process" | "generate") =>
+    action === "process" ? rerunProcessed : rerunEmbedded;
+  const rerunLabelFor = (action?: "process" | "generate") =>
+    action === "process"
+      ? t("workspace.itemDetail.rerunProcess")
+      : t("workspace.itemDetail.rerunEmbed");
+
   return (
     <div className="space-y-3">
-      {/* Plain-language status + the single next-step action. The "searchable"
-          framing only applies when the context embeds; otherwise just the
-          stepper + action show. */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        {hasEmbedder ? (
-          <div className="min-w-0 space-y-0.5">
-            {/* Keyed by tone so the line re-mounts and gently animates in when
-                the pipeline flips state (e.g. → "Ready to search"). */}
-            <div
-              key={summaryTone}
-              className="flex items-center gap-1.5 text-sm font-medium motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-left-1 motion-safe:duration-300"
-            >
-              {summaryTone === "success" ? (
-                <Check aria-hidden="true" className="size-4 text-success" />
-              ) : summaryTone === "info" ? (
-                <Loader2
-                  aria-hidden="true"
-                  className="size-4 text-info motion-safe:animate-spin"
-                />
-              ) : (
-                <Circle aria-hidden="true" className="size-4 text-muted-foreground/50" />
-              )}
-              <span>{summaryLabel}</span>
-            </div>
-            {summaryHint ? (
-              <p className="text-xs text-muted-foreground">{summaryHint}</p>
-            ) : null}
-          </div>
-        ) : (
-          <div />
-        )}
-
-        <div className="flex shrink-0 items-center gap-1">
-          {nextAction && !anyRunning ? (
-            <Button
-              type="button"
-              size="sm"
-              disabled={primaryBusy}
-              onClick={nextAction === "process" ? rerunProcessed : rerunEmbedded}
-            >
-              {nextAction === "process" ? (
-                <Zap aria-hidden="true" className="mr-2 size-4" />
-              ) : (
-                <Sparkles aria-hidden="true" className="mr-2 size-4" />
-              )}
-              {nextAction === "process"
-                ? t("workspace.itemDetail.runProcess")
-                : t("workspace.itemDetail.runEmbed")}
-            </Button>
-          ) : null}
-          {rerunItems.length > 0 && !anyRunning ? (
-            <OverflowMenu
-              items={rerunItems}
-              label={t("workspace.itemDetail.rerun")}
-            />
-          ) : null}
-        </div>
-      </div>
-
-      {/* Visual stepper — done / running / pending, connected. */}
-      <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-2">
-        {steps.map((step, i) => {
-          const state = stepState(step.key);
-          return (
-            <React.Fragment key={step.key}>
-              {i > 0 ? (
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "h-px w-5 sm:w-8",
-                    isDone(steps[i - 1]!.key) ? "bg-success/50" : "bg-border",
-                  )}
-                />
-              ) : null}
-              <li className="inline-flex items-center gap-1.5 text-sm">
-                {state === "done" ? (
-                  <Check aria-hidden="true" className="size-4 text-success" />
-                ) : state === "running" ? (
-                  <Loader2
+      {/* Stepper (done / running / pending, connected) on the left; the single
+          next-step action on the right. The plain-language end state lives
+          inline as the terminal "Ready to search" step — no separate summary,
+          no second ⋯ menu. Completed actionable steps expose an inline re-run. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-2">
+          {steps.map((step, i) => {
+            const state = stepState(step.key);
+            const isTerminal = step.key === "retrievable";
+            const canRerun = Boolean(step.action) && state === "done" && !anyRunning;
+            return (
+              <React.Fragment key={step.key}>
+                {i > 0 ? (
+                  <span
                     aria-hidden="true"
-                    className="size-4 text-info motion-safe:animate-spin"
+                    className={cn(
+                      "h-px w-5 sm:w-8",
+                      isDone(steps[i - 1]!.key) ? "bg-success/50" : "bg-border",
+                    )}
                   />
-                ) : (
-                  <Circle aria-hidden="true" className="size-4 text-muted-foreground/40" />
-                )}
-                <span className={cn(state === "pending" && "text-muted-foreground")}>
-                  {step.label}
-                </span>
-              </li>
-            </React.Fragment>
-          );
-        })}
-      </ol>
+                ) : null}
+                <li className="inline-flex items-center gap-1.5 text-sm">
+                  {state === "done" ? (
+                    <Check aria-hidden="true" className="size-4 text-success" />
+                  ) : state === "running" ? (
+                    <Loader2
+                      aria-hidden="true"
+                      className="size-4 text-info motion-safe:animate-spin"
+                    />
+                  ) : (
+                    <Circle aria-hidden="true" className="size-4 text-muted-foreground/40" />
+                  )}
+                  <span
+                    className={cn(
+                      state === "pending" && "text-muted-foreground",
+                      // Highlight the terminal "Ready to search" end state.
+                      isTerminal && state === "done" && "font-medium text-success",
+                    )}
+                  >
+                    {step.label}
+                  </span>
+                  {canRerun ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-6 text-muted-foreground/60 transition-colors hover:text-foreground"
+                      title={rerunLabelFor(step.action)}
+                      aria-label={rerunLabelFor(step.action)}
+                      onClick={rerunFor(step.action)}
+                    >
+                      <RefreshCw aria-hidden="true" className="size-3" />
+                    </Button>
+                  ) : null}
+                </li>
+              </React.Fragment>
+            );
+          })}
+        </ol>
+
+        {nextAction && !anyRunning ? (
+          <Button
+            type="button"
+            size="sm"
+            className="shrink-0"
+            disabled={primaryBusy}
+            onClick={nextAction === "process" ? rerunProcessed : rerunEmbedded}
+          >
+            {nextAction === "process" ? (
+              <Zap aria-hidden="true" className="mr-2 size-4" />
+            ) : (
+              <Sparkles aria-hidden="true" className="mr-2 size-4" />
+            )}
+            {nextAction === "process"
+              ? t("workspace.itemDetail.runProcess")
+              : t("workspace.itemDetail.runEmbed")}
+          </Button>
+        ) : null}
+      </div>
 
       {anyRunning && (
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">

@@ -15,21 +15,23 @@ import { gql } from "@apollo/client";
  * VERIFIED RESOLVER ARGS (proven shapes only — queries/queries.ts):
  * - skillsPagination(page, limit, sort, filters) returns pageInfo +
  *   items { SKILL_FIELDS }.
- * - Filter shape proven in production: [{ name: { contains } }]
- *   (legacy skills/page.tsx:79-80). Array entries AND together. No verified
- *   `or:` combinator or `tags: { contains }` on FilterSkill — list search
- *   stays NAME-only server-side (see SKILLS_OR_SEARCH_SUPPORTED).
+ * - Filter shapes: [{ name: { contains } }] (proven in production — legacy
+ *   skills/page.tsx:79-80) and [{ tags: { contains } }] (FilterSkill.tags is a
+ *   FilterOperatorJSON; `contains` maps to Postgres jsonb `@>` containment, the
+ *   same mechanism the prompts tag filter uses). Array entries AND together.
+ *   No verified `or:` combinator on FilterSkill — free-text search stays
+ *   NAME-only server-side (see SKILLS_OR_SEARCH_SUPPORTED). Tag filtering is a
+ *   separate set of AND'd `tags: { contains }` entries, not an OR search.
  */
 
 /* -----------------------------------------------------------------------------
  * Schema-gated extensions (brief rule 4) — mirror PROMPTS_*_SUPPORTED.
  *
  * SKILLS_RBAC_TEAMS_SUPPORTED — add teams { id rights } to RBAC selection.
- * Today: false. Backend introspection during agents 2.8 proved RBACData has
- * no `teams` field; selecting it crashes the query. RBACInput is the same
- * shared type, so sending teams for skills would fail symmetrically.
- * RBACControl is passed allowedModes excluding "teams" — flip ONLY after
- * backend confirmation.
+ * Enabled 2026-06-19: the backend now exposes `teams` on both `RBACData` and
+ * `RBACInput` (src/graphql/schemas/index.ts), and the resolver/mutation layer
+ * (ee/rbac-resolver.ts, ee/rbac-update.ts) reads and persists team grants, so
+ * skills can query and mutate `teams` symmetrically.
  *
  * SKILLS_OR_SEARCH_SUPPORTED — extend search to name-OR-tags via an `or:`
  * combinator on FilterSkill. Today: false. No existing consumer extends
@@ -38,7 +40,7 @@ import { gql } from "@apollo/client";
  *
  * SKILLS_ASSIGNED_AGENTS_SUPPORTED — reserved (no consumer in this PR).
  * -------------------------------------------------------------------------- */
-export const SKILLS_RBAC_TEAMS_SUPPORTED = false;
+export const SKILLS_RBAC_TEAMS_SUPPORTED = true;
 export const SKILLS_OR_SEARCH_SUPPORTED = false;
 export const SKILLS_ASSIGNED_AGENTS_SUPPORTED = false;
 
@@ -94,6 +96,12 @@ export const GET_SKILLS_INDEX = gql`
         ${SKILL_FIELDS_INDEX}
       }
     }
+  }
+`;
+
+export const GET_UNIQUE_SKILL_TAGS_INDEX = gql`
+  query UniqueSkillTagsIndex {
+    getUniqueSkillTags
   }
 `;
 

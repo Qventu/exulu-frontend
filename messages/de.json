@@ -2065,11 +2065,19 @@
   },
   "keys": {
     "adminRoleNotice": "Admin-Schlüssel agieren derzeit als Super-Admin – die ausgewählte Rolle schränkt sie noch nicht ein.",
+    "attribution": {
+      "teamLabel": "Team",
+      "projectLabel": "Projekt",
+      "noTeam": "Kein Team",
+      "noProject": "Kein Projekt"
+    },
     "columns": {
       "created": "Erstellt",
       "lastUsed": "Zuletzt verwendet",
       "name": "Name",
-      "scope": "Geltungsbereich"
+      "scope": "Geltungsbereich",
+      "team": "Team",
+      "project": "Projekt"
     },
     "create": {
       "addAgent": "Agent hinzufügen…",
@@ -2123,7 +2131,11 @@
       "roleNotUsedCaption": "Rollen werden bei Agenten-Schlüsseln nicht verwendet.",
       "roleUpdateFailed": "Rolle konnte nicht aktualisiert werden",
       "roleUpdated": "Rolle aktualisiert",
-      "scope": "Geltungsbereich"
+      "scope": "Geltungsbereich",
+      "attribution": "Zuordnung",
+      "attributionCaption": "Optional. Mit diesem Schlüssel ausgeführte Anfragen werden dem gewählten Team und/oder Projekt für die Kostenverfolgung zugeordnet.",
+      "attributionUpdated": "Zuordnung aktualisiert",
+      "attributionUpdateFailed": "Zuordnung konnte nicht aktualisiert werden"
     },
     "emptyDescription": "Erstellen Sie einen, um die Exulu-API aus Ihren Diensten aufzurufen.",
     "emptyTitle": "Noch keine API-Schlüssel",
@@ -2150,6 +2162,16 @@
     "tokenCrossLinkAction": "Persönlicher Token"
   },
   "knowledge": {
+    "pins": {
+      "favourite": "Zu Favoriten hinzufügen",
+      "favourites": {
+        "title": "Favoriten"
+      },
+      "recent": {
+        "title": "Zuletzt angesehen"
+      },
+      "unfavourite": "Aus Favoriten entfernen"
+    },
     "library": {
       "backendHint": "Kontexte werden in deinem Backend durch Entwickler definiert.",
       "description": "Kontexte, aus denen deine Agenten abrufen.",
@@ -2166,7 +2188,8 @@
         "failedJobs": "{count, plural, one {# fehlgeschlagener Job} other {# fehlgeschlagene Jobs}}",
         "ingested": "geladen",
         "itemCount": "{count, plural, one {# Eintrag} other {# Einträge}}",
-        "statusFailed": "{count, plural, one {# fehlgeschlagener Job — Aufmerksamkeit erforderlich} other {# fehlgeschlagene Jobs — Aufmerksamkeit erforderlich}}"
+        "statusFailed": "{count, plural, one {# fehlgeschlagener Job — Aufmerksamkeit erforderlich} other {# fehlgeschlagene Jobs — Aufmerksamkeit erforderlich}}",
+        "setIcon": "Symbol für {name} festlegen"
       },
       "searchPlaceholder": "Kontexte suchen",
       "stats": {
@@ -2185,6 +2208,13 @@
         "timeSeriesDescription": "Upserts und Abrufe über alle Kontexte.",
         "timeSeriesTitle": "Aktivität im Zeitverlauf",
         "view": "Nutzung anzeigen"
+      },
+      "iconPicker": {
+        "title": "Symbol auswählen",
+        "searchPlaceholder": "Symbole suchen…",
+        "reset": "Auf Standard zurücksetzen",
+        "noResults": "Keine Symbole gefunden",
+        "saveError": "Symbol konnte nicht gespeichert werden"
       }
     },
     "workspace": {
@@ -2459,6 +2489,21 @@
       "entities": {
         "description": "Aus Dokumenten dieses Kontexts extrahierte Entitätstypen. Sie werden mit den im Code definierten Typen zusammengeführt und ermöglichen entitätsbewusstes Retrieval.",
         "addType": "Typ hinzufügen",
+        "model": {
+          "title": "Extraktionsmodell",
+          "caption": "Das Modell, das Entitäten aus Dokumenten in diesem Kontext extrahiert.",
+          "noneTitle": "Kein Modell konfiguriert",
+          "noneDescription": "Die Entitätsextraktion wird übersprungen, bis ein Modell gesetzt ist. Wählen Sie unten eines aus, oder definieren Sie context.entities.model im Code / setzen Sie EXULU_ENTITY_EXTRACTION_MODEL.",
+          "usingFrom": "Verwendet {model} · {source}",
+          "source": {
+            "database": "hier gesetzt",
+            "code": "im Code definiert",
+            "env": "aus Umgebungsvariable"
+          },
+          "reset": "Auf Standard zurücksetzen",
+          "saved": "Extraktionsmodell aktualisiert",
+          "saveError": "Extraktionsmodell konnte nicht aktualisiert werden"
+        },
         "empty": "Noch keine Entitätstypen",
         "emptyDescription": "Fügen Sie einen Entitätstyp hinzu, um strukturierte Entitäten aus diesem Kontext zu extrahieren.",
         "inactive": "Inaktiv",
@@ -2468,7 +2513,13 @@
           "title": "Nachverarbeitung empfohlen",
           "description": "{count} Eintrag/Einträge wurden vor den aktuellen Entitätstypen verarbeitet. Führen Sie die Extraktion aus, um die Änderungen anzuwenden.",
           "cta": "Jetzt nachverarbeiten",
-          "running": "Wird nachverarbeitet…"
+          "runAll": "Extraktion erneut ausführen",
+          "running": "Wird nachverarbeitet…",
+          "confirmTitle": "Entitäts-Nachverarbeitung ausführen?",
+          "confirmDescription": "Dies extrahiert Entitäten für {count} Eintrag/Einträge neu, die vor den aktuellen Entitätstypen verarbeitet wurden.",
+          "confirmAllDescription": "Dies extrahiert Entitäten für alle Einträge in diesem Kontext neu und wendet die aktuellen Entitätstypen und das aktuelle Modell an.",
+          "confirmWarning": "Für jeden Eintrag wird eine LLM-Extraktion ausgeführt – das kann bei großen Mengen langsam und teuer sein.",
+          "confirmCta": "Nachverarbeitung ausführen"
         },
         "menu": {
           "label": "Aktionen für Entitätstyp",
@@ -2500,12 +2551,39 @@
           "backfillProcessed": "{count} Eintrag/Einträge verarbeitet.",
           "backfillSkipped": "· {count} übersprungen (Limit erreicht).",
           "backfillError": "Fehler bei der Nachverarbeitung",
-          "nameRequired": "Bitte geben Sie einen Namen für den Entitätstyp an."
+          "nameRequired": "Bitte geben Sie einen Namen für den Entitätstyp an.",
+          "promoted": "Entitätstyp hinzugefügt",
+          "promoteError": "Vorgeschlagener Typ konnte nicht hinzugefügt werden"
+        },
+        "suggested": {
+          "title": "Vorgeschlagene Typen",
+          "caption": "Typen, die der Extraktor in Ihren Inhalten erkannt hat, die aber noch nicht konfiguriert sind. Fügen Sie nützliche hinzu oder verwerfen Sie den Rest.",
+          "add": "Hinzufügen",
+          "dismiss": "Verwerfen"
+        },
+        "itemSection": {
+          "title": "Entitäten",
+          "count": "{count, plural, one {# Entität} other {# Entitäten}}",
+          "empty": "Für diesen Eintrag wurden noch keine Entitäten extrahiert.",
+          "emptyAction": "Starten Sie die Extraktion, um Entitäten in diesem Eintrag zu finden.",
+          "unavailable": "Entitätsdaten sind nicht verfügbar.",
+          "extract": "Entitäten extrahieren",
+          "reExtract": "Neu extrahieren",
+          "extracting": "Extrahiere…",
+          "detachAll": "Alle trennen",
+          "detachConfirmTitle": "Alle Entitäten trennen?",
+          "detachConfirmBody": "Dadurch werden alle Entitätsverknüpfungen von diesem Eintrag entfernt. Entitäten, die nur von diesem Eintrag verwendet werden, werden gelöscht. Sie können jederzeit neu extrahieren.",
+          "detachConfirmAction": "Alle trennen",
+          "detached": "{count, plural, =0 {Keine Entitäten zum Trennen} one {# Entität getrennt} other {# Entitäten getrennt}}",
+          "detachError": "Entitäten konnten nicht getrennt werden"
         }
       },
       "backToItems": "Zurück zu den Einträgen",
       "itemDetail": {
         "copyId": "Eintrags-ID kopieren",
+        "extractEntities": "Entitäten extrahieren",
+        "extractEntitiesDone": "{count, plural, =0 {Keine Entitäten gefunden} one {# Entität extrahiert} other {# Entitäten extrahiert}}",
+        "extractEntitiesError": "Entitäten konnten nicht extrahiert werden",
         "externalIdLabel": "ext",
         "details": "Details",
         "idLabel": "ID",
@@ -3355,6 +3433,7 @@
       "roles": "Mit Rollen geteilt",
       "rolesCount": "{count, plural, one {# Rolle} other {# Rollen}}",
       "teams": "Mit Teams geteilt",
+      "teamsCount": "{count, plural, one {# Team} other {# Teams}}",
       "unknown": "Eingeschränkt",
       "users": "Mit Benutzern geteilt",
       "usersCount": "{count, plural, one {# Benutzer} other {# Benutzer}}"
@@ -3399,6 +3478,10 @@
       "accessFailed": "Zugriff konnte nicht aktualisiert werden",
       "accessSaved": "Zugriffskontrolle aktualisiert",
       "current": "aktuell",
+      "downloadFailed": "Skill konnte nicht heruntergeladen werden",
+      "downloadInProgress": "Download wird vorbereitet…",
+      "downloadStarted": "Skill-Download gestartet",
+      "downloadZip": "Als .zip herunterladen",
       "openEditor": "Editor öffnen",
       "saving": "Speichern…",
       "showLess": "Weniger anzeigen",
@@ -3408,6 +3491,18 @@
       "skillMdMissingTitle": "SKILL.md nicht gefunden",
       "subjectLabel": "Skill",
       "tags": "Tags",
+      "tagsCreateHeading": "Neu erstellen",
+      "tagsCreateOption": "\"{tag}\" erstellen",
+      "tagsEmpty": "Noch keine Tags.",
+      "tagsExistingHeading": "Tags",
+      "tagsFailed": "Tags konnten nicht aktualisiert werden",
+      "tagsLoading": "Tags werden geladen…",
+      "tagsNoMatch": "Keine Tags gefunden. Tippen, um eines zu erstellen.",
+      "tagsNone": "Noch keine Tags.",
+      "tagsPlaceholder": "Tags hinzufügen…",
+      "tagsRemove": "{tag} entfernen",
+      "tagsSaved": "Tags aktualisiert",
+      "tagsSearchPlaceholder": "Tags suchen oder erstellen…",
       "usesLabel": "Verwendungen",
       "usesTooltip": "Wie oft dieser Skill von einem Agenten geladen wurde.",
       "usesTooltipLabel": "Was zählt als Verwendung?",
@@ -3416,6 +3511,9 @@
       "viewAllAndCompare": "Alle anzeigen & vergleichen"
     },
     "detailEmptyTitle": "Wählen Sie einen Skill zur Vorschau",
+    "filterNoTags": "Noch keine Tags.",
+    "filterTagsHeading": "Tags",
+    "filterTagsPlaceholder": "Tags suchen…",
     "editor": {
       "confirm": {
         "deleteConfirm": "Löschen",
@@ -3542,6 +3640,7 @@
     "errorTitle": "Skills konnten nicht geladen werden",
     "newSkill": "Neuer Skill",
     "rangeOfTotal": "{from}–{to} von {total}",
+    "removeFilter": "{name} entfernen",
     "row": {
       "actionsLabel": "Aktionen für {name}",
       "copyId": "Skill-ID kopieren",
@@ -3591,7 +3690,26 @@
       "start": "Starten",
       "titleLabel": "Titel",
       "titlePlaceholder": "Titel des Transkripts",
-      "uploading": "Wird hochgeladen…"
+      "uploading": "Wird hochgeladen…",
+      "modeAudio": "Audio hochladen",
+      "modeMeeting": "Meeting aufnehmen",
+      "meetingUrl": "Meeting-URL",
+      "meetingUrlPlaceholder": "https://… (Zoom, Meet, Teams)",
+      "joinTiming": "Beitrittszeitpunkt",
+      "joinNow": "Jetzt beitreten",
+      "joinSchedule": "Planen",
+      "joinAt": "Beitreten am",
+      "botName": "Bot-Name",
+      "botNamePlaceholder": "Exulu Notetaker",
+      "notifyChat": "Teilnehmer im Chat informieren, dass das Meeting aufgezeichnet wird",
+      "postProcessing": "Nachbearbeitung",
+      "postProcessingHint": "Prompts automatisch auf das Transkript anwenden, sobald es fertig ist",
+      "addPrompt": "Prompt hinzufügen",
+      "selectPrompt": "Prompt auswählen",
+      "selectAgent": "Agent auswählen",
+      "removePrompt": "Entfernen",
+      "startMeeting": "Aufnahme starten",
+      "meetingSummary": "Tritt jetzt bei · Privat · Kein Projekt"
     },
     "confirmCancel": {
       "confirm": "Transkription stoppen",
@@ -3680,7 +3798,13 @@
       "speakers": "Sprecher",
       "speakersHint": "Namen eingeben, um die Rohbezeichnungen zu ersetzen",
       "title": "Transkript überprüfen",
-      "transcript": "Transkript"
+      "transcript": "Transkript",
+      "postProcessing": "Nachbearbeitung",
+      "postProcessingEmpty": "Keine Nachbearbeitungsergebnisse.",
+      "rerun": "Erneut ausführen",
+      "resultFailed": "Fehlgeschlagen",
+      "resultRunning": "Wird ausgeführt…",
+      "meetingNoAudio": "Für Meeting-Aufnahmen ist keine Audiovorschau verfügbar."
     },
     "row": {
       "awaitingReview": "Wartet auf Überprüfung",
@@ -3697,7 +3821,9 @@
       "transcribing": "Wird transkribiert…",
       "transcribingWithLength": "{length} Audio wird transkribiert…",
       "updated": "Aktualisiert",
-      "wrappingUp": "wird abgeschlossen…"
+      "wrappingUp": "wird abgeschlossen…",
+      "meetingSource": "Meeting-Aufnahme",
+      "inMeeting": "Im Meeting…"
     },
     "searchPlaceholder": "Transkripte durchsuchen…",
     "sharing": {
@@ -3715,7 +3841,16 @@
       "started": "Transkription gestartet",
       "updated": "Transkript aktualisiert",
       "uploadFailed": "Upload fehlgeschlagen",
-      "viewInLibrary": "In der Bibliothek ansehen"
+      "viewInLibrary": "In der Bibliothek ansehen",
+      "meetingStarted": "Bot tritt dem Meeting bei",
+      "meetingStartFailed": "Meeting-Bot konnte nicht gestartet werden",
+      "postProcessingRan": "Prompt erneut ausgeführt",
+      "postProcessingFailed": "Prompt konnte nicht ausgeführt werden"
+    },
+    "usage": {
+      "label": "Aufnahmezeit diesen Monat",
+      "summary": "{used} von {limit} genutzt ({percent}%)",
+      "exceeded": "Monatliches Aufnahmelimit erreicht — neue Meeting-Aufnahmen sind bis nächsten Monat blockiert."
     }
   },
   "variables": {

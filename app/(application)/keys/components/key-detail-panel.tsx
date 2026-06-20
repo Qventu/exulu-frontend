@@ -34,12 +34,18 @@ import {
   useAgentNames,
   useKeyRoles,
 } from "../hooks";
+import { KeyAttributionSelects } from "./key-attribution-selects";
 import { KeysRoleSelector } from "./keys-role-selector";
 import { ScopeBadge } from "./scope-badge";
 
 export interface KeyDetailPanelProps {
   apiKey: ApiKeyRow;
   onChangeRole: (id: string, roleId: string | null) => Promise<void>;
+  /** Save the key's optional team / project attribution. */
+  onChangeAttribution: (
+    id: string,
+    next: { teamId?: string | null; projectId?: string | null },
+  ) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   /** Called after a successful delete so the parent clears the selection. */
   onDeleted: () => void;
@@ -48,6 +54,7 @@ export interface KeyDetailPanelProps {
 export function KeyDetailPanel({
   apiKey,
   onChangeRole,
+  onChangeAttribution,
   onDelete,
   onDeleted,
 }: KeyDetailPanelProps) {
@@ -58,6 +65,20 @@ export function KeyDetailPanel({
 
   const [pendingRoleId, setPendingRoleId] = React.useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+
+  const saveAttribution = React.useCallback(
+    async (next: { teamId?: string | null; projectId?: string | null }) => {
+      try {
+        await onChangeAttribution(apiKey.id, next);
+        toast.success(t("detail.attributionUpdated"));
+      } catch (error) {
+        toast.error(t("detail.attributionUpdateFailed"), {
+          description: error instanceof Error ? error.message : undefined,
+        });
+      }
+    },
+    [onChangeAttribution, apiKey.id, t],
+  );
 
   const timestampFormatter = React.useMemo(
     () =>
@@ -149,6 +170,23 @@ export function KeyDetailPanel({
           {isAgentsScoped
             ? t("detail.roleNotUsedCaption")
             : t("adminRoleNotice")}
+        </p>
+      </Section>
+
+      {/* Attribution — optional team / project for LiteLLM cost tracking. */}
+      <Section label={t("detail.attribution")}>
+        <KeyAttributionSelects
+          teamId={apiKey.team}
+          projectId={apiKey.project}
+          onTeamChange={(teamId) =>
+            void saveAttribution({ teamId, projectId: apiKey.project ?? null })
+          }
+          onProjectChange={(projectId) =>
+            void saveAttribution({ teamId: apiKey.team ?? null, projectId })
+          }
+        />
+        <p className="text-xs text-muted-foreground">
+          {t("detail.attributionCaption")}
         </p>
       </Section>
 

@@ -55,10 +55,13 @@ import {
   CANCEL_TRANSCRIPTION_JOB,
   FINALIZE_TRANSCRIPTION_JOB,
   GET_TRANSCRIPTION_JOB,
+  RUN_TRANSCRIPT_POST_PROCESSING,
 } from "../queries";
 import {
   formatClock,
   formatDuration,
+  isMeetingJob,
+  parsePostProcessingOutputs,
   parseSegments,
   parseSpeakers,
   speakerColor,
@@ -225,6 +228,7 @@ function ReviewForm({
 }) {
   const t = useTranslations("transcriptions");
   const tCommon = useTranslations("common");
+  const meeting = isMeetingJob(job);
 
   const segments = React.useMemo(
     () => parseSegments(job.raw_segments),
@@ -552,6 +556,10 @@ function ReviewForm({
           )}
         </div>
 
+        {/* Post-processing results (Recall meeting jobs). Auto-run on transcript
+            ready; each card can be re-run manually after speaker edits. */}
+        {meeting && <PostProcessingResults job={job} />}
+
         {/* L3: project re-assignment + sharing (inventory 44/45). */}
         <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
           <CollapsibleTrigger className="group flex min-h-9 w-full items-center gap-2 rounded-md text-left text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
@@ -610,14 +618,21 @@ function ReviewForm({
 
       {/* Sticky audio footer: player + ribbon + actions (inventory 48–54). */}
       <div className="shrink-0 space-y-3 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <AudioTimeline
-          ref={timelineRef}
-          audioS3Key={job.audio_s3key}
-          segments={segments}
-          speakers={speakers}
-          onTime={setCurrentSecond}
-          onSeek={scrollToTime}
-        />
+        {/* Meeting recordings live in Recall, not S3 — no local audio to play. */}
+        {meeting || !job.audio_s3key ? (
+          <p className="px-1 text-xs text-muted-foreground">
+            {t("review.meetingNoAudio")}
+          </p>
+        ) : (
+          <AudioTimeline
+            ref={timelineRef}
+            audioS3Key={job.audio_s3key}
+            segments={segments}
+            speakers={speakers}
+            onTime={setCurrentSecond}
+            onSeek={scrollToTime}
+          />
+        )}
         <div className="flex justify-end gap-2">
           <Button
             type="button"
@@ -661,6 +676,94 @@ function ReviewForm({
         confirmLabel={t("confirmDiscard.confirm")}
         onConfirm={onConfirmDiscard}
       />
+    </div>
+  );
+}
+
+/* --------------------------- post-processing ----------------------------- */
+
+/**
+ * Cards for the per-meeting post-processing results. Each output carries its
+ * own {prompt_id, agent_id}, so it can be re-run after editing speakers. The
+ * mutation returns the updated job (same id), so Apollo's normalized cache
+ * refreshes these cards automatically.
+ */
+function PostProcessingResults({ job }: { job: Job }) {
+  const t = useTranslations("transcriptions");
+  const outputs = React.useMemo(
+    () => parsePostProcessingOutputs(job.post_processing_outputs),
+    [job.post_processing_outputs],
+  );
+  const [rerun] = useMutation(RUN_TRANSCRIPT_POST_PROCESSING);
+  const [runningKey, setRunningKey] = React.useState<string | null>(null);
+
+  const onRerun = async (promptId: string, agentId: string) => {
+    const key = `${promptId}:${agentId}`;
+    setRunningKey(key);
+    try {
+      await rerun({
+        variables: { id: job.id, prompt_id: promptId, agent_id: agentId },
+      });
+      toast.success(t("toasts.postProcessingRan"));
+    } catch (err: unknown) {
+      toast.error(t("toasts.postProcessingFailed"), {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setRunningKey(null);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">{t("review.postProcessing")}</p>
+      {outputs.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {t("review.postProcessingEmpty")}
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {outputs.map((output, index) => {
+            const key = `${output.prompt_id}:${output.agent_id}`;
+            const running = runningKey === key;
+            return (
+              <div key={index} className="rounded-md border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-sm font-medium">
+                    {output.prompt_name ?? output.prompt_id}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={running}
+                    onClick={() => onRerun(output.prompt_id, output.agent_id)}
+                    className="shrink-0 max-md:h-11"
+                  >
+                    {running ? (
+                      <Loader2
+                        aria-hidden="true"
+                        className="mr-1 size-3.5 animate-spin"
+                      />
+                    ) : null}
+                    {t("review.rerun")}
+                  </Button>
+                </div>
+                {output.status === "failed" ? (
+                  <p className="mt-1 text-sm text-destructive">
+                    {t("review.resultFailed")}
+                    {output.error ? ` — ${output.error}` : ""}
+                  </p>
+                ) : (
+                  <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                    {output.output}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

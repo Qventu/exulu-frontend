@@ -23,6 +23,7 @@ import {
   DELETE_SKILL_INDEX,
   GET_SKILLS_INDEX,
   GET_SKILL_BY_ID_INDEX,
+  GET_UNIQUE_SKILL_TAGS_INDEX,
   UPDATE_SKILL_INDEX,
 } from "./queries";
 import type {
@@ -64,7 +65,7 @@ interface CreateSkillVars {
   description?: string;
   tags?: string[];
   rights_mode: SkillRightsMode;
-  RBAC?: { users: SkillRBACEntry[]; roles: SkillRBACEntry[] };
+  RBAC?: { users: SkillRBACEntry[]; roles: SkillRBACEntry[]; teams?: SkillRBACEntry[] };
 }
 
 interface UpdateSkillVars {
@@ -73,7 +74,7 @@ interface UpdateSkillVars {
   description?: string;
   tags?: string[];
   rights_mode?: SkillRightsMode;
-  RBAC?: { users: SkillRBACEntry[]; roles: SkillRBACEntry[] };
+  RBAC?: { users: SkillRBACEntry[]; roles: SkillRBACEntry[]; teams?: SkillRBACEntry[] };
   history?: SkillHistoryEntry[];
   current_version?: number;
 }
@@ -83,6 +84,7 @@ export function useSkillsIndex() {
   const [page, setPageState] = React.useState(1);
   const [search, setSearchState] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  const [tags, setTagsState] = React.useState<string[]>([]);
   const [sort, setSortState] = React.useState<SkillsSort>(DEFAULT_SKILLS_SORT);
 
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -99,6 +101,11 @@ export function useSkillsIndex() {
     }, SEARCH_DEBOUNCE_MS);
   }, []);
 
+  const setTags = React.useCallback((next: string[]) => {
+    setTagsState(next);
+    setPageState(1);
+  }, []);
+
   const setSort = React.useCallback((next: SkillsSort) => {
     setSortState(next);
     setPageState(1);
@@ -109,12 +116,15 @@ export function useSkillsIndex() {
   }, []);
 
   // Filters AND together per array entry (proven shape only — queries.ts).
+  // Each selected tag is its own `tags: { contains }` entry, so a skill must
+  // carry every selected tag to match (mirrors the prompts tag filter).
   const filters = React.useMemo(() => {
     const list: Array<Record<string, unknown>> = [];
     const term = debouncedSearch.trim();
     if (term) list.push({ name: { contains: term } });
+    for (const tag of tags) list.push({ tags: { contains: tag } });
     return list;
-  }, [debouncedSearch]);
+  }, [debouncedSearch, tags]);
 
   const { data, previousData, loading, error, refetch } = useQuery<{
     skillsPagination?: SkillsConnection;
@@ -142,9 +152,18 @@ export function useSkillsIndex() {
     setPage,
     search,
     setSearch,
+    tags,
+    setTags,
     sort,
     setSort,
   };
+}
+
+/** Unique tags across all accessible skills (for the list filter popover). */
+export function useUniqueSkillTagsLocal() {
+  return useQuery<{ getUniqueSkillTags: string[] }>(
+    GET_UNIQUE_SKILL_TAGS_INDEX,
+  );
 }
 
 /** Single-skill hook (ide route). */
@@ -200,8 +219,15 @@ export function useCreateSkillLocal() {
 }
 
 export function useUpdateSkillLocal() {
-  const [mutate, state] =
-    useMutation<{ skillsUpdateOneById: { item: Skill } }>(UPDATE_SKILL_INDEX);
+  const [mutate, state] = useMutation<{ skillsUpdateOneById: { item: Skill } }>(
+    UPDATE_SKILL_INDEX,
+    {
+      // A tag edit can introduce a brand-new tag — refresh the filter's tag
+      // universe. No-op when the unique-tags query has no active observer
+      // (e.g. an access-only edit while the filter popover is unmounted).
+      refetchQueries: [{ query: GET_UNIQUE_SKILL_TAGS_INDEX }],
+    },
+  );
 
   const update = React.useCallback(
     async (vars: UpdateSkillVars): Promise<Skill> => {

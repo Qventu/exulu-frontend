@@ -32,6 +32,8 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronsRight,
+  Copy,
+  Download,
   ExternalLink,
   FileText,
   GitBranch,
@@ -63,10 +65,11 @@ import {
 import { skillsApi } from "@/lib/api/skills";
 import { cn } from "@/lib/utils";
 
-import { useUpdateSkillLocal } from "../hooks";
+import { useUniqueSkillTagsLocal, useUpdateSkillLocal } from "../hooks";
 import { SKILLS_RBAC_TEAMS_SUPPORTED } from "../queries";
 import type { Skill, SkillRBACEntry, SkillRightsMode } from "../types";
 import { AccessBadge } from "./access-badge";
+import { SkillTagsInput } from "./skill-tags-input";
 
 const PREVIEW_LINES = 15;
 
@@ -133,13 +136,45 @@ export function SkillDetailPanel({
     : allLines.slice(0, PREVIEW_LINES);
   const hasMore = allLines.length > PREVIEW_LINES;
 
-  // ----- Access editing ----------------------------------------------------
+  // ----- Tags editing ------------------------------------------------------
   const [updateSkill, { loading: savingAccess }] = useUpdateSkillLocal();
+  const { data: tagsData, loading: tagsLoading } = useUniqueSkillTagsLocal();
+  const availableTags = React.useMemo(
+    () => tagsData?.getUniqueSkillTags ?? [],
+    [tagsData],
+  );
+  const [editingTags, setEditingTags] = React.useState(false);
+  const [pendingTags, setPendingTags] = React.useState<string[]>([]);
+  const [savingTags, setSavingTags] = React.useState(false);
+
+  const startEditingTags = () => {
+    setPendingTags(skill.tags ?? []);
+    setEditingTags(true);
+  };
+
+  const handleSaveTags = async () => {
+    setSavingTags(true);
+    try {
+      await updateSkill({ id: skill.id, tags: pendingTags });
+      toast.success(t("detail.tagsSaved"));
+      setEditingTags(false);
+      await onRefetch();
+    } catch (err) {
+      toast.error(t("detail.tagsFailed"), {
+        description: (err as Error).message,
+      });
+    } finally {
+      setSavingTags(false);
+    }
+  };
+
+  // ----- Access editing ----------------------------------------------------
   const [editingAccess, setEditingAccess] = React.useState(false);
   const [pendingRbac, setPendingRbac] = React.useState<{
     rights_mode: SkillRightsMode;
     users: SkillRBACEntry[];
     roles: SkillRBACEntry[];
+    teams: SkillRBACEntry[];
   } | null>(null);
 
   const handleSaveAccess = async () => {
@@ -151,6 +186,7 @@ export function SkillDetailPanel({
         RBAC: {
           users: pendingRbac.users,
           roles: pendingRbac.roles,
+          teams: pendingRbac.teams,
         },
       });
       toast.success(t("detail.accessSaved"));
@@ -164,7 +200,36 @@ export function SkillDetailPanel({
     }
   };
 
-  // ----- Header overflow (Copy ID) -----------------------------------------
+  // ----- Header overflow (Download .zip, Copy ID) --------------------------
+  const [downloading, setDownloading] = React.useState(false);
+
+  const handleDownloadZip = React.useCallback(async () => {
+    setDownloading(true);
+    const version = skill.current_version ?? 1;
+    try {
+      const blob = await skillsApi.download(skill.id, version);
+      const safeName =
+        (skill.name || "skill")
+          .replace(/[^a-zA-Z0-9-_]+/g, "-")
+          .replace(/^-+|-+$/g, "") || "skill";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${safeName}-v${version}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(t("detail.downloadStarted"));
+    } catch (err) {
+      toast.error(t("detail.downloadFailed"), {
+        description: (err as Error).message,
+      });
+    } finally {
+      setDownloading(false);
+    }
+  }, [skill.id, skill.current_version, skill.name, t]);
+
   const handleCopyId = React.useCallback(async () => {
     try {
       await navigator.clipboard.writeText(skill.id);
@@ -177,11 +242,20 @@ export function SkillDetailPanel({
   const headerOverflowItems = React.useMemo<OverflowMenuItem[]>(
     () => [
       {
+        label: downloading
+          ? t("detail.downloadInProgress")
+          : t("detail.downloadZip"),
+        icon: Download,
+        onSelect: () => void handleDownloadZip(),
+        disabled: downloading,
+      },
+      {
         label: t("row.copyId"),
+        icon: Copy,
         onSelect: () => void handleCopyId(),
       },
     ],
-    [handleCopyId, t],
+    [downloading, handleDownloadZip, handleCopyId, t],
   );
 
   // ----- History (compact: current + last 3, link to editor) ---------------
@@ -194,8 +268,13 @@ export function SkillDetailPanel({
     () => ({
       users: skill.RBAC?.users?.length ?? 0,
       roles: skill.RBAC?.roles?.length ?? 0,
+      teams: skill.RBAC?.teams?.length ?? 0,
     }),
-    [skill.RBAC?.roles?.length, skill.RBAC?.users?.length],
+    [
+      skill.RBAC?.roles?.length,
+      skill.RBAC?.users?.length,
+      skill.RBAC?.teams?.length,
+    ],
   );
 
   return (
@@ -300,26 +379,85 @@ export function SkillDetailPanel({
 
           <Separator />
 
-          {/* Tags (only when present — section omitted otherwise) */}
-          {skill.tags && skill.tags.length > 0 ? (
+          {/* Tags — editable when the viewer has write access (mirrors the
+              prompts tag editor; read-only viewers see badges only, and the
+              section is hidden entirely when there are no tags and no rights
+              to add any). */}
+          {canWrite || (skill.tags && skill.tags.length > 0) ? (
             <>
               <section className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Tag
-                    aria-hidden="true"
-                    className="size-3.5 text-muted-foreground"
-                  />
-                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {t("detail.tags")}
-                  </span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Tag
+                      aria-hidden="true"
+                      className="size-3.5 text-muted-foreground"
+                    />
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t("detail.tags")}
+                    </span>
+                  </div>
+                  {canWrite && !editingTags ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1.5 px-2 text-xs"
+                      onClick={startEditingTags}
+                    >
+                      <Pencil aria-hidden="true" className="size-3" />
+                      {tCommon("edit")}
+                    </Button>
+                  ) : null}
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {skill.tags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
+
+                {!editingTags ? (
+                  skill.tags && skill.tags.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {skill.tags.map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {t("detail.tagsNone")}
+                    </p>
+                  )
+                ) : (
+                  <div className="space-y-3 pt-1">
+                    <SkillTagsInput
+                      value={pendingTags}
+                      onChange={setPendingTags}
+                      availableTags={availableTags}
+                      loading={tagsLoading}
+                    />
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingTags(false);
+                          setPendingTags([]);
+                        }}
+                        disabled={savingTags}
+                      >
+                        {tCommon("cancel")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => void handleSaveTags()}
+                        disabled={savingTags}
+                        aria-busy={savingTags}
+                      >
+                        {savingTags ? t("detail.saving") : tCommon("save")}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </section>
               <Separator />
             </>
@@ -412,6 +550,7 @@ export function SkillDetailPanel({
                         (skill.rights_mode as SkillRightsMode) ?? "private",
                       users: (skill.RBAC?.users ?? []) as SkillRBACEntry[],
                       roles: (skill.RBAC?.roles ?? []) as SkillRBACEntry[],
+                      teams: (skill.RBAC?.teams ?? []) as SkillRBACEntry[],
                     });
                   }}
                 >
@@ -447,7 +586,12 @@ export function SkillDetailPanel({
                       rights: "read" | "write";
                     }[]
                   }
-                  initialTeams={[]}
+                  initialTeams={
+                    (skill.RBAC?.teams ?? []) as {
+                      id: string;
+                      rights: "read" | "write";
+                    }[]
+                  }
                   allowedModes={
                     SKILLS_RBAC_TEAMS_SUPPORTED
                       ? undefined
@@ -455,14 +599,13 @@ export function SkillDetailPanel({
                           "private" | "users" | "roles" | "teams" | "public"
                         >)
                   }
-                  // 4-arg signature (rights_mode, users, roles, teams) — teams
-                  // is the empty list while SKILLS_RBAC_TEAMS_SUPPORTED is off
-                  // (fixes H7 — the legacy 3-arg call dropped teams data).
-                  onChange={(rights_mode, users, roles /* teams */) => {
+                  // 4-arg signature (rights_mode, users, roles, teams).
+                  onChange={(rights_mode, users, roles, teams) => {
                     setPendingRbac({
                       rights_mode: rights_mode as SkillRightsMode,
                       users,
                       roles,
+                      teams,
                     });
                   }}
                 />
