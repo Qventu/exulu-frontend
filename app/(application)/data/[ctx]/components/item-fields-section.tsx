@@ -4,15 +4,14 @@
  * ItemFieldsSection — DetailSection "Fields" body. Default open (the
  * primary surface).
  *
- * View mode delegates to the schema-adaptive ItemFieldsView (file hero +
- * type-aware tiles + an "empty fields" expander) so the page renders whatever
- * the ExuluContext defines without a fixed layout. Edit mode keeps the shared
- * ItemFormFields form. The "Process" action surfaces inline when the context
- * has a processor.
+ * Both read and edit mode render the shared ItemFormFields in the same
+ * labelled-row layout — read mode shows disabled, click-to-edit controls — so
+ * the page doesn't shift when toggling edit. File fields render inline as
+ * regular rows. The "Process" action surfaces inline when the context has a
+ * processor.
  *
- * Inventory items: 40, 41 (per-value copy, keyboard-accessible — now on the
- * tiles), 42 (custom typed fields, view + edit), 45 (Process action shown
- * only when context.processor exists).
+ * Inventory items: 40, 42 (custom typed fields, view + edit), 45 (Process
+ * action shown only when context.processor exists).
  */
 
 import { Zap } from "lucide-react";
@@ -24,7 +23,6 @@ import { Button } from "@/components/ui/button";
 import type { Item } from "@EXULU_SHARED/models/item";
 import type { Context } from "@/types/models/context";
 
-import { ItemFieldsView } from "./item-fields-view";
 import { ItemFormFields } from "./item-form-fields";
 
 export interface ItemFieldsSectionProps {
@@ -75,24 +73,18 @@ export function ItemFieldsSection({
         ) : null
       }
     >
-      {/* View mode renders the schema-adaptive field view (hero + typed
-          tiles); edit mode keeps the shared form. */}
-      {editing ? (
-        <ItemFormFields
-          context={context}
-          data={draft}
-          newItem={false}
-          editing={editing}
-          onDataChange={onDraftChange}
-          focusField={focusField}
-        />
-      ) : (
-        <ItemFieldsView
-          context={context}
-          values={item}
-          onEditField={onEditField}
-        />
-      )}
+      {/* One layout for both modes: read mode shows disabled, click-to-edit
+          controls (driven by the saved item); edit mode swaps to the draft and
+          enables the inputs. File fields render inline as regular rows. */}
+      <ItemFormFields
+        context={context}
+        data={editing ? draft : item}
+        newItem={false}
+        editing={editing}
+        onDataChange={onDraftChange}
+        onStartEdit={onEditField}
+        focusField={focusField}
+      />
     </DetailSection>
   );
 }

@@ -25,8 +25,11 @@ import {
   CREATE_API_KEY,
   GET_API_KEYS,
   GET_KEY_AGENTS,
+  GET_KEY_PROJECTS,
   GET_KEY_ROLES,
+  GET_KEY_TEAMS,
   REMOVE_API_KEY,
+  UPDATE_API_KEY_ATTRIBUTION,
   UPDATE_API_KEY_ROLE,
 } from "./queries";
 
@@ -50,6 +53,9 @@ export interface ApiKeyRow {
   scope_mode?: string | null;
   agent_ids?: string[] | null;
   role?: string | null;
+  /** Optional attribution targets (uuid) for LiteLLM cost tracking. */
+  team?: string | null;
+  project?: string | null;
 }
 
 export interface CreateKeyInput {
@@ -57,6 +63,9 @@ export interface CreateKeyInput {
   scopeMode: KeyScopeMode;
   roleId?: string;
   agentIds?: string[];
+  /** Optional attribution targets (uuid). */
+  teamId?: string;
+  projectId?: string;
 }
 
 /** Display name of a key row (name wins over the stored firstname). */
@@ -141,6 +150,7 @@ export function useApiKeys() {
 
   const [createApiKey] = useMutation(CREATE_API_KEY);
   const [updateApiKeyRole] = useMutation(UPDATE_API_KEY_ROLE);
+  const [updateApiKeyAttribution] = useMutation(UPDATE_API_KEY_ATTRIBUTION);
   const [removeApiKey] = useMutation(REMOVE_API_KEY);
 
   /**
@@ -166,6 +176,8 @@ export function useApiKeys() {
           super_admin: input.scopeMode === "admin",
           scope_mode: input.scopeMode,
           agent_ids: input.scopeMode === "agents" ? input.agentIds : undefined,
+          team: input.teamId || undefined,
+          project: input.projectId || undefined,
         },
       });
       await refetch();
@@ -180,6 +192,23 @@ export function useApiKeys() {
       await refetch();
     },
     [updateApiKeyRole, refetch],
+  );
+
+  const updateAttribution = React.useCallback(
+    async (
+      id: string,
+      next: { teamId?: string | null; projectId?: string | null },
+    ): Promise<void> => {
+      await updateApiKeyAttribution({
+        variables: {
+          id,
+          team: next.teamId ?? null,
+          project: next.projectId ?? null,
+        },
+      });
+      await refetch();
+    },
+    [updateApiKeyAttribution, refetch],
   );
 
   const deleteKey = React.useCallback(
@@ -206,8 +235,32 @@ export function useApiKeys() {
     setPage,
     createKey,
     updateRole,
+    updateAttribution,
     deleteKey,
   };
+}
+
+/** Team / project id → name lookups for the attribution selectors. */
+export function useKeyEntities() {
+  const teamsQuery = useQuery(GET_KEY_TEAMS, {
+    fetchPolicy: "cache-first",
+    variables: { page: 1, limit: 200 },
+  });
+  const projectsQuery = useQuery(GET_KEY_PROJECTS, {
+    fetchPolicy: "cache-first",
+    variables: { page: 1, limit: 200 },
+  });
+
+  const teams: Array<{ id: string; name: string }> = React.useMemo(
+    () => teamsQuery.data?.teamsPagination?.items ?? [],
+    [teamsQuery.data],
+  );
+  const projects: Array<{ id: string; name: string }> = React.useMemo(
+    () => projectsQuery.data?.projectsPagination?.items ?? [],
+    [projectsQuery.data],
+  );
+
+  return { teams, projects };
 }
 
 /** Agent id → name lookup for the allowlist builder and the detail panel. */

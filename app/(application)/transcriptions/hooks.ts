@@ -7,7 +7,11 @@
 import { useQuery } from "@apollo/client";
 import * as React from "react";
 
-import { GET_PROJECTS, GET_TRANSCRIPTION_JOBS } from "./queries";
+import {
+  GET_MEETING_RECORDING_USAGE,
+  GET_PROJECTS,
+  GET_TRANSCRIPTION_JOBS,
+} from "./queries";
 import { ACTIVE_STATUSES, type Job, type ProjectOption } from "./types";
 
 const POLL_INTERVAL_MS = 5000;
@@ -100,6 +104,35 @@ export function useTranscriptionJobs(): TranscriptionJobs {
 type ProjectsResult = {
   projectsPagination: { items: ProjectOption[] };
 };
+
+export type RecordingUsage = {
+  enabled: boolean;
+  used_seconds: number;
+  limit_seconds: number | null;
+  percent: number | null;
+  exceeded: boolean;
+};
+
+/**
+ * Monthly meeting-recording usage against the optional cap. `enabled` is false
+ * when no cap is configured (the bar is hidden in that case). Exposes refetch so
+ * the page can refresh it after a new bot is started.
+ */
+export function useRecordingUsage(skip = false): {
+  usage: RecordingUsage | null;
+  refetch: () => void;
+} {
+  const { data, refetch } = useQuery<{
+    meetingRecordingUsage: RecordingUsage | null;
+  }>(GET_MEETING_RECORDING_USAGE, {
+    skip,
+    fetchPolicy: "cache-and-network",
+  });
+  return {
+    usage: data?.meetingRecordingUsage ?? null,
+    refetch: () => void refetch(),
+  };
+}
 
 /** First 100 projects for the optional project assignment (unchanged). */
 export function useProjectOptions(): ProjectOption[] {

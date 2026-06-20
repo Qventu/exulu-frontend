@@ -7,7 +7,7 @@
  * confirm via the shared ConfirmDialog — no more unconfirmed mutations.
  */
 import { useMutation } from "@apollo/client";
-import { ExternalLink, FileAudio } from "lucide-react";
+import { ExternalLink, FileAudio, Video } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import * as React from "react";
@@ -23,6 +23,8 @@ import { CANCEL_TRANSCRIPTION_JOB, REMOVE_TRANSCRIPTION_JOB } from "../queries";
 import {
   displayTitle,
   formatDuration,
+  humanizeBotStatus,
+  isMeetingJob,
   PROCESSING_FACTOR,
   type Job,
 } from "../types";
@@ -45,6 +47,7 @@ export function JobRow({ job, onReview, onChanged }: JobRowProps) {
   const [confirmDismissOpen, setConfirmDismissOpen] = React.useState(false);
 
   const title = displayTitle(job);
+  const meeting = isMeetingJob(job);
   const isRunning = job.status === "queued" || job.status === "transcribing";
 
   // Row-scoped 1s ticker — only transcribing rows re-render every second
@@ -56,6 +59,12 @@ export function JobRow({ job, onReview, onChanged }: JobRowProps) {
     : null;
 
   const statusLine = (() => {
+    // Recall meeting jobs are webhook-driven: surface the live bot lifecycle
+    // instead of the whisper-style elapsed/remaining estimate.
+    if (meeting && (job.status === "queued" || job.status === "transcribing")) {
+      if (job.status === "transcribing") return t("row.transcribing");
+      return humanizeBotStatus(job.bot_status) ?? t("row.queued");
+    }
     switch (job.status) {
       case "queued":
         return t("row.queued");
@@ -128,10 +137,17 @@ export function JobRow({ job, onReview, onChanged }: JobRowProps) {
   return (
     <li className="relative overflow-hidden rounded-lg border">
       <div className="flex items-center gap-3 p-3">
-        <FileAudio
-          aria-hidden="true"
-          className="size-4 shrink-0 text-muted-foreground"
-        />
+        {meeting ? (
+          <Video
+            aria-hidden="true"
+            className="size-4 shrink-0 text-muted-foreground"
+          />
+        ) : (
+          <FileAudio
+            aria-hidden="true"
+            className="size-4 shrink-0 text-muted-foreground"
+          />
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
             <span className="truncate font-medium">{title}</span>

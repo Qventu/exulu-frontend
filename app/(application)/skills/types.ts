@@ -26,7 +26,7 @@ export interface SkillRBAC {
   type?: string;
   users?: SkillRBACEntry[];
   roles?: SkillRBACEntry[];
-  // teams intentionally absent — gated by SKILLS_RBAC_TEAMS_SUPPORTED.
+  teams?: SkillRBACEntry[];
 }
 
 export interface SkillHistoryEntry {

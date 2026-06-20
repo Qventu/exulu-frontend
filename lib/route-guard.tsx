@@ -32,6 +32,7 @@ import {
   type NavConfig,
   type NavEntry,
 } from "@/components/shell/nav-config";
+import { configApi, type BackendConfigType } from "@/lib/api/config";
 import { can, type Requirement, type RightsUser } from "@/lib/rights";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 
@@ -41,13 +42,21 @@ import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 const getSessionUser = serverSideAuthCheck;
 
 /**
- * The server-derived slice of NavConfig the guards need. Mirrors the env
- * wiring in app/(application)/layout.tsx — these flags are env-only (the
- * backend /config payload carries no n8n/transcription/feedback switches,
- * see BackendConfigType), so reading process.env here is the same source
- * of truth the client ConfigContext receives.
+ * The server-derived slice of NavConfig the guards need. The transcription /
+ * n8n / feedback switches are frontend-env-only (mirroring the wiring in
+ * app/(application)/layout.tsx). Recall meeting bots, however, are gated by
+ * BACKEND env vars (RECALL_*), so that flag is read from the backend /config
+ * payload — the same source the client ConfigContext receives via `...json`.
  */
-function serverNavConfig(): NavConfig {
+async function serverNavConfig(): Promise<NavConfig> {
+  let recallEnabled = false;
+  try {
+    const res = await configApi.backend();
+    const json: BackendConfigType = await res.json();
+    recallEnabled = json.recall?.enabled === true;
+  } catch {
+    recallEnabled = false;
+  }
   return {
     transcription: {
       enabled:
@@ -55,6 +64,7 @@ function serverNavConfig(): NavConfig {
         process.env.TRANSCRIPTION_MODEL !== "" &&
         process.env.EXULU_USE_LITELLM === "true",
     },
+    recall: { enabled: recallEnabled },
     n8n: {
       enabled:
         typeof process.env.N8N_URL === "string" && process.env.N8N_URL !== "",
@@ -136,7 +146,7 @@ export async function guardRoute(
     );
   }
 
-  if (entry?.configFlag && !flagEnabled(serverNavConfig(), entry.configFlag)) {
+  if (entry?.configFlag && !flagEnabled(await serverNavConfig(), entry.configFlag)) {
     // Feature is switched off for the whole workspace — no right to name.
     return <AccessDenied backHref="/chat" />;
   }

@@ -22,7 +22,7 @@
  */
 
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { Archive, Database, Info, PackageOpen, Save, Trash2, XCircle } from "lucide-react";
+import { Archive, Info, PackageOpen, Save, Trash2, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -30,6 +30,7 @@ import * as React from "react";
 import { ConfigContext } from "@/components/shell/config-context";
 import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { CopyButton } from "@/components/primitives/copy-button";
+import { FavoriteToggle } from "@/components/primitives/favorite-toggle";
 import {
   OverflowMenu,
   type OverflowMenuItem,
@@ -47,11 +48,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LoadingStates } from "@/components/loading-states";
 import type { Context } from "@/types/models/context";
 
-import { useItemDetail } from "../../../hooks";
+import {
+  itemGlobalId,
+  useContextItemFavourites,
+  useItemDetail,
+  useRecentlyViewedItems,
+} from "../../../hooks";
 import { ItemAccessSection } from "../../components/item-access-section";
 import { ItemCalculatedSection } from "../../components/item-calculated-section";
 import { ItemEmbeddingsSection } from "../../components/item-embeddings-section";
-import { ItemDocumentHero } from "../../components/item-fields-view";
+import { ItemEntitiesSection } from "../../components/item-entities-section";
 import { ItemFieldsSection } from "../../components/item-fields-section";
 import { useItemEditor } from "../../components/use-item-editor";
 import { ItemPipelineStatus } from "./item-pipeline-status";
@@ -97,6 +103,24 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
   );
 
   const { item, loading, error, refetch } = useItemDetail({ context, itemId });
+
+  // Favourites + recently-viewed (shared store with the items table + /data
+  // grid). The global id is the cross-context pin key.
+  const globalId = itemGlobalId(context.id, itemId);
+  const { isFavorite, toggleFavorite } = useContextItemFavourites();
+  const { recordView } = useRecentlyViewedItems();
+
+  // Record the view once the item actually resolves (never log a 404'd id).
+  React.useEffect(() => {
+    if (item?.id) void recordView(globalId);
+  }, [globalId, recordView, item?.id]);
+
+  const favorited = isFavorite(globalId);
+  const handleToggleFavorite = React.useCallback(() => {
+    void toggleFavorite(globalId).catch(() => {
+      // Optimistic state already reverted in the hook.
+    });
+  }, [toggleFavorite, globalId]);
 
   const editor = useItemEditor({
     context,
@@ -169,33 +193,38 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
   const title = item.name ?? item.external_id ?? t("workspace.items.untitled");
 
   // ---- Overflow menu ------------------------------------------------
-  // Process + Generate embeddings now live on the interactive pipeline
-  // stepper (as per-step Run / Re-run); the menu keeps the rarer + the
-  // destructive actions.
+  // Action homes follow their object: pipeline stepper runs Process / Embed;
+  // the Embeddings section owns regenerate/delete embeddings; the Entities
+  // section owns Extract entities. The header overflow keeps only the
+  // item-lifecycle actions (archive, delete).
 
-  const overflowItems: OverflowMenuItem[] = [];
-  overflowItems.push({
-    label: t("workspace.panel.menu.deleteEmbeddings"),
-    icon: Database,
-    destructive: true,
-    onSelect: () => editor.setConfirm("delete-embeddings"),
-  });
-  overflowItems.push({
-    label: item.archived
-      ? t("workspace.panel.menu.unarchive")
-      : t("workspace.panel.menu.archive"),
-    icon: item.archived ? PackageOpen : Archive,
-    onSelect: () => void editor.handleArchiveToggle(!item.archived),
-  });
-  overflowItems.push({
-    label: t("workspace.panel.menu.delete"),
-    icon: Trash2,
-    destructive: true,
-    onSelect: () => editor.setConfirm("delete-item"),
-  });
+  const overflowItems: OverflowMenuItem[] = [
+    {
+      label: item.archived
+        ? t("workspace.panel.menu.unarchive")
+        : t("workspace.panel.menu.archive"),
+      icon: item.archived ? PackageOpen : Archive,
+      onSelect: () => void editor.handleArchiveToggle(!item.archived),
+    },
+    {
+      label: t("workspace.panel.menu.delete"),
+      icon: Trash2,
+      destructive: true,
+      onSelect: () => editor.setConfirm("delete-item"),
+    },
+  ];
 
   const headerAction = (
     <div className="flex shrink-0 items-center gap-1">
+      <FavoriteToggle
+        pressed={favorited}
+        onToggle={handleToggleFavorite}
+        label={
+          favorited
+            ? t("pins.unfavourite")
+            : t("pins.favourite")
+        }
+      />
       {editor.editing ? (
         <>
           <Button type="button" variant="ghost" size="sm" onClick={editor.cancelEdit}>
@@ -293,10 +322,9 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
 
         <div className="border-t" />
 
-        {/* Sections. The promoted document hero (first file field, if any)
-            leads the content; renders nothing for file-less contexts. */}
+        {/* Sections. File fields render inline within the Fields section like
+            any other field — no separate document hero. */}
         <div className="space-y-4">
-          <ItemDocumentHero context={context} values={item} />
           <ItemFieldsSection
             context={context}
             item={item}
@@ -315,6 +343,9 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
             onGenerate={editor.triggerGenerate}
             onDelete={() => editor.setConfirm("delete-embeddings")}
           />
+          {context.embedder ? (
+            <ItemEntitiesSection context={context} item={item} />
+          ) : null}
           <ItemAccessSection
             context={context}
             item={item}

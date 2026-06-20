@@ -11,6 +11,10 @@ export type User = {
   super_admin?: boolean;
   favourite_agents?: string[];
   favourite_projects?: string[];
+  /** Favourited data items — global ids ("<contextId>/<itemId>"). */
+  favourite_items?: string[];
+  /** Recently viewed data items — global ids, most-recent first. */
+  recently_viewed_items?: string[];
   personal_system_prompt?: string;
   role: string;
   team?: string;

@@ -23,6 +23,7 @@
 import { useQuery } from "@apollo/client";
 import { Database, FileX2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import * as React from "react";
 
 import { RelativeTime } from "@/components/primitives/relative-time";
@@ -167,7 +168,12 @@ export function ProjectItemCard({
     <Card className={cn("relative", CARD_ENTRANCE)}>
       <CardContent className="flex items-start gap-3 p-4">
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-sm font-medium">{item.name}</p>
+          <Link
+            href={`/data/${context}/items/${id}`}
+            className="line-clamp-2 text-sm font-medium hover:text-primary hover:underline focus-visible:outline-none focus-visible:text-primary focus-visible:underline"
+          >
+            {item.name}
+          </Link>
           {item.description && (
             <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
               {item.description}

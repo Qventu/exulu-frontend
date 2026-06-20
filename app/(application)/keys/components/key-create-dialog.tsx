@@ -49,6 +49,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import type { CreateKeyInput, KeyScopeMode } from "../hooks";
+import { KeyAttributionSelects } from "./key-attribution-selects";
 import { KeysRoleSelector } from "./keys-role-selector";
 
 export interface KeyCreateDialogProps {
@@ -75,6 +76,8 @@ export function KeyCreateDialog({
   const [scopeMode, setScopeMode] = React.useState<KeyScopeMode>("admin");
   const [roleId, setRoleId] = React.useState("");
   const [agentIds, setAgentIds] = React.useState<string[]>([]);
+  const [teamId, setTeamId] = React.useState<string | null>(null);
+  const [projectId, setProjectId] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [createdKey, setCreatedKey] = React.useState<string | null>(null);
   const [nameTouched, setNameTouched] = React.useState(false);
@@ -88,6 +91,8 @@ export function KeyCreateDialog({
       setScopeMode("admin");
       setRoleId("");
       setAgentIds([]);
+      setTeamId(null);
+      setProjectId(null);
       setSubmitting(false);
       setCreatedKey(null);
       setNameTouched(false);
@@ -111,6 +116,8 @@ export function KeyCreateDialog({
         scopeMode,
         roleId: roleId || undefined,
         agentIds,
+        teamId: teamId || undefined,
+        projectId: projectId || undefined,
       });
       setCreatedKey(plainKey);
       setStep("reveal");
@@ -284,6 +291,16 @@ export function KeyCreateDialog({
                   ) : null}
                 </div>
               )}
+
+              {/* Optional attribution targets (team / project) for LiteLLM
+                  cost tracking — applies to both scopes. */}
+              <KeyAttributionSelects
+                teamId={teamId}
+                projectId={projectId}
+                onTeamChange={setTeamId}
+                onProjectChange={setProjectId}
+                disabled={submitting}
+              />
             </div>
 
             <DialogFooter className="mt-auto gap-2 sm:mt-0">

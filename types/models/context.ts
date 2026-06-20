@@ -11,14 +11,8 @@ export interface Context {
   name: string
   description: string
   embedder?: {
-    name: string,
-    id: string,
-    queue: string,
-    config?: {
-      name: string,
-      description: string,
-      default: string
-    }[]
+    model: string,
+    queue?: string,
   }
   active: boolean
   slug: string

@@ -2065,11 +2065,19 @@
   },
   "keys": {
     "adminRoleNotice": "Admin keys currently act as a super admin — the selected role does not restrict them yet.",
+    "attribution": {
+      "teamLabel": "Team",
+      "projectLabel": "Project",
+      "noTeam": "No team",
+      "noProject": "No project"
+    },
     "columns": {
       "created": "Created",
       "lastUsed": "Last used",
       "name": "Name",
-      "scope": "Scope"
+      "scope": "Scope",
+      "team": "Team",
+      "project": "Project"
     },
     "create": {
       "addAgent": "Add agent…",
@@ -2123,7 +2131,11 @@
       "roleNotUsedCaption": "Roles are not used for agents-scoped keys.",
       "roleUpdateFailed": "Couldn't update the role",
       "roleUpdated": "Role updated",
-      "scope": "Scope"
+      "scope": "Scope",
+      "attribution": "Attribution",
+      "attributionCaption": "Optional. Requests made with this key are attributed to the chosen team and/or project for cost tracking.",
+      "attributionUpdated": "Attribution updated",
+      "attributionUpdateFailed": "Couldn't update attribution"
     },
     "emptyDescription": "Create one to call the Exulu API from your services.",
     "emptyTitle": "No API keys yet",
@@ -2150,6 +2162,16 @@
     "tokenCrossLinkAction": "Personal token"
   },
   "knowledge": {
+    "pins": {
+      "favourite": "Add to favourites",
+      "favourites": {
+        "title": "Favourites"
+      },
+      "recent": {
+        "title": "Recently viewed"
+      },
+      "unfavourite": "Remove from favourites"
+    },
     "library": {
       "backendHint": "Contexts are defined in your backend.",
       "description": "Contexts your agents retrieve from.",
@@ -2166,7 +2188,8 @@
         "failedJobs": "{count, plural, one {# failed job} other {# failed jobs}}",
         "ingested": "ingested",
         "itemCount": "{count, plural, one {# item} other {# items}}",
-        "statusFailed": "{count, plural, one {# failed job — needs attention} other {# failed jobs — needs attention}}"
+        "statusFailed": "{count, plural, one {# failed job — needs attention} other {# failed jobs — needs attention}}",
+        "setIcon": "Set icon for {name}"
       },
       "searchPlaceholder": "Search contexts",
       "stats": {
@@ -2185,6 +2208,13 @@
         "timeSeriesDescription": "Upserts and retrievals across all contexts.",
         "timeSeriesTitle": "Activity over time",
         "view": "View usage"
+      },
+      "iconPicker": {
+        "title": "Choose an icon",
+        "searchPlaceholder": "Search icons…",
+        "reset": "Reset to default",
+        "noResults": "No icons found",
+        "saveError": "Couldn't save the icon"
       }
     },
     "workspace": {
@@ -2459,6 +2489,21 @@
       "entities": {
         "description": "Entity types extracted from documents in this context. They're merged with any types declared in code and power entity-aware retrieval.",
         "addType": "Add type",
+        "model": {
+          "title": "Extraction model",
+          "caption": "The model used to extract entities from documents in this context.",
+          "noneTitle": "No model configured",
+          "noneDescription": "Entity extraction is skipped until a model is set. Pick one below, or define context.entities.model in code / set EXULU_ENTITY_EXTRACTION_MODEL.",
+          "usingFrom": "Using {model} · {source}",
+          "source": {
+            "database": "set here",
+            "code": "defined in code",
+            "env": "from environment"
+          },
+          "reset": "Reset to default",
+          "saved": "Extraction model updated",
+          "saveError": "Couldn't update the extraction model"
+        },
         "empty": "No entity types yet",
         "emptyDescription": "Add an entity type to start extracting structured entities from this context.",
         "inactive": "Inactive",
@@ -2468,7 +2513,13 @@
           "title": "Backfill recommended",
           "description": "{count} item(s) were processed before the current entity types. Run extraction to apply the changes.",
           "cta": "Backfill now",
-          "running": "Backfilling…"
+          "runAll": "Re-run extraction",
+          "running": "Backfilling…",
+          "confirmTitle": "Run entity backfill?",
+          "confirmDescription": "This re-extracts entities for {count} item(s) that predate the current entity types.",
+          "confirmAllDescription": "This re-extracts entities for every item in this context, applying the current entity types and model.",
+          "confirmWarning": "Each item runs an LLM extraction, so this can be slow and costly on large sets.",
+          "confirmCta": "Run backfill"
         },
         "menu": {
           "label": "Entity type actions",
@@ -2500,12 +2551,39 @@
           "backfillProcessed": "Processed {count} item(s).",
           "backfillSkipped": "· {count} skipped (cap reached).",
           "backfillError": "Error running backfill",
-          "nameRequired": "Please provide an entity type name."
+          "nameRequired": "Please provide an entity type name.",
+          "promoted": "Entity type added",
+          "promoteError": "Couldn't add the suggested type"
+        },
+        "suggested": {
+          "title": "Suggested types",
+          "caption": "Types the extractor noticed in your content but aren't configured yet. Add the useful ones or dismiss the rest.",
+          "add": "Add",
+          "dismiss": "Dismiss"
+        },
+        "itemSection": {
+          "title": "Entities",
+          "count": "{count, plural, one {# entity} other {# entities}}",
+          "empty": "No entities extracted for this item yet.",
+          "emptyAction": "Run extraction to find entities in this item.",
+          "unavailable": "Entity data isn't available.",
+          "extract": "Extract entities",
+          "reExtract": "Re-extract",
+          "extracting": "Extracting…",
+          "detachAll": "Detach all",
+          "detachConfirmTitle": "Detach all entities?",
+          "detachConfirmBody": "This removes every entity link from this item. Entities used only by this item are deleted. You can re-extract at any time.",
+          "detachConfirmAction": "Detach all",
+          "detached": "{count, plural, =0 {No entities to detach} one {Detached # entity} other {Detached # entities}}",
+          "detachError": "Couldn't detach entities"
         }
       },
       "backToItems": "Back to items",
       "itemDetail": {
         "copyId": "Copy item ID",
+        "extractEntities": "Extract entities",
+        "extractEntitiesDone": "{count, plural, =0 {No entities found} one {Extracted # entity} other {Extracted # entities}}",
+        "extractEntitiesError": "Couldn't extract entities",
         "externalIdLabel": "ext",
         "details": "Details",
         "idLabel": "ID",
@@ -3355,6 +3433,7 @@
       "roles": "Shared with roles",
       "rolesCount": "{count, plural, one {# role} other {# roles}}",
       "teams": "Shared with teams",
+      "teamsCount": "{count, plural, one {# team} other {# teams}}",
       "unknown": "Restricted",
       "users": "Shared with users",
       "usersCount": "{count, plural, one {# user} other {# users}}"
@@ -3399,6 +3478,10 @@
       "accessFailed": "Couldn't update access",
       "accessSaved": "Access control updated",
       "current": "current",
+      "downloadFailed": "Couldn't download skill",
+      "downloadInProgress": "Preparing download…",
+      "downloadStarted": "Skill download started",
+      "downloadZip": "Download as .zip",
       "openEditor": "Open editor",
       "saving": "Saving…",
       "showLess": "Show less",
@@ -3408,6 +3491,18 @@
       "skillMdMissingTitle": "SKILL.md not found",
       "subjectLabel": "skill",
       "tags": "Tags",
+      "tagsCreateHeading": "Create new",
+      "tagsCreateOption": "Create \"{tag}\"",
+      "tagsEmpty": "No tags yet.",
+      "tagsExistingHeading": "Tags",
+      "tagsFailed": "Couldn't update tags",
+      "tagsLoading": "Loading tags…",
+      "tagsNoMatch": "No tags found. Type to create one.",
+      "tagsNone": "No tags yet.",
+      "tagsPlaceholder": "Add tags…",
+      "tagsRemove": "Remove {tag}",
+      "tagsSaved": "Tags updated",
+      "tagsSearchPlaceholder": "Search or create tags…",
       "usesLabel": "Uses",
       "usesTooltip": "How many times this skill has been loaded by an agent.",
       "usesTooltipLabel": "What counts as a use?",
@@ -3416,6 +3511,9 @@
       "viewAllAndCompare": "View all & compare"
     },
     "detailEmptyTitle": "Select a skill to preview",
+    "filterNoTags": "No tags yet.",
+    "filterTagsHeading": "Tags",
+    "filterTagsPlaceholder": "Search tags…",
     "editor": {
       "confirm": {
         "deleteConfirm": "Delete",
@@ -3542,6 +3640,7 @@
     "errorTitle": "Couldn't load skills",
     "newSkill": "New skill",
     "rangeOfTotal": "{from}–{to} of {total}",
+    "removeFilter": "Remove {name}",
     "row": {
       "actionsLabel": "Actions for {name}",
       "copyId": "Copy skill ID",
@@ -3591,7 +3690,26 @@
       "start": "Start",
       "titleLabel": "Title",
       "titlePlaceholder": "Transcript title",
-      "uploading": "Uploading…"
+      "uploading": "Uploading…",
+      "modeAudio": "Upload audio",
+      "modeMeeting": "Record a meeting",
+      "meetingUrl": "Meeting URL",
+      "meetingUrlPlaceholder": "https://… (Zoom, Meet, Teams)",
+      "joinTiming": "When to join",
+      "joinNow": "Join now",
+      "joinSchedule": "Schedule",
+      "joinAt": "Join at",
+      "botName": "Bot name",
+      "botNamePlaceholder": "Exulu Notetaker",
+      "notifyChat": "Notify participants in chat that the meeting is recorded",
+      "postProcessing": "Post-processing",
+      "postProcessingHint": "Run prompts on the transcript automatically when it's ready",
+      "addPrompt": "Add prompt",
+      "selectPrompt": "Select a prompt",
+      "selectAgent": "Select an agent",
+      "removePrompt": "Remove",
+      "startMeeting": "Start recording",
+      "meetingSummary": "Joining now · Private · No project"
     },
     "confirmCancel": {
       "confirm": "Stop transcription",
@@ -3680,7 +3798,13 @@
       "speakers": "Speakers",
       "speakersHint": "Type names to replace the raw labels",
       "title": "Review transcript",
-      "transcript": "Transcript"
+      "transcript": "Transcript",
+      "postProcessing": "Post-processing",
+      "postProcessingEmpty": "No post-processing results.",
+      "rerun": "Re-run",
+      "resultFailed": "Failed",
+      "resultRunning": "Running…",
+      "meetingNoAudio": "Audio preview isn't available for meeting recordings."
     },
     "row": {
       "awaitingReview": "Awaiting review",
@@ -3697,7 +3821,9 @@
       "transcribing": "Transcribing…",
       "transcribingWithLength": "Transcribing {length} of audio…",
       "updated": "Updated",
-      "wrappingUp": "wrapping up…"
+      "wrappingUp": "wrapping up…",
+      "meetingSource": "Meeting recording",
+      "inMeeting": "In the meeting…"
     },
     "searchPlaceholder": "Search transcripts…",
     "sharing": {
@@ -3715,7 +3841,16 @@
       "started": "Transcription started",
       "updated": "Transcript updated",
       "uploadFailed": "Upload failed",
-      "viewInLibrary": "View in library"
+      "viewInLibrary": "View in library",
+      "meetingStarted": "Bot is joining the meeting",
+      "meetingStartFailed": "Couldn't start the meeting bot",
+      "postProcessingRan": "Prompt re-run",
+      "postProcessingFailed": "Couldn't run the prompt"
+    },
+    "usage": {
+      "label": "Recording time this month",
+      "summary": "{used} of {limit} used ({percent}%)",
+      "exceeded": "Monthly recording limit reached — new meeting recordings are blocked until next month."
     }
   },
   "variables": {

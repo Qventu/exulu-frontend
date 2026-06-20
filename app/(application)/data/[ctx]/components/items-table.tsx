@@ -25,6 +25,7 @@ import { useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
+import { FavoriteToggle } from "@/components/primitives/favorite-toggle";
 import { RelativeTime } from "@/components/primitives/relative-time";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +45,11 @@ import { cn } from "@/lib/utils";
 import type { Item } from "@EXULU_SHARED/models/item";
 import type { Context } from "@/types/models/context";
 
-import { useContextItems } from "../../hooks";
+import {
+  itemGlobalId,
+  useContextItems,
+  useContextItemFavourites,
+} from "../../hooks";
 
 import { ItemsActionBar } from "./items-action-bar";
 import { ItemsEmpty } from "./items-empty";
@@ -114,6 +119,18 @@ export function ItemsTable({
     archived,
     advancedFilters,
   });
+
+  // Favourite star per row — shared store, so the detail-header star and the
+  // /data favourites grid stay in sync with toggles made here.
+  const { isFavorite, toggleFavorite } = useContextItemFavourites();
+  const handleToggleFavorite = React.useCallback(
+    (globalId: string) => {
+      void toggleFavorite(globalId).catch(() => {
+        // Optimistic state already reverted in the hook.
+      });
+    },
+    [toggleFavorite],
+  );
 
   // Wipe selection when the result set fundamentally changes (page/view).
   React.useEffect(() => {
@@ -286,11 +303,13 @@ export function ItemsTable({
                   <TableHead>
                     {t("workspace.items.columns.processed")}
                   </TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((item) => {
                   const id = item.id ?? "";
+                  const globalId = itemGlobalId(context.id, id);
                   return (
                     <ItemRow
                       key={id}
@@ -299,6 +318,8 @@ export function ItemsTable({
                       active={selectedItemId === id}
                       onToggle={(v) => toggleOne(id, v)}
                       onOpen={() => onSelect(id)}
+                      favorited={isFavorite(globalId)}
+                      onToggleFavorite={() => handleToggleFavorite(globalId)}
                     />
                   );
                 })}
@@ -310,6 +331,7 @@ export function ItemsTable({
           <ul className="flex flex-col gap-2 md:hidden">
             {items.map((item) => {
               const id = item.id ?? "";
+              const globalId = itemGlobalId(context.id, id);
               return (
                 <li key={id}>
                   <ItemCard
@@ -318,6 +340,8 @@ export function ItemsTable({
                     active={selectedItemId === id}
                     onToggle={(v) => toggleOne(id, v)}
                     onOpen={() => onSelect(id)}
+                    favorited={isFavorite(globalId)}
+                    onToggleFavorite={() => handleToggleFavorite(globalId)}
                   />
                 </li>
               );
@@ -386,9 +410,19 @@ interface RowProps {
   active: boolean;
   onToggle: (checked: boolean) => void;
   onOpen: () => void;
+  favorited: boolean;
+  onToggleFavorite: () => void;
 }
 
-function ItemRow({ item, selected, active, onToggle, onOpen }: RowProps) {
+function ItemRow({
+  item,
+  selected,
+  active,
+  onToggle,
+  onOpen,
+  favorited,
+  onToggleFavorite,
+}: RowProps) {
   const t = useTranslations("knowledge");
   const rawTags: unknown = item.tags;
   const tags: string[] = Array.isArray(rawTags)
@@ -446,11 +480,30 @@ function ItemRow({ item, selected, active, onToggle, onOpen }: RowProps) {
           t("workspace.items.never")
         )}
       </TableCell>
+      <TableCell onClick={(e) => e.stopPropagation()} className="text-right">
+        <FavoriteToggle
+          pressed={favorited}
+          onToggle={onToggleFavorite}
+          label={
+            favorited
+              ? t("pins.unfavourite")
+              : t("pins.favourite")
+          }
+        />
+      </TableCell>
     </TableRow>
   );
 }
 
-function ItemCard({ item, selected, active, onToggle, onOpen }: RowProps) {
+function ItemCard({
+  item,
+  selected,
+  active,
+  onToggle,
+  onOpen,
+  favorited,
+  onToggleFavorite,
+}: RowProps) {
   const t = useTranslations("knowledge");
   const chunkCount =
     typeof item.chunks_count === "number" ? item.chunks_count : 0;
@@ -484,6 +537,12 @@ function ItemCard({ item, selected, active, onToggle, onOpen }: RowProps) {
             : t("workspace.items.notEmbedded")}
         </span>
       </button>
+      <FavoriteToggle
+        pressed={favorited}
+        onToggle={onToggleFavorite}
+        label={favorited ? t("pins.unfavourite") : t("pins.favourite")}
+        className="-mt-1"
+      />
     </div>
   );
 }

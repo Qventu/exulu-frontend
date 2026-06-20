@@ -12,6 +12,9 @@ export type BackendConfigType = {
     liteLLM?: {
         enabled: boolean;
     }
+    recall?: {
+        enabled: boolean;
+    }
 }
 
 export type FeedbackConfig = {

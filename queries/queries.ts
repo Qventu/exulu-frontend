@@ -9,14 +9,8 @@ const CONTEXT_FIELDS = `
     name
     description
     embedder {
-      name
-      id
+      model
       queue
-      config {
-        name
-        description
-        default
-      }
     }
     slug
     active
@@ -1397,51 +1391,6 @@ export const CREATE_VARIABLE = gql`
   }
 `;
 
-export const CREATE_EMBEDDER_CONFIG = gql`
-  mutation CreateEmbedderConfig($name: String!, $value: String, $context: String!, $embedder: String!) {
-    embedder_settingsCreateOne(input: { name: $name, value: $value, context: $context, embedder: $embedder }) {
-      item {
-        id
-        name
-        value
-        context
-        embedder
-      }
-    }
-  }
-`;
-
-export const GET_EMBEDDER_CONFIGS = gql`
-  query GetEmbedderConfigs($context: String, $embedder: String) {
-    embedder_settingsPagination(page: 1, limit: 100, filters: {
-      context: {
-        eq: $context
-      },
-      embedder: {
-        eq: $embedder
-      }
-    }) {
-      items {
-        id
-        name
-        value
-        createdAt
-        updatedAt
-      }
-    }
-  }
-`;
-
-export const UPDATE_EMBEDDER_CONFIG = gql`
-  mutation UpdateEmbedderConfig($id: ID!, $name: String, $value: String) {
-    embedder_settingsUpdateOneById(id: $id, input: { name: $name, value: $value }) {
-      item {
-        id
-      }
-    }
-  }
-`;
-
 // ───────────────────────── entity types (graph retrieval) ─────────────────────────
 
 export const GET_ENTITY_TYPES = gql`
@@ -1452,8 +1401,23 @@ export const GET_ENTITY_TYPES = gql`
         name
         description
         active
+        status
         createdAt
         updatedAt
+      }
+    }
+  }
+`;
+
+/** Promote a suggested type into an active, configured type. */
+export const PROMOTE_ENTITY_TYPE = gql`
+  mutation PromoteEntityType($id: ID!) {
+    entity_type_settingsUpdateOneById(
+      id: $id
+      input: { active: true, status: "active" }
+    ) {
+      item {
+        id
       }
     }
   }
@@ -1511,6 +1475,60 @@ export const PURGE_ENTITY_TYPE = (context: string) => gql`
   mutation PurgeEntityType${context}($type: String!) {
     ${context}_itemsPurgeEntityType(type: $type) {
       removed
+    }
+  }
+`;
+
+/** Resolved entity-extraction model for a context (effective + source + overrides). */
+export const GET_ENTITY_MODEL = (context: string) => gql`
+  query EntityModel${context} {
+    ${context}_itemsEntityModel {
+      effectiveModel
+      source
+      databaseModel
+      codeModel
+    }
+  }
+`;
+
+/** Entities linked to a single item (item detail page), with per-item mention count. */
+export const GET_ENTITIES_FOR_ITEM = (context: string) => gql`
+  query EntitiesForItem${context}($item: ID!) {
+    ${context}_itemsEntitiesForItem(item: $item) {
+      id
+      type
+      name
+      mentions
+    }
+  }
+`;
+
+/** Extract + ingest entities for a single item (item detail "test" action). */
+export const EXTRACT_ENTITIES_FOR_ITEM = (context: string) => gql`
+  mutation ExtractEntities${context}($item: ID!) {
+    ${context}_itemsExtractEntities(item: $item) {
+      extracted
+    }
+  }
+`;
+
+/** Detach all entities from a single item (item detail "Detach all" action). */
+export const DETACH_ENTITIES_FOR_ITEM = (context: string) => gql`
+  mutation DetachEntities${context}($item: ID!) {
+    ${context}_itemsDetachEntities(item: $item) {
+      detached
+    }
+  }
+`;
+
+/** Set (or clear, with null) the UI-configured entity-extraction model. */
+export const SET_ENTITY_MODEL = (context: string) => gql`
+  mutation SetEntityModel${context}($model: String) {
+    ${context}_itemsSetEntityModel(model: $model) {
+      effectiveModel
+      source
+      databaseModel
+      codeModel
     }
   }
 `;

@@ -60,6 +60,7 @@ export type NavConfigFlag = "transcriptions" | "n8n" | "feedback";
  */
 export interface NavConfig {
   transcription?: { enabled?: boolean };
+  recall?: { enabled?: boolean };
   n8n?: { enabled?: boolean };
   feedback?: { enabled?: boolean };
 }
@@ -380,7 +381,12 @@ export function flagEnabled(config: NavConfig, flag?: NavConfigFlag): boolean {
   if (!flag) return true;
   switch (flag) {
     case "transcriptions":
-      return config.transcription?.enabled === true;
+      // Shown when either the Whisper upload flow OR Recall meeting bots are
+      // configured — both live on the /transcriptions page.
+      return (
+        config.transcription?.enabled === true ||
+        config.recall?.enabled === true
+      );
     case "n8n":
       return config.n8n?.enabled === true;
     case "feedback":

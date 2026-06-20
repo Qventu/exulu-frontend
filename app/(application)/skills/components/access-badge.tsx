@@ -11,9 +11,10 @@
  * badge.tsx stub.
  *
  * Fixes skills.md H7 (the legacy renderer silently fell back to "Public" for
- * unknown rights modes — including "teams" — confusing access semantics). The
- * stub renders "Restricted" for unknown/teams modes until backend support
- * lands. Token-only colors, monochrome icons (skills.md M8).
+ * unknown rights modes, confusing access semantics). "teams" is a first-class
+ * mode now that the backend exposes RBAC team grants (SKILLS_RBAC_TEAMS_SUPPORTED);
+ * only genuinely unknown modes render "Restricted". Token-only colors,
+ * monochrome icons (skills.md M8).
  */
 
 import {
@@ -49,7 +50,7 @@ export interface AccessBadgeProps {
   mode: SkillRightsMode | string | undefined | null;
   /** "row" => compact muted single line; "panel" => with optional count summary. */
   variant?: "row" | "panel";
-  counts?: { users?: number; roles?: number };
+  counts?: { users?: number; roles?: number; teams?: number };
   className?: string;
 }
 
@@ -98,6 +99,9 @@ export function AccessBadge({
   }
   if (mode === "roles" && counts?.roles !== undefined) {
     countParts.push(t("access.rolesCount", { count: counts.roles }));
+  }
+  if (mode === "teams" && counts?.teams !== undefined) {
+    countParts.push(t("access.teamsCount", { count: counts.teams }));
   }
 
   return (

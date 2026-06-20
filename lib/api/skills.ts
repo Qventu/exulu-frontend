@@ -18,6 +18,22 @@ export const skillsApi = {
         return res.json();
     },
 
+    /**
+     * Download every file in a skill version as a .zip blob (folder structure
+     * preserved, plus a version.txt). Lets users take a skill into other tools.
+     */
+    download: async (skillId: string, version?: number): Promise<Blob> => {
+        const uris = await getUris();
+        const token = await getToken();
+        if (!token) throw new Error("No valid session token available.");
+        const params = version != null ? `?version=${version}` : "";
+        const res = await fetch(`${uris.base}/skills/${skillId}/download${params}`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return res.blob();
+    },
+
     /** Get a presigned PUT URL for uploading a file at an exact path. */
     sign: async (skillId: string, filePath: string, contentType: string) =>
         request(`/skills/${skillId}/sign`, "POST", { filePath, contentType }),

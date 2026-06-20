@@ -50,10 +50,14 @@ export const PROMPTS_OR_SEARCH_SUPPORTED = false;
  * same shared type used by prompts, sending `teams` from /prompts will fail
  * symmetrically. Flag defaults OFF: the fragment omits `teams`, the editor
  * mutation omits `teams`, RBACControl drops the "teams" mode, and the editor
- * summary covers only the 4 supported modes. Flip to `true` only after backend
- * introspection confirms the prompts mutation accepts and reads back `teams`.
+ * summary covers only the 4 supported modes.
+ *
+ * Enabled 2026-06-19: the backend now exposes `teams` on both `RBACData` and
+ * `RBACInput` (src/graphql/schemas/index.ts), and the resolver/mutation layer
+ * (ee/rbac-resolver.ts, ee/rbac-update.ts) reads and persists team grants, so
+ * prompts can query and mutate `teams` symmetrically.
  * -------------------------------------------------------------------------- */
-export const PROMPTS_RBAC_TEAMS_SUPPORTED = false;
+export const PROMPTS_RBAC_TEAMS_SUPPORTED = true;
 
 const PROMPT_LIBRARY_FIELDS = `
   id

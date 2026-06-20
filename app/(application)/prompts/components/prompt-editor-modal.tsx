@@ -684,13 +684,9 @@ function sharingSummary({
     case "roles":
       return t("editor.summary.roles", { count: rbacRoles.length });
     case "teams":
-      // Teams is gated behind PROMPTS_RBAC_TEAMS_SUPPORTED — when the flag is
-      // off (current default), this branch is unreachable from the editor's
-      // own selector (allowedModes excludes "teams"). It can still be reached
-      // by editing a prompt that already has a teams rights_mode in the
-      // database; render the count from rbacTeams when flagged on, otherwise
-      // fall back to the generic unknown copy so we don't pretend we
-      // round-trip it correctly.
+      // Teams is gated behind PROMPTS_RBAC_TEAMS_SUPPORTED. With the flag on,
+      // render the team count; if it is ever turned back off, fall back to the
+      // generic unknown copy so we don't pretend we round-trip teams correctly.
       return PROMPTS_RBAC_TEAMS_SUPPORTED
         ? t("editor.summary.teams", { count: rbacTeams.length })
         : t("access.unknown");
