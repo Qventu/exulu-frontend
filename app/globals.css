@@ -281,11 +281,7 @@
 .chat-response-container p {
   margin-bottom: 0.5rem;
   margin-top: 0.5rem;
-  color: black;
-}
-
-.dark .chat-response-container p {
-  color: white;
+  color: hsl(var(--foreground));
 }
 
 .lucide {
