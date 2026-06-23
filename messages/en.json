@@ -291,7 +291,7 @@
       "generatingImages": "Generating your agent images...",
       "generatingProgress": "Creating {current}/4 image options",
       "imageGenerationFailed": "Failed to generate images. Please try again.",
-      "imageInfoAlert": "Exulu can generate a cool image for your agent if an OPENAI_IMAGE_GENERATION_API_KEY has been added to your variables page.",
+      "imageInfoAlert": "IMP can generate a cool image for your agent if an OPENAI_IMAGE_GENERATION_API_KEY has been added to your variables page.",
       "imageStyle": "Image Style",
       "imageStylePlaceholder": "Select image style",
       "instructionsLabel": "Instructions",
@@ -1805,7 +1805,7 @@
     }
   },
   "configuration": {
-    "description": "White-label Exulu for your organization — changes apply to every user.",
+    "description": "White-label IMP for your organization — changes apply to every user.",
     "editor": {
       "defaultValue": "Default: {value}",
       "invalidValue": "Not a recognized color value — it will be published exactly as typed.",
@@ -2137,7 +2137,7 @@
       "attributionUpdated": "Attribution updated",
       "attributionUpdateFailed": "Couldn't update attribution"
     },
-    "emptyDescription": "Create one to call the Exulu API from your services.",
+    "emptyDescription": "Create one to call the IMP API from your services.",
     "emptyTitle": "No API keys yet",
     "neverUsed": "Never",
     "roles": {
@@ -2493,7 +2493,7 @@
           "title": "Extraction model",
           "caption": "The model used to extract entities from documents in this context.",
           "noneTitle": "No model configured",
-          "noneDescription": "Entity extraction is skipped until a model is set. Pick one below, or define context.entities.model in code / set EXULU_ENTITY_EXTRACTION_MODEL.",
+          "noneDescription": "Entity extraction is skipped until a model is set. Pick one below, or define context.entities.model in code.",
           "usingFrom": "Using {model} · {source}",
           "source": {
             "database": "set here",
@@ -2710,7 +2710,7 @@
     },
     "error": {
       "title": "Couldn't load models",
-      "body": "The LiteLLM proxy may be unreachable from the Exulu backend.",
+      "body": "The LiteLLM proxy may be unreachable from the IMP backend.",
       "retry": "Retry",
       "details": "Show error details"
     },
@@ -3405,7 +3405,7 @@
       "description": "Choose how the interface is themed. System follows your device setting.",
       "title": "Appearance"
     },
-    "description": "How Exulu looks, speaks, and responds to you.",
+    "description": "How the IMP looks, speaks, and responds to you.",
     "language": {
       "confirmAction": "Change language",
       "confirmDescription": "Changing the language reloads the page — your unsaved system prompt edits will be lost.",
@@ -3656,7 +3656,7 @@
     "cardTitle": "Token",
     "copySnippet": "Copy example",
     "copyToken": "Copy token",
-    "description": "Your bearer token for the Exulu API.",
+    "description": "Your bearer token for the IMP API.",
     "expired": "Expired — sign in again",
     "expiresInHours": "Expires in {hours} h",
     "expiresInMinutes": "Expires in {minutes} min",
@@ -3700,7 +3700,7 @@
       "joinSchedule": "Schedule",
       "joinAt": "Join at",
       "botName": "Bot name",
-      "botNamePlaceholder": "Exulu Notetaker",
+      "botNamePlaceholder": "IMP Notetaker",
       "notifyChat": "Notify participants in chat that the meeting is recorded",
       "postProcessing": "Post-processing",
       "postProcessingHint": "Run prompts on the transcript automatically when it's ready",

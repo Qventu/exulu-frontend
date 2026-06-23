@@ -291,7 +291,7 @@
       "generatingImages": "Ihre Agentenbilder werden generiert...",
       "generatingProgress": "Erstelle {current}/4 Bildoptionen",
       "imageGenerationFailed": "Fehler beim Generieren der Bilder. Bitte versuchen Sie es erneut.",
-      "imageInfoAlert": "Exulu kann ein cooles Bild für Ihren Agenten generieren, wenn ein OPENAI_IMAGE_GENERATION_API_KEY zu Ihrer Variablenseite hinzugefügt wurde.",
+      "imageInfoAlert": "Sie können ein cooles Bild für Ihren Agenten generieren, wenn ein OPENAI_IMAGE_GENERATION_API_KEY zu Ihrer Variablenseite hinzugefügt wurde.",
       "imageStyle": "Bildstil",
       "imageStylePlaceholder": "Bildstil auswählen",
       "instructionsLabel": "Anweisungen",
@@ -1805,7 +1805,7 @@
     }
   },
   "configuration": {
-    "description": "Gestalten Sie Exulu im Stil Ihrer Organisation — Änderungen gelten für alle Benutzer.",
+    "description": "Gestalten Sie das IMP im Stil Ihrer Organisation — Änderungen gelten für alle Benutzer.",
     "editor": {
       "defaultValue": "Standard: {value}",
       "invalidValue": "Kein erkennbarer Farbwert — wird genau so veröffentlicht wie eingegeben.",
@@ -2137,7 +2137,7 @@
       "attributionUpdated": "Zuordnung aktualisiert",
       "attributionUpdateFailed": "Zuordnung konnte nicht aktualisiert werden"
     },
-    "emptyDescription": "Erstellen Sie einen, um die Exulu-API aus Ihren Diensten aufzurufen.",
+    "emptyDescription": "Erstellen Sie einen, um die API aus Ihren Diensten aufzurufen.",
     "emptyTitle": "Noch keine API-Schlüssel",
     "neverUsed": "Nie",
     "roles": {
@@ -2493,7 +2493,7 @@
           "title": "Extraktionsmodell",
           "caption": "Das Modell, das Entitäten aus Dokumenten in diesem Kontext extrahiert.",
           "noneTitle": "Kein Modell konfiguriert",
-          "noneDescription": "Die Entitätsextraktion wird übersprungen, bis ein Modell gesetzt ist. Wählen Sie unten eines aus, oder definieren Sie context.entities.model im Code / setzen Sie EXULU_ENTITY_EXTRACTION_MODEL.",
+          "noneDescription": "Die Entitätsextraktion wird übersprungen, bis ein Modell gesetzt ist. Wählen Sie unten eines aus, oder definieren Sie context.entities.model im Code.",
           "usingFrom": "Verwendet {model} · {source}",
           "source": {
             "database": "hier gesetzt",
@@ -2674,7 +2674,7 @@
     "openAdminUi": "LiteLLM Admin UI öffnen",
     "banner": {
       "title": "In LiteLLM konfiguriert",
-      "body": "Modelle werden in der config.yaml von LiteLLM gepflegt. Bearbeiten Sie sie auf dem Host und starten Sie Exulu neu, um Änderungen zu übernehmen."
+      "body": "Modelle werden in der config.yaml von LiteLLM gepflegt. Bearbeiten Sie sie auf dem Host und starten Sie das IMP neu, um Änderungen zu übernehmen."
     },
     "search": {
       "placeholder": "Modelle suchen…"
@@ -2702,7 +2702,7 @@
     },
     "empty": {
       "title": "Keine Modelle konfiguriert",
-      "body": "Bearbeiten Sie die config.yaml von LiteLLM auf dem Host und starten Sie Exulu neu, um hier Modelle bereitzustellen."
+      "body": "Bearbeiten Sie die config.yaml von LiteLLM auf dem Host und starten Sie das IMP neu, um hier Modelle bereitzustellen."
     },
     "emptyFiltered": {
       "title": "Keine Modelle passen zu Ihrer Suche",
@@ -2710,7 +2710,7 @@
     },
     "error": {
       "title": "Modelle konnten nicht geladen werden",
-      "body": "Der LiteLLM-Proxy ist möglicherweise vom Exulu-Backend aus nicht erreichbar.",
+      "body": "Der LiteLLM-Proxy ist möglicherweise vom IMP-Backend aus nicht erreichbar.",
       "retry": "Erneut versuchen",
       "details": "Fehlerdetails anzeigen"
     },
@@ -3405,7 +3405,7 @@
       "description": "Wählen Sie das Erscheinungsbild der Oberfläche. „System“ folgt der Einstellung Ihres Geräts.",
       "title": "Erscheinungsbild"
     },
-    "description": "Wie Exulu für Sie aussieht, spricht und antwortet.",
+    "description": "Wie das IMP für Sie aussieht, spricht und antwortet.",
     "language": {
       "confirmAction": "Sprache ändern",
       "confirmDescription": "Beim Sprachwechsel wird die Seite neu geladen — Ihre ungespeicherten Änderungen am System-Prompt gehen verloren.",
@@ -3656,7 +3656,7 @@
     "cardTitle": "Token",
     "copySnippet": "Beispiel kopieren",
     "copyToken": "Token kopieren",
-    "description": "Ihr Bearer-Token für die Exulu-API.",
+    "description": "Ihr Bearer-Token für die IMP-API.",
     "expired": "Abgelaufen – melden Sie sich erneut an",
     "expiresInHours": "Läuft in {hours} Std. ab",
     "expiresInMinutes": "Läuft in {minutes} Min. ab",
@@ -3700,7 +3700,7 @@
       "joinSchedule": "Planen",
       "joinAt": "Beitreten am",
       "botName": "Bot-Name",
-      "botNamePlaceholder": "Exulu Notetaker",
+      "botNamePlaceholder": "IMP Notetaker",
       "notifyChat": "Teilnehmer im Chat informieren, dass das Meeting aufgezeichnet wird",
       "postProcessing": "Nachbearbeitung",
       "postProcessingHint": "Prompts automatisch auf das Transkript anwenden, sobald es fertig ist",
