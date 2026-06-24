@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
@@ -21,7 +21,7 @@ export default async function ArtifactPage({
     `${backend}/shared-artifacts/${encodeURIComponent(artifact_name)}/meta`,
     { headers: { "internal-key": internal }, cache: "no-store" },
   );
-  if (metaRes.status === 404) return <Centered title="Artifact not found" />;
+  if (metaRes.status === 404) notFound();
   if (metaRes.status === 410) return <Centered title="This link has expired" />;
   if (!metaRes.ok) return <Centered title="Something went wrong" />;
 
@@ -49,6 +49,7 @@ export default async function ArtifactPage({
       `${backend}/shared-artifacts/${encodeURIComponent(artifact_name)}/content`,
       { headers: { "internal-key": internal, "x-share-password": pw }, cache: "no-store" },
     );
+    await check.body?.cancel();
     if (check.status === 401) return <PasswordGate name={artifact_name} error />;
     if (!check.ok) return <Centered title="Something went wrong" />;
   }

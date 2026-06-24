@@ -32,7 +32,8 @@ export async function GET(
   } else {
     headers["internal-key"] = internal;
     if (meta.auth_mode === "password") {
-      const pw = (await cookies()).get(`share_pw_${artifact_name}`)?.value ?? "";
+      const pw = (await cookies()).get(`share_pw_${artifact_name}`)?.value;
+      if (!pw) return new NextResponse(null, { status: 401 });
       headers["x-share-password"] = pw;
     }
   }
