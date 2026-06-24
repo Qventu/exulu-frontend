@@ -45,10 +45,12 @@ import {
   FileText,
   FileWarning,
   ImageIcon,
+  Link2,
   LoaderIcon,
   PlusIcon,
   X,
 } from "lucide-react";
+import { ShareArtifactDialog } from "@/components/artifacts/share-artifact-dialog";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import * as React from "react";
@@ -342,6 +344,7 @@ export function FileItem({
 }: FileItemProps) {
   const t = useTranslations("common");
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [shareOpen, setShareOpen] = React.useState(false);
 
   const isImage =
     s3Key &&
@@ -424,6 +427,19 @@ export function FileItem({
           >
             <Download aria-hidden="true" className="size-3" />
           </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            type="button"
+            className="size-8 bg-background/80 hover:bg-background md:size-6"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShareOpen(true);
+            }}
+            aria-label="Share"
+          >
+            <Link2 aria-hidden="true" className="size-3" />
+          </Button>
           {onRemove ? (
             <Button
               variant="ghost"
@@ -453,6 +469,11 @@ export function FileItem({
           }}
         />
       ) : null}
+      <ShareArtifactDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        s3Key={s3Key}
+      />
     </>
   );
 }

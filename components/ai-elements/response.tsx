@@ -21,6 +21,7 @@ import { getPresignedUrl } from '../primitives/file-picker';
 import { ConfirmDialog } from '../primitives/confirm-dialog';
 import Link from 'next/link';
 import { AlertTriangle, LinkIcon, CopyIcon } from 'lucide-react';
+import { ShareLinkAnchor } from '@/components/artifacts/share-link-anchor';
 import { toast } from "sonner";
 
 /**
@@ -682,16 +683,7 @@ const components = {
       {children}
     </span>
   ),
-  a: ({ node, children, className, ...props }) => (
-    <a
-      className={cn('font-medium text-primary underline', className)}
-      rel="noreferrer"
-      target="_blank"
-      {...props}
-    >
-      {children}
-    </a>
-  ),
+  a: ({ node, ...props }) => <ShareLinkAnchor {...props} />,
   h1: ({ node, children, className, ...props }) => (
     <h1
       className={cn('mt-6 mb-2 font-semibold text-3xl', className)}

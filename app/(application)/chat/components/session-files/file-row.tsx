@@ -12,6 +12,7 @@
  * - timestamps via the shared RelativeTime primitive.
  */
 
+import { useState } from "react";
 import {
     Download,
     Eye,
@@ -21,9 +22,12 @@ import {
     FileSpreadsheet,
     FileText,
     FileType2,
+    Link2,
     Trash2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+
+import { ShareArtifactDialog } from "@/components/artifacts/share-artifact-dialog";
 
 import { RelativeTime } from "@/components/primitives/relative-time";
 import { Button } from "@/components/ui/button";
@@ -69,6 +73,7 @@ export function FileRow({
 }) {
     const t = useTranslations("chat");
     const tCommon = useTranslations("common");
+    const [shareOpen, setShareOpen] = useState(false);
 
     return (
         <TooltipProvider delayDuration={300}>
@@ -123,6 +128,20 @@ export function FileRow({
                             <Button
                                 variant="ghost"
                                 size="icon"
+                                className={ACTION_BUTTON_CLASSES}
+                                onClick={() => setShareOpen(true)}
+                                aria-label="Share"
+                            >
+                                <Link2 className="size-4" aria-hidden="true" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Share</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
                                 className={`${ACTION_BUTTON_CLASSES} text-destructive hover:text-destructive`}
                                 onClick={() => onDelete(file)}
                                 aria-label={tCommon("delete")}
@@ -134,6 +153,12 @@ export function FileRow({
                     </Tooltip>
                 </div>
             </div>
+            <ShareArtifactDialog
+                open={shareOpen}
+                onOpenChange={setShareOpen}
+                s3Key={file.key}
+                contentType={file.contentType}
+            />
         </TooltipProvider>
     );
 }
