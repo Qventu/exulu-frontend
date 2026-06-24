@@ -1,7 +1,9 @@
 import { redirect, notFound } from "next/navigation";
 import { cookies } from "next/headers";
+import { getServerSession } from "next-auth";
 
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
+import { getAuthOptions } from "@/app/api/auth/[...nextauth]/options";
 import { Centered, AutoDownload } from "./ui";
 import { PasswordGate } from "./password-gate";
 
@@ -37,6 +39,19 @@ export default async function ArtifactPage({
     if (!user) {
       redirect(`/login?destination=/artifacts/${encodeURIComponent(artifact_name)}`);
     }
+    // Pre-flight: confirm the viewer is RBAC-authorized before rendering.
+    // Without this, a denied viewer of an HTML artifact would get a broken iframe.
+    const session: any = await getServerSession(await getAuthOptions());
+    const jwt = session?.user?.jwt as string | undefined;
+    const check = await fetch(
+      `${backend}/shared-artifacts/${encodeURIComponent(artifact_name)}/content`,
+      { headers: { Authorization: `Bearer ${jwt ?? ""}` }, cache: "no-store" },
+    );
+    await check.body?.cancel();
+    if (check.status === 401 || check.status === 403) {
+      return <Centered title="You don't have access to this artifact" />;
+    }
+    if (!check.ok) return <Centered title="Something went wrong" />;
   }
 
   if (meta.auth_mode === "password") {

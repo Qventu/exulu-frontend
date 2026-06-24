@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 import {
@@ -49,6 +49,17 @@ export function ShareArtifactDialog({
   const [rightsMode, setRightsMode] = useState("private");
   const [rbac, setRbac] = useState<ShareRbac>({ users: [], roles: [], teams: [] });
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName(slugifyShareName(s3Key));
+      setAuthMode("regular");
+      setPassword("");
+      setExpiryDays(7);
+      setRightsMode("private");
+      setRbac({ users: [], roles: [], teams: [] });
+    }
+  }, [open, s3Key]);
 
   const submit = async () => {
     setSubmitting(true);
