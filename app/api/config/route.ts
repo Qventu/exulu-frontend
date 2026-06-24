@@ -18,6 +18,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
         backend: process.env.BACKEND,
+        s3_endpoint: process.env.COMPANION_S3_ENDPOINT,
         google_client_id: process.env.GOOGLE_CLIENT_ID,
         auth_mode: process.env.AUTH_MODE,
         langfuse: process.env.LANGFUSE_URI,
