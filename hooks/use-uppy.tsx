@@ -39,7 +39,15 @@ function extractS3KeyFromUrl(uploadURL: string): string {
         // key that doesn't exist.
         const rawPath = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
         const keyPath = decodeURIComponent(rawPath);
-        if (hostname.includes(".s3.") || hostname.includes(".s3-")) {
+        // Virtual-hosted-style AWS S3 URLs put the bucket in the subdomain:
+        // <bucket>.s3.<region>.amazonaws.com/<key> → re-prepend the bucket.
+        // Custom / MinIO endpoints (e.g. api.s3.exulu.com) are path-style — the
+        // bucket is already the first path segment — so the pathname IS the
+        // bucket/key. Guard on amazonaws.com so a host like "api.s3.exulu.com"
+        // isn't mistaken for a virtual-hosted bucket named "api".
+        const isAwsVirtualHosted =
+            hostname.endsWith(".amazonaws.com") && /\.s3[.-]/.test(hostname);
+        if (isAwsVirtualHosted) {
             const parts = hostname.split(/\.s3[.-]/);
             const bucket = parts[0];
             return `${bucket}/${keyPath}`;
