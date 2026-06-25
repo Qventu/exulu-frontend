@@ -16,12 +16,11 @@ export default async function ArtifactPage({
 }) {
   const { artifact_name } = await params;
   const backend = process.env.BACKEND;
-  const internal = process.env.INTERNAL_SECRET;
-  if (!backend || !internal) return <Centered title="Server misconfigured" />;
+  if (!backend) return <Centered title="Server misconfigured" />;
 
   const metaRes = await fetch(
     `${backend}/shared-artifacts/${encodeURIComponent(artifact_name)}/meta`,
-    { headers: { "internal-key": internal }, cache: "no-store" },
+    { cache: "no-store" },
   );
   if (metaRes.status === 404) notFound();
   if (metaRes.status === 410) return <Centered title="This link has expired" />;
@@ -62,7 +61,7 @@ export default async function ArtifactPage({
     // password path — acceptable; artifacts are modest in size.)
     const check = await fetch(
       `${backend}/shared-artifacts/${encodeURIComponent(artifact_name)}/content`,
-      { headers: { "internal-key": internal, "x-share-password": pw }, cache: "no-store" },
+      { headers: { "x-share-password": pw }, cache: "no-store" },
     );
     await check.body?.cancel();
     if (check.status === 401) return <PasswordGate name={artifact_name} error />;
