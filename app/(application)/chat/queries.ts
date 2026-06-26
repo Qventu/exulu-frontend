@@ -30,6 +30,7 @@ name
 model
 feedback
 suggestions_enabled
+sandbox_enabled
 memory
 instructions
 welcomemessage

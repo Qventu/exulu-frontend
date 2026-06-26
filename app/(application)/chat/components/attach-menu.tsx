@@ -52,22 +52,28 @@ function MenuEntry({
   description,
   trailing,
   onSelect,
+  disabled = false,
 }: {
   icon: LucideIcon;
   label: string;
   description?: string;
   trailing?: React.ReactNode;
   onSelect: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onSelect}
+      disabled={disabled}
+      aria-disabled={disabled}
       className={cn(
         "flex w-full items-start gap-3 rounded-md px-2 py-2.5 text-left transition-colors duration-150",
-        "hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         // Touch targets ≥44px below md (responsive.md §2).
         "min-h-[44px] md:min-h-0 md:py-2",
+        disabled
+          ? "cursor-not-allowed opacity-50"
+          : "hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
       )}
     >
       <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -153,7 +159,12 @@ export function AttachMenu({
         <MenuEntry
           icon={FolderOpen}
           label={t("attach.sessionFiles")}
-          description={t("attach.sessionFilesDescription")}
+          description={
+            agent.sandbox_enabled
+              ? t("attach.sessionFilesDescription")
+              : t("attach.sessionFilesDisabled")
+          }
+          disabled={!agent.sandbox_enabled}
           onSelect={() => select(() => void controller.setFilesPanelOpen(true))}
         />
         {hasCapabilities && (

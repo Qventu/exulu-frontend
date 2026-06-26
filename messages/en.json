@@ -890,6 +890,7 @@
       "open": "Add to conversation",
       "sessionFiles": "Session files",
       "sessionFilesDescription": "View and upload files for this session",
+      "sessionFilesDisabled": "Unavailable — the file sandbox is off for this agent.",
       "skillsAndTools": "Skills & tools",
       "skillsAndToolsDescription": "Choose what the agent may use"
     },

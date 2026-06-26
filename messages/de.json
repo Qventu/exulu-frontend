@@ -890,6 +890,7 @@
       "open": "Zur Unterhaltung hinzufügen",
       "sessionFiles": "Sitzungsdateien",
       "sessionFilesDescription": "Dateien dieser Sitzung ansehen und hochladen",
+      "sessionFilesDisabled": "Nicht verfügbar — die Datei-Sandbox ist für diesen Agenten deaktiviert.",
       "skillsAndTools": "Skills & Tools",
       "skillsAndToolsDescription": "Festlegen, was der Agent verwenden darf"
     },
