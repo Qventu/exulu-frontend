@@ -80,6 +80,7 @@ export const agentEditorSchema = z.object({
   defaultagent: z.boolean().optional(),
   feedback: z.boolean().optional(),
   suggestions_enabled: z.boolean().optional(),
+  sandbox_enabled: z.boolean().optional(),
   active: z.boolean().optional(),
 });
 
@@ -213,6 +214,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       defaultagent: !!(agent as any).defaultagent,
       feedback: !!(agent as any).feedback,
       suggestions_enabled: !!(agent as any).suggestions_enabled,
+      sandbox_enabled: !!(agent as any).sandbox_enabled,
       active: !!(agent as any).active,
     },
   });
@@ -314,6 +316,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       memory: memory || null,
       feedback: values.feedback,
       suggestions_enabled: values.suggestions_enabled ?? false,
+      sandbox_enabled: values.sandbox_enabled ?? false,
       model: model || null,
       animation_idle: animationIdle,
       animation_responding: animationResponding,
@@ -381,6 +384,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       defaultagent: !!(agent as any).defaultagent,
       feedback: !!(agent as any).feedback,
       suggestions_enabled: !!(agent as any).suggestions_enabled,
+      sandbox_enabled: !!(agent as any).sandbox_enabled,
       active: !!(agent as any).active,
     });
     setTools(defaultTools(agent));

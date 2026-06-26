@@ -113,6 +113,24 @@ export function ChatExperienceSection({ editor }: EditorSectionProps) {
               </SettingRow>
             )}
           />
+
+          <FormField
+            control={editor.form.control}
+            name="sandbox_enabled"
+            render={({ field }) => (
+              <SettingRow
+                htmlFor="agent-sandbox"
+                label={t("editor.chatExperience.sandboxLabel")}
+                description={t("editor.chatExperience.sandboxDescription")}
+              >
+                <Switch
+                  id="agent-sandbox"
+                  checked={!!field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </SettingRow>
+            )}
+          />
         </div>
       </Form>
     </section>

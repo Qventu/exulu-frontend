@@ -385,6 +385,8 @@
         "description": "How the agent shows up inside chat.",
         "feedbackDescription": "Allow users to send feedback during chat.",
         "feedbackLabel": "Feedback collection",
+        "sandboxDescription": "Give this agent a file sandbox with readFile/writeFile/bash tools — needed for skills and file generation. Off by default for knowledge agents.",
+        "sandboxLabel": "File sandbox",
         "suggestionsDescription": "After each reply, suggest up to 3 messages the user might send next. Uses the agent’s model; tokens count toward limits.",
         "suggestionsLabel": "Follow-up suggestions",
         "welcomeDescription": "Shown when the agent is first loaded in chat.",

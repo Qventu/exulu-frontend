@@ -385,6 +385,8 @@
         "description": "Wie der Agent im Chat erscheint.",
         "feedbackDescription": "Erlaubt Benutzern, während des Chats Feedback zu senden.",
         "feedbackLabel": "Feedback-Erfassung",
+        "sandboxDescription": "Gibt diesem Agenten eine Datei-Sandbox mit readFile/writeFile/bash-Tools – nötig für Skills und Dateierzeugung. Für Wissens-Agenten standardmäßig aus.",
+        "sandboxLabel": "Datei-Sandbox",
         "suggestionsDescription": "Schlägt nach jeder Antwort bis zu 3 mögliche Folgefragen vor. Nutzt das Modell des Agenten; Tokens zählen zum Limit.",
         "suggestionsLabel": "Folge-Vorschläge",
         "welcomeDescription": "Wird angezeigt, wenn der Agent erstmals im Chat geladen wird.",

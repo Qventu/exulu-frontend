@@ -70,6 +70,7 @@ export const AGENT_EDITOR_FIELDS = `
   model
   feedback
   suggestions_enabled
+  sandbox_enabled
   memory
   instructions
   welcomemessage
@@ -275,6 +276,7 @@ export const UPDATE_AGENT_EDITOR = gql`
     $name: String
     $feedback: Boolean
     $suggestions_enabled: Boolean
+    $sandbox_enabled: Boolean
     $model: String
     $description: String
     $welcomemessage: String
@@ -297,6 +299,7 @@ export const UPDATE_AGENT_EDITOR = gql`
         name: $name
         feedback: $feedback
         suggestions_enabled: $suggestions_enabled
+        sandbox_enabled: $sandbox_enabled
         model: $model
         description: $description
         welcomemessage: $welcomemessage
@@ -322,6 +325,7 @@ export const UPDATE_AGENT_EDITOR = gql`
         description
         feedback
         suggestions_enabled
+        sandbox_enabled
         welcomemessage
         defaultagent
         instructions
