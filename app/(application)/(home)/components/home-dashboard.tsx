@@ -53,6 +53,19 @@ const ENTRANCE_CLASSES =
 
 type RoleSlot = "workflows" | "budgets" | "evals" | null;
 
+/** Render unattributed hint if gap between tagged and unfiltered is meaningful (>1%). */
+function unattributedHint(
+  tagged: number | null,
+  unfiltered: number | null,
+  format: (n: number) => string,
+): string | undefined {
+  if (tagged == null || unfiltered == null || unfiltered === 0) return undefined;
+  const gap = unfiltered - tagged;
+  if (gap <= 0) return undefined;
+  if (gap / unfiltered <= 0.01) return undefined;
+  return `+ ${format(gap)} unattributed`;
+}
+
 export function HomeDashboard() {
   const t = useTranslations("home");
   const tNav = useTranslations("navigation");
@@ -235,6 +248,11 @@ export function HomeDashboard() {
                     ? "/analytics?dimension=agents&measure=spend"
                     : undefined
                 }
+                hint={unattributedHint(
+                  spendStat.current,
+                  vitals.unfilteredTotals?.spend ?? null,
+                  formatCurrency.format,
+                )}
                 {...trendOf(spendStat, formatCurrency.format)}
               />
               <StatCard
@@ -246,6 +264,11 @@ export function HomeDashboard() {
                     ? "/analytics?dimension=agents&measure=tokens"
                     : undefined
                 }
+                hint={unattributedHint(
+                  tokensStat.current,
+                  vitals.unfilteredTotals?.total_tokens ?? null,
+                  formatNumber.format,
+                )}
                 {...trendOf(tokensStat)}
               />
               {roleSlot === "workflows" && (
