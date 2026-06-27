@@ -14,7 +14,11 @@
 import { useQuery, type DocumentNode } from "@apollo/client";
 import * as React from "react";
 
-import { useTagActivity } from "@/lib/litellm-activity";
+import {
+  CANONICAL_DEDUPE_TAG_PREFIX,
+  useTagActivity,
+  type TagActivityTotals,
+} from "@/lib/litellm-activity";
 import {
   computeBudgetProjection,
   type BudgetInfo,
@@ -218,6 +222,8 @@ export interface TodayVitals {
   spend: StatPair;
   tokens: StatPair;
   requests: StatPair;
+  /** Raw unfiltered 24h totals for computing unattributed gap. Null until loaded. */
+  unfilteredTotals: TagActivityTotals | null;
 }
 
 /**
@@ -238,16 +244,22 @@ export function useTodayVitals(skip = false): TodayVitals {
   const weekStart = toLiteLLMDate(dates.weekAgo);
 
   const dayQuery = React.useMemo(
-    () => ({ start_date: dayStart, end_date: today }),
+    () => ({ start_date: dayStart, end_date: today, tag_prefix: CANONICAL_DEDUPE_TAG_PREFIX }),
     [dayStart, today],
   );
   const weekQuery = React.useMemo(
-    () => ({ start_date: weekStart, end_date: today }),
+    () => ({ start_date: weekStart, end_date: today, tag_prefix: CANONICAL_DEDUPE_TAG_PREFIX }),
     [weekStart, today],
+  );
+
+  const unfilteredDayQuery = React.useMemo(
+    () => ({ start_date: dayStart, end_date: today }),
+    [dayStart, today],
   );
 
   const day = useTagActivity(dayQuery, skip);
   const week = useTagActivity(weekQuery, skip);
+  const unfiltered = useTagActivity(unfilteredDayQuery, skip);
 
   const loading = !skip && (day.loading || week.loading);
   const error = Boolean(day.error || week.error);
@@ -275,6 +287,7 @@ export function useTodayVitals(skip = false): TodayVitals {
     requests: ready
       ? pair(dayTotals!.successful_requests, weekTotals!.successful_requests, true)
       : empty,
+    unfilteredTotals: unfiltered.data?.totals ?? null,
   };
 }
 
