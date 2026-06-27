@@ -266,7 +266,9 @@ export function HomeDashboard() {
                 }
                 hint={unattributedHint(
                   tokensStat.current,
-                  vitals.unfilteredTotals?.total_tokens ?? null,
+                  vitals.unfilteredTotals != null
+                    ? (vitals.unfilteredTotals.prompt_tokens ?? 0) + (vitals.unfilteredTotals.completion_tokens ?? 0)
+                    : null,
                   formatNumber.format,
                 )}
                 {...trendOf(tokensStat)}
