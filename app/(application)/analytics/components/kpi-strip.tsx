@@ -23,13 +23,28 @@ import { StatCard, type StatCardDelta } from "@/components/primitives/stat-card"
 
 import {
   lensToSearchParams,
+  resolveWindow,
   useActivityTotals,
+  useTagActivity,
   type Lens,
   type RangeTotalsStat,
+  type TagActivityQuery,
 } from "../hooks";
 
 const EMPHASIS_THRESHOLD_PERCENT = 25;
 const SPEND_CURRENCY = "USD"; // LiteLLM reports spend in USD; see analytics.md §4 Risks.
+
+function unattributedHint(
+  tagged: number | null,
+  unfiltered: number | null,
+  format: (n: number) => string,
+): string | undefined {
+  if (tagged == null || unfiltered == null || unfiltered === 0) return undefined;
+  const gap = unfiltered - tagged;
+  if (gap <= 0) return undefined;
+  if (gap / unfiltered <= 0.01) return undefined;
+  return `+ ${format(gap)} unattributed`;
+}
 
 export interface KPIStripProps {
   lens: Lens;
@@ -57,6 +72,15 @@ export function KPIStrip({ lens }: KPIStripProps) {
   const spend = useActivityTotals(lens, "spend");
   const tokens = useActivityTotals(lens, "tokens");
   const requests = useActivityTotals(lens, "requests");
+
+  const unfilteredQuery = React.useMemo<TagActivityQuery>(
+    () => {
+      const { current } = resolveWindow(lens);
+      return { start_date: current.from, end_date: current.to };
+    },
+    [lens],
+  );
+  const unfiltered = useTagActivity(unfilteredQuery);
 
   const trendOf = React.useCallback(
     (
@@ -117,6 +141,11 @@ export function KPIStrip({ lens }: KPIStripProps) {
         value={statValue(spend.current, spend.error, formatSpend)}
         loading={spend.loading}
         href={hrefFor({ measure: "spend" })}
+        hint={unattributedHint(
+          spend.current,
+          unfiltered.data?.totals.spend ?? null,
+          formatSpend,
+        )}
         {...trendOf(spend, formatSpend)}
       />
       <StatCard
@@ -124,6 +153,14 @@ export function KPIStrip({ lens }: KPIStripProps) {
         value={statValue(tokens.current, tokens.error, formatCount)}
         loading={tokens.loading}
         href={hrefFor({ measure: "tokens" })}
+        hint={unattributedHint(
+          tokens.current,
+          unfiltered.data?.totals != null
+            ? (unfiltered.data.totals.prompt_tokens ?? 0) +
+              (unfiltered.data.totals.completion_tokens ?? 0)
+            : null,
+          formatCount,
+        )}
         {...trendOf(tokens, formatCount)}
       />
       <StatCard
@@ -131,6 +168,11 @@ export function KPIStrip({ lens }: KPIStripProps) {
         value={statValue(requests.current, requests.error, formatCount)}
         loading={requests.loading}
         href={hrefFor({ measure: "requests" })}
+        hint={unattributedHint(
+          requests.current,
+          unfiltered.data?.totals.successful_requests ?? null,
+          formatCount,
+        )}
         {...trendOf(requests, formatCount)}
       />
     </div>
