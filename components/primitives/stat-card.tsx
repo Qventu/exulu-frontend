@@ -45,6 +45,8 @@ export interface StatCardProps
   delta?: StatCardDelta;
   /** Quiet comparison caption, always visible (no hover-only data). */
   caption?: string;
+  /** Second quiet caption line for contextual hints (e.g. unattributed spend). */
+  hint?: string;
   loading?: boolean;
   /** Makes the whole card a link (e.g. Home → /analytics). */
   href?: string;
@@ -59,7 +61,7 @@ const DELTA_ICONS: Record<StatCardDelta["direction"], LucideIcon> = {
 
 const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
   (
-    { label, value, delta, caption, loading = false, href, icon, className, ...props },
+    { label, value, delta, caption, hint, loading = false, href, icon, className, ...props },
     ref,
   ) => {
     const locale = useLocale();
@@ -101,7 +103,7 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
         <p className="text-3xl font-bold tracking-tight text-foreground">
           {formattedValue}
         </p>
-        {(delta || caption) && (
+        {(delta || caption || hint) && (
           <div className="space-y-0.5">
             {delta && DeltaIcon && (
               <p className={cn("flex items-center gap-1 text-xs font-medium", deltaColor)}>
@@ -111,6 +113,9 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
             )}
             {caption && (
               <p className="text-xs text-muted-foreground/70">{caption}</p>
+            )}
+            {hint && (
+              <p className="text-xs text-muted-foreground/50">{hint}</p>
             )}
           </div>
         )}
