@@ -58,6 +58,7 @@ import {
   type FeedbackTarget,
 } from "./feedback-dialog";
 import { ToolCallApproval } from "./tool-call-approval";
+import { findTrajectoryRefForFeedback } from "./trajectory-ref";
 
 export interface MessageColumnProps {
   controller: ChatSessionController;
@@ -182,11 +183,13 @@ export function MessageColumn({ controller }: MessageColumnProps) {
     const message = messages?.find((m) => m.id === messageId);
     const referencedItems =
       feedback === "negative" && message ? extractReferencedItems(message) : [];
+    const trajectoryId = findTrajectoryRefForFeedback(messages, messageId);
     setFeedbackTarget({
       sessionId: controller.session?.id ?? "",
       agentId: agent.id,
       score: feedback === "positive" ? 1 : 0,
       referencedItems,
+      trajectoryId,
     });
   };
 
