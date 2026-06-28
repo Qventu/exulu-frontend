@@ -4,23 +4,27 @@ import type { UIMessage } from "ai";
  * Extracts a harness trajectory ref from a single message part, or null.
  *
  * Name-agnostic by design: does NOT match on the tool name (`knowledge_search`), since the
- * retrieval tool may be renamed or moved into the library. Reads any part's `output` (covering
- * `tool-*` and `dynamic-tool` shapes). The harness wraps its payload as `{ result: "<json>" }`;
- * parse that, falling back to treating `output` itself as the payload, then read `trajectoryId`.
+ * retrieval tool is named differently in practice and may move into the library. Reads any part's
+ * `output` (covering `tool-*` and `dynamic-tool` shapes). The payload lives at `output.result`,
+ * which arrives as an already-parsed OBJECT on the live client (verified from a real message dump)
+ * or as a JSON STRING after a DB round-trip — falling back to `output` itself. From whichever, read
+ * `trajectoryId`.
  */
 export function trajectoryIdFromPart(part: unknown): string | null {
   const output = (part as { output?: unknown } | null | undefined)?.output;
   if (!output || typeof output !== "object") return null;
-  let payload: { trajectoryId?: unknown } = output as {
-    trajectoryId?: unknown;
-  };
   const result = (output as { result?: unknown }).result;
+  let payload: { trajectoryId?: unknown } | null;
   if (typeof result === "string") {
     try {
       payload = JSON.parse(result);
     } catch {
       return null;
     }
+  } else if (result && typeof result === "object") {
+    payload = result as { trajectoryId?: unknown };
+  } else {
+    payload = output as { trajectoryId?: unknown };
   }
   const id = payload?.trajectoryId;
   return typeof id === "string" && id.length > 0 ? id : null;

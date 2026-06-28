@@ -6,13 +6,16 @@ import {
 } from "./trajectory-ref";
 
 // Minimal factories — only the fields the finder reads.
+// Real client shape (verified from a live message dump): output.result is an already-PARSED
+// object, and the tool name is not literally "knowledge_search". The harness yields
+// `{ result: JSON.stringify(...) }`, but by the time it reaches the client `result` is an object.
 const ksPart = (trajectoryId: string | null) => ({
-  type: "tool-knowledge_search",
+  type: "tool-Knowledge_context_search",
   output: {
-    result: JSON.stringify({
+    result: {
       chunks: [],
       ...(trajectoryId ? { trajectoryId } : {}),
-    }),
+    },
   },
 });
 const textPart = (text: string) => ({ type: "text", text });
@@ -20,8 +23,15 @@ const msg = (id: string, role: "user" | "assistant", parts: unknown[]) =>
   ({ id, role, parts }) as unknown as UIMessage;
 
 describe("trajectoryIdFromPart", () => {
-  test("reads trajectoryId from a wrapped { result: json } output", () => {
+  test("reads trajectoryId when output.result is an already-parsed object (real client shape)", () => {
     expect(trajectoryIdFromPart(ksPart("newton::abc"))).toBe("newton::abc");
+  });
+  test("also handles output.result as a JSON string (DB-reload robustness)", () => {
+    expect(
+      trajectoryIdFromPart({
+        output: { result: JSON.stringify({ chunks: [], trajectoryId: "newton::str" }) },
+      }),
+    ).toBe("newton::str");
   });
   test("reads trajectoryId present directly on output (future shape)", () => {
     expect(
@@ -36,11 +46,12 @@ describe("trajectoryIdFromPart", () => {
       }),
     ).toBe("a::b");
   });
-  test("null for malformed JSON, missing field, or no output", () => {
+  test("null for malformed JSON, missing field (object or string), or no output", () => {
     expect(trajectoryIdFromPart({ output: { result: "{not json" } })).toBeNull();
     expect(
       trajectoryIdFromPart({ output: { result: JSON.stringify({ chunks: [] }) } }),
     ).toBeNull();
+    expect(trajectoryIdFromPart({ output: { result: { chunks: [] } } })).toBeNull();
     expect(trajectoryIdFromPart(textPart("hi"))).toBeNull();
     expect(trajectoryIdFromPart(undefined)).toBeNull();
   });
