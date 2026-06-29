@@ -15,6 +15,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation"
 import { AgenticKnowledgeSourceSearchResults, KnowledgeSourceSearchResultChunk } from "@/types/models/knowledge-source-search-results"
 import { Badge } from "@/components/ui/badge"
+import { TrajectoryReuseIndicator } from "./trajectory-reuse-indicator"
+import { trajectoryReuseFromMessage } from "@/app/(application)/chat/components/trajectory-ref"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useState, useEffect, useContext, useRef } from "react"
@@ -510,6 +512,9 @@ export function MessageRenderer({
             key={message.id}
           >
             <MessageContent id={"message_id_" + message.id}>
+              {message.role === 'assistant' && trajectoryReuseFromMessage(message) && (
+                <TrajectoryReuseIndicator />
+              )}
               {message.parts?.map((part, i) => {
 
                 if (part.type === 'step-start') {
