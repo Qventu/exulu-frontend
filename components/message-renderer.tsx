@@ -1173,6 +1173,8 @@ export function MessageRenderer({
                       {(showTokens && message.role === 'assistant' && messageMetadata?.totalTokens) && (
                         <small className="text-muted-foreground">
                           {Intl.NumberFormat('en-US').format(messageMetadata?.totalTokens)} tokens
+                          {(typeof messageMetadata?.inputTokens === 'number' && typeof messageMetadata?.outputTokens === 'number') &&
+                            ` · ${Intl.NumberFormat('en-US').format(messageMetadata.inputTokens)} in / ${Intl.NumberFormat('en-US').format(messageMetadata.outputTokens)} out`}
                         </small>
                       )}
                     </MessageActions>
