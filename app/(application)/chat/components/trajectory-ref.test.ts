@@ -3,6 +3,8 @@ import type { UIMessage } from "ai";
 import {
   findTrajectoryRefForFeedback,
   trajectoryIdFromPart,
+  trajectoryReuseFromPart,
+  trajectoryReuseFromMessage,
 } from "./trajectory-ref";
 
 // Minimal factories — only the fields the finder reads.
@@ -102,5 +104,63 @@ describe("findTrajectoryRefForFeedback", () => {
       ),
     ).toBeNull();
     expect(findTrajectoryRefForFeedback(undefined, "a1")).toBeNull();
+  });
+});
+
+// A replayed answer: the harness omits trajectoryId on replay and includes `reuse`.
+const replayPart = (matchedRef: string | null) => ({
+  type: "tool-Knowledge_context_search",
+  output: {
+    result: {
+      chunks: [],
+      ...(matchedRef
+        ? { reuse: { matchedRef, matchedQuery: "wie kommt 0xFF0C", matchedAt: "2026-06-01T00:00:00.000Z" } }
+        : {}),
+    },
+  },
+});
+
+describe("trajectoryReuseFromPart", () => {
+  test("reads reuse from an object-shaped result", () => {
+    expect(trajectoryReuseFromPart(replayPart("newton::R1"))).toEqual({
+      matchedRef: "newton::R1",
+      matchedQuery: "wie kommt 0xFF0C",
+      matchedAt: "2026-06-01T00:00:00.000Z",
+    });
+  });
+  test("reads reuse from a JSON-string result (DB-reload shape)", () => {
+    expect(
+      trajectoryReuseFromPart({ output: { result: JSON.stringify({ reuse: { matchedRef: "newton::S1" } }) } }),
+    ).toEqual({ matchedRef: "newton::S1", matchedQuery: undefined, matchedAt: undefined });
+  });
+  test("null when reuse is absent or has no matchedRef", () => {
+    expect(trajectoryReuseFromPart(ksPart("T1"))).toBeNull();
+    expect(trajectoryReuseFromPart({ output: { result: { reuse: {} } } })).toBeNull();
+    expect(trajectoryReuseFromPart(textPart("hi"))).toBeNull();
+  });
+});
+
+describe("findTrajectoryRefForFeedback prefers the reused trajectory", () => {
+  test("replayed answer (reuse present, no trajectoryId) → matchedRef", () => {
+    const messages = [msg("a1", "assistant", [replayPart("newton::R1"), textPart("ans")])];
+    expect(findTrajectoryRefForFeedback(messages, "a1")).toBe("newton::R1");
+  });
+  test("reuse wins over a trajectoryId on the same part", () => {
+    const both = {
+      type: "tool-x",
+      output: { result: { trajectoryId: "newton::SAVED", reuse: { matchedRef: "newton::R1" } } },
+    };
+    expect(findTrajectoryRefForFeedback([msg("a1", "assistant", [both])], "a1")).toBe("newton::R1");
+  });
+});
+
+describe("trajectoryReuseFromMessage", () => {
+  test("returns the reuse info of a replayed message", () => {
+    const m = msg("a1", "assistant", [replayPart("newton::R1"), textPart("ans")]);
+    expect(trajectoryReuseFromMessage(m)?.matchedRef).toBe("newton::R1");
+  });
+  test("null when the message has no reuse", () => {
+    expect(trajectoryReuseFromMessage(msg("a1", "assistant", [ksPart("T1")]))).toBeNull();
+    expect(trajectoryReuseFromMessage(undefined)).toBeNull();
   });
 });
