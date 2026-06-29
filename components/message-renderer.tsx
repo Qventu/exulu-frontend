@@ -17,6 +17,7 @@ import { AgenticKnowledgeSourceSearchResults, KnowledgeSourceSearchResultChunk }
 import { Badge } from "@/components/ui/badge"
 import { TrajectoryReuseIndicator } from "./trajectory-reuse-indicator"
 import { trajectoryReuseFromMessage } from "@/app/(application)/chat/components/trajectory-ref"
+import { formatRetrievalMetrics } from "@/lib/retrieval-metrics"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useState, useEffect, useContext, useRef } from "react"
@@ -512,9 +513,6 @@ export function MessageRenderer({
             key={message.id}
           >
             <MessageContent id={"message_id_" + message.id}>
-              {message.role === 'assistant' && trajectoryReuseFromMessage(message) && (
-                <TrajectoryReuseIndicator />
-              )}
               {message.parts?.map((part, i) => {
 
                 if (part.type === 'step-start') {
@@ -798,6 +796,7 @@ export function MessageRenderer({
                       output: any;
                     }[]
                   }[] = !Array.isArray(output?.result) ? output?.result?.reasoning : [];
+                  const metricsLine = formatRetrievalMetrics(!Array.isArray(output?.result) ? (output?.result as any)?.metrics : undefined);
 
                   // Map the chunks to items
                   const itemsMap = new Map<string, ItemWithChunks>();
@@ -841,6 +840,9 @@ export function MessageRenderer({
                         items={Array.from(itemsMap.values())}
                         totalChunks={chunks?.length ?? 0}
                       />
+                      {metricsLine && (
+                        <div className="mt-1 text-xs text-muted-foreground">{metricsLine}</div>
+                      )}
                     </>
                   )
                 }
@@ -927,6 +929,7 @@ export function MessageRenderer({
                       output: any;
                     }[]
                   }[] = !Array.isArray(output?.result) ? output?.result?.reasoning : [];
+                  const metricsLine = formatRetrievalMetrics(!Array.isArray(output?.result) ? (output?.result as any)?.metrics : undefined);
                   return (
 
                     <>
@@ -942,6 +945,9 @@ export function MessageRenderer({
                         callId={callId}
                         addToContext={addToContext}
                       />
+                      {metricsLine && (
+                        <div className="mt-1 text-xs text-muted-foreground">{metricsLine}</div>
+                      )}
                     </>
                   )
                 }
@@ -1043,130 +1049,134 @@ export function MessageRenderer({
                   // gated behind hover-capable pointers; touch devices and
                   // the last assistant message keep the row always visible,
                   // and keyboard focus reveals it (focus-within).
-                  <MessageActions
-                    className={cn(
-                      "mt-2 transition-opacity duration-150 motion-reduce:transition-none",
-                      message.role === 'assistant' && !isLastAssistantMessage &&
-                      "[@media(hover:hover)_and_(pointer:fine)]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-focus-within:opacity-100"
+                  <div className="mt-2">
+                    {message.role === 'assistant' && trajectoryReuseFromMessage(message) && (
+                      <TrajectoryReuseIndicator />
                     )}
-                  >
-                    {(showActions && message.role === 'assistant' && onRegenerate) && (
-                      <MessageAction
-                        className="mr-1"
-                        onClick={() => onRegenerate()}
-                        label="Retry"
-                        disabled={!writeAccess}
-                      >
-                        <RefreshCcwIcon className="size-3" />
-                      </MessageAction>
-                    )}
-                    {showActions && message.role === 'assistant' && (
-                      <MessageAction
-                        className="mr-1"
-                        onClick={() => {
-                          navigator.clipboard.writeText(
+                    <MessageActions
+                      className={cn(
+                        "mt-2 transition-opacity duration-150 motion-reduce:transition-none",
+                        message.role === 'assistant' && !isLastAssistantMessage &&
+                        "[@media(hover:hover)_and_(pointer:fine)]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-focus-within:opacity-100"
+                      )}
+                    >
+                      {(showActions && message.role === 'assistant' && onRegenerate) && (
+                        <MessageAction
+                          className="mr-1"
+                          onClick={() => onRegenerate()}
+                          label="Retry"
+                          disabled={!writeAccess}
+                        >
+                          <RefreshCcwIcon className="size-3" />
+                        </MessageAction>
+                      )}
+                      {showActions && message.role === 'assistant' && (
+                        <MessageAction
+                          className="mr-1"
+                          onClick={() => {
+                            navigator.clipboard.writeText(
+                              message.parts?.map((part: any) => part?.text || "").join('\n')
+                            )
+                            toast.success("Copied message", { description: "The message was copied to your clipboard." })
+                          }}
+                          label="Copy"
+                        >
+                          <CopyIcon className="size-3" />
+                        </MessageAction>
+                      )}
+                      {ttsEnabled && showActions && message.role === 'assistant' && (
+                        <MessageAction
+                          className="mr-1"
+                          onClick={() => handleTtsClick(message)}
+                          label={
+                            (ttsStateByMessage[message.id] ?? "idle") === "playing"
+                              ? "Pause"
+                              : (ttsStateByMessage[message.id] ?? "idle") === "paused"
+                                ? "Resume"
+                                : "Read aloud"
+                          }
+                        >
+                          {ttsStateByMessage[message.id] === "loading" && <Loader2 className="size-3 animate-spin" />}
+                          {ttsStateByMessage[message.id] === "playing" && <Pause className="size-3" />}
+                          {(!ttsStateByMessage[message.id] || ttsStateByMessage[message.id] === "idle" || ttsStateByMessage[message.id] === "paused") && <Volume2 className="size-3" />}
+                        </MessageAction>
+                      )}
+                      {showActions && message.role === 'assistant' && (
+                        <MessageAction
+                          className="mr-1"
+                          onClick={() => {
+                            const messageText = message.parts?.map((part: any) => part?.text || "").join('\n')
+
+                            // Create a blob with the text content
+                            const blob = new Blob([messageText], { type: 'text/plain' })
+                            const url = URL.createObjectURL(blob)
+
+                            // Create a temporary link and trigger download
+                            const a = document.createElement('a')
+                            a.href = url
+                            a.download = `message-${new Date().getTime()}.txt`
+                            document.body.appendChild(a)
+                            a.click()
+
+                            // Cleanup
+                            document.body.removeChild(a)
+                            URL.revokeObjectURL(url)
+
+                            toast.success("Downloaded message", { description: "The message was downloaded as a text file." })
+                          }}
+                          label="Download"
+                        >
+                          <DownloadIcon className="size-3" />
+                        </MessageAction>
+                      )}
+                      {showEdit && message.role === 'user' && (
+                        <MessageAction
+                          className="mr-1"
+                          label="Edit"
+                          onClick={() => handleStartEdit(
+                            message.id,
                             message.parts?.map((part: any) => part?.text || "").join('\n')
-                          )
-                          toast.success("Copied message", { description: "The message was copied to your clipboard." })
-                        }}
-                        label="Copy"
-                      >
-                        <CopyIcon className="size-3" />
-                      </MessageAction>
-                    )}
-                    {ttsEnabled && showActions && message.role === 'assistant' && (
-                      <MessageAction
-                        className="mr-1"
-                        onClick={() => handleTtsClick(message)}
-                        label={
-                          (ttsStateByMessage[message.id] ?? "idle") === "playing"
-                            ? "Pause"
-                            : (ttsStateByMessage[message.id] ?? "idle") === "paused"
-                              ? "Resume"
-                              : "Read aloud"
-                        }
-                      >
-                        {ttsStateByMessage[message.id] === "loading" && <Loader2 className="size-3 animate-spin" />}
-                        {ttsStateByMessage[message.id] === "playing" && <Pause className="size-3" />}
-                        {(!ttsStateByMessage[message.id] || ttsStateByMessage[message.id] === "idle" || ttsStateByMessage[message.id] === "paused") && <Volume2 className="size-3" />}
-                      </MessageAction>
-                    )}
-                    {showActions && message.role === 'assistant' && (
-                      <MessageAction
-                        className="mr-1"
-                        onClick={() => {
-                          const messageText = message.parts?.map((part: any) => part?.text || "").join('\n')
-
-                          // Create a blob with the text content
-                          const blob = new Blob([messageText], { type: 'text/plain' })
-                          const url = URL.createObjectURL(blob)
-
-                          // Create a temporary link and trigger download
-                          const a = document.createElement('a')
-                          a.href = url
-                          a.download = `message-${new Date().getTime()}.txt`
-                          document.body.appendChild(a)
-                          a.click()
-
-                          // Cleanup
-                          document.body.removeChild(a)
-                          URL.revokeObjectURL(url)
-
-                          toast.success("Downloaded message", { description: "The message was downloaded as a text file." })
-                        }}
-                        label="Download"
-                      >
-                        <DownloadIcon className="size-3" />
-                      </MessageAction>
-                    )}
-                    {showEdit && message.role === 'user' && (
-                      <MessageAction
-                        className="mr-1"
-                        label="Edit"
-                        onClick={() => handleStartEdit(
-                          message.id,
-                          message.parts?.map((part: any) => part?.text || "").join('\n')
-                        )}
-                      >
-                        <EditIcon className="size-3" />
-                      </MessageAction>
-                    )}
-                    {showRemove && (
-                      <MessageAction
-                        className="mr-1"
-                        label="Remove"
-                        onClick={() => handleRemove(message.id)}
-                      >
-                        <Trash2Icon className="size-3" />
-                      </MessageAction>
-                    )}
-                    {
-                      agent?.feedback && (
-                        <>
-                          <MessageAction
-                            className="mr-1"
-                            label="Good response"
-                            onClick={() => handleFeedback?.(message.id, 'positive')}
-                          >
-                            <ThumbsUp className="size-3" />
-                          </MessageAction>
-                          <MessageAction
-                            className="mr-1"
-                            label="Bad response"
-                            onClick={() => handleFeedback?.(message.id, 'negative')}
-                          >
-                            <ThumbsDown className="size-3" />
-                          </MessageAction>
-                        </>
-                      )
-                    }
-                    {(showTokens && message.role === 'assistant' && messageMetadata?.totalTokens) && (
-                      <small className="text-muted-foreground">
-                        {Intl.NumberFormat('en-US').format(messageMetadata?.totalTokens)} tokens
-                      </small>
-                    )}
-                  </MessageActions>
-
+                          )}
+                        >
+                          <EditIcon className="size-3" />
+                        </MessageAction>
+                      )}
+                      {showRemove && (
+                        <MessageAction
+                          className="mr-1"
+                          label="Remove"
+                          onClick={() => handleRemove(message.id)}
+                        >
+                          <Trash2Icon className="size-3" />
+                        </MessageAction>
+                      )}
+                      {
+                        agent?.feedback && (
+                          <>
+                            <MessageAction
+                              className="mr-1"
+                              label="Good response"
+                              onClick={() => handleFeedback?.(message.id, 'positive')}
+                            >
+                              <ThumbsUp className="size-3" />
+                            </MessageAction>
+                            <MessageAction
+                              className="mr-1"
+                              label="Bad response"
+                              onClick={() => handleFeedback?.(message.id, 'negative')}
+                            >
+                              <ThumbsDown className="size-3" />
+                            </MessageAction>
+                          </>
+                        )
+                      }
+                      {(showTokens && message.role === 'assistant' && messageMetadata?.totalTokens) && (
+                        <small className="text-muted-foreground">
+                          {Intl.NumberFormat('en-US').format(messageMetadata?.totalTokens)} tokens
+                        </small>
+                      )}
+                    </MessageActions>
+                  </div>
                 )}
             </MessageContent>
           </Message >
