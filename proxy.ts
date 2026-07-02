@@ -45,6 +45,10 @@ function buildCsp(): string {
     const scriptSrc = [
         "'self'",
         "'unsafe-inline'",
+        // Shiki uses WebAssembly for syntax highlighting; wasm-unsafe-eval
+        // permits only wasm instantiation (not arbitrary eval) so it is safe
+        // in production. unsafe-eval is still needed in dev for Next.js HMR.
+        "'wasm-unsafe-eval'",
         isDev && "'unsafe-eval'",
         'https://cdn.jsdelivr.net',
         'https://accounts.google.com',
