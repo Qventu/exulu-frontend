@@ -20,7 +20,7 @@ export function TrajectoryReuseIndicator() {
         <TooltipTrigger asChild>
           <Badge
             variant="secondary"
-            className="mb-2 gap-1 font-normal text-muted-foreground"
+            className="gap-1 font-normal text-muted-foreground"
           >
             <History className="size-3" aria-hidden="true" />
             Answered like a similar earlier request

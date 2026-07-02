@@ -81,7 +81,7 @@ export function NewItemDialog({
     const input: Record<string, unknown> = {
       name: draft.name,
       description: draft.description ?? "",
-      external_id: draft.external_id ?? "",
+      external_id: draft.external_id || null,
       tags: Array.isArray(draft.tags) ? draft.tags.join(",") : "",
       source: "manual",
       textlength: typeof draft.description === "string"

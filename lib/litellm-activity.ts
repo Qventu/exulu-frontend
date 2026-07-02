@@ -30,6 +30,16 @@ import * as React from "react";
 
 import { request } from "@/lib/api/client";
 
+// ─────────────────────────── Constants ───────────────────────────
+
+/**
+ * Tag prefix used to deduplicate LiteLLM totals. Each Exulu LLM call is
+ * tagged with multiple dimensions (user_id_, team_id_, agent_id_, …). Without
+ * filtering, the API sums spend/tokens once per tag and inflates the totals.
+ * Slicing to this prefix ensures each request is counted exactly once.
+ */
+export const CANONICAL_DEDUPE_TAG_PREFIX = "user_id_";
+
 // ─────────────────────────── Request shape ───────────────────────────
 
 export interface TagActivityQuery {

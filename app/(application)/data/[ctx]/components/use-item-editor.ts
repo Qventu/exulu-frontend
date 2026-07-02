@@ -301,7 +301,7 @@ export function useItemEditor({
             typeof draft.description === "string" ? draft.description.length : undefined,
           description: draft.description,
           name: draft.name,
-          external_id: draft.external_id,
+          external_id: draft.external_id || null,
           tags: Array.isArray(draft.tags)
             ? draft.tags.join(",")
             : (draft.tags as string | undefined),
