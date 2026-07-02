@@ -33,50 +33,63 @@ export default async function ArtifactPage({
   };
   const contentUrl = `/artifacts/${encodeURIComponent(artifact_name)}/content`;
 
+  const credHeaders: Record<string, string> = {};
+
   if (meta.auth_mode === "regular") {
     const user = await serverSideAuthCheck();
     if (!user) {
       redirect(`/login?destination=/artifacts/${encodeURIComponent(artifact_name)}`);
     }
-    // Pre-flight: confirm the viewer is RBAC-authorized before rendering.
-    // Without this, a denied viewer of an HTML artifact would get a broken iframe.
     const session: any = await getServerSession(await getAuthOptions());
     const jwt = session?.user?.jwt as string | undefined;
-    const check = await fetch(
-      `${backend}/shared-artifacts/${encodeURIComponent(artifact_name)}/content`,
-      { headers: { Authorization: `Bearer ${jwt ?? ""}` }, cache: "no-store" },
-    );
-    await check.body?.cancel();
-    if (check.status === 401 || check.status === 403) {
-      return <Centered title="You don't have access to this artifact" />;
-    }
-    if (!check.ok) return <Centered title="Something went wrong" />;
-  }
-
-  if (meta.auth_mode === "password") {
+    if (!jwt) return <Centered title="You don't have access to this artifact" />;
+    credHeaders["Authorization"] = `Bearer ${jwt}`;
+  } else if (meta.auth_mode === "password") {
     const pw = (await cookies()).get(`share_pw_${artifact_name}`)?.value;
     if (!pw) return <PasswordGate name={artifact_name} />;
-    // Validate before rendering so a wrong password re-prompts cleanly rather
-    // than showing a broken iframe / failed download. (One extra fetch in the
-    // password path — acceptable; artifacts are modest in size.)
-    const check = await fetch(
-      `${backend}/shared-artifacts/${encodeURIComponent(artifact_name)}/content`,
-      { headers: { "x-share-password": pw }, cache: "no-store" },
-    );
-    await check.body?.cancel();
-    if (check.status === 401) return <PasswordGate name={artifact_name} error />;
-    if (!check.ok) return <Centered title="Something went wrong" />;
+    credHeaders["x-share-password"] = pw;
   }
 
   if (meta.is_html) {
+    // Fetch content server-side so we can use srcdoc — avoids the browser making
+    // a separate request to the content route which would be blocked by the
+    // global X-Frame-Options: DENY header.
+    const contentRes = await fetch(
+      `${backend}/shared-artifacts/${encodeURIComponent(artifact_name)}/content`,
+      { headers: credHeaders, cache: "no-store" },
+    );
+    if (contentRes.status === 401) {
+      return meta.auth_mode === "password"
+        ? <PasswordGate name={artifact_name} error />
+        : <Centered title="You don't have access to this artifact" />;
+    }
+    if (contentRes.status === 403) return <Centered title="You don't have access to this artifact" />;
+    if (!contentRes.ok) return <Centered title="Something went wrong" />;
+    const html = await contentRes.text();
     return (
       <iframe
-        src={contentUrl}
+        srcdoc={html}
         sandbox="allow-scripts allow-popups allow-forms"
         className="h-screen w-screen border-0"
         title={meta.filename}
       />
     );
+  }
+
+  // Non-HTML: pre-flight to confirm access before the browser triggers the download.
+  if (meta.auth_mode !== "public") {
+    const check = await fetch(
+      `${backend}/shared-artifacts/${encodeURIComponent(artifact_name)}/content`,
+      { headers: credHeaders, cache: "no-store" },
+    );
+    await check.body?.cancel();
+    if (check.status === 401) {
+      return meta.auth_mode === "password"
+        ? <PasswordGate name={artifact_name} error />
+        : <Centered title="You don't have access to this artifact" />;
+    }
+    if (check.status === 403) return <Centered title="You don't have access to this artifact" />;
+    if (!check.ok) return <Centered title="Something went wrong" />;
   }
 
   return <AutoDownload url={contentUrl} filename={meta.filename} />;
