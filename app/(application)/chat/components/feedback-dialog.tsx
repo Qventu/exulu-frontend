@@ -36,6 +36,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 import { CREATE_FEEDBACK, UPDATE_ITEM } from "../queries";
+import {
+  buildTrajectoryFeedbackBody,
+  postTrajectoryFeedback,
+} from "@/lib/api/trajectory-feedback";
 
 export interface ReferencedItem {
   itemId: string;
@@ -48,6 +52,7 @@ export interface FeedbackTarget {
   agentId: string;
   score: 0 | 1;
   referencedItems: ReferencedItem[];
+  trajectoryId: string | null;
 }
 
 export interface FeedbackDialogProps {
@@ -140,6 +145,22 @@ export function FeedbackDialog({
           },
         },
       });
+      // Close the trajectory feedback loop (best-effort; never blocks the GraphQL feedback).
+      if (target.trajectoryId) {
+        try {
+          await postTrajectoryFeedback(
+            target.trajectoryId,
+            buildTrajectoryFeedbackBody(target.score, description),
+          );
+        } catch (error) {
+          if (process.env.NODE_ENV === "development") {
+            console.warn(
+              "Trajectory feedback POST failed (non-blocking):",
+              error,
+            );
+          }
+        }
+      }
       toast.success(t("feedbackDialog.submitted"), {
         description: t("feedbackDialog.submittedDescription"),
       });
