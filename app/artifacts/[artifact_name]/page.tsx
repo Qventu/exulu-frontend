@@ -68,7 +68,7 @@ export default async function ArtifactPage({
     const html = await contentRes.text();
     return (
       <iframe
-        srcdoc={html}
+        srcDoc={html}
         sandbox="allow-scripts allow-popups allow-forms"
         className="h-screen w-screen border-0"
         title={meta.filename}
