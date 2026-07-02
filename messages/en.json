@@ -2072,7 +2072,11 @@
       "teamLabel": "Team",
       "projectLabel": "Project",
       "noTeam": "No team",
-      "noProject": "No project"
+      "noProject": "No project",
+      "teamSearchPlaceholder": "Search teams…",
+      "projectSearchPlaceholder": "Search projects…",
+      "teamEmpty": "No teams found.",
+      "projectEmpty": "No projects found."
     },
     "columns": {
       "created": "Created",

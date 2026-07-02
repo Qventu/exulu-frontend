@@ -71,8 +71,8 @@ export const GET_KEY_AGENTS = gql`
 
 /** Teams for the optional attribution selector (id + name). */
 export const GET_KEY_TEAMS = gql`
-  query GetKeyTeams($page: Int!, $limit: Int!) {
-    teamsPagination(page: $page, limit: $limit) {
+  query GetKeyTeams($page: Int!, $limit: Int!, $filters: [FilterTeam]) {
+    teamsPagination(page: $page, limit: $limit, filters: $filters) {
       items {
         id
         name
@@ -81,14 +81,34 @@ export const GET_KEY_TEAMS = gql`
   }
 `;
 
+/** Single team by id — for resolving the trigger label in the attribution combobox. */
+export const GET_KEY_TEAM_BY_ID = gql`
+  query GetKeyTeamById($id: ID!) {
+    teamById(id: $id) {
+      id
+      name
+    }
+  }
+`;
+
 /** Projects for the optional attribution selector (id + name). */
 export const GET_KEY_PROJECTS = gql`
-  query GetKeyProjects($page: Int!, $limit: Int!) {
-    projectsPagination(page: $page, limit: $limit) {
+  query GetKeyProjects($page: Int!, $limit: Int!, $filters: [FilterProject]) {
+    projectsPagination(page: $page, limit: $limit, filters: $filters) {
       items {
         id
         name
       }
+    }
+  }
+`;
+
+/** Single project by id — for resolving the trigger label in the attribution combobox. */
+export const GET_KEY_PROJECT_BY_ID = gql`
+  query GetKeyProjectById($id: ID!) {
+    projectById(id: $id) {
+      id
+      name
     }
   }
 `;

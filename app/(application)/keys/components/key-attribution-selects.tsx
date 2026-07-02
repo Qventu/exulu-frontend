@@ -5,25 +5,26 @@
  * on the key's user record (`team` / `project`) and emitted as
  * team_id_/project_id_ tags by the backend's buildTags for any request the key
  * triggers — so API usage can be attributed to a team or project in LiteLLM
- * cost tracking. Both are optional ("No team" / "No project" clears them).
+ * cost tracking. Both are optional (clearing them sets null on the key).
+ *
+ * Uses EntityCombobox (async, server-filtered) so large orgs with many
+ * projects or teams are fully searchable — the previous plain Select was
+ * bounded by the 200-item eager fetch.
  */
 
+import { useApolloClient } from "@apollo/client";
 import { useTranslations } from "next-intl";
+import * as React from "react";
 
+import { EntityCombobox } from "@/components/primitives/entity-combobox";
 import { Label } from "@/components/ui/label";
+
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-import { useKeyEntities } from "../hooks";
-
-// Radix Select forbids an empty-string item value, so "unassigned" uses a
-// sentinel that maps back to null on change.
-const NONE = "__none__";
+  GET_KEY_PROJECT_BY_ID,
+  GET_KEY_PROJECTS,
+  GET_KEY_TEAM_BY_ID,
+  GET_KEY_TEAMS,
+} from "../queries";
 
 export interface KeyAttributionSelectsProps {
   teamId: string | null | undefined;
@@ -33,6 +34,8 @@ export interface KeyAttributionSelectsProps {
   disabled?: boolean;
 }
 
+const COMBOBOX_PAGE_SIZE = 20;
+
 export function KeyAttributionSelects({
   teamId,
   projectId,
@@ -41,50 +44,106 @@ export function KeyAttributionSelects({
   disabled,
 }: KeyAttributionSelectsProps) {
   const t = useTranslations("keys");
-  const { teams, projects } = useKeyEntities();
+  const apolloClient = useApolloClient();
+
+  const fetchTeams = React.useCallback(
+    async (q: string) => {
+      const { data } = await apolloClient.query({
+        query: GET_KEY_TEAMS,
+        variables: {
+          page: 1,
+          limit: COMBOBOX_PAGE_SIZE,
+          filters: q ? [{ name: { contains: q } }] : undefined,
+        },
+        fetchPolicy: "cache-first",
+      });
+      return (data?.teamsPagination?.items ?? []).map(
+        (item: { id: string; name: string }) => ({
+          id: item.id,
+          label: item.name,
+        }),
+      );
+    },
+    [apolloClient],
+  );
+
+  const resolveTeamLabel = React.useCallback(
+    async (id: string) => {
+      const { data } = await apolloClient.query({
+        query: GET_KEY_TEAM_BY_ID,
+        variables: { id },
+        fetchPolicy: "cache-first",
+      });
+      const found = data?.teamById;
+      return found ? { label: found.name as string } : null;
+    },
+    [apolloClient],
+  );
+
+  const fetchProjects = React.useCallback(
+    async (q: string) => {
+      const { data } = await apolloClient.query({
+        query: GET_KEY_PROJECTS,
+        variables: {
+          page: 1,
+          limit: COMBOBOX_PAGE_SIZE,
+          filters: q ? [{ name: { contains: q } }] : undefined,
+        },
+        fetchPolicy: "cache-first",
+      });
+      return (data?.projectsPagination?.items ?? []).map(
+        (item: { id: string; name: string }) => ({
+          id: item.id,
+          label: item.name,
+        }),
+      );
+    },
+    [apolloClient],
+  );
+
+  const resolveProjectLabel = React.useCallback(
+    async (id: string) => {
+      const { data } = await apolloClient.query({
+        query: GET_KEY_PROJECT_BY_ID,
+        variables: { id },
+        fetchPolicy: "cache-first",
+      });
+      const found = data?.projectById;
+      return found ? { label: found.name as string } : null;
+    },
+    [apolloClient],
+  );
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div className="flex flex-col gap-2">
         <Label>{t("attribution.teamLabel")}</Label>
-        <Select
-          value={teamId || NONE}
-          onValueChange={(v) => onTeamChange(v === NONE ? null : v)}
+        <EntityCombobox
+          value={teamId ?? null}
+          onChange={onTeamChange}
+          fetchOptions={fetchTeams}
+          resolveLabel={resolveTeamLabel}
+          placeholder={t("attribution.noTeam")}
+          emptyMessage={t("attribution.teamEmpty")}
+          searchPlaceholder={t("attribution.teamSearchPlaceholder")}
           disabled={disabled}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder={t("attribution.noTeam")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE}>{t("attribution.noTeam")}</SelectItem>
-            {teams.map((team) => (
-              <SelectItem key={team.id} value={team.id}>
-                {team.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          triggerClassName="w-full"
+        />
       </div>
 
       <div className="flex flex-col gap-2">
         <Label>{t("attribution.projectLabel")}</Label>
-        <Select
-          value={projectId || NONE}
-          onValueChange={(v) => onProjectChange(v === NONE ? null : v)}
+        <EntityCombobox
+          value={projectId ?? null}
+          onChange={onProjectChange}
+          fetchOptions={fetchProjects}
+          resolveLabel={resolveProjectLabel}
+          placeholder={t("attribution.noProject")}
+          emptyMessage={t("attribution.projectEmpty")}
+          searchPlaceholder={t("attribution.projectSearchPlaceholder")}
           disabled={disabled}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder={t("attribution.noProject")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE}>{t("attribution.noProject")}</SelectItem>
-            {projects.map((project) => (
-              <SelectItem key={project.id} value={project.id}>
-                {project.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          triggerClassName="w-full"
+        />
       </div>
     </div>
   );
