@@ -10,13 +10,18 @@
  */
 
 import { useApolloClient, useMutation, useQuery } from "@apollo/client";
+import { useTranslations } from "next-intl";
 import * as React from "react";
+import { toast } from "sonner";
 
 import { UserContext } from "@/app/(application)/authenticated";
 import type { PageInfo } from "@/components/primitives/data-table";
+import { ConfigContext } from "@/components/shell/config-context";
+import { getToken } from "@/lib/api/client";
 import { filesApi } from "@/lib/api/files";
 import type { AgentSession } from "@/types/models/agent-session";
 import type { Project } from "@/types/models/project";
+import { GET_LITELLM_CATALOG } from "@/queries/queries";
 
 import {
   DELETE_ITEM,
@@ -389,4 +394,141 @@ export function useDeleteProjectCascade() {
     },
     [apolloClient, deleteProjectMutation, detachSession, deleteSession],
   );
+}
+
+/** Generates and triggers browser downloads for tool-specific config files. */
+export function useProjectConfigDownloads(projectId: string, projectName: string) {
+  const config = React.useContext(ConfigContext);
+  const apolloClient = useApolloClient();
+  const t = useTranslations("projects");
+
+  function toSlug(name: string): string {
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  }
+
+  function triggerDownload(content: string, filename: string, mimeType: string): void {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function pickBestOpusModel(catalog: { model_name: string }[]): string {
+    const opusModels = catalog
+      .filter((m) => /^claude-opus-/i.test(m.model_name))
+      .sort((a, b) => {
+        const parseVer = (s: string) =>
+          s.replace(/^claude-opus-/i, "").split(/[-.]/).map(Number);
+        const av = parseVer(a.model_name);
+        const bv = parseVer(b.model_name);
+        for (let i = 0; i < Math.max(av.length, bv.length); i++) {
+          const diff = (bv[i] ?? 0) - (av[i] ?? 0);
+          if (diff !== 0) return diff;
+        }
+        return 0;
+      });
+    if (opusModels.length > 0) return opusModels[0].model_name;
+    if (catalog.length > 0) return catalog[0].model_name;
+    return "claude-opus-4-8";
+  }
+
+  async function downloadCoworkConfig(): Promise<void> {
+    const token = await getToken();
+    if (!token || !config?.backend) {
+      toast.error(t("detail.downloadFailed"));
+      return;
+    }
+    const slug = toSlug(projectName);
+    const baseUrl = `${config.backend}/litellm/${projectId}`;
+    triggerDownload(
+      JSON.stringify(
+        {
+          inferenceProvider: "gateway",
+          inferenceCredentialKind: "static",
+          inferenceGatewayBaseUrl: baseUrl,
+          inferenceGatewayApiKey: token,
+          banner: {
+            enabled: true,
+            text: "OPEN",
+            backgroundColor: "#E6D200",
+            textColor: "#000000",
+          },
+        },
+        null,
+        2,
+      ),
+      `cowork_config_${slug}.json`,
+      "application/json",
+    );
+  }
+
+  async function downloadClaudeCodeConfig(): Promise<void> {
+    const token = await getToken();
+    if (!token || !config?.backend) {
+      toast.error(t("detail.downloadFailed"));
+      return;
+    }
+    const { data } = await apolloClient.query({
+      query: GET_LITELLM_CATALOG,
+      fetchPolicy: "cache-first",
+    });
+    const catalog: { model_name: string }[] = data?.litellmCatalog ?? [];
+    const baseUrl = `${config.backend}/litellm/${projectId}`;
+    triggerDownload(
+      JSON.stringify(
+        {
+          model: pickBestOpusModel(catalog),
+          availableModels: catalog.map((m) => m.model_name),
+          env: {
+            ANTHROPIC_BASE_URL: baseUrl,
+            CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: 1,
+            DISABLE_AUTOUPDATER: 0,
+          },
+          apiKeyHelper: `echo ${token}`,
+        },
+        null,
+        2,
+      ),
+      "settings.json",
+      "application/json",
+    );
+  }
+
+  async function downloadContinueDevConfig(): Promise<void> {
+    const token = await getToken();
+    if (!token || !config?.backend) {
+      toast.error(t("detail.downloadFailed"));
+      return;
+    }
+    const slug = toSlug(projectName);
+    const apiBase = `${config.backend}/litellm/${projectId}/v1`;
+    const yaml = [
+      "name: Local Config",
+      "version: 1.0.0",
+      "schema: v1",
+      "models:",
+      "  - name: AI.OPEN",
+      "    provider: openai",
+      `    apiBase: ${apiBase}`,
+      `    apiKey: ${token}`,
+      "    model: AUTODETECT",
+      "    roles:",
+      "      - chat",
+      "      - edit",
+      "      - apply",
+      "    capabilities:",
+      "      - tool_use",
+      "      - image_input",
+    ].join("\n");
+    triggerDownload(yaml, `continue_config_${slug}.yaml`, "application/yaml");
+  }
+
+  return {
+    downloadCoworkConfig: () => { void downloadCoworkConfig(); },
+    downloadClaudeCodeConfig: () => { void downloadClaudeCodeConfig(); },
+    downloadContinueDevConfig: () => { void downloadContinueDevConfig(); },
+  };
 }
