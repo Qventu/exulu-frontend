@@ -23,7 +23,7 @@
  */
 
 import { useMutation } from "@apollo/client";
-import { FolderOpen, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, FolderOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import * as React from "react";
@@ -276,6 +276,19 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
               // ≥44px touch target below md (responsive.md DoD).
               className="size-11 md:size-8"
               items={[
+                {
+                  label: t("detail.copyId"),
+                  icon: Copy,
+                  dividerAfter: true,
+                  onSelect: async () => {
+                    try {
+                      await navigator.clipboard.writeText(project.id);
+                      toast.success(t("common.copied"));
+                    } catch {
+                      toast.error(t("common.copyFailed"));
+                    }
+                  },
+                },
                 {
                   label: t("detail.editDetails"),
                   icon: Pencil,
