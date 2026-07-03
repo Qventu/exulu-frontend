@@ -47,6 +47,8 @@ export interface OverflowMenuItem {
    * behind a separator. Gate the action via ConfirmDialog (see file JSDoc).
    */
   destructive?: boolean;
+  /** When true, renders a DropdownMenuSeparator after this item within the standard items group. */
+  dividerAfter?: boolean;
   disabled?: boolean;
   /**
    * Optional one-line muted sub-label rendered under the label. Use it to
@@ -110,7 +112,12 @@ const OverflowMenu = React.forwardRef<HTMLButtonElement, OverflowMenuProps>(
         </DropdownMenuTrigger>
         <DropdownMenuContent align={align}>
           {standardItems.map((item, index) => (
-            <OverflowMenuEntry key={`${index}-${item.label}`} item={item} />
+            <React.Fragment key={`${index}-${item.label}`}>
+              <OverflowMenuEntry item={item} />
+              {item.dividerAfter && index < standardItems.length - 1 && (
+                <DropdownMenuSeparator />
+              )}
+            </React.Fragment>
           ))}
           {standardItems.length > 0 && destructiveItems.length > 0 ? (
             <DropdownMenuSeparator />

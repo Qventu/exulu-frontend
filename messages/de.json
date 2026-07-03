@@ -2883,6 +2883,7 @@
     "detail": {
       "actions": "Projektaktionen",
       "backToProjects": "Zurück zu Projekten",
+      "copyId": "Projekt-ID kopieren",
       "deleteProject": "Projekt löschen...",
       "editDetails": "Details bearbeiten",
       "errorTitle": "Dieses Projekt konnte nicht geladen werden",

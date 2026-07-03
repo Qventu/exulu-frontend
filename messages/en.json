@@ -2883,6 +2883,7 @@
     "detail": {
       "actions": "Project actions",
       "backToProjects": "Back to projects",
+      "copyId": "Copy project ID",
       "deleteProject": "Delete project...",
       "editDetails": "Edit details",
       "errorTitle": "Couldn't load this project",
