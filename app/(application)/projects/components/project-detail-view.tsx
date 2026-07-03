@@ -23,7 +23,7 @@
  */
 
 import { useMutation } from "@apollo/client";
-import { Copy, FolderOpen, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, Download, FolderOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import * as React from "react";
@@ -46,6 +46,7 @@ import {
   useFavoriteProjects,
   useProject,
   useProjectAgents,
+  useProjectConfigDownloads,
   useProjectSessions,
 } from "../hooks";
 import { UPDATE_PROJECT } from "../queries";
@@ -73,6 +74,8 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   const { agents, agentName, loading: agentsLoading } = useProjectAgents();
   const { favoriteIds, toggleFavorite } = useFavoriteProjects();
   const deleteProjectCascade = useDeleteProjectCascade();
+  const { downloadCoworkConfig, downloadClaudeCodeConfig, downloadContinueDevConfig } =
+    useProjectConfigDownloads(projectId, project?.name ?? "");
 
   /* ------------------------- URL-backed tab state ------------------------- */
 
@@ -279,7 +282,6 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
                 {
                   label: t("detail.copyId"),
                   icon: Copy,
-                  dividerAfter: true,
                   onSelect: async () => {
                     try {
                       await navigator.clipboard.writeText(project.id);
@@ -288,6 +290,22 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
                       toast.error(t("common.copyFailed"));
                     }
                   },
+                },
+                {
+                  label: t("detail.downloadCoworkConfig"),
+                  icon: Download,
+                  onSelect: downloadCoworkConfig,
+                },
+                {
+                  label: t("detail.downloadClaudeCodeConfig"),
+                  icon: Download,
+                  onSelect: downloadClaudeCodeConfig,
+                },
+                {
+                  label: t("detail.downloadContinueDevConfig"),
+                  icon: Download,
+                  dividerAfter: true,
+                  onSelect: downloadContinueDevConfig,
                 },
                 {
                   label: t("detail.editDetails"),
