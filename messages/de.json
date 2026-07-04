@@ -433,7 +433,126 @@
         "noContexts": "Keine Kontexte gefunden.",
         "none": "Keiner",
         "searchContexts": "Kontexte suchen…",
-        "selectContext": "Kontext auswählen…"
+        "selectContext": "Kontext auswählen…",
+        "summary": {
+          "kbs": "{count, plural, one {# Wissensdatenbank} other {# Wissensdatenbanken}}",
+          "rules": "{count, plural, =0 {keine Routing-Regeln} one {# Routing-Regel} other {# Routing-Regeln}}",
+          "memoryOn": "Gedächtnis aktiv",
+          "memoryOff": "Gedächtnis inaktiv",
+          "reranker": "Reranker: {name}",
+          "noReranker": "kein Reranker",
+          "editSources": "Wissensdatenbanken",
+          "editRouting": "Routing",
+          "editVocabulary": "Fachvokabular",
+          "editBehavior": "Verhalten"
+        },
+        "wizard": {
+          "title": "Wissenssuche konfigurieren",
+          "back": "Zurück",
+          "continue": "Weiter",
+          "finish": "Übernehmen",
+          "steps": {
+            "sources": { "label": "Quellen", "description": "Wählen Sie, welche Wissensdatenbanken der Assistent durchsuchen darf und welche Art von Inhalten sie enthalten." },
+            "routing": { "label": "Routing", "description": "Lehren Sie den Assistenten, bei welchen Fragetypen er welche Quellen zuerst prüfen soll." },
+            "vocabulary": { "label": "Fachvokabular", "description": "Geben Sie dem Assistenten Ihre Fachsprache: Abkürzungen, Produktnamen und den Schreibstil Ihrer Dokumente." },
+            "memory": { "label": "Gedächtnis", "description": "Steuern Sie, wie kuratierte Gedächtniseinträge in die Antworten einfließen." },
+            "behavior": { "label": "Verhalten", "description": "Passen Sie an, wie Ergebnisse gewichtet werden und wie viele zurückgegeben werden." },
+            "review": { "label": "Überprüfung", "description": "Prüfen Sie alles vor der Übernahme. Änderungen werden mit dem Agenten gespeichert." }
+          },
+          "sources": {
+            "intro": "Wählen Sie die Wissensdatenbanken aus, die dieser Assistent durchsuchen darf. Alles, was Sie nicht auswählen, wird nie durchsucht.",
+            "kindLabel": "Was ist darin enthalten?",
+            "kinds": {
+              "documents": { "label": "Dokumente & Handbücher", "hint": "Gründlich durchsucht mit Query-Expansion — ideal für Handbücher, PDFs und lange Dokumente (bis zu {limit} Passagen, liest {expand} benachbarte Abschnitte)." },
+              "conversations": { "label": "Konversationen & Tickets", "hint": "Zunächst nach Namen und Schlüsselwörtern gesucht — ideal für Support-Tickets und E-Mail-Verläufe (bis zu {limit} Passagen)." },
+              "records": { "label": "Strukturierte Datensätze", "hint": "Direkt per Schlüsselwort durchsucht — ideal für Datenbankzeilen und kurze Einträge (bis zu {limit} Passagen)." }
+            },
+            "instructionsLabel": "Wann soll der Assistent hier nachschauen? (optional)",
+            "instructionsPlaceholder": "z. B. Produkthandbücher und Datenblätter — bei technischen Fragen zuerst hier prüfen."
+          },
+          "routing": {
+            "intro": "Routing-Regeln beschreiben Fragetypen in einfacher Sprache und lenken sie an die richtigen Quellen.",
+            "defaultNote": "Ohne Regeln wird jede aktivierte Wissensdatenbank bei jeder Frage durchsucht. Das ist ein guter Standard — fügen Sie Regeln hinzu, wenn Sie schnellere, fokussiertere Antworten wünschen.",
+            "newRuleLabel": "Neue Regel",
+            "labelPlaceholder": "z. B. Technische Fragen",
+            "descriptionPlaceholder": "z. B. Fragen zu Produkten, Fehlercodes, Installation oder Spezifikationen.",
+            "mainLabel": "Diese zuerst durchsuchen",
+            "fallbackLabel": "Auch prüfen, wenn die erste Suche schwach ausfällt",
+            "addRule": "Regel hinzufügen",
+            "removeRule": "Regel entfernen"
+          },
+          "vocabulary": {
+            "intro": "Optional, aber wirkungsvoll: Ihre Fachsprache hilft dem Assistenten, Dokumente zu finden, auch wenn Nutzer anders formulieren.",
+            "glossaryTitle": "Glossar",
+            "glossaryHint": "Abkürzungen und Begriffe, die Ihre Dokumente verwenden. z. B. FST → Feldbuscontroller.",
+            "termPlaceholder": "Begriff",
+            "meaningPlaceholder": "Bedeutung",
+            "addTerm": "Begriff hinzufügen",
+            "identifiersTitle": "Namen & Codes",
+            "identifiersHint": "Arten von Bezeichnern, die Nutzer nennen und auf bestimmte Dateien verweisen — Produktnamen, Normen, Fehlercodes. Der Assistent heftet passende Dateien an, sobald er einen erkennt.",
+            "identifierNamePlaceholder": "z. B. Produktnamen",
+            "examplesPlaceholder": "Beispiele, kommagetrennt: FST, ECO, CBM-2",
+            "strategyFuzzy": "Namen & Titel (ungefähre Übereinstimmung)",
+            "strategyExact": "Codes & Normen (exakte Übereinstimmung)",
+            "appliesTo": "Gilt für",
+            "styleHintTitle": "Beschreiben Sie Ihre Dokumente (optional)",
+            "styleHintPlaceholder": "z. B. Deutsche technische Handbücher für Aufzugssteuerungen, mit Menüpfaden, Parametern und Fehlercodes.",
+            "rewritesTitle": "Erweitert: Query-Umschreibungen",
+            "rewritesHint": "Ersetzen Sie Formulierungen in der Frage des Nutzers vor der Suche. Nützlich bei systematischen Unterschieden zwischen Nutzersprache und Dokumentensprache.",
+            "findPlaceholder": "Suchen",
+            "replacePlaceholder": "Ersetzen durch",
+            "addIdentifierSet": "Bezeichner-Set hinzufügen",
+            "addRewrite": "Umschreibung hinzufügen",
+            "remove": "Entfernen"
+          },
+          "memory": {
+            "intro": "Gedächtniseinträge sind kuratierte Notizen, die der Wissensdatenbank dieses Agenten zugeordnet sind. Diese Funktionen steuern, wie sie den Abruf beeinflussen.",
+            "noMemoryTitle": "Keine Gedächtnis-Wissensdatenbank konfiguriert",
+            "noMemoryHint": "Wählen Sie im Bereich Wissen & Gedächtnis unten einen Gedächtniskontext aus, um diese Funktionen zu nutzen.",
+            "features": {
+              "enabled": { "label": "Gedächtnis beim Abruf verwenden", "hint": "Relevante Gedächtniseinträge werden abgerufen und dem Assistenten zusammen mit Dokumentenergebnissen angeboten." },
+              "override": { "label": "Verifizierten Gedächtnis-Einträgen Vorrang vor Dokumenten geben", "hint": "Wenn ein kuratierter Eintrag die Frage direkt beantwortet, führt die Antwort damit — auch gegenüber Dokumenten. Streng geregelt." },
+              "filePrioritization": { "label": "Dateihinweisen im Gedächtnis folgen", "hint": "Gedächtnisnotizen wie 'immer zuerst X prüfen' heften diese Dateien an die Suche an." },
+              "queryAugmentation": { "label": "Suchanfragen mit Gedächtnis & Glossar erweitern", "hint": "Fügt Synonyme und Erweiterungen aus dem Gedächtnis und dem Glossar zur Suche hinzu." }
+            }
+          },
+          "behavior": {
+            "rerankerTitle": "Reranker",
+            "rerankerHint": "Ein Reranker bewertet Suchergebnisse nach Relevanz neu. Dringend empfohlen — ohne Reranker werden Ergebnisse nach rohem Suchscore sortiert.",
+            "topKLabel": "Ergebnisse für den Assistenten",
+            "topKHint": "Wie viele Top-Passagen der Assistent sieht. Mehr = breiterer Kontext, langsamere und teurere Antworten.",
+            "fallbackLabel": "Auslöser für Backup-Quellen: {percent}%",
+            "fallbackHint": "Wenn das beste Ergebnis der ersten Suche unter diesem Wert liegt, werden auch Backup-Quellen geprüft. Höher = Backups häufiger verwendet.",
+            "instructionsTitle": "Zusätzliche Anweisungen (optional)",
+            "instructionsPlaceholder": "Freitextanweisungen für die Abruf-Pipeline.",
+            "advancedTitle": "Erweiterte Feinabstimmung",
+            "pinBoostLabel": "Score-Boost für angeheftete Dateien",
+            "identifierBoostLabel": "Score-Boost bei Bezeichner-Treffer",
+            "pageWindowLabel": "Seitenfenster für Seitenreferenzen",
+            "maxQueriesLabel": "Maximale Query-Varianten pro Quelle",
+            "utilityModelLabel": "Hilfsmodell (optional)",
+            "utilityModelHint": "Modell-ID für interne Mikro-Aufrufe der Pipeline. Leer = das eigene Modell des Agenten.",
+            "flags": {
+              "managedContext": { "label": "Verwalteter Kontext", "hint": "Nutzer müssen Elemente vorab auswählen, bevor dieses Werkzeug sucht." },
+              "requirePreselectedContexts": { "label": "Ausgewählte Wissensdatenbanken voraussetzen", "hint": "Nutzer müssen auswählen, welche Wissensdatenbanken durchsucht werden sollen, bevor das Werkzeug startet." },
+              "logging": { "label": "Debug-Protokollierung", "hint": "Ausführliche phasenweise Protokollierung in der Serverkonsole." }
+            }
+          },
+          "review": {
+            "intro": "Das wird übernommen. Verwenden Sie die Schritt-Schaltflächen oben, um etwas zu ändern.",
+            "sourcesTitle": "{count, plural, one {# Wissensdatenbank} other {# Wissensdatenbanken}}",
+            "routingTitle": "{count, plural, =0 {Keine Routing-Regeln} one {# Routing-Regel} other {# Routing-Regeln}}",
+            "fallback": "Backup",
+            "vocabularyTitle": "Fachvokabular",
+            "vocabularyLine": "{glossary} Glossarbegriffe · {identifiers} Bezeichner-Sets · {rewrites} Umschreibungen",
+            "memoryTitle": "Gedächtnis",
+            "memoryOn": "Gedächtnisfunktionen sind aktiv.",
+            "memoryOff": "Gedächtnis ist für den Abruf deaktiviert.",
+            "behaviorTitle": "Verhalten",
+            "behaviorLine": "Top {topK} Ergebnisse · Backup-Auslöser {percent}% · {reranker}",
+            "noReranker": "kein Reranker"
+          }
+        }
       },
       "notFoundDescription": "Dieser Agent konnte nicht geladen werden. Möglicherweise wurde er gelöscht oder Sie haben keinen Zugriff.",
       "notFoundTitle": "Agent nicht gefunden",

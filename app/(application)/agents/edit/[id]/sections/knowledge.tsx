@@ -30,7 +30,11 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
-import { ToolConfigurationElement } from "../components/tool-config-fields";
+import { KnowledgeSearchSummaryCard } from "../components/knowledge-search/summary-card";
+import {
+  KnowledgeSearchWizard, type WizardStepId,
+} from "../components/knowledge-search/wizard";
+import type { ToolConfigEntry } from "../components/tool-config-fields";
 import type { EditorSectionProps } from "./types";
 
 export function KnowledgeSection({ editor, refs }: EditorSectionProps) {
@@ -42,6 +46,26 @@ export function KnowledgeSection({ editor, refs }: EditorSectionProps) {
   const memoryEnabled = !!editor.memory;
 
   const selectedContext = refs.contexts.find((c) => c.id === editor.memory);
+
+  const [wizardOpen, setWizardOpen] = React.useState(false);
+  const [wizardStep, setWizardStep] = React.useState<WizardStepId>("sources");
+
+  const agenticEntries =
+    (editor.tools.find((t) => t.id === "agentic_context_search")
+      ?.config as ToolConfigEntry[]) || [];
+
+  const applyAgenticConfig = (entries: ToolConfigEntry[]) => {
+    editor.setTools(
+      editor.tools.map((t) =>
+        t.id === "agentic_context_search" ? { ...t, config: entries as any } : t,
+      ),
+    );
+  };
+
+  const openWizard = (step: WizardStepId) => {
+    setWizardStep(step);
+    setWizardOpen(true);
+  };
 
   const toggleAgentic = (enabled: boolean) => {
     if (!refs.agenticRetrievalTool) return;
@@ -60,27 +84,12 @@ export function KnowledgeSection({ editor, refs }: EditorSectionProps) {
             })) || [],
         },
       ]);
+      openWizard("sources");
     } else {
       editor.setTools(
         editor.tools.filter((t) => t.id !== "agentic_context_search"),
       );
     }
-  };
-
-  const updateAgenticConfig = (value: any, name: string) => {
-    editor.setTools(
-      editor.tools.map((t) => {
-        if (t.id === "agentic_context_search") {
-          return {
-            ...t,
-            config: t.config.map((c) =>
-              c.name === name ? { ...c, variable: value } : c,
-            ),
-          };
-        }
-        return t;
-      }),
-    );
   };
 
   return (
@@ -119,18 +128,11 @@ export function KnowledgeSection({ editor, refs }: EditorSectionProps) {
           </div>
 
           {agenticEnabled && (
-            <div className="space-y-3 border-t pt-3">
-              <ToolConfigurationElement
-                tool={refs.agenticRetrievalTool}
-                config={
-                  (editor.tools.find(
-                    (t) => t.id === "agentic_context_search",
-                  )?.config as any) || []
-                }
-                variables={refs.variables}
-                update={updateAgenticConfig}
-              />
-            </div>
+            <KnowledgeSearchSummaryCard
+              entries={agenticEntries}
+              contexts={refs.contexts}
+              onEdit={openWizard}
+            />
           )}
         </div>
       )}
@@ -218,6 +220,15 @@ export function KnowledgeSection({ editor, refs }: EditorSectionProps) {
           </PopoverContent>
         </Popover>
       </div>
+      <KnowledgeSearchWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        initialStep={wizardStep}
+        entries={agenticEntries}
+        contexts={refs.contexts}
+        memoryContextId={editor.memory}
+        onApply={applyAgenticConfig}
+      />
     </section>
   );
 }
