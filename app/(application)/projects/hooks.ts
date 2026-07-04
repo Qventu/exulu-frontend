@@ -452,7 +452,7 @@ export function useProjectConfigDownloads(projectId: string, projectName: string
           inferenceGatewayApiKey: token,
           banner: {
             enabled: true,
-            text: "OPEN",
+            text: "IMP",
             backgroundColor: "#E6D200",
             textColor: "#000000",
           },
