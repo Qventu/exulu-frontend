@@ -21,7 +21,7 @@ import { VariableSelectionElement } from "./variable-selection-element";
 export type ToolConfigEntry = {
   name: string;
   variable: string | boolean | number;
-  type: "string" | "number" | "boolean" | "variable";
+  type: "string" | "number" | "boolean" | "variable" | "json";
 };
 
 interface ToolConfigurationElementProps {
@@ -140,6 +140,39 @@ export function ToolConfigurationElement({
                   onCheckedChange={(value) =>
                     update(value ? "true" : "false", configItem.name)
                   }
+                />
+              </div>
+            );
+          case "json":
+            return (
+              <div
+                key={configIndex}
+                className="space-y-2 rounded-md border p-3"
+              >
+                <div className="text-sm font-medium capitalize">
+                  {configItem.name.replace(/_/g, " ")}
+                </div>
+                {configItem.description && (
+                  <TextPreview
+                    text={configItem.description}
+                    sliceLength={200}
+                  />
+                )}
+                <Textarea
+                  disabled={!configEntry}
+                  className="font-mono text-xs"
+                  rows={6}
+                  placeholder={
+                    typeof configItem.default === "string"
+                      ? configItem.default
+                      : JSON.stringify(configItem.default ?? {})
+                  }
+                  value={
+                    typeof currentValue === "object" && currentValue !== null
+                      ? JSON.stringify(currentValue, null, 2)
+                      : (currentValue as string) || ""
+                  }
+                  onChange={(e) => update(e.target.value, configItem.name)}
                 />
               </div>
             );

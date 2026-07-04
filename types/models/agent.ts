@@ -9,7 +9,7 @@ export interface AgentTool {
     config: {
         name: string;
         variable: string;
-        type: "boolean" | "string" | "number" | "variable";
+        type: "boolean" | "string" | "number" | "variable" | "json";
     }[];
     name: string;
     description?: string;

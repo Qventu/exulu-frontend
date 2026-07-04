@@ -433,7 +433,126 @@
         "noContexts": "No contexts found.",
         "none": "None",
         "searchContexts": "Search contexts…",
-        "selectContext": "Select context…"
+        "selectContext": "Select context…",
+        "summary": {
+          "kbs": "{count, plural, one {# knowledge base} other {# knowledge bases}}",
+          "rules": "{count, plural, =0 {no routing rules} one {# routing rule} other {# routing rules}}",
+          "memoryOn": "memory on",
+          "memoryOff": "memory off",
+          "reranker": "reranker: {name}",
+          "noReranker": "no reranker",
+          "editSources": "Knowledge bases",
+          "editRouting": "Routing",
+          "editVocabulary": "Vocabulary",
+          "editBehavior": "Behavior"
+        },
+        "wizard": {
+          "title": "Configure knowledge search",
+          "back": "Back",
+          "continue": "Continue",
+          "finish": "Apply",
+          "steps": {
+            "sources": { "label": "Sources", "description": "Choose which knowledge bases the assistant may search and what kind of content each one holds." },
+            "routing": { "label": "Routing", "description": "Teach the assistant which sources to check first for different kinds of questions." },
+            "vocabulary": { "label": "Vocabulary", "description": "Give the assistant your domain language: abbreviations, product names, and how your documents are written." },
+            "memory": { "label": "Memory", "description": "Control how curated memory entries participate in answers." },
+            "behavior": { "label": "Behavior", "description": "Tune how results are ranked and how many are returned." },
+            "review": { "label": "Review", "description": "Check everything before applying. Changes are saved with the agent." }
+          },
+          "sources": {
+            "intro": "Pick the knowledge bases this assistant may search. Everything you leave unchecked will never be searched.",
+            "kindLabel": "What's in it?",
+            "kinds": {
+              "documents": { "label": "Documents & manuals", "hint": "Searched thoroughly with query expansion — best for manuals, PDFs, and long documents (up to {limit} passages, reads {expand} neighboring sections)." },
+              "conversations": { "label": "Conversations & tickets", "hint": "Matched by names and keywords first — best for support tickets and email threads (up to {limit} passages)." },
+              "records": { "label": "Structured records", "hint": "Searched directly by keywords — best for database rows and short entries (up to {limit} passages)." }
+            },
+            "instructionsLabel": "When should the assistant look here? (optional)",
+            "instructionsPlaceholder": "e.g. Product manuals and datasheets — check here first for technical questions."
+          },
+          "routing": {
+            "intro": "Routing rules describe kinds of questions in plain language and point them at the right sources.",
+            "defaultNote": "No rules means every enabled knowledge base is searched for every question. That's a fine default — add rules when you want faster, more focused answers.",
+            "newRuleLabel": "New rule",
+            "labelPlaceholder": "e.g. Technical questions",
+            "descriptionPlaceholder": "e.g. Questions about products, error codes, installation or specifications.",
+            "mainLabel": "Search these first",
+            "fallbackLabel": "Also check when the first search looks weak",
+            "addRule": "Add rule",
+            "removeRule": "Remove rule"
+          },
+          "vocabulary": {
+            "intro": "Optional, but powerful: your domain language helps the assistant find documents even when users phrase things differently.",
+            "glossaryTitle": "Glossary",
+            "glossaryHint": "Abbreviations and terms your documents use. e.g. FST → field bus controller.",
+            "termPlaceholder": "Term",
+            "meaningPlaceholder": "Meaning",
+            "addTerm": "Add term",
+            "identifiersTitle": "Names & codes",
+            "identifiersHint": "Kinds of identifiers users mention that map to specific files — product names, standards, error codes. The assistant pins matching files when it spots one.",
+            "identifierNamePlaceholder": "e.g. Product names",
+            "examplesPlaceholder": "Examples, comma-separated: FST, ECO, CBM-2",
+            "strategyFuzzy": "Names & titles (approximate matching)",
+            "strategyExact": "Codes & standards (exact matching)",
+            "appliesTo": "Applies to",
+            "styleHintTitle": "Describe your documents (optional)",
+            "styleHintPlaceholder": "e.g. German technical manuals for elevator controllers, with menu paths, parameters and error codes.",
+            "rewritesTitle": "Advanced: query rewrites",
+            "rewritesHint": "Replace phrases in the user's question before searching. Use for systematic wording differences between how users ask and how documents are written.",
+            "findPlaceholder": "Find",
+            "replacePlaceholder": "Replace with",
+            "addIdentifierSet": "Add identifier set",
+            "addRewrite": "Add rewrite",
+            "remove": "Remove"
+          },
+          "memory": {
+            "intro": "Memory entries are curated notes attached to this agent's memory knowledge base. These features control how they shape retrieval.",
+            "noMemoryTitle": "No memory knowledge base configured",
+            "noMemoryHint": "Pick a memory context in the Knowledge & memory section below to use these features.",
+            "features": {
+              "enabled": { "label": "Use memory during retrieval", "hint": "Relevant memory entries are retrieved and offered to the assistant alongside document results." },
+              "override": { "label": "Let verified memory override documents", "hint": "When a curated entry directly answers the question, the answer leads with it — even over the documents. Strictly gated." },
+              "filePrioritization": { "label": "Follow file hints in memory", "hint": "Memory notes like \"always check X first\" pin those files into the search." },
+              "queryAugmentation": { "label": "Expand queries with memory & glossary", "hint": "Adds synonyms and expansions from memory and your glossary to the search." }
+            }
+          },
+          "behavior": {
+            "rerankerTitle": "Reranker",
+            "rerankerHint": "A reranker re-scores search results for relevance. Strongly recommended — without one, results are ordered by raw search score.",
+            "topKLabel": "Results to hand the assistant",
+            "topKHint": "How many top passages the assistant sees. More = broader context, slower and costlier answers.",
+            "fallbackLabel": "Backup-source trigger: {percent}%",
+            "fallbackHint": "When the best first-search result scores below this, backup sources are also checked. Higher = backups used more often.",
+            "instructionsTitle": "Extra instructions (optional)",
+            "instructionsPlaceholder": "Free-text guidance for the retrieval pipeline.",
+            "advancedTitle": "Advanced tuning",
+            "pinBoostLabel": "Pinned-file score boost",
+            "identifierBoostLabel": "Identifier-match score boost",
+            "pageWindowLabel": "Page window for page references",
+            "maxQueriesLabel": "Max query variations per source",
+            "utilityModelLabel": "Utility model (optional)",
+            "utilityModelHint": "Model id for the pipeline's internal micro-calls. Empty = the agent's own model.",
+            "flags": {
+              "managedContext": { "label": "Managed context", "hint": "Users must preselect items before this tool will search." },
+              "requirePreselectedContexts": { "label": "Require chosen knowledge bases", "hint": "Users must pick which knowledge bases to search before the tool runs." },
+              "logging": { "label": "Debug logging", "hint": "Verbose per-phase logging to the server console." }
+            }
+          },
+          "review": {
+            "intro": "Here's what will be applied. Use the step buttons above to change anything.",
+            "sourcesTitle": "{count, plural, one {# knowledge base} other {# knowledge bases}}",
+            "routingTitle": "{count, plural, =0 {No routing rules} one {# routing rule} other {# routing rules}}",
+            "fallback": "backup",
+            "vocabularyTitle": "Vocabulary",
+            "vocabularyLine": "{glossary} glossary terms · {identifiers} identifier sets · {rewrites} rewrites",
+            "memoryTitle": "Memory",
+            "memoryOn": "Memory features are on.",
+            "memoryOff": "Memory is off for retrieval.",
+            "behaviorTitle": "Behavior",
+            "behaviorLine": "Top {topK} results · backup trigger {percent}% · {reranker}",
+            "noReranker": "no reranker"
+          }
+        }
       },
       "notFoundDescription": "This agent could not be loaded. It may have been deleted, or you may not have access.",
       "notFoundTitle": "Agent not found",
