@@ -46,3 +46,6 @@ package/dist/*
 *.tsbuildinfo
 next-env.d.ts
 shopify-tokens.json
+
+# superpowers worktrees
+.worktrees/
