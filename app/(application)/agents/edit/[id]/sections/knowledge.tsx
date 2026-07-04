@@ -67,6 +67,9 @@ export function KnowledgeSection({ editor, refs }: EditorSectionProps) {
     setWizardOpen(true);
   };
 
+  // Enabling stages the tool immediately (with empty config values → backend defaults)
+  // and then opens the wizard. Closing the wizard without Apply keeps the tool enabled;
+  // the switch — not the wizard — is the undo for enablement.
   const toggleAgentic = (enabled: boolean) => {
     if (!refs.agenticRetrievalTool) return;
     if (enabled) {

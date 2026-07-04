@@ -19,6 +19,46 @@ import {
   selectedKbIds, type IdentifierSet, type WizardConfig,
 } from "../config-schema";
 
+/** Controlled input that keeps in-flight raw text so commas aren't eaten mid-type. */
+function ExamplesInput({
+  examples,
+  placeholder,
+  onChange,
+}: {
+  examples: string[];
+  placeholder: string;
+  onChange: (parsed: string[]) => void;
+}) {
+  const [raw, setRaw] = React.useState(() => examples.join(", "));
+  const committed = examples.join(", ");
+
+  // Sync raw display when examples change externally (e.g. parent reset).
+  // If raw already parses to the same array the user's own typing caused the update —
+  // leave raw alone so a trailing ", " doesn't collapse mid-entry.
+  // If the parsed values differ, an external change occurred — adopt the new form.
+  React.useEffect(() => {
+    setRaw((prev) => {
+      const prevParsed = prev.split(",").map((s) => s.trim()).filter(Boolean).join(",");
+      const newParsed = examples.join(",");
+      return prevParsed === newParsed ? prev : committed;
+    });
+  // `committed` is a stable string derived from `examples`; depend on it, not the array.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [committed]);
+
+  return (
+    <Input
+      placeholder={placeholder}
+      value={raw}
+      onChange={(e) => {
+        setRaw(e.target.value);
+        onChange(e.target.value.split(",").map((s) => s.trim()).filter(Boolean));
+      }}
+      onBlur={() => setRaw(committed)}
+    />
+  );
+}
+
 export function VocabularyStep({
   draft, setDraft, contexts,
 }: {
@@ -126,14 +166,10 @@ export function VocabularyStep({
                 <Trash2 className="size-4" />
               </Button>
             </div>
-            <Input
+            <ExamplesInput
+              examples={set.examples}
               placeholder={t("editor.knowledge.wizard.vocabulary.examplesPlaceholder")}
-              value={set.examples.join(", ")}
-              onChange={(e) =>
-                updateIdentifier(idx, {
-                  examples: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                })
-              }
+              onChange={(parsed) => updateIdentifier(idx, { examples: parsed })}
             />
             <Select
               value={set.strategy}

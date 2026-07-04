@@ -81,7 +81,7 @@ export function RoutingStep({
       </p>
 
       {draft.routing.rules.map((rule, idx) => (
-        <div key={rule.id} className="space-y-3 rounded-md border p-3">
+        <div key={idx} className="space-y-3 rounded-md border p-3">
           <div className="flex items-center justify-between gap-2">
             <Input
               placeholder={t("editor.knowledge.wizard.routing.labelPlaceholder")}
