@@ -99,6 +99,10 @@ describe("helpers", () => {
     expect(ruleIdFromLabel("Tech", ["tech"])).toBe("tech-2");
     expect(ruleIdFromLabel("Tech", ["tech", "tech-2"])).toBe("tech-3");
   });
+  test("ruleIdFromLabel falls back to 'rule' for all-special-character labels", () => {
+    expect(ruleIdFromLabel("!!!", [])).toBe("rule");
+    expect(ruleIdFromLabel("!!!", ["rule"])).toBe("rule-2");
+  });
   test("buildSummary digests the config", () => {
     const cfg = defaultWizardConfig();
     cfg.knowledgeBases = { b: { enabled: false, kind: "documents", instructions: "", overrides: {} } };

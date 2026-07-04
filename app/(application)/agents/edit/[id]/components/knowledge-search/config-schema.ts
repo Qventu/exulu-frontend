@@ -208,15 +208,27 @@ function parseJsonField(v: unknown): unknown {
   return undefined;
 }
 
-/** Apply a zod schema with `.default()`, falling back on parse failure. */
+/** Apply a zod schema with `.default()`, falling back on parse failure. Never throws. */
 function safeZodParse<T>(schema: z.ZodType<T>, value: unknown): T {
-  const result = schema.safeParse(value);
-  if (result.success) return result.data;
-  // Fall through to the schema's default by parsing `undefined`
-  const fallback = schema.safeParse(undefined);
-  if (fallback.success) return fallback.data;
-  // Should never reach here given all schemas have defaults
-  throw new Error("Schema has no default");
+  try {
+    const result = schema.safeParse(value);
+    if (result.success) return result.data;
+    // Fall through to the schema's default by parsing `undefined`
+    const fallback = schema.safeParse(undefined);
+    if (fallback.success) return fallback.data;
+    // Should never reach here given all schemas have defaults
+    console.warn(
+      "[knowledge-search] safeZodParse: failed to parse value and schema has no default. " +
+      "Returning empty object as fallback.",
+    );
+    return {} as T;
+  } catch (e) {
+    console.warn(
+      "[knowledge-search] safeZodParse: unexpected error during parsing: " +
+      (e instanceof Error ? e.message : String(e)),
+    );
+    return {} as T;
+  }
 }
 
 /** Lookup an entry by name from a flat array. */
@@ -258,6 +270,7 @@ export function parseWizardConfig(
 
   // --- flat string fields ---
   const instructions = strVal(findEntry(list, "instructions")?.variable);
+  // "" and "none" are the same sentinel; parse normalizes empty string to "none"
   const reranker =
     strVal(findEntry(list, "reranker")?.variable) || "none";
   const utilityModel = strVal(findEntry(list, "utility_model")?.variable);
@@ -410,9 +423,12 @@ export function ruleIdFromLabel(label: string, existingIds: string[]): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  if (!existingIds.includes(slug)) return slug;
+  // Fall back to "rule" if slug is empty (e.g., all-special-character label)
+  const baseId = slug || "rule";
+
+  if (!existingIds.includes(baseId)) return baseId;
 
   let n = 2;
-  while (existingIds.includes(`${slug}-${n}`)) n++;
-  return `${slug}-${n}`;
+  while (existingIds.includes(`${baseId}-${n}`)) n++;
+  return `${baseId}-${n}`;
 }
