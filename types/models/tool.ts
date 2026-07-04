@@ -14,7 +14,7 @@ export interface ExuluTool {
     config: {
         name: string;
         description: string;
-        type: "boolean" | "string" | "number" | "variable";
+        type: "boolean" | "string" | "number" | "variable" | "json";
         default?: string | boolean | number | "variable";
         value?: string; // the exulu variable reference
     }[];
