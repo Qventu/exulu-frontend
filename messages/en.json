@@ -452,20 +452,47 @@
           "continue": "Continue",
           "finish": "Apply",
           "steps": {
-            "sources": { "label": "Sources", "description": "Choose which knowledge bases the assistant may search and what kind of content each one holds." },
-            "routing": { "label": "Routing", "description": "Teach the assistant which sources to check first for different kinds of questions." },
-            "vocabulary": { "label": "Vocabulary", "description": "Give the assistant your domain language: abbreviations, product names, and how your documents are written." },
-            "memory": { "label": "Memory", "description": "Control how curated memory entries participate in answers." },
-            "behavior": { "label": "Behavior", "description": "Tune how results are ranked and how many are returned." },
-            "review": { "label": "Review", "description": "Check everything before applying. Changes are saved with the agent." }
+            "sources": {
+              "label": "Sources",
+              "description": "Choose which knowledge bases the assistant may search and what kind of content each one holds."
+            },
+            "routing": {
+              "label": "Routing",
+              "description": "Teach the assistant which sources to check first for different kinds of questions."
+            },
+            "vocabulary": {
+              "label": "Vocabulary",
+              "description": "Give the assistant your domain language: abbreviations, product names, and how your documents are written."
+            },
+            "memory": {
+              "label": "Memory",
+              "description": "Control how curated memory entries participate in answers."
+            },
+            "behavior": {
+              "label": "Behavior",
+              "description": "Tune how results are ranked and how many are returned."
+            },
+            "review": {
+              "label": "Review",
+              "description": "Check everything before applying. Changes are saved with the agent."
+            }
           },
           "sources": {
             "intro": "Pick the knowledge bases this assistant may search. Everything you leave unchecked will never be searched.",
             "kindLabel": "What's in it?",
             "kinds": {
-              "documents": { "label": "Documents & manuals", "hint": "Searched thoroughly with query expansion — best for manuals, PDFs, and long documents (up to {limit} passages, reads {expand} neighboring sections)." },
-              "conversations": { "label": "Conversations & tickets", "hint": "Matched by names and keywords first — best for support tickets and email threads (up to {limit} passages)." },
-              "records": { "label": "Structured records", "hint": "Searched directly by keywords — best for database rows and short entries (up to {limit} passages)." }
+              "documents": {
+                "label": "Documents & manuals",
+                "hint": "Searched thoroughly with query expansion — best for manuals, PDFs, and long documents (up to {limit} passages, reads {expand} neighboring sections)."
+              },
+              "conversations": {
+                "label": "Conversations & tickets",
+                "hint": "Matched by names and keywords first — best for support tickets and email threads (up to {limit} passages)."
+              },
+              "records": {
+                "label": "Structured records",
+                "hint": "Searched directly by keywords — best for database rows and short entries (up to {limit} passages)."
+              }
             },
             "instructionsLabel": "When should the assistant look here? (optional)",
             "instructionsPlaceholder": "e.g. Product manuals and datasheets — check here first for technical questions."
@@ -510,10 +537,22 @@
             "noMemoryTitle": "No memory knowledge base configured",
             "noMemoryHint": "Pick a memory context in the Knowledge & memory section below to use these features.",
             "features": {
-              "enabled": { "label": "Use memory during retrieval", "hint": "Relevant memory entries are retrieved and offered to the assistant alongside document results." },
-              "override": { "label": "Let verified memory override documents", "hint": "When a curated entry directly answers the question, the answer leads with it — even over the documents. Strictly gated." },
-              "filePrioritization": { "label": "Follow file hints in memory", "hint": "Memory notes like \"always check X first\" pin those files into the search." },
-              "queryAugmentation": { "label": "Expand queries with memory & glossary", "hint": "Adds synonyms and expansions from memory and your glossary to the search." }
+              "enabled": {
+                "label": "Use memory during retrieval",
+                "hint": "Relevant memory entries are retrieved and offered to the assistant alongside document results."
+              },
+              "override": {
+                "label": "Let verified memory override documents",
+                "hint": "When a curated entry directly answers the question, the answer leads with it — even over the documents. Strictly gated."
+              },
+              "filePrioritization": {
+                "label": "Follow file hints in memory",
+                "hint": "Memory notes like \"always check X first\" pin those files into the search."
+              },
+              "queryAugmentation": {
+                "label": "Expand queries with memory & glossary",
+                "hint": "Adds synonyms and expansions from memory and your glossary to the search."
+              }
             }
           },
           "behavior": {
@@ -533,10 +572,21 @@
             "utilityModelLabel": "Utility model (optional)",
             "utilityModelHint": "Model id for the pipeline's internal micro-calls. Empty = the agent's own model.",
             "flags": {
-              "managedContext": { "label": "Managed context", "hint": "Users must preselect items before this tool will search." },
-              "requirePreselectedContexts": { "label": "Require chosen knowledge bases", "hint": "Users must pick which knowledge bases to search before the tool runs." },
-              "logging": { "label": "Debug logging", "hint": "Verbose per-phase logging to the server console." }
-            }
+              "managedContext": {
+                "label": "Managed context",
+                "hint": "Users must preselect items before this tool will search."
+              },
+              "requirePreselectedContexts": {
+                "label": "Require chosen knowledge bases",
+                "hint": "Users must pick which knowledge bases to search before the tool runs."
+              },
+              "logging": {
+                "label": "Debug logging",
+                "hint": "Verbose per-phase logging to the server console."
+              }
+            },
+            "maxStepsLabel": "Max agent steps per message",
+            "maxStepsHint": "Caps how many reasoning/tool rounds the assistant may take on one message while knowledge search is enabled — bounds retries and token cost. 0 = platform default."
           },
           "review": {
             "intro": "Here's what will be applied. Use the step buttons above to change anything.",

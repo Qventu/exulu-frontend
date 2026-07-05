@@ -42,6 +42,8 @@ export type WizardConfig = {
   instructions: string;
   reranker: string;
   utilityModel: string;
+  /** Max reasoning/tool steps for the CALLING agent while this tool is enabled; 0 = platform default. */
+  maxSteps: number;
   managedContext: boolean;
   requirePreselectedContexts: boolean;
   logging: boolean;
@@ -248,6 +250,7 @@ export function defaultWizardConfig(): WizardConfig {
     instructions: "",
     reranker: "none",
     utilityModel: "",
+    maxSteps: 0,
     managedContext: false,
     requirePreselectedContexts: false,
     logging: false,
@@ -274,6 +277,8 @@ export function parseWizardConfig(
   const reranker =
     strVal(findEntry(list, "reranker")?.variable) || "none";
   const utilityModel = strVal(findEntry(list, "utility_model")?.variable);
+  const maxStepsRaw = Number(findEntry(list, "max_steps")?.variable ?? 0);
+  const maxSteps = Number.isFinite(maxStepsRaw) && maxStepsRaw > 0 ? Math.floor(maxStepsRaw) : 0;
 
   // --- boolean fields ---
   const managedContext = boolVal(findEntry(list, "managed_context")?.variable);
@@ -314,6 +319,7 @@ export function parseWizardConfig(
     instructions,
     reranker,
     utilityModel,
+    maxSteps,
     managedContext,
     requirePreselectedContexts,
     logging,
@@ -326,7 +332,7 @@ export function parseWizardConfig(
 }
 
 // ---------------------------------------------------------------------------
-// serializeWizardConfig — exactly 11 entries in declaration order
+// serializeWizardConfig — exactly 12 entries in declaration order
 // ---------------------------------------------------------------------------
 
 export function serializeWizardConfig(cfg: WizardConfig): ToolConfigEntry[] {
@@ -335,6 +341,8 @@ export function serializeWizardConfig(cfg: WizardConfig): ToolConfigEntry[] {
     { name: "instructions", variable: cfg.instructions, type: "string" },
     { name: "reranker", variable: cfg.reranker, type: "string" },
     { name: "utility_model", variable: cfg.utilityModel, type: "string" },
+    // number entries (stringified)
+    { name: "max_steps", variable: String(cfg.maxSteps), type: "number" },
     // boolean entries ("true"/"false" strings)
     { name: "managed_context", variable: cfg.managedContext ? "true" : "false", type: "boolean" },
     { name: "require_preselected_contexts", variable: cfg.requirePreselectedContexts ? "true" : "false", type: "boolean" },

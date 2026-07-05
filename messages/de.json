@@ -452,20 +452,47 @@
           "continue": "Weiter",
           "finish": "Übernehmen",
           "steps": {
-            "sources": { "label": "Quellen", "description": "Wählen Sie, welche Wissensdatenbanken der Assistent durchsuchen darf und welche Art von Inhalten sie enthalten." },
-            "routing": { "label": "Routing", "description": "Lehren Sie den Assistenten, bei welchen Fragetypen er welche Quellen zuerst prüfen soll." },
-            "vocabulary": { "label": "Fachvokabular", "description": "Geben Sie dem Assistenten Ihre Fachsprache: Abkürzungen, Produktnamen und den Schreibstil Ihrer Dokumente." },
-            "memory": { "label": "Gedächtnis", "description": "Steuern Sie, wie kuratierte Gedächtniseinträge in die Antworten einfließen." },
-            "behavior": { "label": "Verhalten", "description": "Passen Sie an, wie Ergebnisse gewichtet werden und wie viele zurückgegeben werden." },
-            "review": { "label": "Überprüfung", "description": "Prüfen Sie alles vor der Übernahme. Änderungen werden mit dem Agenten gespeichert." }
+            "sources": {
+              "label": "Quellen",
+              "description": "Wählen Sie, welche Wissensdatenbanken der Assistent durchsuchen darf und welche Art von Inhalten sie enthalten."
+            },
+            "routing": {
+              "label": "Routing",
+              "description": "Lehren Sie den Assistenten, bei welchen Fragetypen er welche Quellen zuerst prüfen soll."
+            },
+            "vocabulary": {
+              "label": "Fachvokabular",
+              "description": "Geben Sie dem Assistenten Ihre Fachsprache: Abkürzungen, Produktnamen und den Schreibstil Ihrer Dokumente."
+            },
+            "memory": {
+              "label": "Gedächtnis",
+              "description": "Steuern Sie, wie kuratierte Gedächtniseinträge in die Antworten einfließen."
+            },
+            "behavior": {
+              "label": "Verhalten",
+              "description": "Passen Sie an, wie Ergebnisse gewichtet werden und wie viele zurückgegeben werden."
+            },
+            "review": {
+              "label": "Überprüfung",
+              "description": "Prüfen Sie alles vor der Übernahme. Änderungen werden mit dem Agenten gespeichert."
+            }
           },
           "sources": {
             "intro": "Wählen Sie die Wissensdatenbanken aus, die dieser Assistent durchsuchen darf. Alles, was Sie nicht auswählen, wird nie durchsucht.",
             "kindLabel": "Was ist darin enthalten?",
             "kinds": {
-              "documents": { "label": "Dokumente & Handbücher", "hint": "Gründlich durchsucht mit Query-Expansion — ideal für Handbücher, PDFs und lange Dokumente (bis zu {limit} Passagen, liest {expand} benachbarte Abschnitte)." },
-              "conversations": { "label": "Konversationen & Tickets", "hint": "Zunächst nach Namen und Schlüsselwörtern gesucht — ideal für Support-Tickets und E-Mail-Verläufe (bis zu {limit} Passagen)." },
-              "records": { "label": "Strukturierte Datensätze", "hint": "Direkt per Schlüsselwort durchsucht — ideal für Datenbankzeilen und kurze Einträge (bis zu {limit} Passagen)." }
+              "documents": {
+                "label": "Dokumente & Handbücher",
+                "hint": "Gründlich durchsucht mit Query-Expansion — ideal für Handbücher, PDFs und lange Dokumente (bis zu {limit} Passagen, liest {expand} benachbarte Abschnitte)."
+              },
+              "conversations": {
+                "label": "Konversationen & Tickets",
+                "hint": "Zunächst nach Namen und Schlüsselwörtern gesucht — ideal für Support-Tickets und E-Mail-Verläufe (bis zu {limit} Passagen)."
+              },
+              "records": {
+                "label": "Strukturierte Datensätze",
+                "hint": "Direkt per Schlüsselwort durchsucht — ideal für Datenbankzeilen und kurze Einträge (bis zu {limit} Passagen)."
+              }
             },
             "instructionsLabel": "Wann soll der Assistent hier nachschauen? (optional)",
             "instructionsPlaceholder": "z. B. Produkthandbücher und Datenblätter — bei technischen Fragen zuerst hier prüfen."
@@ -510,10 +537,22 @@
             "noMemoryTitle": "Keine Gedächtnis-Wissensdatenbank konfiguriert",
             "noMemoryHint": "Wählen Sie im Bereich Wissen & Gedächtnis unten einen Gedächtniskontext aus, um diese Funktionen zu nutzen.",
             "features": {
-              "enabled": { "label": "Gedächtnis beim Abruf verwenden", "hint": "Relevante Gedächtniseinträge werden abgerufen und dem Assistenten zusammen mit Dokumentenergebnissen angeboten." },
-              "override": { "label": "Verifizierten Gedächtnis-Einträgen Vorrang vor Dokumenten geben", "hint": "Wenn ein kuratierter Eintrag die Frage direkt beantwortet, führt die Antwort damit — auch gegenüber Dokumenten. Streng geregelt." },
-              "filePrioritization": { "label": "Dateihinweisen im Gedächtnis folgen", "hint": "Gedächtnisnotizen wie 'immer zuerst X prüfen' heften diese Dateien an die Suche an." },
-              "queryAugmentation": { "label": "Suchanfragen mit Gedächtnis & Glossar erweitern", "hint": "Fügt Synonyme und Erweiterungen aus dem Gedächtnis und dem Glossar zur Suche hinzu." }
+              "enabled": {
+                "label": "Gedächtnis beim Abruf verwenden",
+                "hint": "Relevante Gedächtniseinträge werden abgerufen und dem Assistenten zusammen mit Dokumentenergebnissen angeboten."
+              },
+              "override": {
+                "label": "Verifizierten Gedächtnis-Einträgen Vorrang vor Dokumenten geben",
+                "hint": "Wenn ein kuratierter Eintrag die Frage direkt beantwortet, führt die Antwort damit — auch gegenüber Dokumenten. Streng geregelt."
+              },
+              "filePrioritization": {
+                "label": "Dateihinweisen im Gedächtnis folgen",
+                "hint": "Gedächtnisnotizen wie 'immer zuerst X prüfen' heften diese Dateien an die Suche an."
+              },
+              "queryAugmentation": {
+                "label": "Suchanfragen mit Gedächtnis & Glossar erweitern",
+                "hint": "Fügt Synonyme und Erweiterungen aus dem Gedächtnis und dem Glossar zur Suche hinzu."
+              }
             }
           },
           "behavior": {
@@ -533,10 +572,21 @@
             "utilityModelLabel": "Hilfsmodell (optional)",
             "utilityModelHint": "Modell-ID für interne Mikro-Aufrufe der Pipeline. Leer = das eigene Modell des Agenten.",
             "flags": {
-              "managedContext": { "label": "Verwalteter Kontext", "hint": "Nutzer müssen Elemente vorab auswählen, bevor dieses Werkzeug sucht." },
-              "requirePreselectedContexts": { "label": "Ausgewählte Wissensdatenbanken voraussetzen", "hint": "Nutzer müssen auswählen, welche Wissensdatenbanken durchsucht werden sollen, bevor das Werkzeug startet." },
-              "logging": { "label": "Debug-Protokollierung", "hint": "Ausführliche phasenweise Protokollierung in der Serverkonsole." }
-            }
+              "managedContext": {
+                "label": "Verwalteter Kontext",
+                "hint": "Nutzer müssen Elemente vorab auswählen, bevor dieses Werkzeug sucht."
+              },
+              "requirePreselectedContexts": {
+                "label": "Ausgewählte Wissensdatenbanken voraussetzen",
+                "hint": "Nutzer müssen auswählen, welche Wissensdatenbanken durchsucht werden sollen, bevor das Werkzeug startet."
+              },
+              "logging": {
+                "label": "Debug-Protokollierung",
+                "hint": "Ausführliche phasenweise Protokollierung in der Serverkonsole."
+              }
+            },
+            "maxStepsLabel": "Max. Agenten-Schritte pro Nachricht",
+            "maxStepsHint": "Begrenzt, wie viele Denk-/Tool-Runden der Assistent pro Nachricht ausführen darf, solange die Wissenssuche aktiviert ist — begrenzt Wiederholungen und Token-Kosten. 0 = Plattform-Standard."
           },
           "review": {
             "intro": "Das wird übernommen. Verwenden Sie die Schritt-Schaltflächen oben, um etwas zu ändern.",

@@ -116,6 +116,12 @@ export function BehaviorStep({
               onChange={(n) => setTuning({ pageWindow: Math.max(0, Math.round(n)) })}
             />
             <NumberField
+              label={t("editor.knowledge.wizard.behavior.maxStepsLabel")}
+              hint={t("editor.knowledge.wizard.behavior.maxStepsHint")}
+              value={draft.maxSteps} min={0} max={20}
+              onChange={(n) => setDraft((prev) => ({ ...prev, maxSteps: Math.max(0, Math.round(n)) }))}
+            />
+            <NumberField
               label={t("editor.knowledge.wizard.behavior.maxQueriesLabel")}
               value={draft.tuning.maxQueriesPerContext} min={1} max={10}
               onChange={(n) => setTuning({ maxQueriesPerContext: Math.max(1, Math.round(n)) })}

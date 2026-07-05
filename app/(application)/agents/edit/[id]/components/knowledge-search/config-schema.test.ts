@@ -50,13 +50,14 @@ describe("parseWizardConfig", () => {
 });
 
 describe("serializeWizardConfig", () => {
-  test("emits exactly 11 entries with the platform value conventions", () => {
+  test("emits exactly 12 entries with the platform value conventions", () => {
     const cfg = defaultWizardConfig();
     cfg.managedContext = true;
     cfg.tuning.topK = 7;
     const entries = serializeWizardConfig(cfg);
-    expect(entries).toHaveLength(11);
+    expect(entries).toHaveLength(12);
     const byName = Object.fromEntries(entries.map((e) => [e.name, e]));
+    expect(byName["max_steps"]).toEqual({ name: "max_steps", variable: "0", type: "number" });
     expect(byName["managed_context"]).toEqual({ name: "managed_context", variable: "true", type: "boolean" });
     expect(byName["logging"].variable).toBe("false");
     expect(byName["tuning"].type).toBe("json");
