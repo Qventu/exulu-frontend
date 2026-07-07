@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/tooltip";
 import { type BudgetInfo } from "@/lib/budget";
 import { cn } from "@/lib/utils";
+import { deriveContextBudget } from "../lib/context-budget";
 
 import {
   useAvailableModels,
@@ -144,19 +145,23 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
     ? resolveModelName(modelOverride)
     : agent.modelName || resolveModelName(agent.model);
 
-  // ── Usage chip (item 27; detail = items 27/38 via UsagePopover) ──────────
+  // ── Usage chip — REAL context occupancy (spec §5a), not the cumulative sum.
+  // maxContext kept: the popover still receives it as its no-context fallback.
   const maxContext =
     typeof agent.maxContextLength === "number" && agent.maxContextLength > 0
       ? agent.maxContextLength
       : null;
-  const usagePct = maxContext
-    ? Math.round((tokenCounts.totalTokens / maxContext) * 100)
-    : null;
-  const usageWarning = usagePct !== null && usagePct >= 80;
+  const contextWindow = controller.contextWindow;
+  const contextBudget = contextWindow ? deriveContextBudget(contextWindow) : null;
+  const usagePct =
+    contextBudget && contextBudget.usableWindow > 0
+      ? Math.round((controller.contextOccupancy / contextBudget.usableWindow) * 100)
+      : null;
+  const usageWarning = controller.contextState !== "ok";
   const compactTokens = new Intl.NumberFormat("en-US", {
     notation: "compact",
-  }).format(tokenCounts.totalTokens);
-  const showUsageChip = usagePct !== null && tokenCounts.totalTokens > 0;
+  }).format(controller.contextOccupancy);
+  const showUsageChip = usagePct !== null && controller.contextOccupancy > 0;
 
   // Budget snapshot — surfaced in the TopBar chrome (TopBarBudget), no longer
   // as an in-chat chip. Still threaded into the Usage popover/dialog detail
@@ -321,6 +326,8 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
             <UsagePopover
               tokenCounts={tokenCounts}
               maxContextLength={maxContext}
+              contextOccupancy={controller.contextOccupancy}
+              contextWindow={controller.contextWindow}
               budget={budget}
             >
               <button
@@ -427,6 +434,8 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
         onOpenChange={setUsageOpen}
         tokenCounts={tokenCounts}
         maxContextLength={maxContext}
+        contextOccupancy={controller.contextOccupancy}
+        contextWindow={controller.contextWindow}
         budget={budget}
       />
 

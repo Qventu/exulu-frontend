@@ -60,6 +60,7 @@ import { GET_PROMPT_BY_ID, UPDATE_CONTEXT_PRESET, GET_CONTEXT_PRESETS } from "..
 import type { ChatSessionController } from "../hooks";
 import { CHAT_COLUMN } from "./chat-shell";
 import { AttachMenu } from "./attach-menu";
+import { ContextBanner } from "./context-banner";
 import { CapabilitySheet } from "./capability-sheet";
 import { PinnedContextRow } from "./pinned-context-row";
 import { PromptSelectorModal } from "./prompt-selector-modal";
@@ -88,7 +89,9 @@ export function Composer({ controller }: ComposerProps) {
     maxInputLength,
     suggestions,
     writeAccess,
+    contextState,
   } = controller;
+  const contextBlocked = contextState === "blocked";
 
   // ── Composer-local state ────────────────────────────────────────────────
   const [input, setInput] = useState("");
@@ -253,6 +256,12 @@ export function Composer({ controller }: ComposerProps) {
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
 
+    if (contextBlocked) {
+      toast.error(t("context.blockedToastTitle"), {
+        description: t("context.blockedToastDescription"),
+      });
+      return;
+    }
     if (budgetExceeded) {
       toast.error(t("composer.budgetReachedToastTitle"), {
         description: t("composer.budgetReachedToastDescription"),
@@ -459,6 +468,9 @@ export function Composer({ controller }: ComposerProps) {
       )}
 
       <div className={CHAT_COLUMN}>
+        {/* Context-window warn/blocked banner (context-window-management §5b) */}
+        <ContextBanner controller={controller} />
+
         {/* Managed-context one-time dismissible hint (item 72) */}
         {controller.managedContextEnabled && !managedHintDismissed && (
           <div className="mb-2 flex items-start gap-2 rounded-md border bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
@@ -509,11 +521,13 @@ export function Composer({ controller }: ComposerProps) {
               onKeyDown={handleKeyDown}
               onChange={(e) => setInput(e.target.value)}
               name="message"
-              disabled={budgetExceeded}
+              disabled={budgetExceeded || contextBlocked}
               placeholder={
-                budgetExceeded
-                  ? t("composer.placeholderBudgetReached")
-                  : t("composer.placeholder")
+                contextBlocked
+                  ? t("context.placeholderBlocked")
+                  : budgetExceeded
+                    ? t("composer.placeholderBudgetReached")
+                    : t("composer.placeholder")
               }
               className="max-h-40 min-w-0 flex-1 resize-none overflow-y-auto bg-transparent px-2 py-2.5 text-base placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
               aria-label={t("composer.inputAriaLabel")}
@@ -565,7 +579,8 @@ export function Composer({ controller }: ComposerProps) {
                   status === "submitted" ||
                   !input?.trim() ||
                   recordingState !== "idle" ||
-                  budgetExceeded
+                  budgetExceeded ||
+                  contextBlocked
                 }
                 aria-label={t("composer.send")}
               >

@@ -138,6 +138,7 @@ export default async function SessionsPage({
       {
         page: 1,
         limit: 50,
+        sort: { field: "createdAt", direction: "DESC" },
         filters: {
           session: {
             eq: session,
@@ -149,9 +150,10 @@ export default async function SessionsPage({
     let initialMessages = [];
 
     if (messageHistory?.agent_messagesPagination) {
-      initialMessages = messageHistory?.agent_messagesPagination?.items?.map(
-        (item: { content: string }) => JSON.parse(item.content),
-      );
+      // Query returns newest-first (DESC); reverse so display order is chronological.
+      initialMessages = messageHistory?.agent_messagesPagination?.items
+        ?.map((item: { content: string }) => JSON.parse(item.content))
+        .reverse();
     }
 
     if (!sessionData?.agent_sessionById) {

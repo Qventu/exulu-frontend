@@ -1075,6 +1075,21 @@
       "title": "Skills & Tools",
       "tools": "Tools"
     },
+    "context": {
+      "warnTitle": "Kontextlimit fast erreicht",
+      "warnBody": "Diese Unterhaltung nutzt {percent}% des Kontextfensters des Modells. Komprimiere sie, damit der Agent schnell und präzise bleibt.",
+      "blockedTitle": "Kontextlimit erreicht",
+      "blockedBody": "Diese Unterhaltung passt nicht mehr in das Kontextfenster des Modells. Komprimiere sie, um fortzufahren.",
+      "compact": "Unterhaltung komprimieren",
+      "compacting": "Unterhaltung wird zusammengefasst…",
+      "steerToggle": "Etwas, das im Detail erhalten bleiben soll?",
+      "steerPlaceholder": "z. B. die genauen Zahlen aus den Serviceberichten behalten",
+      "dismiss": "Ausblenden",
+      "insufficientError": "Diese Unterhaltung kann nicht weiter komprimiert werden — bitte starte einen neuen Chat.",
+      "blockedToastTitle": "Kontextlimit erreicht",
+      "blockedToastDescription": "Komprimiere die Unterhaltung, bevor du neue Nachrichten sendest.",
+      "placeholderBlocked": "Komprimiere die Unterhaltung, um fortzufahren…"
+    },
     "composer": {
       "attachmentsLabel": "Anhänge",
       "budgetReachedNotice": "Du hast dein Budget für diesen Zeitraum erreicht. Nachrichten sind pausiert, bis es zurückgesetzt wird.",
@@ -1356,6 +1371,8 @@
     },
     "usage": {
       "budgetTitle": "Ihr Budget",
+      "contextTitle": "Kontextfenster",
+      "cumulativeTitle": "Sitzungsverbrauch (kumuliert)",
       "description": "Token- und Budgetnutzung für diese Unterhaltung.",
       "title": "Nutzung",
       "tokensExplainer": "Token sind die Einheiten, in denen KI-Nutzung gemessen wird – etwa ¾ Wort pro Token.",

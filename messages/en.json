@@ -1075,6 +1075,21 @@
       "title": "Skills & tools",
       "tools": "Tools"
     },
+    "context": {
+      "warnTitle": "Approaching the context limit",
+      "warnBody": "This conversation uses {percent}% of the model's context window. Compact it to keep the agent fast and accurate.",
+      "blockedTitle": "Context limit reached",
+      "blockedBody": "This conversation no longer fits the model's context window. Compact it to continue.",
+      "compact": "Compact conversation",
+      "compacting": "Summarizing conversation…",
+      "steerToggle": "Anything to preserve in detail?",
+      "steerPlaceholder": "e.g. keep the exact figures from the service reports",
+      "dismiss": "Dismiss",
+      "insufficientError": "This conversation can't be compacted further — please start a new chat.",
+      "blockedToastTitle": "Context limit reached",
+      "blockedToastDescription": "Compact the conversation before sending new messages.",
+      "placeholderBlocked": "Compact the conversation to continue…"
+    },
     "composer": {
       "attachmentsLabel": "Attachments",
       "budgetReachedNotice": "You've reached your budget for this period. Messaging is paused until it resets.",
@@ -1356,6 +1371,8 @@
     },
     "usage": {
       "budgetTitle": "Your budget",
+      "contextTitle": "Context window",
+      "cumulativeTitle": "Session usage (cumulative)",
       "description": "Token and budget usage for this conversation.",
       "title": "Usage",
       "tokensExplainer": "Tokens are the units AI usage is measured in — roughly ¾ of a word each.",
