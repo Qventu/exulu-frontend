@@ -65,6 +65,9 @@ import { CapabilitySheet } from "./capability-sheet";
 import { PinnedContextRow } from "./pinned-context-row";
 import { PromptSelectorModal } from "./prompt-selector-modal";
 import { SavePresetModal } from "./save-preset-modal";
+import { AutocompleteMenu } from "./composer-autocomplete/autocomplete-menu";
+import { HighlightOverlay } from "./composer-autocomplete/highlight-overlay";
+import { useComposerAutocomplete } from "./composer-autocomplete/use-composer-autocomplete";
 
 export interface ComposerProps {
   controller: ChatSessionController;
@@ -96,6 +99,15 @@ export function Composer({ controller }: ComposerProps) {
   // ── Composer-local state ────────────────────────────────────────────────
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  // Inline "/" (tools & skills) and "@" (session files) autocomplete
+  // (spec 2026-07-07). Pure logic in composer-autocomplete/matching.ts.
+  const autocomplete = useComposerAutocomplete({
+    controller,
+    input,
+    setInput,
+    inputRef,
+  });
 
   // Overlay flags (Esc priority chain, item 77).
   const [promptSelectorOpen, setPromptSelectorOpen] = useState(false);
@@ -282,6 +294,8 @@ export function Composer({ controller }: ComposerProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Open suggestion menu owns arrows/Enter/Tab/Escape (spec 2026-07-07).
+    if (autocomplete.onKeyDown(e)) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (status !== "submitted" && status !== "streaming" && input?.trim()) {
@@ -497,6 +511,7 @@ export function Composer({ controller }: ComposerProps) {
           onSubmit={submit}
           className="relative rounded-lg border bg-card p-2"
         >
+          <AutocompleteMenu autocomplete={autocomplete} />
           <div className="flex items-end gap-1.5">
             <AttachMenu
               controller={controller}
@@ -511,28 +526,46 @@ export function Composer({ controller }: ComposerProps) {
               onOpenChange={setCapabilitiesOpen}
               controller={controller}
             />
-            <TextareaAutosize
-              autoComplete="off"
-              autoFocus={true}
-              minRows={1}
-              maxLength={maxInputLength}
-              value={input}
-              ref={inputRef}
-              onKeyDown={handleKeyDown}
-              onChange={(e) => setInput(e.target.value)}
-              name="message"
-              disabled={budgetExceeded || contextBlocked}
-              placeholder={
-                contextBlocked
-                  ? t("context.placeholderBlocked")
-                  : budgetExceeded
-                    ? t("composer.placeholderBudgetReached")
-                    : t("composer.placeholder")
-              }
-              className="max-h-40 min-w-0 flex-1 resize-none overflow-y-auto bg-transparent px-2 py-2.5 text-base placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-              aria-label={t("composer.inputAriaLabel")}
-              aria-describedby={showCounter ? "composer-length-warning" : undefined}
-            />
+            <div className="relative min-w-0 flex-1">
+              <HighlightOverlay
+                ref={overlayRef}
+                value={input}
+                ranges={autocomplete.tokenRanges}
+              />
+              <TextareaAutosize
+                autoComplete="off"
+                autoFocus={true}
+                minRows={1}
+                maxLength={maxInputLength}
+                value={input}
+                ref={inputRef}
+                onKeyDown={handleKeyDown}
+                onChange={(e) => setInput(e.target.value)}
+                onSelect={autocomplete.onSelect}
+                onBlur={autocomplete.onBlur}
+                onScroll={(e) => {
+                  if (overlayRef.current) {
+                    overlayRef.current.scrollTop = e.currentTarget.scrollTop;
+                  }
+                }}
+                name="message"
+                disabled={budgetExceeded || contextBlocked}
+                placeholder={
+                  contextBlocked
+                    ? t("context.placeholderBlocked")
+                    : budgetExceeded
+                      ? t("composer.placeholderBudgetReached")
+                      : t("composer.placeholder")
+                }
+                className="relative max-h-40 w-full resize-none overflow-y-auto bg-transparent px-2 py-2.5 text-base placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                aria-label={t("composer.inputAriaLabel")}
+                aria-describedby={showCounter ? "composer-length-warning" : undefined}
+                aria-autocomplete="list"
+                aria-expanded={autocomplete.menuOpen}
+                aria-controls={autocomplete.menuOpen ? autocomplete.listboxId : undefined}
+                aria-activedescendant={autocomplete.activeOptionId ?? undefined}
+              />
+            </div>
             {transcriptionEnabled && (
               <Button
                 className="size-11 shrink-0 md:size-9"
