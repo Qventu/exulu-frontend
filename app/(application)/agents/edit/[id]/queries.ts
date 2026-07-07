@@ -71,6 +71,7 @@ export const AGENT_EDITOR_FIELDS = `
   feedback
   suggestions_enabled
   sandbox_enabled
+  max_tool_steps
   memory
   instructions
   welcomemessage
@@ -277,6 +278,7 @@ export const UPDATE_AGENT_EDITOR = gql`
     $feedback: Boolean
     $suggestions_enabled: Boolean
     $sandbox_enabled: Boolean
+    $max_tool_steps: Int
     $model: String
     $description: String
     $welcomemessage: String
@@ -300,6 +302,7 @@ export const UPDATE_AGENT_EDITOR = gql`
         feedback: $feedback
         suggestions_enabled: $suggestions_enabled
         sandbox_enabled: $sandbox_enabled
+        max_tool_steps: $max_tool_steps
         model: $model
         description: $description
         welcomemessage: $welcomemessage
@@ -326,6 +329,7 @@ export const UPDATE_AGENT_EDITOR = gql`
         feedback
         suggestions_enabled
         sandbox_enabled
+        max_tool_steps
         welcomemessage
         defaultagent
         instructions
