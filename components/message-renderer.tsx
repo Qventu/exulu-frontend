@@ -484,6 +484,39 @@ export function MessageRenderer({
         const isLastAssistantMessage = messageIndex === lastAssistantMessageIndex;
         const messageMetadata = message.metadata as any
 
+        // Compaction checkpoint (context-window management spec §5c): render
+        // as a divider, not a bubble. Deliberately outside <Message> so none
+        // of the actions (edit/remove/retry) apply — removing a checkpoint
+        // would silently restore an oversized model view.
+        if (messageMetadata?.compaction) {
+          const compaction = messageMetadata.compaction as {
+            originalTokens?: number;
+            summaryTokens?: number;
+          };
+          const fmt = (n?: number) =>
+            typeof n === "number" ? Intl.NumberFormat("en-US", { notation: "compact" }).format(n) : "?";
+          const summaryText = message.parts
+            ?.filter((part: any) => part.type === "text")
+            .map((part: any) => part.text)
+            .join("\n")
+            .replace(/^\[Conversation summary — earlier messages were compacted\]\n*/, "");
+          return (
+            <div key={message.id} className="my-6 w-full" role="note" aria-label="Conversation compacted">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="h-px flex-1 bg-border" aria-hidden="true" />
+                <span className="shrink-0">Conversation compacted — older messages summarized</span>
+                <div className="h-px flex-1 bg-border" aria-hidden="true" />
+              </div>
+              <details className="mx-auto mt-2 max-w-xl rounded-md border bg-muted/30 px-3 py-2 text-xs">
+                <summary className="cursor-pointer text-muted-foreground">
+                  Summary ({fmt(compaction.originalTokens)} → {fmt(compaction.summaryTokens)} tokens)
+                </summary>
+                <div className="mt-2 whitespace-pre-wrap text-foreground">{summaryText}</div>
+              </details>
+            </div>
+          );
+        }
+
         // iterate through all parts and find the ones that have a type of 'text' and contain '<file name="', if so
         // extract the filename and content, and return an array of objects with the filename and content
         // Remove the <file name="...">...</file> from the text and return the text without the file parts
