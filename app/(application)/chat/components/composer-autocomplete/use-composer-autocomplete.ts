@@ -236,6 +236,11 @@ export function useComposerAutocomplete({
         setEscapedKey(triggerKey(trigger));
         return;
       }
+      // Close the menu: the insert leaves the caret inside the same trigger
+      // region (same kind:start key) and the inserted name still matches, so
+      // without this the menu stays open and swallows Enter-to-send. Reuses
+      // the sticky escape key — spec close condition "selection made".
+      setEscapedKey(triggerKey(trigger));
       setInput(result.text);
       const el = inputRef.current;
       requestAnimationFrame(() => {

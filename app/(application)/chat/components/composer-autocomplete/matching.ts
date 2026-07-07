@@ -55,7 +55,13 @@ export function detectTrigger(
   return null;
 }
 
-/** Boundary after a token: end of text or a char that can't continue a name. */
+/**
+ * Boundary after a token: end of text or a char that can't continue a name.
+ * Deliberately excludes '.' from the continuation class: "@report.pdf." must
+ * still match "report.pdf" (trailing sentence period), and the '.' inside
+ * file names is consumed by the exact name match itself. Widening the class
+ * to [\w.-] would break token boundaries for file names.
+ */
 const isEndBoundary = (ch: string | undefined) => ch === undefined || !/[\w-]/.test(ch);
 
 /**
@@ -127,6 +133,9 @@ export function insertToken(
   const after = text.slice(caret);
   const space = after.startsWith(" ") ? "" : " ";
   const next = `${before}${trigger.kind}${name}${space}${after}`;
+  // Caret lands after the terminating space in BOTH paths: when a space is
+  // inserted it occupies start+1+name.length; when an existing space is
+  // reused, that same index already holds it.
   return { text: next, caret: trigger.start + 1 + name.length + 1 };
 }
 

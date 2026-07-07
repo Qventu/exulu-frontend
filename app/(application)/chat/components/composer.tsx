@@ -557,7 +557,7 @@ export function Composer({ controller }: ComposerProps) {
                       ? t("composer.placeholderBudgetReached")
                       : t("composer.placeholder")
                 }
-                className="relative max-h-40 w-full resize-none overflow-y-auto bg-transparent px-2 py-2.5 text-base placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                className="relative max-h-40 w-full resize-none overflow-y-auto [scrollbar-gutter:stable] bg-transparent px-2 py-2.5 text-base placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                 aria-label={t("composer.inputAriaLabel")}
                 aria-describedby={showCounter ? "composer-length-warning" : undefined}
                 aria-autocomplete="list"
