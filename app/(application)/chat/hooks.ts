@@ -297,7 +297,9 @@ export function useChatSession({
         (m: { model_name: string }) => m.model_name === modelOverride,
       );
       const w = entry?.max_input_tokens ?? entry?.max_tokens;
-      if (typeof w === "number" && w > 0) return w;
+      // Unknown override window → null (hide the meter) rather than the base
+      // agent's window, which may wildly overstate a smaller model.
+      return typeof w === "number" && w > 0 ? w : null;
     }
     return typeof agent.maxContextLength === "number" && agent.maxContextLength > 0
       ? agent.maxContextLength
