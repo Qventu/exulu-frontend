@@ -587,8 +587,8 @@
                 "hint": "Ausführliche phasenweise Protokollierung in der Serverkonsole."
               }
             },
-            "maxStepsLabel": "Max. Agenten-Schritte pro Nachricht",
-            "maxStepsHint": "Begrenzt, wie viele Denk-/Tool-Runden der Assistent pro Nachricht ausführen darf, solange die Wissenssuche aktiviert ist — begrenzt Wiederholungen und Token-Kosten. 0 = Plattform-Standard."
+            "maxStepsLabel": "Max. Wissenssuchen pro Nachricht",
+            "maxStepsHint": "Begrenzt, wie viele Wissenssuchen der Assistent für eine Nachricht ausführen darf. Danach ist die Suche für den Rest der Nachricht deaktiviert. 0 = keine suchspezifische Grenze (das allgemeine Tool-Schritte-Budget gilt weiterhin)."
           },
           "review": {
             "intro": "Das wird übernommen. Verwenden Sie die Schritt-Schaltflächen oben, um etwas zu ändern.",

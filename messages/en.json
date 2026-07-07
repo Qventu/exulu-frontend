@@ -587,8 +587,8 @@
                 "hint": "Verbose per-phase logging to the server console."
               }
             },
-            "maxStepsLabel": "Max agent steps per message",
-            "maxStepsHint": "Caps how many reasoning/tool rounds the assistant may take on one message while knowledge search is enabled — bounds retries and token cost. 0 = platform default."
+            "maxStepsLabel": "Max knowledge searches per message",
+            "maxStepsHint": "Caps how many knowledge searches the assistant may run for one message. Once spent, the search tool is disabled for the rest of the turn. 0 = no search-specific cap (the overall tool-step budget still applies)."
           },
           "review": {
             "intro": "Here's what will be applied. Use the step buttons above to change anything.",

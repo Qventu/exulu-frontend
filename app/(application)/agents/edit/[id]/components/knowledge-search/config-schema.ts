@@ -2,7 +2,7 @@
  * config-schema.ts — single source of truth for the knowledge-search wizard
  * config: types, zod schemas, parse / serialize / digest helpers.
  *
- * Shapes mirror the backend pipeline exactly (11-entry serialisation contract).
+ * Shapes mirror the backend pipeline exactly (12-entry serialisation contract).
  * Never throws — all parse paths fall back to schema defaults on failure.
  */
 
@@ -42,7 +42,8 @@ export type WizardConfig = {
   instructions: string;
   reranker: string;
   utilityModel: string;
-  /** Max reasoning/tool steps for the CALLING agent while this tool is enabled; 0 = platform default. */
+  /** Max agentic-retrieval CALLS per message (search-only budget; the turn-wide
+   *  tool budget is the agent's max_tool_steps). 0 = no search-specific cap. */
   maxSteps: number;
   managedContext: boolean;
   requirePreselectedContexts: boolean;
