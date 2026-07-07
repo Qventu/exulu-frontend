@@ -52,6 +52,14 @@ import {
   UPDATE_AGENT_SESSION_ITEMS,
   UPDATE_AGENT_SESSION_TITLE,
 } from "./queries";
+import {
+  COMPACTION_INSUFFICIENT,
+  CONTEXT_COMPACTION_REQUIRED,
+  computeContextOccupancy,
+  deriveContextBudget,
+  deriveContextState,
+  type ContextState,
+} from "./lib/context-budget";
 
 // ---------------------------------------------------------------------------
 // Shared types (binding contracts)
@@ -130,6 +138,12 @@ export interface ChatSessionController {
   budgetExceeded: boolean;
   // managed context (item 72)
   managedContextEnabled: boolean;
+  // context-window management (spec 2026-07-07)
+  contextWindow: number | null;
+  contextOccupancy: number;
+  contextState: ContextState;
+  compacting: boolean;
+  compactConversation: (steer?: string) => Promise<boolean>;
 }
 
 // ---------------------------------------------------------------------------
@@ -227,11 +241,6 @@ export function useChatSession({
     setDisabledTools((prev) => Array.from(new Set([...prev, ...ids])));
   }, []);
 
-  // --- input budget (item 60): 80% of context window × ~4 chars/token --------
-  const maxInputLength = agent.maxContextLength
-    ? Math.floor(agent.maxContextLength * 0.8 * 4)
-    : 50000;
-
   // --- suggestions (item 63) --------------------------------------------------
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
   const suggestionAbortRef = React.useRef<AbortController | null>(null);
@@ -277,6 +286,32 @@ export function useChatSession({
     );
   }, [agent.tools]);
 
+  // --- context-window management -------------------------------------------
+  const litellmCatalogQuery = useQuery(GET_LITELLM_CATALOG, {
+    fetchPolicy: "cache-first",
+  });
+
+  const contextWindow = React.useMemo<number | null>(() => {
+    if (modelOverride && modelOverride !== agent.model) {
+      const entry = (litellmCatalogQuery.data?.litellmCatalog ?? []).find(
+        (m: { model_name: string }) => m.model_name === modelOverride,
+      );
+      const w = entry?.max_input_tokens ?? entry?.max_tokens;
+      if (typeof w === "number" && w > 0) return w;
+    }
+    return typeof agent.maxContextLength === "number" && agent.maxContextLength > 0
+      ? agent.maxContextLength
+      : null;
+  }, [modelOverride, agent.model, agent.maxContextLength, litellmCatalogQuery.data]);
+
+  const [serverContextBlocked, setServerContextBlocked] = React.useState(false);
+  const [compacting, setCompacting] = React.useState(false);
+
+  // --- input budget (item 60): 80% of the REAL context window × ~4 chars/token
+  const maxInputLength = contextWindow
+    ? Math.floor(contextWindow * 0.8 * 4)
+    : 50000;
+
   // --- transport (items 32/33/71 — invariants verbatim from the monolith) -----
   const {
     messages,
@@ -298,6 +333,10 @@ export function useChatSession({
       }
     },
     onError: (err) => {
+      if (err?.message?.includes(CONTEXT_COMPACTION_REQUIRED)) {
+        setServerContextBlocked(true);
+        return; // dedicated blocked-composer state, not the generic alert
+      }
       if (process.env.NODE_ENV === "development") {
         console.error("[Chat Error]", err?.message);
       }
@@ -344,6 +383,10 @@ export function useChatSession({
     }),
   });
 
+  const contextOccupancy = React.useMemo(() => computeContextOccupancy(messages), [messages]);
+  const contextBudget = contextWindow ? deriveContextBudget(contextWindow) : null;
+  const contextState = deriveContextState(contextOccupancy, contextBudget, serverContextBlocked);
+
   // --- reset on session navigation (page params change without remount) -------
   React.useEffect(() => {
     setCurrentSession(initialSession);
@@ -357,6 +400,7 @@ export function useChatSession({
     // navigations — the legacy monolith reset currentSession the same way).
     setMessages(initialMessages);
     clearError();
+    setServerContextBlocked(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSession, user]);
 
@@ -445,6 +489,13 @@ export function useChatSession({
       return;
     }
 
+    if (contextState === "blocked") {
+      toast.error(t("context.blockedToastTitle"), {
+        description: t("context.blockedToastDescription"),
+      });
+      return;
+    }
+
     let sessionToUse = currentSessionRef.current;
     if (!sessionToUse || sessionToUse.id === "new") {
       const createdSession = await createSession(text.substring(0, 50));
@@ -487,6 +538,58 @@ export function useChatSession({
       { text: "[answer:" + answerText + "]", files: [] },
       { body: { disabledTools, approvedTools } },
     );
+  };
+
+  // --- compaction (spec §4/§5) ------------------------------------------------
+  const compactConversation = async (steer?: string): Promise<boolean> => {
+    const session = currentSessionRef.current;
+    if (!session || session.id === "new") return false;
+    if (status === "streaming" || status === "submitted" || compacting) return false;
+    setCompacting(true);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("No valid session token available.");
+      const compactPath = (agent.slug ?? "").replace(/\/run$/, "/compact");
+      const res = await fetch(`${configContext?.backend}${compactPath}/${agent.id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          User: user.id,
+          Session: session.id,
+          Authorization: `Bearer ${token}`,
+          ...(modelOverrideRef.current && modelOverrideRef.current !== agent.model
+            ? { "X-Exulu-Model-Override": modelOverrideRef.current }
+            : {}),
+        },
+        body: JSON.stringify({ steer: steer?.trim() || undefined }),
+      });
+      const bodyText = await res.text();
+      if (!res.ok) {
+        if (bodyText.includes(COMPACTION_INSUFFICIENT)) {
+          setError(t("context.insufficientError"));
+        } else {
+          let message = bodyText;
+          try {
+            message = JSON.parse(bodyText).message ?? bodyText;
+          } catch {
+            // plain-text error body
+          }
+          setError(message || t("errors.unexpected"));
+        }
+        return false;
+      }
+      const data = JSON.parse(bodyText) as { checkpoint: UIMessage };
+      // Appending the checkpoint makes it the newest occupancy anchor — the
+      // meter drops immediately; the divider renders from metadata.compaction.
+      setMessages((prev) => [...prev, data.checkpoint]);
+      setServerContextBlocked(false);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("errors.unexpected"));
+      return false;
+    } finally {
+      setCompacting(false);
+    }
   };
 
   // --- follow-up suggestions (item 63) — verbatim from the monolith ------------
@@ -774,6 +877,11 @@ export function useChatSession({
     sessionFilesCount,
     budgetExceeded,
     managedContextEnabled,
+    contextWindow,
+    contextOccupancy,
+    contextState,
+    compacting,
+    compactConversation,
   };
 }
 
