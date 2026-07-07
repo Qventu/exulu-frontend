@@ -476,12 +476,15 @@ export function useProjectConfigDownloads(projectId: string, projectName: string
       fetchPolicy: "cache-first",
     });
     const catalog: { model_name: string }[] = data?.litellmCatalog ?? [];
+    const claudeModels = catalog.filter((m) =>
+      /claude/i.test(m.model_name),
+    );
     const baseUrl = `${config.backend}/litellm/${projectId}`;
     triggerDownload(
       JSON.stringify(
         {
-          model: pickBestOpusModel(catalog),
-          availableModels: catalog.map((m) => m.model_name),
+          model: pickBestOpusModel(claudeModels),
+          availableModels: claudeModels.map((m) => m.model_name),
           env: {
             ANTHROPIC_BASE_URL: baseUrl,
             CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: 1,
