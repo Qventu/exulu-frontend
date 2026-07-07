@@ -32,6 +32,21 @@ describe("computeContextOccupancy", () => {
     expect(occ).toBeLessThan(53_000);
   });
 
+  it("prefers lastStepInputTokens over summed inputTokens when both present (multi-step fix)", () => {
+    const messages = [
+      msg("assistant", "reply", {
+        inputTokens: 500_000,
+        outputTokens: 2_000,
+        lastStepInputTokens: 50_000,
+        lastStepOutputTokens: 1_000,
+      }),
+    ];
+    const occ = computeContextOccupancy(messages);
+    // Must anchor on lastStep (51_000) not summed (502_000)
+    expect(occ).toBeGreaterThanOrEqual(51_000);
+    expect(occ).toBeLessThan(53_000);
+  });
+
   it("prefers a newer compaction checkpoint over stale usage", () => {
     const messages = [
       msg("assistant", "big", { inputTokens: 900_000, outputTokens: 100 }),

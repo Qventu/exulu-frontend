@@ -43,8 +43,12 @@ export const computeContextOccupancy = (messages: UIMessage[]): number => {
   let anchorIdx = -1;
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i]!;
-    const meta = m.metadata as { inputTokens?: number } | undefined;
-    if (getCompaction(m) || (m.role === "assistant" && typeof meta?.inputTokens === "number")) {
+    const meta = m.metadata as { inputTokens?: number; lastStepInputTokens?: number } | undefined;
+    if (
+      getCompaction(m) ||
+      (m.role === "assistant" &&
+        (typeof meta?.inputTokens === "number" || typeof meta?.lastStepInputTokens === "number"))
+    ) {
       anchorIdx = i;
       break;
     }
@@ -57,8 +61,16 @@ export const computeContextOccupancy = (messages: UIMessage[]): number => {
     if (compaction) {
       total = compaction.occupancyEstimate;
     } else {
-      const meta = anchor.metadata as { inputTokens?: number; outputTokens?: number };
-      total = (meta.inputTokens ?? 0) + (meta.outputTokens ?? 0);
+      const meta = anchor.metadata as {
+        inputTokens?: number;
+        outputTokens?: number;
+        lastStepInputTokens?: number;
+        lastStepOutputTokens?: number;
+      };
+      total =
+        typeof meta.lastStepInputTokens === "number"
+          ? meta.lastStepInputTokens + (meta.lastStepOutputTokens ?? 0)
+          : (meta.inputTokens ?? 0) + (meta.outputTokens ?? 0);
     }
     rest = messages.slice(anchorIdx + 1);
   }
