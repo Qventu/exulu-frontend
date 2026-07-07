@@ -58,9 +58,14 @@ In `components/items-selection-modal.tsx`:
   admin, is the preset's `created_by`, or has `rights: "write"` through the
   preset's `rights_mode`/`RBAC` entries (users/roles/teams). Unit-tested with
   vitest.
-- **Delete:** trash opens the standard `ConfirmDialog` primitive
-  (`components/primitives/confirm-dialog.tsx`) in destructive mode with the
-  preset name in the copy. Confirm fires `DELETE_CONTEXT_PRESET` with
+- **Delete:** two-step inline confirm. The project's destructive-confirm
+  primitive (`components/primitives/confirm-dialog.tsx`) documents a hard
+  rule: deletes that originate inside an already-open dialog must NOT stack
+  a ConfirmDialog on top (one overlay at a time, never modal-on-modal) and
+  must use the two-step inline confirm pattern instead. The preset rows live
+  inside the items-selection dialog, so: trash swaps in a confirm strip on
+  the row ("This cannot be undone." + destructive "Confirm delete" + cancel,
+  with async pending state). Confirm fires `DELETE_CONTEXT_PRESET` with
   `refetchQueries: [GET_CONTEXT_PRESETS, "GetContextPresets"]` (the string
   operation name keeps the `chat/queries.ts` duplicate documents in sync, per
   the existing contract note in `save-preset-modal.tsx`). On success: toast;
@@ -121,9 +126,9 @@ stays presentational.
 
 ### 4. Error handling
 
-- Delete/update mutation failures: destructive dialog surfaces the error via
-  `ConfirmDialog`'s error slot; update-preset failures toast an error and
-  keep the dirty state so the user can retry.
+- Delete mutation failures: toast an error and keep the row's inline
+  confirm strip open so the user can retry or cancel. Update-preset failures
+  toast an error and keep the dirty state so the user can retry.
 - Validation of preset items on apply (`validate-preset-items.ts`) is
   unchanged; a preset whose items partially fail validation applies only the
   valid ones, as today — the active-preset chip still binds to the preset,
