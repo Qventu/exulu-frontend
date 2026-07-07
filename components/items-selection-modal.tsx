@@ -1,8 +1,8 @@
 import { Context } from "@/types/models/context";
 import { useContexts } from "@/hooks/contexts";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useState, useEffect, useMemo } from "react"
-import { ArrowLeft, Brain, Folder, FolderOpen, File, ChevronRight, X, Check, Plus, Loader2, LayersPlus, FilePlusCorner, Bookmark, Search, Database, AlertCircle } from "lucide-react"
+import { useState, useEffect, useMemo, useContext } from "react"
+import { ArrowLeft, Brain, Folder, FolderOpen, File, ChevronRight, X, Check, Plus, Loader2, LayersPlus, FilePlusCorner, Bookmark, Search, Database, AlertCircle, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useQuery, useMutation, useApolloClient } from "@apollo/client";
 import {
@@ -20,7 +20,11 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog"
 import { Item } from "@/types/models/item";
-import { GET_ITEMS, PAGINATION_POSTFIX, CREATE_ITEM, GET_CONTEXT_PRESETS, INCREMENT_PRESET_USAGE } from "@/queries/queries";
+import { GET_ITEMS, PAGINATION_POSTFIX, CREATE_ITEM, GET_CONTEXT_PRESETS, INCREMENT_PRESET_USAGE, DELETE_CONTEXT_PRESET } from "@/queries/queries";
+import { useTranslations } from "next-intl";
+import { UserContext } from "@/app/(application)/authenticated";
+import { checkPresetWriteAccess } from "@/lib/presets/check-preset-access";
+import type { ContextPreset } from "@/types/models/context-preset";
 import { Loading } from "@/components/primitives/loading";
 import { LoadingStates } from "@/components/loading-states";
 import { cn } from "@/lib/utils";
@@ -37,21 +41,12 @@ type SelectedItem = {
     context: Context;
 };
 
-interface ContextPreset {
-    id: string
-    name: string
-    description?: string
-    preset_items: string[]
-    tags?: string[]
-    usage_count: number
-    created_by: number
-    createdAt: string
-}
-
 export const ItemsSelectionModal = ({
     onConfirm,
     onSelectContext,
     onApplyPreset,
+    onEditPreset,
+    onPresetDeleted,
     open: controlledOpen,
     onOpenChange,
     note,
@@ -68,6 +63,13 @@ export const ItemsSelectionModal = ({
     }[]) => void
     onSelectContext?: (context: Context) => void | Promise<void>
     onApplyPreset?: (items: string[], preset: ContextPreset) => void | Promise<void>
+    /** When provided, a per-row edit (pencil) action is shown for presets the
+     *  user can write; the caller owns the edit surface (the chat composer
+     *  opens SavePresetModal in edit mode). */
+    onEditPreset?: (preset: ContextPreset) => void
+    /** Fired after a preset is deleted so callers can clear dependent state
+     *  (e.g. the composer's active-preset chip). */
+    onPresetDeleted?: (presetId: string) => void
     /** Optional controlled mode (additive): when `open` is provided the
      *  built-in trigger button is not rendered and open state is owned by
      *  the caller (used by the chat composer's AttachMenu and the projects
@@ -119,6 +121,20 @@ export const ItemsSelectionModal = ({
 
     const [incrementUsage] = useMutation(INCREMENT_PRESET_USAGE);
 
+    const t = useTranslations("chat");
+    const tCommon = useTranslations("common");
+    const { user } = useContext(UserContext);
+
+    // Two-step inline delete confirm (never a stacked ConfirmDialog inside
+    // this dialog — one overlay at a time, per confirm-dialog.tsx).
+    const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+    const [deletingPresetId, setDeletingPresetId] = useState<string | null>(null);
+    const [deletePresetMutation] = useMutation(DELETE_CONTEXT_PRESET, {
+        // STRING operation name keeps the chat/queries.ts duplicate documents
+        // refreshing too (contract note in save-preset-modal.tsx).
+        refetchQueries: [GET_CONTEXT_PRESETS, "GetContextPresets"],
+    });
+
     const presets: ContextPreset[] = presetsData?.context_presetsPagination?.items || [];
 
     // Filter presets by search query
@@ -139,6 +155,31 @@ export const ItemsSelectionModal = ({
         setSearchQuery("");
         setSelectedPreset(null);
         setValidationResult(null);
+        setConfirmingDeleteId(null);
+    };
+
+    const handleDeletePreset = async (preset: ContextPreset) => {
+        setDeletingPresetId(preset.id);
+        try {
+            await deletePresetMutation({ variables: { id: preset.id } });
+            toast.success(t("presets.deletedToastTitle"), {
+                description: t("presets.deletedToastDescription", { name: preset.name }),
+            });
+            if (selectedPreset?.id === preset.id) {
+                setSelectedPreset(null);
+                setValidationResult(null);
+            }
+            setConfirmingDeleteId(null);
+            onPresetDeleted?.(preset.id);
+        } catch (error) {
+            // Keep the confirm strip open so the user can retry or cancel.
+            console.error('Error deleting preset:', error);
+            toast.error(t("presets.deleteErrorToastTitle"), {
+                description: error instanceof Error ? error.message : t("presets.deleteErrorToastDescription"),
+            });
+        } finally {
+            setDeletingPresetId(null);
+        }
     };
 
     const toggleItemSelection = (item: Item, context: Context) => {
@@ -456,58 +497,124 @@ export const ItemsSelectionModal = ({
                                             {filteredPresets.map((preset) => {
                                                 const stats = parsePresetItemsForDisplay(preset.preset_items);
                                                 const isSelected = selectedPreset?.id === preset.id;
+                                                const canWrite = user ? checkPresetWriteAccess(preset, user) : false;
+                                                const isConfirmingDelete = confirmingDeleteId === preset.id;
+                                                const isDeleting = deletingPresetId === preset.id;
 
                                                 return (
-                                                    <button
+                                                    <div
                                                         key={preset.id}
-                                                        onClick={() => handleSelectPreset(preset)}
                                                         className={cn(
-                                                            "w-full text-left p-3 rounded-lg border transition-all",
+                                                            "relative w-full rounded-lg border transition-all",
                                                             "hover:border-primary/50 hover:bg-accent/50",
                                                             isSelected && "border-primary bg-accent"
                                                         )}
                                                     >
-                                                        <div className="flex items-start justify-between gap-2 mb-2">
-                                                            <h4 className="font-medium text-sm line-clamp-1">{preset.name}</h4>
-                                                            {isSelected && (
-                                                                <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                                                            )}
-                                                        </div>
-
-                                                        {preset.description && (
-                                                            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                                                                {preset.description}
-                                                            </p>
-                                                        )}
-
-                                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                            <Database className="h-3 w-3" />
-                                                            <span>
-                                                                {stats.contextCount} {stats.contextCount === 1 ? 'context' : 'contexts'}
-                                                            </span>
-                                                            {stats.itemCount > 0 && (
-                                                                <>
-                                                                    <span>•</span>
-                                                                    <span>{stats.itemCount} {stats.itemCount === 1 ? 'item' : 'items'}</span>
-                                                                </>
-                                                            )}
-                                                        </div>
-
-                                                        {preset.tags && preset.tags.length > 0 && (
-                                                            <div className="flex flex-wrap gap-1 mt-2">
-                                                                {preset.tags.slice(0, 3).map((tag) => (
-                                                                    <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
-                                                                        {tag}
-                                                                    </Badge>
-                                                                ))}
-                                                                {preset.tags.length > 3 && (
-                                                                    <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                                                                        +{preset.tags.length - 3}
-                                                                    </Badge>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleSelectPreset(preset)}
+                                                            className={cn("w-full text-left p-3", canWrite && "pr-16")}
+                                                        >
+                                                            <div className="flex items-start gap-2 mb-2">
+                                                                <h4 className="font-medium text-sm line-clamp-1">{preset.name}</h4>
+                                                                {isSelected && (
+                                                                    <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                                                                 )}
                                                             </div>
+
+                                                            {preset.description && (
+                                                                <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                                                                    {preset.description}
+                                                                </p>
+                                                            )}
+
+                                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                                <Database className="h-3 w-3" />
+                                                                <span>
+                                                                    {stats.contextCount} {stats.contextCount === 1 ? 'context' : 'contexts'}
+                                                                </span>
+                                                                {stats.itemCount > 0 && (
+                                                                    <>
+                                                                        <span>•</span>
+                                                                        <span>{stats.itemCount} {stats.itemCount === 1 ? 'item' : 'items'}</span>
+                                                                    </>
+                                                                )}
+                                                            </div>
+
+                                                            {preset.tags && preset.tags.length > 0 && (
+                                                                <div className="flex flex-wrap gap-1 mt-2">
+                                                                    {preset.tags.slice(0, 3).map((tag) => (
+                                                                        <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
+                                                                            {tag}
+                                                                        </Badge>
+                                                                    ))}
+                                                                    {preset.tags.length > 3 && (
+                                                                        <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                                                                            +{preset.tags.length - 3}
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </button>
+
+                                                        {canWrite && !isConfirmingDelete && (
+                                                            <div className="absolute right-2 top-2 flex items-center gap-0.5">
+                                                                {onEditPreset && (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="size-7 text-muted-foreground hover:text-foreground"
+                                                                        aria-label={t("presets.editAction", { name: preset.name })}
+                                                                        onClick={() => onEditPreset(preset)}
+                                                                    >
+                                                                        <Pencil className="size-3.5" aria-hidden="true" />
+                                                                    </Button>
+                                                                )}
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="size-7 text-muted-foreground hover:text-destructive"
+                                                                    aria-label={t("presets.deleteAction", { name: preset.name })}
+                                                                    onClick={() => setConfirmingDeleteId(preset.id)}
+                                                                >
+                                                                    <Trash2 className="size-3.5" aria-hidden="true" />
+                                                                </Button>
+                                                            </div>
                                                         )}
-                                                    </button>
+
+                                                        {isConfirmingDelete && (
+                                                            <div className="flex items-center gap-2 border-t px-3 py-2">
+                                                                <p className="flex-1 text-xs text-destructive">
+                                                                    {t("presets.deleteConfirmHint")}
+                                                                </p>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-7 text-xs"
+                                                                    disabled={isDeleting}
+                                                                    onClick={() => setConfirmingDeleteId(null)}
+                                                                >
+                                                                    {tCommon("cancel")}
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="destructive"
+                                                                    size="sm"
+                                                                    className="h-7 text-xs"
+                                                                    disabled={isDeleting}
+                                                                    onClick={() => void handleDeletePreset(preset)}
+                                                                >
+                                                                    {isDeleting && (
+                                                                        <Loader2 className="mr-1 size-3 animate-spin" aria-hidden="true" />
+                                                                    )}
+                                                                    {t("presets.deleteConfirmAction")}
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 );
                                             })}
                                         </div>

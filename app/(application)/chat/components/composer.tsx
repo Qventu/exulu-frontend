@@ -29,10 +29,11 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
-import { useQuery } from "@apollo/client";
+import { useQuery, useMutation } from "@apollo/client";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import TextareaAutosize from "react-textarea-autosize";
@@ -51,7 +52,11 @@ import { cn } from "@/lib/utils";
 import { useIncrementPromptUsage } from "@/hooks/use-prompts";
 import { PromptLibrary } from "@/types/models/prompt-library";
 
-import { GET_PROMPT_BY_ID } from "../queries";
+import { checkPresetWriteAccess } from "@/lib/presets/check-preset-access";
+import { sameItemSet } from "@/lib/presets/preset-items";
+import type { ContextPreset } from "@/types/models/context-preset";
+
+import { GET_PROMPT_BY_ID, UPDATE_CONTEXT_PRESET, GET_CONTEXT_PRESETS } from "../queries";
 import type { ChatSessionController } from "../hooks";
 import { CHAT_COLUMN } from "./chat-shell";
 import { AttachMenu } from "./attach-menu";
@@ -94,6 +99,11 @@ export function Composer({ controller }: ComposerProps) {
   const [contextModalOpen, setContextModalOpen] = useState(false);
   const [capabilitiesOpen, setCapabilitiesOpen] = useState(false);
   const [savePresetOpen, setSavePresetOpen] = useState(false);
+  // Active preset (spec §2): ephemeral, composer-local. Set on apply,
+  // cleared on deselect/delete; lost on reload or session switch by design.
+  const [activePreset, setActivePreset] = useState<ContextPreset | null>(null);
+  // Preset being edited via SavePresetModal's edit mode (metadata + sharing).
+  const [editingPreset, setEditingPreset] = useState<ContextPreset | null>(null);
 
   // Speech-to-text state machine (item 62). Feature hidden unless the shared
   // config enables transcription (EXULU_USE_LITELLM + TRANSCRIPTION_MODEL).
@@ -128,6 +138,56 @@ export function Composer({ controller }: ComposerProps) {
 
   // ── Prompt insertion (items 65) ─────────────────────────────────────────
   const [incrementPromptUsage] = useIncrementPromptUsage();
+
+  const [updatePresetContents, { loading: updatingPreset }] = useMutation(
+    UPDATE_CONTEXT_PRESET,
+    {
+      // STRING operation name keeps both document copies fresh (contract §0).
+      refetchQueries: [GET_CONTEXT_PRESETS, "GetContextPresets"],
+    },
+  );
+
+  const presetDirty = useMemo(
+    () =>
+      Boolean(
+        activePreset &&
+          !sameItemSet(controller.sessionItems || [], activePreset.preset_items),
+      ),
+    [activePreset, controller.sessionItems],
+  );
+
+  const canUpdatePreset = useMemo(
+    () => Boolean(activePreset && user && checkPresetWriteAccess(activePreset, user)),
+    [activePreset, user],
+  );
+
+  const handleUpdatePreset = async () => {
+    if (!activePreset) return;
+    const items = controller.sessionItems || [];
+    try {
+      await updatePresetContents({
+        variables: { id: activePreset.id, preset_items: items },
+      });
+      toast.success(t("presets.updatedToastTitle"), {
+        description: t("presets.updatedToastDescription", {
+          name: activePreset.name,
+        }),
+      });
+      setActivePreset((prev) => (prev ? { ...prev, preset_items: items } : prev));
+    } catch (error) {
+      // Dirty state stays so the user can retry.
+      console.error("Error updating preset contents:", error);
+      toast.error(t("presets.errorToastTitle"), {
+        description:
+          error instanceof Error ? error.message : t("presets.errorToastDescription"),
+      });
+    }
+  };
+
+  const handleDeselectPreset = async () => {
+    setActivePreset(null);
+    await controller.replaceSessionItems([]);
+  };
 
   const insertPromptIntoChat = useCallback((promptText: string) => {
     setInput((prev) => (prev ? `${prev}\n\n${promptText}` : promptText));
@@ -178,15 +238,16 @@ export function Composer({ controller }: ComposerProps) {
       if (e.key !== "Escape") return;
       if (capabilitiesOpen) {
         setCapabilitiesOpen(false);
-      } else if (savePresetOpen) {
+      } else if (savePresetOpen || editingPreset) {
         setSavePresetOpen(false);
+        setEditingPreset(null);
       } else if (promptSelectorOpen) {
         setPromptSelectorOpen(false);
       }
     };
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [capabilitiesOpen, savePresetOpen, promptSelectorOpen]);
+  }, [capabilitiesOpen, savePresetOpen, editingPreset, promptSelectorOpen]);
 
   // ── Send / stop (items 60/61) ───────────────────────────────────────────
   const submit = async (e?: React.FormEvent) => {
@@ -527,6 +588,12 @@ export function Composer({ controller }: ComposerProps) {
           <PinnedContextRow
             controller={controller}
             onSavePreset={() => setSavePresetOpen(true)}
+            activePreset={activePreset}
+            presetDirty={presetDirty}
+            canUpdatePreset={canUpdatePreset}
+            updatingPreset={updatingPreset}
+            onDeselectPreset={() => void handleDeselectPreset()}
+            onUpdatePreset={() => void handleUpdatePreset()}
           />
 
           {/* Next-message attachments with per-file remove (item 74) */}
@@ -618,16 +685,42 @@ export function Composer({ controller }: ComposerProps) {
         onSelectContext={async (context) => {
           await controller.addSessionItems([context.id]);
         }}
-        onApplyPreset={async (items) => {
-          await controller.addSessionItems(items);
+        onApplyPreset={async (items, preset) => {
+          // Replace (not merge): the pinned set becomes the preset (spec §2).
+          // activePreset keeps the preset's own item list so dropped invalid
+          // items surface as "modified" (spec §4).
+          await controller.replaceSessionItems(items);
+          setActivePreset(preset);
+        }}
+        onEditPreset={(preset) => {
+          // One overlay at a time: close this dialog before opening the
+          // edit surface (never modal-on-modal).
+          setContextModalOpen(false);
+          setEditingPreset(preset);
+        }}
+        onPresetDeleted={(presetId) => {
+          setActivePreset((prev) => (prev && prev.id === presetId ? null : prev));
         }}
       />
 
-      {/* Save context preset (item 68) */}
+      {/* Save context preset (item 68) + edit mode (spec §1). The key forces
+          a remount per target: SavePresetModal seeds its fields from
+          existingPreset via useState initializers, which only run on mount. */}
       <SavePresetModal
-        isOpen={savePresetOpen}
-        onClose={() => setSavePresetOpen(false)}
+        key={editingPreset?.id ?? "create"}
+        isOpen={savePresetOpen || Boolean(editingPreset)}
+        onClose={() => {
+          setSavePresetOpen(false);
+          setEditingPreset(null);
+        }}
         currentItems={controller.sessionItems || []}
+        existingPreset={editingPreset ?? undefined}
+        onSave={(saved) => {
+          // Keep the active-preset chip's metadata in sync after an edit.
+          setActivePreset((prev) =>
+            prev && prev.id === saved.id ? { ...prev, ...saved } : prev,
+          );
+        }}
       />
     </div>
   );
