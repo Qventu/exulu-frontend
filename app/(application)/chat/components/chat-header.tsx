@@ -153,9 +153,10 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
       : null;
   const contextWindow = controller.contextWindow;
   const contextBudget = contextWindow ? deriveContextBudget(contextWindow) : null;
-  const usagePct = contextBudget
-    ? Math.round((controller.contextOccupancy / contextBudget.usableWindow) * 100)
-    : null;
+  const usagePct =
+    contextBudget && contextBudget.usableWindow > 0
+      ? Math.round((controller.contextOccupancy / contextBudget.usableWindow) * 100)
+      : null;
   const usageWarning = controller.contextState !== "ok";
   const compactTokens = new Intl.NumberFormat("en-US", {
     notation: "compact",

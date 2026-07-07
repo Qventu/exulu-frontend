@@ -113,9 +113,11 @@ function UsageBreakdown({
           <ContextContentHeader />
         ) : null}
         <ContextContentBody className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">
-            {t("usage.cumulativeTitle")}
-          </p>
+          {hasContext ? (
+            <p className="text-xs font-medium text-muted-foreground">
+              {t("usage.cumulativeTitle")}
+            </p>
+          ) : null}
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">{t("usage.total")}</span>
             <span>{compactTotal}</span>
