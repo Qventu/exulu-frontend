@@ -278,7 +278,7 @@ export const UPDATE_AGENT_EDITOR = gql`
     $feedback: Boolean
     $suggestions_enabled: Boolean
     $sandbox_enabled: Boolean
-    $max_tool_steps: Int
+    $max_tool_steps: Float
     $model: String
     $description: String
     $welcomemessage: String
