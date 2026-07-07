@@ -3907,6 +3907,12 @@
       "description": "This removes the job from the list. The audio file stays in your files.",
       "title": "Dismiss failed job?"
     },
+    "confirmDelete": {
+      "title": "Delete saved transcription?",
+      "description": "This removes the entry from this page. The saved transcript stays in the knowledge base unless you also select it below.",
+      "confirm": "Delete",
+      "alsoDeleteItem": "Also delete the saved transcript from the knowledge base"
+    },
     "description": "Turn audio into speaker-labeled transcripts you can use in chats and projects.",
     "empty": {
       "description": "Upload a meeting or voice memo and get back a speaker-labeled transcript.",
@@ -3991,6 +3997,7 @@
       "awaitingReview": "Awaiting review",
       "awaitingReviewWithLength": "Awaiting review ({length})",
       "cancelled": "Cancelled",
+      "delete": "Delete",
       "dismiss": "Dismiss",
       "elapsed": "{elapsed} elapsed",
       "failed": "Failed",
@@ -4014,6 +4021,8 @@
     "toasts": {
       "cancelFailed": "Couldn't cancel the job",
       "cancelled": "Transcription cancelled",
+      "deleted": "Transcription entry deleted",
+      "deleteFailed": "Couldn't delete the entry",
       "discardFailed": "Couldn't discard the transcript",
       "dismissFailed": "Couldn't dismiss the job",
       "saveFailed": "Couldn't save the transcript",

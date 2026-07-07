@@ -3907,6 +3907,12 @@
       "description": "Dadurch wird der Auftrag aus der Liste entfernt. Die Audiodatei bleibt in Ihren Dateien erhalten.",
       "title": "Fehlgeschlagenen Auftrag verwerfen?"
     },
+    "confirmDelete": {
+      "title": "Gespeicherte Transkription löschen?",
+      "description": "Dadurch wird der Eintrag von dieser Seite entfernt. Das gespeicherte Transkript bleibt in der Wissensdatenbank erhalten, sofern Sie es unten nicht ebenfalls auswählen.",
+      "confirm": "Löschen",
+      "alsoDeleteItem": "Auch das gespeicherte Transkript aus der Wissensdatenbank löschen"
+    },
     "description": "Verwandeln Sie Audio in Transkripte mit benannten Sprechern, die Sie in Chats und Projekten nutzen können.",
     "empty": {
       "description": "Laden Sie ein Meeting oder Sprachmemo hoch und erhalten Sie ein Transkript mit benannten Sprechern.",
@@ -3991,6 +3997,7 @@
       "awaitingReview": "Wartet auf Überprüfung",
       "awaitingReviewWithLength": "Wartet auf Überprüfung ({length})",
       "cancelled": "Abgebrochen",
+      "delete": "Löschen",
       "dismiss": "Verwerfen",
       "elapsed": "{elapsed} vergangen",
       "failed": "Fehlgeschlagen",
@@ -4014,6 +4021,8 @@
     "toasts": {
       "cancelFailed": "Auftrag konnte nicht abgebrochen werden",
       "cancelled": "Transkription abgebrochen",
+      "deleted": "Transkriptionseintrag gelöscht",
+      "deleteFailed": "Eintrag konnte nicht gelöscht werden",
       "discardFailed": "Transkript konnte nicht verworfen werden",
       "dismissFailed": "Auftrag konnte nicht verworfen werden",
       "saveFailed": "Transkript konnte nicht gespeichert werden",

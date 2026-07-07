@@ -93,6 +93,19 @@ export const REMOVE_TRANSCRIPTION_JOB = gql`
   }
 `;
 
+/**
+ * Deletes the knowledge item a saved job produced (the cascade checkbox in
+ * the delete confirm). Transcripts live in the context named "transcriptions"
+ * — the same hardcoded home the saved-row "Open in library" link points at.
+ */
+export const REMOVE_SAVED_TRANSCRIPT_ITEM = gql`
+  mutation RemoveSavedTranscriptItem($id: ID!) {
+    transcriptions_itemsRemoveOneById(id: $id) {
+      id
+    }
+  }
+`;
+
 /* ----------------------- Recall meeting-bot operations ----------------------- */
 
 /** Send a Recall bot to a meeting URL and create a recall transcription job. */
