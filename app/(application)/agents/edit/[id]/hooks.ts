@@ -216,7 +216,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       feedback: !!(agent as any).feedback,
       suggestions_enabled: !!(agent as any).suggestions_enabled,
       sandbox_enabled: !!(agent as any).sandbox_enabled,
-      max_tool_steps: Math.max(0, Math.round(Number((agent as any).max_tool_steps) || 0)),
+      max_tool_steps: Math.min(50, Math.max(0, Math.round(Number((agent as any).max_tool_steps) || 0))),
       active: !!(agent as any).active,
     },
   });
