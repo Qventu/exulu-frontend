@@ -116,6 +116,7 @@ export interface ChatSessionController {
   sessionItems: string[] | null;
   addSessionItems: (gids: string[]) => Promise<void>;
   removeSessionItem: (gid: string) => Promise<void>;
+  replaceSessionItems: (gids: string[]) => Promise<void>;
   // next-message attachments (items 74/75)
   fileItems: string[] | null;
   addFileItem: (s3Key: string) => void;
@@ -614,6 +615,21 @@ export function useChatSession({
     setSessionItems(update);
   };
 
+  const replaceSessionItems = async (gids: string[]): Promise<void> => {
+    const session = await ensureSession();
+    if (!session) {
+      toast.error(t("errors.title"), {
+        description: t("errors.sessionCreateFailed"),
+      });
+      return;
+    }
+    const update = [...new Set(gids)];
+    updateAgentSessionItems({
+      variables: { id: session.id, session_items: update },
+    });
+    setSessionItems(update);
+  };
+
   // --- next-message attachments (items 74/75) -------------------------------------
   const addFileItem = React.useCallback((s3Key: string) => {
     setFileItems((prev) => [...(prev || []), s3Key]);
@@ -765,6 +781,7 @@ export function useChatSession({
     sessionItems,
     addSessionItems,
     removeSessionItem,
+    replaceSessionItems,
     fileItems,
     addFileItem,
     removeFileItem,
