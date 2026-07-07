@@ -2,7 +2,7 @@
  * config-schema.ts — single source of truth for the knowledge-search wizard
  * config: types, zod schemas, parse / serialize / digest helpers.
  *
- * Shapes mirror the backend pipeline exactly (11-entry serialisation contract).
+ * Shapes mirror the backend pipeline exactly (13-entry serialisation contract).
  * Never throws — all parse paths fall back to schema defaults on failure.
  */
 
@@ -47,6 +47,8 @@ export type WizardConfig = {
   managedContext: boolean;
   requirePreselectedContexts: boolean;
   logging: boolean;
+  /** Search items attached to the chat's project automatically. Default on. */
+  projectSearch: boolean;
   knowledgeBases: Record<string, WizardKbProfile>;
   routing: { rules: RoutingRule[] };
   vocabulary: {
@@ -254,6 +256,7 @@ export function defaultWizardConfig(): WizardConfig {
     managedContext: false,
     requirePreselectedContexts: false,
     logging: false,
+    projectSearch: true,
     knowledgeBases: {},
     routing: { rules: [] },
     vocabulary: { glossary: [], identifiers: [], rewrites: [], styleHint: "" },
@@ -286,6 +289,9 @@ export function parseWizardConfig(
     findEntry(list, "require_preselected_contexts")?.variable,
   );
   const logging = boolVal(findEntry(list, "logging")?.variable);
+  const projectSearchRaw = findEntry(list, "project_search")?.variable;
+  const projectSearch =
+    projectSearchRaw === undefined || projectSearchRaw === "" ? true : boolVal(projectSearchRaw);
 
   // --- json fields ---
   const knowledgeBases = safeZodParse(
@@ -323,6 +329,7 @@ export function parseWizardConfig(
     managedContext,
     requirePreselectedContexts,
     logging,
+    projectSearch,
     knowledgeBases,
     routing,
     vocabulary,
@@ -332,7 +339,7 @@ export function parseWizardConfig(
 }
 
 // ---------------------------------------------------------------------------
-// serializeWizardConfig — exactly 12 entries in declaration order
+// serializeWizardConfig — exactly 13 entries in declaration order
 // ---------------------------------------------------------------------------
 
 export function serializeWizardConfig(cfg: WizardConfig): ToolConfigEntry[] {
@@ -347,6 +354,7 @@ export function serializeWizardConfig(cfg: WizardConfig): ToolConfigEntry[] {
     { name: "managed_context", variable: cfg.managedContext ? "true" : "false", type: "boolean" },
     { name: "require_preselected_contexts", variable: cfg.requirePreselectedContexts ? "true" : "false", type: "boolean" },
     { name: "logging", variable: cfg.logging ? "true" : "false", type: "boolean" },
+    { name: "project_search", variable: cfg.projectSearch ? "true" : "false", type: "boolean" },
     // json entries (JSON.stringify'd)
     { name: "knowledge_bases", variable: JSON.stringify(cfg.knowledgeBases), type: "json" },
     { name: "routing", variable: JSON.stringify(cfg.routing), type: "json" },

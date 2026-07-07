@@ -50,12 +50,12 @@ describe("parseWizardConfig", () => {
 });
 
 describe("serializeWizardConfig", () => {
-  test("emits exactly 12 entries with the platform value conventions", () => {
+  test("emits exactly 13 entries with the platform value conventions", () => {
     const cfg = defaultWizardConfig();
     cfg.managedContext = true;
     cfg.tuning.topK = 7;
     const entries = serializeWizardConfig(cfg);
-    expect(entries).toHaveLength(12);
+    expect(entries).toHaveLength(13);
     const byName = Object.fromEntries(entries.map((e) => [e.name, e]));
     expect(byName["max_steps"]).toEqual({ name: "max_steps", variable: "0", type: "number" });
     expect(byName["managed_context"]).toEqual({ name: "managed_context", variable: "true", type: "boolean" });
@@ -72,6 +72,22 @@ describe("serializeWizardConfig", () => {
     cfg.vocabulary.glossary = [{ term: "FST", meaning: "controller" }];
     cfg.reranker = "rerank-v4";
     expect(parseWizardConfig(serializeWizardConfig(cfg))).toEqual(cfg);
+  });
+});
+
+describe("projectSearch", () => {
+  test("defaults to true when the entry is absent or staged empty", () => {
+    expect(parseWizardConfig([]).projectSearch).toBe(true);
+    expect(
+      parseWizardConfig([{ name: "project_search", variable: "", type: "boolean" }]).projectSearch,
+    ).toBe(true);
+  });
+
+  test("parses explicit false and round-trips", () => {
+    const cfg = { ...defaultWizardConfig(), projectSearch: false };
+    const entries = serializeWizardConfig(cfg);
+    expect(entries.find((e) => e.name === "project_search")?.variable).toBe("false");
+    expect(parseWizardConfig(entries).projectSearch).toBe(false);
   });
 });
 
