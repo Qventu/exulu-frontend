@@ -562,6 +562,10 @@
             "topKHint": "How many top passages the assistant sees. More = broader context, slower and costlier answers.",
             "fallbackLabel": "Backup-source trigger: {percent}%",
             "fallbackHint": "When the best first-search result scores below this, backup sources are also checked. Higher = backups used more often.",
+            "projectSearch": {
+              "label": "Search attached project items",
+              "hint": "When a chat belongs to a project, the assistant automatically searches the items pinned to that project."
+            },
             "instructionsTitle": "Extra instructions (optional)",
             "instructionsPlaceholder": "Free-text guidance for the retrieval pipeline.",
             "advancedTitle": "Advanced tuning",

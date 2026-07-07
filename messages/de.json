@@ -562,6 +562,10 @@
             "topKHint": "Wie viele Top-Passagen der Assistent sieht. Mehr = breiterer Kontext, langsamere und teurere Antworten.",
             "fallbackLabel": "Auslöser für Backup-Quellen: {percent}%",
             "fallbackHint": "Wenn das beste Ergebnis der ersten Suche unter diesem Wert liegt, werden auch Backup-Quellen geprüft. Höher = Backups häufiger verwendet.",
+            "projectSearch": {
+              "label": "Angeheftete Projektelemente durchsuchen",
+              "hint": "Gehört ein Chat zu einem Projekt, durchsucht der Assistent automatisch die im Projekt angehefteten Elemente."
+            },
             "instructionsTitle": "Zusätzliche Anweisungen (optional)",
             "instructionsPlaceholder": "Freitextanweisungen für die Abruf-Pipeline.",
             "advancedTitle": "Erweiterte Feinabstimmung",
