@@ -532,3 +532,34 @@ export const UPDATE_CONTEXT_PRESET = gql`
     }
   }
 `;
+
+// ---------------------------------------------------------------------------
+// Composer inline autocomplete (spec 2026-07-07): description enrichment for
+// the "/" menu. NEW operation names (not monolith copies) — these are
+// read-only catalogs, never refetch targets, so the verbatim-copy contract
+// above does not apply.
+// ---------------------------------------------------------------------------
+
+export const GET_CHAT_TOOL_CATALOG = gql`
+  query ChatToolCatalog($limit: Int, $page: Int) {
+    tools(limit: $limit, page: $page) {
+      items {
+        id
+        name
+        description
+      }
+    }
+  }
+`;
+
+export const GET_CHAT_SKILL_CATALOG = gql`
+  query ChatSkillCatalog($page: Int!, $limit: Int!) {
+    skillsPagination(page: $page, limit: $limit) {
+      items {
+        id
+        name
+        description
+      }
+    }
+  }
+`;

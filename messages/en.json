@@ -1092,6 +1092,16 @@
     },
     "composer": {
       "attachmentsLabel": "Attachments",
+      "autocomplete": {
+        "filesError": "Couldn't load session files",
+        "filesGroup": "Session files",
+        "listLabel": "Autocomplete suggestions",
+        "noFilesYet": "No files in this session yet",
+        "noMatches": "No matches",
+        "off": "off",
+        "skillsGroup": "Skills",
+        "toolsGroup": "Tools"
+      },
       "budgetReachedNotice": "You've reached your budget for this period. Messaging is paused until it resets.",
       "budgetReachedToastDescription": "You've used your full budget for this period. Messaging is paused until it resets.",
       "budgetReachedToastTitle": "Budget reached",

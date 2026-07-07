@@ -1092,6 +1092,16 @@
     },
     "composer": {
       "attachmentsLabel": "Anhänge",
+      "autocomplete": {
+        "filesError": "Sitzungsdateien konnten nicht geladen werden",
+        "filesGroup": "Sitzungsdateien",
+        "listLabel": "Vorschläge zur Autovervollständigung",
+        "noFilesYet": "Noch keine Dateien in dieser Sitzung",
+        "noMatches": "Keine Treffer",
+        "off": "aus",
+        "skillsGroup": "Skills",
+        "toolsGroup": "Tools"
+      },
       "budgetReachedNotice": "Du hast dein Budget für diesen Zeitraum erreicht. Nachrichten sind pausiert, bis es zurückgesetzt wird.",
       "budgetReachedToastDescription": "Du hast dein gesamtes Budget für diesen Zeitraum verbraucht. Nachrichten sind pausiert, bis es zurückgesetzt wird.",
       "budgetReachedToastTitle": "Budget erreicht",
