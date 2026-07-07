@@ -7,7 +7,7 @@
  * confirm via the shared ConfirmDialog — no more unconfirmed mutations.
  */
 import { useMutation } from "@apollo/client";
-import { ExternalLink, FileAudio, Video } from "lucide-react";
+import { ExternalLink, FileAudio, Trash2, Video } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import * as React from "react";
@@ -19,7 +19,11 @@ import { StatusDot } from "@/components/primitives/status-dot";
 import { Button } from "@/components/ui/button";
 
 import { useTicker } from "../hooks";
-import { CANCEL_TRANSCRIPTION_JOB, REMOVE_TRANSCRIPTION_JOB } from "../queries";
+import {
+  CANCEL_TRANSCRIPTION_JOB,
+  REMOVE_SAVED_TRANSCRIPT_ITEM,
+  REMOVE_TRANSCRIPTION_JOB,
+} from "../queries";
 import {
   displayTitle,
   formatDuration,
@@ -43,8 +47,10 @@ export function JobRow({ job, onReview, onChanged }: JobRowProps) {
 
   const [cancelJob] = useMutation(CANCEL_TRANSCRIPTION_JOB);
   const [removeJob] = useMutation(REMOVE_TRANSCRIPTION_JOB);
+  const [removeSavedItem] = useMutation(REMOVE_SAVED_TRANSCRIPT_ITEM);
   const [confirmCancelOpen, setConfirmCancelOpen] = React.useState(false);
   const [confirmDismissOpen, setConfirmDismissOpen] = React.useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
 
   const title = displayTitle(job);
   const meeting = isMeetingJob(job);
@@ -131,6 +137,25 @@ export function JobRow({ job, onReview, onChanged }: JobRowProps) {
         description: err instanceof Error ? err.message : undefined,
       });
       throw err;
+    }
+  };
+
+  // Cascade order: knowledge item first, then the job row — if the item
+  // delete fails the entry survives, so nothing dangles and the user can
+  // retry (or uncheck the box and delete just the entry).
+  const onConfirmDelete = async (optionIds?: string[]) => {
+    try {
+      if (optionIds?.includes("knowledge-item") && job.saved_item_id) {
+        await removeSavedItem({ variables: { id: job.saved_item_id } });
+      }
+      await removeJob({ variables: { id: job.id } });
+      toast.success(t("toasts.deleted"));
+      onChanged();
+    } catch (err: unknown) {
+      toast.error(t("toasts.deleteFailed"), {
+        description: err instanceof Error ? err.message : undefined,
+      });
+      throw err; // keep the ConfirmDialog open
     }
   };
 
@@ -238,6 +263,17 @@ export function JobRow({ job, onReview, onChanged }: JobRowProps) {
               >
                 {tCommon("edit")}
               </Button>
+              {/* Icon-only delete; ≥44px target below md like the row's other actions. */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-label={t("row.delete")}
+                className="text-muted-foreground hover:text-destructive max-md:h-11 max-md:w-11 max-md:px-0 md:w-8 md:px-0"
+                onClick={() => setConfirmDeleteOpen(true)}
+              >
+                <Trash2 aria-hidden="true" className="size-4" />
+              </Button>
             </>
           )}
           {job.status === "failed" && (
@@ -276,6 +312,19 @@ export function JobRow({ job, onReview, onChanged }: JobRowProps) {
         description={t("confirmDismiss.description")}
         confirmLabel={t("confirmDismiss.confirm")}
         onConfirm={onConfirmDismiss}
+      />
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title={t("confirmDelete.title")}
+        description={t("confirmDelete.description")}
+        confirmLabel={t("confirmDelete.confirm")}
+        options={
+          job.saved_item_id
+            ? [{ id: "knowledge-item", label: t("confirmDelete.alsoDeleteItem") }]
+            : undefined
+        }
+        onConfirm={onConfirmDelete}
       />
     </li>
   );
