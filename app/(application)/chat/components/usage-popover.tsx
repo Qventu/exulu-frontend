@@ -48,6 +48,10 @@ import type { TokenCounts } from "../hooks";
 export interface UsagePopoverProps {
   tokenCounts: TokenCounts;
   maxContextLength?: number | null;
+  /** Real-time context occupancy from the controller (Task 14). */
+  contextOccupancy?: number | null;
+  /** Active context window size reported by the model (Task 14). */
+  contextWindow?: number | null;
   /** `user.budget` (UserBudgetView / BudgetInfo shape), rendered via BudgetBar. */
   budget?: unknown | null;
   /** Trigger element. */
@@ -63,10 +67,14 @@ export interface UsagePopoverProps {
 function UsageBreakdown({
   tokenCounts,
   maxContextLength,
+  contextOccupancy,
+  contextWindow,
   budget,
 }: {
   tokenCounts: TokenCounts;
   maxContextLength?: number | null;
+  contextOccupancy?: number | null;
+  contextWindow?: number | null;
   budget?: unknown | null;
 }) {
   const t = useTranslations("chat");
@@ -76,10 +84,15 @@ function UsageBreakdown({
   const hasMax = typeof maxContextLength === "number" && maxContextLength > 0;
   const budgetInfo = (budget as BudgetInfo | null | undefined) ?? null;
 
+  const hasContext =
+    typeof contextOccupancy === "number" &&
+    typeof contextWindow === "number" &&
+    contextWindow > 0;
+
   return (
     <Context
-      usedTokens={tokenCounts.totalTokens}
-      maxTokens={hasMax ? (maxContextLength as number) : 0}
+      usedTokens={hasContext ? (contextOccupancy as number) : tokenCounts.totalTokens}
+      maxTokens={hasContext ? (contextWindow as number) : hasMax ? (maxContextLength as number) : 0}
       usage={{
         inputTokens: tokenCounts.inputTokens,
         outputTokens: tokenCounts.outputTokens,
@@ -89,8 +102,20 @@ function UsageBreakdown({
       }}
     >
       <div className="divide-y">
-        {hasMax ? <ContextContentHeader /> : null}
+        {hasContext ? (
+          <div className="space-y-1 p-3">
+            <p className="text-xs font-medium text-muted-foreground">
+              {t("usage.contextTitle")}
+            </p>
+            <ContextContentHeader />
+          </div>
+        ) : hasMax ? (
+          <ContextContentHeader />
+        ) : null}
         <ContextContentBody className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">
+            {t("usage.cumulativeTitle")}
+          </p>
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">{t("usage.total")}</span>
             <span>{compactTotal}</span>
@@ -120,6 +145,8 @@ function UsageBreakdown({
 export function UsagePopover({
   tokenCounts,
   maxContextLength,
+  contextOccupancy,
+  contextWindow,
   budget,
   children,
 }: UsagePopoverProps) {
@@ -136,6 +163,8 @@ export function UsagePopover({
         <UsageBreakdown
           tokenCounts={tokenCounts}
           maxContextLength={maxContextLength}
+          contextOccupancy={contextOccupancy}
+          contextWindow={contextWindow}
           budget={budget}
         />
       </PopoverContent>
@@ -148,6 +177,10 @@ export interface UsageDialogProps {
   onOpenChange: (open: boolean) => void;
   tokenCounts: TokenCounts;
   maxContextLength?: number | null;
+  /** Real-time context occupancy from the controller (Task 14). */
+  contextOccupancy?: number | null;
+  /** Active context window size reported by the model (Task 14). */
+  contextWindow?: number | null;
   budget?: unknown | null;
 }
 
@@ -161,6 +194,8 @@ export function UsageDialog({
   onOpenChange,
   tokenCounts,
   maxContextLength,
+  contextOccupancy,
+  contextWindow,
   budget,
 }: UsageDialogProps) {
   const t = useTranslations("chat");
@@ -178,6 +213,8 @@ export function UsageDialog({
           <UsageBreakdown
             tokenCounts={tokenCounts}
             maxContextLength={maxContextLength}
+            contextOccupancy={contextOccupancy}
+            contextWindow={contextWindow}
             budget={budget}
           />
         </div>

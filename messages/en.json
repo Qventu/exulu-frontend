@@ -1360,6 +1360,8 @@
     },
     "usage": {
       "budgetTitle": "Your budget",
+      "contextTitle": "Context window",
+      "cumulativeTitle": "Session usage (cumulative)",
       "description": "Token and budget usage for this conversation.",
       "title": "Usage",
       "tokensExplainer": "Tokens are the units AI usage is measured in — roughly ¾ of a word each.",

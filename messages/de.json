@@ -1360,6 +1360,8 @@
     },
     "usage": {
       "budgetTitle": "Ihr Budget",
+      "contextTitle": "Kontextfenster",
+      "cumulativeTitle": "Sitzungsverbrauch (kumuliert)",
       "description": "Token- und Budgetnutzung für diese Unterhaltung.",
       "title": "Nutzung",
       "tokensExplainer": "Token sind die Einheiten, in denen KI-Nutzung gemessen wird – etwa ¾ Wort pro Token.",
