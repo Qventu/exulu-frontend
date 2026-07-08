@@ -230,6 +230,12 @@ export function useChatSession({
 
   // --- capability toggles (items 69–71) --------------------------------------
   const [disabledTools, setDisabledTools] = React.useState<string[]>([]);
+  // Latest-value mirror: sendQuestionAnswer can be invoked from a memoized
+  // message item whose closure predates the latest toggle state.
+  const disabledToolsRef = React.useRef<string[]>(disabledTools);
+  React.useEffect(() => {
+    disabledToolsRef.current = disabledTools;
+  }, [disabledTools]);
   const toggleTool = React.useCallback((id: string) => {
     setDisabledTools((prev) =>
       prev.includes(id) ? prev.filter((name) => name !== id) : [...prev, id],
@@ -327,8 +333,11 @@ export function useChatSession({
   } = useChat({
     messages: initialMessages,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
-    // Throttle the messages and data updates to 50ms:
-    experimental_throttle: 50,
+    // Throttle the messages and data updates to 100ms (10 renders/s). At the
+    // previous 50ms, a single slow tick on a large conversation saturated the
+    // main thread; 100ms halves the per-second render budget with no visible
+    // loss of streaming smoothness.
+    experimental_throttle: 100,
     async onToolCall({ toolCall }) {
       // Check if it's a dynamic tool first for proper type narrowing
       if (toolCall.dynamic) {
@@ -408,26 +417,21 @@ export function useChatSession({
   }, [initialSession, user]);
 
   // --- token accounting (items 27/38) ------------------------------------------
-  const [tokenCounts, setTokenCounts] = React.useState<TokenCounts>({
-    totalTokens: 0,
-    reasoningTokens: 0,
-    inputTokens: 0,
-    outputTokens: 0,
-    cachedInputTokens: 0,
-  });
-  React.useEffect(() => {
+  // Derived with useMemo (not state + effect): the effect variant queued a
+  // second full re-render after every throttled stream tick.
+  const tokenCounts = React.useMemo<TokenCounts>(() => {
     const sum = (key: keyof TokenCounts) =>
       messages?.reduce((acc, message) => {
         const meta = message.metadata as Partial<TokenCounts> | undefined;
         return acc + (meta?.[key] || 0);
       }, 0) ?? 0;
-    setTokenCounts({
+    return {
       totalTokens: sum("totalTokens"),
       reasoningTokens: sum("reasoningTokens"),
       inputTokens: sum("inputTokens"),
       outputTokens: sum("outputTokens"),
       cachedInputTokens: sum("cachedInputTokens"),
-    });
+    };
   }, [messages]);
 
   // --- lazy session creation (item 34) -----------------------------------------
@@ -539,7 +543,7 @@ export function useChatSession({
     setSuggestions([]);
     sendMessage(
       { text: "[answer:" + answerText + "]", files: [] },
-      { body: { disabledTools, approvedTools } },
+      { body: { disabledTools: disabledToolsRef.current, approvedTools } },
     );
   };
 

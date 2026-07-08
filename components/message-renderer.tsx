@@ -13,14 +13,12 @@ import { TodoList } from "./ai-elements/todo-list"
 import { FileItem } from "./primitives/file-picker"
 import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation"
-import { AgenticKnowledgeSourceSearchResults, KnowledgeSourceSearchResultChunk } from "@/types/models/knowledge-source-search-results"
 import { Badge } from "@/components/ui/badge"
 import { TrajectoryReuseIndicator } from "./trajectory-reuse-indicator"
 import { trajectoryReuseFromMessage } from "@/app/(application)/chat/components/trajectory-ref"
-import { formatRetrievalMetrics } from "@/lib/retrieval-metrics"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useState, useEffect, useContext, useRef } from "react"
+import { memo, useState, useEffect, useContext, useRef } from "react"
 import { ConfigContext } from "@/components/shell/config-context"
 import { UserContext } from "@/app/(application)/authenticated"
 import { getToken } from "@/lib/api/client"
@@ -35,20 +33,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { CheckIcon, XIcon } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Agent } from "@/types/models/agent"
-import { ImageGenerationWidget, type ImageGenerationWidgetConfig } from "./image-generation/image-generation-widget"
+import { ImageGenerationWidget } from "./image-generation/image-generation-widget"
 
-interface ItemWithChunks {
-  id: string,
-  external_id: string,
-  name: string,
-  updatedAt: string,
-  createdAt: string,
-  context: {
-    name: string,
-    id: string
-  },
-  chunks: KnowledgeSourceSearchResultChunk[]
-}
+import {
+  computeContextSearchData,
+  computeUntypedToolData,
+  getCachedToolData,
+  messageItemPropsEqual,
+  type ItemWithChunks,
+  type ToolDataCache,
+  type ToolReasoningStep,
+} from "./message-renderer-tool-data"
 
 function camelCaseToLabel(camelCaseString) {
   if (!camelCaseString || typeof camelCaseString !== 'string') {
@@ -102,6 +97,8 @@ interface MessageRendererProps {
   }
 }
 
+type TTSState = "idle" | "loading" | "playing" | "paused"
+
 export function MessageRenderer({
   messages,
   status = "idle",
@@ -126,6 +123,18 @@ export function MessageRenderer({
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [editedText, setEditedText] = useState<string>("")
 
+  // Latest-value refs. The handlers below are invoked from memoized
+  // MessageItems whose closures can be several renders old (the memo
+  // comparator deliberately ignores handler identity), so every mutable
+  // value a handler needs is read through a ref at call time instead of
+  // being captured.
+  const messagesRef = useRef(messages)
+  useEffect(() => { messagesRef.current = messages }, [messages])
+  const editedTextRef = useRef(editedText)
+  useEffect(() => { editedTextRef.current = editedText }, [editedText])
+  const onUpdateRef = useRef(onUpdate)
+  useEffect(() => { onUpdateRef.current = onUpdate }, [onUpdate])
+
   // Text-to-speech. Sentence-chunked streaming playback: text is split into
   // ~300-char chunks, up to TTS_MAX_CONCURRENT chunks are fetched in parallel,
   // and a single shared HTMLAudioElement plays them sequentially as they
@@ -137,8 +146,9 @@ export function MessageRenderer({
   const configContext = useContext(ConfigContext)
   const userContext = useContext(UserContext)
   const ttsEnabled = configContext?.tts?.enabled === true
-  type TTSState = "idle" | "loading" | "playing" | "paused"
   const [ttsStateByMessage, setTtsStateByMessage] = useState<Record<string, TTSState>>({})
+  const ttsStateByMessageRef = useRef<Record<string, TTSState>>(ttsStateByMessage)
+  useEffect(() => { ttsStateByMessageRef.current = ttsStateByMessage }, [ttsStateByMessage])
   // Per-message cache: sparse array of Blobs indexed by chunk number. Filled
   // as fetches resolve; persists across pauses and replays.
   const ttsCacheRef = useRef<Map<string, Array<Blob | undefined>>>(new Map())
@@ -214,7 +224,7 @@ export function MessageRenderer({
       audioElRef.current = new Audio()
     }
     const audio = audioElRef.current
-    const currentState = ttsStateByMessage[message.id] ?? "idle"
+    const currentState = ttsStateByMessageRef.current[message.id] ?? "idle"
 
     // Pause/resume on the currently playing message.
     if (currentState === "playing") {
@@ -379,16 +389,18 @@ export function MessageRenderer({
   }
 
   const handleRemove = (messageId: string) => {
-    if (!onUpdate) return
-    const index = messages.findIndex(msg => msg.id === messageId)
-    const nextMessage = messages[index + 1]
-    let updatedMessages = messages.filter(msg => msg.id !== messageId)
+    const onUpdateFn = onUpdateRef.current
+    if (!onUpdateFn) return
+    const currentMessages = messagesRef.current
+    const index = currentMessages.findIndex(msg => msg.id === messageId)
+    const nextMessage = currentMessages[index + 1]
+    let updatedMessages = currentMessages.filter(msg => msg.id !== messageId)
 
     // If the next message is a placeholder message, remove it
     if ((nextMessage?.metadata as any)?.type === 'placeholder') {
       updatedMessages = updatedMessages.filter(msg => msg.id !== nextMessage.id)
     }
-    onUpdate(updatedMessages)
+    onUpdateFn(updatedMessages)
   }
 
   const handleCancelEdit = () => {
@@ -397,14 +409,16 @@ export function MessageRenderer({
   }
 
   const handleConfirmEdit = (messageId: string) => {
-    if (!onUpdate) return
-    const updatedMessages = messages.map(msg => {
+    const onUpdateFn = onUpdateRef.current
+    if (!onUpdateFn) return
+    const text = editedTextRef.current
+    const updatedMessages = messagesRef.current.map(msg => {
       if (msg.id === messageId) {
         return {
           ...msg,
           parts: msg.parts?.map(part =>
             part.type === 'text'
-              ? { ...part, text: editedText }
+              ? { ...part, text }
               : part
           )
         }
@@ -412,7 +426,7 @@ export function MessageRenderer({
       return msg
     })
 
-    onUpdate(updatedMessages)
+    onUpdateFn(updatedMessages)
     setEditingMessageId(null)
     setEditedText("")
   }
@@ -444,18 +458,6 @@ export function MessageRenderer({
   // Use filteredMessages in the rendering logic
   const messagesToRender = filteredMessages;
 
-  const streamingTexts = [
-    "Generating...",
-    "Thinking...",
-    "Researching...",
-    "Planning...",
-    "Writing...",
-    "Responding...",
-    "Finishing up...",
-    "Almost there...",
-    "Just a moment...",
-  ]
-
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   // Streaming placeholder (item 39 / U10): the ai-elements Shimmer animates
   // continuously, so honor prefers-reduced-motion with a static line instead.
@@ -463,11 +465,11 @@ export function MessageRenderer({
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTextIndex((prevIndex) => (prevIndex + 1) % streamingTexts.length);
+      setCurrentTextIndex((prevIndex) => (prevIndex + 1) % STREAMING_PLACEHOLDER_TEXTS.length);
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [streamingTexts.length]);
+  }, []);
 
 
   // Find the index of the last assistant message
@@ -475,14 +477,177 @@ export function MessageRenderer({
     msg.role === 'assistant' ? idx : -1
   ).filter(idx => idx !== -1).pop() ?? -1;
 
+  // First user message AFTER each index (collapses answered question_ask
+  // parts) — one reverse pass instead of the per-item slice().find().
+  const nextUserMessageByIndex: (UIMessage | undefined)[] = []
+  {
+    let nextUser: UIMessage | undefined
+    for (let i = (messagesToRender?.length ?? 0) - 1; i >= 0; i--) {
+      nextUserMessageByIndex[i] = nextUser
+      const candidate = messagesToRender![i]
+      if (candidate.role === "user") nextUser = candidate
+    }
+  }
+
   return (
     <>
       {messagesToRender?.map((message, messageIndex) => {
-        const isFirstMessage = messageIndex === 0
-        const isLastMessage =
-          messageIndex === messages.length - 1;
-        const isLastAssistantMessage = messageIndex === lastAssistantMessageIndex;
-        const messageMetadata = message.metadata as any
+        // Kept verbatim from the legacy body: compared against the UNfiltered
+        // messages length, not messagesToRender.
+        const isLastMessage = messageIndex === messages.length - 1;
+        const showsStreamingPlaceholder =
+          status !== "ready" && status !== "error" && isLastMessage && message.role === "assistant";
+        return (
+          <MessageItem
+            key={message.id}
+            message={message}
+            agent={agent}
+            className={className}
+            config={config}
+            status={status}
+            isFirstMessage={messageIndex === 0}
+            isLastMessage={isLastMessage}
+            isLastAssistantMessage={messageIndex === lastAssistantMessageIndex}
+            nextUserMessage={nextUserMessageByIndex[messageIndex]}
+            showActions={showActions}
+            showEdit={showEdit}
+            showRemove={showRemove}
+            showTokens={showTokens}
+            writeAccess={writeAccess}
+            ttsEnabled={ttsEnabled}
+            ttsState={ttsStateByMessage[message.id] ?? "idle"}
+            isEditing={editingMessageId === message.id}
+            anyEditing={editingMessageId !== null}
+            editedText={editingMessageId === message.id ? editedText : ""}
+            streamingLabel={showsStreamingPlaceholder ? STREAMING_PLACEHOLDER_TEXTS[currentTextIndex] : null}
+            prefersReducedMotion={prefersReducedMotion}
+            onEditTextChange={setEditedText}
+            onStartEdit={handleStartEdit}
+            onCancelEdit={handleCancelEdit}
+            onConfirmEdit={handleConfirmEdit}
+            onRemoveMessage={handleRemove}
+            onTtsClick={handleTtsClick}
+            handleFeedback={handleFeedback}
+            onRegenerate={onRegenerate}
+            addToolApprovalResponse={addToolApprovalResponse}
+            addToContext={addToContext}
+            onQuestionAnswer={onQuestionAnswer}
+            setMessages={setMessages}
+            UntypedToolPartComponent={UntypedToolPartComponent}
+            AgentVisualComponent={AgentVisualComponent}
+          />
+        );
+      })}
+    </>
+  )
+}
+
+const STREAMING_PLACEHOLDER_TEXTS = [
+  "Generating...",
+  "Thinking...",
+  "Researching...",
+  "Planning...",
+  "Writing...",
+  "Responding...",
+  "Finishing up...",
+  "Almost there...",
+  "Just a moment...",
+]
+
+interface MessageItemProps {
+  message: UIMessage
+  agent?: Agent
+  className?: string
+  config?: MessageRendererProps["config"]
+  status: NonNullable<MessageRendererProps["status"]>
+  isFirstMessage: boolean
+  isLastMessage: boolean
+  isLastAssistantMessage: boolean
+  /** First user message after this one — collapses an answered question_ask. */
+  nextUserMessage: UIMessage | undefined
+  showActions: boolean
+  showEdit: boolean
+  showRemove: boolean
+  showTokens: boolean
+  writeAccess: boolean
+  ttsEnabled: boolean
+  ttsState: TTSState
+  isEditing: boolean
+  anyEditing: boolean
+  /** Only populated while this message is the one being edited. */
+  editedText: string
+  /** Non-null only on the message showing the streaming placeholder line. */
+  streamingLabel: string | null
+  prefersReducedMotion: boolean | null
+  onEditTextChange: (text: string) => void
+  onStartEdit: (messageId: string, currentText: string) => void
+  onCancelEdit: () => void
+  onConfirmEdit: (messageId: string) => void
+  onRemoveMessage: (messageId: string) => void
+  onTtsClick: (message: UIMessage) => void
+  handleFeedback?: MessageRendererProps["handleFeedback"]
+  onRegenerate?: () => void
+  addToolApprovalResponse?: ChatAddToolApproveResponseFunction
+  addToContext?: (item: any) => void
+  onQuestionAnswer?: (questionId: string, answerId: string, answerText: string) => void
+  setMessages?: MessageRendererProps["setMessages"]
+  UntypedToolPartComponent?: MessageRendererProps["UntypedToolPartComponent"]
+  AgentVisualComponent?: React.ComponentType<any>
+}
+
+/**
+ * One conversation message. Memoized with a custom comparator
+ * (message-renderer-tool-data.ts) so that finished messages skip re-rendering
+ * entirely during streaming — the AI SDK only replaces the object identity of
+ * the in-progress message, every other element of `messages` is reference-
+ * stable across stream ticks. Handler props are excluded from the comparison;
+ * they are safe to call from an older render because everything mutable they
+ * touch is read through refs in MessageRenderer.
+ */
+const MessageItem = memo(function MessageItem({
+  message,
+  agent,
+  className,
+  config,
+  status,
+  isFirstMessage,
+  isLastMessage,
+  isLastAssistantMessage,
+  nextUserMessage,
+  showActions,
+  showEdit,
+  showRemove,
+  showTokens,
+  writeAccess,
+  ttsEnabled,
+  ttsState,
+  isEditing,
+  anyEditing,
+  editedText,
+  streamingLabel,
+  prefersReducedMotion,
+  onEditTextChange,
+  onStartEdit,
+  onCancelEdit,
+  onConfirmEdit,
+  onRemoveMessage,
+  onTtsClick,
+  handleFeedback,
+  onRegenerate,
+  addToolApprovalResponse,
+  addToContext,
+  onQuestionAnswer,
+  setMessages,
+  UntypedToolPartComponent,
+  AgentVisualComponent,
+}: MessageItemProps) {
+  // Parsed tool-part data keyed by toolCallId + state: the SDK deep-clones
+  // the streaming message's parts every tick, so caching by part reference
+  // would never hit. Terminal-state parts are immutable — see
+  // message-renderer-tool-data.ts.
+  const toolDataCacheRef = useRef<ToolDataCache>(new Map())
+
+  const messageMetadata = message.metadata as any
 
         // Compaction checkpoint (context-window management spec §5c): render
         // as a divider, not a bubble. Deliberately outside <Message> so none
@@ -671,8 +836,6 @@ export function MessageRenderer({
                     });
                   }
 
-                  const isEditing = editingMessageId === message.id
-
                   return <>
                     {isEditing ? (
                       <div className="items-center gap-2" key={`${message.id}-${i}` + "_edit"}>
@@ -680,7 +843,7 @@ export function MessageRenderer({
                           <Textarea
                             value={editedText}
                             rows={3}
-                            onChange={(e) => setEditedText(e.target.value)}
+                            onChange={(e) => onEditTextChange(e.target.value)}
                             className="flex-1 w-full max-w-full resize-none"
                             autoFocus
                           />
@@ -690,7 +853,7 @@ export function MessageRenderer({
                             size="sm"
                             variant="outline"
                             className="text-destructive"
-                            onClick={handleCancelEdit}>
+                            onClick={onCancelEdit}>
                             <span className="text-destructive">Cancel</span>
                             <XIcon className="size-4 ml-2 text-destructive" />
                           </Button>
@@ -698,7 +861,7 @@ export function MessageRenderer({
                             size="sm"
                             variant="outline"
                             className="text-green-500"
-                            onClick={() => handleConfirmEdit(message.id)}>
+                            onClick={() => onConfirmEdit(message.id)}>
                             <span className="text-green-500">Confirm</span>
                             <CheckIcon className="size-4 ml-2 text-green-500" />
                           </Button>
@@ -706,7 +869,10 @@ export function MessageRenderer({
                       </div>
                     ) : (
                       <div className="relative" key={`${message.id}-${i}` + "_response_wrapper"}>
-                        <Response className="chat-response-container">
+                        {/* chunked: block-level memoization — the streaming
+                            text only re-parses its growing last block per
+                            tick instead of the whole document. */}
+                        <Response className="chat-response-container" chunked>
                           {text}
                         </Response>
                       </div>
@@ -752,8 +918,6 @@ export function MessageRenderer({
                     status: string;
                   };
 
-                  const laterMessages = messagesToRender.slice(messageIndex + 1);
-                  const nextUserMessage = laterMessages.find((m) => m.role === "user");
                   const isAnswered = !!nextUserMessage;
 
                   const answeredText = nextUserMessage?.parts
@@ -802,187 +966,113 @@ export function MessageRenderer({
                 ) {
 
                   const dynamicToolPart = part as any;
-                  let output = dynamicToolPart.output as {
-                    result: KnowledgeSourceSearchResultChunk[] | AgenticKnowledgeSourceSearchResults
-                  };
-
-                  if (typeof output === "string") {
-                    output = JSON.parse(output)
+                  const data = getCachedToolData(
+                    toolDataCacheRef.current,
+                    `cs:${dynamicToolPart.toolCallId ?? `${message.id}-${i}`}`,
+                    dynamicToolPart.state,
+                    () => computeContextSearchData(dynamicToolPart),
+                  );
+                  if (data === null) {
+                    // Output's `result` is not valid JSON — treated as text.
+                    return null;
                   }
-                  if (typeof output?.result === "string") {
-                    try {
-                      output.result = JSON.parse(output?.result)
-                    } catch (error) {
-                      // Means the output is not a valid JSON, so treating it as text
-                      return null;
-
-                    }
-                  }
-
-                  const chunks = Array.isArray(output?.result) ? output?.result : output?.result?.chunks;
-                  const reasoning: {
-                    text: string;
-                    tools: {
-                      name: string;
-                      id: string;
-                      input: any;
-                      output: any;
-                    }[]
-                  }[] = !Array.isArray(output?.result) ? output?.result?.reasoning : [];
-                  const metricsLine = formatRetrievalMetrics(!Array.isArray(output?.result) ? (output?.result as any)?.metrics : undefined);
-
-                  // Map the chunks to items
-                  const itemsMap = new Map<string, ItemWithChunks>();
-                  const uniqueContexts = new Set(chunks?.map(chunk => {
-                    return chunk.context?.name ? chunk.context.name.replaceAll('_', ' ') : '';
-                  }));
-                  const contextNames = Array.from(uniqueContexts).join(', ');
-                  if (chunks) {
-                    for (const chunk of chunks) {
-
-                      if (itemsMap.has(chunk.item_id)) {
-                        itemsMap.get(chunk.item_id)?.chunks.push(chunk);
-                      } else {
-                        itemsMap.set(chunk.item_id, {
-                          id: chunk.item_id,
-                          updatedAt: chunk.item_updated_at,
-                          createdAt: chunk.item_created_at,
-                          external_id: chunk.item_external_id,
-                          name: chunk.item_name,
-                          context: {
-                            name: chunk.context?.name,
-                            id: chunk.context?.id
-                          },
-                          chunks: [chunk]
-                        });
-                      }
-                    }
-                  }
+                  const contextSearchStreaming =
+                    status !== "ready" && status !== "error" && isLastMessage && message.role === 'assistant';
                   return (
                     <>
                       <ReasoningVisualisation
-                        reasoning={reasoning}
-                        streaming={status !== "ready" && status !== "error" && isLastMessage && message.role === 'assistant'}
+                        reasoning={data.reasoning}
+                        streaming={contextSearchStreaming}
                       />
                       <ContextSearchResults
                         key={`${message.id}-${i}`}
                         input={dynamicToolPart.input}
                         state={dynamicToolPart.state}
-                        contextNames={contextNames}
-                        streaming={status !== "ready" && status !== "error" && isLastMessage && message.role === 'assistant'}
-                        items={Array.from(itemsMap.values())}
-                        totalChunks={chunks?.length ?? 0}
+                        contextNames={data.contextNames}
+                        streaming={contextSearchStreaming}
+                        items={data.items}
+                        totalChunks={data.totalChunks}
                       />
-                      {metricsLine && (
-                        <div className="mt-1 text-xs text-muted-foreground">{metricsLine}</div>
+                      {data.metricsLine && (
+                        <div className="mt-1 text-xs text-muted-foreground">{data.metricsLine}</div>
                       )}
                     </>
                   )
                 }
 
                 if (part.type.startsWith('tool-') || part.type === 'dynamic-tool') {
+                  // Single normalization pass for the generic tool part
+                  // (legacy code parsed the output once for the image-shape
+                  // check and again for the untyped renderer), cached across
+                  // stream ticks for terminal states.
+                  const untypedToolPart = part as DynamicToolUIPart
+                  const callId = untypedToolPart.toolCallId
+                  const data = getCachedToolData(
+                    toolDataCacheRef.current,
+                    `ut:${callId ?? `${message.id}-${i}`}`,
+                    untypedToolPart.state,
+                    () => computeUntypedToolData(untypedToolPart),
+                  );
+
                   // Image generation tool results carry one of two shapes:
                   //  - { type: 'image_generation_widget', ... }: open the
                   //    interactive widget (current image_generation tool).
                   //  - { type: 'image_generation', url, ... }: render the
                   //    inline result rendered by the older per-model tool.
                   //    Kept so historical messages still render.
-                  const dynamicToolPart = part as any;
-                  let imageOutput: any = dynamicToolPart.output;
-                  if (typeof imageOutput === "string") {
-                    try { imageOutput = JSON.parse(imageOutput); } catch { /* not JSON */ }
-                  }
-                  let imageResult: any = imageOutput?.result;
-                  if (typeof imageResult === "string") {
-                    try { imageResult = JSON.parse(imageResult); } catch { /* not JSON */ }
-                  }
-                  if (
-                    imageResult &&
-                    typeof imageResult === 'object' &&
-                    imageResult.type === 'image_generation_widget'
-                  ) {
+                  if (data.imageWidget) {
                     return (
                       <ImageGenerationWidget
                         key={`${message.id}-${i}`}
-                        config={imageResult as ImageGenerationWidgetConfig}
+                        config={data.imageWidget}
                         setMessages={setMessages}
                       />
                     );
                   }
-                  if (
-                    imageResult &&
-                    typeof imageResult === 'object' &&
-                    imageResult.type === 'image_generation' &&
-                    typeof imageResult.url === 'string'
-                  ) {
+                  if (data.imageInline) {
                     return (
                       <ImageGenerationResult
                         key={`${message.id}-${i}`}
-                        url={imageResult.url}
-                        prompt={imageResult.prompt}
-                        revisedPrompt={imageResult.revised_prompt}
-                        model={imageResult.model}
+                        url={data.imageInline.url}
+                        prompt={data.imageInline.prompt}
+                        revisedPrompt={data.imageInline.revisedPrompt}
+                        model={data.imageInline.model}
                       />
                     );
                   }
-                }
 
-                if (
-                  (part.type.startsWith('tool-') || part.type === 'dynamic-tool') &&
-                  UntypedToolPartComponent &&
-                  addToContext &&
-                  agent &&
-                  addToolApprovalResponse
-                ) {
-                  const untypedToolPart = part as DynamicToolUIPart
-                  const callId = untypedToolPart.toolCallId
-                  let output = untypedToolPart.output as {
-                    result: KnowledgeSourceSearchResultChunk[] | AgenticKnowledgeSourceSearchResults
-                  };
-
-                  if (typeof output === "string") {
-                    output = JSON.parse(output)
-                  }
-                  if (typeof output?.result === "string") {
-                    try {
-                      output.result = JSON.parse(output?.result)
-                    } catch (error) {
-                      // Means the output is not a valid JSON, so treating it as text
+                  if (
+                    UntypedToolPartComponent &&
+                    addToContext &&
+                    agent &&
+                    addToolApprovalResponse
+                  ) {
+                    if (!data.ok) {
+                      // Output's `result` is not valid JSON — treated as text.
                       return null;
-
                     }
+                    return (
+                      <>
+                        <ReasoningVisualisation
+                          reasoning={data.reasoning}
+                          streaming={status !== "ready" && status !== "error" && isLastMessage && message.role === 'assistant'}
+                        />
+                        <UntypedToolPartComponent
+                          key={callId}
+                          agent={agent}
+                          addToolApprovalResponse={addToolApprovalResponse}
+                          untypedToolPart={data.part}
+                          callId={callId}
+                          addToContext={addToContext}
+                        />
+                        {data.metricsLine && (
+                          <div className="mt-1 text-xs text-muted-foreground">{data.metricsLine}</div>
+                        )}
+                      </>
+                    )
                   }
-
-                  const reasoning: {
-                    text: string;
-                    tools: {
-                      name: string;
-                      id: string;
-                      input: any;
-                      output: any;
-                    }[]
-                  }[] = !Array.isArray(output?.result) ? output?.result?.reasoning : [];
-                  const metricsLine = formatRetrievalMetrics(!Array.isArray(output?.result) ? (output?.result as any)?.metrics : undefined);
-                  return (
-
-                    <>
-                      <ReasoningVisualisation
-                        reasoning={reasoning}
-                        streaming={status !== "ready" && status !== "error" && isLastMessage && message.role === 'assistant'}
-                      />
-                      <UntypedToolPartComponent
-                        key={callId}
-                        agent={agent}
-                        addToolApprovalResponse={addToolApprovalResponse}
-                        untypedToolPart={untypedToolPart}
-                        callId={callId}
-                        addToContext={addToContext}
-                      />
-                      {metricsLine && (
-                        <div className="mt-1 text-xs text-muted-foreground">{metricsLine}</div>
-                      )}
-                    </>
-                  )
+                  // No untyped renderer wired (consumer didn't pass the full
+                  // prop set) — fall through like the legacy branch did.
                 }
 
                 if (part.type === 'file') {
@@ -1050,7 +1140,7 @@ export function MessageRenderer({
                 </div>
               )}
 
-              {status !== "ready" && status !== "error" && isLastMessage && message.role === 'assistant' && (
+              {streamingLabel !== null && (
                 <div
                   className="pointer-events-none py-1"
                   // The vendored Shimmer (read-only) paints with the Tailwind v4
@@ -1063,11 +1153,11 @@ export function MessageRenderer({
                 >
                   {prefersReducedMotion ? (
                     <span className="text-sm text-muted-foreground">
-                      {streamingTexts[currentTextIndex]}
+                      {streamingLabel}
                     </span>
                   ) : (
                     <Shimmer as="span" className="text-sm">
-                      {streamingTexts[currentTextIndex]}
+                      {streamingLabel}
                     </Shimmer>
                   )}
                 </div>
@@ -1075,7 +1165,7 @@ export function MessageRenderer({
 
               {(
                 ((showActions && message.role === 'assistant') || showEdit || showRemove) &&
-                !editingMessageId &&
+                !anyEditing &&
                 (message.metadata as any)?.type !== 'placeholder'
               ) && (
                   // T7 / item 55: hover-reveal is an enhancement only —
@@ -1120,18 +1210,18 @@ export function MessageRenderer({
                       {ttsEnabled && showActions && message.role === 'assistant' && (
                         <MessageAction
                           className="mr-1"
-                          onClick={() => handleTtsClick(message)}
+                          onClick={() => onTtsClick(message)}
                           label={
-                            (ttsStateByMessage[message.id] ?? "idle") === "playing"
+                            ttsState === "playing"
                               ? "Pause"
-                              : (ttsStateByMessage[message.id] ?? "idle") === "paused"
+                              : ttsState === "paused"
                                 ? "Resume"
                                 : "Read aloud"
                           }
                         >
-                          {ttsStateByMessage[message.id] === "loading" && <Loader2 className="size-3 animate-spin" />}
-                          {ttsStateByMessage[message.id] === "playing" && <Pause className="size-3" />}
-                          {(!ttsStateByMessage[message.id] || ttsStateByMessage[message.id] === "idle" || ttsStateByMessage[message.id] === "paused") && <Volume2 className="size-3" />}
+                          {ttsState === "loading" && <Loader2 className="size-3 animate-spin" />}
+                          {ttsState === "playing" && <Pause className="size-3" />}
+                          {(ttsState === "idle" || ttsState === "paused") && <Volume2 className="size-3" />}
                         </MessageAction>
                       )}
                       {showActions && message.role === 'assistant' && (
@@ -1166,7 +1256,7 @@ export function MessageRenderer({
                         <MessageAction
                           className="mr-1"
                           label="Edit"
-                          onClick={() => handleStartEdit(
+                          onClick={() => onStartEdit(
                             message.id,
                             message.parts?.map((part: any) => part?.text || "").join('\n')
                           )}
@@ -1178,7 +1268,7 @@ export function MessageRenderer({
                         <MessageAction
                           className="mr-1"
                           label="Remove"
-                          onClick={() => handleRemove(message.id)}
+                          onClick={() => onRemoveMessage(message.id)}
                         >
                           <Trash2Icon className="size-3" />
                         </MessageAction>
@@ -1220,7 +1310,7 @@ export function MessageRenderer({
         // Wrap the last assistant message with AgentVisual on the left
         if (isLastAssistantMessage && message.role === 'assistant' && AgentVisualComponent && agent) {
           return (
-            <div key={message.id + '_wrapper'} className="flex items-start gap-3 w-full">
+            <div className="flex items-start gap-3 w-full">
               <div className="shrink-0 mt-1">
                 <AgentVisualComponent agent={agent} status={status} className="w-12 h-12" />
               </div>
@@ -1230,10 +1320,7 @@ export function MessageRenderer({
         }
 
         return messageElement;
-      })}
-    </>
-  )
-}
+}, messageItemPropsEqual)
 
 const getToolIcon = (name: string) => {
   const lower = (name || '').toLowerCase();
@@ -1375,15 +1462,7 @@ const ReasoningVisualisation = ({
   streaming
 }: {
   streaming: boolean;
-  reasoning: {
-    text: string;
-    tools: {
-      name: string;
-      id: string;
-      input: any;
-      output: any;
-    }[]
-  }[];
+  reasoning: ToolReasoningStep[] | undefined;
 }) => {
 
   const [showAllReasoning, setShowAllReasoning] = useState(false);

@@ -2,7 +2,8 @@
 
 import { cn } from '@/lib/utils';
 import type { ComponentProps, HTMLAttributes } from 'react';
-import { isValidElement, memo, useState, useEffect } from 'react';
+import { isValidElement, memo, useMemo, useState, useEffect } from 'react';
+import { parseMarkdownIntoBlocks } from 'streamdown';
 import ReactMarkdown, { type Options } from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
@@ -184,6 +185,17 @@ export type ResponseProps = HTMLAttributes<HTMLDivElement> & {
     ReturnType<typeof hardenReactMarkdown>
   >['defaultOrigin'];
   parseIncompleteMarkdown?: boolean;
+  /**
+   * Block-level memoization for streaming-hot call sites: the source is split
+   * into top-level markdown blocks (streamdown's lexer-based splitter) and
+   * each block renders through the SAME pipeline as the whole-document path,
+   * memoized on its text. A growing streamed text then only re-parses its
+   * last block per tick instead of the whole document (which is O(n²) over
+   * the stream). Off by default — blocks parse as independent documents, so
+   * cross-block references (e.g. reference-style link definitions) don't
+   * resolve; enable only where content arrives incrementally.
+   */
+  chunked?: boolean;
 };
 
 
@@ -822,6 +834,43 @@ const components = {
   },
 };
 
+type MarkdownPassProps = {
+  options?: Options;
+  children: Options['children'];
+  allowedImagePrefixes?: ResponseProps['allowedImagePrefixes'];
+  allowedLinkPrefixes?: ResponseProps['allowedLinkPrefixes'];
+  defaultOrigin?: ResponseProps['defaultOrigin'];
+};
+
+/** The single markdown pipeline shared by the whole-document and chunked paths. */
+const MarkdownPass = ({
+  options,
+  children,
+  allowedImagePrefixes,
+  allowedLinkPrefixes,
+  defaultOrigin,
+}: MarkdownPassProps) => (
+  <HardenedMarkdown
+    allowedImagePrefixes={allowedImagePrefixes ?? ['*']}
+    allowedLinkPrefixes={allowedLinkPrefixes ?? ['*']}
+    components={components as any}
+    defaultOrigin={defaultOrigin}
+    rehypePlugins={[rehypeRaw as any, rehypeKatex]}
+    remarkPlugins={[remarkGfm, remarkMath]}
+    {...options}
+  >
+    {children}
+  </HardenedMarkdown>
+);
+
+// Memoized per block: only the block whose text changed (the growing last
+// one, during streaming) re-parses. The remaining props are static per call
+// site, so comparing the text is sufficient.
+const MemoizedMarkdownBlock = memo(
+  MarkdownPass,
+  (prevProps, nextProps) => prevProps.children === nextProps.children
+);
+
 export const Response = memo(
   ({
     className,
@@ -831,8 +880,44 @@ export const Response = memo(
     allowedLinkPrefixes,
     defaultOrigin,
     parseIncompleteMarkdown: shouldParseIncompleteMarkdown = true,
+    chunked = false,
     ...props
   }: ResponseProps) => {
+    const blocks = useMemo(
+      () =>
+        chunked && typeof children === 'string'
+          ? parseMarkdownIntoBlocks(children)
+          : null,
+      [chunked, children]
+    );
+
+    if (blocks) {
+      return (
+        <div
+          className={cn(
+            'size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
+            className
+          )}
+          {...props}
+        >
+          {blocks.map((block, index) => (
+            <MemoizedMarkdownBlock
+              key={index}
+              options={options}
+              allowedImagePrefixes={allowedImagePrefixes}
+              allowedLinkPrefixes={allowedLinkPrefixes}
+              defaultOrigin={defaultOrigin}
+            >
+              {/* Incomplete tokens can only exist at the streaming tail. */}
+              {index === blocks.length - 1 && shouldParseIncompleteMarkdown
+                ? parseIncompleteMarkdown(block)
+                : block}
+            </MemoizedMarkdownBlock>
+          ))}
+        </div>
+      );
+    }
+
     // Parse the children to remove incomplete markdown tokens if enabled
     const parsedChildren =
       typeof children === 'string' && shouldParseIncompleteMarkdown
@@ -847,17 +932,14 @@ export const Response = memo(
         )}
         {...props}
       >
-        <HardenedMarkdown
-          allowedImagePrefixes={allowedImagePrefixes ?? ['*']}
-          allowedLinkPrefixes={allowedLinkPrefixes ?? ['*']}
-          components={components as any}
+        <MarkdownPass
+          options={options}
+          allowedImagePrefixes={allowedImagePrefixes}
+          allowedLinkPrefixes={allowedLinkPrefixes}
           defaultOrigin={defaultOrigin}
-          rehypePlugins={[rehypeRaw as any, rehypeKatex]}
-          remarkPlugins={[remarkGfm, remarkMath]}
-          {...options}
         >
           {parsedChildren}
-        </HardenedMarkdown>
+        </MarkdownPass>
       </div>
     );
   },

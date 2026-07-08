@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { UIMessage } from "ai";
 import {
   deriveContextBudget,
   computeContextOccupancy,
   deriveContextState,
+  estimateMessageTokens,
   getCompaction,
 } from "./context-budget";
 
@@ -58,6 +59,31 @@ describe("computeContextOccupancy", () => {
 
   it("estimates chars/4 with no anchor", () => {
     expect(computeContextOccupancy([msg("user", "x".repeat(400))])).toBeGreaterThan(100);
+  });
+
+  it("returns identical results on repeated calls (memoized per message object)", () => {
+    const messages = [msg("user", "q"), msg("assistant", "a".repeat(1_000))];
+    const first = computeContextOccupancy(messages);
+    expect(computeContextOccupancy(messages)).toBe(first);
+  });
+});
+
+describe("estimateMessageTokens", () => {
+  it("stringifies a message object once and serves repeats from the cache", () => {
+    const message = msg("user", "hello world");
+    const spy = vi.spyOn(JSON, "stringify");
+    const first = estimateMessageTokens(message);
+    const callsAfterFirst = spy.mock.calls.length;
+    const second = estimateMessageTokens(message);
+    expect(second).toBe(first);
+    expect(spy.mock.calls.length).toBe(callsAfterFirst);
+    spy.mockRestore();
+  });
+
+  it("computes fresh for a new object with the same content (identity-keyed)", () => {
+    const a = msg("user", "same text");
+    const b = { ...a } as UIMessage;
+    expect(estimateMessageTokens(a)).toBe(estimateMessageTokens(b));
   });
 });
 

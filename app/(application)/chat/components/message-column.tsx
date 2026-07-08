@@ -127,7 +127,9 @@ function makeUntypedToolPart(onApproveForChat: (toolId: string) => void) {
           <ToolOutput
             output={
               output ? (
-                <Response>
+                // chunked: tool outputs can stream in while expanded — only
+                // the growing last markdown block re-parses per tick.
+                <Response chunked>
                   {typeof output === "string"
                     ? output
                     : JSON.stringify(output, null, 2)}

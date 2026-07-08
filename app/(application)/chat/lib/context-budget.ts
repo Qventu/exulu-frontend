@@ -39,6 +39,22 @@ export type CompactionMetadata = {
 export const getCompaction = (message: UIMessage): CompactionMetadata | undefined =>
   (message.metadata as { compaction?: CompactionMetadata } | undefined)?.compaction;
 
+// Frontend-only memoization (the backend mirror needs no counterpart — the
+// formula and results are unchanged): finished UIMessage objects are
+// reference-stable across stream ticks (the AI SDK deep-clones only the
+// in-progress message), so the per-message estimate is cached by object
+// identity. Without this, every throttled stream tick re-stringified the
+// whole unanchored tail of the conversation.
+const messageTokenCache = new WeakMap<UIMessage, number>();
+
+export const estimateMessageTokens = (message: UIMessage): number => {
+  const cached = messageTokenCache.get(message);
+  if (cached !== undefined) return cached;
+  const estimate = estimateTokens(JSON.stringify(message));
+  messageTokenCache.set(message, estimate);
+  return estimate;
+};
+
 export const computeContextOccupancy = (messages: UIMessage[]): number => {
   let anchorIdx = -1;
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -74,7 +90,7 @@ export const computeContextOccupancy = (messages: UIMessage[]): number => {
     }
     rest = messages.slice(anchorIdx + 1);
   }
-  for (const m of rest) total += estimateTokens(JSON.stringify(m));
+  for (const m of rest) total += estimateMessageTokens(m);
   return total;
 };
 
