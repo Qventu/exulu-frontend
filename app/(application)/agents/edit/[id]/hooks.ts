@@ -81,6 +81,7 @@ export const agentEditorSchema = z.object({
   feedback: z.boolean().optional(),
   suggestions_enabled: z.boolean().optional(),
   sandbox_enabled: z.boolean().optional(),
+  max_tool_steps: z.number().int().min(0).max(50).optional(),
   active: z.boolean().optional(),
 });
 
@@ -215,6 +216,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       feedback: !!(agent as any).feedback,
       suggestions_enabled: !!(agent as any).suggestions_enabled,
       sandbox_enabled: !!(agent as any).sandbox_enabled,
+      max_tool_steps: Math.min(50, Math.max(0, Math.round(Number((agent as any).max_tool_steps) || 0))),
       active: !!(agent as any).active,
     },
   });
@@ -317,6 +319,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       feedback: values.feedback,
       suggestions_enabled: values.suggestions_enabled ?? false,
       sandbox_enabled: values.sandbox_enabled ?? false,
+      max_tool_steps: values.max_tool_steps ?? 0,
       model: model || null,
       animation_idle: animationIdle,
       animation_responding: animationResponding,
@@ -385,6 +388,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       feedback: !!(agent as any).feedback,
       suggestions_enabled: !!(agent as any).suggestions_enabled,
       sandbox_enabled: !!(agent as any).sandbox_enabled,
+      max_tool_steps: Math.min(50, Math.max(0, Math.round(Number((agent as any).max_tool_steps) || 0))),
       active: !!(agent as any).active,
     });
     setTools(defaultTools(agent));

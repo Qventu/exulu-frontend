@@ -19,6 +19,7 @@ export interface Agent {
     feedback?: boolean;
     suggestions_enabled?: boolean;
     sandbox_enabled?: boolean;
+    max_tool_steps?: number | null;
     modelName?: string;
     providerName?: string;
     welcomemessage?: string;

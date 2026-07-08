@@ -11,6 +11,7 @@ import * as React from "react";
 
 import { SettingRow } from "@/components/primitives/setting-row";
 import { Form, FormField } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -127,6 +128,31 @@ export function ChatExperienceSection({ editor }: EditorSectionProps) {
                   id="agent-sandbox"
                   checked={!!field.value}
                   onCheckedChange={field.onChange}
+                />
+              </SettingRow>
+            )}
+          />
+
+          <FormField
+            control={editor.form.control}
+            name="max_tool_steps"
+            render={({ field }) => (
+              <SettingRow
+                htmlFor="agent-max-tool-steps"
+                label={t("editor.chatExperience.maxToolStepsLabel")}
+                description={t("editor.chatExperience.maxToolStepsDescription")}
+              >
+                <Input
+                  id="agent-max-tool-steps"
+                  type="number"
+                  min={0}
+                  max={50}
+                  className="w-24"
+                  value={field.value ?? 0}
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    field.onChange(Number.isFinite(n) ? Math.max(0, Math.min(50, Math.round(n))) : 0);
+                  }}
                 />
               </SettingRow>
             )}

@@ -42,7 +42,8 @@ export type WizardConfig = {
   instructions: string;
   reranker: string;
   utilityModel: string;
-  /** Max reasoning/tool steps for the CALLING agent while this tool is enabled; 0 = platform default. */
+  /** Max agentic-retrieval CALLS per message (search-only budget; the turn-wide
+   *  tool budget is the agent's max_tool_steps). 0 = no search-specific cap. */
   maxSteps: number;
   managedContext: boolean;
   requirePreselectedContexts: boolean;

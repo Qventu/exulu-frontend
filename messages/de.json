@@ -385,6 +385,8 @@
         "description": "Wie der Agent im Chat erscheint.",
         "feedbackDescription": "Erlaubt Benutzern, während des Chats Feedback zu senden.",
         "feedbackLabel": "Feedback-Erfassung",
+        "maxToolStepsDescription": "Begrenzt, wie viele Tool-/Denk-Schritte dieser Agent pro Nachricht ausführen darf — gilt für alle Tools (Bash, Dateien, Wissenssuche, Integrationen). 0 = Plattform-Standard (10).",
+        "maxToolStepsLabel": "Max. Tool-Schritte pro Nachricht",
         "sandboxDescription": "Gibt diesem Agenten eine Datei-Sandbox mit readFile/writeFile/bash-Tools – nötig für Skills und Dateierzeugung. Für Wissens-Agenten standardmäßig aus.",
         "sandboxLabel": "Datei-Sandbox",
         "suggestionsDescription": "Schlägt nach jeder Antwort bis zu 3 mögliche Folgefragen vor. Nutzt das Modell des Agenten; Tokens zählen zum Limit.",
@@ -589,8 +591,8 @@
                 "hint": "Ausführliche phasenweise Protokollierung in der Serverkonsole."
               }
             },
-            "maxStepsLabel": "Max. Agenten-Schritte pro Nachricht",
-            "maxStepsHint": "Begrenzt, wie viele Denk-/Tool-Runden der Assistent pro Nachricht ausführen darf, solange die Wissenssuche aktiviert ist — begrenzt Wiederholungen und Token-Kosten. 0 = Plattform-Standard."
+            "maxStepsLabel": "Max. Wissenssuchen pro Nachricht",
+            "maxStepsHint": "Begrenzt, wie viele Wissenssuchen der Assistent für eine Nachricht ausführen darf. Danach ist die Suche für den Rest der Nachricht deaktiviert. 0 = keine suchspezifische Grenze (das allgemeine Tool-Schritte-Budget gilt weiterhin)."
           },
           "review": {
             "intro": "Das wird übernommen. Verwenden Sie die Schritt-Schaltflächen oben, um etwas zu ändern.",
