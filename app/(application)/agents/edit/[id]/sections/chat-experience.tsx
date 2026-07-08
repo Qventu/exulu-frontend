@@ -148,7 +148,7 @@ export function ChatExperienceSection({ editor }: EditorSectionProps) {
                   min={0}
                   max={50}
                   className="w-24"
-                  value={field.value ?? 0}
+                  value={field.value ?? 10}
                   onChange={(e) => {
                     const n = Number(e.target.value);
                     field.onChange(Number.isFinite(n) ? Math.max(0, Math.min(50, Math.round(n))) : 0);
