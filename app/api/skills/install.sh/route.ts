@@ -6,7 +6,12 @@ function baseUrlFrom(request: Request): string {
   const h = request.headers;
   const proto = h.get("x-forwarded-proto") ?? "https";
   const host = h.get("x-forwarded-host") ?? h.get("host");
-  return host ? `${proto}://${host}` : new URL(request.url).origin;
+  const origin = host ? `${proto}://${host}` : new URL(request.url).origin;
+  // Sanitize: only accept a plain http(s) origin to prevent shell injection via
+  // attacker-controlled Host headers when the value is interpolated into sh.
+  return /^https?:\/\/[A-Za-z0-9.\-:]+$/.test(origin)
+    ? origin
+    : new URL(request.url).origin;
 }
 
 export async function GET(request: Request) {
@@ -48,7 +53,7 @@ say "Backend: $BACKEND"
 
 # 2. Pick install root (project dir vs home).
 ROOT="$(pwd)"
-if [ -t 0 ] || [ -r /dev/tty ]; then
+if [ -r /dev/tty ]; then
   printf 'Install into current project (%s) or home (~)? [project/home] ' "$ROOT" > /dev/tty
   read ANSWER < /dev/tty || ANSWER="project"
   [ "$ANSWER" = "home" ] && ROOT="$HOME"
@@ -115,9 +120,10 @@ for id in $SELECTED; do
     else
       say "symlink failed for $parent; copying"; place "$parent"
     fi
-  else
+  elif [ "$LINK_MODE" = "copy" ]; then
     place "$parent"
   fi
+  # symlink+agents: already placed by the pre-loop canonical install; skip.
 done
 
 # 6. API key + config.
@@ -128,9 +134,9 @@ if [ -f "$CONFIG_FILE" ]; then
 fi
 if [ -r /dev/tty ]; then
   printf 'Exulu API key%s: ' "$( [ -n "$API_KEY" ] && echo ' (Enter to keep existing)')" > /dev/tty
-  stty -echo 2>/dev/null || true
-  read NEWKEY < /dev/tty || NEWKEY=""
-  stty echo 2>/dev/null || true
+  stty -echo </dev/tty 2>/dev/null || true
+  read NEWKEY </dev/tty || NEWKEY=""
+  stty echo </dev/tty 2>/dev/null || true
   printf '\\n' > /dev/tty
   [ -n "$NEWKEY" ] && API_KEY="$NEWKEY"
 fi
