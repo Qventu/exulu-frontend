@@ -3664,6 +3664,14 @@
       "usersCount": "{count, plural, one {# Benutzer} other {# Benutzer}}"
     },
     "clearSearch": "Suche löschen",
+    "connect": {
+      "copy": "Befehl kopieren",
+      "description": "Führen Sie diesen Befehl in Ihrem Terminal aus, um Ihren Coding-Agenten mit dieser Exulu-Instanz zu verbinden.",
+      "details": "Ihr Agent fragt, in welche Clients installiert werden soll (Claude Code, OpenCode und andere) und ob eine gemeinsame Kopie via Symlinks genutzt werden soll. Sie benötigen einen API-Schlüssel — erstellen Sie einen in den Einstellungen.",
+      "instruction": "Führen Sie dies in Ihrem Terminal aus:",
+      "title": "Agenten verbinden"
+    },
+    "connectAgent": "Agenten verbinden",
     "countLabel": "{count, plural, =0 {Keine Skills} one {# Skill} other {# Skills}}",
     "create": {
       "accessLabel": "Zugriff",
@@ -3708,7 +3716,9 @@
       "downloadFailed": "Skill konnte nicht heruntergeladen werden",
       "downloadInProgress": "Download wird vorbereitet…",
       "downloadStarted": "Skill-Download gestartet",
+      "copyInstallPrompt": "Installations-Prompt kopieren",
       "downloadZip": "Als .zip herunterladen",
+      "exportSkill": "Als .skill exportieren",
       "openEditor": "Editor öffnen",
       "saving": "Speichern…",
       "showLess": "Weniger anzeigen",
@@ -4168,30 +4178,61 @@
       "valueHelperPlain": "Wird als Klartext gespeichert.",
       "type": "Typ",
       "typeSecret": "Geheimnis — verschlüsselt gespeichert",
+      "typeSecretDescription": "Wird verschlüsselt gespeichert. Empfohlen für API-Schlüssel, Token und Passwörter.",
       "typePlain": "Klartext — unverändert gespeichert",
-      "required": "{field} ist erforderlich."
+      "typePlainDescription": "Wird unverändert gespeichert. Für nicht-sensible Werte wie Basis-URLs verwenden.",
+      "required": "{field} ist erforderlich.",
+      "nameRequired": "Name ist erforderlich.",
+      "valueRequired": "Wert ist erforderlich."
     },
     "create": {
       "title": "Variable hinzufügen",
       "description": "Speichern Sie ein neues Geheimnis oder einen Konfigurationswert.",
       "success": "Variable „{name}\" hinzugefügt.",
-      "error": "Variable konnte nicht hinzugefügt werden."
+      "error": "Variable konnte nicht hinzugefügt werden.",
+      "submit": "Variable erstellen",
+      "submitting": "Wird erstellt…",
+      "errorGeneric": "Variable konnte nicht erstellt werden. Bitte erneut versuchen."
     },
     "edit": {
       "title": "Variable bearbeiten",
       "description": "{name} bearbeiten.",
       "success": "Variable aktualisiert.",
       "error": "Variable konnte nicht aktualisiert werden.",
+      "errorGeneric": "Variable konnte nicht aktualisiert werden. Bitte erneut versuchen.",
       "notFoundTitle": "Variable nicht gefunden",
       "notFoundBody": "Diese Variable wurde möglicherweise gelöscht.",
       "loadErrorTitle": "Diese Variable konnte nicht geladen werden",
       "loadErrorBody": "Bitte erneut versuchen oder zur Übersicht zurückkehren.",
+      "submit": "Änderungen speichern",
+      "submitting": "Speichern…",
+      "revealFailed": "Aktueller Wert konnte nicht angezeigt werden.",
+      "replaceValueShow": "Aktuellen Wert anzeigen",
+      "replaceValueHide": "Aktuellen Wert ausblenden",
+      "replaceValueLoading": "Lädt…",
+      "metaTitle": "Details",
+      "metaCreated": "Erstellt",
+      "metaUpdated": "Zuletzt aktualisiert",
+      "metaUsedBy": "Verwendet von",
+      "metaUsedByNone": "Nicht verwendet",
+      "metaUsedByCount": "{count, plural, one {# Ressource} other {# Ressourcen}}",
+      "metaId": "ID",
+      "confirmTitle": "Änderungen speichern?",
+      "confirmRename": "Umbenennen kann {count, plural, =0 {verweisende Ressourcen} one {# verweisende Ressource} other {# verweisende Ressourcen}} beeinträchtigen.",
+      "confirmSecretToPlain": "Wechsel von Geheimnis zu Klartext speichert den Wert unverschlüsselt — Verbraucher, die ihn entschlüsseln, können ausfallen.",
+      "confirmViewUsage": "Verwendung anzeigen",
       "valuePlaceholderUnchanged": "Leer lassen, um den aktuellen Wert zu behalten",
       "valueHintUnchanged": "Leer lassen, um den aktuellen Wert zu behalten; einen neuen Wert eingeben, um ihn zu ersetzen."
     },
     "usage": {
       "title": "Variablenverwendung",
       "description": "Ressourcen, die {name} verwenden.",
+      "countShort": "{count, plural, one {# Ressource} other {# Ressourcen}}",
+      "previous": "Zurück",
+      "next": "Weiter",
+      "pageOf": "Seite {page} von {total}",
+      "range": "{start}–{end} von {total}",
+      "copyId": "ID kopieren",
       "empty": {
         "title": "Nicht verwendet",
         "body": "Kann bearbeitet oder gelöscht werden — keine Ressource verwendet diese Variable."

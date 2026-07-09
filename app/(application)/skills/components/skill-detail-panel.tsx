@@ -35,6 +35,7 @@ import {
   Copy,
   Download,
   ExternalLink,
+  FileArchive,
   FileText,
   GitBranch,
   Info,
@@ -230,6 +231,32 @@ export function SkillDetailPanel({
     }
   }, [skill.id, skill.current_version, skill.name, t]);
 
+  const handleExportSkill = React.useCallback(async () => {
+    setDownloading(true);
+    const version = skill.current_version ?? 1;
+    try {
+      const blob = await skillsApi.download(skill.id, version, "skill");
+      const safeName = String(skill.name ?? "skill")
+        .replace(/[^a-zA-Z0-9-_]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "skill";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${safeName}.skill`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(t("detail.downloadStarted"));
+    } catch (err) {
+      toast.error(t("detail.downloadFailed"), {
+        description: (err as Error).message,
+      });
+    } finally {
+      setDownloading(false);
+    }
+  }, [skill.id, skill.current_version, skill.name, t]);
+
   const handleCopyId = React.useCallback(async () => {
     try {
       await navigator.clipboard.writeText(skill.id);
@@ -250,12 +277,28 @@ export function SkillDetailPanel({
         disabled: downloading,
       },
       {
+        label: t("detail.exportSkill"),
+        icon: FileArchive,
+        onSelect: () => void handleExportSkill(),
+        disabled: downloading,
+      },
+      {
+        label: t("detail.copyInstallPrompt"),
+        icon: Copy,
+        onSelect: () => {
+          void navigator.clipboard.writeText(
+            `Install the Exulu skill "${skill.name}"`,
+          );
+          toast.success(tCommon("copied"));
+        },
+      },
+      {
         label: t("row.copyId"),
         icon: Copy,
         onSelect: () => void handleCopyId(),
       },
     ],
-    [downloading, handleDownloadZip, handleCopyId, t],
+    [downloading, handleDownloadZip, handleExportSkill, handleCopyId, skill.name, t, tCommon],
   );
 
   // ----- History (compact: current + last 3, link to editor) ---------------

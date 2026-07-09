@@ -3664,6 +3664,14 @@
       "usersCount": "{count, plural, one {# user} other {# users}}"
     },
     "clearSearch": "Clear search",
+    "connect": {
+      "copy": "Copy command",
+      "description": "Run this command in your terminal to connect your coding agent to this Exulu instance.",
+      "details": "Your agent will ask which clients to install into (Claude Code, OpenCode, and others) and whether to share one copy across them via symlinks. You'll need an API key — create one in Settings.",
+      "instruction": "Run this in your terminal:",
+      "title": "Connect your agent"
+    },
+    "connectAgent": "Connect your agent",
     "countLabel": "{count, plural, =0 {No skills} one {# skill} other {# skills}}",
     "create": {
       "accessLabel": "Access",
@@ -3708,7 +3716,9 @@
       "downloadFailed": "Couldn't download skill",
       "downloadInProgress": "Preparing download…",
       "downloadStarted": "Skill download started",
+      "copyInstallPrompt": "Copy install prompt",
       "downloadZip": "Download as .zip",
+      "exportSkill": "Export as .skill",
       "openEditor": "Open editor",
       "saving": "Saving…",
       "showLess": "Show less",

@@ -21,7 +21,7 @@
  * routes here.
  */
 
-import { ChevronLeft, ChevronRight, Plus, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Sparkles, Terminal } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -59,6 +59,7 @@ import {
   useUniqueSkillTagsLocal,
 } from "../hooks";
 import { hasSkillWriteAccess, type Skill } from "../types";
+import { ConnectAgentDialog } from "./connect-agent-dialog";
 import { CreateSkillDialog } from "./create-skill-dialog";
 import { SkillDetailPanel } from "./skill-detail-panel";
 import { SkillListItem } from "./skill-list-item";
@@ -123,6 +124,9 @@ export function SkillsView() {
     // Skill was removed — clear; the lg+ auto-select effect will re-pick.
     setSelectedId(null);
   }, [items, selectedId]);
+
+  // ----- Connect agent dialog -----------------------------------------------
+  const [connectOpen, setConnectOpen] = React.useState(false);
 
   // ----- Create dialog: ?new=1 deep-link + keyboard "N" --------------------
   const [createOpen, setCreateOpen] = React.useState(false);
@@ -329,10 +333,16 @@ export function SkillsView() {
         title={t("title")}
         description={t("description")}
         action={
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus aria-hidden="true" className="mr-2 size-4" />
-            {t("newSkill")}
-          </Button>
+          <>
+            <Button variant="outline" onClick={() => setConnectOpen(true)}>
+              <Terminal aria-hidden="true" className="mr-2 size-4" />
+              {t("connectAgent")}
+            </Button>
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus aria-hidden="true" className="mr-2 size-4" />
+              {t("newSkill")}
+            </Button>
+          </>
         }
       />
 
@@ -407,6 +417,8 @@ export function SkillsView() {
           />
         </div>
       </div>
+
+      <ConnectAgentDialog open={connectOpen} onOpenChange={setConnectOpen} />
 
       <CreateSkillDialog
         open={createOpen}
