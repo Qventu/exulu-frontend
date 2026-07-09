@@ -41,6 +41,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { skillsApi } from "@/lib/api/skills";
+import { readSkillMetaFromZip } from "@/lib/skills/bundle";
 
 import { useCreateSkillLocal } from "../hooks";
 import { SKILLS_RBAC_TEAMS_SUPPORTED } from "../queries";
@@ -115,6 +116,19 @@ export function CreateSkillDialog({
       return;
     }
     setUploadFile(file);
+    if (lower.endsWith(".zip") || lower.endsWith(".skill")) {
+      void (async () => {
+        try {
+          const buf = new Uint8Array(await file.arrayBuffer());
+          const meta = readSkillMetaFromZip(buf);
+          // Only fill fields the user hasn't typed into.
+          setName((prev) => prev || meta.name || "");
+          setDescription((prev) => prev || meta.description || "");
+        } catch {
+          /* prefill is best-effort; ignore parse failures */
+        }
+      })();
+    }
   };
 
   const submitDisabled =
