@@ -48,24 +48,46 @@ async function readDropEntries(items: DataTransferItemList): Promise<File[]> {
   const walk = (entry: any, prefix: string): Promise<void> =>
     new Promise((resolve) => {
       if (entry.isFile) {
-        entry.file((file: File) => {
-          Object.defineProperty(file, "webkitRelativePath", {
-            value: prefix + file.name,
-            configurable: true,
-          });
-          out.push(file);
-          resolve();
-        });
+        entry.file(
+          (file: File) => {
+            Object.defineProperty(file, "webkitRelativePath", {
+              value: prefix + file.name,
+              configurable: true,
+            });
+            out.push(file);
+            resolve();
+          },
+          (err: unknown) => {
+            console.warn("[dropzone] could not read file entry", entry.fullPath, err);
+            resolve();
+          },
+        );
       } else if (entry.isDirectory) {
         const reader = entry.createReader();
-        const readBatch = () =>
-          reader.readEntries(async (ents: any[]) => {
-            if (!ents.length) return resolve();
-            await Promise.all(ents.map((e) => walk(e, prefix + entry.name + "/")));
-            readBatch();
-          });
+        const readBatch = () => {
+          reader.readEntries(
+            (ents: any[]) => {
+              if (!ents.length) {
+                resolve();
+                return;
+              }
+              Promise.all(ents.map((e) => walk(e, prefix + entry.name + "/")))
+                .then(readBatch)
+                .catch((err: unknown) => {
+                  console.warn("[dropzone] error walking directory", entry.fullPath, err);
+                  resolve();
+                });
+            },
+            (err: unknown) => {
+              console.warn("[dropzone] readEntries error", entry.fullPath, err);
+              resolve();
+            },
+          );
+        };
         readBatch();
-      } else resolve();
+      } else {
+        resolve();
+      }
     });
   const roots = Array.from(items)
     .map((it) => (it.webkitGetAsEntry ? it.webkitGetAsEntry() : null))

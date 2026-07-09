@@ -49,7 +49,7 @@ describe("validateBundleFiles", () => {
 });
 
 describe("collectFromFileList", () => {
-  it("uses webkitRelativePath and strips the top folder name", async () => {
+  it("uses webkitRelativePath and keeps the full relative path including the top folder name", async () => {
     const f = new File([enc("---\nname: x\n---\n")], "SKILL.md");
     Object.defineProperty(f, "webkitRelativePath", { value: "my-skill/SKILL.md" });
     const files = await collectFromFileList([f] as unknown as FileList);
