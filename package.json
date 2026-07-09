@@ -87,6 +87,7 @@
     "cron-validator": "^1.4.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
+    "fflate": "^0.8.3",
     "framer-motion": "12.23.24",
     "graphiql": "5.2.2",
     "graphql": "^16.8.1",
