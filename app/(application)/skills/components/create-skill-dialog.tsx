@@ -106,7 +106,11 @@ export function CreateSkillDialog({
       return;
     }
     const lower = file.name.toLowerCase();
-    if (!lower.endsWith(".zip") && !lower.endsWith(".md")) {
+    if (
+      !lower.endsWith(".zip") &&
+      !lower.endsWith(".md") &&
+      !lower.endsWith(".skill")
+    ) {
       toast.error(t("create.unsupportedFile"));
       return;
     }
@@ -157,8 +161,13 @@ export function CreateSkillDialog({
           newSkill.description ?? "",
         );
       } else if (uploadFile) {
-        const isZip = uploadFile.name.toLowerCase().endsWith(".zip");
-        const ext = isZip ? ".zip" : ".md";
+        const lower = uploadFile.name.toLowerCase();
+        const isZip = lower.endsWith(".zip") || lower.endsWith(".skill");
+        const ext = lower.endsWith(".md")
+          ? ".md"
+          : lower.endsWith(".skill")
+            ? ".skill"
+            : ".zip";
         const contentType =
           uploadFile.type || (isZip ? "application/zip" : "text/markdown");
 
@@ -257,7 +266,7 @@ export function CreateSkillDialog({
               ) : (
                 <Dropzone
                   onFiles={handleFiles}
-                  accept={[".zip", ".md"]}
+                  accept={[".zip", ".md", ".skill"]}
                   label={t("create.dropzoneLabel")}
                   hint={t("create.dropzoneHint")}
                 />

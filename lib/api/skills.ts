@@ -22,12 +22,15 @@ export const skillsApi = {
      * Download every file in a skill version as a .zip blob (folder structure
      * preserved, plus a version.txt). Lets users take a skill into other tools.
      */
-    download: async (skillId: string, version?: number): Promise<Blob> => {
+    download: async (skillId: string, version?: number, format?: "zip" | "skill"): Promise<Blob> => {
         const uris = await getUris();
         const token = await getToken();
         if (!token) throw new Error("No valid session token available.");
-        const params = version != null ? `?version=${version}` : "";
-        const res = await fetch(`${uris.base}/skills/${skillId}/download${params}`, {
+        const params = new URLSearchParams();
+        if (version != null) params.set("version", String(version));
+        if (format) params.set("format", format);
+        const qs = params.toString();
+        const res = await fetch(`${uris.base}/skills/${skillId}/download${qs ? `?${qs}` : ""}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error(await res.text());
@@ -45,7 +48,7 @@ export const skillsApi = {
      */
     uploadSign: async (
         skillId: string,
-        extension: ".zip" | ".md",
+        extension: ".zip" | ".md" | ".skill",
         contentType: string,
     ): Promise<{ uploadUrl: string; stagingKey: string }> =>
         request(`/skills/${skillId}/upload-sign`, "POST", { extension, contentType }),
