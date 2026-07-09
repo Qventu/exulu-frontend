@@ -41,7 +41,12 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { skillsApi } from "@/lib/api/skills";
-import { readSkillMetaFromZip } from "@/lib/skills/bundle";
+import {
+  collectFromFileList,
+  validateBundleFiles,
+  zipFiles,
+  readSkillMetaFromZip,
+} from "@/lib/skills/bundle";
 
 import { useCreateSkillLocal } from "../hooks";
 import { SKILLS_RBAC_TEAMS_SUPPORTED } from "../queries";
@@ -129,6 +134,22 @@ export function CreateSkillDialog({
         }
       })();
     }
+  };
+
+  const handleFolderFiles = async (fileList: File[]) => {
+    const collected = await collectFromFileList(fileList);
+    const check = validateBundleFiles(collected);
+    if (!check.ok) {
+      toast.error(check.error);
+      return;
+    }
+    // Root folder name = the common top segment; fall back to the skill name.
+    const top = collected[0]?.path.split("/")[0] || "skill";
+    const zipBytes = zipFiles(collected, top);
+    setUploadFile(new File([zipBytes.buffer as ArrayBuffer], `${top}.zip`, { type: "application/zip" }));
+    const meta = readSkillMetaFromZip(zipBytes);
+    setName((prev) => prev || meta.name || top);
+    setDescription((prev) => prev || meta.description || "");
   };
 
   const submitDisabled =
@@ -278,12 +299,20 @@ export function CreateSkillDialog({
                   </Button>
                 </div>
               ) : (
-                <Dropzone
-                  onFiles={handleFiles}
-                  accept={[".zip", ".md", ".skill"]}
-                  label={t("create.dropzoneLabel")}
-                  hint={t("create.dropzoneHint")}
-                />
+                <div className="space-y-2">
+                  <Dropzone
+                    onFiles={handleFiles}
+                    accept={[".zip", ".md", ".skill"]}
+                    label={t("create.dropzoneLabel")}
+                    hint={t("create.dropzoneHint")}
+                  />
+                  <Dropzone
+                    onFiles={(files) => void handleFolderFiles(files)}
+                    directory
+                    label={t("create.dropzoneFolderLabel")}
+                    hint={t("create.dropzoneFolderHint")}
+                  />
+                </div>
               )}
             </div>
           ) : null}

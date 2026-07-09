@@ -38,7 +38,40 @@ export interface DropzoneProps {
   /** Override click-to-browse (e.g. open a gallery dialog). Default: native file input. */
   onBrowse?: () => void;
   multiple?: boolean;
+  /** Enable folder picking (webkitdirectory) and recursive folder drop traversal. */
+  directory?: boolean;
   className?: string;
+}
+
+async function readDropEntries(items: DataTransferItemList): Promise<File[]> {
+  const out: File[] = [];
+  const walk = (entry: any, prefix: string): Promise<void> =>
+    new Promise((resolve) => {
+      if (entry.isFile) {
+        entry.file((file: File) => {
+          Object.defineProperty(file, "webkitRelativePath", {
+            value: prefix + file.name,
+            configurable: true,
+          });
+          out.push(file);
+          resolve();
+        });
+      } else if (entry.isDirectory) {
+        const reader = entry.createReader();
+        const readBatch = () =>
+          reader.readEntries(async (ents: any[]) => {
+            if (!ents.length) return resolve();
+            await Promise.all(ents.map((e) => walk(e, prefix + entry.name + "/")));
+            readBatch();
+          });
+        readBatch();
+      } else resolve();
+    });
+  const roots = Array.from(items)
+    .map((it) => (it.webkitGetAsEntry ? it.webkitGetAsEntry() : null))
+    .filter(Boolean);
+  await Promise.all(roots.map((r: any) => walk(r, "")));
+  return out;
 }
 
 const Dropzone = React.forwardRef<HTMLButtonElement, DropzoneProps>(
@@ -51,6 +84,7 @@ const Dropzone = React.forwardRef<HTMLButtonElement, DropzoneProps>(
       label,
       onBrowse,
       multiple = false,
+      directory = false,
       className,
     },
     ref,
@@ -93,7 +127,13 @@ const Dropzone = React.forwardRef<HTMLButtonElement, DropzoneProps>(
       dragDepth.current = 0;
       setDragActive(false);
       if (disabled) return;
-      emitFiles(event.dataTransfer?.files ?? null);
+      if (directory && event.dataTransfer?.items) {
+        void readDropEntries(event.dataTransfer.items).then((files) => {
+          if (files.length > 0) onFiles(files);
+        });
+      } else {
+        emitFiles(event.dataTransfer?.files ?? null);
+      }
     };
 
     const handleClick = () => {
@@ -142,9 +182,15 @@ const Dropzone = React.forwardRef<HTMLButtonElement, DropzoneProps>(
             multiple={multiple}
             disabled={disabled}
             onChange={(event) => {
-              emitFiles(event.target.files);
+              if (directory && event.target.files) {
+                const files = Array.from(event.target.files);
+                if (files.length > 0) onFiles(files);
+              } else {
+                emitFiles(event.target.files);
+              }
               event.target.value = "";
             }}
+            {...(directory ? ({ webkitdirectory: "", directory: "" } as any) : {})}
           />
         )}
       </>

@@ -3672,6 +3672,8 @@
       "creating": "Creating…",
       "description": "Create a skill package. You'll be taken to the editor where you can add files and scripts.",
       "descriptionPlaceholder": "What does this skill do? When should an agent use it?",
+      "dropzoneFolderHint": "Folder must contain a SKILL.md at its root",
+      "dropzoneFolderLabel": "Or drop / pick a skill folder",
       "dropzoneHint": ".zip (full skill folder) or single .md file",
       "dropzoneLabel": "Drag & drop or click to choose",
       "failed": "Couldn't create skill",

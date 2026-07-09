@@ -40,6 +40,18 @@ function stripWrapper(paths: string[]): (p: string) => string {
   return (p) => p;
 }
 
+// From an <input webkitdirectory> FileList: each File carries a
+// webkitRelativePath like "folder/sub/file"; we keep that as the entry path.
+export async function collectFromFileList(list: FileList | File[]): Promise<CollectedFile[]> {
+  const files: CollectedFile[] = [];
+  for (const file of Array.from(list as ArrayLike<File>)) {
+    const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
+    if (isOsJunk(rel)) continue;
+    files.push({ path: rel, data: new Uint8Array(await file.arrayBuffer()) });
+  }
+  return files;
+}
+
 export function validateBundleFiles(
   files: CollectedFile[],
 ): { ok: true } | { ok: false; error: string } {

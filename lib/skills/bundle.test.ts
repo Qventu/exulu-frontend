@@ -5,6 +5,7 @@ import {
   parseFrontmatter,
   isOsJunk,
   validateBundleFiles,
+  collectFromFileList,
   type CollectedFile,
 } from "./bundle";
 
@@ -44,6 +45,15 @@ describe("validateBundleFiles", () => {
     for (let i = 0; i < 500; i++) files.push({ path: `s/f${i}.txt`, data: enc("y") });
     const r = validateBundleFiles(files);
     expect(r.ok).toBe(false);
+  });
+});
+
+describe("collectFromFileList", () => {
+  it("uses webkitRelativePath and strips the top folder name", async () => {
+    const f = new File([enc("---\nname: x\n---\n")], "SKILL.md");
+    Object.defineProperty(f, "webkitRelativePath", { value: "my-skill/SKILL.md" });
+    const files = await collectFromFileList([f] as unknown as FileList);
+    expect(files).toEqual([{ path: "my-skill/SKILL.md", data: expect.any(Uint8Array) }]);
   });
 });
 

@@ -3672,6 +3672,8 @@
       "creating": "Erstellen…",
       "description": "Erstellen Sie ein Skill-Paket. Sie werden zum Editor weitergeleitet, wo Sie Dateien und Skripte hinzufügen können.",
       "descriptionPlaceholder": "Was macht dieser Skill? Wann sollte ein Agent ihn verwenden?",
+      "dropzoneFolderHint": "Ordner muss eine SKILL.md im Stammverzeichnis enthalten",
+      "dropzoneFolderLabel": "Oder Skill-Ordner ablegen / auswählen",
       "dropzoneHint": ".zip (kompletter Skill-Ordner) oder einzelne .md-Datei",
       "dropzoneLabel": "Ziehen & Ablegen oder klicken, um zu wählen",
       "failed": "Skill konnte nicht erstellt werden",
