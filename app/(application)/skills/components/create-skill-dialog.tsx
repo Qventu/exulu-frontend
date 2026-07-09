@@ -143,9 +143,11 @@ export function CreateSkillDialog({
       toast.error(check.error);
       return;
     }
-    // Root folder name = the common top segment; fall back to the skill name.
+    // Root folder name = the common top segment; fall back to "skill".
+    // Paths from collectFromFileList already include the top folder (e.g.
+    // "my-skill/SKILL.md"), so zip them verbatim — no extra prefix.
     const top = collected[0]?.path.split("/")[0] || "skill";
-    const zipBytes = zipFiles(collected, top);
+    const zipBytes = zipFiles(collected); // paths already include the <top>/ wrapper
     setUploadFile(new File([zipBytes.buffer as ArrayBuffer], `${top}.zip`, { type: "application/zip" }));
     const meta = readSkillMetaFromZip(zipBytes);
     setName((prev) => prev || meta.name || top);

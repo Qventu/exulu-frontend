@@ -69,11 +69,12 @@ export function validateBundleFiles(
   return { ok: true };
 }
 
-export function zipFiles(files: CollectedFile[], rootFolder: string): Uint8Array {
+export function zipFiles(files: CollectedFile[], rootFolder = ""): Uint8Array {
   const tree: Record<string, Uint8Array> = {};
   for (const f of files) {
     if (isOsJunk(f.path)) continue;
-    tree[`${rootFolder}/${f.path}`] = f.data;
+    const key = rootFolder ? `${rootFolder}/${f.path}` : f.path;
+    tree[key] = f.data;
   }
   return zipSync(tree, { level: 6 });
 }
