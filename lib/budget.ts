@@ -120,3 +120,26 @@ export function formatUsd(value: number | null | undefined): string {
 export function durationLabel(duration: string | null | undefined): string {
   return BUDGET_DURATIONS.find((d) => d.value === duration)?.label ?? (duration ?? "—");
 }
+
+/**
+ * The standardized reset date a duration defaults to, mirroring LiteLLM's
+ * scheme (duration_parser._handle_day_reset): daily → next midnight, weekly →
+ * next Monday, monthly → 1st of next month. Computed at UTC day boundaries so
+ * the monthly default lands on the 1st in UTC — the backend's window math keys
+ * calendar-month alignment off `budget_reset_at.getUTCDate() === 1`.
+ */
+export function defaultResetDate(duration: BudgetDuration, now: Date = new Date()): Date {
+  const y = now.getUTCFullYear();
+  const mo = now.getUTCMonth();
+  const d = now.getUTCDate();
+  if (duration === "30d") {
+    return new Date(Date.UTC(y, mo + 1, 1));
+  }
+  if (duration === "7d") {
+    const dow = now.getUTCDay(); // Sun=0 … Sat=6
+    const daysUntilMonday = ((1 - dow + 7) % 7) || 7; // next Monday; if Monday, +7
+    return new Date(Date.UTC(y, mo, d + daysUntilMonday));
+  }
+  // "1d" and any fallback → next UTC midnight
+  return new Date(Date.UTC(y, mo, d + 1));
+}
