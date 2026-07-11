@@ -25,7 +25,7 @@ export const budgetsApi = {
     upsert: async (
         entityType: BudgetEntityType,
         entityId: string,
-        input: { max_budget: number; budget_duration: BudgetDuration | string },
+        input: { max_budget: number; budget_duration: BudgetDuration | string; budget_reset_at?: string },
     ): Promise<BudgetInfo | null> => {
         const json = await request(
             `/admin/budgets/${entityType}/${encodeURIComponent(entityId)}`,
@@ -39,7 +39,7 @@ export const budgetsApi = {
     bulkUpsert: async (
         entityType: BudgetEntityType,
         entityIds: string[],
-        input: { max_budget: number; budget_duration: BudgetDuration | string },
+        input: { max_budget: number; budget_duration: BudgetDuration | string; budget_reset_at?: string },
     ): Promise<BulkBudgetResult[]> => {
         const json = await request(
             `/admin/budgets/${entityType}/bulk`,
