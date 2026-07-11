@@ -48,6 +48,9 @@ import {
     type BudgetInfo,
 } from "@/lib/budget"
 
+const toUtcDay = (d: Date): Date =>
+    new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+
 type BudgetEditorProps = {
     entityType: BudgetEntityType
     /** Display label: an entity name (single) or e.g. "3 projects" (bulk). */
@@ -99,9 +102,7 @@ export function BudgetEditor(props: BudgetEditorProps) {
         (existing?.budget_duration as BudgetDuration) || "30d",
     )
 
-    const toUtcDay = (d: Date): Date =>
-        new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
-
+    // Duplicates the duration fallback above — a useState initializer can't read another state value.
     const [resetAt, setResetAt] = useState<Date>(() => {
         const iso = existing?.budget_reset_at
         if (iso) {
