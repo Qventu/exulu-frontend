@@ -140,6 +140,6 @@ export function defaultResetDate(duration: BudgetDuration, now: Date = new Date(
     const daysUntilMonday = ((1 - dow + 7) % 7) || 7; // next Monday; if Monday, +7
     return new Date(Date.UTC(y, mo, d + daysUntilMonday));
   }
-  // "1d" and any fallback → next UTC midnight
+  // "1d" → next UTC midnight
   return new Date(Date.UTC(y, mo, d + 1));
 }
