@@ -19,10 +19,14 @@
  * namespaces (budgets.md §4 — German users were seeing English strings).
  */
 
-import { Loader2, Trash2, Wallet } from "lucide-react"
+import { format } from "date-fns"
+import { CalendarIcon, Loader2, Trash2, Wallet } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { toast } from "sonner"
+
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 import { BudgetBar } from "@/components/budget-bar"
 import { Button } from "@/components/ui/button"
@@ -38,6 +42,7 @@ import {
 import { budgetsApi, type BulkBudgetResult } from "@/lib/api/budgets"
 import {
     BUDGET_DURATIONS,
+    defaultResetDate,
     type BudgetDuration,
     type BudgetEntityType,
     type BudgetInfo,
@@ -93,6 +98,21 @@ export function BudgetEditor(props: BudgetEditorProps) {
     const [duration, setDuration] = useState<BudgetDuration>(
         (existing?.budget_duration as BudgetDuration) || "30d",
     )
+
+    const toUtcDay = (d: Date): Date =>
+        new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+
+    const [resetAt, setResetAt] = useState<Date>(() => {
+        const iso = existing?.budget_reset_at
+        if (iso) {
+            const parsed = new Date(iso)
+            if (!Number.isNaN(parsed.getTime())) return parsed
+        }
+        return defaultResetDate(
+            (existing?.budget_duration as BudgetDuration) || "30d",
+        )
+    })
+
     const [saving, setSaving] = useState(false)
     const [deleting, setDeleting] = useState(false)
 
@@ -108,6 +128,7 @@ export function BudgetEditor(props: BudgetEditorProps) {
                 await budgetsApi.upsert(entityType, props.entityId, {
                     max_budget: amountValue,
                     budget_duration: duration,
+                    budget_reset_at: resetAt.toISOString(),
                 })
                 toast.success(t("editor.savedTitle"), {
                     description: t("editor.savedDescription", { name: label }),
@@ -117,6 +138,7 @@ export function BudgetEditor(props: BudgetEditorProps) {
                 const results = await budgetsApi.bulkUpsert(entityType, props.entityIds, {
                     max_budget: amountValue,
                     budget_duration: duration,
+                    budget_reset_at: resetAt.toISOString(),
                 })
                 if (onBulkComplete) {
                     // Defer toast + onDone to the wrapper so it can show the
@@ -200,7 +222,11 @@ export function BudgetEditor(props: BudgetEditorProps) {
                 <Label>{t("editor.resetLabel")}</Label>
                 <Select
                     value={duration}
-                    onValueChange={(v) => setDuration(v as BudgetDuration)}
+                    onValueChange={(v) => {
+                        const next = v as BudgetDuration
+                        setDuration(next)
+                        setResetAt(defaultResetDate(next))
+                    }}
                     disabled={busy}
                 >
                     <SelectTrigger>
@@ -214,6 +240,34 @@ export function BudgetEditor(props: BudgetEditorProps) {
                         ))}
                     </SelectContent>
                 </Select>
+            </div>
+
+            <div className="space-y-2">
+                <Label>{t("editor.resetDateLabel")}</Label>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                            disabled={busy}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {format(resetAt, "PPP")}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            mode="single"
+                            selected={resetAt}
+                            onSelect={(d) => d && setResetAt(toUtcDay(d))}
+                            autoFocus
+                        />
+                    </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">
+                    {t("editor.resetHint")}
+                </p>
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t pt-4">
