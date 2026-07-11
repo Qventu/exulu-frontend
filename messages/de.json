@@ -1014,6 +1014,8 @@
       "amountLabel": "Budget (USD)",
       "amountPlaceholder": "z. B. 20",
       "resetLabel": "Zurücksetzungsintervall",
+      "resetDateLabel": "Reset-Datum",
+      "resetHint": "Standardmäßig wird das Budget zum Beginn des Tages, der Woche oder des Monats zurückgesetzt. Wähle ein Datum für ein eigenes Reset-Datum.",
       "remove": "Entfernen",
       "cancel": "Abbrechen",
       "saveBudget": "Budget speichern",

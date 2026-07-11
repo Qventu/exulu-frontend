@@ -1014,6 +1014,8 @@
       "amountLabel": "Budget (USD)",
       "amountPlaceholder": "e.g. 20",
       "resetLabel": "Reset period",
+      "resetDateLabel": "Reset date",
+      "resetHint": "By default the budget resets at the start of each day, week, or month. Pick a date to set a custom reset.",
       "remove": "Remove",
       "cancel": "Cancel",
       "saveBudget": "Save budget",
