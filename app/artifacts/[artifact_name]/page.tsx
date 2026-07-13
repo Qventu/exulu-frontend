@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
+import { withFragmentNavFix } from "@/lib/artifacts/fragment-nav";
 import { getAuthOptions } from "@/app/api/auth/[...nextauth]/options";
 import { Centered, AutoDownload } from "./ui";
 import { PasswordGate } from "./password-gate";
@@ -68,7 +69,7 @@ export default async function ArtifactPage({
     const html = await contentRes.text();
     return (
       <iframe
-        srcDoc={html}
+        srcDoc={withFragmentNavFix(html)}
         sandbox="allow-scripts allow-popups allow-forms"
         className="h-screen w-screen border-0"
         title={meta.filename}
