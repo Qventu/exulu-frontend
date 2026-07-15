@@ -2584,7 +2584,7 @@
           "applyToAll": "Apply to all rows",
           "applyToAllValue": "Value for every row",
           "emptyCell": "—",
-          "importAll": "{count, plural, one {# item} other {# items}}",
+          "importAll": "Import {count, plural, one {# item} other {# items}}",
           "importValid": "Import {count} valid rows",
           "removeRow": "Remove row",
           "statusCreate": "Create",
