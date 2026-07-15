@@ -301,6 +301,19 @@ export const GET_ITEMS_BY_IDS = (context: string) => {
   `;
 };
 
+export const GET_ITEMS_BY_EXTERNAL_IDS = (context: string) => {
+  return gql`
+    query ${context}ByExternalIds($ids: [String], $limit: Int!) {
+      ${context}${PAGINATION_POSTFIX}(page: 1, limit: $limit, filters: [{ external_id: { in: $ids } }]) {
+        items {
+          id
+          external_id
+        }
+      }
+    }
+  `;
+};
+
 // ---------------------------------------------------------------------------
 // Per-context item operations.
 // ---------------------------------------------------------------------------
