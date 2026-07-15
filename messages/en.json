@@ -2554,6 +2554,7 @@
         },
         "back": "Back",
         "cancelRun": "Cancel import",
+        "classifyError": "Couldn't check for existing items",
         "close": "Close",
         "continue": "Continue",
         "description": "Add or update many items at once from files or a CSV.",

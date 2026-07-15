@@ -2554,6 +2554,7 @@
         },
         "back": "Zurück",
         "cancelRun": "Import abbrechen",
+        "classifyError": "Abgleich mit bestehenden Einträgen fehlgeschlagen",
         "close": "Schließen",
         "continue": "Weiter",
         "description": "Viele Einträge auf einmal aus Dateien oder einer CSV hinzufügen oder aktualisieren.",

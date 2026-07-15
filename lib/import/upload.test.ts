@@ -104,4 +104,18 @@ describe("uploadFileToS3", () => {
       "Upload failed (500)",
     );
   });
+
+  it("throws when sign response is missing url", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ key: "k", method: "PUT" })),
+        ),
+    );
+    await expect(uploadFileToS3(new File(["x"], "a.pdf"))).rejects.toThrow(
+      "Sign response missing upload url",
+    );
+  });
 });

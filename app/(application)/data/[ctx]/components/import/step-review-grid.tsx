@@ -205,7 +205,8 @@ function CellEditor({
         "h-8 min-w-28 text-sm",
         cell?.error && "border-destructive",
       )}
-      type={field.type === "number" ? "number" : "text"}
+      type="text"
+      inputMode={field.type === "number" ? "decimal" : undefined}
     />
   );
 }

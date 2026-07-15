@@ -3,6 +3,7 @@
 import { Download, FileSpreadsheet, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
+import { toast } from "sonner";
 
 import { Dropzone } from "@/components/primitives/dropzone";
 import { Button } from "@/components/ui/button";
@@ -54,7 +55,13 @@ export function StepAddData({
     if (csvFile) {
       onCsvChange({ name: csvFile.name, parsed: await parseCsvFile(csvFile) });
     }
-    if (dataFiles.length > 0) onFilesAdded(dataFiles);
+    if (dataFiles.length > 0) {
+      if (fileTargets.length === 0) {
+        toast.error(t("workspace.import.add.csvOnlyHint"));
+      } else {
+        onFilesAdded(dataFiles);
+      }
+    }
   };
 
   const downloadTemplate = () => {

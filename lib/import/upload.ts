@@ -32,6 +32,7 @@ export async function uploadFileToS3(file: File): Promise<string> {
     url: string;
     method?: string;
   };
+  if (!url) throw new Error("Sign response missing upload url");
 
   const putRes = await fetch(url, {
     method: method ?? "PUT",

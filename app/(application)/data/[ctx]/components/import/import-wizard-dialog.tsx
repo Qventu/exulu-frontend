@@ -63,6 +63,7 @@ export function ImportWizardDialog({
   const fileTargets = React.useMemo(() => fileFields(fields), [fields]);
 
   const [step, setStep] = React.useState<WizardStep>("add");
+  const [classifying, setClassifying] = React.useState(false);
   const [files, setFiles] = React.useState<File[]>([]);
   const [csv, setCsv] = React.useState<{
     name: string;
@@ -160,20 +161,29 @@ export function ImportWizardDialog({
   );
 
   const enterReview = React.useCallback(async () => {
-    const index = indexFiles(files);
-    if (index.duplicateNames.length > 0) {
-      toast.error(
-        t("workspace.import.add.duplicateFiles", {
-          names: index.duplicateNames.join(", "),
-        }),
-      );
+    setClassifying(true);
+    try {
+      const index = indexFiles(files);
+      if (index.duplicateNames.length > 0) {
+        toast.error(
+          t("workspace.import.add.duplicateFiles", {
+            names: index.duplicateNames.join(", "),
+          }),
+        );
+      }
+      let built: ImportRow[] = [];
+      if (csv) built = rowsFromCsv(csv.parsed, mapping, fields, index);
+      else if (resolvedFileTarget)
+        built = rowsFromFiles(files, resolvedFileTarget);
+      setRows(await classifyAgainstServer(built));
+      setStep("review");
+    } catch (e) {
+      toast.error(t("workspace.import.classifyError"), {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      setClassifying(false);
     }
-    let built: ImportRow[] = [];
-    if (csv) built = rowsFromCsv(csv.parsed, mapping, fields, index);
-    else if (resolvedFileTarget)
-      built = rowsFromFiles(files, resolvedFileTarget);
-    setRows(await classifyAgainstServer(built));
-    setStep("review");
   }, [
     csv,
     files,
@@ -209,7 +219,30 @@ export function ImportWizardDialog({
   };
 
   const handleKeyCellBlur = () => {
-    void classifyAgainstServer(rowsRef.current).then(setRows);
+    void classifyAgainstServer(rowsRef.current)
+      .then((classified) => {
+        const byKey = new Map(classified.map((r) => [r.key, r]));
+        setRows((prev) =>
+          prev.map((row) => {
+            const c = byKey.get(row.key);
+            if (!c) return row;
+            return validateRow(
+              {
+                ...row,
+                action: c.action,
+                targetItemId: c.targetItemId,
+                error: c.error,
+              },
+              fields,
+            );
+          }),
+        );
+      })
+      .catch((e) => {
+        toast.error(t("workspace.import.classifyError"), {
+          description: e instanceof Error ? e.message : String(e),
+        });
+      });
   };
 
   const handleApplyToAll = (fieldName: string, raw: string) => {
@@ -259,9 +292,13 @@ export function ImportWizardDialog({
   const failedCount = rows.filter((r) => r.runState === "failed").length;
 
   const downloadErrorReport = () => {
+    const present = new Set<string>();
+    for (const row of rows)
+      for (const key of Object.keys(row.cells)) present.add(key);
+    const reportFields = fields.filter((f) => present.has(f.name));
     const report = buildErrorReportCsv(
       rows,
-      fields,
+      reportFields,
       (row) =>
         row.runError ??
         (row.error
@@ -392,14 +429,18 @@ export function ImportWizardDialog({
           {step === "add" && (
             <Button
               type="button"
-              disabled={!canContinueFromAdd}
+              disabled={!canContinueFromAdd || classifying}
               onClick={handleContinueFromAdd}
             >
               {t("workspace.import.continue")}
             </Button>
           )}
           {step === "map" && (
-            <Button type="button" onClick={() => void enterReview()}>
+            <Button
+              type="button"
+              disabled={classifying}
+              onClick={() => void enterReview()}
+            >
               {t("workspace.import.continue")}
             </Button>
           )}
