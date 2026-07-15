@@ -13,7 +13,7 @@
  * dialog reused).
  */
 
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -25,6 +25,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Context } from "@/types/models/context";
 
 import { ContextEntityTypes } from "../../components/entity-types";
+import { ImportWizardDialog } from "./import/import-wizard-dialog";
 import { ItemsTab } from "./items-tab";
 import { NewItemDialog } from "./new-item-dialog";
 import { PipelineTab } from "./pipeline-tab";
@@ -60,6 +61,7 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
         : "items";
 
   const [newItemOpen, setNewItemOpen] = React.useState(false);
+  const [importOpen, setImportOpen] = React.useState(false);
 
   const setTab = (next: WorkspaceTab) => {
     const url = new URLSearchParams(params?.toString() ?? "");
@@ -86,10 +88,16 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
           breadcrumb={{ label: tNav("knowledge"), href: "/data" }}
           truncateDescription
           action={
-            <Button onClick={() => setNewItemOpen(true)}>
-              <Plus aria-hidden="true" className="mr-2 size-4" />
-              {t("workspace.newItem")}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload aria-hidden="true" className="mr-2 size-4" />
+                {t("workspace.import.trigger")}
+              </Button>
+              <Button onClick={() => setNewItemOpen(true)}>
+                <Plus aria-hidden="true" className="mr-2 size-4" />
+                {t("workspace.newItem")}
+              </Button>
+            </div>
           }
         />
 
@@ -121,6 +129,7 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
             search={searchParams.search ?? ""}
             selectedItemId={searchParams.item ?? null}
             onOpenCreate={() => setNewItemOpen(true)}
+            onOpenImport={() => setImportOpen(true)}
           />
         ) : tab === "pipeline" ? (
           <PipelineTab context={context} />
@@ -134,6 +143,11 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
         onOpenChange={setNewItemOpen}
         context={context}
         onCreated={onCreated}
+      />
+      <ImportWizardDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        context={context}
       />
     </PageShell>
   );

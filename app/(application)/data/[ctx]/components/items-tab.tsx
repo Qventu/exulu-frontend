@@ -33,6 +33,7 @@ export interface ItemsTabProps {
   search: string;
   selectedItemId: string | null;
   onOpenCreate: () => void;
+  onOpenImport: () => void;
 }
 
 export function ItemsTab({
@@ -42,6 +43,7 @@ export function ItemsTab({
   search,
   selectedItemId,
   onOpenCreate,
+  onOpenImport,
 }: ItemsTabProps) {
   const t = useTranslations("knowledge");
   const router = useRouter();
@@ -101,6 +103,7 @@ export function ItemsTab({
         onOpenFilters={() => setFiltersOpen(true)}
         onClearFilters={() => setAdvancedFilters([])}
         onOpenCreate={onOpenCreate}
+        onOpenImport={onOpenImport}
         viewSwitch={
           <Tabs value={view} onValueChange={(v) => setView(v as "active" | "archived")}>
             <TabsList>

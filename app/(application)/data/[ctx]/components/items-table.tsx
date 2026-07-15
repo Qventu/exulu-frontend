@@ -68,6 +68,7 @@ export interface ItemsTableProps {
   onOpenFilters: () => void;
   onClearFilters: () => void;
   onOpenCreate: () => void;
+  onOpenImport: () => void;
   viewSwitch: React.ReactNode;
 }
 
@@ -84,6 +85,7 @@ export function ItemsTable({
   onOpenFilters,
   onClearFilters,
   onOpenCreate,
+  onOpenImport,
   viewSwitch,
 }: ItemsTableProps) {
   const t = useTranslations("knowledge");
@@ -273,6 +275,7 @@ export function ItemsTable({
           hasFilters={hasFilters}
           onClearFilters={onClearFilters}
           onCreate={archived ? undefined : onOpenCreate}
+          onImport={archived ? undefined : onOpenImport}
         />
       ) : (
         <>
