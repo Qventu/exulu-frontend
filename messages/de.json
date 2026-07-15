@@ -2538,6 +2538,79 @@
         "title": "Vorschau",
         "updated": "Aktualisiert"
       },
+      "import": {
+        "add": {
+          "browse": "Dateien oder CSV hier ablegen oder klicken zum Auswählen",
+          "csvChip": "{name} — {count, plural, one {# Zeile} other {# Zeilen}}",
+          "csvErrors": "CSV mit Warnungen gelesen: {errors}",
+          "csvOnlyHint": "Diese Wissensdatenbank hat kein Dateifeld, daher ist nur CSV-Import möglich.",
+          "duplicateFiles": "Doppelte Dateinamen ignoriert: {names}",
+          "fileCount": "{count, plural, one {# Datei} other {# Dateien}} bereit zum Import",
+          "fileFieldTarget": "Abgelegte Dateien speichern in",
+          "hint": "Dateien werden zu neuen Einträgen; eine CSV füllt Felder aus Spalten",
+          "removeCsv": "CSV entfernen",
+          "removeFile": "{name} entfernen",
+          "template": "CSV-Vorlage herunterladen"
+        },
+        "back": "Zurück",
+        "cancelRun": "Import abbrechen",
+        "close": "Schließen",
+        "continue": "Weiter",
+        "description": "Viele Einträge auf einmal aus Dateien oder einer CSV hinzufügen oder aktualisieren.",
+        "errors": {
+          "boolean": "true/false, ja/nein oder 1/0 verwenden",
+          "date": "Format JJJJ-MM-TT verwenden",
+          "duplicateKey": "Doppelter Wert für {field} in diesem Import",
+          "enum": "Muss einer der folgenden Werte sein: {values}",
+          "fileMissing": "Keine abgelegte Datei namens \"{name}\"",
+          "fileType": "Erlaubte Dateitypen: {values}",
+          "idNotFound": "Kein Eintrag mit dieser ID vorhanden",
+          "json": "Kein gültiges JSON",
+          "number": "Keine Zahl — Dezimalpunkt wie 1.5 verwenden",
+          "numberAmbiguous": "Mehrdeutige Zahl — Dezimalpunkt wie 1.5 verwenden",
+          "required": "{field} ist erforderlich",
+          "uuid": "Keine gültige UUID"
+        },
+        "map": {
+          "column": "CSV-Spalte",
+          "hint": "Zeilen mit einer id oder passender external_id aktualisieren bestehende Einträge; alle anderen erstellen neue.",
+          "ignore": "Ignorieren",
+          "samples": "Beispielwerte",
+          "target": "Importieren als",
+          "title": "CSV-Spalten den Feldern zuordnen"
+        },
+        "review": {
+          "addLeftovers": "{count, plural, one {# abgelegte Datei ist} other {# abgelegte Dateien sind}} nicht referenziert — als neue Zeilen hinzufügen",
+          "applyToAll": "Auf alle Zeilen anwenden",
+          "applyToAllValue": "Wert für alle Zeilen",
+          "emptyCell": "—",
+          "importAll": "{count, plural, one {# Eintrag} other {# Einträge}} importieren",
+          "importValid": "{count} gültige Zeilen importieren",
+          "removeRow": "Zeile entfernen",
+          "statusCreate": "Neu",
+          "statusError": "Fehler",
+          "statusUpdate": "Update",
+          "validCount": "{valid} von {total} Zeilen bereit"
+        },
+        "run": {
+          "downloadReport": "Fehlerbericht herunterladen",
+          "progress": "{done} von {total} importiert…",
+          "retryFailed": "Fehlgeschlagene Zeilen erneut versuchen",
+          "stateDone": "Fertig",
+          "stateFailed": "Fehlgeschlagen",
+          "statePending": "Wartet",
+          "stateSaving": "Speichert",
+          "stateUploading": "Lädt hoch",
+          "summary": "{created} erstellt, {updated} aktualisiert, {failed} fehlgeschlagen"
+        },
+        "steps": {
+          "add": "Daten hinzufügen",
+          "map": "Spalten zuordnen",
+          "review": "Prüfen & importieren"
+        },
+        "title": "Einträge importieren",
+        "trigger": "Importieren"
+      },
       "itemPanel": {
         "title": "Element-Details"
       },

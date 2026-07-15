@@ -2538,6 +2538,79 @@
         "title": "Preview",
         "updated": "Updated"
       },
+      "import": {
+        "add": {
+          "browse": "Drop files or a CSV here, or click to browse",
+          "csvChip": "{name} — {count, plural, one {# row} other {# rows}}",
+          "csvErrors": "CSV parsed with warnings: {errors}",
+          "csvOnlyHint": "This knowledge base has no file field, so only CSV import is available.",
+          "duplicateFiles": "Ignored duplicate filenames: {names}",
+          "fileCount": "{count, plural, one {# file} other {# files}} ready to import",
+          "fileFieldTarget": "Put dropped files into",
+          "hint": "Files become new items; a CSV fills fields from columns",
+          "removeCsv": "Remove CSV",
+          "removeFile": "Remove {name}",
+          "template": "Download CSV template"
+        },
+        "back": "Back",
+        "cancelRun": "Cancel import",
+        "close": "Close",
+        "continue": "Continue",
+        "description": "Add or update many items at once from files or a CSV.",
+        "errors": {
+          "boolean": "Use true/false, yes/no or 1/0",
+          "date": "Use the YYYY-MM-DD format",
+          "duplicateKey": "Duplicate {field} in this import",
+          "enum": "Must be one of: {values}",
+          "fileMissing": "No dropped file named \"{name}\"",
+          "fileType": "Allowed file types: {values}",
+          "idNotFound": "No item with this id exists",
+          "json": "Not valid JSON",
+          "number": "Not a number — use a dot decimal like 1.5",
+          "numberAmbiguous": "Ambiguous number — use a dot decimal like 1.5",
+          "required": "{field} is required",
+          "uuid": "Not a valid UUID"
+        },
+        "map": {
+          "column": "CSV column",
+          "hint": "Rows with an id or a matching external_id update existing items; everything else creates new ones.",
+          "ignore": "Ignore",
+          "samples": "Sample values",
+          "target": "Import as",
+          "title": "Match CSV columns to fields"
+        },
+        "review": {
+          "addLeftovers": "{count, plural, one {# dropped file is} other {# dropped files are}} unreferenced — add as new rows",
+          "applyToAll": "Apply to all rows",
+          "applyToAllValue": "Value for every row",
+          "emptyCell": "—",
+          "importAll": "{count, plural, one {# item} other {# items}}",
+          "importValid": "Import {count} valid rows",
+          "removeRow": "Remove row",
+          "statusCreate": "Create",
+          "statusError": "Error",
+          "statusUpdate": "Update",
+          "validCount": "{valid} of {total} rows ready"
+        },
+        "run": {
+          "downloadReport": "Download error report",
+          "progress": "Imported {done} of {total}…",
+          "retryFailed": "Retry failed rows",
+          "stateDone": "Done",
+          "stateFailed": "Failed",
+          "statePending": "Pending",
+          "stateSaving": "Saving",
+          "stateUploading": "Uploading",
+          "summary": "{created} created, {updated} updated, {failed} failed"
+        },
+        "steps": {
+          "add": "Add data",
+          "map": "Map columns",
+          "review": "Review & import"
+        },
+        "title": "Import items",
+        "trigger": "Import"
+      },
       "itemPanel": {
         "title": "Item details"
       },
