@@ -112,7 +112,11 @@ function CellEditor({
         value={current}
         onValueChange={(v) => onCellChange(row.key, field.name, v === UNSET ? "" : v)}
       >
-        <SelectTrigger className={cn("h-8 w-24", cell?.error && "border-destructive")}>
+        <SelectTrigger
+          title={errorTitle}
+          aria-invalid={Boolean(cell?.error)}
+          className={cn("h-8 w-24", cell?.error && "border-destructive")}
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -134,6 +138,7 @@ function CellEditor({
       >
         <SelectTrigger
           title={errorTitle}
+          aria-invalid={Boolean(cell?.error)}
           className={cn("h-8 w-36", cell?.error && "border-destructive")}
         >
           <SelectValue />
