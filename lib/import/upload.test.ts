@@ -77,13 +77,11 @@ describe("uploadFileToS3", () => {
   it("throws the backend detail on sign failure", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(
-          new Response(JSON.stringify({ detail: "no permission" }), {
-            status: 403,
-          }),
-        ),
+      vi.fn().mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "no permission" }), {
+          status: 403,
+        }),
+      ),
     );
     await expect(uploadFileToS3(new File(["x"], "a.pdf"))).rejects.toThrow(
       "no permission",
