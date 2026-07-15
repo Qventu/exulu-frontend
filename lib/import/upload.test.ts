@@ -3,7 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { uploadFileToS3 } from "@/lib/import/upload";
 
 vi.mock("@/lib/api/client", () => ({
-  getUris: vi.fn(async () => ({ base: "https://backend.test", files: "https://backend.test" })),
+  getUris: vi.fn(async () => ({
+    base: "https://backend.test",
+    files: "https://backend.test",
+  })),
   getToken: vi.fn(async () => "jwt-token"),
 }));
 
@@ -19,12 +22,20 @@ describe("uploadFileToS3", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ key: "uuid-_EXULU_report.pdf", url: signedUrl, method: "PUT" })),
+        new Response(
+          JSON.stringify({
+            key: "uuid-_EXULU_report.pdf",
+            url: signedUrl,
+            method: "PUT",
+          }),
+        ),
       )
       .mockResolvedValueOnce(new Response(null, { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const key = await uploadFileToS3(new File(["x"], "report.pdf", { type: "application/pdf" }));
+    const key = await uploadFileToS3(
+      new File(["x"], "report.pdf", { type: "application/pdf" }),
+    );
 
     expect(key).toBe("exulu/user_1/uuid-_EXULU_report.pdf");
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -33,7 +44,10 @@ describe("uploadFileToS3", () => {
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({ Authorization: "Bearer jwt-token" }),
-        body: JSON.stringify({ filename: "report.pdf", type: "application/pdf" }),
+        body: JSON.stringify({
+          filename: "report.pdf",
+          type: "application/pdf",
+        }),
       }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -47,23 +61,33 @@ describe("uploadFileToS3", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ key: "k", url: signedUrl, method: "PUT" })),
+        new Response(
+          JSON.stringify({ key: "k", url: signedUrl, method: "PUT" }),
+        ),
       )
       .mockResolvedValueOnce(new Response(null, { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
     await uploadFileToS3(new File(["x"], "README"));
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body).type).toBe("application/octet-stream");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).type).toBe(
+      "application/octet-stream",
+    );
   });
 
   it("throws the backend detail on sign failure", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValueOnce(
-        new Response(JSON.stringify({ detail: "no permission" }), { status: 403 }),
-      ),
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ detail: "no permission" }), {
+            status: 403,
+          }),
+        ),
     );
-    await expect(uploadFileToS3(new File(["x"], "a.pdf"))).rejects.toThrow("no permission");
+    await expect(uploadFileToS3(new File(["x"], "a.pdf"))).rejects.toThrow(
+      "no permission",
+    );
   });
 
   it("throws on PUT failure", async () => {
@@ -72,10 +96,14 @@ describe("uploadFileToS3", () => {
       vi
         .fn()
         .mockResolvedValueOnce(
-          new Response(JSON.stringify({ key: "k", url: signedUrl, method: "PUT" })),
+          new Response(
+            JSON.stringify({ key: "k", url: signedUrl, method: "PUT" }),
+          ),
         )
         .mockResolvedValueOnce(new Response(null, { status: 500 })),
     );
-    await expect(uploadFileToS3(new File(["x"], "a.pdf"))).rejects.toThrow("Upload failed (500)");
+    await expect(uploadFileToS3(new File(["x"], "a.pdf"))).rejects.toThrow(
+      "Upload failed (500)",
+    );
   });
 });

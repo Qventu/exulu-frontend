@@ -23,7 +23,10 @@ export function indexFiles(files: File[]): FileIndex {
   return { byName, duplicateNames };
 }
 
-export function findFile(index: FileIndex, cellValue: string): File | undefined {
+export function findFile(
+  index: FileIndex,
+  cellValue: string,
+): File | undefined {
   return index.byName.get(fileMatchKey(cellValue));
 }
 

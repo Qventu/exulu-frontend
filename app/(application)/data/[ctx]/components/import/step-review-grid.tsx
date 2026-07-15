@@ -1,7 +1,11 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import {
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import { Paperclip, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
@@ -23,7 +27,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { CellError, ImportField, ImportRow, RowRunState } from "@/lib/import/types";
+import type {
+  CellError,
+  ImportField,
+  ImportRow,
+  RowRunState,
+} from "@/lib/import/types";
 import { cn } from "@/lib/utils";
 
 const UNSET = "__unset__";
@@ -48,7 +57,15 @@ export interface StepReviewGridProps {
   onRemoveRow: (rowKey: string) => void;
 }
 
-function StatusBadge({ label, tone, title }: { label: string; tone: "create" | "update" | "error" | "muted" | "done" | "failed"; title?: string }) {
+function StatusBadge({
+  label,
+  tone,
+  title,
+}: {
+  label: string;
+  tone: "create" | "update" | "error" | "muted" | "done" | "failed";
+  title?: string;
+}) {
   const classes = {
     create: "bg-secondary text-secondary-foreground",
     update: "border border-input text-foreground",
@@ -60,7 +77,10 @@ function StatusBadge({ label, tone, title }: { label: string; tone: "create" | "
   return (
     <span
       title={title}
-      className={cn("inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium", classes)}
+      className={cn(
+        "inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium",
+        classes,
+      )}
     >
       {label}
     </span>
@@ -83,7 +103,9 @@ function CellEditor({
   t: ReturnType<typeof useTranslations>;
 }) {
   const cell = row.cells[field.name];
-  const errorTitle = cell?.error ? translateCellError(t, cell.error) : undefined;
+  const errorTitle = cell?.error
+    ? translateCellError(t, cell.error)
+    : undefined;
   const isKeyField = field.name === "id" || field.name === "external_id";
 
   if (field.type === "file") {
@@ -97,20 +119,29 @@ function CellEditor({
           )}
         >
           <Paperclip aria-hidden="true" className="size-3 shrink-0" />
-          <span className="truncate">{cell?.file?.name ?? String(cell?.value)}</span>
+          <span className="truncate">
+            {cell?.file?.name ?? String(cell?.value)}
+          </span>
         </span>
       );
     }
-    return <span className="text-muted-foreground">{t("workspace.import.review.emptyCell")}</span>;
+    return (
+      <span className="text-muted-foreground">
+        {t("workspace.import.review.emptyCell")}
+      </span>
+    );
   }
 
   if (field.type === "boolean") {
-    const current = cell?.value === true ? "true" : cell?.value === false ? "false" : UNSET;
+    const current =
+      cell?.value === true ? "true" : cell?.value === false ? "false" : UNSET;
     return (
       <Select
         disabled={disabled}
         value={current}
-        onValueChange={(v) => onCellChange(row.key, field.name, v === UNSET ? "" : v)}
+        onValueChange={(v) =>
+          onCellChange(row.key, field.name, v === UNSET ? "" : v)
+        }
       >
         <SelectTrigger
           title={errorTitle}
@@ -120,7 +151,9 @@ function CellEditor({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={UNSET}>{t("workspace.import.review.emptyCell")}</SelectItem>
+          <SelectItem value={UNSET}>
+            {t("workspace.import.review.emptyCell")}
+          </SelectItem>
           <SelectItem value="true">true</SelectItem>
           <SelectItem value="false">false</SelectItem>
         </SelectContent>
@@ -129,12 +162,15 @@ function CellEditor({
   }
 
   if (field.type === "enum") {
-    const current = typeof cell?.value === "string" && cell.value !== "" ? cell.value : UNSET;
+    const current =
+      typeof cell?.value === "string" && cell.value !== "" ? cell.value : UNSET;
     return (
       <Select
         disabled={disabled}
         value={current}
-        onValueChange={(v) => onCellChange(row.key, field.name, v === UNSET ? "" : v)}
+        onValueChange={(v) =>
+          onCellChange(row.key, field.name, v === UNSET ? "" : v)
+        }
       >
         <SelectTrigger
           title={errorTitle}
@@ -144,7 +180,9 @@ function CellEditor({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={UNSET}>{t("workspace.import.review.emptyCell")}</SelectItem>
+          <SelectItem value={UNSET}>
+            {t("workspace.import.review.emptyCell")}
+          </SelectItem>
           {(field.enumValues ?? []).map((v) => (
             <SelectItem key={v} value={v}>
               {v}
@@ -163,7 +201,10 @@ function CellEditor({
       onBlur={isKeyField ? onKeyCellBlur : undefined}
       title={errorTitle}
       aria-invalid={Boolean(cell?.error)}
-      className={cn("h-8 min-w-28 text-sm", cell?.error && "border-destructive")}
+      className={cn(
+        "h-8 min-w-28 text-sm",
+        cell?.error && "border-destructive",
+      )}
       type={field.type === "number" ? "number" : "text"}
     />
   );
@@ -187,7 +228,12 @@ export function StepReviewGrid({
   const statusFor = (row: ImportRow): React.ReactNode => {
     const runState = rowStates[row.key]?.state ?? row.runState;
     if (running || runState === "done" || runState === "failed") {
-      const tone = runState === "done" ? "done" : runState === "failed" ? "failed" : "muted";
+      const tone =
+        runState === "done"
+          ? "done"
+          : runState === "failed"
+            ? "failed"
+            : "muted";
       const labelKey = {
         pending: "statePending",
         uploading: "stateUploading",
@@ -213,9 +259,15 @@ export function StepReviewGrid({
       );
     }
     return row.action === "update" ? (
-      <StatusBadge label={t("workspace.import.review.statusUpdate")} tone="update" />
+      <StatusBadge
+        label={t("workspace.import.review.statusUpdate")}
+        tone="update"
+      />
     ) : (
-      <StatusBadge label={t("workspace.import.review.statusCreate")} tone="create" />
+      <StatusBadge
+        label={t("workspace.import.review.statusCreate")}
+        tone="create"
+      />
     );
   };
 
@@ -251,14 +303,24 @@ export function StepReviewGrid({
           onClick={() => onRemoveRow(row.original.key)}
         >
           <X aria-hidden="true" className="size-4" />
-          <span className="sr-only">{t("workspace.import.review.removeRow")}</span>
+          <span className="sr-only">
+            {t("workspace.import.review.removeRow")}
+          </span>
         </Button>
       ),
     };
     return [status, ...fieldColumns, remove];
     // statusFor closes over rows/rowStates/running — recompute with them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayFields, running, rowStates, onCellChange, onKeyCellBlur, onRemoveRow, t]);
+  }, [
+    displayFields,
+    running,
+    rowStates,
+    onCellChange,
+    onKeyCellBlur,
+    onRemoveRow,
+    t,
+  ]);
 
   const table = useReactTable({
     data: rows,
@@ -277,7 +339,9 @@ export function StepReviewGrid({
         <div className="flex flex-wrap items-center gap-2">
           <Select value={applyField || undefined} onValueChange={setApplyField}>
             <SelectTrigger className="h-8 w-44">
-              <SelectValue placeholder={t("workspace.import.review.applyToAll")} />
+              <SelectValue
+                placeholder={t("workspace.import.review.applyToAll")}
+              />
             </SelectTrigger>
             <SelectContent>
               {applicableFields.map((f) => (
@@ -312,7 +376,10 @@ export function StepReviewGrid({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id} className="whitespace-nowrap">
-                    {flexRender(header.column.columnDef.header, header.getContext())}
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext(),
+                    )}
                   </TableHead>
                 ))}
               </TableRow>

@@ -31,7 +31,12 @@ export interface StepMapColumnsProps {
   onMappingChange: (mapping: ColumnMapping[]) => void;
 }
 
-export function StepMapColumns({ csv, mapping, fields, onMappingChange }: StepMapColumnsProps) {
+export function StepMapColumns({
+  csv,
+  mapping,
+  fields,
+  onMappingChange,
+}: StepMapColumnsProps) {
   const t = useTranslations("knowledge");
 
   const usedFields = new Set(mapping.map((m) => m.fieldName).filter(Boolean));
@@ -45,14 +50,18 @@ export function StepMapColumns({ csv, mapping, fields, onMappingChange }: StepMa
   const setTarget = (index: number, fieldName: string) => {
     onMappingChange(
       mapping.map((m) =>
-        m.index === index ? { ...m, fieldName: fieldName === IGNORE ? null : fieldName } : m,
+        m.index === index
+          ? { ...m, fieldName: fieldName === IGNORE ? null : fieldName }
+          : m,
       ),
     );
   };
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-muted-foreground">{t("workspace.import.map.hint")}</p>
+      <p className="text-sm text-muted-foreground">
+        {t("workspace.import.map.hint")}
+      </p>
       <Table>
         <TableHeader>
           <TableRow>
@@ -69,17 +78,24 @@ export function StepMapColumns({ csv, mapping, fields, onMappingChange }: StepMa
                 {samplesFor(m.index)}
               </TableCell>
               <TableCell>
-                <Select value={m.fieldName ?? IGNORE} onValueChange={(v) => setTarget(m.index, v)}>
+                <Select
+                  value={m.fieldName ?? IGNORE}
+                  onValueChange={(v) => setTarget(m.index, v)}
+                >
                   <SelectTrigger className="w-56">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={IGNORE}>{t("workspace.import.map.ignore")}</SelectItem>
+                    <SelectItem value={IGNORE}>
+                      {t("workspace.import.map.ignore")}
+                    </SelectItem>
                     {fields.map((f) => (
                       <SelectItem
                         key={f.name}
                         value={f.name}
-                        disabled={usedFields.has(f.name) && m.fieldName !== f.name}
+                        disabled={
+                          usedFields.has(f.name) && m.fieldName !== f.name
+                        }
                       >
                         {f.label}
                       </SelectItem>

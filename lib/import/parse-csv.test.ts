@@ -13,7 +13,9 @@ describe("parseCsvText", () => {
   });
 
   it("handles quoted commas and quotes", () => {
-    const parsed = parseCsvText('name,description\n"Comma, Inc.","He said ""hi"""\n');
+    const parsed = parseCsvText(
+      'name,description\n"Comma, Inc.","He said ""hi"""\n',
+    );
     expect(parsed.rows[0]).toEqual(["Comma, Inc.", 'He said "hi"']);
   });
 
@@ -23,6 +25,9 @@ describe("parseCsvText", () => {
   });
 
   it("trims header whitespace", () => {
-    expect(parseCsvText(" name , category \nA,b").headers).toEqual(["name", "category"]);
+    expect(parseCsvText(" name , category \nA,b").headers).toEqual([
+      "name",
+      "category",
+    ]);
   });
 });

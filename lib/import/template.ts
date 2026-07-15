@@ -19,7 +19,10 @@ export function buildErrorReportCsv(
   errorFor: (row: ImportRow) => string,
 ): string {
   const failed = rows.filter(
-    (r) => r.runState === "failed" || r.error || Object.values(r.cells).some((c) => c.error),
+    (r) =>
+      r.runState === "failed" ||
+      r.error ||
+      Object.values(r.cells).some((c) => c.error),
   );
   const header = [...fields.map((f) => csvEscape(f.label)), "error"].join(",");
   const lines = failed.map((row) =>

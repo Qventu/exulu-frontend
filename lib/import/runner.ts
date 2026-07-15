@@ -1,4 +1,8 @@
-import { buildCreateInput, buildUpdateInput, rowIsValid } from "@/lib/import/rows";
+import {
+  buildCreateInput,
+  buildUpdateInput,
+  rowIsValid,
+} from "@/lib/import/rows";
 import type { ImportField, ImportRow, RowRunState } from "@/lib/import/types";
 
 export interface RunnerEffects {
@@ -61,7 +65,10 @@ export async function runImport(
         row.runState = "saving";
         options.onRowState(row.key, "saving");
         if (row.action === "update" && row.targetItemId) {
-          await effects.updateItem(row.targetItemId, buildUpdateInput(row, fields));
+          await effects.updateItem(
+            row.targetItemId,
+            buildUpdateInput(row, fields),
+          );
           summary.updated += 1;
         } else {
           await effects.createItem(buildCreateInput(row, fields));

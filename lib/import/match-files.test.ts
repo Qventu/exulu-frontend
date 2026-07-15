@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { fileMatchKey, findFile, indexFiles, leftoverFiles } from "@/lib/import/match-files";
+import {
+  fileMatchKey,
+  findFile,
+  indexFiles,
+  leftoverFiles,
+} from "@/lib/import/match-files";
 import type { ImportRow } from "@/lib/import/types";
 
 const f = (name: string) => new File(["x"], name);

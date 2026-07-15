@@ -5,11 +5,35 @@ import type { ImportField, ImportRow } from "@/lib/import/types";
 
 const FIELDS: ImportField[] = [
   { name: "id", label: "id", type: "text", required: false, core: true },
-  { name: "external_id", label: "external_id", type: "text", required: false, core: true },
-  { name: "name", label: "name", type: "shortText", required: true, core: true },
-  { name: "description", label: "description", type: "longText", required: false, core: true },
+  {
+    name: "external_id",
+    label: "external_id",
+    type: "text",
+    required: false,
+    core: true,
+  },
+  {
+    name: "name",
+    label: "name",
+    type: "shortText",
+    required: true,
+    core: true,
+  },
+  {
+    name: "description",
+    label: "description",
+    type: "longText",
+    required: false,
+    core: true,
+  },
   { name: "tags", label: "tags", type: "text", required: false, core: true },
-  { name: "doc_s3key", label: "doc", type: "file", required: false, core: false },
+  {
+    name: "doc_s3key",
+    label: "doc",
+    type: "file",
+    required: false,
+    core: false,
+  },
 ];
 
 const createRow = (key: string, name: string, file?: File): ImportRow => ({
@@ -23,7 +47,9 @@ const createRow = (key: string, name: string, file?: File): ImportRow => ({
 });
 
 const effects = () => ({
-  uploadFile: vi.fn(async (file: File) => `bucket/user_1/uuid-_EXULU_${file.name}`),
+  uploadFile: vi.fn(
+    async (file: File) => `bucket/user_1/uuid-_EXULU_${file.name}`,
+  ),
   createItem: vi.fn(async () => {}),
   updateItem: vi.fn(async () => {}),
 });
@@ -35,7 +61,11 @@ describe("runImport", () => {
     const summary = await runImport(rows, FIELDS, fx, { onRowState: () => {} });
     expect(fx.uploadFile).toHaveBeenCalledTimes(1);
     expect(fx.createItem).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Alpha", doc_s3key: "bucket/user_1/uuid-_EXULU_a.pdf", source: "import" }),
+      expect.objectContaining({
+        name: "Alpha",
+        doc_s3key: "bucket/user_1/uuid-_EXULU_a.pdf",
+        source: "import",
+      }),
     );
     expect(summary).toEqual({ created: 1, updated: 0, failed: 0, skipped: 0 });
     expect(rows[0].runState).toBe("done");
@@ -51,8 +81,13 @@ describe("runImport", () => {
       runState: "pending",
       cells: { description: { raw: "d", value: "d" } },
     };
-    const summary = await runImport([row], FIELDS, fx, { onRowState: () => {} });
-    expect(fx.updateItem).toHaveBeenCalledWith("item-1", { description: "d", textlength: 1 });
+    const summary = await runImport([row], FIELDS, fx, {
+      onRowState: () => {},
+    });
+    expect(fx.updateItem).toHaveBeenCalledWith("item-1", {
+      description: "d",
+      textlength: 1,
+    });
     expect(summary.updated).toBe(1);
   });
 
@@ -83,9 +118,14 @@ describe("runImport", () => {
       runState: "pending",
       cells: { name: { raw: "", value: "", error: { code: "required" } } },
     };
-    const summary = await runImport([done, invalid, createRow("ok", "Ok")], FIELDS, fx, {
-      onRowState: () => {},
-    });
+    const summary = await runImport(
+      [done, invalid, createRow("ok", "Ok")],
+      FIELDS,
+      fx,
+      {
+        onRowState: () => {},
+      },
+    );
     expect(fx.createItem).toHaveBeenCalledTimes(1);
     expect(summary.skipped).toBe(2);
   });
@@ -96,7 +136,11 @@ describe("runImport", () => {
     fx.createItem.mockImplementation(async () => {
       cancelled = true;
     });
-    const rows = [createRow("r1", "A"), createRow("r2", "B"), createRow("r3", "C")];
+    const rows = [
+      createRow("r1", "A"),
+      createRow("r2", "B"),
+      createRow("r3", "C"),
+    ];
     const summary = await runImport(rows, FIELDS, fx, {
       concurrency: 1,
       isCancelled: () => cancelled,

@@ -28,7 +28,10 @@ export async function uploadFileToS3(file: File): Promise<string> {
       .catch(() => signRes.statusText);
     throw new Error(detail);
   }
-  const { url, method } = (await signRes.json()) as { url: string; method?: string };
+  const { url, method } = (await signRes.json()) as {
+    url: string;
+    method?: string;
+  };
 
   const putRes = await fetch(url, {
     method: method ?? "PUT",

@@ -21,7 +21,10 @@ export function rowsFromFiles(
     action: "create" as const,
     runState: "pending" as const,
     cells: {
-      name: { raw: stripExtension(file.name), value: stripExtension(file.name) },
+      name: {
+        raw: stripExtension(file.name),
+        value: stripExtension(file.name),
+      },
       [targetFieldName]: { raw: file.name, value: file.name, file },
     },
   }));
@@ -42,14 +45,23 @@ export function rowsFromCsv(
       const field = byName.get(m.fieldName);
       if (!field) continue;
       const cell = coerceValue(field, raw[m.index] ?? "");
-      if (field.type === "file" && typeof cell.value === "string" && cell.value !== "") {
+      if (
+        field.type === "file" &&
+        typeof cell.value === "string" &&
+        cell.value !== ""
+      ) {
         const file = findFile(fileIndex, cell.value);
         if (file) cell.file = file;
         else cell.error = { code: "fileMissing", params: { name: cell.value } };
       }
       cells[m.fieldName] = cell;
     }
-    return { key: `csv-${i}`, action: "create" as const, runState: "pending" as const, cells };
+    return {
+      key: `csv-${i}`,
+      action: "create" as const,
+      runState: "pending" as const,
+      cells,
+    };
   });
 }
 
@@ -83,7 +95,10 @@ export function validateRow(row: ImportRow, fields: ImportField[]): ImportRow {
       if (!ok) {
         cells[f.name] = {
           ...cell,
-          error: { code: "fileType", params: { values: f.allowedFileTypes.join(", ") } },
+          error: {
+            code: "fileType",
+            params: { values: f.allowedFileTypes.join(", ") },
+          },
         };
       }
     }
@@ -97,9 +112,14 @@ export function rowIsValid(row: ImportRow): boolean {
 }
 
 /** Create-mutation input, mirroring new-item-dialog.tsx but source "import". */
-export function buildCreateInput(row: ImportRow, fields: ImportField[]): Record<string, unknown> {
+export function buildCreateInput(
+  row: ImportRow,
+  fields: ImportField[],
+): Record<string, unknown> {
   const description =
-    typeof row.cells.description?.value === "string" ? row.cells.description.value : "";
+    typeof row.cells.description?.value === "string"
+      ? row.cells.description.value
+      : "";
   const input: Record<string, unknown> = {
     name: row.cells.name?.value ?? "",
     description,
@@ -118,7 +138,10 @@ export function buildCreateInput(row: ImportRow, fields: ImportField[]): Record<
 }
 
 /** Partial update input: only mapped/filled cells; id and source never sent. */
-export function buildUpdateInput(row: ImportRow, fields: ImportField[]): Record<string, unknown> {
+export function buildUpdateInput(
+  row: ImportRow,
+  fields: ImportField[],
+): Record<string, unknown> {
   const input: Record<string, unknown> = {};
   for (const f of fields) {
     if (f.name === "id") continue;

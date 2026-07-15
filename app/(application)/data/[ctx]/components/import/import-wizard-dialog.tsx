@@ -23,12 +23,21 @@ import { indexFiles, leftoverFiles } from "@/lib/import/match-files";
 import type { ParsedCsv } from "@/lib/import/parse-csv";
 import { classifyRows } from "@/lib/import/resolve-targets";
 import type { ExistingRefs } from "@/lib/import/resolve-targets";
-import { rowIsValid, rowsFromCsv, rowsFromFiles, validateRow } from "@/lib/import/rows";
+import {
+  rowIsValid,
+  rowsFromCsv,
+  rowsFromFiles,
+  validateRow,
+} from "@/lib/import/rows";
 import { buildErrorReportCsv } from "@/lib/import/template";
 import type { ImportRow } from "@/lib/import/types";
 import type { Context } from "@/types/models/context";
 
-import { GET_ITEMS_BY_EXTERNAL_IDS, GET_ITEMS_BY_IDS, PAGINATION_POSTFIX } from "../../../queries";
+import {
+  GET_ITEMS_BY_EXTERNAL_IDS,
+  GET_ITEMS_BY_IDS,
+  PAGINATION_POSTFIX,
+} from "../../../queries";
 
 import { StepAddData } from "./step-add-data";
 import { StepMapColumns } from "./step-map-columns";
@@ -43,7 +52,11 @@ export interface ImportWizardDialogProps {
   context: Context;
 }
 
-export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizardDialogProps) {
+export function ImportWizardDialog({
+  open,
+  onOpenChange,
+  context,
+}: ImportWizardDialogProps) {
   const t = useTranslations("knowledge");
   const client = useApolloClient();
   const fields = React.useMemo(() => importableFields(context), [context]);
@@ -51,7 +64,10 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
 
   const [step, setStep] = React.useState<WizardStep>("add");
   const [files, setFiles] = React.useState<File[]>([]);
-  const [csv, setCsv] = React.useState<{ name: string; parsed: ParsedCsv } | null>(null);
+  const [csv, setCsv] = React.useState<{
+    name: string;
+    parsed: ParsedCsv;
+  } | null>(null);
   const [mapping, setMapping] = React.useState<ColumnMapping[]>([]);
   const [rows, setRows] = React.useState<ImportRow[]>([]);
   const rowsRef = React.useRef(rows);
@@ -61,7 +77,9 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
   const running = runner.phase === "running";
 
   // Single file field auto-selects; multiple need the add-step dropdown.
-  const [fileFieldTarget, setFileFieldTarget] = React.useState<string | null>(null);
+  const [fileFieldTarget, setFileFieldTarget] = React.useState<string | null>(
+    null,
+  );
   const resolvedFileTarget =
     fileTargets.length === 1 ? fileTargets[0].name : fileFieldTarget;
 
@@ -92,7 +110,9 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
       const ids = [
         ...new Set(
           input
-            .map((r) => (typeof r.cells.id?.value === "string" ? r.cells.id.value : ""))
+            .map((r) =>
+              typeof r.cells.id?.value === "string" ? r.cells.id.value : "",
+            )
             .filter(Boolean),
         ),
       ];
@@ -100,20 +120,27 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
         ...new Set(
           input
             .map((r) =>
-              typeof r.cells.external_id?.value === "string" ? r.cells.external_id.value : "",
+              typeof r.cells.external_id?.value === "string"
+                ? r.cells.external_id.value
+                : "",
             )
             .filter(Boolean),
         ),
       ];
-      const existing: ExistingRefs = { byExternalId: new Map(), knownIds: new Set() };
+      const existing: ExistingRefs = {
+        byExternalId: new Map(),
+        knownIds: new Set(),
+      };
       if (exts.length > 0) {
         const { data } = await client.query({
           query: GET_ITEMS_BY_EXTERNAL_IDS(context.id),
           variables: { ids: exts, limit: exts.length },
           fetchPolicy: "network-only",
         });
-        for (const item of data?.[context.id + PAGINATION_POSTFIX]?.items ?? []) {
-          if (item.external_id) existing.byExternalId.set(item.external_id, item.id);
+        for (const item of data?.[context.id + PAGINATION_POSTFIX]?.items ??
+          []) {
+          if (item.external_id)
+            existing.byExternalId.set(item.external_id, item.id);
         }
       }
       if (ids.length > 0) {
@@ -122,7 +149,8 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
           variables: { ids, limit: ids.length },
           fetchPolicy: "network-only",
         });
-        for (const item of data?.[context.id + PAGINATION_POSTFIX]?.items ?? []) {
+        for (const item of data?.[context.id + PAGINATION_POSTFIX]?.items ??
+          []) {
           existing.knownIds.add(item.id);
         }
       }
@@ -135,15 +163,26 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
     const index = indexFiles(files);
     if (index.duplicateNames.length > 0) {
       toast.error(
-        t("workspace.import.add.duplicateFiles", { names: index.duplicateNames.join(", ") }),
+        t("workspace.import.add.duplicateFiles", {
+          names: index.duplicateNames.join(", "),
+        }),
       );
     }
     let built: ImportRow[] = [];
     if (csv) built = rowsFromCsv(csv.parsed, mapping, fields, index);
-    else if (resolvedFileTarget) built = rowsFromFiles(files, resolvedFileTarget);
+    else if (resolvedFileTarget)
+      built = rowsFromFiles(files, resolvedFileTarget);
     setRows(await classifyAgainstServer(built));
     setStep("review");
-  }, [csv, files, mapping, fields, resolvedFileTarget, classifyAgainstServer, t]);
+  }, [
+    csv,
+    files,
+    mapping,
+    fields,
+    resolvedFileTarget,
+    classifyAgainstServer,
+    t,
+  ]);
 
   const handleContinueFromAdd = () => {
     if (csv) {
@@ -160,7 +199,10 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
         if (row.key !== rowKey) return row;
         const field = fields.find((f) => f.name === fieldName);
         if (!field) return row;
-        const next = { ...row, cells: { ...row.cells, [fieldName]: coerceValue(field, raw) } };
+        const next = {
+          ...row,
+          cells: { ...row.cells, [fieldName]: coerceValue(field, raw) },
+        };
         return validateRow(next, fields);
       }),
     );
@@ -176,7 +218,10 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
     setRows((prev) =>
       prev.map((row) =>
         validateRow(
-          { ...row, cells: { ...row.cells, [fieldName]: coerceValue(field, raw) } },
+          {
+            ...row,
+            cells: { ...row.cells, [fieldName]: coerceValue(field, raw) },
+          },
           fields,
         ),
       ),
@@ -194,17 +239,19 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
 
   const addLeftovers = () => {
     if (!resolvedFileTarget) return;
-    const extra = rowsFromFiles(leftovers, resolvedFileTarget, "extra").map((r) =>
-      validateRow(r, fields),
+    const extra = rowsFromFiles(leftovers, resolvedFileTarget, "extra").map(
+      (r) => validateRow(r, fields),
     );
     setRows((prev) => [...prev, ...extra]);
   };
 
   const displayFields = React.useMemo(() => {
     const present = new Set<string>();
-    for (const row of rows) for (const key of Object.keys(row.cells)) present.add(key);
+    for (const row of rows)
+      for (const key of Object.keys(row.cells)) present.add(key);
     return fields.filter(
-      (f) => f.name === "name" || present.has(f.name) || (f.required && !f.core),
+      (f) =>
+        f.name === "name" || present.has(f.name) || (f.required && !f.core),
     );
   }, [rows, fields]);
 
@@ -212,14 +259,17 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
   const failedCount = rows.filter((r) => r.runState === "failed").length;
 
   const downloadErrorReport = () => {
-    const report = buildErrorReportCsv(rows, fields, (row) =>
-      row.runError ??
-      (row.error
-        ? translateCellError(t, row.error)
-        : Object.values(row.cells)
-            .filter((c) => c.error)
-            .map((c) => translateCellError(t, c.error!))
-            .join("; ")),
+    const report = buildErrorReportCsv(
+      rows,
+      fields,
+      (row) =>
+        row.runError ??
+        (row.error
+          ? translateCellError(t, row.error)
+          : Object.values(row.cells)
+              .filter((c) => c.error)
+              .map((c) => translateCellError(t, c.error!))
+              .join("; ")),
     );
     const blob = new Blob([report], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -243,9 +293,12 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
       <DialogContent className="flex max-h-[90dvh] w-[95vw] max-w-6xl flex-col gap-4">
         <DialogHeader>
           <DialogTitle>
-            {t("workspace.import.title")} — {t(`workspace.import.steps.${step}`)}
+            {t("workspace.import.title")} —{" "}
+            {t(`workspace.import.steps.${step}`)}
           </DialogTitle>
-          <DialogDescription>{t("workspace.import.description")}</DialogDescription>
+          <DialogDescription>
+            {t("workspace.import.description")}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -257,7 +310,9 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
               csv={csv}
               fileFieldTarget={resolvedFileTarget}
               onFilesAdded={(added) => setFiles((prev) => [...prev, ...added])}
-              onRemoveFile={(i) => setFiles((prev) => prev.filter((_, idx) => idx !== i))}
+              onRemoveFile={(i) =>
+                setFiles((prev) => prev.filter((_, idx) => idx !== i))
+              }
               onCsvChange={setCsv}
               onFileFieldTargetChange={setFileFieldTarget}
             />
@@ -276,7 +331,9 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
                 <div className="flex items-center gap-3">
                   <Progress
                     className="h-2 flex-1"
-                    value={rows.length ? (runner.doneCount / rows.length) * 100 : 0}
+                    value={
+                      rows.length ? (runner.doneCount / rows.length) * 100 : 0
+                    }
                   />
                   <span className="whitespace-nowrap text-sm text-muted-foreground">
                     {runner.phase === "running"
@@ -292,11 +349,20 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
                   </span>
                 </div>
               )}
-              {runner.phase === "edit" && leftovers.length > 0 && resolvedFileTarget && (
-                <Button type="button" variant="outline" size="sm" onClick={addLeftovers}>
-                  {t("workspace.import.review.addLeftovers", { count: leftovers.length })}
-                </Button>
-              )}
+              {runner.phase === "edit" &&
+                leftovers.length > 0 &&
+                resolvedFileTarget && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addLeftovers}
+                  >
+                    {t("workspace.import.review.addLeftovers", {
+                      count: leftovers.length,
+                    })}
+                  </Button>
+                )}
               <StepReviewGrid
                 fields={fields}
                 displayFields={displayFields}
@@ -324,7 +390,11 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
           )}
 
           {step === "add" && (
-            <Button type="button" disabled={!canContinueFromAdd} onClick={handleContinueFromAdd}>
+            <Button
+              type="button"
+              disabled={!canContinueFromAdd}
+              onClick={handleContinueFromAdd}
+            >
               {t("workspace.import.continue")}
             </Button>
           )}
@@ -348,8 +418,12 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
                 onClick={() => void runner.run(rowsRef.current)}
               >
                 {validRows.length === rows.length
-                  ? t("workspace.import.review.importAll", { count: rows.length })
-                  : t("workspace.import.review.importValid", { count: validRows.length })}
+                  ? t("workspace.import.review.importAll", {
+                      count: rows.length,
+                    })
+                  : t("workspace.import.review.importValid", {
+                      count: validRows.length,
+                    })}
               </Button>
             </>
           )}
@@ -364,15 +438,26 @@ export function ImportWizardDialog({ open, onOpenChange, context }: ImportWizard
             <>
               {failedCount > 0 && (
                 <>
-                  <Button type="button" variant="outline" onClick={downloadErrorReport}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={downloadErrorReport}
+                  >
                     {t("workspace.import.run.downloadReport")}
                   </Button>
-                  <Button type="button" onClick={() => void runner.run(rowsRef.current)}>
+                  <Button
+                    type="button"
+                    onClick={() => void runner.run(rowsRef.current)}
+                  >
                     {t("workspace.import.run.retryFailed")}
                   </Button>
                 </>
               )}
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
                 {t("workspace.import.close")}
               </Button>
             </>

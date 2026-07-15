@@ -48,7 +48,9 @@ export function StepAddData({
 
   const handleDrop = async (dropped: File[]) => {
     const csvFile = dropped.find((f) => f.name.toLowerCase().endsWith(".csv"));
-    const dataFiles = dropped.filter((f) => !f.name.toLowerCase().endsWith(".csv"));
+    const dataFiles = dropped.filter(
+      (f) => !f.name.toLowerCase().endsWith(".csv"),
+    );
     if (csvFile) {
       onCsvChange({ name: csvFile.name, parsed: await parseCsvFile(csvFile) });
     }
@@ -56,7 +58,9 @@ export function StepAddData({
   };
 
   const downloadTemplate = () => {
-    const blob = new Blob([buildCsvTemplate(fields)], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([buildCsvTemplate(fields)], {
+      type: "text/csv;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -75,7 +79,12 @@ export function StepAddData({
       />
 
       <div className="flex items-center justify-between gap-2">
-        <Button type="button" variant="ghost" size="sm" onClick={downloadTemplate}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={downloadTemplate}
+        >
           <Download aria-hidden="true" className="mr-2 size-4" />
           {t("workspace.import.add.template")}
         </Button>
@@ -88,7 +97,10 @@ export function StepAddData({
 
       {csv && (
         <div className="flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm">
-          <FileSpreadsheet aria-hidden="true" className="size-4 text-muted-foreground" />
+          <FileSpreadsheet
+            aria-hidden="true"
+            className="size-4 text-muted-foreground"
+          />
           <span className="min-w-0 flex-1 truncate">
             {t("workspace.import.add.csvChip", {
               name: csv.name,
@@ -102,13 +114,17 @@ export function StepAddData({
             onClick={() => onCsvChange(null)}
           >
             <X aria-hidden="true" className="size-4" />
-            <span className="sr-only">{t("workspace.import.add.removeCsv")}</span>
+            <span className="sr-only">
+              {t("workspace.import.add.removeCsv")}
+            </span>
           </Button>
         </div>
       )}
       {csv && csv.parsed.errors.length > 0 && (
         <p className="text-sm text-destructive">
-          {t("workspace.import.add.csvErrors", { errors: csv.parsed.errors.join("; ") })}
+          {t("workspace.import.add.csvErrors", {
+            errors: csv.parsed.errors.join("; "),
+          })}
         </p>
       )}
 

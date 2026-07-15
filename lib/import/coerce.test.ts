@@ -45,8 +45,10 @@ describe("coerceValue: number", () => {
 describe("coerceValue: boolean", () => {
   const bool = field({ type: "boolean" });
   it("accepts true/yes/ja/1 and false/no/nein/0, case-insensitive", () => {
-    for (const v of ["true", "YES", "Ja", "1"]) expect(coerceValue(bool, v).value).toBe(true);
-    for (const v of ["false", "No", "NEIN", "0"]) expect(coerceValue(bool, v).value).toBe(false);
+    for (const v of ["true", "YES", "Ja", "1"])
+      expect(coerceValue(bool, v).value).toBe(true);
+    for (const v of ["false", "No", "NEIN", "0"])
+      expect(coerceValue(bool, v).value).toBe(false);
   });
   it("rejects anything else", () => {
     expect(coerceValue(bool, "maybe").error?.code).toBe("boolean");
@@ -69,7 +71,9 @@ describe("coerceValue: date", () => {
   const date = field({ type: "date" });
   it("accepts ISO dates verbatim", () => {
     expect(coerceValue(date, "2026-07-15").value).toBe("2026-07-15");
-    expect(coerceValue(date, "2026-07-15T10:00:00Z").value).toBe("2026-07-15T10:00:00Z");
+    expect(coerceValue(date, "2026-07-15T10:00:00Z").value).toBe(
+      "2026-07-15T10:00:00Z",
+    );
   });
   it("rejects slash formats as ambiguous", () => {
     expect(coerceValue(date, "03/04/2026").error?.code).toBe("date");
@@ -86,19 +90,32 @@ describe("coerceValue: date", () => {
 
 describe("coerceValue: json / uuid / file / text", () => {
   it("validates json but keeps the raw string as value", () => {
-    expect(coerceValue(field({ type: "json" }), '{"a":1}').value).toBe('{"a":1}');
-    expect(coerceValue(field({ type: "json" }), "{nope").error?.code).toBe("json");
+    expect(coerceValue(field({ type: "json" }), '{"a":1}').value).toBe(
+      '{"a":1}',
+    );
+    expect(coerceValue(field({ type: "json" }), "{nope").error?.code).toBe(
+      "json",
+    );
   });
   it("validates uuid format", () => {
     expect(
-      coerceValue(field({ type: "uuid" }), "123e4567-e89b-12d3-a456-426614174000").error,
+      coerceValue(
+        field({ type: "uuid" }),
+        "123e4567-e89b-12d3-a456-426614174000",
+      ).error,
     ).toBeUndefined();
-    expect(coerceValue(field({ type: "uuid" }), "nope").error?.code).toBe("uuid");
+    expect(coerceValue(field({ type: "uuid" }), "nope").error?.code).toBe(
+      "uuid",
+    );
   });
   it("passes file cell values through trimmed (filename matching happens later)", () => {
-    expect(coerceValue(field({ type: "file" }), " report.pdf ").value).toBe("report.pdf");
+    expect(coerceValue(field({ type: "file" }), " report.pdf ").value).toBe(
+      "report.pdf",
+    );
   });
   it("keeps raw text for unknown types (backend-only types degrade to text)", () => {
-    expect(coerceValue(field({ type: "somethingNew" }), "keep me").value).toBe("keep me");
+    expect(coerceValue(field({ type: "somethingNew" }), "keep me").value).toBe(
+      "keep me",
+    );
   });
 });

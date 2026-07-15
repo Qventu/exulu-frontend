@@ -20,9 +20,9 @@ describe("extractS3KeyFromUrl", () => {
   });
 
   it("does not treat a custom host with s3 in the name as virtual-hosted", () => {
-    expect(
-      extractS3KeyFromUrl("https://api.s3.exulu.com/bucket/key.png"),
-    ).toBe("bucket/key.png");
+    expect(extractS3KeyFromUrl("https://api.s3.exulu.com/bucket/key.png")).toBe(
+      "bucket/key.png",
+    );
   });
 
   it("falls back to the last URL segment when parsing fails", () => {

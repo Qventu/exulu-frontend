@@ -13,12 +13,44 @@ import type { ImportField, ImportRow } from "@/lib/import/types";
 
 const FIELDS: ImportField[] = [
   { name: "id", label: "id", type: "text", required: false, core: true },
-  { name: "external_id", label: "external_id", type: "text", required: false, core: true },
-  { name: "name", label: "name", type: "shortText", required: true, core: true },
-  { name: "description", label: "description", type: "longText", required: false, core: true },
+  {
+    name: "external_id",
+    label: "external_id",
+    type: "text",
+    required: false,
+    core: true,
+  },
+  {
+    name: "name",
+    label: "name",
+    type: "shortText",
+    required: true,
+    core: true,
+  },
+  {
+    name: "description",
+    label: "description",
+    type: "longText",
+    required: false,
+    core: true,
+  },
   { name: "tags", label: "tags", type: "text", required: false, core: true },
-  { name: "category", label: "category", type: "enum", required: true, core: false, enumValues: ["a", "b"] },
-  { name: "doc_s3key", label: "doc", type: "file", required: false, core: false, allowedFileTypes: [".pdf"] },
+  {
+    name: "category",
+    label: "category",
+    type: "enum",
+    required: true,
+    core: false,
+    enumValues: ["a", "b"],
+  },
+  {
+    name: "doc_s3key",
+    label: "doc",
+    type: "file",
+    required: false,
+    core: false,
+    allowedFileTypes: [".pdf"],
+  },
 ];
 
 describe("rowsFromFiles", () => {
@@ -55,14 +87,24 @@ describe("rowsFromCsv", () => {
   });
 
   it("skips unmapped columns", () => {
-    const rows = rowsFromCsv(parsed, [{ header: "name", index: 0, fieldName: "name" }], FIELDS, indexFiles([]));
+    const rows = rowsFromCsv(
+      parsed,
+      [{ header: "name", index: 0, fieldName: "name" }],
+      FIELDS,
+      indexFiles([]),
+    );
     expect(Object.keys(rows[0].cells)).toEqual(["name"]);
   });
 });
 
 describe("validateRow", () => {
   it("flags missing required fields on create rows", () => {
-    const row: ImportRow = { key: "r", action: "create", runState: "pending", cells: {} };
+    const row: ImportRow = {
+      key: "r",
+      action: "create",
+      runState: "pending",
+      cells: {},
+    };
     const validated = validateRow(row, FIELDS);
     expect(validated.cells.name?.error?.code).toBe("required");
     expect(validated.cells.category?.error?.code).toBe("required");
@@ -90,10 +132,16 @@ describe("validateRow", () => {
       cells: {
         name: { raw: "n", value: "n" },
         category: { raw: "a", value: "a" },
-        doc_s3key: { raw: "x.txt", value: "x.txt", file: new File(["x"], "x.txt") },
+        doc_s3key: {
+          raw: "x.txt",
+          value: "x.txt",
+          file: new File(["x"], "x.txt"),
+        },
       },
     };
-    expect(validateRow(row, FIELDS).cells.doc_s3key.error?.code).toBe("fileType");
+    expect(validateRow(row, FIELDS).cells.doc_s3key.error?.code).toBe(
+      "fileType",
+    );
   });
 
   it("clears a stale required error once the value is filled", () => {
@@ -102,7 +150,11 @@ describe("validateRow", () => {
       action: "create",
       runState: "pending",
       cells: {
-        name: { raw: "n", value: "n", error: { code: "required", params: { field: "name" } } },
+        name: {
+          raw: "n",
+          value: "n",
+          error: { code: "required", params: { field: "name" } },
+        },
         category: { raw: "a", value: "a" },
       },
     };

@@ -31,7 +31,12 @@ export interface ImportCell {
 }
 
 export type RowAction = "create" | "update";
-export type RowRunState = "pending" | "uploading" | "saving" | "done" | "failed";
+export type RowRunState =
+  | "pending"
+  | "uploading"
+  | "saving"
+  | "done"
+  | "failed";
 
 export interface ImportRow {
   /** Stable per-batch key, e.g. "csv-3" or "file-0-report.pdf". */

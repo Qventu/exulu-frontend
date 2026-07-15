@@ -8,9 +8,27 @@ import type { ImportField } from "@/lib/import/types";
  */
 export const CORE_FIELDS: ImportField[] = [
   { name: "id", label: "id", type: "text", required: false, core: true },
-  { name: "external_id", label: "external_id", type: "text", required: false, core: true },
-  { name: "name", label: "name", type: "shortText", required: true, core: true },
-  { name: "description", label: "description", type: "longText", required: false, core: true },
+  {
+    name: "external_id",
+    label: "external_id",
+    type: "text",
+    required: false,
+    core: true,
+  },
+  {
+    name: "name",
+    label: "name",
+    type: "shortText",
+    required: true,
+    core: true,
+  },
+  {
+    name: "description",
+    label: "description",
+    type: "longText",
+    required: false,
+    core: true,
+  },
   { name: "tags", label: "tags", type: "text", required: false, core: true },
 ];
 

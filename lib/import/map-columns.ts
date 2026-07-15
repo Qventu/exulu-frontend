@@ -2,7 +2,10 @@ import type { ImportField } from "@/lib/import/types";
 
 /** Lowercase, trim, and unify space/dash separators to underscores. */
 export function normalizeHeader(value: string): string {
-  return value.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
 }
 
 export interface ColumnMapping {
@@ -12,7 +15,10 @@ export interface ColumnMapping {
 }
 
 /** Best-effort header → field auto-match; unmatched columns map to null. */
-export function autoMapColumns(headers: string[], fields: ImportField[]): ColumnMapping[] {
+export function autoMapColumns(
+  headers: string[],
+  fields: ImportField[],
+): ColumnMapping[] {
   const used = new Set<string>();
   return headers.map((header, index) => {
     const n = normalizeHeader(header);

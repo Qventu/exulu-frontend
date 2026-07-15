@@ -11,7 +11,9 @@ export function extractS3KeyFromUrl(uploadURL: string): string {
     // Decode it so the stored s3Key is the raw object key — otherwise the
     // backend re-encodes it when presigning (%20 → %2520) and S3 404s on a
     // key that doesn't exist.
-    const rawPath = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
+    const rawPath = url.pathname.startsWith("/")
+      ? url.pathname.slice(1)
+      : url.pathname;
     const keyPath = decodeURIComponent(rawPath);
     // Virtual-hosted-style AWS S3 URLs put the bucket in the subdomain:
     // <bucket>.s3.<region>.amazonaws.com/<key> → re-prepend the bucket.
