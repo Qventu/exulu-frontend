@@ -51,6 +51,8 @@ export interface Context {
     name: string
     editable?: boolean
     calculated?: boolean
+    required?: boolean
+    unique?: boolean
     type: ExuluFieldTypes
     label: string
     allowedFileTypes?: allFileTypes[]
