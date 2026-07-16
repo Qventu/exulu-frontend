@@ -1,6 +1,7 @@
 "use client";
 
 import { useApolloClient } from "@apollo/client";
+import { CheckCircle2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
@@ -296,6 +297,10 @@ export function ImportWizardDialog({
 
   const validRows = rows.filter(rowIsValid);
   const failedCount = rows.filter((r) => r.runState === "failed").length;
+  // Rows that could still import: failed ones plus rows fixed after the run.
+  const remainingCount = rows.filter(
+    (r) => rowIsValid(r) && r.runState !== "done",
+  ).length;
 
   const downloadErrorReport = () => {
     const present = new Set<string>();
@@ -376,20 +381,34 @@ export function ImportWizardDialog({
                   <Progress
                     className="h-2 flex-1"
                     value={
-                      rows.length ? (runner.doneCount / rows.length) * 100 : 0
+                      runner.runTotal
+                        ? (runner.doneCount / runner.runTotal) * 100
+                        : 0
                     }
                   />
+                  {runner.phase === "done" &&
+                    (runner.summary?.failed ?? 0) === 0 && (
+                      <CheckCircle2
+                        aria-hidden="true"
+                        className="size-4 shrink-0 text-emerald-600 dark:text-emerald-500"
+                      />
+                    )}
                   <span className="whitespace-nowrap text-sm text-muted-foreground">
                     {runner.phase === "running"
                       ? t("workspace.import.run.progress", {
                           done: runner.doneCount,
-                          total: rows.length,
+                          total: runner.runTotal,
                         })
                       : t("workspace.import.run.summary", {
                           created: runner.summary?.created ?? 0,
                           updated: runner.summary?.updated ?? 0,
                           failed: runner.summary?.failed ?? 0,
                         })}
+                    {runner.phase === "done" &&
+                      (runner.summary?.skipped ?? 0) > 0 &&
+                      ` · ${t("workspace.import.run.summarySkipped", {
+                        count: runner.summary?.skipped ?? 0,
+                      })}`}
                   </span>
                 </div>
               )}
@@ -403,6 +422,7 @@ export function ImportWizardDialog({
                 displayFields={displayFields}
                 rows={rows}
                 running={running}
+                finished={runner.phase === "done"}
                 rowStates={runner.rowStates}
                 onCellChange={handleCellChange}
                 onKeyCellBlur={handleKeyCellBlur}
@@ -475,21 +495,25 @@ export function ImportWizardDialog({
           {runner.phase === "done" && (
             <>
               {failedCount > 0 && (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={downloadErrorReport}
-                  >
-                    {t("workspace.import.run.downloadReport")}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => void runner.run(rowsRef.current)}
-                  >
-                    {t("workspace.import.run.retryFailed")}
-                  </Button>
-                </>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={downloadErrorReport}
+                >
+                  {t("workspace.import.run.downloadReport")}
+                </Button>
+              )}
+              {remainingCount > 0 && (
+                <Button
+                  type="button"
+                  onClick={() => void runner.run(rowsRef.current)}
+                >
+                  {failedCount > 0
+                    ? t("workspace.import.run.retryFailed")
+                    : t("workspace.import.review.importValid", {
+                        count: remainingCount,
+                      })}
+                </Button>
               )}
               <Button
                 type="button"

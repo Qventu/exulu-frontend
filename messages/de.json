@@ -2607,8 +2607,10 @@
           "stateFailed": "Fehlgeschlagen",
           "statePending": "Wartet",
           "stateSaving": "Speichert",
+          "stateSkipped": "Übersprungen",
           "stateUploading": "Lädt hoch",
-          "summary": "{created} erstellt, {updated} aktualisiert, {failed} fehlgeschlagen"
+          "summary": "{created} erstellt, {updated} aktualisiert, {failed} fehlgeschlagen",
+          "summarySkipped": "{count, plural, one {# Zeile übersprungen} other {# Zeilen übersprungen}}"
         },
         "steps": {
           "add": "Daten hinzufügen",
