@@ -54,7 +54,19 @@ export function buildErrorReportCsv(
   const header = [...fields.map((f) => csvEscape(f.label)), "error"].join(",");
   const lines = failed.map((row) =>
     [
-      ...fields.map((f) => csvEscape(row.cells[f.name]?.raw ?? "")),
+      ...fields.map((f) => {
+        const cell = row.cells[f.name];
+        if (
+          f.type === "file" &&
+          cell &&
+          !cell.file &&
+          typeof cell.value === "string" &&
+          cell.value !== ""
+        ) {
+          return csvEscape(cell.value);
+        }
+        return csvEscape(cell?.raw ?? "");
+      }),
       csvEscape(errorFor(row)),
     ].join(","),
   );

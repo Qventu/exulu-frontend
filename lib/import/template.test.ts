@@ -113,4 +113,41 @@ describe("buildErrorReportCsv", () => {
     );
     expect(csv).toBe('id,name,doc,error\n,"Broken, Inc.",,boom\n');
   });
+
+  it("exports the stored key for file cells that resolved to a value", () => {
+    const fields: ImportField[] = [
+      {
+        name: "name",
+        label: "name",
+        type: "shortText",
+        required: true,
+        core: true,
+      },
+      {
+        name: "doc_s3key",
+        label: "doc",
+        type: "file",
+        required: false,
+        core: false,
+      },
+    ];
+    const rows: ImportRow[] = [
+      {
+        key: "bad",
+        action: "create",
+        runState: "failed",
+        runError: "boom",
+        cells: {
+          name: { raw: "Alpha", value: "Alpha" },
+          doc_s3key: {
+            raw: "report.pdf",
+            value: "exulu/user_1/uuid-_EXULU_report.pdf",
+          },
+        },
+      },
+    ];
+    expect(buildErrorReportCsv(rows, fields, (r) => r.runError ?? "x")).toBe(
+      "name,doc,error\nAlpha,exulu/user_1/uuid-_EXULU_report.pdf,boom\n",
+    );
+  });
 });

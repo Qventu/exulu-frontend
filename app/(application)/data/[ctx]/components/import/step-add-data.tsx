@@ -197,7 +197,6 @@ export function StepAddData({
             type="button"
             variant="ghost"
             size="sm"
-            disabled={csvZoneDisabled}
             onClick={downloadTemplate}
           >
             <Download aria-hidden="true" className="mr-2 size-4" />

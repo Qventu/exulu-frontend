@@ -69,6 +69,7 @@ export function ImportWizardDialog({
 
   const [step, setStep] = React.useState<WizardStep>("add");
   const [classifying, setClassifying] = React.useState(false);
+  const [verifying, setVerifying] = React.useState(false);
   const [files, setFiles] = React.useState<File[]>([]);
   const [csv, setCsv] = React.useState<{
     name: string;
@@ -81,6 +82,8 @@ export function ImportWizardDialog({
 
   const runner = useImportRunner(context.id, fields);
   const running = runner.phase === "running";
+  const phaseRef = React.useRef(runner.phase);
+  phaseRef.current = runner.phase;
 
   // Single file field auto-selects; multiple need the add-step dropdown.
   const [fileFieldTarget, setFileFieldTarget] = React.useState<string | null>(
@@ -222,8 +225,10 @@ export function ImportWizardDialog({
   };
 
   const handleKeyCellBlur = () => {
+    setVerifying(true);
     void verifyRows(rowsRef.current)
       .then((verified) => {
+        if (phaseRef.current !== "edit") return;
         const byKey = new Map(verified.map((r) => [r.key, r]));
         setRows((prev) =>
           prev.map((row) => {
@@ -261,7 +266,8 @@ export function ImportWizardDialog({
         toast.error(t("workspace.import.classifyError"), {
           description: e instanceof Error ? e.message : String(e),
         });
-      });
+      })
+      .finally(() => setVerifying(false));
   };
 
   const handleApplyToAll = (fieldName: string, raw: string) => {
@@ -299,9 +305,7 @@ export function ImportWizardDialog({
       rows.some(
         (row) =>
           row.action === "update" &&
-          Object.values(row.cells).some(
-            (c) => (c.value === null || c.value === "") && !c.file,
-          ),
+          Object.values(row.cells).some((c) => !c.file && c.raw.trim() === ""),
       ),
     [rows],
   );
@@ -464,7 +468,7 @@ export function ImportWizardDialog({
               </span>
               <Button
                 type="button"
-                disabled={validRows.length === 0}
+                disabled={validRows.length === 0 || verifying}
                 onClick={() => void runner.run(rowsRef.current)}
               >
                 {validRows.length === rows.length
