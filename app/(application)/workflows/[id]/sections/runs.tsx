@@ -34,7 +34,10 @@ import { AlertCircle, ChevronDown, Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
-import { CodeBlock, CodeBlockCopyButton } from "@/components/ai-elements/code-block";
+import {
+  CodeBlock,
+  CodeBlockCopyButton,
+} from "@/components/ai-elements/code-block";
 import { TextPreview } from "@/components/custom/text-preview";
 import { DetailSection } from "@/components/primitives/detail-section";
 import { EmptyState } from "@/components/primitives/empty-state";
@@ -53,7 +56,10 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
+import { RoutineRunsList } from "@/components/widgets/routine-runs/runs-list";
+
 import { GET_JOB_RESULTS_LIGHT, GET_JOB_RESULT_BY_ID } from "../../queries";
+import { ROUTINES_RUNS_V2_SUPPORTED } from "../../schema-flags";
 import type { Routine } from "../../types";
 
 type RunListItem = {
@@ -115,11 +121,35 @@ function previewError(error: unknown): string | null {
 
 export interface RunsSectionProps {
   routine: Routine;
-  /** Subpage hosts the run dialog → row "Retry" calls back here. */
+  /** Subpage hosts the run dialog → row "Retry" calls back here (legacy path only). */
   onRetry?: (prefill: Record<string, string>) => void;
 }
 
-export function RunsSection({ routine, onRetry }: RunsSectionProps) {
+/**
+ * Flag dispatcher (design §7.2): runs-v2 renders the shared RoutineRunsList
+ * widget scoped to this routine (real `workflow` column filter, trigger
+ * badges, needs-attention, cancel/retry/open-session). Fallback keeps the
+ * byte-for-byte legacy list below. Two components — never conditional hooks.
+ */
+export function RunsSection(props: RunsSectionProps) {
+  if (ROUTINES_RUNS_V2_SUPPORTED) {
+    return <RunsSectionV2 routine={props.routine} />;
+  }
+  return <LegacyRunsSection {...props} />;
+}
+
+function RunsSectionV2({ routine }: { routine: Routine }) {
+  const t = useTranslations("routines");
+  return (
+    <section id="runs" className="scroll-mt-20" tabIndex={-1}>
+      <DetailSection title={t("runs.title")} defaultOpen={true}>
+        <RoutineRunsList workflow={routine.id} />
+      </DetailSection>
+    </section>
+  );
+}
+
+function LegacyRunsSection({ routine, onRetry }: RunsSectionProps) {
   const t = useTranslations("routines");
   const tCommon = useTranslations("common");
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
@@ -233,8 +263,12 @@ function RunRow({
   const handleRetry = onRetry
     ? () => {
         const inputs =
-          (detail?.metadata as { inputs?: Record<string, string> } | null | undefined)
-            ?.inputs ?? {};
+          (
+            detail?.metadata as
+              | { inputs?: Record<string, string> }
+              | null
+              | undefined
+          )?.inputs ?? {};
         onRetry(inputs);
       }
     : undefined;
