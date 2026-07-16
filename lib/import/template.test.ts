@@ -22,8 +22,56 @@ const FIELDS: ImportField[] = [
 ];
 
 describe("buildCsvTemplate", () => {
-  it("emits one header row using labels", () => {
-    expect(buildCsvTemplate(FIELDS)).toBe("id,name,doc\n");
+  it("emits a header row and an example row", () => {
+    const fields: ImportField[] = [
+      { name: "id", label: "id", type: "text", required: false, core: true },
+      {
+        name: "external_id",
+        label: "external_id",
+        type: "text",
+        required: false,
+        core: true,
+      },
+      {
+        name: "name",
+        label: "name",
+        type: "shortText",
+        required: true,
+        core: true,
+      },
+      {
+        name: "tags",
+        label: "tags",
+        type: "text",
+        required: false,
+        core: true,
+      },
+      {
+        name: "count",
+        label: "count",
+        type: "number",
+        required: false,
+        core: false,
+      },
+      {
+        name: "cat",
+        label: "cat",
+        type: "enum",
+        required: false,
+        core: false,
+        enumValues: ["A", "B"],
+      },
+      {
+        name: "doc_s3key",
+        label: "doc",
+        type: "file",
+        required: false,
+        core: false,
+      },
+    ];
+    expect(buildCsvTemplate(fields)).toBe(
+      'id,external_id,name,tags,count,cat,doc\n,example-id-123,Example item,"tag1,tag2",1.5,A,\n',
+    );
   });
 
   it("escapes labels containing commas or quotes", () => {
@@ -36,7 +84,7 @@ describe("buildCsvTemplate", () => {
         core: false,
       },
     ];
-    expect(buildCsvTemplate(fields)).toBe('"weird, ""label"""\n');
+    expect(buildCsvTemplate(fields)).toBe('"weird, ""label"""\nExample text\n');
   });
 });
 

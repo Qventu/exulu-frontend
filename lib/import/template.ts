@@ -4,9 +4,36 @@ function csvEscape(value: string): string {
   return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }
 
-/** Header-only CSV template using human labels (mapping matches labels too). */
+function exampleValueFor(field: ImportField): string {
+  if (field.name === "id") return "";
+  if (field.name === "external_id") return "example-id-123";
+  if (field.name === "name") return "Example item";
+  if (field.name === "description") return "Example description";
+  if (field.name === "tags") return "tag1,tag2";
+  switch (field.type) {
+    case "number":
+      return "1.5";
+    case "boolean":
+      return "true";
+    case "enum":
+      return field.enumValues?.[0] ?? "";
+    case "date":
+      return "2026-07-16";
+    case "json":
+      return "{}";
+    case "file":
+    case "uuid":
+      return "";
+    default:
+      return "Example text";
+  }
+}
+
+/** Header row + one example row showing what each column expects. */
 export function buildCsvTemplate(fields: ImportField[]): string {
-  return fields.map((f) => csvEscape(f.label)).join(",") + "\n";
+  const header = fields.map((f) => csvEscape(f.label)).join(",");
+  const example = fields.map((f) => csvEscape(exampleValueFor(f))).join(",");
+  return `${header}\n${example}\n`;
 }
 
 /**
