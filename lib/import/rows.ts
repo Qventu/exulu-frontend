@@ -1,6 +1,4 @@
 import { coerceValue } from "@/lib/import/coerce";
-import type { FileIndex } from "@/lib/import/match-files";
-import { findFile } from "@/lib/import/match-files";
 import type { ColumnMapping } from "@/lib/import/map-columns";
 import type { ParsedCsv } from "@/lib/import/parse-csv";
 import type { ImportCell, ImportField, ImportRow } from "@/lib/import/types";
@@ -35,7 +33,6 @@ export function rowsFromCsv(
   parsed: ParsedCsv,
   mapping: ColumnMapping[],
   fields: ImportField[],
-  fileIndex: FileIndex,
 ): ImportRow[] {
   const byName = new Map(fields.map((f) => [f.name, f]));
   return parsed.rows.map((raw, i) => {
@@ -45,15 +42,6 @@ export function rowsFromCsv(
       const field = byName.get(m.fieldName);
       if (!field) continue;
       const cell = coerceValue(field, raw[m.index] ?? "");
-      if (
-        field.type === "file" &&
-        typeof cell.value === "string" &&
-        cell.value !== ""
-      ) {
-        const file = findFile(fileIndex, cell.value);
-        if (file) cell.file = file;
-        else cell.error = { code: "fileMissing", params: { name: cell.value } };
-      }
       cells[m.fieldName] = cell;
     }
     return {
@@ -88,18 +76,22 @@ export function validateRow(row: ImportRow, fields: ImportField[]): ImportRow {
         cells[f.name] = { raw: cell.raw, value: cell.value, file: cell.file };
       }
     }
-    if (f.type === "file" && f.allowedFileTypes?.length && cell?.file) {
-      const ok = f.allowedFileTypes.some((ext) =>
-        cell.file!.name.toLowerCase().endsWith(ext.toLowerCase()),
-      );
-      if (!ok) {
-        cells[f.name] = {
-          ...cell,
-          error: {
-            code: "fileType",
-            params: { values: f.allowedFileTypes.join(", ") },
-          },
-        };
+    if (f.type === "file" && f.allowedFileTypes?.length) {
+      const candidate =
+        cell?.file?.name ?? (typeof cell?.value === "string" ? cell.value : "");
+      if (candidate) {
+        const ok = f.allowedFileTypes.some((ext) =>
+          candidate.toLowerCase().endsWith(ext.toLowerCase()),
+        );
+        if (!ok) {
+          cells[f.name] = {
+            ...cell!,
+            error: {
+              code: "fileType",
+              params: { values: f.allowedFileTypes.join(", ") },
+            },
+          };
+        }
       }
     }
   }

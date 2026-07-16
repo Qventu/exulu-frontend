@@ -108,9 +108,38 @@ describe("coerceValue: json / uuid / file / text", () => {
       "uuid",
     );
   });
-  it("passes file cell values through trimmed (filename matching happens later)", () => {
-    expect(coerceValue(field({ type: "file" }), " report.pdf ").value).toBe(
-      "report.pdf",
+  it("extracts the key from an AWS virtual-hosted storage URL", () => {
+    expect(
+      coerceValue(
+        field({ type: "file" }),
+        "https://mybucket.s3.eu-central-1.amazonaws.com/user_1/uuid-_EXULU_report.pdf?X-Amz-Signature=xyz",
+      ).value,
+    ).toBe("mybucket/user_1/uuid-_EXULU_report.pdf");
+  });
+  it("extracts the key from a path-style (MinIO) storage URL", () => {
+    expect(
+      coerceValue(
+        field({ type: "file" }),
+        "https://api.s3.exulu.com/exulu/user_1/uuid-_EXULU_report.pdf",
+      ).value,
+    ).toBe("exulu/user_1/uuid-_EXULU_report.pdf");
+  });
+  it("accepts a raw bucket/key string", () => {
+    expect(
+      coerceValue(field({ type: "file" }), " exulu/user_1/x.pdf ").value,
+    ).toBe("exulu/user_1/x.pdf");
+  });
+  it("rejects URLs that do not extract to a bucket/key", () => {
+    expect(
+      coerceValue(field({ type: "file" }), "https://example.com/").error?.code,
+    ).toBe("fileUrl");
+  });
+  it("rejects plain filenames and text", () => {
+    expect(coerceValue(field({ type: "file" }), "report.pdf").error?.code).toBe(
+      "fileUrl",
+    );
+    expect(coerceValue(field({ type: "file" }), "some text").error?.code).toBe(
+      "fileUrl",
     );
   });
   it("keeps raw text for unknown types (backend-only types degrade to text)", () => {

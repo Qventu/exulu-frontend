@@ -19,7 +19,6 @@ import { coerceValue } from "@/lib/import/coerce";
 import { fileFields, importableFields } from "@/lib/import/fields";
 import { autoMapColumns } from "@/lib/import/map-columns";
 import type { ColumnMapping } from "@/lib/import/map-columns";
-import { indexFiles, leftoverFiles } from "@/lib/import/match-files";
 import type { ParsedCsv } from "@/lib/import/parse-csv";
 import { classifyRows } from "@/lib/import/resolve-targets";
 import type { ExistingRefs } from "@/lib/import/resolve-targets";
@@ -163,16 +162,8 @@ export function ImportWizardDialog({
   const enterReview = React.useCallback(async () => {
     setClassifying(true);
     try {
-      const index = indexFiles(files);
-      if (index.duplicateNames.length > 0) {
-        toast.error(
-          t("workspace.import.add.duplicateFiles", {
-            names: index.duplicateNames.join(", "),
-          }),
-        );
-      }
       let built: ImportRow[] = [];
-      if (csv) built = rowsFromCsv(csv.parsed, mapping, fields, index);
+      if (csv) built = rowsFromCsv(csv.parsed, mapping, fields);
       else if (resolvedFileTarget)
         built = rowsFromFiles(files, resolvedFileTarget);
       setRows(await classifyAgainstServer(built));
@@ -263,19 +254,6 @@ export function ImportWizardDialog({
 
   const handleRemoveRow = (rowKey: string) => {
     setRows((prev) => prev.filter((r) => r.key !== rowKey));
-  };
-
-  const leftovers = React.useMemo(
-    () => (csv ? leftoverFiles(files, rows) : []),
-    [csv, files, rows],
-  );
-
-  const addLeftovers = () => {
-    if (!resolvedFileTarget) return;
-    const extra = rowsFromFiles(leftovers, resolvedFileTarget, "extra").map(
-      (r) => validateRow(r, fields),
-    );
-    setRows((prev) => [...prev, ...extra]);
   };
 
   const displayFields = React.useMemo(() => {
@@ -386,20 +364,6 @@ export function ImportWizardDialog({
                   </span>
                 </div>
               )}
-              {runner.phase === "edit" &&
-                leftovers.length > 0 &&
-                resolvedFileTarget && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addLeftovers}
-                  >
-                    {t("workspace.import.review.addLeftovers", {
-                      count: leftovers.length,
-                    })}
-                  </Button>
-                )}
               <StepReviewGrid
                 fields={fields}
                 displayFields={displayFields}

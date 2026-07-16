@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { indexFiles } from "@/lib/import/match-files";
 import {
   buildCreateInput,
   buildUpdateInput,
@@ -67,8 +66,8 @@ describe("rowsFromCsv", () => {
   const parsed = {
     headers: ["name", "category", "doc"],
     rows: [
-      ["Alpha", "A", "report.pdf"],
-      ["Beta", "b", "missing.pdf"],
+      ["Alpha", "A", "exulu/user_1/uuid-_EXULU_report.pdf"],
+      ["Beta", "b", "not-a-key"],
     ],
     errors: [],
   };
@@ -78,12 +77,13 @@ describe("rowsFromCsv", () => {
     { header: "doc", index: 2, fieldName: "doc_s3key" },
   ];
 
-  it("coerces cells and matches files by name", () => {
-    const index = indexFiles([new File(["x"], "Report.PDF")]);
-    const rows = rowsFromCsv(parsed, mapping, FIELDS, index);
+  it("coerces cells; file columns become storage keys", () => {
+    const rows = rowsFromCsv(parsed, mapping, FIELDS);
     expect(rows[0].cells.category.value).toBe("a");
-    expect(rows[0].cells.doc_s3key.file?.name).toBe("Report.PDF");
-    expect(rows[1].cells.doc_s3key.error?.code).toBe("fileMissing");
+    expect(rows[0].cells.doc_s3key.value).toBe(
+      "exulu/user_1/uuid-_EXULU_report.pdf",
+    );
+    expect(rows[1].cells.doc_s3key.error?.code).toBe("fileUrl");
   });
 
   it("skips unmapped columns", () => {
@@ -91,7 +91,6 @@ describe("rowsFromCsv", () => {
       parsed,
       [{ header: "name", index: 0, fieldName: "name" }],
       FIELDS,
-      indexFiles([]),
     );
     expect(Object.keys(rows[0].cells)).toEqual(["name"]);
   });
@@ -124,7 +123,7 @@ describe("validateRow", () => {
     expect(validated.cells.category).toBeUndefined();
   });
 
-  it("enforces allowedFileTypes", () => {
+  it("enforces allowedFileTypes against dropped file names", () => {
     const row: ImportRow = {
       key: "r",
       action: "create",
@@ -136,6 +135,25 @@ describe("validateRow", () => {
           raw: "x.txt",
           value: "x.txt",
           file: new File(["x"], "x.txt"),
+        },
+      },
+    };
+    expect(validateRow(row, FIELDS).cells.doc_s3key.error?.code).toBe(
+      "fileType",
+    );
+  });
+
+  it("enforces allowedFileTypes against storage keys", () => {
+    const row: ImportRow = {
+      key: "r",
+      action: "create",
+      runState: "pending",
+      cells: {
+        name: { raw: "n", value: "n" },
+        category: { raw: "a", value: "a" },
+        doc_s3key: {
+          raw: "exulu/user_1/uuid-_EXULU_x.txt",
+          value: "exulu/user_1/uuid-_EXULU_x.txt",
         },
       },
     };

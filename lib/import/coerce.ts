@@ -1,4 +1,5 @@
 import type { ImportCell, ImportField } from "@/lib/import/types";
+import { extractS3KeyFromUrl } from "@/lib/s3/extract-key";
 
 const TEXTUAL = new Set(["text", "longText", "shortText", "markdown", "code"]);
 
@@ -80,8 +81,16 @@ export function coerceValue(field: ImportField, raw: string): ImportCell {
         ? { raw, value: trimmed }
         : err(raw, "uuid");
     }
-    case "file":
-      return { raw, value: trimmed };
+    case "file": {
+      // v1.1: file cells reference this instance's storage — a URL (presigned
+      // links included) or a raw bucket/key. Never a local filename.
+      if (/^https?:\/\//i.test(trimmed)) {
+        const key = extractS3KeyFromUrl(trimmed);
+        return key.includes("/") ? { raw, value: key } : err(raw, "fileUrl");
+      }
+      if (trimmed.includes("/")) return { raw, value: trimmed };
+      return err(raw, "fileUrl");
+    }
     default:
       return { raw, value: raw };
   }
