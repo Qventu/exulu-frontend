@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { filesApi } from "@/lib/api/files";
 import { coerceValue } from "@/lib/import/coerce";
 import { fileFields, importableFields } from "@/lib/import/fields";
 import { autoMapColumns } from "@/lib/import/map-columns";
@@ -29,6 +30,11 @@ import {
   validateRow,
 } from "@/lib/import/rows";
 import { buildErrorReportCsv } from "@/lib/import/template";
+import {
+  applyMissingFileErrors,
+  fileKeysOf,
+  findMissingFileKeys,
+} from "@/lib/import/verify-files";
 import type { ImportRow } from "@/lib/import/types";
 import type { Context } from "@/types/models/context";
 
@@ -159,6 +165,20 @@ export function ImportWizardDialog({
     [client, context.id, fields],
   );
 
+  const verifyRows = React.useCallback(
+    async (input: ImportRow[]): Promise<ImportRow[]> => {
+      const classified = await classifyAgainstServer(input);
+      const keys = fileKeysOf(classified, fields);
+      if (keys.length === 0) return classified;
+      const missing = await findMissingFileKeys(keys, async (key) => {
+        const res = await filesApi.object(key);
+        return res?.$metadata?.httpStatusCode === 200;
+      });
+      return applyMissingFileErrors(classified, fields, missing);
+    },
+    [classifyAgainstServer, fields],
+  );
+
   const enterReview = React.useCallback(async () => {
     setClassifying(true);
     try {
@@ -166,7 +186,7 @@ export function ImportWizardDialog({
       if (csv) built = rowsFromCsv(csv.parsed, mapping, fields);
       else if (resolvedFileTarget)
         built = rowsFromFiles(files, resolvedFileTarget);
-      setRows(await classifyAgainstServer(built));
+      setRows(await verifyRows(built));
       setStep("review");
     } catch (e) {
       toast.error(t("workspace.import.classifyError"), {
@@ -175,15 +195,7 @@ export function ImportWizardDialog({
     } finally {
       setClassifying(false);
     }
-  }, [
-    csv,
-    files,
-    mapping,
-    fields,
-    resolvedFileTarget,
-    classifyAgainstServer,
-    t,
-  ]);
+  }, [csv, files, mapping, fields, resolvedFileTarget, verifyRows, t]);
 
   const handleContinueFromAdd = () => {
     if (csv) {
@@ -210,19 +222,35 @@ export function ImportWizardDialog({
   };
 
   const handleKeyCellBlur = () => {
-    void classifyAgainstServer(rowsRef.current)
-      .then((classified) => {
-        const byKey = new Map(classified.map((r) => [r.key, r]));
+    void verifyRows(rowsRef.current)
+      .then((verified) => {
+        const byKey = new Map(verified.map((r) => [r.key, r]));
         setRows((prev) =>
           prev.map((row) => {
-            const c = byKey.get(row.key);
-            if (!c) return row;
+            const v = byKey.get(row.key);
+            if (!v) return row;
+            const cells = { ...row.cells };
+            for (const f of fields) {
+              if (f.type !== "file") continue;
+              const verifiedCell = v.cells[f.name];
+              const currentCell = cells[f.name];
+              // Adopt verification outcome only when the cell wasn't edited
+              // during the roundtrip (same raw).
+              if (
+                verifiedCell &&
+                currentCell &&
+                verifiedCell.raw === currentCell.raw
+              ) {
+                cells[f.name] = verifiedCell;
+              }
+            }
             return validateRow(
               {
                 ...row,
-                action: c.action,
-                targetItemId: c.targetItemId,
-                error: c.error,
+                cells,
+                action: v.action,
+                targetItemId: v.targetItemId,
+                error: v.error,
               },
               fields,
             );
@@ -265,6 +293,18 @@ export function ImportWizardDialog({
         f.name === "name" || present.has(f.name) || (f.required && !f.core),
     );
   }, [rows, fields]);
+
+  const hasBlankUpdateCells = React.useMemo(
+    () =>
+      rows.some(
+        (row) =>
+          row.action === "update" &&
+          Object.values(row.cells).some(
+            (c) => (c.value === null || c.value === "") && !c.file,
+          ),
+      ),
+    [rows],
+  );
 
   const validRows = rows.filter(rowIsValid);
   const failedCount = rows.filter((r) => r.runState === "failed").length;
@@ -363,6 +403,11 @@ export function ImportWizardDialog({
                         })}
                   </span>
                 </div>
+              )}
+              {runner.phase === "edit" && hasBlankUpdateCells && (
+                <p className="text-sm text-muted-foreground">
+                  {t("workspace.import.review.blankClearsWarning")}
+                </p>
               )}
               <StepReviewGrid
                 fields={fields}
