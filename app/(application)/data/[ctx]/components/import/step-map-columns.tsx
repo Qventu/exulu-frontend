@@ -102,6 +102,14 @@ export function StepMapColumns({
                     ))}
                   </SelectContent>
                 </Select>
+                {(() => {
+                  const target = fields.find((f) => f.name === m.fieldName);
+                  return target?.type === "file" ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t("workspace.import.map.fileHint")}
+                    </p>
+                  ) : null;
+                })()}
               </TableCell>
             </TableRow>
           ))}

@@ -109,7 +109,7 @@ function CellEditor({
   const isKeyField = field.name === "id" || field.name === "external_id";
 
   if (field.type === "file") {
-    if (cell?.file || (typeof cell?.value === "string" && cell.value !== "")) {
+    if (cell?.file) {
       return (
         <span
           title={errorTitle}
@@ -119,16 +119,30 @@ function CellEditor({
           )}
         >
           <Paperclip aria-hidden="true" className="size-3 shrink-0" />
-          <span className="truncate">
-            {cell?.file?.name ?? String(cell?.value)}
-          </span>
+          <span className="truncate">{cell.file.name}</span>
         </span>
       );
     }
+    // CSV flow: the cell holds a storage URL/key — editable text.
+    const keyName =
+      typeof cell?.value === "string" && cell.value !== ""
+        ? cell.value.split("_EXULU_").pop()
+        : undefined;
     return (
-      <span className="text-muted-foreground">
-        {t("workspace.import.review.emptyCell")}
-      </span>
+      <Input
+        disabled={disabled}
+        value={cell?.raw ?? ""}
+        onChange={(e) => onCellChange(row.key, field.name, e.target.value)}
+        onBlur={onKeyCellBlur}
+        title={errorTitle ?? keyName}
+        aria-invalid={Boolean(cell?.error)}
+        placeholder={t("workspace.import.review.filePlaceholder")}
+        className={cn(
+          "h-8 min-w-36 text-sm",
+          cell?.error && "border-destructive",
+        )}
+        type="text"
+      />
     );
   }
 
