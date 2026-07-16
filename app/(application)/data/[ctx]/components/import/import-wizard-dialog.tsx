@@ -356,6 +356,7 @@ export function ImportWizardDialog({
               onRemoveFile={(i) =>
                 setFiles((prev) => prev.filter((_, idx) => idx !== i))
               }
+              onClearFiles={() => setFiles([])}
               onCsvChange={setCsv}
               onFileFieldTargetChange={setFileFieldTarget}
             />

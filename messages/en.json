@@ -2552,6 +2552,7 @@
           "filesZoneDrop": "Drop files here, or click to browse",
           "filesZoneHint": "One new item per file",
           "filesZoneTitle": "Import files",
+          "removeAllFiles": "Remove all",
           "removeCsv": "Remove CSV",
           "removeFile": "Remove {name}",
           "template": "Download CSV template"

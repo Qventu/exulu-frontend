@@ -2552,6 +2552,7 @@
           "filesZoneDrop": "Dateien hier ablegen oder klicken zum Auswählen",
           "filesZoneHint": "Ein neuer Eintrag pro Datei",
           "filesZoneTitle": "Dateien importieren",
+          "removeAllFiles": "Alle entfernen",
           "removeCsv": "CSV entfernen",
           "removeFile": "{name} entfernen",
           "template": "CSV-Vorlage herunterladen"
