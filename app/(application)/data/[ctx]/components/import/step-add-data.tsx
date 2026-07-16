@@ -86,7 +86,6 @@ export function StepAddData({
     >
       {fileTargets.length > 0 && (
         <section
-          aria-disabled={filesZoneDisabled}
           className={cn(
             "flex flex-col gap-3 rounded-lg border border-input p-4",
             filesZoneDisabled && "opacity-50",
@@ -169,7 +168,6 @@ export function StepAddData({
       )}
 
       <section
-        aria-disabled={csvZoneDisabled}
         className={cn(
           "flex flex-col gap-3 rounded-lg border border-input p-4",
           csvZoneDisabled && "opacity-50",
