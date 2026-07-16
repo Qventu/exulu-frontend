@@ -27,6 +27,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type {
   CellError,
   ImportField,
@@ -53,7 +59,6 @@ export interface StepReviewGridProps {
   rowStates: Record<string, { state: RowRunState; error?: string }>;
   onCellChange: (rowKey: string, fieldName: string, raw: string) => void;
   onKeyCellBlur: () => void;
-  onApplyToAll: (fieldName: string, raw: string) => void;
   onRemoveRow: (rowKey: string) => void;
 }
 
@@ -74,9 +79,8 @@ function StatusBadge({
     done: "bg-secondary text-secondary-foreground",
     failed: "bg-destructive/10 text-destructive",
   }[tone];
-  return (
+  const badge = (
     <span
-      title={title}
       className={cn(
         "inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium",
         classes,
@@ -84,6 +88,13 @@ function StatusBadge({
     >
       {label}
     </span>
+  );
+  if (!title) return badge;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{badge}</TooltipTrigger>
+      <TooltipContent>{title}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -111,38 +122,40 @@ function CellEditor({
   if (field.type === "file") {
     if (cell?.file) {
       return (
-        <span
-          title={errorTitle}
-          className={cn(
-            "inline-flex max-w-44 items-center gap-1 truncate rounded-md border border-input px-2 py-0.5 text-xs",
-            cell?.error && "border-destructive text-destructive",
+        <div className="flex flex-col gap-1">
+          <span
+            className={cn(
+              "inline-flex max-w-44 items-center gap-1 truncate rounded-md border border-input px-2 py-0.5 text-xs",
+              cell?.error && "border-destructive text-destructive",
+            )}
+          >
+            <Paperclip aria-hidden="true" className="size-3 shrink-0" />
+            <span className="truncate">{cell.file.name}</span>
+          </span>
+          {errorTitle && (
+            <p className="text-xs text-destructive">{errorTitle}</p>
           )}
-        >
-          <Paperclip aria-hidden="true" className="size-3 shrink-0" />
-          <span className="truncate">{cell.file.name}</span>
-        </span>
+        </div>
       );
     }
     // CSV flow: the cell holds a storage URL/key — editable text.
-    const keyName =
-      typeof cell?.value === "string" && cell.value !== ""
-        ? cell.value.split("_EXULU_").pop()
-        : undefined;
     return (
-      <Input
-        disabled={disabled}
-        value={cell?.raw ?? ""}
-        onChange={(e) => onCellChange(row.key, field.name, e.target.value)}
-        onBlur={onKeyCellBlur}
-        title={errorTitle ?? keyName}
-        aria-invalid={Boolean(cell?.error)}
-        placeholder={t("workspace.import.review.filePlaceholder")}
-        className={cn(
-          "h-8 min-w-36 text-sm",
-          cell?.error && "border-destructive",
-        )}
-        type="text"
-      />
+      <div className="flex flex-col gap-1">
+        <Input
+          disabled={disabled}
+          value={cell?.raw ?? ""}
+          onChange={(e) => onCellChange(row.key, field.name, e.target.value)}
+          onBlur={onKeyCellBlur}
+          aria-invalid={Boolean(cell?.error)}
+          placeholder={t("workspace.import.review.filePlaceholder")}
+          className={cn(
+            "h-8 min-w-36 text-sm",
+            cell?.error && "border-destructive",
+          )}
+          type="text"
+        />
+        {errorTitle && <p className="text-xs text-destructive">{errorTitle}</p>}
+      </div>
     );
   }
 
@@ -150,28 +163,30 @@ function CellEditor({
     const current =
       cell?.value === true ? "true" : cell?.value === false ? "false" : UNSET;
     return (
-      <Select
-        disabled={disabled}
-        value={current}
-        onValueChange={(v) =>
-          onCellChange(row.key, field.name, v === UNSET ? "" : v)
-        }
-      >
-        <SelectTrigger
-          title={errorTitle}
-          aria-invalid={Boolean(cell?.error)}
-          className={cn("h-8 w-24", cell?.error && "border-destructive")}
+      <div className="flex flex-col gap-1">
+        <Select
+          disabled={disabled}
+          value={current}
+          onValueChange={(v) =>
+            onCellChange(row.key, field.name, v === UNSET ? "" : v)
+          }
         >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={UNSET}>
-            {t("workspace.import.review.emptyCell")}
-          </SelectItem>
-          <SelectItem value="true">true</SelectItem>
-          <SelectItem value="false">false</SelectItem>
-        </SelectContent>
-      </Select>
+          <SelectTrigger
+            aria-invalid={Boolean(cell?.error)}
+            className={cn("h-8 w-24", cell?.error && "border-destructive")}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={UNSET}>
+              {t("workspace.import.review.emptyCell")}
+            </SelectItem>
+            <SelectItem value="true">true</SelectItem>
+            <SelectItem value="false">false</SelectItem>
+          </SelectContent>
+        </Select>
+        {errorTitle && <p className="text-xs text-destructive">{errorTitle}</p>}
+      </div>
     );
   }
 
@@ -179,49 +194,53 @@ function CellEditor({
     const current =
       typeof cell?.value === "string" && cell.value !== "" ? cell.value : UNSET;
     return (
-      <Select
-        disabled={disabled}
-        value={current}
-        onValueChange={(v) =>
-          onCellChange(row.key, field.name, v === UNSET ? "" : v)
-        }
-      >
-        <SelectTrigger
-          title={errorTitle}
-          aria-invalid={Boolean(cell?.error)}
-          className={cn("h-8 w-36", cell?.error && "border-destructive")}
+      <div className="flex flex-col gap-1">
+        <Select
+          disabled={disabled}
+          value={current}
+          onValueChange={(v) =>
+            onCellChange(row.key, field.name, v === UNSET ? "" : v)
+          }
         >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={UNSET}>
-            {t("workspace.import.review.emptyCell")}
-          </SelectItem>
-          {(field.enumValues ?? []).map((v) => (
-            <SelectItem key={v} value={v}>
-              {v}
+          <SelectTrigger
+            aria-invalid={Boolean(cell?.error)}
+            className={cn("h-8 w-36", cell?.error && "border-destructive")}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={UNSET}>
+              {t("workspace.import.review.emptyCell")}
             </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+            {(field.enumValues ?? []).map((v) => (
+              <SelectItem key={v} value={v}>
+                {v}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errorTitle && <p className="text-xs text-destructive">{errorTitle}</p>}
+      </div>
     );
   }
 
   return (
-    <Input
-      disabled={disabled}
-      value={cell?.raw ?? ""}
-      onChange={(e) => onCellChange(row.key, field.name, e.target.value)}
-      onBlur={isKeyField ? onKeyCellBlur : undefined}
-      title={errorTitle}
-      aria-invalid={Boolean(cell?.error)}
-      className={cn(
-        "h-8 min-w-28 text-sm",
-        cell?.error && "border-destructive",
-      )}
-      type="text"
-      inputMode={field.type === "number" ? "decimal" : undefined}
-    />
+    <div className="flex flex-col gap-1">
+      <Input
+        disabled={disabled}
+        value={cell?.raw ?? ""}
+        onChange={(e) => onCellChange(row.key, field.name, e.target.value)}
+        onBlur={isKeyField ? onKeyCellBlur : undefined}
+        aria-invalid={Boolean(cell?.error)}
+        className={cn(
+          "h-8 min-w-28 text-sm",
+          cell?.error && "border-destructive",
+        )}
+        type="text"
+        inputMode={field.type === "number" ? "decimal" : undefined}
+      />
+      {errorTitle && <p className="text-xs text-destructive">{errorTitle}</p>}
+    </div>
   );
 }
 
@@ -233,12 +252,9 @@ export function StepReviewGrid({
   rowStates,
   onCellChange,
   onKeyCellBlur,
-  onApplyToAll,
   onRemoveRow,
 }: StepReviewGridProps) {
   const t = useTranslations("knowledge");
-  const [applyField, setApplyField] = React.useState<string>("");
-  const [applyValue, setApplyValue] = React.useState<string>("");
 
   const statusFor = (row: ImportRow): React.ReactNode => {
     const runState = rowStates[row.key]?.state ?? row.runState;
@@ -344,46 +360,8 @@ export function StepReviewGrid({
     getRowId: (row) => row.key,
   });
 
-  const applicableFields = displayFields.filter(
-    (f) => f.type !== "file" && f.name !== "id" && f.name !== "external_id",
-  );
-
   return (
-    <div className="flex min-h-0 flex-col gap-3">
-      {!running && applicableFields.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={applyField || undefined} onValueChange={setApplyField}>
-            <SelectTrigger className="h-8 w-44">
-              <SelectValue
-                placeholder={t("workspace.import.review.applyToAll")}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {applicableFields.map((f) => (
-                <SelectItem key={f.name} value={f.name}>
-                  {f.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            value={applyValue}
-            onChange={(e) => setApplyValue(e.target.value)}
-            placeholder={t("workspace.import.review.applyToAllValue")}
-            className="h-8 w-52 text-sm"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={!applyField}
-            onClick={() => onApplyToAll(applyField, applyValue)}
-          >
-            {t("workspace.import.review.applyToAll")}
-          </Button>
-        </div>
-      )}
-
+    <TooltipProvider delayDuration={300}>
       <div className="min-h-0 flex-1 overflow-auto rounded-md border border-input">
         <Table>
           <TableHeader>
@@ -404,7 +382,7 @@ export function StepReviewGrid({
             {table.getRowModel().rows.map((row) => (
               <TableRow key={row.id}>
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="py-1.5">
+                  <TableCell key={cell.id} className="py-1.5 align-top">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -413,6 +391,6 @@ export function StepReviewGrid({
           </TableBody>
         </Table>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

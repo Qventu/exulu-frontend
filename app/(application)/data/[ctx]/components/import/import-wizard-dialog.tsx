@@ -270,22 +270,6 @@ export function ImportWizardDialog({
       .finally(() => setVerifying(false));
   };
 
-  const handleApplyToAll = (fieldName: string, raw: string) => {
-    const field = fields.find((f) => f.name === fieldName);
-    if (!field) return;
-    setRows((prev) =>
-      prev.map((row) =>
-        validateRow(
-          {
-            ...row,
-            cells: { ...row.cells, [fieldName]: coerceValue(field, raw) },
-          },
-          fields,
-        ),
-      ),
-    );
-  };
-
   const handleRemoveRow = (rowKey: string) => {
     setRows((prev) => prev.filter((r) => r.key !== rowKey));
   };
@@ -421,7 +405,6 @@ export function ImportWizardDialog({
                 rowStates={runner.rowStates}
                 onCellChange={handleCellChange}
                 onKeyCellBlur={handleKeyCellBlur}
-                onApplyToAll={handleApplyToAll}
                 onRemoveRow={handleRemoveRow}
               />
             </div>

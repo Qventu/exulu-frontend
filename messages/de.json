@@ -2587,8 +2587,6 @@
           "title": "CSV-Spalten den Feldern zuordnen"
         },
         "review": {
-          "applyToAll": "Auf alle Zeilen anwenden",
-          "applyToAllValue": "Wert für alle Zeilen",
           "blankClearsWarning": "Leere Zellen in zugeordneten Spalten löschen diese Felder bei aktualisierten Einträgen.",
           "emptyCell": "—",
           "filePlaceholder": "Speicher-URL oder Schlüssel",
