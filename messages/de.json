@@ -3701,6 +3701,76 @@
     },
     "runActionLabel": "Ausführen"
   },
+  "routineRuns": {
+    "filters": {
+      "state": "Status",
+      "allStates": "Alle Status",
+      "trigger": "Auslöser",
+      "allTriggers": "Alle Auslöser",
+      "from": "Von",
+      "to": "Bis",
+      "searchPlaceholder": "Läufe durchsuchen…",
+      "needsAttention": "Erfordert Aufmerksamkeit",
+      "showFiltered": "Gefilterte anzeigen"
+    },
+    "state": {
+      "waiting": "Wartend",
+      "active": "Aktiv",
+      "completed": "Abgeschlossen",
+      "failed": "Fehlgeschlagen",
+      "delayed": "Verzögert",
+      "paused": "Pausiert",
+      "stuck": "Hängt fest",
+      "waiting_approval": "Erfordert Aufmerksamkeit",
+      "filtered": "Gefiltert",
+      "cancelled": "Abgebrochen"
+    },
+    "trigger": {
+      "email": "E-Mail",
+      "schedule": "Zeitplan",
+      "manual": "Manuell",
+      "api": "API",
+      "none": "—"
+    },
+    "filteredReason": {
+      "sender_not_allowed": "Absender nicht erlaubt",
+      "filter": "Filterregeln nicht erfüllt",
+      "rate_limited": "Rate-Limit erreicht",
+      "duplicate": "Duplikat",
+      "auto_reply": "Automatische Antwort"
+    },
+    "row": {
+      "openSession": "Unterhaltung öffnen",
+      "cancel": "Lauf abbrechen",
+      "retry": "Erneut ausführen",
+      "showRaw": "Rohdaten anzeigen",
+      "hideRaw": "Rohdaten ausblenden",
+      "errorHeading": "Fehler",
+      "filteredReason": "Gefiltert wegen",
+      "failedRule": "Fehlgeschlagene Regel",
+      "messageId": "Message-ID",
+      "from": "Von",
+      "subject": "Betreff",
+      "cron": "Cron",
+      "tries": "Versuche"
+    },
+    "cancelConfirm": {
+      "title": "Diesen Lauf abbrechen?",
+      "description": "Der Lauf wird gestoppt und als abgebrochen markiert. Bereits ausgeführte Schritte werden nicht rückgängig gemacht.",
+      "confirmLabel": "Lauf abbrechen"
+    },
+    "toast": {
+      "cancelled": "Lauf abgebrochen",
+      "cancelFailed": "Lauf konnte nicht abgebrochen werden",
+      "retried": "Lauf erneut eingereiht",
+      "retryFailed": "Lauf konnte nicht erneut gestartet werden"
+    },
+    "emptyTitle": "Keine Läufe",
+    "emptyDescription": "Keine Läufe entsprechen den aktuellen Filtern.",
+    "pagination": "Seite {page} von {pages}",
+    "previousPage": "Vorherige Seite",
+    "nextPage": "Nächste Seite"
+  },
   "settings": {
     "account": {
       "description": "Wer Sie auf dieser Plattform sind.",

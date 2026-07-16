@@ -3701,6 +3701,76 @@
     },
     "runActionLabel": "Run"
   },
+  "routineRuns": {
+    "filters": {
+      "state": "State",
+      "allStates": "All states",
+      "trigger": "Trigger",
+      "allTriggers": "All triggers",
+      "from": "From",
+      "to": "To",
+      "searchPlaceholder": "Search runs…",
+      "needsAttention": "Needs attention",
+      "showFiltered": "Show filtered"
+    },
+    "state": {
+      "waiting": "Waiting",
+      "active": "Active",
+      "completed": "Completed",
+      "failed": "Failed",
+      "delayed": "Delayed",
+      "paused": "Paused",
+      "stuck": "Stuck",
+      "waiting_approval": "Needs attention",
+      "filtered": "Filtered",
+      "cancelled": "Cancelled"
+    },
+    "trigger": {
+      "email": "Email",
+      "schedule": "Schedule",
+      "manual": "Manual",
+      "api": "API",
+      "none": "—"
+    },
+    "filteredReason": {
+      "sender_not_allowed": "Sender not allowed",
+      "filter": "Did not match filter rules",
+      "rate_limited": "Rate limited",
+      "duplicate": "Duplicate",
+      "auto_reply": "Auto-reply"
+    },
+    "row": {
+      "openSession": "Open session",
+      "cancel": "Cancel run",
+      "retry": "Retry run",
+      "showRaw": "Show raw JSON",
+      "hideRaw": "Hide raw JSON",
+      "errorHeading": "Error",
+      "filteredReason": "Filtered because",
+      "failedRule": "Failed rule",
+      "messageId": "Message ID",
+      "from": "From",
+      "subject": "Subject",
+      "cron": "Cron",
+      "tries": "Attempts"
+    },
+    "cancelConfirm": {
+      "title": "Cancel this run?",
+      "description": "The run is stopped and marked as cancelled. Steps that already ran are not undone.",
+      "confirmLabel": "Cancel run"
+    },
+    "toast": {
+      "cancelled": "Run cancelled",
+      "cancelFailed": "Could not cancel run",
+      "retried": "Run re-queued",
+      "retryFailed": "Could not retry run"
+    },
+    "emptyTitle": "No runs",
+    "emptyDescription": "No runs match the current filters.",
+    "pagination": "Page {page} of {pages}",
+    "previousPage": "Previous page",
+    "nextPage": "Next page"
+  },
   "settings": {
     "account": {
       "description": "Who you are on this platform.",
