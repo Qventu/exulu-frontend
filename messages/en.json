@@ -2607,8 +2607,10 @@
           "stateFailed": "Failed",
           "statePending": "Pending",
           "stateSaving": "Saving",
+          "stateSkipped": "Skipped",
           "stateUploading": "Uploading",
-          "summary": "{created} created, {updated} updated, {failed} failed"
+          "summary": "{created} created, {updated} updated, {failed} failed",
+          "summarySkipped": "{count, plural, one {# row skipped} other {# rows skipped}}"
         },
         "steps": {
           "add": "Add data",

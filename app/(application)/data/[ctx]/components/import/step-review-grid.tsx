@@ -56,6 +56,8 @@ export interface StepReviewGridProps {
   displayFields: ImportField[];
   rows: ImportRow[];
   running: boolean;
+  /** Run finished — rows never queued (invalid) show a Skipped badge. */
+  finished: boolean;
   rowStates: Record<string, { state: RowRunState; error?: string }>;
   onCellChange: (rowKey: string, fieldName: string, raw: string) => void;
   onKeyCellBlur: () => void;
@@ -249,6 +251,7 @@ export function StepReviewGrid({
   displayFields,
   rows,
   running,
+  finished,
   rowStates,
   onCellChange,
   onKeyCellBlur,
@@ -279,6 +282,18 @@ export function StepReviewGrid({
           title={rowStates[row.key]?.error ?? row.runError}
         />
       );
+    }
+    if (finished && runState === "pending") {
+      const invalid =
+        row.error || Object.values(row.cells).some((c) => c.error);
+      if (invalid) {
+        return (
+          <StatusBadge
+            label={t("workspace.import.run.stateSkipped")}
+            tone="muted"
+          />
+        );
+      }
     }
     if (row.error) {
       return (
@@ -341,11 +356,12 @@ export function StepReviewGrid({
       ),
     };
     return [status, ...fieldColumns, remove];
-    // statusFor closes over rows/rowStates/running — recompute with them.
+    // statusFor closes over rows/rowStates/running/finished — recompute with them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     displayFields,
     running,
+    finished,
     rowStates,
     onCellChange,
     onKeyCellBlur,

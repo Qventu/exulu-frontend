@@ -3,6 +3,7 @@
 import { useApolloClient } from "@apollo/client";
 import * as React from "react";
 
+import { rowIsValid } from "@/lib/import/rows";
 import { runImport } from "@/lib/import/runner";
 import type { RunSummary } from "@/lib/import/runner";
 import type { ImportField, ImportRow, RowRunState } from "@/lib/import/types";
@@ -19,6 +20,9 @@ export function useImportRunner(contextId: string, fields: ImportField[]) {
     Record<string, { state: RowRunState; error?: string }>
   >({});
   const [summary, setSummary] = React.useState<RunSummary | null>(null);
+  // Rows actually queued this run (invalid rows are skipped by the engine) —
+  // the progress denominator, so the bar can reach 100%.
+  const [runTotal, setRunTotal] = React.useState(0);
   const cancelRef = React.useRef(false);
 
   const run = React.useCallback(
@@ -26,6 +30,9 @@ export function useImportRunner(contextId: string, fields: ImportField[]) {
       cancelRef.current = false;
       setPhase("running");
       setSummary(null);
+      setRunTotal(
+        rows.filter((r) => rowIsValid(r) && r.runState !== "done").length,
+      );
       const result = await runImport(
         rows,
         fields,
@@ -72,11 +79,12 @@ export function useImportRunner(contextId: string, fields: ImportField[]) {
     setPhase("edit");
     setRowStates({});
     setSummary(null);
+    setRunTotal(0);
   }, []);
 
   const doneCount = Object.values(rowStates).filter(
     (s) => s.state === "done" || s.state === "failed",
   ).length;
 
-  return { phase, rowStates, summary, doneCount, run, cancel, reset };
+  return { phase, rowStates, summary, doneCount, runTotal, run, cancel, reset };
 }
