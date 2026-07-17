@@ -60,17 +60,30 @@ export interface NavItemProps {
    * uses it to close on navigate.
    */
   onSelect?: (entry: NavEntry) => void;
+  /**
+   * Numeric attention badge (e.g. runs needing approval). Hidden at 0;
+   * capped at "99+". Rail mode surfaces the count in the tooltip instead
+   * of a chip. Announced to AT via the aria-label.
+   */
+  badge?: number;
   className?: string;
 }
 
 const NavItem = React.forwardRef<HTMLLIElement, NavItemProps>(
-  ({ entry, shortcut, onSelect, className }, ref) => {
+  ({ entry, shortcut, onSelect, badge, className }, ref) => {
     const t = useTranslations();
     const pathname = usePathname();
     const { state, isMobile } = useSidebar();
     const reducedMotion = useReducedMotion() ?? false;
 
     const label = t(entry.i18nKey);
+    const badgeCount =
+      typeof badge === "number" && badge > 0
+        ? badge > 99
+          ? "99+"
+          : String(badge)
+        : null;
+    const ariaLabel = badgeCount ? `${label} (${badgeCount})` : label;
     const Icon = entry.icon;
 
     // Active matching: first-segment equality + alias list, owned by
@@ -125,11 +138,19 @@ const NavItem = React.forwardRef<HTMLLIElement, NavItemProps>(
             </motion.span>
           ) : null}
         </AnimatePresence>
+        {badgeCount && !isRail ? (
+          <span
+            aria-hidden="true"
+            className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-warning/15 px-1.5 text-[11px] font-medium tabular-nums text-warning"
+          >
+            {badgeCount}
+          </span>
+        ) : null}
       </>
     );
 
     const sharedProps = {
-      "aria-label": label,
+      "aria-label": ariaLabel,
       "data-sidebar": "menu-button",
       "data-active": isActive,
       className: itemClassName,
@@ -174,6 +195,9 @@ const NavItem = React.forwardRef<HTMLLIElement, NavItemProps>(
             className="flex items-center gap-2"
           >
             <span>{label}</span>
+            {badgeCount ? (
+              <span className="tabular-nums text-warning">{badgeCount}</span>
+            ) : null}
             {shortcut ? (
               <kbd className="pointer-events-none select-none font-mono text-xs text-muted-foreground">
                 {shortcut}

@@ -11,6 +11,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
   BarChart3,
   BookCheck,
   Bot,
@@ -37,6 +38,7 @@ import {
 } from "lucide-react";
 
 import { can, type Requirement, type RightsUser } from "@/lib/rights";
+import { ROUTINES_RUNS_V2_SUPPORTED } from "@/lib/routine-runs/flags";
 
 /**
  * Persona-altitude groups, top to bottom in descending frequency-of-use and
@@ -193,6 +195,21 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     // Read role gets the item + read-only page (workflows.md row 187).
     requires: { area: "workflows", level: "read" },
   },
+  // Global runs console (email-routines design §7.3) — ships flag-gated so
+  // the frontend can merge before the Plan-1 backend. The /runs layout
+  // guards with the same inline requirement (flag-independent).
+  ...(ROUTINES_RUNS_V2_SUPPORTED
+    ? ([
+        {
+          id: "runs",
+          group: "build",
+          route: "/runs",
+          i18nKey: "navigation.runs",
+          icon: Activity,
+          requires: { area: "workflows", level: "read" },
+        },
+      ] as const)
+    : []),
   {
     id: "automation",
     group: "build",
@@ -398,9 +415,13 @@ export function flagEnabled(config: NavConfig, flag?: NavConfigFlag): boolean {
  * Every entry the given account may see: RBAC predicate AND config flags
  * (rendering rule §1.3 #1). Order is the table's canonical order.
  */
-export function visibleEntries(user: RightsUser, config: NavConfig): NavEntry[] {
+export function visibleEntries(
+  user: RightsUser,
+  config: NavConfig,
+): NavEntry[] {
   return NAV_ENTRIES.filter(
-    (entry) => can(user, entry.requires) && flagEnabled(config, entry.configFlag),
+    (entry) =>
+      can(user, entry.requires) && flagEnabled(config, entry.configFlag),
   );
 }
 
@@ -465,10 +486,16 @@ export function activeEntryFor(pathname: string): NavEntry | null {
   }
   return (
     NAV_ENTRIES.find((entry) => {
-      if (entry.route && entry.route !== "/" && firstSegment(entry.route) === segment) {
+      if (
+        entry.route &&
+        entry.route !== "/" &&
+        firstSegment(entry.route) === segment
+      ) {
         return true;
       }
-      return entry.aliases?.some((alias) => firstSegment(alias) === segment) ?? false;
+      return (
+        entry.aliases?.some((alias) => firstSegment(alias) === segment) ?? false
+      );
     }) ?? null
   );
 }

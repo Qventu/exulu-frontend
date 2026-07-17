@@ -40,6 +40,7 @@ import {
 } from "@/components/shell/nav-config";
 import { NavGroup } from "@/components/shell/nav-group";
 import { NavItem } from "@/components/shell/nav-item";
+import { useRunsAttentionCount } from "@/components/shell/use-runs-attention";
 import { type UserMenuUser } from "@/components/shell/user-menu";
 import {
   Sidebar,
@@ -79,6 +80,13 @@ export function AppSidebar({ user, onSendFeedback }: AppSidebarProps) {
   const tree = React.useMemo<SidebarTree>(
     () => (user ? groupsFor(user, config ?? {}) : EMPTY_TREE),
     [user, config],
+  );
+
+  // Needs-attention badge on the flag-gated /runs entry (design §7.3).
+  const runsAttentionCount = useRunsAttentionCount(user);
+  const badges = React.useMemo<Partial<Record<string, number>>>(
+    () => ({ runs: runsAttentionCount }),
+    [runsAttentionCount],
   );
 
   const handleSelect = React.useCallback(
@@ -142,6 +150,7 @@ export function AppSidebar({ user, onSendFeedback }: AppSidebarProps) {
             suppressHeader={tree.suppressGroupHeaders}
             first={index === 0}
             onSelect={handleSelect}
+            badges={badges}
           />
         ))}
       </SidebarContent>

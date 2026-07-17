@@ -3083,6 +3083,7 @@
     "projects": "Projekte",
     "prompts": "Prompts",
     "routines": "Routinen",
+    "runs": "Läufe",
     "search": "Suchen…",
     "sendFeedback": "Feedback senden",
     "settings": "Einstellungen",
@@ -3770,6 +3771,12 @@
     "pagination": "Seite {page} von {pages}",
     "previousPage": "Vorherige Seite",
     "nextPage": "Nächste Seite"
+  },
+  "runs": {
+    "title": "Läufe",
+    "description": "Alle Routine-Läufe in Ihrem Arbeitsbereich — Einträge mit Handlungsbedarf zuerst.",
+    "unavailableTitle": "Läufe ist noch nicht verfügbar",
+    "unavailableDescription": "Diese Seite benötigt ein Backend, das die Routine-Läufe-API unterstützt."
   },
   "settings": {
     "account": {

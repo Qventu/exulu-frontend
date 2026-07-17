@@ -15,7 +15,11 @@ import {
   type NavConfig,
 } from "@/components/shell/nav-config";
 import type { RightArea, RightsUser } from "@/lib/rights";
+import { ROUTINES_RUNS_V2_SUPPORTED } from "@/lib/routine-runs/flags";
 import type { UserRole } from "@/types/models/user-role";
+
+/** The runs entry ships flag-gated (email-routines design §7.3). */
+const RUNS_ROWS = ROUTINES_RUNS_V2_SUPPORTED ? ["runs"] : [];
 
 const emptyRole: UserRole = {
   id: "role-1",
@@ -67,6 +71,7 @@ describe("the table itself (§1.2)", () => {
       "prompts",
       "skills",
       "routines",
+      ...RUNS_ROWS,
       "automation",
       "feedback",
       "evals",
@@ -100,7 +105,9 @@ describe("the table itself (§1.2)", () => {
   });
 
   it("send-feedback is the dialog entry: no route", () => {
-    const sendFeedback = NAV_ENTRIES.find((entry) => entry.id === "send-feedback");
+    const sendFeedback = NAV_ENTRIES.find(
+      (entry) => entry.id === "send-feedback",
+    );
     expect(sendFeedback?.route).toBeNull();
     expect(sendFeedback?.configFlag).toBe("feedback");
   });
@@ -131,11 +138,12 @@ describe("single-right matrix (Phase 1 exit criterion)", () => {
     ]);
   });
 
-  it("workflows:read → routines + automation (n8n flag on)", () => {
+  it("workflows:read → routines + runs (flagged) + automation (n8n flag on)", () => {
     expect(ids(userWith({ workflows: "read" }))).toEqual([
       "home",
       ...ALL_USER_BODY,
       "routines",
+      ...RUNS_ROWS,
       "automation",
       ...FOOTER,
     ]);
@@ -263,7 +271,8 @@ describe("persona matrix (§1.3)", () => {
     // Administration after the keys/feedback moves: users, models, budgets,
     // analytics, variables, configuration.
     expect(
-      tree.groups.find((group) => group.group === "administration")?.entries.length,
+      tree.groups.find((group) => group.group === "administration")?.entries
+        .length,
     ).toBe(6);
     expect(
       tree.groups
@@ -275,6 +284,7 @@ describe("persona matrix (§1.3)", () => {
       "prompts",
       "skills",
       "routines",
+      ...RUNS_ROWS,
       "automation",
       "feedback",
     ]);
@@ -336,6 +346,7 @@ describe("persona matrix (§1.3)", () => {
       "prompts",
       "skills",
       "routines",
+      ...RUNS_ROWS,
       "automation",
     ]);
     expect(
@@ -347,7 +358,10 @@ describe("persona matrix (§1.3)", () => {
   });
 
   it("P4 hat (api:w + evals:r): Workspace + Develop only — keys lives in Develop now", () => {
-    const tree = groupsFor(userWith({ api: "write", evals: "read" }), fullConfig);
+    const tree = groupsFor(
+      userWith({ api: "write", evals: "read" }),
+      fullConfig,
+    );
     expect(tree.groups.map((group) => group.group)).toEqual([
       "workspace",
       "develop",
@@ -377,6 +391,12 @@ describe("activeEntryFor (§1.3 rule 4: first-segment equality + aliases)", () =
 
   it("matches the root path to Home", () => {
     expect(activeEntryFor("/")?.id).toBe("home");
+  });
+
+  it("matches /runs to the flag-gated runs entry", () => {
+    expect(activeEntryFor("/runs")?.id ?? null).toBe(
+      ROUTINES_RUNS_V2_SUPPORTED ? "runs" : null,
+    );
   });
 
   it("never substring-matches (audit H7): /users/data is Users, not Knowledge", () => {

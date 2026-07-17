@@ -71,6 +71,8 @@ export interface NavGroupProps {
   first?: boolean;
   /** Forwarded to every item (e.g. the mobile drawer closes on navigate). */
   onSelect?: (entry: NavEntry) => void;
+  /** Per-entry-id attention counts, forwarded to NavItem's `badge`. */
+  badges?: Readonly<Partial<Record<string, number>>>;
   className?: string;
 }
 
@@ -100,6 +102,7 @@ const NavGroup = React.forwardRef<HTMLDivElement, NavGroupProps>(
       suppressHeader = false,
       first = false,
       onSelect,
+      badges,
       className,
     },
     ref,
@@ -159,7 +162,12 @@ const NavGroup = React.forwardRef<HTMLDivElement, NavGroupProps>(
     const menu = (
       <SidebarMenu aria-labelledby={suppressHeader ? undefined : labelId}>
         {entries.map((entry) => (
-          <NavItem key={entry.id} entry={entry} onSelect={onSelect} />
+          <NavItem
+            key={entry.id}
+            entry={entry}
+            onSelect={onSelect}
+            badge={badges?.[entry.id]}
+          />
         ))}
       </SidebarMenu>
     );

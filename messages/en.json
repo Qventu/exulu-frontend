@@ -3083,6 +3083,7 @@
     "projects": "Projects",
     "prompts": "Prompts",
     "routines": "Routines",
+    "runs": "Runs",
     "search": "Search…",
     "sendFeedback": "Send feedback",
     "settings": "Settings",
@@ -3770,6 +3771,12 @@
     "pagination": "Page {page} of {pages}",
     "previousPage": "Previous page",
     "nextPage": "Next page"
+  },
+  "runs": {
+    "title": "Runs",
+    "description": "Every routine run across your workspace — items needing attention first.",
+    "unavailableTitle": "Runs isn't available yet",
+    "unavailableDescription": "This page needs a backend that supports the routine-runs API."
   },
   "settings": {
     "account": {
