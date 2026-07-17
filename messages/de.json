@@ -2029,6 +2029,40 @@
   },
   "configuration": {
     "description": "Gestalten Sie das IMP im Stil Ihrer Organisation — Änderungen gelten für alle Benutzer.",
+    "emailIntake": {
+      "title": "E-Mail-Eingang",
+      "description": "Eingehende E-Mails für Routinen — Anbieter, Domain und Webhook-Zugangsdaten.",
+      "enabled": "E-Mail-Eingang aktivieren",
+      "provider": "Anbieter",
+      "providerMailgunEu": "Mailgun (EU-Region) — der einzige unterstützte Anbieter in v1.",
+      "domainLabel": "Eingangsdomain",
+      "domainPlaceholder": "mail.ihre-firma.de",
+      "signingKeyLabel": "Webhook-Signaturschlüssel",
+      "signingKeyStored": "Ein Signaturschlüssel ist hinterlegt — neuen Wert eingeben, um ihn zu ersetzen.",
+      "signingKeyPlaceholder": "Mailgun HTTP-Webhook-Signaturschlüssel einfügen",
+      "webhookUrlLabel": "Webhook-URL",
+      "webhookUrlHint": "Richten Sie die forward()-Aktion Ihrer Mailgun-Route auf diese URL.",
+      "webhookUrlPending": "Speichern Sie die Einstellungen einmal, um die Webhook-URL zu sehen.",
+      "lastWebhookLabel": "Letzter Webhook empfangen:",
+      "lastWebhookNever": "noch nie — senden Sie eine Test-E-Mail, sobald DNS und Route eingerichtet sind.",
+      "checklistTitle": "Einrichtungs-Checkliste",
+      "checklist": {
+        "step1": "Mailgun-EU-Konto anlegen und die Empfangsdomain hinzufügen (z. B. mail.ihre-firma.de).",
+        "step2": "MX-Einträge (mxa.eu.mailgun.org, mxb.eu.mailgun.org) und TXT-Verifizierungseinträge veröffentlichen.",
+        "step3": "EINE Catch-all-Route anlegen: match_recipient(\".*@ihre-domain\") → forward auf die Webhook-URL unten → stop().",
+        "step4": "Die Nachrichtenspeicherung des Kontos/der Domain auf 0 setzen und explizit prüfen — die Speicherdauer ist KEINE Routen-Einstellung.",
+        "step5": "Den HTTP-Webhook-Signaturschlüssel der Domain in das Feld oben kopieren und den E-Mail-Eingang aktivieren.",
+        "step6": "Eine Test-E-Mail senden und prüfen, dass sich \"Letzter Webhook empfangen\" aktualisiert."
+      },
+      "save": "Einstellungen speichern",
+      "saving": "Wird gespeichert…",
+      "toast": {
+        "saved": "E-Mail-Eingangseinstellungen gespeichert",
+        "saveFailed": "E-Mail-Eingangseinstellungen konnten nicht gespeichert werden"
+      },
+      "unavailableTitle": "E-Mail-Eingang ist noch nicht verfügbar",
+      "unavailableDescription": "Diese Oberfläche benötigt ein Backend, das die E-Mail-Eingangs-API unterstützt."
+    },
     "editor": {
       "defaultValue": "Standard: {value}",
       "invalidValue": "Kein erkennbarer Farbwert — wird genau so veröffentlicht wie eingegeben.",

@@ -2029,6 +2029,40 @@
   },
   "configuration": {
     "description": "White-label IMP for your organization — changes apply to every user.",
+    "emailIntake": {
+      "title": "Email intake",
+      "description": "Inbound email for routines — provider, domain and webhook credentials.",
+      "enabled": "Enable email intake",
+      "provider": "Provider",
+      "providerMailgunEu": "Mailgun (EU region) — the only supported provider in v1.",
+      "domainLabel": "Inbound domain",
+      "domainPlaceholder": "mail.your-company.com",
+      "signingKeyLabel": "Webhook signing key",
+      "signingKeyStored": "A signing key is stored — enter a new value to replace it.",
+      "signingKeyPlaceholder": "Paste the Mailgun HTTP webhook signing key",
+      "webhookUrlLabel": "Webhook URL",
+      "webhookUrlHint": "Point your Mailgun route's forward() action at this URL.",
+      "webhookUrlPending": "Save the settings once to see the webhook URL.",
+      "lastWebhookLabel": "Last webhook received:",
+      "lastWebhookNever": "never — send a test email once DNS and the route are set up.",
+      "checklistTitle": "Setup checklist",
+      "checklist": {
+        "step1": "Create a Mailgun EU account and add the receiving domain (e.g. mail.your-company.com).",
+        "step2": "Publish the MX records (mxa.eu.mailgun.org, mxb.eu.mailgun.org) and the TXT verification records.",
+        "step3": "Create ONE catch-all route: match_recipient(\".*@your-domain\") → forward to the webhook URL below → stop().",
+        "step4": "Set the account/domain message retention to 0 and verify it explicitly — retention is NOT a per-route setting.",
+        "step5": "Copy the domain's HTTP webhook signing key into the field above and enable email intake.",
+        "step6": "Send a test email and confirm \"Last webhook received\" updates."
+      },
+      "save": "Save settings",
+      "saving": "Saving…",
+      "toast": {
+        "saved": "Email intake settings saved",
+        "saveFailed": "Could not save email intake settings"
+      },
+      "unavailableTitle": "Email intake isn't available yet",
+      "unavailableDescription": "This surface needs a backend that supports the email-inbound API."
+    },
     "editor": {
       "defaultValue": "Default: {value}",
       "invalidValue": "Not a recognized color value — it will be published exactly as typed.",
