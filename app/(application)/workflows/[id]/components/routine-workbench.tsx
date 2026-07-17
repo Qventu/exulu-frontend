@@ -68,6 +68,7 @@ import {
 import { DeleteRoutineDialog } from "../../components/delete-routine-dialog";
 import { RunRoutineDialog } from "../../components/run-routine-dialog";
 import { RUN_WORKFLOW } from "../../queries";
+import { ROUTINES_EMAIL_TRIGGER_SUPPORTED } from "../../schema-flags";
 import type { Routine } from "../../types";
 import { useRoutineEditor, useRoutineWorkbench, useScrollSpy } from "../hooks";
 import { AccessSection } from "../sections/access";
@@ -77,6 +78,7 @@ import { QueueSection } from "../sections/queue";
 import { RunsSection } from "../sections/runs";
 import { ScheduleSection } from "../sections/schedule";
 import { StepsSection } from "../sections/steps";
+import { TriggersSection } from "../sections/triggers";
 import { RoutineHeader } from "./routine-header";
 import { StepsEditorSheet } from "./steps-editor-sheet";
 
@@ -85,6 +87,7 @@ export const ROUTINE_SECTION_IDS = [
   "access",
   "steps",
   "schedule",
+  "triggers",
   "runs",
   "queue",
   "danger",
@@ -116,7 +119,9 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
   const sectionIds = React.useMemo(
     () =>
       ROUTINE_SECTION_IDS.filter(
-        (id) => id !== "danger" || workbench.access.canDelete,
+        (id) =>
+          (id !== "danger" || workbench.access.canDelete) &&
+          (id !== "triggers" || ROUTINES_EMAIL_TRIGGER_SUPPORTED),
       ),
     [workbench.access.canDelete],
   );
@@ -185,6 +190,7 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
               onOpenSheet={workbench.openStepsSheet}
             />
             <ScheduleSection routine={routine} access={workbench.access} />
+            <TriggersSection routine={routine} access={workbench.access} />
             <RunsSection
               routine={routine}
               onRetry={(prefill) => workbench.openRun(prefill)}

@@ -45,16 +45,8 @@ const TEMPLATE_ITEM_SELECTION = `
   RBAC {
     ${RBAC_SELECTION}
   }
-  ${
-    ROUTINES_LAST_RUN_EMBEDDED_SUPPORTED
-      ? "lastRun { state createdAt }"
-      : ""
-  }
-  ${
-    ROUTINES_SCHEDULE_EMBEDDED_SUPPORTED
-      ? "schedule { schedule next }"
-      : ""
-  }
+  ${ROUTINES_LAST_RUN_EMBEDDED_SUPPORTED ? "lastRun { state createdAt }" : ""}
+  ${ROUTINES_SCHEDULE_EMBEDDED_SUPPORTED ? "schedule { schedule next }" : ""}
 `;
 
 /* ------------------------------------------------------------------------- */
@@ -231,6 +223,54 @@ export const DELETE_WORKFLOW_SCHEDULE = gql`
   mutation DeleteWorkflowSchedule($workflow: ID!) {
     deleteWorkflowSchedule(workflow: $workflow) {
       status
+    }
+  }
+`;
+
+/* ------------------------------------------------------------------------- */
+/* Email trigger (Plan-2 API — every call site is gated by
+   ROUTINES_EMAIL_TRIGGER_SUPPORTED; the documents are inert until then). */
+
+const WORKFLOW_TRIGGER_SELECTION = `
+  id
+  workflow
+  type
+  enabled
+  address
+  config
+  run_as_user
+  createdAt
+  updatedAt
+`;
+
+export const GET_WORKFLOW_TRIGGERS = gql`
+  query GetWorkflowTriggers($workflow: ID!) {
+    workflowTriggers(workflow: $workflow) {
+      ${WORKFLOW_TRIGGER_SELECTION}
+    }
+  }
+`;
+
+export const UPSERT_WORKFLOW_EMAIL_TRIGGER = gql`
+  mutation UpsertWorkflowEmailTrigger(
+    $workflow: ID!
+    $enabled: Boolean!
+    $config: JSON!
+  ) {
+    upsertWorkflowEmailTrigger(
+      workflow: $workflow
+      enabled: $enabled
+      config: $config
+    ) {
+      ${WORKFLOW_TRIGGER_SELECTION}
+    }
+  }
+`;
+
+export const DELETE_WORKFLOW_TRIGGER = gql`
+  mutation DeleteWorkflowTrigger($id: ID!) {
+    deleteWorkflowTrigger(id: $id) {
+      id
     }
   }
 `;

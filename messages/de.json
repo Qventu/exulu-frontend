@@ -3621,6 +3621,7 @@
         "access": "Zugriff",
         "steps": "Schritte",
         "schedule": "Zeitplan",
+        "triggers": "E-Mail-Auslöser",
         "runs": "Läufe",
         "queue": "Warteschlange",
         "danger": "Gefahrenzone"
@@ -3703,6 +3704,72 @@
         "saveFailed": "Routine konnte nicht gespeichert werden",
         "nameRequired": "Routinenname ist erforderlich",
         "agentRequired": "Routinen müssen einem Agenten zugeordnet sein"
+      }
+    },
+    "triggers": {
+      "title": "E-Mail-Auslöser",
+      "metaNone": "Nicht eingerichtet",
+      "metaEnabled": "Aktiviert",
+      "metaDisabled": "Deaktiviert",
+      "loading": "E-Mail-Auslöser wird geladen…",
+      "enable": "Diese Routine starten, wenn eine E-Mail eintrifft",
+      "addressLabel": "Eingangsadresse",
+      "addressPending": "Die dedizierte Adresse wird beim ersten Speichern des Auslösers erzeugt.",
+      "senders": {
+        "label": "Erlaubte Absender",
+        "hint": "Exakte Adressen oder *@domain-Platzhalter. Leer lassen, um alle Absender zuzulassen.",
+        "empty": "Alle Absender erlaubt.",
+        "placeholder": "service@example.com oder *@example.com",
+        "add": "Hinzufügen",
+        "remove": "{sender} entfernen"
+      },
+      "filters": {
+        "label": "Filterregeln",
+        "hint": "Reguläre Ausdrücke — ALLE Regeln müssen zutreffen, sonst wird die E-Mail als gefiltert protokolliert und kein Lauf gestartet.",
+        "field": "Feld",
+        "fields": {
+          "from": "Absender",
+          "subject": "Betreff",
+          "body": "Inhalt",
+          "attachment_name": "Anhangsname"
+        },
+        "pattern": "Muster",
+        "patternPlaceholder": "Ersatzteil|spare part",
+        "add": "Filter hinzufügen",
+        "remove": "Filter entfernen",
+        "invalid": {
+          "empty": "Das Muster darf nicht leer sein.",
+          "too_long": "Das Muster darf höchstens 200 Zeichen lang sein.",
+          "invalid": "Kein gültiger regulärer Ausdruck."
+        }
+      },
+      "limits": {
+        "retention": "Gefilterte Läufe aufbewahren",
+        "perHour": "Max. E-Mails pro Stunde",
+        "perSenderPerHour": "Max. pro Absender pro Stunde"
+      },
+      "securityHint": "E-Mails sind nicht vertrauenswürdige Eingaben. Versehen Sie alle Werkzeuge mit Außenwirkung (z. B. E-Mail-Versand oder Angebotserstellung) beim Agenten dieser Routine mit einer Freigabepflicht.",
+      "save": "Auslöser speichern",
+      "update": "Auslöser aktualisieren",
+      "saving": "Wird gespeichert…",
+      "remove": "Auslöser entfernen",
+      "delete": {
+        "title": "E-Mail-Auslöser entfernen?",
+        "description": "\"{name}\" startet nicht mehr bei eingehenden E-Mails. Die erzeugte Adresse funktioniert sofort nicht mehr.",
+        "confirmLabel": "Auslöser entfernen"
+      },
+      "toast": {
+        "saved": "E-Mail-Auslöser gespeichert",
+        "saveFailed": "E-Mail-Auslöser konnte nicht gespeichert werden",
+        "deleted": "E-Mail-Auslöser entfernt",
+        "deleteFailed": "E-Mail-Auslöser konnte nicht entfernt werden",
+        "invalidSender": "Geben Sie eine vollständige Adresse oder einen *@domain-Platzhalter ein",
+        "invalidFilters": "Korrigieren Sie die ungültigen Filterregeln vor dem Speichern"
+      },
+      "notConfigured": {
+        "title": "E-Mail-Eingang ist nicht konfiguriert",
+        "description": "Ein Super-Admin muss zuerst den Anbieter für eingehende E-Mails verbinden, bevor Routinen E-Mails empfangen können.",
+        "cta": "E-Mail-Einstellungen öffnen"
       }
     },
     "runActionLabel": "Ausführen"

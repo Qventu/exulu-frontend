@@ -3621,6 +3621,7 @@
         "access": "Access",
         "steps": "Steps",
         "schedule": "Schedule",
+        "triggers": "Email trigger",
         "runs": "Runs",
         "queue": "Queue",
         "danger": "Danger zone"
@@ -3703,6 +3704,72 @@
         "saveFailed": "Could not save routine",
         "nameRequired": "Routine name is required",
         "agentRequired": "Routines must have an agent attached"
+      }
+    },
+    "triggers": {
+      "title": "Email trigger",
+      "metaNone": "Not set up",
+      "metaEnabled": "Enabled",
+      "metaDisabled": "Disabled",
+      "loading": "Loading email trigger…",
+      "enable": "Start this routine when an email arrives",
+      "addressLabel": "Inbound address",
+      "addressPending": "The dedicated address is generated when you save the trigger for the first time.",
+      "senders": {
+        "label": "Allowed senders",
+        "hint": "Exact addresses or *@domain wildcards. Leave empty to allow every sender.",
+        "empty": "All senders allowed.",
+        "placeholder": "service@example.com or *@example.com",
+        "add": "Add",
+        "remove": "Remove {sender}"
+      },
+      "filters": {
+        "label": "Filter rules",
+        "hint": "Regular expressions — ALL rules must match, otherwise the email is recorded as filtered and no run starts.",
+        "field": "Field",
+        "fields": {
+          "from": "From",
+          "subject": "Subject",
+          "body": "Body",
+          "attachment_name": "Attachment name"
+        },
+        "pattern": "Pattern",
+        "patternPlaceholder": "Ersatzteil|spare part",
+        "add": "Add filter",
+        "remove": "Remove filter",
+        "invalid": {
+          "empty": "Pattern must not be empty.",
+          "too_long": "Pattern must be 200 characters or fewer.",
+          "invalid": "Not a valid regular expression."
+        }
+      },
+      "limits": {
+        "retention": "Keep filtered runs",
+        "perHour": "Max. emails per hour",
+        "perSenderPerHour": "Max. per sender per hour"
+      },
+      "securityHint": "Emails are untrusted input. Approval-gate any tool with external effects (for example sending email or creating offers) on the agent this routine uses.",
+      "save": "Save trigger",
+      "update": "Update trigger",
+      "saving": "Saving…",
+      "remove": "Remove trigger",
+      "delete": {
+        "title": "Remove email trigger?",
+        "description": "\"{name}\" will no longer start when emails arrive. The generated address stops working immediately.",
+        "confirmLabel": "Remove trigger"
+      },
+      "toast": {
+        "saved": "Email trigger saved",
+        "saveFailed": "Could not save email trigger",
+        "deleted": "Email trigger removed",
+        "deleteFailed": "Could not remove email trigger",
+        "invalidSender": "Enter a full address or a *@domain wildcard",
+        "invalidFilters": "Fix the invalid filter rules before saving"
+      },
+      "notConfigured": {
+        "title": "Email intake isn't configured",
+        "description": "A super admin needs to connect the inbound email provider before routines can receive email.",
+        "cta": "Open email settings"
       }
     },
     "runActionLabel": "Run"
