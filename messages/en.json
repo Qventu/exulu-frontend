@@ -1040,6 +1040,11 @@
     }
   },
   "chat": {
+    "runBanner": {
+      "label": "Routine run — {name}",
+      "fallbackName": "Routine",
+      "viewRun": "View run"
+    },
     "agentSelect": {
       "clearSearch": "Clear search",
       "description": "Pick the agent you want to talk to. You can switch at any time.",

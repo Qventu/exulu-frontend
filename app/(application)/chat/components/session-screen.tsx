@@ -25,11 +25,7 @@ import * as React from "react";
 import type { UIMessage } from "ai";
 
 import { SidePanel } from "@/components/primitives/side-panel";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type { Agent } from "@/types/models/agent";
 import type { AgentSession } from "@/types/models/agent-session";
@@ -37,6 +33,7 @@ import type { AgentSession } from "@/types/models/agent-session";
 import { useChatSession } from "../hooks";
 import { CHAT_COLUMN } from "./chat-shell";
 import { ChatHeader } from "./chat-header";
+import { RunSessionBanner } from "./run-session-banner";
 import { Composer } from "./composer";
 import { MessageColumn } from "./message-column";
 import { SessionFilesContent } from "./session-files/panel-content";
@@ -60,6 +57,10 @@ export function SessionScreen({
       {/* The quiet column */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <ChatHeader controller={controller} />
+
+        {/* Run-linked sessions get a slim banner (design §7.4) — renders
+            null unless the session carries Plan-1 run metadata. */}
+        {initialSession ? <RunSessionBanner session={initialSession} /> : null}
 
         {/* Conversation — MessageColumn owns the scroll container (V2). */}
         <MessageColumn controller={controller} />

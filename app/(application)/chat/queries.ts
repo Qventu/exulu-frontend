@@ -206,44 +206,15 @@ export const GET_AGENT_SESSIONS = gql`
         hasNextPage
       }
       items {
-          createdAt
-          updatedAt
-          created_by
-          user
-          title
-          agent
-          project
-          rights_mode
-          session_items
-          RBAC {
-            type
-            users {
-              id
-              rights
-            }
-            roles {
-              id
-              rights
-            }
-          }
-          id
-      }
-    }
-  }
-`;
-
-export const GET_AGENT_SESSION_BY_ID = gql`
-  query GetAgentSessionById($id: ID!) {
-    agent_sessionById(id: $id) {
         createdAt
         updatedAt
+        created_by
         user
         title
         agent
-        created_by
+        project
         rights_mode
         session_items
-        project
         RBAC {
           type
           users {
@@ -256,6 +227,36 @@ export const GET_AGENT_SESSION_BY_ID = gql`
           }
         }
         id
+      }
+    }
+  }
+`;
+
+export const GET_AGENT_SESSION_BY_ID = gql`
+  query GetAgentSessionById($id: ID!) {
+    agent_sessionById(id: $id) {
+      createdAt
+      updatedAt
+      user
+      title
+      agent
+      created_by
+      rights_mode
+      session_items
+      metadata
+      project
+      RBAC {
+        type
+        users {
+          id
+          rights
+        }
+        roles {
+          id
+          rights
+        }
+      }
+      id
     }
   }
 `;
@@ -292,7 +293,7 @@ export const GET_AGENT_MESSAGES = gql`
 
 export const CREATE_AGENT_SESSION = gql`
   mutation createAgentSession(
-    $title: String,
+    $title: String
     $user: Float
     $agent: String
     $project: String
@@ -300,7 +301,14 @@ export const CREATE_AGENT_SESSION = gql`
     $RBAC: RBACInput
   ) {
     agent_sessionsCreateOne(
-      input: { agent: $agent, user: $user, project: $project, title: $title, rights_mode: $rights_mode, RBAC: $RBAC }
+      input: {
+        agent: $agent
+        user: $user
+        project: $project
+        title: $title
+        rights_mode: $rights_mode
+        RBAC: $RBAC
+      }
     ) {
       item {
         id
@@ -318,11 +326,8 @@ export const REMOVE_AGENT_SESSION_BY_ID = gql`
 `;
 
 export const UPDATE_AGENT_SESSION_TITLE = gql`
-  mutation UpdateAgentSessionTitle(
-    $id: ID!
-    $title: String
-  ) {
-    agent_sessionsUpdateOneById(id: $id, input: {title: $title}) {
+  mutation UpdateAgentSessionTitle($id: ID!, $title: String) {
+    agent_sessionsUpdateOneById(id: $id, input: { title: $title }) {
       item {
         id
         title
@@ -337,7 +342,10 @@ export const UPDATE_AGENT_SESSION_RBAC = gql`
     $RBAC: RBACInput
     $rights_mode: String
   ) {
-    agent_sessionsUpdateOneById(id: $id, input: { rights_mode: $rights_mode, RBAC: $RBAC }) {
+    agent_sessionsUpdateOneById(
+      id: $id
+      input: { rights_mode: $rights_mode, RBAC: $RBAC }
+    ) {
       item {
         id
       }
@@ -348,11 +356,11 @@ export const UPDATE_AGENT_SESSION_RBAC = gql`
 // NOTE: operation name `UpdateAgentSessionTitle` is a verbatim copy of the
 // monolith's (pre-existing duplicate name) — see file header.
 export const UPDATE_AGENT_SESSION_ITEMS = gql`
-  mutation UpdateAgentSessionTitle(
-    $id: ID!
-    $session_items: JSON!
-  ) {
-    agent_sessionsUpdateOneById(id: $id, input: {session_items: $session_items}) {
+  mutation UpdateAgentSessionTitle($id: ID!, $session_items: JSON!) {
+    agent_sessionsUpdateOneById(
+      id: $id
+      input: { session_items: $session_items }
+    ) {
       item {
         id
         session_items
