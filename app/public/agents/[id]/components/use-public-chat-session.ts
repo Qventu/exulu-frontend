@@ -36,16 +36,30 @@ import {
 } from "@/lib/public-agents/transcript-store";
 import type { Agent } from "@/types/models/agent";
 
+import type { PublicSessionManager } from "./use-public-session-manager";
+
 export interface UsePublicChatSessionArgs {
   /** Minimal Agent cast from PublicAgentMeta — see PublicChatScreen. */
   agent: Agent;
   mode: "anonymous" | "authenticated";
   userId?: string | number;
+  /**
+   * Server-session lifecycle, present ONLY in authenticated mode (it wraps
+   * Apollo hooks that must run inside PublicApolloProvider). When present the
+   * transport posts only the last message + a Session header and skips the
+   * localStorage transcript; when absent the anonymous full-history path runs
+   * unchanged.
+   */
+  sessionManager?: PublicSessionManager;
 }
 
 export interface UsePublicChatSessionResult {
   controller: ChatSessionController;
   clearConversation: () => void;
+  /** Authenticated only: start a fresh server session (no-op anonymous). */
+  startNewSession: () => void;
+  /** Authenticated only: load an existing session's messages into the view. */
+  resumeSession: (session: { id: string }, messages: UIMessage[]) => void;
 }
 
 const GUEST_MAX_INPUT = 8000; // mirrors EXULU_GUEST_MAX_MESSAGE_CHARS default
@@ -61,6 +75,7 @@ const EMPTY_TOKEN_COUNTS: TokenCounts = {
 export function usePublicChatSession({
   agent,
   mode,
+  sessionManager,
 }: UsePublicChatSessionArgs): UsePublicChatSessionResult {
   const t = useTranslations("publicAgents.chat");
   const tRoot = useTranslations("publicAgents");
@@ -75,13 +90,36 @@ export function usePublicChatSession({
     messages: initialMessages,
     transport: new DefaultChatTransport({
       api: `/public/agents/${agent.id}/chat`,
-      prepareSendMessagesRequest: async ({ messages, body }) => ({
+      prepareSendMessagesRequest: async ({ messages, body }) => {
+        // Authenticated: lazily create the server session, then post ONLY the
+        // last message + a Session header. The proxy (chat/route.ts) forwards
+        // that header and attaches Authorization server-side, so no bearer
+        // token is sent client-side. The backend loads history from the DB.
+        if (mode === "authenticated" && sessionManager) {
+          const session = await sessionManager.ensureSession();
+          if (!session) {
+            throw new Error("No session available.");
+          }
+          return {
+            body: {
+              ...body,
+              message: messages[messages.length - 1],
+              session: session.id,
+            },
+            headers: { Stream: "true", Session: session.id } as Record<
+              string,
+              string
+            >,
+          };
+        }
         // Anonymous: no server session — send the FULL history so the model
         // has context (the backend uses body.messages when no session header
         // is present).
-        body: { ...body, messages },
-        headers: { Stream: "true" },
-      }),
+        return {
+          body: { ...body, messages },
+          headers: { Stream: "true" } as Record<string, string>,
+        };
+      },
     }),
     onError: (err) => {
       const msg = String(err?.message ?? "");
@@ -118,8 +156,40 @@ export function usePublicChatSession({
 
   const clearConversation = React.useCallback(() => {
     chat.setMessages([]);
-    clearTranscript(agent.id);
-  }, [agent.id, chat]);
+    // Authenticated: also drop the server session so "Clear" behaves like a
+    // fresh start; the next send lazily creates a new one. Anonymous: wipe the
+    // persisted transcript.
+    if (mode === "authenticated" && sessionManager) {
+      sessionManager.startNewSession();
+    } else {
+      clearTranscript(agent.id);
+    }
+  }, [agent.id, chat, mode, sessionManager]);
+
+  // Authenticated only: begin a brand-new server session (the "New chat"
+  // button). No-op in anonymous mode.
+  const startNewSession = React.useCallback(() => {
+    if (mode === "authenticated" && sessionManager) {
+      sessionManager.startNewSession();
+    }
+    chat.setMessages([]);
+    setError(null);
+  }, [chat, mode, sessionManager]);
+
+  // Authenticated only: point the transport at an existing session and load
+  // its messages. The session ref is synced BEFORE setMessages so a send that
+  // races the render targets the resumed session, not a stale/new one (mirror
+  // of the currentSessionRef sync in chat/hooks.ts).
+  const resumeSession = React.useCallback(
+    (session: { id: string }, messages: UIMessage[]) => {
+      if (mode === "authenticated" && sessionManager) {
+        sessionManager.setSession(session);
+      }
+      chat.setMessages(messages);
+      setError(null);
+    },
+    [chat, mode, sessionManager],
+  );
 
   const controller = {
     // identity & access
@@ -189,5 +259,5 @@ export function usePublicChatSession({
     compactConversation: async () => false,
   } satisfies ChatSessionController;
 
-  return { controller, clearConversation };
+  return { controller, clearConversation, startNewSession, resumeSession };
 }

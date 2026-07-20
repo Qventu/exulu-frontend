@@ -11,9 +11,17 @@
  * value (`user ? ... : false`, `user && ...`), so a null user is safe; the only
  * `user.id` reads sit behind flag-gated surfaces (transcription) that stay off
  * on public pages. ConfigContext + LanguageProvider come from the public layout.
+ *
+ * Mode split (Task 11):
+ * - anonymous: rendered directly, NO Apollo/next-auth — transport posts the
+ *   full history to the same-origin proxy. Nothing here changed from Task 10.
+ * - authenticated: wrapped in PublicApolloProvider (Apollo + SessionProvider);
+ *   an inner body instantiates the server-session manager (Apollo hook) and the
+ *   History dropdown, and the transport switches to last-message + Session
+ *   header with lazy server sessions.
  */
 
-import { LogOut } from "lucide-react";
+import { LogOut, Plus } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
@@ -25,7 +33,13 @@ import { Button } from "@/components/ui/button";
 import type { PublicAgentMeta } from "@/lib/api/public-agents";
 import type { Agent } from "@/types/models/agent";
 
+import { PublicApolloProvider } from "./public-apollo-provider";
+import { PublicHistory } from "./public-history";
 import { usePublicChatSession } from "./use-public-chat-session";
+import {
+  usePublicSessionManager,
+  type PublicSessionManager,
+} from "./use-public-session-manager";
 
 /** Minimal Agent cast: only fields the chat components actually read. */
 function toAgent(meta: PublicAgentMeta): Agent {
@@ -39,22 +53,29 @@ function toAgent(meta: PublicAgentMeta): Agent {
   } as unknown as Agent;
 }
 
-export function PublicChatScreen({
+/**
+ * The shared chat body. `sessionManager` is present only in authenticated mode
+ * (it wraps Apollo hooks) — its presence turns on the server-session transport,
+ * the New chat button, and the History dropdown.
+ */
+function PublicChatBody({
   meta,
+  agent,
   mode,
   userId,
+  sessionManager,
 }: {
   meta: PublicAgentMeta;
+  agent: Agent;
   mode: "anonymous" | "authenticated";
   userId?: string | number;
+  sessionManager?: PublicSessionManager;
 }) {
   const t = useTranslations("publicAgents.chat");
-  const agent = React.useMemo(() => toAgent(meta), [meta]);
-  const { controller, clearConversation } = usePublicChatSession({
-    agent,
-    mode,
-    userId,
-  });
+  const { controller, clearConversation, startNewSession, resumeSession } =
+    usePublicChatSession({ agent, mode, userId, sessionManager });
+
+  const authenticated = mode === "authenticated";
 
   return (
     // MessageColumn/Composer destructure `user` off UserContext (default null,
@@ -73,6 +94,20 @@ export function PublicChatScreen({
           ) : null}
           <p className="min-w-0 truncate text-sm font-medium">{agent.name}</p>
           <div className="ml-auto flex items-center gap-1">
+            {authenticated && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={startNewSession}
+                  aria-label={t("newChat")}
+                >
+                  <Plus className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">{t("newChat")}</span>
+                </Button>
+                <PublicHistory agentId={agent.id} onResume={resumeSession} />
+              </>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -81,7 +116,7 @@ export function PublicChatScreen({
             >
               <span>{t("clear")}</span>
             </Button>
-            {mode === "authenticated" && (
+            {authenticated && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -107,5 +142,54 @@ export function PublicChatScreen({
         </div>
       </div>
     </UserContext.Provider>
+  );
+}
+
+/** Authenticated body — instantiates the Apollo-backed session manager. Only
+ *  rendered inside PublicApolloProvider (usePublicSessionManager uses Apollo). */
+function AuthenticatedChatBody({
+  meta,
+  agent,
+  userId,
+}: {
+  meta: PublicAgentMeta;
+  agent: Agent;
+  userId?: string | number;
+}) {
+  const sessionManager = usePublicSessionManager({ agentId: agent.id, userId });
+  return (
+    <PublicChatBody
+      meta={meta}
+      agent={agent}
+      mode="authenticated"
+      userId={userId}
+      sessionManager={sessionManager}
+    />
+  );
+}
+
+export function PublicChatScreen({
+  meta,
+  mode,
+  userId,
+}: {
+  meta: PublicAgentMeta;
+  mode: "anonymous" | "authenticated";
+  userId?: string | number;
+}) {
+  const agent = React.useMemo(() => toAgent(meta), [meta]);
+
+  // Anonymous: render directly — NO Apollo/next-auth (the public layout has
+  // neither, and none of this code path runs here).
+  if (mode !== "authenticated") {
+    return <PublicChatBody meta={meta} agent={agent} mode="anonymous" />;
+  }
+
+  // Authenticated: Apollo + SessionProvider wrap the whole body so the session
+  // manager, history query, and getToken (→ getSession) all resolve.
+  return (
+    <PublicApolloProvider>
+      <AuthenticatedChatBody meta={meta} agent={agent} userId={userId} />
+    </PublicApolloProvider>
   );
 }
