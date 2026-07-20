@@ -369,6 +369,7 @@
         "passwordLabel": "Passwort",
         "passwordPlaceholder": "Passwort eingeben",
         "passwordSetHint": "Ein Passwort ist gesetzt. Leer lassen, um es zu behalten.",
+        "passwordRequired": "Lege ein Passwort fest, bevor du im Passwort-Modus veröffentlichst.",
         "linkLabel": "Öffentlicher Link",
         "copy": "Kopieren",
         "copied": "Link kopiert",
@@ -3469,6 +3470,8 @@
     "listTitle": "Agent auswählen",
     "listDescription": "Wähle einen Agenten, um zu chatten.",
     "openAgent": "Öffnen",
+    "badgePassword": "Passwortgeschützt",
+    "badgeLogin": "Anmeldung erforderlich",
     "empty": {
       "title": "Keine Agenten verfügbar",
       "description": "Derzeit sind keine Agenten veröffentlicht."

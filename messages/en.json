@@ -369,6 +369,7 @@
         "passwordLabel": "Password",
         "passwordPlaceholder": "Enter a password",
         "passwordSetHint": "A password is set. Leave blank to keep it.",
+        "passwordRequired": "Set a password before publishing in password mode.",
         "linkLabel": "Public link",
         "copy": "Copy",
         "copied": "Link copied",
@@ -3469,6 +3470,8 @@
     "listTitle": "Choose an agent",
     "listDescription": "Select an agent to start chatting.",
     "openAgent": "Open",
+    "badgePassword": "Password protected",
+    "badgeLogin": "Login required",
     "empty": {
       "title": "No agents available",
       "description": "There are currently no published agents."

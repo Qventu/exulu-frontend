@@ -24,4 +24,8 @@ describe("isEmailDomainAllowed", () => {
   it("handles multi-domain lists with whitespace", () => {
     expect(isEmailDomainAllowed("a@b.co", "acme.com, b.co", "user")).toBe(true);
   });
+
+  it("matches case-insensitively against cased env domains", () => {
+    expect(isEmailDomainAllowed("a@acme.com", "Acme.COM", "user")).toBe(true);
+  });
 });

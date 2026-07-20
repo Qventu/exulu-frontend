@@ -11,9 +11,24 @@ export const dynamic = "force-dynamic";
  * Creates a `type='external'` user row if the email is unknown (spec §4.2).
  * - Registration requires SMTP: without EMAIL_SERVER_HOST there is no OTP
  *   verification path, so respond 503 (the UI hides signup then anyway).
- * - Existing users (any type) are NEVER modified.
- * - The response is identical whether the user existed or was created —
- *   no account-enumeration signal.
+ * - Existing rows are left untouched, with ONE exception (see below): an
+ *   external row that is still unverified may have its password hash replaced.
+ * - The response is byte-identical `{ ok: true }` whether the user existed, was
+ *   created, or had its unverified password updated — no enumeration signal.
+ *
+ * Last-unverified-registrant-wins (pre-hijack close): previously existing rows
+ * were NEVER modified, so an attacker could pre-register a victim's email with
+ * the attacker's password. The victim's own later registration silently
+ * discarded the victim's password, and once the victim OTP-verified, the
+ * ATTACKER's password owned a now-verified account. Fix: when the existing row
+ * is `type='external'` AND still unverified ("emailVerified" IS NULL) AND a
+ * password is supplied, overwrite its password hash. This is safe because
+ * verification via OTP still proves ownership — whoever actually receives the
+ * code and verifies is the legitimate owner — and, combined with Fix 2
+ * (unverified external rows cannot credential-login), unverified rows stay
+ * inert until that OTP proof lands. So the last registrant to set a password
+ * before verification simply wins, and only the real inbox owner can activate
+ * the account.
  */
 export async function POST(req: NextRequest) {
   if (!process.env.EMAIL_SERVER_HOST) {
@@ -43,10 +58,26 @@ export async function POST(req: NextRequest) {
   const client = await pool.connect();
   try {
     const existing = await client.query(
-      "SELECT id FROM users WHERE LOWER(email) = LOWER($1)",
+      'SELECT id, type, "emailVerified" FROM users WHERE LOWER(email) = LOWER($1)',
       [parsed.email],
     );
     if (existing.rows.length > 0) {
+      const row = existing.rows[0];
+      // Last-unverified-registrant-wins: overwrite the password hash ONLY when
+      // the row is an unverified external account and a password was supplied.
+      // All other existing rows (internal, or already-verified external) remain
+      // untouched. Response stays byte-identical either way.
+      if (
+        row.type === "external" &&
+        row.emailVerified == null &&
+        parsed.password
+      ) {
+        const passwordHash = await bcrypt.hash(parsed.password, 12);
+        await client.query(
+          "UPDATE users SET password = $1, \"updatedAt\" = $2 WHERE id = $3",
+          [passwordHash, new Date(), row.id],
+        );
+      }
       return NextResponse.json({ ok: true });
     }
     const roleResult = await client.query(

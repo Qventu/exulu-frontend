@@ -325,6 +325,20 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       toast.error(tCommon("somethingWentWrong"));
       return;
     }
+
+    // Guard: password-mode guest access requires an actual password. Publishing
+    // with an empty password would leave the agent reachable with no shared
+    // secret. hasPassword covers the "already set, left blank to keep" case.
+    if (
+      guest.enabled &&
+      guest.authMode === "password" &&
+      !guest.hasPassword &&
+      guest.password.length === 0
+    ) {
+      toast.error(t("editor.guestAccess.passwordRequired"));
+      return;
+    }
+
     const values = form.getValues();
 
     const variables: Record<string, unknown> = {

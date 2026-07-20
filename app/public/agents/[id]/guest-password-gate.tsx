@@ -28,6 +28,7 @@ export function GuestPasswordGate({ id, error }: { id: string; error?: boolean }
           value={pw}
           onChange={(e) => setPw(e.target.value)}
           placeholder={t("placeholder")}
+          aria-label={t("placeholder")}
           autoFocus
         />
         <Button type="submit" disabled={pending || !pw} className="w-full">

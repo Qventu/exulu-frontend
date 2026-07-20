@@ -82,6 +82,14 @@ const providers: Provider[] = [
           return null;
         }
         for (const user of res.rows) {
+          // Spec §4.2: unverified external accounts are inert. An external row
+          // whose "emailVerified" column (camelCase) is null/undefined has not
+          // proven ownership via OTP, so it must never authenticate — even with
+          // a matching password. Scoped to external users so legacy internal
+          // accounts (which may predate email verification) are unaffected.
+          if (user.type === "external" && user.emailVerified == null) {
+            continue;
+          }
           const isMatch = await bcrypt.compare(credentials.password, user.password)
           if (isMatch) {
             await client.query('UPDATE users SET last_used = $1 WHERE email = $2', [new Date(), user.email])
@@ -236,7 +244,11 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
             await client.query('UPDATE users SET last_used = $1 WHERE LOWER(email) = LOWER($2)', [new Date(), email])
           }
 
-          if (existingUser && !existingUser.email_verified) {
+          // Rows expose the "emailVerified" column as camelCase `emailVerified`
+          // (NOT snake_case) — the previous `email_verified` read was always
+          // undefined, so this guard fired on EVERY sign-in and re-stamped
+          // verification each time. Only stamp when genuinely unverified.
+          if (existingUser && !existingUser.emailVerified) {
             await client.query('UPDATE users SET "emailVerified" = $1 WHERE LOWER(email) = LOWER($2)', [new Date(), email])
           }
 

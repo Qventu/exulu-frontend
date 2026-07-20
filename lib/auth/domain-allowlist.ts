@@ -13,7 +13,9 @@ export function isEmailDomainAllowed(
   if (existingUserType === "external") return true;
   const allowed = allowedEmailDomainsEnv
     .split(",")
-    .map((d) => d.trim())
+    // Lowercase each domain so a cased env value (e.g. "Acme.COM") still matches
+    // the already-lowercased email suffix below.
+    .map((d) => d.trim().toLowerCase())
     .filter(Boolean);
   allowed.push("exulu.com", "qventu.com");
   return allowed.some((domain) => email.endsWith(`@${domain}`));

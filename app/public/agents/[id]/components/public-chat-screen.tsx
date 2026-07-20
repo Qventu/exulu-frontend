@@ -13,12 +13,23 @@
  * on public pages. ConfigContext + LanguageProvider come from the public layout.
  *
  * Mode split (Task 11):
- * - anonymous: rendered directly, NO Apollo/next-auth — transport posts the
- *   full history to the same-origin proxy. Nothing here changed from Task 10.
- * - authenticated: wrapped in PublicApolloProvider (Apollo + SessionProvider);
- *   an inner body instantiates the server-session manager (Apollo hook) and the
- *   History dropdown, and the transport switches to last-message + Session
- *   header with lazy server sessions.
+ * - anonymous: transport posts the full history to the same-origin proxy.
+ * - authenticated: an inner body instantiates the server-session manager
+ *   (Apollo hook) and the History dropdown, and the transport switches to
+ *   last-message + Session header with lazy server sessions.
+ *
+ * BOTH modes are wrapped in PublicApolloProvider. The reused authenticated
+ * Composer/MessageColumn call Apollo hooks UNCONDITIONALLY on mount —
+ * Composer → useIncrementPromptUsage() + useMutation(UPDATE_CONTEXT_PRESET),
+ * and its always-mounted PromptSelectorModal → usePrompts() (useQuery, no
+ * skip); MessageColumn → FeedbackDialog → useMutation(CREATE_FEEDBACK).
+ * useApolloClient throws without a provider, so an anonymous guest crashed on
+ * first render. Wrapping anonymous mode too fixes that: getToken() resolves
+ * null for a guest (no next-auth session), so the client simply carries no
+ * auth header. Nothing fires a mutation on mount, and the one query that DOES
+ * fire on mount (usePrompts) degrades quietly — the client's defaultOptions
+ * set errorPolicy "all", so a guest 401 returns `{ data: undefined }` instead
+ * of throwing, and the modal reads `data?...items || []`.
  */
 
 import { LogOut, Plus } from "lucide-react";
@@ -179,17 +190,20 @@ export function PublicChatScreen({
 }) {
   const agent = React.useMemo(() => toAgent(meta), [meta]);
 
-  // Anonymous: render directly — NO Apollo/next-auth (the public layout has
-  // neither, and none of this code path runs here).
-  if (mode !== "authenticated") {
-    return <PublicChatBody meta={meta} agent={agent} mode="anonymous" />;
-  }
-
-  // Authenticated: Apollo + SessionProvider wrap the whole body so the session
-  // manager, history query, and getToken (→ getSession) all resolve.
+  // BOTH modes are wrapped in PublicApolloProvider + SessionProvider: the
+  // reused Composer/MessageColumn call Apollo hooks on mount even for guests
+  // (see the file header), so a missing provider crashed anonymous chat. For
+  // anonymous mode getToken() resolves null (no session) — the client just
+  // carries no auth header; guests' GraphQL calls would 401 server-side, which
+  // is fine because nothing fires on mount except a query that degrades under
+  // errorPolicy "all".
   return (
     <PublicApolloProvider>
-      <AuthenticatedChatBody meta={meta} agent={agent} userId={userId} />
+      {mode === "authenticated" ? (
+        <AuthenticatedChatBody meta={meta} agent={agent} userId={userId} />
+      ) : (
+        <PublicChatBody meta={meta} agent={agent} mode="anonymous" />
+      )}
     </PublicApolloProvider>
   );
 }

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { Lock, UserRound } from "lucide-react";
 
 import { fetchPublicAgents } from "@/lib/api/public-agents";
 import { Badge } from "@/components/ui/badge";
@@ -58,9 +59,21 @@ export default async function PublicAgentsPage() {
                     {agent.description}
                   </p>
                   {agent.guest_auth_mode !== "public" ? (
-                    <Badge variant="outline">
-                      {agent.guest_auth_mode === "password" ? "🔒" : "👤"}
-                    </Badge>
+                    (() => {
+                      const label =
+                        agent.guest_auth_mode === "password"
+                          ? t("badgePassword")
+                          : t("badgeLogin");
+                      return (
+                        <Badge variant="outline" aria-label={label} title={label}>
+                          {agent.guest_auth_mode === "password" ? (
+                            <Lock className="size-3" aria-hidden="true" />
+                          ) : (
+                            <UserRound className="size-3" aria-hidden="true" />
+                          )}
+                        </Badge>
+                      );
+                    })()
                   ) : null}
                 </div>
               </CardContent>

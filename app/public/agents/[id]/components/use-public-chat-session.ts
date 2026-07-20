@@ -145,9 +145,12 @@ export function usePublicChatSession({
     [chat],
   );
 
+  // question_ask answers are dispatched as "[answer:…]" — mirror the
+  // authenticated hook (chat/hooks.ts sendQuestionAnswer) so the backend
+  // recognizes the wire format for both guest and internal chat.
   const sendQuestionAnswer = React.useCallback(
     (answerText: string) => {
-      void sendUserMessage(answerText);
+      void sendUserMessage("[answer:" + answerText + "]");
     },
     [sendUserMessage],
   );

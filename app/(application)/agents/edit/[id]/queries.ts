@@ -120,6 +120,12 @@ export const AGENT_EDITOR_FIELDS = `
   createdAt
   updatedAt
   ${AGENT_FIREWALL_SUPPORTED ? "firewall" : ""}
+  # Guest-access + budget fields deploy in LOCKSTEP with the companion backend
+  # branch feat/public-agents (deliberate decision — no AGENT_*_SUPPORTED flag
+  # gate here, unlike firewall/teams/image above). The /public/agents pages
+  # depend on this same backend anyway, so there is no interim state where the
+  # frontend ships these selections against a backend that lacks the fields;
+  # both merge together.
   guest_access
   guest_auth_mode
   guest_has_password
