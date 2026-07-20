@@ -86,8 +86,6 @@ firstname
 lastname
 email
 super_admin
-apikey
-anthropic_token
 personal_system_prompt
 type
 role
@@ -676,9 +674,7 @@ export const GET_USERS = gql`
         last_used
         createdAt
         type
-        apikey
         emailVerified
-        anthropic_token
         super_admin
         scope_mode
         agent_ids
