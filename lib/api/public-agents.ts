@@ -46,14 +46,19 @@ export async function verifyGuestPassword(
   id: string,
   password: string,
 ): Promise<boolean> {
-  const res = await fetch(
-    `${backend()}/public-agents/${encodeURIComponent(id)}/verify-password`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-      cache: "no-store",
-    },
-  );
-  return res.status === 204;
+  if (!backend()) return false;
+  try {
+    const res = await fetch(
+      `${backend()}/public-agents/${encodeURIComponent(id)}/verify-password`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+        cache: "no-store",
+      },
+    );
+    return res.status === 204;
+  } catch {
+    return false;
+  }
 }
