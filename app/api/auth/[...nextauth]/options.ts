@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs";
 import { SignJWT, importJWK } from "jose"
 import GoogleProvider from "next-auth/providers/google";
 import { Provider } from "next-auth/providers";
+import { isEmailDomainAllowed } from "@/lib/auth/domain-allowlist";
 
 const generateJWT = async (payload) => {
   const secret = process.env.NEXTAUTH_SECRET;
@@ -184,15 +185,6 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
             email = String(email).trim().toLowerCase();
           }
 
-          if (process.env.ALLOWED_EMAIL_DOMAINS) {
-            let allowedDomains = process.env.ALLOWED_EMAIL_DOMAINS.split(",");
-            allowedDomains.push("exulu.com")
-            allowedDomains.push("qventu.com")
-            if (!allowedDomains.some(domain => email.endsWith(`@${domain}`))) {
-              return false;
-            }
-          }
-
           /* console.log("process.env.GOOGLE_SECURITY_GROUPS", process.env.GOOGLE_SECURITY_GROUPS)
           if (
             account?.provider === "google" &&
@@ -229,6 +221,16 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
 
           const existingUserQueryResult = await client.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email])
           let existingUser = existingUserQueryResult?.rows[0];
+
+          if (
+            !isEmailDomainAllowed(
+              email,
+              process.env.ALLOWED_EMAIL_DOMAINS,
+              existingUser?.type,
+            )
+          ) {
+            return false;
+          }
 
           if (existingUser) {
             await client.query('UPDATE users SET last_used = $1 WHERE LOWER(email) = LOWER($2)', [new Date(), email])
