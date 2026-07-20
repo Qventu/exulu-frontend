@@ -8,6 +8,7 @@ import { fetchPublicAgentMeta, verifyGuestPassword } from "@/lib/api/public-agen
 import { decideGate } from "@/lib/public-agents/gate";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 import { CenteredNote } from "../components/centered-note";
+import { PublicChatScreen } from "./components/public-chat-screen";
 import { GuestPasswordGate } from "./guest-password-gate";
 
 export const dynamic = "force-dynamic";
@@ -55,10 +56,14 @@ export default async function PublicAgentPage({
   if (decision === "chat-authenticated") {
     const user = await serverSideAuthCheck();
     if (!user) redirect(`/public/agents/${encodeURIComponent(id)}/auth`);
-    // Placeholder until Task 10/11 — replaced by <PublicChatScreen ... />
-    return <div data-testid="public-chat" data-mode="authenticated" />;
+    return (
+      <PublicChatScreen
+        meta={meta}
+        mode="authenticated"
+        userId={(user as { id?: string | number }).id}
+      />
+    );
   }
 
-  // Placeholder until Task 10 — replaced by <PublicChatScreen ... />
-  return <div data-testid="public-chat" data-mode="anonymous" />;
+  return <PublicChatScreen meta={meta} mode="anonymous" />;
 }
