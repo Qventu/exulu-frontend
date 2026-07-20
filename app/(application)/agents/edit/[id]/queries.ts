@@ -120,6 +120,11 @@ export const AGENT_EDITOR_FIELDS = `
   createdAt
   updatedAt
   ${AGENT_FIREWALL_SUPPORTED ? "firewall" : ""}
+  guest_access
+  guest_auth_mode
+  guest_has_password
+  guest_cover_image
+  budget
 `;
 
 /* ---------------------------------------------------------------------------
@@ -295,6 +300,10 @@ export const UPDATE_AGENT_EDITOR = gql`
     $RBAC: RBACInput
     ${AGENT_FIREWALL_SUPPORTED ? "$firewall: JSON" : ""}
     ${AGENT_IMAGE_UPDATE_SUPPORTED ? "$image: String" : ""}
+    $guest_access: Boolean
+    $guest_auth_mode: String
+    $guest_password: String
+    $guest_cover_image: String
   ) {
     agentsUpdateOneById(
       input: {
@@ -319,6 +328,10 @@ export const UPDATE_AGENT_EDITOR = gql`
         RBAC: $RBAC
         ${AGENT_FIREWALL_SUPPORTED ? "firewall: $firewall" : ""}
         ${AGENT_IMAGE_UPDATE_SUPPORTED ? "image: $image" : ""}
+        guest_access: $guest_access
+        guest_auth_mode: $guest_auth_mode
+        guest_password: $guest_password
+        guest_cover_image: $guest_cover_image
       }
       id: $id
     ) {
@@ -342,6 +355,10 @@ export const UPDATE_AGENT_EDITOR = gql`
         model
         ${AGENT_IMAGE_UPDATE_SUPPORTED ? "image" : ""}
         ${AGENT_FIREWALL_SUPPORTED ? "firewall" : ""}
+        guest_access
+        guest_auth_mode
+        guest_has_password
+        guest_cover_image
         RBAC {
           type
           users {

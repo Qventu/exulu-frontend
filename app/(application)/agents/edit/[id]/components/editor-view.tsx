@@ -32,6 +32,7 @@ import {
 } from "../hooks";
 import { AGENT_FIREWALL_SUPPORTED } from "../queries";
 import { AccessSection } from "../sections/access";
+import { GuestAccessSection } from "../sections/guest-access";
 import { AppearanceSection } from "../sections/appearance";
 import { BasicsSection } from "../sections/basics";
 import { ChatExperienceSection } from "../sections/chat-experience";
@@ -53,6 +54,7 @@ const ALL_SECTION_IDS = [
   "knowledge",
   "chat-experience",
   "access",
+  "guest-access",
   "safety",
   "appearance",
   "developer",
@@ -113,6 +115,7 @@ export function EditorView({ agent }: { agent: Agent }) {
             <KnowledgeSection {...sectionProps} />
             <ChatExperienceSection {...sectionProps} />
             <AccessSection {...sectionProps} />
+            <GuestAccessSection {...sectionProps} />
             {AGENT_FIREWALL_SUPPORTED ? (
               <SafetySection {...sectionProps} />
             ) : null}
