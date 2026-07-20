@@ -34,7 +34,7 @@ export default async function PublicAgentAuthPage({
 
   return (
     <AuthShell coverUrl={coverUrl} termsHref={process.env.TERMS_URL || undefined}>
-      <PublicAuth agentId={id} agentName={meta.name} destination={agentUrl} />
+      <PublicAuth agentName={meta.name} destination={agentUrl} />
     </AuthShell>
   );
 }

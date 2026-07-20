@@ -15,11 +15,9 @@ type Step = "identify" | "verify";
 type Tab = "signIn" | "register";
 
 export function PublicAuth({
-  agentId,
   agentName,
   destination,
 }: {
-  agentId: string;
   agentName: string;
   destination: string;
 }) {
@@ -37,12 +35,12 @@ export function PublicAuth({
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  async function ensureUser(withPassword: boolean): Promise<boolean> {
+  async function ensureUser(emailArg: string, withPassword: boolean): Promise<boolean> {
     const res = await fetch("/api/public-auth/ensure-user", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(
-        withPassword ? { email, password } : { email },
+        withPassword ? { email: emailArg, password } : { email: emailArg },
       ),
     });
     if (!res.ok) {
@@ -63,7 +61,7 @@ export function PublicAuth({
     try {
       if (isOtp) {
         // OTP mode: registration and login are one flow (spec §4.2).
-        if (!(await ensureUser(false))) return;
+        if (!(await ensureUser(normalizedEmail, false))) return;
         const res = await signIn("email", { email: normalizedEmail, redirect: false });
         if (res?.error) {
           setError(t("genericError"));
@@ -74,7 +72,7 @@ export function PublicAuth({
       }
       if (tab === "register") {
         // Password mode registration: create, then verify by OTP code.
-        if (!(await ensureUser(true))) return;
+        if (!(await ensureUser(normalizedEmail, true))) return;
         const res = await signIn("email", { email: normalizedEmail, redirect: false });
         if (res?.error) {
           setError(t("genericError"));
