@@ -456,6 +456,14 @@
         "agenticTitle": "Agentenbasierter Abruf",
         "description": "Was der Agent lesen, sich merken und abrufen kann.",
         "disabled": "deaktiviert",
+        "editing": {
+          "title": "Wissensdatenbank-Bearbeitung",
+          "description": "Erlaubt diesem Agenten, während des Chats Einträge in ausgewählten Wissensdatenbanken zu erstellen oder zu aktualisieren.",
+          "createLabel": "Einträge erstellen",
+          "updateLabel": "Einträge aktualisieren",
+          "skipApprovalTitle": "Chat-Freigabe überspringen",
+          "skipApprovalDescription": "Schreibvorgänge laufen ohne Freigabe-Abfrage im Chat. Nur für vertrauenswürdige Automatisierungs-Agenten aktivieren."
+        },
         "enabled": "aktiviert",
         "memoryDescription": "Wählen Sie einen Kontext, in dem der Agent benutzerbezogen Inhalte speichert und abruft.",
         "memoryTitle": "Langzeitgedächtnis",

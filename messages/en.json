@@ -456,6 +456,14 @@
         "agenticTitle": "Agentic retrieval",
         "description": "What the agent can read, remember and retrieve.",
         "disabled": "disabled",
+        "editing": {
+          "title": "Knowledge base editing",
+          "description": "Let this agent create or update items in selected knowledge bases during chat.",
+          "createLabel": "Create items",
+          "updateLabel": "Update items",
+          "skipApprovalTitle": "Skip chat approval",
+          "skipApprovalDescription": "Writes run without an approval prompt in the chat. Only enable for trusted automation agents."
+        },
         "enabled": "enabled",
         "memoryDescription": "Choose a context for the agent to store and recall items per user.",
         "memoryTitle": "Long-term memory",
