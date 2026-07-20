@@ -71,9 +71,7 @@ export const GET_USERS = gql`
         last_used
         createdAt
         type
-        apikey
         emailVerified
-        anthropic_token
         super_admin
         scope_mode
         agent_ids

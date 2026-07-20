@@ -46,8 +46,9 @@ export interface UserDetailPanelProps {
 
 /**
  * Mask any field that smells like a secret before rendering the raw JSON
- * toggle (L4). Belt-and-suspenders: GET_USERS doesn't return passwords, but
- * `anthropic_token` is in the selection and must never leak.
+ * toggle (L4). Belt-and-suspenders: secret columns are no longer in the
+ * GET_USERS selection, but the mask is kept as a safety net in case any
+ * field appears in future selections or local state.
  */
 const SECRET_KEYS = new Set(["anthropic_token", "password", "apikey"]);
 
