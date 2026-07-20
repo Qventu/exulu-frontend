@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs";
 import { SignJWT, importJWK } from "jose"
 import GoogleProvider from "next-auth/providers/google";
 import { Provider } from "next-auth/providers";
+import { isEmailDomainAllowed } from "@/lib/auth/domain-allowlist";
 
 const generateJWT = async (payload) => {
   const secret = process.env.NEXTAUTH_SECRET;
@@ -81,6 +82,14 @@ const providers: Provider[] = [
           return null;
         }
         for (const user of res.rows) {
+          // Spec §4.2: unverified external accounts are inert. An external row
+          // whose "emailVerified" column (camelCase) is null/undefined has not
+          // proven ownership via OTP, so it must never authenticate — even with
+          // a matching password. Scoped to external users so legacy internal
+          // accounts (which may predate email verification) are unaffected.
+          if (user.type === "external" && user.emailVerified == null) {
+            continue;
+          }
           const isMatch = await bcrypt.compare(credentials.password, user.password)
           if (isMatch) {
             await client.query('UPDATE users SET last_used = $1 WHERE email = $2', [new Date(), user.email])
@@ -184,15 +193,6 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
             email = String(email).trim().toLowerCase();
           }
 
-          if (process.env.ALLOWED_EMAIL_DOMAINS) {
-            let allowedDomains = process.env.ALLOWED_EMAIL_DOMAINS.split(",");
-            allowedDomains.push("exulu.com")
-            allowedDomains.push("qventu.com")
-            if (!allowedDomains.some(domain => email.endsWith(`@${domain}`))) {
-              return false;
-            }
-          }
-
           /* console.log("process.env.GOOGLE_SECURITY_GROUPS", process.env.GOOGLE_SECURITY_GROUPS)
           if (
             account?.provider === "google" &&
@@ -230,11 +230,25 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
           const existingUserQueryResult = await client.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email])
           let existingUser = existingUserQueryResult?.rows[0];
 
+          if (
+            !isEmailDomainAllowed(
+              email,
+              process.env.ALLOWED_EMAIL_DOMAINS,
+              existingUser?.type,
+            )
+          ) {
+            return false;
+          }
+
           if (existingUser) {
             await client.query('UPDATE users SET last_used = $1 WHERE LOWER(email) = LOWER($2)', [new Date(), email])
           }
 
-          if (existingUser && !existingUser.email_verified) {
+          // Rows expose the "emailVerified" column as camelCase `emailVerified`
+          // (NOT snake_case) — the previous `email_verified` read was always
+          // undefined, so this guard fired on EVERY sign-in and re-stamped
+          // verification each time. Only stamp when genuinely unverified.
+          if (existingUser && !existingUser.emailVerified) {
             await client.query('UPDATE users SET "emailVerified" = $1 WHERE LOWER(email) = LOWER($2)', [new Date(), email])
           }
 

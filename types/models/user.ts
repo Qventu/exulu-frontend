@@ -7,7 +7,9 @@ export type User = {
   id: number;
   email: string;
   emailVerified?: string;
-  type?: "api" | "user"
+  // "external" = self-registered public-agents guest (spec §4.2); such rows are
+  // fenced out of internal API routes (e.g. app/api/feedback/[kind]/route.ts).
+  type?: "api" | "user" | "external"
   super_admin?: boolean;
   favourite_agents?: string[];
   favourite_projects?: string[];

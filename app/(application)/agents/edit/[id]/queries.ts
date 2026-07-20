@@ -120,6 +120,17 @@ export const AGENT_EDITOR_FIELDS = `
   createdAt
   updatedAt
   ${AGENT_FIREWALL_SUPPORTED ? "firewall" : ""}
+  # Guest-access + budget fields deploy in LOCKSTEP with the companion backend
+  # branch feat/public-agents (deliberate decision — no AGENT_*_SUPPORTED flag
+  # gate here, unlike firewall/teams/image above). The /public/agents pages
+  # depend on this same backend anyway, so there is no interim state where the
+  # frontend ships these selections against a backend that lacks the fields;
+  # both merge together.
+  guest_access
+  guest_auth_mode
+  guest_has_password
+  guest_cover_image
+  budget
 `;
 
 /* ---------------------------------------------------------------------------
@@ -295,6 +306,10 @@ export const UPDATE_AGENT_EDITOR = gql`
     $RBAC: RBACInput
     ${AGENT_FIREWALL_SUPPORTED ? "$firewall: JSON" : ""}
     ${AGENT_IMAGE_UPDATE_SUPPORTED ? "$image: String" : ""}
+    $guest_access: Boolean
+    $guest_auth_mode: String
+    $guest_password: String
+    $guest_cover_image: String
   ) {
     agentsUpdateOneById(
       input: {
@@ -319,6 +334,10 @@ export const UPDATE_AGENT_EDITOR = gql`
         RBAC: $RBAC
         ${AGENT_FIREWALL_SUPPORTED ? "firewall: $firewall" : ""}
         ${AGENT_IMAGE_UPDATE_SUPPORTED ? "image: $image" : ""}
+        guest_access: $guest_access
+        guest_auth_mode: $guest_auth_mode
+        guest_password: $guest_password
+        guest_cover_image: $guest_cover_image
       }
       id: $id
     ) {
@@ -342,6 +361,10 @@ export const UPDATE_AGENT_EDITOR = gql`
         model
         ${AGENT_IMAGE_UPDATE_SUPPORTED ? "image" : ""}
         ${AGENT_FIREWALL_SUPPORTED ? "firewall" : ""}
+        guest_access
+        guest_auth_mode
+        guest_has_password
+        guest_cover_image
         RBAC {
           type
           users {

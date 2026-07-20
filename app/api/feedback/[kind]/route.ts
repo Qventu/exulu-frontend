@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/app/api/auth/[...nextauth]/options";
+import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,14 @@ export async function POST(
     const session: any = await getServerSession(authOptions);
     if (!session?.user) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    // This route spends the internal FEEDBACK_TOKEN secret, so it must never be
+    // reachable by external (guest/public-agent) users. Resolve the caller's
+    // row and reject anything that isn't a confirmed internal user.
+    const user = await serverSideAuthCheck();
+    if (!user || user.type === "external") {
+        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
     const backend = process.env.FEEDBACK_BACKEND;

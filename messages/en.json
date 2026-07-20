@@ -355,6 +355,33 @@
         "summaryTeams": "Shared with {count} team(s).",
         "summaryUsers": "Shared with {count} user(s)."
       },
+      "guestAccess": {
+        "description": "Publish this agent to external users at /public/agents.",
+        "enableLabel": "Enable guest access",
+        "publicListingWarning": "When enabled, this agent's name, description and avatar are publicly listed on the /public/agents page.",
+        "modeLabel": "Access mode",
+        "modePublic": "Public",
+        "modePublicHint": "Anyone with the link can chat. No sign-in.",
+        "modePassword": "Password",
+        "modePasswordHint": "Visitors must enter a shared password.",
+        "modeLogin": "Login",
+        "modeLoginHint": "Visitors must sign in or register with their email.",
+        "passwordLabel": "Password",
+        "passwordPlaceholder": "Enter a password",
+        "passwordSetHint": "A password is set. Leave blank to keep it.",
+        "passwordRequired": "Set a password before publishing in password mode.",
+        "linkLabel": "Public link",
+        "copy": "Copy",
+        "copied": "Link copied",
+        "coverLabel": "Login page image",
+        "coverDescription": "Shown on the right side of the sign-in page for this agent.",
+        "coverRemove": "Remove image",
+        "budgetTitle": "Budget",
+        "budgetEdit": "Set budget",
+        "budgetWarning": "Strongly recommended: set an overall budget for this agent before exposing it publicly.",
+        "budgetNoRights": "You don't have budget-management rights. Ask a budget admin to set a budget for this agent.",
+        "smtpHint": "Email (SMTP) is not configured — external users won't be able to register. Login mode requires SMTP for sign-up codes."
+      },
       "appearance": {
         "avatarDescription": "Shown next to this agent everywhere it appears.",
         "avatarTitle": "Avatar",
@@ -648,6 +675,7 @@
         "basics": "Basics",
         "chatExperience": "Chat experience",
         "developer": "Developer",
+        "guestAccess": "Guest access",
         "instructions": "Instructions",
         "knowledge": "Knowledge & memory",
         "safety": "Safety",
@@ -3477,6 +3505,60 @@
       "title": "Fill in variables"
     },
     "varsCount": "{count, plural, one {# var} other {# vars}}"
+  },
+  "publicAgents": {
+    "listTitle": "Choose an agent",
+    "listDescription": "Select an agent to start chatting.",
+    "openAgent": "Open",
+    "badgePassword": "Password protected",
+    "badgeLogin": "Login required",
+    "empty": {
+      "title": "No agents available",
+      "description": "There are currently no published agents."
+    },
+    "notFound": {
+      "title": "Agent not found",
+      "description": "This agent does not exist or is no longer available."
+    },
+    "unavailable": {
+      "title": "This agent is no longer available",
+      "description": "It may have been unpublished."
+    },
+    "misconfigured": {
+      "title": "Something went wrong",
+      "description": "The server is not reachable. Try again later."
+    },
+    "passwordGate": {
+      "title": "This agent is password protected",
+      "placeholder": "Password",
+      "submit": "Continue",
+      "checking": "Checking…",
+      "error": "Incorrect password. Try again."
+    },
+    "auth": {
+      "title": "Sign in to chat with {agent}",
+      "registerTitle": "Create an account",
+      "email": "Email",
+      "password": "Password",
+      "passwordMin": "At least 8 characters",
+      "continue": "Continue",
+      "signIn": "Sign in",
+      "register": "Register",
+      "switchToRegister": "New here? Create an account",
+      "switchToSignIn": "Already have an account? Sign in",
+      "registrationUnavailable": "Registration is currently unavailable.",
+      "genericError": "Something went wrong. Try again."
+    },
+    "chat": {
+      "newChat": "New chat",
+      "clear": "Clear conversation",
+      "signOut": "Sign out",
+      "history": "History",
+      "noSessions": "No previous conversations",
+      "rateLimited": "You're sending messages too quickly. Please wait a moment.",
+      "messageTooLong": "Your message is too long.",
+      "sendFailed": "Sending failed. Try again."
+    }
   },
   "routines": {
     "title": "Routines",

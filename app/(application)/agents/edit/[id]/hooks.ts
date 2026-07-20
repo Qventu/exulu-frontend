@@ -109,6 +109,22 @@ export interface RbacState {
   teams?: RbacIdEntry[];
 }
 
+export interface GuestAccessState {
+  enabled: boolean;
+  authMode: "public" | "password" | "regular";
+  password: string; // plaintext to set on next save; "" = keep existing
+  hasPassword: boolean;
+  coverImage: string; // S3 key or ""
+}
+
+const defaultGuest = (agent: Agent): GuestAccessState => ({
+  enabled: !!(agent as any).guest_access,
+  authMode: ((agent as any).guest_auth_mode as GuestAccessState["authMode"]) || "regular",
+  password: "",
+  hasPassword: !!(agent as any).guest_has_password,
+  coverImage: (agent as any).guest_cover_image ?? "",
+});
+
 function defaultFirewall(agent: Agent | undefined): FirewallState {
   // The firewall column is a JSON scalar — tolerate object or string.
   let raw: any = agent?.firewall;
@@ -195,6 +211,8 @@ export interface UseAgentEditor {
   setImage: (url: string) => void;
   firewall: FirewallState;
   setFirewall: (f: FirewallState) => void;
+  guest: GuestAccessState;
+  setGuest: (g: GuestAccessState) => void;
 }
 
 export function useAgentEditor(agent: Agent): UseAgentEditor {
@@ -250,6 +268,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
   const [firewall, setFirewall] = React.useState<FirewallState>(() =>
     defaultFirewall(agent),
   );
+  const [guest, setGuest] = React.useState<GuestAccessState>(() => defaultGuest(agent));
 
   // Track non-RHF dirty state by snapshotting initial JSON strings.
   const initialSnapshot = React.useRef({
@@ -267,6 +286,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
     animationResponding: (agent as any).animation_responding ?? "",
     image: (agent as any).image ?? "",
     firewall: JSON.stringify(defaultFirewall(agent)),
+    guest: JSON.stringify(defaultGuest(agent)),
   });
 
   // Compare staged state against the initial snapshot. The ref is the canonical
@@ -284,7 +304,8 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
     animationIdle !== snapshot.animationIdle ||
     animationResponding !== snapshot.animationResponding ||
     (image ?? "") !== snapshot.image ||
-    JSON.stringify(firewall) !== snapshot.firewall;
+    JSON.stringify(firewall) !== snapshot.firewall ||
+    JSON.stringify(guest) !== snapshot.guest;
 
   const dirty = form.formState.isDirty || stagedDirty;
 
@@ -304,6 +325,20 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       toast.error(tCommon("somethingWentWrong"));
       return;
     }
+
+    // Guard: password-mode guest access requires an actual password. Publishing
+    // with an empty password would leave the agent reachable with no shared
+    // secret. hasPassword covers the "already set, left blank to keep" case.
+    if (
+      guest.enabled &&
+      guest.authMode === "password" &&
+      !guest.hasPassword &&
+      guest.password.length === 0
+    ) {
+      toast.error(t("editor.guestAccess.passwordRequired"));
+      return;
+    }
+
     const values = form.getValues();
 
     const variables: Record<string, unknown> = {
@@ -331,6 +366,10 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       },
       tools: JSON.stringify(tools),
       skills: JSON.stringify(skills),
+      guest_access: guest.enabled,
+      guest_auth_mode: guest.authMode,
+      guest_password: guest.password.length > 0 ? guest.password : null,
+      guest_cover_image: guest.coverImage || null,
     };
     if (AGENT_FIREWALL_SUPPORTED) {
       variables.firewall = JSON.stringify(firewall);
@@ -342,6 +381,16 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
     try {
       await updateAgent({ variables });
       toast.success(t("editor.saved"));
+      // Clear plaintext password after save; update hasPassword based on what was saved.
+      const savedGuest: GuestAccessState = {
+        ...guest,
+        password: "",
+        hasPassword:
+          guest.authMode === "password"
+            ? guest.password.length > 0 || guest.hasPassword
+            : false,
+      };
+      setGuest(savedGuest);
       // Re-snapshot so dirty flips off cleanly.
       initialSnapshot.current = {
         tools: JSON.stringify(tools),
@@ -353,6 +402,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
         animationResponding,
         image: image ?? "",
         firewall: JSON.stringify(firewall),
+        guest: JSON.stringify(savedGuest),
       };
       // Reset RHF dirty (keep values).
       form.reset(values, { keepValues: true });
@@ -365,6 +415,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
     animationResponding,
     firewall,
     form,
+    guest,
     image,
     memory,
     model,
@@ -405,6 +456,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
     setAnimationResponding((agent as any).animation_responding ?? "");
     setImage((agent as any).image ?? undefined);
     setFirewall(defaultFirewall(agent));
+    setGuest(defaultGuest(agent));
   }, [agent]);
 
   const duplicate = React.useCallback(async () => {
@@ -450,6 +502,8 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
     setImage,
     firewall,
     setFirewall,
+    guest,
+    setGuest,
   };
 }
 

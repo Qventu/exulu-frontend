@@ -355,6 +355,33 @@
         "summaryTeams": "Mit {count} Team(s) geteilt.",
         "summaryUsers": "Mit {count} Benutzer(n) geteilt."
       },
+      "guestAccess": {
+        "description": "Diesen Agenten für externe Nutzer unter /public/agents veröffentlichen.",
+        "enableLabel": "Gastzugriff aktivieren",
+        "publicListingWarning": "Wenn aktiviert, sind Name, Beschreibung und Avatar dieses Agenten öffentlich auf der /public/agents-Seite gelistet.",
+        "modeLabel": "Zugriffsmodus",
+        "modePublic": "Öffentlich",
+        "modePublicHint": "Jeder mit dem Link kann chatten. Keine Anmeldung.",
+        "modePassword": "Passwort",
+        "modePasswordHint": "Besucher müssen ein gemeinsames Passwort eingeben.",
+        "modeLogin": "Login",
+        "modeLoginHint": "Besucher müssen sich mit ihrer E-Mail anmelden oder registrieren.",
+        "passwordLabel": "Passwort",
+        "passwordPlaceholder": "Passwort eingeben",
+        "passwordSetHint": "Ein Passwort ist gesetzt. Leer lassen, um es zu behalten.",
+        "passwordRequired": "Lege ein Passwort fest, bevor du im Passwort-Modus veröffentlichst.",
+        "linkLabel": "Öffentlicher Link",
+        "copy": "Kopieren",
+        "copied": "Link kopiert",
+        "coverLabel": "Bild der Anmeldeseite",
+        "coverDescription": "Wird auf der rechten Seite der Anmeldeseite dieses Agenten angezeigt.",
+        "coverRemove": "Bild entfernen",
+        "budgetTitle": "Budget",
+        "budgetEdit": "Budget festlegen",
+        "budgetWarning": "Dringend empfohlen: Lege ein Gesamtbudget für diesen Agenten fest, bevor du ihn öffentlich machst.",
+        "budgetNoRights": "Du hast keine Budget-Verwaltungsrechte. Bitte einen Budget-Admin, ein Budget für diesen Agenten festzulegen.",
+        "smtpHint": "E-Mail (SMTP) ist nicht konfiguriert — externe Nutzer können sich nicht registrieren. Der Login-Modus benötigt SMTP für Registrierungscodes."
+      },
       "appearance": {
         "avatarDescription": "Wird überall neben dem Agenten angezeigt.",
         "avatarTitle": "Avatar",
@@ -648,6 +675,7 @@
         "basics": "Grundlagen",
         "chatExperience": "Chat-Erlebnis",
         "developer": "Entwickler",
+        "guestAccess": "Gastzugriff",
         "instructions": "Anweisungen",
         "knowledge": "Wissen & Gedächtnis",
         "safety": "Sicherheit",
@@ -3477,6 +3505,60 @@
       "title": "Variablen ausfüllen"
     },
     "varsCount": "{count, plural, one {# Var.} other {# Var.}}"
+  },
+  "publicAgents": {
+    "listTitle": "Agent auswählen",
+    "listDescription": "Wähle einen Agenten, um zu chatten.",
+    "openAgent": "Öffnen",
+    "badgePassword": "Passwortgeschützt",
+    "badgeLogin": "Anmeldung erforderlich",
+    "empty": {
+      "title": "Keine Agenten verfügbar",
+      "description": "Derzeit sind keine Agenten veröffentlicht."
+    },
+    "notFound": {
+      "title": "Agent nicht gefunden",
+      "description": "Dieser Agent existiert nicht oder ist nicht mehr verfügbar."
+    },
+    "unavailable": {
+      "title": "Dieser Agent ist nicht mehr verfügbar",
+      "description": "Er wurde möglicherweise zurückgezogen."
+    },
+    "misconfigured": {
+      "title": "Etwas ist schiefgelaufen",
+      "description": "Der Server ist nicht erreichbar. Versuche es später erneut."
+    },
+    "passwordGate": {
+      "title": "Dieser Agent ist passwortgeschützt",
+      "placeholder": "Passwort",
+      "submit": "Weiter",
+      "checking": "Wird geprüft…",
+      "error": "Falsches Passwort. Versuche es erneut."
+    },
+    "auth": {
+      "title": "Melde dich an, um mit {agent} zu chatten",
+      "registerTitle": "Konto erstellen",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "passwordMin": "Mindestens 8 Zeichen",
+      "continue": "Weiter",
+      "signIn": "Anmelden",
+      "register": "Registrieren",
+      "switchToRegister": "Neu hier? Konto erstellen",
+      "switchToSignIn": "Bereits ein Konto? Anmelden",
+      "registrationUnavailable": "Die Registrierung ist derzeit nicht verfügbar.",
+      "genericError": "Etwas ist schiefgelaufen. Versuche es erneut."
+    },
+    "chat": {
+      "newChat": "Neuer Chat",
+      "clear": "Unterhaltung löschen",
+      "signOut": "Abmelden",
+      "history": "Verlauf",
+      "noSessions": "Keine früheren Unterhaltungen",
+      "rateLimited": "Du sendest Nachrichten zu schnell. Bitte warte einen Moment.",
+      "messageTooLong": "Deine Nachricht ist zu lang.",
+      "sendFailed": "Senden fehlgeschlagen. Versuche es erneut."
+    }
   },
   "routines": {
     "title": "Routinen",
