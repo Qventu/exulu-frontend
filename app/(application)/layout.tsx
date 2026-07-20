@@ -82,6 +82,9 @@ export default async function RootLayout({
                 process.env.TTS_MODEL !== "" &&
                 process.env.EXULU_USE_LITELLM === "true",
         },
+        public_auth: {
+            otp_available: !!process.env.EMAIL_SERVER_HOST,
+        },
         ...json
     }
 

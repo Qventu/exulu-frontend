@@ -3438,6 +3438,58 @@
     },
     "varsCount": "{count, plural, one {# Var.} other {# Var.}}"
   },
+  "publicAgents": {
+    "listTitle": "Agent auswählen",
+    "listDescription": "Wähle einen Agenten, um zu chatten.",
+    "openAgent": "Öffnen",
+    "empty": {
+      "title": "Keine Agenten verfügbar",
+      "description": "Derzeit sind keine Agenten veröffentlicht."
+    },
+    "notFound": {
+      "title": "Agent nicht gefunden",
+      "description": "Dieser Agent existiert nicht oder ist nicht mehr verfügbar."
+    },
+    "unavailable": {
+      "title": "Dieser Agent ist nicht mehr verfügbar",
+      "description": "Er wurde möglicherweise zurückgezogen."
+    },
+    "misconfigured": {
+      "title": "Etwas ist schiefgelaufen",
+      "description": "Der Server ist nicht erreichbar. Versuche es später erneut."
+    },
+    "passwordGate": {
+      "title": "Dieser Agent ist passwortgeschützt",
+      "placeholder": "Passwort",
+      "submit": "Weiter",
+      "checking": "Wird geprüft…",
+      "error": "Falsches Passwort. Versuche es erneut."
+    },
+    "auth": {
+      "title": "Melde dich an, um mit {agent} zu chatten",
+      "registerTitle": "Konto erstellen",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "passwordMin": "Mindestens 8 Zeichen",
+      "continue": "Weiter",
+      "signIn": "Anmelden",
+      "register": "Registrieren",
+      "switchToRegister": "Neu hier? Konto erstellen",
+      "switchToSignIn": "Bereits ein Konto? Anmelden",
+      "registrationUnavailable": "Die Registrierung ist derzeit nicht verfügbar.",
+      "genericError": "Etwas ist schiefgelaufen. Versuche es erneut."
+    },
+    "chat": {
+      "newChat": "Neuer Chat",
+      "clear": "Unterhaltung löschen",
+      "signOut": "Abmelden",
+      "history": "Verlauf",
+      "noSessions": "Keine früheren Unterhaltungen",
+      "rateLimited": "Du sendest Nachrichten zu schnell. Bitte warte einen Moment.",
+      "messageTooLong": "Deine Nachricht ist zu lang.",
+      "sendFailed": "Senden fehlgeschlagen. Versuche es erneut."
+    }
+  },
   "routines": {
     "title": "Routinen",
     "description": "Gespeicherte Unterhaltungen, die auf Abruf oder nach Zeitplan ausgeführt werden.",

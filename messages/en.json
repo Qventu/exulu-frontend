@@ -3438,6 +3438,58 @@
     },
     "varsCount": "{count, plural, one {# var} other {# vars}}"
   },
+  "publicAgents": {
+    "listTitle": "Choose an agent",
+    "listDescription": "Select an agent to start chatting.",
+    "openAgent": "Open",
+    "empty": {
+      "title": "No agents available",
+      "description": "There are currently no published agents."
+    },
+    "notFound": {
+      "title": "Agent not found",
+      "description": "This agent does not exist or is no longer available."
+    },
+    "unavailable": {
+      "title": "This agent is no longer available",
+      "description": "It may have been unpublished."
+    },
+    "misconfigured": {
+      "title": "Something went wrong",
+      "description": "The server is not reachable. Try again later."
+    },
+    "passwordGate": {
+      "title": "This agent is password protected",
+      "placeholder": "Password",
+      "submit": "Continue",
+      "checking": "Checking…",
+      "error": "Incorrect password. Try again."
+    },
+    "auth": {
+      "title": "Sign in to chat with {agent}",
+      "registerTitle": "Create an account",
+      "email": "Email",
+      "password": "Password",
+      "passwordMin": "At least 8 characters",
+      "continue": "Continue",
+      "signIn": "Sign in",
+      "register": "Register",
+      "switchToRegister": "New here? Create an account",
+      "switchToSignIn": "Already have an account? Sign in",
+      "registrationUnavailable": "Registration is currently unavailable.",
+      "genericError": "Something went wrong. Try again."
+    },
+    "chat": {
+      "newChat": "New chat",
+      "clear": "Clear conversation",
+      "signOut": "Sign out",
+      "history": "History",
+      "noSessions": "No previous conversations",
+      "rateLimited": "You're sending messages too quickly. Please wait a moment.",
+      "messageTooLong": "Your message is too long.",
+      "sendFailed": "Sending failed. Try again."
+    }
+  },
   "routines": {
     "title": "Routines",
     "description": "Saved conversations that run on demand or on a schedule.",

@@ -13,6 +13,9 @@ export type ConfigContextType = {
     tts?: {
         enabled: boolean;
     };
+    public_auth?: {
+        otp_available: boolean;
+    };
 } & BackendConfigType;
 
 export const ConfigContext = createContext<ConfigContextType | null>(null);
