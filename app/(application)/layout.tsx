@@ -40,6 +40,10 @@ export default async function RootLayout({
     const user = await serverSideAuthCheck();
     if (!user) return redirect(`/login${pathname ? `?destination=${pathname}` : ''}`);
 
+    // External (self-registered) users never enter the internal shell —
+    // public-agents spec §4.4. Everything they may use lives under /public.
+    if ((user as any).type === "external") return redirect("/public/agents");
+
     const backend = await configApi.backend();
     const json: BackendConfigType = await backend.json();
 
