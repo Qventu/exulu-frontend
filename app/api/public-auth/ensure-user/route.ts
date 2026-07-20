@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
       { status: 503 },
     );
   }
+  // Missing x-forwarded-for (not behind a proxy) buckets all clients under "unknown" — intentional; header is present in production behind any reverse proxy.
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   if (ensureUserRateLimited(ip)) {
@@ -69,7 +70,11 @@ export async function POST(req: NextRequest) {
       [parsed.email, "", passwordHash, new Date(), new Date(), "external", false, externalRole.id],
     );
     return NextResponse.json({ ok: true });
-  } catch (error) {
+  } catch (error: unknown) {
+    if ((error as { code?: string }).code === "23505") {
+      // Concurrent duplicate insert — same outcome as "already existed".
+      return NextResponse.json({ ok: true });
+    }
     console.error("[EXULU] ensure-user failed", error);
     return NextResponse.json({ detail: "Something went wrong." }, { status: 500 });
   } finally {
