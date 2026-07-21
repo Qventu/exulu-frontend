@@ -69,8 +69,8 @@ New route handler `app/manifest.webmanifest/route.ts`:
 
 ```json
 {
-  "name": "<APP_NAME or \"Exulu\">",
-  "short_name": "<APP_NAME or \"Exulu\">",
+  "name": "<APP_NAME or \"IMP\">",
+  "short_name": "<APP_NAME or \"IMP\">",
   "start_url": "/",
   "display": "standalone",
   "icons": [
@@ -90,7 +90,7 @@ New route handler `app/manifest.webmanifest/route.ts`:
 
 ### 3. `APP_NAME` env var
 
-Optional, read by the manifest route only. Defaults to `"Exulu"`. Provides the
+Optional, read by the manifest route only. Defaults to `"IMP"`. Provides the
 manifest `name` / `short_name` — the label shown under the installed app icon.
 
 ### 4. Documentation
@@ -114,7 +114,7 @@ currently written down anywhere.
 ## Testing
 
 - Unit test for the manifest route: correct content type, icon `src` uses
-  `BACKEND`, `name` honors `APP_NAME` and falls back to `"Exulu"`.
+  `BACKEND`, `name` honors `APP_NAME` and falls back to `"IMP"`.
 - Manual verification: drop a `favicon.png` into a client-style `public/`
   folder, confirm the tab icon appears and the app is installable with the
   icon and `APP_NAME` label.
