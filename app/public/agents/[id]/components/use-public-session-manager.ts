@@ -44,18 +44,27 @@ export interface PublicSessionManager {
 export function usePublicSessionManager({
   agentId,
   userId,
+  initialSession,
+  basePath,
 }: {
   agentId: string;
   userId?: string | number;
+  /** Server-loaded session (from ?session=<sid>) — seeds the manager. */
+  initialSession?: PublicSession | null;
+  /** Base URL used for the lazy-create replaceState URL swap. */
+  basePath?: string;
 }): PublicSessionManager {
   const t = useTranslations("publicAgents.chat");
 
   const [currentSession, setCurrentSession] =
-    React.useState<PublicSession | null>(null);
+    React.useState<PublicSession | null>(initialSession ?? null);
   // Ref kept in sync with state — the transport's prepareSendMessagesRequest
   // may read it before a re-render commits (mirror of currentSessionRef in
-  // chat/hooks.ts).
-  const currentSessionRef = React.useRef<PublicSession | null>(null);
+  // chat/hooks.ts). Seeded synchronously from the server session so the very
+  // first send targets it.
+  const currentSessionRef = React.useRef<PublicSession | null>(
+    initialSession ?? null,
+  );
   React.useEffect(() => {
     currentSessionRef.current = currentSession;
   }, [currentSession]);
@@ -85,9 +94,20 @@ export function usePublicSessionManager({
         // re-renders (same guard as the internal hook's createSession).
         currentSessionRef.current = item;
         setCurrentSession(item);
+        // Put the freshly-created session id in the URL WITHOUT a Next.js
+        // navigation (a real router.replace would kill the in-flight stream) —
+        // mirror of the internal hooks.ts window.history.replaceState pattern.
+        // Now a page reload / rail highlight resolves to this session.
+        if (basePath && typeof window !== "undefined") {
+          window.history.replaceState(
+            null,
+            "",
+            `${basePath}?session=${encodeURIComponent(item.id)}`,
+          );
+        }
       }
       return item;
-    }, [agentId, createAgentSession, t, userId]);
+    }, [agentId, basePath, createAgentSession, t, userId]);
 
   const startNewSession = React.useCallback(() => {
     currentSessionRef.current = null;

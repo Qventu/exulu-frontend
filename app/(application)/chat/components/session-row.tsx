@@ -45,6 +45,7 @@ import type { Agent } from "@/types/models/agent";
 import type { AgentSession } from "@/types/models/agent-session";
 
 import type { UseSessionMutationsResult } from "../hooks";
+import { useChatShell } from "./chat-shell";
 
 /**
  * The session list query populates `.agent` as an object (contract:
@@ -61,6 +62,15 @@ export interface SessionRowProps {
   mutations: UseSessionMutationsResult;
   /** Called on navigation so the mobile history Sheet can close itself. */
   onNavigate?: () => void;
+  /** Row link target. Default: current /chat/${agentId}/${session.id}. */
+  href?: string;
+  /** Active state override. Default: pathname?.includes(session.id). */
+  active?: boolean;
+  /**
+   * Fallback target when deleting the ACTIVE session (must not strand the
+   * user on a dead route). Default: current /chat/${agentId}/new.
+   */
+  newChatHref?: string;
 }
 
 export function SessionRow({
@@ -68,18 +78,26 @@ export function SessionRow({
   agentId,
   mutations,
   onNavigate,
+  href,
+  active: activeProp,
+  newChatHref,
 }: SessionRowProps) {
   const t = useTranslations("chat");
   const tCommon = useTranslations("common");
   const pathname = usePathname();
   const router = useRouter();
+  const { startNewChat } = useChatShell();
   const { user } = React.useContext(UserContext);
 
   const [renameOpen, setRenameOpen] = React.useState(false);
   const [renameValue, setRenameValue] = React.useState("");
   const [deleteOpen, setDeleteOpen] = React.useState(false);
 
-  const active = Boolean(pathname?.includes(session.id));
+  const active =
+    activeProp !== undefined
+      ? activeProp
+      : Boolean(pathname?.includes(session.id));
+  const resolvedHref = href ?? `/chat/${agentId}/${session.id}`;
   const displayTitle = session.title || t("history.untitled");
 
   const sessionAgentId =
@@ -112,7 +130,7 @@ export function SessionRow({
         )}
       >
         <Link
-          href={`/chat/${agentId}/${session.id}`}
+          href={resolvedHref}
           aria-current={active ? "page" : undefined}
           onClick={() => onNavigate?.()}
           className="flex min-h-11 min-w-0 flex-1 flex-col justify-center gap-0.5 rounded-md px-2 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -210,9 +228,12 @@ export function SessionRow({
           }
           toast.success(t("history.deleted"));
           // Deleting the conversation you are reading must not strand you on
-          // a dead route — fall back to a fresh chat.
+          // a dead route — fall back to a fresh chat. Push alone no-ops after
+          // a lazy session create (stale router tree — see
+          // ChatShellContextValue.startNewChat).
           if (active) {
-            router.push(`/chat/${agentId}/new`);
+            startNewChat();
+            router.push(newChatHref ?? `/chat/${agentId}/new`);
           }
         }}
       />

@@ -40,7 +40,13 @@ const emptyStateVariants = cva(
 
 export type EmptyStateAction =
   | { label: string; onClick: () => void }
-  | { label: string; href: string };
+  | {
+      label: string;
+      href: string;
+      /** Optional side effect on top of the navigation (the Link still owns
+       *  it — modified clicks keep their open-in-new-tab semantics). */
+      onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
+    };
 
 export interface EmptyStateProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, "title">,
@@ -65,7 +71,9 @@ const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
           variant={resolvedVariant === "default" ? "default" : "outline"}
           size={resolvedVariant === "quiet" ? "sm" : "default"}
         >
-          <Link href={action.href}>{action.label}</Link>
+          <Link href={action.href} onClick={action.onClick}>
+            {action.label}
+          </Link>
         </Button>
       ) : (
         <Button

@@ -64,20 +64,51 @@ import { AgentSwitcherDialog } from "./agent-switcher-dialog";
 import { useChatShell } from "./chat-shell";
 import { SessionRow, type SessionListItem } from "./session-row";
 
+/**
+ * URL sites the rail navigates to. Defaulted (in the component) to the exact
+ * internal /chat/... strings so internal chat is byte-identical; the public
+ * guest shell passes its own /public/agents/... paths (?session=<sid>).
+ */
+export interface HistoryRailPaths {
+  session: (sessionId: string) => string;
+  newChat: string;
+  /** null hides the "See all" link (public has no search page). */
+  search: string | null;
+}
+
 export interface HistoryRailProps {
   agent: Agent;
+  /** Default: current /chat/... URLs. */
+  paths?: HistoryRailPaths;
+  /** Overrides SessionRow's pathname matching (public is URL-param driven). */
+  activeSessionId?: string;
+  /** Public: the agent name is a plain label, no AgentSwitcherDialog. */
+  hideAgentSwitcher?: boolean;
 }
 
 /** Recents cap — same 20 as the legacy sidebar (chat.md row 13). */
 const RECENTS_LIMIT = 20;
 
-export function HistoryRail({ agent }: HistoryRailProps) {
+export function HistoryRail({
+  agent,
+  paths,
+  activeSessionId,
+  hideAgentSwitcher,
+}: HistoryRailProps) {
   const t = useTranslations("chat");
   const tCommon = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
-  const { historySheetOpen, setHistorySheetOpen, railCollapsed } =
+  const { historySheetOpen, setHistorySheetOpen, railCollapsed, startNewChat } =
     useChatShell();
+
+  // Defaults reproduce the exact internal literals so internal chat is
+  // unchanged; the public shell overrides with its /public/agents paths.
+  const resolvedPaths: HistoryRailPaths = paths ?? {
+    session: (sessionId: string) => `/chat/${agent.id}/${sessionId}`,
+    newChat: `/chat/${agent.id}/new`,
+    search: `/chat/${agent.id}/search`,
+  };
 
   // Inline filter (item 12): instant client-side narrowing of the loaded
   // recents, plus the debounced value feeding useChatSessions, whose server
@@ -131,26 +162,61 @@ export function HistoryRail({ agent }: HistoryRailProps) {
     setNamedOpen(false);
     setNamedTitle("");
     setHistorySheetOpen(false);
-    router.push(`/chat/${agent.id}/${session.id}`);
+    router.push(resolvedPaths.session(session.id));
+  };
+
+  // Shared by the New-chat Link and the empty-state action. Next's Link runs
+  // user onClick for modified clicks too (it only skips its own navigation),
+  // so bail on cmd/ctrl/shift/alt/middle — the browser opens a new tab and
+  // THIS tab must stay untouched.
+  const handleNewChatClick = (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    onNavigate?: () => void,
+  ) => {
+    if (
+      event.defaultPrevented ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      event.button !== 0
+    ) {
+      return;
+    }
+    if (!pathname?.includes("/new")) {
+      setNavigatingToNew(true);
+    }
+    // The Link alone is not enough: after a lazy session create the router
+    // tree still reads "new" and this navigation no-ops (see
+    // ChatShellContextValue.startNewChat).
+    startNewChat();
+    onNavigate?.();
   };
 
   const renderContent = (onNavigate?: () => void, inSheet = false) => (
     <div className="flex h-full min-h-0 w-full flex-col">
-      {/* Header: agent identity is the switcher trigger (item 9) + rail menu. */}
+      {/* Header: agent identity is the switcher trigger (item 9) + rail menu.
+          On public guest chat the name is a non-interactive label (no switcher). */}
       <div className={cn("flex items-center gap-1 p-2", inSheet && "pr-12")}>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => setSwitcherOpen(true)}
-          aria-label={t("history.switchAgent")}
-          className="h-9 min-w-0 flex-1 justify-start gap-2 px-2 max-md:h-11"
-        >
-          <span className="truncate text-sm font-medium">{agent.name}</span>
-          <ChevronsUpDown
-            aria-hidden="true"
-            className="size-4 shrink-0 text-muted-foreground"
-          />
-        </Button>
+        {hideAgentSwitcher ? (
+          <div className="flex h-9 min-w-0 flex-1 items-center gap-2 px-2 max-md:h-11">
+            <span className="truncate text-sm font-medium">{agent.name}</span>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setSwitcherOpen(true)}
+            aria-label={t("history.switchAgent")}
+            className="h-9 min-w-0 flex-1 justify-start gap-2 px-2 max-md:h-11"
+          >
+            <span className="truncate text-sm font-medium">{agent.name}</span>
+            <ChevronsUpDown
+              aria-hidden="true"
+              className="size-4 shrink-0 text-muted-foreground"
+            />
+          </Button>
+        )}
         <OverflowMenu
           label={t("history.menuLabel")}
           className="shrink-0 max-md:size-11"
@@ -174,14 +240,9 @@ export function HistoryRail({ agent }: HistoryRailProps) {
           )}
         >
           <Link
-            href={`/chat/${agent.id}/new`}
+            href={resolvedPaths.newChat}
             aria-disabled={navigatingToNew || undefined}
-            onClick={() => {
-              if (!pathname?.includes("/new")) {
-                setNavigatingToNew(true);
-              }
-              onNavigate?.();
-            }}
+            onClick={(event) => handleNewChatClick(event, onNavigate)}
           >
             {navigatingToNew ? (
               <Loading className="size-4" />
@@ -239,7 +300,8 @@ export function HistoryRail({ agent }: HistoryRailProps) {
               description={t("history.emptyDescription")}
               action={{
                 label: t("history.newChat"),
-                href: `/chat/${agent.id}/new`,
+                href: resolvedPaths.newChat,
+                onClick: (event) => handleNewChatClick(event, onNavigate),
               }}
             />
           )
@@ -253,27 +315,36 @@ export function HistoryRail({ agent }: HistoryRailProps) {
                     agentId={agent.id}
                     mutations={mutations}
                     onNavigate={onNavigate}
+                    href={resolvedPaths.session(session.id)}
+                    active={
+                      activeSessionId
+                        ? session.id === activeSessionId
+                        : undefined
+                    }
+                    newChatHref={resolvedPaths.newChat}
                   />
                 </li>
               ))}
             </ul>
-            <div className="pt-1">
-              <Button
-                asChild
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start text-muted-foreground max-md:h-11"
-              >
-                <Link
-                  href={`/chat/${agent.id}/search`}
-                  onClick={() => onNavigate?.()}
+            {resolvedPaths.search !== null ? (
+              <div className="pt-1">
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-muted-foreground max-md:h-11"
                 >
-                  {itemCount > items.length
-                    ? t("history.seeAllCount", { count: itemCount })
-                    : t("history.seeAll")}
-                </Link>
-              </Button>
-            </div>
+                  <Link
+                    href={resolvedPaths.search}
+                    onClick={() => onNavigate?.()}
+                  >
+                    {itemCount > items.length
+                      ? t("history.seeAllCount", { count: itemCount })
+                      : t("history.seeAll")}
+                  </Link>
+                </Button>
+              </div>
+            ) : null}
           </>
         )}
       </nav>
@@ -313,8 +384,11 @@ export function HistoryRail({ agent }: HistoryRailProps) {
         </SheetContent>
       </Sheet>
 
-      {/* Item 9 — agent switcher (replaces the dead "Back to agent selection" row). */}
-      <AgentSwitcherDialog open={switcherOpen} onOpenChange={setSwitcherOpen} />
+      {/* Item 9 — agent switcher (replaces the dead "Back to agent selection"
+          row). Skipped on public guest chat: no agent switching. */}
+      {hideAgentSwitcher ? null : (
+        <AgentSwitcherDialog open={switcherOpen} onOpenChange={setSwitcherOpen} />
+      )}
 
       {/* Item 18 — "New named chat…" (InputDialog-style, Enter submits). */}
       <Dialog

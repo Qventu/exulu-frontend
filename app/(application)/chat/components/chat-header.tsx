@@ -81,7 +81,7 @@ const CHIP =
 export function ChatHeader({ controller }: ChatHeaderProps) {
   const t = useTranslations("chat");
   const router = useRouter();
-  const { toggleHistory } = useChatShell();
+  const { toggleHistory, startNewChat } = useChatShell();
   const { user } = React.useContext(UserContext);
   const {
     agent,
@@ -391,7 +391,12 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
                 variant="ghost"
                 size="icon"
                 aria-label={t("header.newChat")}
-                onClick={() => router.push(`/chat/${agent.id}/new`)}
+                onClick={() => {
+                  // Push alone no-ops after a lazy session create (stale
+                  // router tree — see ChatShellContextValue.startNewChat).
+                  startNewChat();
+                  router.push(`/chat/${agent.id}/new`);
+                }}
                 className="size-11 sm:hidden"
               >
                 <Plus className="size-4" />
@@ -464,6 +469,7 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
             // Rejection keeps the dialog open (ConfirmDialog contract).
             throw new Error("delete-failed");
           }
+          startNewChat();
           router.push(`/chat/${agent.id}/new`);
         }}
       />

@@ -31,7 +31,7 @@ import type { Agent } from "@/types/models/agent";
 import type { AgentSession } from "@/types/models/agent-session";
 
 import { useChatSession } from "../hooks";
-import { CHAT_COLUMN } from "./chat-shell";
+import { CHAT_COLUMN, useChatShell } from "./chat-shell";
 import { ChatHeader } from "./chat-header";
 import { RunSessionBanner } from "./run-session-banner";
 import { Composer } from "./composer";
@@ -44,13 +44,41 @@ export interface SessionScreenProps {
   initialMessages: UIMessage[];
 }
 
-export function SessionScreen({
+export function SessionScreen(props: SessionScreenProps) {
+  // Keyed on the shell's new-chat nonce: after the lazy session create swaps
+  // the URL via raw history.replaceState, the router tree still reads
+  // `[session] = "new"`, so navigating to /chat/[agent]/new re-renders
+  // nothing. startNewChat() bumps the nonce instead; the remount rebuilds the
+  // controller from this page's props — which in that state are exactly the
+  // pristine /new payload (initialSession null, no messages).
+  // beginLazyCreate is read HERE and passed down as a (stable) prop: a
+  // useChatShell() call inside the inner tree would re-subscribe it to the
+  // whole shell context and defeat the memo below.
+  const { newChatNonce, beginLazyCreate } = useChatShell();
+  return (
+    <SessionScreenInner
+      key={newChatNonce}
+      beginLazyCreate={beginLazyCreate}
+      {...props}
+    />
+  );
+}
+
+// Memoized: the wrapper subscribes to the shell context, so without this a
+// sheet/rail toggle would re-render the whole conversation column.
+const SessionScreenInner = React.memo(function SessionScreenInner({
   agent,
   initialSession,
   initialMessages,
-}: SessionScreenProps) {
+  beginLazyCreate,
+}: SessionScreenProps & { beginLazyCreate: () => () => void }) {
   const t = useTranslations("chat");
-  const controller = useChatSession({ agent, initialSession, initialMessages });
+  const controller = useChatSession({
+    agent,
+    initialSession,
+    initialMessages,
+    beginLazyCreate,
+  });
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
@@ -128,4 +156,4 @@ export function SessionScreen({
       </SidePanel>
     </div>
   );
-}
+});

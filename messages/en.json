@@ -457,8 +457,6 @@
         "description": "What the agent can read, remember and retrieve.",
         "disabled": "disabled",
         "editing": {
-          "title": "Knowledge base editing",
-          "description": "Let this agent create or update items in selected knowledge bases during chat.",
           "createLabel": "Create items",
           "updateLabel": "Update items",
           "skipApprovalTitle": "Skip chat approval",
@@ -3563,7 +3561,6 @@
       "clear": "Clear conversation",
       "signOut": "Sign out",
       "history": "History",
-      "noSessions": "No previous conversations",
       "rateLimited": "You're sending messages too quickly. Please wait a moment.",
       "messageTooLong": "Your message is too long.",
       "sendFailed": "Sending failed. Try again."

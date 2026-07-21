@@ -28,6 +28,7 @@ import {
 import type { Agent } from "@/types/models/agent";
 
 import { AgentGrid } from "./agent-grid";
+import { useChatShell } from "./chat-shell";
 
 export interface AgentSwitcherDialogProps {
   open: boolean;
@@ -40,9 +41,17 @@ export function AgentSwitcherDialog({
 }: AgentSwitcherDialogProps) {
   const t = useTranslations("chat");
   const router = useRouter();
+  const { startNewChat, agent: currentAgent } = useChatShell();
 
   const handleSelect = (agent: Agent) => {
     onOpenChange(false);
+    // Re-selecting the CURRENT agent must still land on a fresh chat; push
+    // alone no-ops after a lazy session create (stale router tree — see
+    // ChatShellContextValue.startNewChat). Cross-agent selects change the
+    // [agent] segment and always really navigate — no bump needed.
+    if (agent.id === currentAgent.id) {
+      startNewChat();
+    }
     router.push(`/chat/${agent.id}/new`);
   };
 

@@ -51,6 +51,11 @@ export interface UsePublicChatSessionArgs {
    * unchanged.
    */
   sessionManager?: PublicSessionManager;
+  /**
+   * Authenticated only: server-loaded messages for a resumed session
+   * (from ?session=<sid>). Anonymous mode seeds from localStorage instead.
+   */
+  initialMessages?: UIMessage[];
 }
 
 export interface UsePublicChatSessionResult {
@@ -76,14 +81,17 @@ export function usePublicChatSession({
   agent,
   mode,
   sessionManager,
+  initialMessages: seededMessages,
 }: UsePublicChatSessionArgs): UsePublicChatSessionResult {
   const t = useTranslations("publicAgents.chat");
   const tRoot = useTranslations("publicAgents");
   const [error, setError] = React.useState<string | null>(null);
 
+  // Anonymous seeds from the localStorage transcript; authenticated seeds from
+  // the server-loaded messages of a resumed session (empty for a fresh chat).
   const initialMessages = React.useMemo(
-    () => (mode === "anonymous" ? loadTranscript(agent.id) : []),
-    [agent.id, mode],
+    () => (mode === "anonymous" ? loadTranscript(agent.id) : seededMessages ?? []),
+    [agent.id, mode, seededMessages],
   );
 
   const chat = useChat({

@@ -18,7 +18,7 @@
  *   the legacy 850/672/850 mix (chat.md U1/U9).
  */
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSelectedLayoutSegment } from "next/navigation";
 import * as React from "react";
 
 import { isChatSessionRoute } from "@/components/shell/mobile-topbar";
@@ -41,9 +41,39 @@ export interface ChatShellContextValue {
   setRailCollapsed: (collapsed: boolean) => void;
   /** ChatHeader's History trigger: <lg opens the sheet, ≥lg toggles the rail. */
   toggleHistory: () => void;
+  /**
+   * New-chat remount signal. The lazy session create (hooks.ts createSession)
+   * swaps the URL with a raw history.replaceState, so the App Router tree keeps
+   * `[session] = "new"` — a later Link/push to /chat/[agent]/new diffs as
+   * "nothing changed" and re-renders nothing. New-chat actions reachable while
+   * a SessionScreen may be mounted on that stale tree must call startNewChat()
+   * alongside their navigation; SessionScreen keys on the nonce and remounts
+   * into the pristine /new state. The bump self-gates to the actual desync
+   * (tree reads "new" while the URL shows a session id), so callers on real
+   * session routes or the pristine /new screen get a no-op — /new links whose
+   * origin can never be desynced (search page, server error states) correctly
+   * omit it.
+   */
+  newChatNonce: number;
+  startNewChat: () => void;
+  /**
+   * hooks.ts createSession marks the lazy-create window (mutation in flight,
+   * URL swap not yet landed) so startNewChat can treat "URL still /new but a
+   * session is being born" as needing the bump too. Returns an end callback
+   * for the finally block. Generation-scoped counter under the hood: a nonce
+   * bump orphans every open window (their resolutions are defused by the
+   * hooks' aliveRef/epoch guards), so it resets the counter — and an
+   * orphaned window's end callback must NOT clear a newer instance's
+   * still-open window.
+   */
+  beginLazyCreate: () => () => void;
 }
 
-const ChatShellContext = React.createContext<ChatShellContextValue | null>(null);
+// Exported so an alternate provider (e.g. the public guest shell) can supply
+// the same context to the shared HistoryRail/SessionRow. ChatShell itself is
+// unchanged.
+export const ChatShellContext =
+  React.createContext<ChatShellContextValue | null>(null);
 
 export function useChatShell(): ChatShellContextValue {
   const ctx = React.useContext(ChatShellContext);
@@ -60,8 +90,66 @@ export interface ChatShellProps {
 
 export function ChatShell({ agent, children }: ChatShellProps) {
   const pathname = usePathname();
+  // The child segment as the ROUTER TREE sees it ("new", a session id, or
+  // "search") — after the lazy-create URL swap this stays "new" while
+  // usePathname already shows the real session id. That divergence IS the
+  // desync startNewChat exists for.
+  const selectedSegment = useSelectedLayoutSegment();
   const [historySheetOpen, setHistorySheetOpen] = React.useState(false);
   const [railCollapsed, setRailCollapsedState] = React.useState(false);
+  const [newChatNonce, setNewChatNonce] = React.useState(0);
+
+  const lazyCreateRef = React.useRef({ gen: 0, count: 0 });
+  const beginLazyCreate = React.useCallback(() => {
+    const gen = lazyCreateRef.current.gen;
+    lazyCreateRef.current.count += 1;
+    let ended = false;
+    return () => {
+      if (ended) return;
+      ended = true;
+      // Skip if a nonce bump reset the window since — decrementing here
+      // would clear a NEWER instance's still-open create window and
+      // resurrect the swallowed-click bug for it.
+      if (lazyCreateRef.current.gen === gen) {
+        lazyCreateRef.current.count = Math.max(
+          0,
+          lazyCreateRef.current.count - 1,
+        );
+      }
+    };
+  }, []);
+
+  const startNewChat = React.useCallback(() => {
+    // Bump only when the paired navigation cannot restore the pristine /new
+    // screen by itself:
+    // - desynced: tree reads "new" but the URL already shows a session id
+    //   (the lazy-create replaceState landed) — the push is a no-op tree diff.
+    // - lazy create in flight: the swap hasn't landed yet, so URL and tree
+    //   BOTH still read /new — the push no-ops AND the resolving create would
+    //   drop the user into the abandoned session; the bump remounts and the
+    //   aliveRef/epoch guards in hooks.ts defuse the orphaned continuation.
+    // On real session routes the push is a genuine navigation (remounting
+    // here would roll the conversation back to its load-time snapshot), and
+    // on a truly pristine /new a bump would wipe the composer draft.
+    // Matched with /\/new\/?$/ (not endsWith) so a future trailingSlash
+    // config can't flip the pristine branch into a draft-wiping bump.
+    // KNOWN HAZARD if `cacheComponents` is ever enabled: the router bfcache
+    // (3 entries) can re-activate a desynced SessionScreen from a previous
+    // visit whose pathname already ends in /new — this gate would then
+    // suppress a needed bump. Re-audit before adopting that flag.
+    const onNewUrl = /\/new\/?$/.test(pathname ?? "");
+    if (
+      selectedSegment === "new" &&
+      (!onNewUrl || lazyCreateRef.current.count > 0)
+    ) {
+      // The remount orphans every open create window (aliveRef/epoch guards
+      // defuse their resolutions), so their pending state is void — reset it,
+      // or a hung mutation would leave the flag stuck and turn pristine-/new
+      // clicks into draft-wiping bumps forever.
+      lazyCreateRef.current = { gen: lazyCreateRef.current.gen + 1, count: 0 };
+      setNewChatNonce((nonce) => nonce + 1);
+    }
+  }, [selectedSegment, pathname]);
 
   // Read the persisted rail state after mount (SSR-safe: server renders the
   // expanded default, the stored preference applies on hydration).
@@ -111,8 +199,20 @@ export function ChatShell({ agent, children }: ChatShellProps) {
       railCollapsed,
       setRailCollapsed,
       toggleHistory,
+      newChatNonce,
+      startNewChat,
+      beginLazyCreate,
     }),
-    [agent, historySheetOpen, railCollapsed, setRailCollapsed, toggleHistory],
+    [
+      agent,
+      historySheetOpen,
+      railCollapsed,
+      setRailCollapsed,
+      toggleHistory,
+      newChatNonce,
+      startNewChat,
+      beginLazyCreate,
+    ],
   );
 
   return (

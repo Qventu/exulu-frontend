@@ -79,6 +79,10 @@ export interface UseChatSessionArgs {
   agent: Agent;
   initialSession: AgentSession | null; // null on /new
   initialMessages: UIMessage[];
+  /** ChatShell's lazy-create window marker (stable identity — passed as a
+   *  prop through SessionScreen rather than read from context here, so the
+   *  React.memo around the conversation column keeps holding). */
+  beginLazyCreate: () => () => void;
 }
 
 /**
@@ -180,6 +184,7 @@ export function useChatSession({
   agent,
   initialSession,
   initialMessages,
+  beginLazyCreate,
 }: UseChatSessionArgs): ChatSessionController {
   const t = useTranslations("chat");
   const configContext = React.useContext(ConfigContext);
@@ -251,6 +256,24 @@ export function useChatSession({
   // --- suggestions (item 63) --------------------------------------------------
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
   const suggestionAbortRef = React.useRef<AbortController | null>(null);
+
+  // --- instance liveness -------------------------------------------------------
+  // The nonce-keyed remount (session-screen.tsx) can tear this instance down
+  // while a lazy session create is in flight; orphaned continuations must not
+  // fire global side effects (URL swap, sendMessage) against the fresh screen.
+  const aliveRef = React.useRef(true);
+  React.useEffect(() => {
+    aliveRef.current = true; // Strict Mode re-runs effects after a simulated unmount
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
+  // Generation stamp for the lazy-create flow. aliveRef alone misses
+  // param-only [session] navigations, where the App Router PRESERVES this
+  // instance (see the reset effect below): an in-flight create then belongs
+  // to the abandoned flow and must not swap the URL, overwrite the session
+  // state, or send. Bumped by the reset effect on every session change.
+  const sessionEpochRef = React.useRef(0);
 
   // --- session identity (item 34: lazy creation) ------------------------------
   const [currentSession, setCurrentSession] = React.useState<AgentSession | null>(
@@ -401,6 +424,7 @@ export function useChatSession({
 
   // --- reset on session navigation (page params change without remount) -------
   React.useEffect(() => {
+    sessionEpochRef.current += 1;
     setCurrentSession(initialSession);
     currentSessionRef.current = initialSession;
     setWriteAccess(
@@ -438,6 +462,15 @@ export function useChatSession({
   const createSession = async (
     title: string,
   ): Promise<AgentSession | null> => {
+    const epoch = sessionEpochRef.current;
+    // Torn down (nonce remount, cross-agent switch) or navigated to another
+    // session on this preserved instance — the visible screen owns the flow.
+    const flowIsCurrent = () =>
+      aliveRef.current && epoch === sessionEpochRef.current;
+    // While the mutation is in flight the URL still ends in /new, so the
+    // shell's desync gate would misread a New Chat click as "already
+    // pristine" — open the window so it bumps anyway.
+    const endLazyCreate = beginLazyCreate();
     try {
       const result = await createAgentSession({
         variables: {
@@ -453,6 +486,10 @@ export function useChatSession({
       });
 
       if (result.data?.agent_sessionsCreateOne?.item) {
+        // Orphaned continuation: no state writes, no URL swap — the created
+        // (empty) session still lands in the rail via the mutation's refetch.
+        if (!flowIsCurrent()) return null;
+
         const newSession = result.data.agent_sessionsCreateOne
           .item as AgentSession;
         newSession.created_by = user.id;
@@ -462,22 +499,35 @@ export function useChatSession({
         setCurrentSession(newSession);
         setWriteAccess(true);
 
-        // Update URL quietly without triggering Next.js routing — NO remount.
-        window.history.replaceState(null, "", `/chat/${agent.id}/${newSession.id}`);
+        // Update URL quietly without triggering Next.js routing — NO remount
+        // (a real router.replace would swap in loading.tsx and kill the
+        // in-flight stream). CONSEQUENCE: the App Router tree keeps
+        // `[session] = "new"`, so any later navigation to /chat/[agent]/new
+        // diffs as a no-op — new-chat actions must pair their push with
+        // ChatShell's startNewChat() (nonce-keyed SessionScreen remount).
+        window.history.replaceState(
+          null,
+          "",
+          `/chat/${agent.id}/${newSession.id}`,
+        );
 
         return newSession;
       }
+      if (!flowIsCurrent()) return null;
       setError(t("errors.sessionCreateFailed"));
       return null;
     } catch (err) {
       if (process.env.NODE_ENV === "development") {
         console.error("Failed to create session:", err);
       }
+      if (!flowIsCurrent()) return null;
       const errorMessage =
         err instanceof Error ? err.message : t("errors.sessionCreateFailed");
       setError(errorMessage);
       toast.error(t("errors.sessionCreateTitle"), { description: errorMessage });
       return null;
+    } finally {
+      endLazyCreate();
     }
   };
 
@@ -505,7 +555,14 @@ export function useChatSession({
 
     let sessionToUse = currentSessionRef.current;
     if (!sessionToUse || sessionToUse.id === "new") {
+      const epoch = sessionEpochRef.current;
       const createdSession = await createSession(text.substring(0, 50));
+      if (!aliveRef.current || epoch !== sessionEpochRef.current) {
+        // Torn down or navigated to another session while the create was in
+        // flight (New Chat / session-row click mid-mutation) — drop the send
+        // silently; the visible screen owns the flow now.
+        return;
+      }
       if (!createdSession) {
         toast.error(t("errors.title"), {
           description: t("errors.sessionCreateFailed"),

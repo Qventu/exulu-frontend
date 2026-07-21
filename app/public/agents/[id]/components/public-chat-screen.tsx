@@ -13,10 +13,13 @@
  * on public pages. ConfigContext + LanguageProvider come from the public layout.
  *
  * Mode split (Task 11):
- * - anonymous: transport posts the full history to the same-origin proxy.
+ * - anonymous: transport posts the full history to the same-origin proxy;
+ *   a standalone h-dvh column, no history rail.
  * - authenticated: an inner body instantiates the server-session manager
- *   (Apollo hook) and the History dropdown, and the transport switches to
- *   last-message + Session header with lazy server sessions.
+ *   (Apollo hook) and mounts the SHARED internal HistoryRail via
+ *   PublicChatShell (docked ≥lg, Sheet below), sessions are URL-driven via
+ *   ?session=<sid>, and the transport switches to last-message + Session
+ *   header with lazy server sessions.
  *
  * BOTH modes are wrapped in PublicApolloProvider. The reused authenticated
  * Composer/MessageColumn call Apollo hooks UNCONDITIONALLY on mount —
@@ -32,20 +35,23 @@
  * of throwing, and the modal reads `data?...items || []`.
  */
 
-import { LogOut, Plus } from "lucide-react";
+import type { UIMessage } from "ai";
+import { LogOut, PanelLeft } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
 import { UserContext } from "@/app/(application)/authenticated";
+import { useChatShell } from "@/app/(application)/chat/components/chat-shell";
 import { Composer } from "@/app/(application)/chat/components/composer";
 import { MessageColumn } from "@/app/(application)/chat/components/message-column";
 import { Button } from "@/components/ui/button";
 import type { PublicAgentMeta } from "@/lib/api/public-agents";
+import type { AgentSession } from "@/types/models/agent-session";
 import type { Agent } from "@/types/models/agent";
 
 import { PublicApolloProvider } from "./public-apollo-provider";
-import { PublicHistory } from "./public-history";
+import { PublicChatShell } from "./public-chat-shell";
 import { usePublicChatSession } from "./use-public-chat-session";
 import {
   usePublicSessionManager,
@@ -64,10 +70,30 @@ function toAgent(meta: PublicAgentMeta): Agent {
   } as unknown as Agent;
 }
 
+/** Mobile-only history trigger (opens the rail's Sheet). Authenticated only —
+ *  it reads useChatShell(), which only exists inside PublicChatShell. */
+function MobileHistoryTrigger() {
+  const t = useTranslations("publicAgents.chat");
+  const { setHistorySheetOpen } = useChatShell();
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="lg:hidden"
+      onClick={() => setHistorySheetOpen(true)}
+      aria-label={t("history")}
+    >
+      <PanelLeft className="size-4" aria-hidden="true" />
+    </Button>
+  );
+}
+
 /**
  * The shared chat body. `sessionManager` is present only in authenticated mode
  * (it wraps Apollo hooks) — its presence turns on the server-session transport,
- * the New chat button, and the History dropdown.
+ * the Clear/Sign-out chrome, and the mobile history trigger. In authenticated
+ * mode the body is a flex-1 column beside the docked HistoryRail (the rail is
+ * mounted by PublicChatShell); anonymous mode keeps the railless h-dvh layout.
  */
 function PublicChatBody({
   meta,
@@ -75,26 +101,47 @@ function PublicChatBody({
   mode,
   userId,
   sessionManager,
+  initialMessages,
 }: {
   meta: PublicAgentMeta;
   agent: Agent;
   mode: "anonymous" | "authenticated";
   userId?: string | number;
   sessionManager?: PublicSessionManager;
+  initialMessages?: UIMessage[];
 }) {
   const t = useTranslations("publicAgents.chat");
-  const { controller, clearConversation, startNewSession, resumeSession } =
-    usePublicChatSession({ agent, mode, userId, sessionManager });
+  const { controller, clearConversation } = usePublicChatSession({
+    agent,
+    mode,
+    userId,
+    sessionManager,
+    initialMessages,
+  });
 
   const authenticated = mode === "authenticated";
 
   return (
-    // MessageColumn/Composer destructure `user` off UserContext (default null,
-    // no Provider on public pages) — supply a null user so the destructure and
-    // their `user ?`/`user &&` guards resolve to unauthenticated behavior.
-    <UserContext.Provider value={{ user: null }}>
-      <div className="flex h-dvh min-h-0 flex-col">
+    // MessageColumn/Composer/SessionRow read `user` off UserContext. Anonymous:
+    // a null user resolves their `user ?`/`user &&` guards to unauthenticated
+    // behavior. Authenticated: the REAL user id is required — the shared
+    // HistoryRail's useSessionMutations reads `user.id` and SessionRow computes
+    // write access from `user` — so supply a minimal `{ id }` object (null-safe
+    // for every guarded access; see the report's UserContext audit).
+    <UserContext.Provider
+      value={{ user: authenticated ? { id: userId } : null }}
+    >
+      {/* Authenticated: flex-1 column beside the docked rail (PublicChatShell
+          owns the h-dvh host). Anonymous: standalone h-dvh column, no rail. */}
+      <div
+        className={
+          authenticated
+            ? "flex min-h-0 min-w-0 flex-1 flex-col"
+            : "flex h-dvh min-h-0 flex-col"
+        }
+      >
         <header className="flex h-12 shrink-0 items-center gap-3 border-b bg-background px-4">
+          {authenticated ? <MobileHistoryTrigger /> : null}
           {agent.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -105,20 +152,6 @@ function PublicChatBody({
           ) : null}
           <p className="min-w-0 truncate text-sm font-medium">{agent.name}</p>
           <div className="ml-auto flex items-center gap-1">
-            {authenticated && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={startNewSession}
-                  aria-label={t("newChat")}
-                >
-                  <Plus className="size-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">{t("newChat")}</span>
-                </Button>
-                <PublicHistory agentId={agent.id} onResume={resumeSession} />
-              </>
-            )}
             <Button
               variant="ghost"
               size="sm"
@@ -158,26 +191,45 @@ function PublicChatBody({
   );
 }
 
-/** Authenticated body — instantiates the Apollo-backed session manager. Only
- *  rendered inside PublicApolloProvider (usePublicSessionManager uses Apollo). */
+/** Authenticated body — instantiates the Apollo-backed session manager and the
+ *  shared HistoryRail (via PublicChatShell). Only rendered inside
+ *  PublicApolloProvider (usePublicSessionManager uses Apollo). */
 function AuthenticatedChatBody({
   meta,
   agent,
   userId,
+  initialSession,
+  initialMessages,
 }: {
   meta: PublicAgentMeta;
   agent: Agent;
   userId?: string | number;
+  initialSession: AgentSession | null;
+  initialMessages: UIMessage[];
 }) {
-  const sessionManager = usePublicSessionManager({ agentId: agent.id, userId });
+  const basePath = `/public/agents/${meta.id}`;
+  const sessionManager = usePublicSessionManager({
+    agentId: agent.id,
+    userId,
+    initialSession: initialSession ? { id: initialSession.id } : null,
+    basePath,
+  });
+
   return (
-    <PublicChatBody
-      meta={meta}
+    <PublicChatShell
       agent={agent}
-      mode="authenticated"
-      userId={userId}
-      sessionManager={sessionManager}
-    />
+      basePath={basePath}
+      activeSessionId={sessionManager.currentSession?.id}
+    >
+      <PublicChatBody
+        meta={meta}
+        agent={agent}
+        mode="authenticated"
+        userId={userId}
+        sessionManager={sessionManager}
+        initialMessages={initialMessages}
+      />
+    </PublicChatShell>
   );
 }
 
@@ -185,10 +237,16 @@ export function PublicChatScreen({
   meta,
   mode,
   userId,
+  initialSession = null,
+  initialMessages = [],
 }: {
   meta: PublicAgentMeta;
   mode: "anonymous" | "authenticated";
   userId?: string | number;
+  /** Authenticated only: server-loaded session from ?session=<sid>. */
+  initialSession?: AgentSession | null;
+  /** Authenticated only: server-loaded messages for that session. */
+  initialMessages?: UIMessage[];
 }) {
   const agent = React.useMemo(() => toAgent(meta), [meta]);
 
@@ -202,7 +260,13 @@ export function PublicChatScreen({
   return (
     <PublicApolloProvider>
       {mode === "authenticated" ? (
-        <AuthenticatedChatBody meta={meta} agent={agent} userId={userId} />
+        <AuthenticatedChatBody
+          meta={meta}
+          agent={agent}
+          userId={userId}
+          initialSession={initialSession}
+          initialMessages={initialMessages}
+        />
       ) : (
         <PublicChatBody meta={meta} agent={agent} mode="anonymous" />
       )}

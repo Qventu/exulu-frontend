@@ -457,8 +457,6 @@
         "description": "Was der Agent lesen, sich merken und abrufen kann.",
         "disabled": "deaktiviert",
         "editing": {
-          "title": "Wissensdatenbank-Bearbeitung",
-          "description": "Erlaubt diesem Agenten, während des Chats Einträge in ausgewählten Wissensdatenbanken zu erstellen oder zu aktualisieren.",
           "createLabel": "Einträge erstellen",
           "updateLabel": "Einträge aktualisieren",
           "skipApprovalTitle": "Chat-Freigabe überspringen",
@@ -3563,7 +3561,6 @@
       "clear": "Unterhaltung löschen",
       "signOut": "Abmelden",
       "history": "Verlauf",
-      "noSessions": "Keine früheren Unterhaltungen",
       "rateLimited": "Du sendest Nachrichten zu schnell. Bitte warte einen Moment.",
       "messageTooLong": "Deine Nachricht ist zu lang.",
       "sendFailed": "Senden fehlgeschlagen. Versuche es erneut."
