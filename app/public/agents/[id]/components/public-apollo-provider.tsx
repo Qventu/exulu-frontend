@@ -64,13 +64,17 @@ export function PublicApolloProvider({
 
     const link = ApolloLink.from([basic, authLink, new HttpLink({ uri: uri })]);
 
-    // Apollo 3.14 removed the constructor `uri` shorthand (HttpLink carries
-    // it) and the InMemoryCache `addTypename` option (always on now) — both
-    // forms below are also valid on 3.10, so this stays lockfile-agnostic.
-    // NOTE: authenticated.tsx still uses the removed options and logs the
-    // same errors under 3.14 — internal migration tracked separately.
+    // Mirrors app/(application)/authenticated.tsx VERBATIM. addTypename:false
+    // is LOAD-BEARING, not cosmetic: this backend forwards the GraphQL
+    // selection straight into SQL, so an injected `__typename` becomes a
+    // non-existent column. (Apollo 3.14 still accepts the option; its dev
+    // deprecation logs match the internal app's and are an app-wide migration
+    // concern, not this feature's.)
     return new ApolloClient({
-      cache: new InMemoryCache(),
+      uri: uri,
+      cache: new InMemoryCache({
+        addTypename: false,
+      }),
       link: link,
       defaultOptions: {
         watchQuery: {
