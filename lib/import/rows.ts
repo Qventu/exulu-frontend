@@ -1,7 +1,12 @@
 import { coerceValue } from "@/lib/import/coerce";
 import type { ColumnMapping } from "@/lib/import/map-columns";
 import type { ParsedCsv } from "@/lib/import/parse-csv";
-import type { ImportCell, ImportField, ImportRow } from "@/lib/import/types";
+import type {
+  BatchAccess,
+  ImportCell,
+  ImportField,
+  ImportRow,
+} from "@/lib/import/types";
 
 function stripExtension(filename: string): string {
   const i = filename.lastIndexOf(".");
@@ -145,4 +150,31 @@ export function buildUpdateInput(
     input.textlength = input.description.length;
   }
   return input;
+}
+
+/**
+ * Merge the wizard's batch access into a create input. rights_mode is always
+ * sent; grant lists only for grant-based modes (private/public carry none).
+ */
+export function mergeBatchAccess(
+  input: Record<string, unknown>,
+  access: BatchAccess,
+): Record<string, unknown> {
+  const hasGrants =
+    access.rights_mode === "users" ||
+    access.rights_mode === "roles" ||
+    access.rights_mode === "teams";
+  return {
+    ...input,
+    rights_mode: access.rights_mode,
+    ...(hasGrants
+      ? {
+          RBAC: {
+            users: access.users,
+            roles: access.roles,
+            teams: access.teams,
+          },
+        }
+      : {}),
+  };
 }

@@ -149,4 +149,19 @@ describe("runImport", () => {
     expect(summary.created).toBe(1);
     expect(rows[2].runState).toBe("pending");
   });
+
+  it("update inputs never contain rights fields (batch access is create-only)", async () => {
+    const fx = effects();
+    const row: ImportRow = {
+      key: "u2",
+      action: "update",
+      targetItemId: "item-2",
+      runState: "pending",
+      cells: { description: { raw: "d", value: "d" } },
+    };
+    await runImport([row], FIELDS, fx, { onRowState: () => {} });
+    const input = fx.updateItem.mock.calls[0][1];
+    expect(input).not.toHaveProperty("rights_mode");
+    expect(input).not.toHaveProperty("RBAC");
+  });
 });

@@ -50,3 +50,14 @@ export interface ImportRow {
   runState: RowRunState;
   runError?: string;
 }
+
+/**
+ * Batch-level access chosen in the import wizard. Applied to CREATED rows
+ * only — update rows keep their existing access (spec decision #2).
+ */
+export interface BatchAccess {
+  rights_mode: "private" | "users" | "roles" | "teams" | "public";
+  users: { id: number; rights: "read" | "write" }[];
+  roles: { id: string; rights: "read" | "write" }[];
+  teams: { id: string; rights: "read" | "write" }[];
+}

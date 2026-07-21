@@ -3,12 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   buildCreateInput,
   buildUpdateInput,
+  mergeBatchAccess,
   rowIsValid,
   rowsFromCsv,
   rowsFromFiles,
   validateRow,
 } from "@/lib/import/rows";
-import type { ImportField, ImportRow } from "@/lib/import/types";
+import type { BatchAccess, ImportField, ImportRow } from "@/lib/import/types";
 
 const FIELDS: ImportField[] = [
   { name: "id", label: "id", type: "text", required: false, core: true },
@@ -235,5 +236,47 @@ describe("buildUpdateInput", () => {
       cells: { doc_s3key: { raw: "", value: null } },
     };
     expect(buildUpdateInput(row, FIELDS)).toEqual({ doc_s3key: null });
+  });
+});
+
+describe("mergeBatchAccess", () => {
+  const base = { name: "A", description: "d", source: "import" };
+
+  it("adds rights_mode without RBAC for private/public", () => {
+    const out = mergeBatchAccess(base, {
+      rights_mode: "public",
+      users: [],
+      roles: [],
+      teams: [],
+    });
+    expect(out).toEqual({ ...base, rights_mode: "public" });
+    expect("RBAC" in out).toBe(false);
+  });
+
+  it("adds rights_mode and RBAC grants for grant-based modes", () => {
+    const access: BatchAccess = {
+      rights_mode: "teams",
+      users: [{ id: 1, rights: "read" }],
+      roles: [],
+      teams: [{ id: "t1", rights: "write" }],
+    };
+    const out = mergeBatchAccess(base, access);
+    expect(out.rights_mode).toBe("teams");
+    expect(out.RBAC).toEqual({
+      users: access.users,
+      roles: [],
+      teams: access.teams,
+    });
+  });
+
+  it("does not mutate the original input", () => {
+    const out = mergeBatchAccess(base, {
+      rights_mode: "private",
+      users: [],
+      roles: [],
+      teams: [],
+    });
+    expect(out).not.toBe(base);
+    expect(base).not.toHaveProperty("rights_mode");
   });
 });
