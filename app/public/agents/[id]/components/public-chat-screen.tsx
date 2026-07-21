@@ -148,7 +148,9 @@ function PublicChatBody({
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <MessageColumn controller={controller} />
           <div className="shrink-0">
-            <Composer controller={controller} />
+            {/* guestMode: no ＋ menu (prompts/knowledge/capabilities are
+                internal-platform surfaces) in ANY public mode. */}
+            <Composer controller={controller} guestMode />
           </div>
         </div>
       </div>

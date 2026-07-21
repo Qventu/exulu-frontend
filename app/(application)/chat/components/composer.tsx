@@ -71,6 +71,11 @@ import { useComposerAutocomplete } from "./composer-autocomplete/use-composer-au
 
 export interface ComposerProps {
   controller: ChatSessionController;
+  /** Public /public/agents chat (all guest modes — public, password, and
+   *  guest-authenticated): hides the ＋ AttachMenu and skips mounting its
+   *  overlays (prompts / knowledge / capabilities) — internal-platform
+   *  surfaces that are inert or 401 for external users. */
+  guestMode?: boolean;
 }
 
 /** localStorage key for the one-time managed-context hint dismissal (item 72).
@@ -79,7 +84,7 @@ export interface ComposerProps {
 const managedHintKey = (agentId: string) =>
   `chat.managedContextHint.dismissed.${agentId}`;
 
-export function Composer({ controller }: ComposerProps) {
+export function Composer({ controller, guestMode = false }: ComposerProps) {
   const t = useTranslations("chat");
   const { user } = useContext(UserContext);
   const configContext = useContext(ConfigContext);
@@ -513,19 +518,23 @@ export function Composer({ controller }: ComposerProps) {
         >
           <AutocompleteMenu autocomplete={autocomplete} />
           <div className="flex items-end gap-1.5">
-            <AttachMenu
-              controller={controller}
-              onOpenPrompts={() => setPromptSelectorOpen(true)}
-              onOpenContext={() => setContextModalOpen(true)}
-              onOpenCapabilities={() => setCapabilitiesOpen(true)}
-            />
-            {/* Skills & tools surface (items 69/70 + 50 revocation). Mounted
-                here so its desktop popover anchors beside the ＋ trigger. */}
-            <CapabilitySheet
-              open={capabilitiesOpen}
-              onOpenChange={setCapabilitiesOpen}
-              controller={controller}
-            />
+            {!guestMode && (
+              <>
+                <AttachMenu
+                  controller={controller}
+                  onOpenPrompts={() => setPromptSelectorOpen(true)}
+                  onOpenContext={() => setContextModalOpen(true)}
+                  onOpenCapabilities={() => setCapabilitiesOpen(true)}
+                />
+                {/* Skills & tools surface (items 69/70 + 50 revocation). Mounted
+                    here so its desktop popover anchors beside the ＋ trigger. */}
+                <CapabilitySheet
+                  open={capabilitiesOpen}
+                  onOpenChange={setCapabilitiesOpen}
+                  controller={controller}
+                />
+              </>
+            )}
             <div className="relative min-w-0 flex-1">
               <HighlightOverlay
                 ref={overlayRef}
@@ -702,8 +711,12 @@ export function Composer({ controller }: ComposerProps) {
         </p>
       </div>
 
-      {/* ── Overlays (composer-local open state, Esc chain above) ────────── */}
-
+      {/* ── Overlays (composer-local open state, Esc chain above) ──────────
+          Not mounted in guestMode: only reachable via the ＋ menu, and the
+          prompt selector fires a GraphQL query on mount that guests can't
+          authorize. */}
+      {!guestMode && (
+        <>
       {/* Prompt selector (item 65) */}
       <PromptSelectorModal
         open={promptSelectorOpen}
@@ -770,6 +783,8 @@ export function Composer({ controller }: ComposerProps) {
           );
         }}
       />
+        </>
+      )}
     </div>
   );
 }
