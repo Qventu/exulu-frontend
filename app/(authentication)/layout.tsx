@@ -3,7 +3,7 @@
  * (design/pages/auth.md ladder #26-#28).
  *
  * - White-label theming kept: backend `GET /theme` CSS variables injected for
- *   `:root` + `.dark`, backend favicons in four sizes (ladder #27).
+ *   `:root` + `.dark`, single backend favicon.png + manifest (ladder #27).
  * - i18n is now real pre-auth (fixes U6): locale from the `NEXT_LOCALE`
  *   cookie drives `<html lang>` and a LanguageProvider mirroring
  *   `app/(application)/layout.tsx` — the product's first screen speaks the
@@ -58,10 +58,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        <link rel="icon" href={process.env.BACKEND + "/icon_16x16.png"} type="image/png" sizes="16x16" />
-        <link rel="icon" href={process.env.BACKEND + "/icon_32x32.png"} type="image/png" sizes="32x32" />
-        <link rel="icon" href={process.env.BACKEND + "/icon_48x48.png"} type="image/png" sizes="48x48" />
-        <link rel="icon" href={process.env.BACKEND + "/icon_512x512.png"} type="image/png" sizes="512x512" />
+        <link rel="icon" href={process.env.BACKEND + "/favicon.png"} type="image/png" />
+        <link rel="apple-touch-icon" href={process.env.BACKEND + "/favicon.png"} />
+        <link rel="manifest" href="/manifest.webmanifest" />
         <style
           dangerouslySetInnerHTML={{
             __html: `

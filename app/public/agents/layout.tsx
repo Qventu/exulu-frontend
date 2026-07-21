@@ -48,10 +48,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        <link rel="icon" href={process.env.BACKEND + "/icon_16x16.png"} type="image/png" sizes="16x16" />
-        <link rel="icon" href={process.env.BACKEND + "/icon_32x32.png"} type="image/png" sizes="32x32" />
-        <link rel="icon" href={process.env.BACKEND + "/icon_48x48.png"} type="image/png" sizes="48x48" />
-        <link rel="icon" href={process.env.BACKEND + "/icon_512x512.png"} type="image/png" sizes="512x512" />
+        <link rel="icon" href={process.env.BACKEND + "/favicon.png"} type="image/png" />
+        <link rel="apple-touch-icon" href={process.env.BACKEND + "/favicon.png"} />
+        <link rel="manifest" href="/manifest.webmanifest" />
         <style
           dangerouslySetInnerHTML={{
             __html: `

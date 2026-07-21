@@ -12,6 +12,9 @@ export const viewport: Viewport = {
 export default function ArtifactsLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href={process.env.BACKEND + "/favicon.png"} type="image/png" />
+      </head>
       <body className={cn("bg-background font-sans antialiased", fontVariables)}>
         {children}
       </body>
