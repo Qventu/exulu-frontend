@@ -84,6 +84,24 @@ We believe that developer tools should be transparent, customizable, and communi
 - Responsive design for desktop and mobile
 - Import and export theme configurations
 
+### 🏷️ Branding Assets
+
+White-label the app by dropping files into the `public/` folder of the project
+where you run the Exulu backend package. The backend serves that folder
+statically and the frontend loads the assets from the backend URL:
+
+| File | Used for | Format |
+| --- | --- | --- |
+| `logo_light.png` | Logo in light mode | PNG |
+| `logo_dark.png` | Logo in dark mode | PNG |
+| `cover.jpg` | Login screen cover image | JPEG |
+| `favicon.png` | Browser tab icon and installed-app icon (Windows taskbar, iOS/Android home screen) | Square PNG, 512×512 recommended, transparent background |
+
+Missing files simply 404 and browsers fall back to their defaults.
+
+To name the installed app (the label under the icon), set the optional
+`APP_NAME` environment variable on the frontend. Defaults to `IMP`.
+
 ### 🔧 Developer Tools
 - GraphQL API explorer with GraphiQL interface
 - Query examples and templates
