@@ -1,14 +1,12 @@
 /**
- * config-schema.ts — parse / serialize layer for the "Knowledge base editing"
- * block: the knowledge_base_editor entry in agent.tools (2-entry contract:
- * knowledge_bases json + skip_approval boolean). Mirrors the backend parser in
+ * config-schema.ts — parse layer for the knowledge_base_editor entry in
+ * agent.tools (2-entry contract: knowledge_bases json + skip_approval
+ * boolean). Mirrors the backend parser in
  * backend/src/templates/tools/kb-editor-config.ts. Never throws — malformed
  * config degrades to "no writable knowledge bases".
  */
 
 import { z } from "zod";
-
-import type { AgentTool } from "@/types/models/agent";
 
 import type { ToolConfigEntry } from "../tool-config-fields";
 
@@ -57,14 +55,7 @@ export const parseKbEditingConfig = (
   return result;
 };
 
-export const serializeKbEditingConfig = (config: KbEditingConfig): ToolConfigEntry[] => [
-  { name: "knowledge_bases", variable: JSON.stringify(config.knowledgeBases), type: "json" },
-  { name: "skip_approval", variable: config.skipApproval ? "true" : "false", type: "boolean" },
-];
-
-export const makeKbEditorTool = (config: KbEditingConfig): AgentTool => ({
-  id: KB_EDITOR_TOOL_ID,
-  type: "function",
-  name: "Knowledge base editor",
-  config: serializeKbEditingConfig(config) as AgentTool["config"],
-});
+// Writes go through the Tools section's per-entry update path (one config
+// entry per call); the enable toggle stages entries from the picker tool's
+// declared config. The 2-entry contract (knowledge_bases json + skip_approval
+// boolean) is defined by createKbEditorPickerTool in the backend.

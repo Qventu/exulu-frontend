@@ -27,6 +27,8 @@ import type { AgentTool } from "@/types/models/agent";
 import type { ExuluTool } from "@/types/models/tool";
 
 import { AgentHierarchyView } from "../components/agent-hierarchy-view";
+import { KB_EDITOR_TOOL_ID } from "../components/kb-editing/config-schema";
+import { KbEditingConfigPanel } from "../components/kb-editing/kb-editing-config-panel";
 import { ToolConfigurationElement } from "../components/tool-config-fields";
 import type { EditorSectionProps } from "./types";
 
@@ -235,14 +237,22 @@ export function ToolsSection({ editor, refs }: EditorSectionProps) {
         sheetOpen={sheetOpen}
         setSheetOpen={setSheetOpen}
         variables={refs.variables}
-        renderConfigElement={(tool, config, update) => (
-          <ToolConfigurationElement
-            tool={tool}
-            config={config as any}
-            variables={refs.variables}
-            update={update}
-          />
-        )}
+        renderConfigElement={(tool, config, update) =>
+          tool.id === KB_EDITOR_TOOL_ID ? (
+            <KbEditingConfigPanel
+              config={config as any}
+              contexts={refs.contexts}
+              update={update}
+            />
+          ) : (
+            <ToolConfigurationElement
+              tool={tool}
+              config={config as any}
+              variables={refs.variables}
+              update={update}
+            />
+          )
+        }
         skills={refs.skills}
         enabledSkills={editor.skills}
         onSkillToggle={handleSkillToggle}

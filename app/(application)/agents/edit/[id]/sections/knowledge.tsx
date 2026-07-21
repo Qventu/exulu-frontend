@@ -30,7 +30,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
-import { KbEditingCard } from "../components/kb-editing/kb-editing-card";
 import { KnowledgeSearchSummaryCard } from "../components/knowledge-search/summary-card";
 import {
   KnowledgeSearchWizard, type WizardStepId,
@@ -38,7 +37,7 @@ import {
 import type { ToolConfigEntry } from "../components/tool-config-fields";
 import type { EditorSectionProps } from "./types";
 
-export function KnowledgeSection({ agent, editor, refs }: EditorSectionProps) {
+export function KnowledgeSection({ editor, refs }: EditorSectionProps) {
   const t = useTranslations("agents");
 
   const agenticEnabled = editor.tools.some(
@@ -224,9 +223,6 @@ export function KnowledgeSection({ agent, editor, refs }: EditorSectionProps) {
           </PopoverContent>
         </Popover>
       </div>
-
-      {/* Knowledge base editing — per-agent write access */}
-      <KbEditingCard agent={agent} editor={editor} refs={refs} />
 
       <KnowledgeSearchWizard
         open={wizardOpen}
