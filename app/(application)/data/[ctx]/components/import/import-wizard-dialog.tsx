@@ -457,12 +457,12 @@ export function ImportWizardDialog({
           )}
         </div>
 
-        <DialogFooter className="flex-wrap gap-2">
-          {step !== "add" && runner.phase === "edit" && (
+        <DialogFooter className="flex-wrap items-center gap-2">
+          {step === "map" && runner.phase === "edit" && (
             <Button
               type="button"
               variant="outline"
-              onClick={() => setStep(step === "review" && csv ? "map" : "add")}
+              onClick={() => setStep("add")}
             >
               {t("workspace.import.back")}
             </Button>
@@ -488,17 +488,11 @@ export function ImportWizardDialog({
           )}
 
           {step === "review" && runner.phase === "edit" && (
-            <>
-              <span className="mr-auto text-sm text-muted-foreground">
-                {t("workspace.import.review.validCount", {
-                  valid: validRows.length,
-                  total: rows.length,
-                })}
-              </span>
+            <div className="flex w-full flex-wrap items-center justify-between gap-2">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button type="button" variant="outline">
-                    <Lock aria-hidden="true" className="size-4" />
+                    <Lock aria-hidden="true" className="mr-2 size-4" />
                     {t("workspace.import.review.accessLabel", {
                       mode: t(
                         MODE_LABEL_KEY[batchAccess.rights_mode] ??
@@ -508,7 +502,7 @@ export function ImportWizardDialog({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent
-                  align="end"
+                  align="start"
                   className="max-h-[60vh] w-[420px] overflow-y-auto"
                 >
                   <div className="space-y-3">
@@ -537,20 +531,35 @@ export function ImportWizardDialog({
                   </div>
                 </PopoverContent>
               </Popover>
-              <Button
-                type="button"
-                disabled={validRows.length === 0 || verifying}
-                onClick={() => void runner.run(rowsRef.current)}
-              >
-                {validRows.length === rows.length
-                  ? t("workspace.import.review.importAll", {
-                      count: rows.length,
-                    })
-                  : t("workspace.import.review.importValid", {
-                      count: validRows.length,
-                    })}
-              </Button>
-            </>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {t("workspace.import.review.validCount", {
+                    valid: validRows.length,
+                    total: rows.length,
+                  })}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep(csv ? "map" : "add")}
+                >
+                  {t("workspace.import.back")}
+                </Button>
+                <Button
+                  type="button"
+                  disabled={validRows.length === 0 || verifying}
+                  onClick={() => void runner.run(rowsRef.current)}
+                >
+                  {validRows.length === rows.length
+                    ? t("workspace.import.review.importAll", {
+                        count: rows.length,
+                      })
+                    : t("workspace.import.review.importValid", {
+                        count: validRows.length,
+                      })}
+                </Button>
+              </div>
+            </div>
           )}
 
           {running && (
