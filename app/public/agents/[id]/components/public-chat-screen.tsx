@@ -122,17 +122,13 @@ function PublicChatBody({
   const authenticated = mode === "authenticated";
 
   return (
-    // MessageColumn/Composer/SessionRow read `user` off UserContext. Anonymous:
-    // a null user resolves their `user ?`/`user &&` guards to unauthenticated
-    // behavior. Authenticated: the REAL user id is required — the shared
-    // HistoryRail's useSessionMutations reads `user.id` and SessionRow computes
-    // write access from `user` — so supply a minimal `{ id }` object (null-safe
-    // for every guarded access; see the report's UserContext audit).
-    <UserContext.Provider
-      value={{ user: authenticated ? { id: userId } : null }}
-    >
+    <>
       {/* Authenticated: flex-1 column beside the docked rail (PublicChatShell
-          owns the h-dvh host). Anonymous: standalone h-dvh column, no rail. */}
+          owns the h-dvh host). Anonymous: standalone h-dvh column, no rail.
+          NOTE: the UserContext.Provider lives ABOVE this component (screen
+          root) — the HistoryRail is a SIBLING mounted by PublicChatShell and
+          its useSessionMutations destructures the context value, so the
+          provider must wrap the shell, not just this body. */}
       <div
         className={
           authenticated
@@ -187,7 +183,7 @@ function PublicChatBody({
           </div>
         </div>
       </div>
-    </UserContext.Provider>
+    </>
   );
 }
 
@@ -215,21 +211,29 @@ function AuthenticatedChatBody({
     basePath,
   });
 
+  // The provider must sit ABOVE PublicChatShell: the HistoryRail it mounts
+  // reaches useSessionMutations, which destructures the context value —
+  // a null default crashes SSR. Minimal { id } is null-safe for every
+  // guarded access (see the integration report's UserContext audit).
+  const userValue = React.useMemo(() => ({ user: { id: userId } }), [userId]);
+
   return (
-    <PublicChatShell
-      agent={agent}
-      basePath={basePath}
-      activeSessionId={sessionManager.currentSession?.id}
-    >
-      <PublicChatBody
-        meta={meta}
+    <UserContext.Provider value={userValue}>
+      <PublicChatShell
         agent={agent}
-        mode="authenticated"
-        userId={userId}
-        sessionManager={sessionManager}
-        initialMessages={initialMessages}
-      />
-    </PublicChatShell>
+        basePath={basePath}
+        activeSessionId={sessionManager.currentSession?.id}
+      >
+        <PublicChatBody
+          meta={meta}
+          agent={agent}
+          mode="authenticated"
+          userId={userId}
+          sessionManager={sessionManager}
+          initialMessages={initialMessages}
+        />
+      </PublicChatShell>
+    </UserContext.Provider>
   );
 }
 
@@ -268,8 +272,15 @@ export function PublicChatScreen({
           initialMessages={initialMessages}
         />
       ) : (
-        <PublicChatBody meta={meta} agent={agent} mode="anonymous" />
+        // Anonymous: a null user resolves Composer/MessageColumn's
+        // `user ?`/`user &&` guards to unauthenticated behavior.
+        <UserContext.Provider value={ANON_USER_VALUE}>
+          <PublicChatBody meta={meta} agent={agent} mode="anonymous" />
+        </UserContext.Provider>
       )}
     </PublicApolloProvider>
   );
 }
+
+/** Stable anonymous context value — never re-created across renders. */
+const ANON_USER_VALUE = { user: null };

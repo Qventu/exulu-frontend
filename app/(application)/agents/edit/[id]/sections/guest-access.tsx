@@ -45,9 +45,14 @@ export function GuestAccessSection({ agent, editor }: EditorSectionProps) {
   const [budget, setBudget] = React.useState<any>((agent as any).budget ?? null);
   const [budgetEditing, setBudgetEditing] = React.useState(false);
 
-  const [refetchBudget] = useLazyQuery(GET_AGENT_BUDGET, {
-    onCompleted: (d) => setBudget(d?.agentById?.budget ?? null),
-  });
+  // Apollo 3.14 removed useQuery/useLazyQuery onCompleted — derive from
+  // `data` in an effect instead (also valid on 3.10).
+  const [refetchBudget, { data: budgetData }] = useLazyQuery(GET_AGENT_BUDGET);
+  React.useEffect(() => {
+    if (budgetData !== undefined) {
+      setBudget(budgetData?.agentById?.budget ?? null);
+    }
+  }, [budgetData]);
 
   const guest = editor.guest;
   const canEditBudget =

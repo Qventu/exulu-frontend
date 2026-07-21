@@ -75,17 +75,26 @@ export function PublicChatShell({
     }
   }, []);
 
-  // <lg opens the sheet, ≥lg toggles the rail — decided at invocation time
-  // (mirror of ChatShell.toggleHistory).
+  // <lg opens the sheet, ≥lg toggles the rail — decided at invocation time.
+  // Functional update (mirror of ChatShell.toggleHistory): never captures a
+  // stale railCollapsed, so rapid double-clicks toggle twice, not net-zero.
   const toggleHistory = React.useCallback(() => {
     const isDesktop =
       typeof window !== "undefined" && window.matchMedia(LG_QUERY).matches;
     if (isDesktop) {
-      setRailCollapsed(!railCollapsed);
+      setRailCollapsedState((prev) => {
+        const next = !prev;
+        try {
+          window.localStorage.setItem(RAIL_COLLAPSED_KEY, String(next));
+        } catch {
+          // Persistence is best-effort.
+        }
+        return next;
+      });
     } else {
       setHistorySheetOpen((prev) => !prev);
     }
-  }, [railCollapsed, setRailCollapsed]);
+  }, []);
 
   // A bare base URL is a fresh chat; also close the mobile sheet.
   const startNewChat = React.useCallback(() => {
