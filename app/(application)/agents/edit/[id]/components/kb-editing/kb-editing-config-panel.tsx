@@ -2,17 +2,21 @@
 
 /**
  * Knowledge base editing — config sheet content for the knowledge_base_editor
- * tool in the Tools section. Per-context create/update checkboxes are explicit
- * opt-in (unchecking both removes the context). Each handler writes exactly ONE
- * config entry through `update` — the sheet's update path maps over the staged
- * tools per call, so two updates in one handler would drop the first.
+ * tool in the Tools section. One compact row per knowledge base: checkbox +
+ * name, with a Create/Update pill toggle-group when enabled. Explicit opt-in:
+ * deselecting both pills (or the checkbox) removes the context. Each handler
+ * writes exactly ONE config entry through `update` — the sheet's update path
+ * maps over the staged tools per call, so two updates in one handler would
+ * drop the first.
  */
 
+import { Pencil, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import type { ToolConfigEntry } from "../tool-config-fields";
 import { parseKbEditingConfig, type KbWritePermission } from "./config-schema";
@@ -23,7 +27,7 @@ export function KbEditingConfigPanel({
   update,
 }: {
   config: ToolConfigEntry[];
-  contexts: { id: string; name: string; description?: string }[];
+  contexts: { id: string; name: string }[];
   update: (value: any, name: string) => void;
 }) {
   const t = useTranslations("agents");
@@ -44,14 +48,16 @@ export function KbEditingConfigPanel({
     applyKnowledgeBases(next);
   };
 
-  const setPermission = (id: string, key: "create" | "update", on: boolean) => {
-    const current = parsed.knowledgeBases[id] ?? { create: false, update: false };
-    const nextPerm = { ...current, [key]: on };
+  const setPermissions = (id: string, enabled: string[]) => {
+    const perm: KbWritePermission = {
+      create: enabled.includes("create"),
+      update: enabled.includes("update"),
+    };
     const next = { ...parsed.knowledgeBases };
-    if (!nextPerm.create && !nextPerm.update) {
+    if (!perm.create && !perm.update) {
       delete next[id];
     } else {
-      next[id] = nextPerm;
+      next[id] = perm;
     }
     applyKnowledgeBases(next);
   };
@@ -63,47 +69,54 @@ export function KbEditingConfigPanel({
           {t("editor.knowledge.noContexts")}
         </p>
       )}
-      {contexts.map((ctx) => {
-        const perms = parsed.knowledgeBases[ctx.id];
-        const isOn = !!perms;
-        return (
-          <div key={ctx.id} className="space-y-3 rounded-md border p-3">
-            <label className="flex items-start gap-3">
-              <Checkbox
-                checked={isOn}
-                onCheckedChange={(v) => setContextEnabled(ctx.id, v === true)}
-                className="mt-0.5"
-              />
-              <span className="space-y-0.5">
-                <span className="block text-sm font-medium">{ctx.name}</span>
-                {ctx.description && (
-                  <span className="block text-xs text-muted-foreground">
-                    {ctx.description}
-                  </span>
-                )}
-              </span>
-            </label>
-            {isOn && (
-              <div className="flex gap-6 border-t pt-3">
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={perms.create}
-                    onCheckedChange={(v) => setPermission(ctx.id, "create", v === true)}
-                  />
-                  {t("editor.knowledge.editing.createLabel")}
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={perms.update}
-                    onCheckedChange={(v) => setPermission(ctx.id, "update", v === true)}
-                  />
-                  {t("editor.knowledge.editing.updateLabel")}
-                </label>
-              </div>
-            )}
-          </div>
-        );
-      })}
+      <div className="space-y-2">
+        {contexts.map((ctx) => {
+          const perms = parsed.knowledgeBases[ctx.id];
+          const isOn = !!perms;
+          return (
+            <div
+              key={ctx.id}
+              className="flex items-center justify-between gap-3 rounded-md border p-3"
+            >
+              <label className="flex min-w-0 items-center gap-3">
+                <Checkbox
+                  checked={isOn}
+                  onCheckedChange={(v) => setContextEnabled(ctx.id, v === true)}
+                />
+                <span className="truncate text-sm font-medium">{ctx.name}</span>
+              </label>
+              {isOn && (
+                <ToggleGroup
+                  type="multiple"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  value={[
+                    ...(perms.create ? ["create"] : []),
+                    ...(perms.update ? ["update"] : []),
+                  ]}
+                  onValueChange={(next) => setPermissions(ctx.id, next)}
+                >
+                  <ToggleGroupItem
+                    value="create"
+                    aria-label={t("editor.knowledge.editing.createLabel")}
+                  >
+                    <Plus className="mr-1 size-3.5" />
+                    {t("editor.knowledge.editing.createLabel")}
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="update"
+                    aria-label={t("editor.knowledge.editing.updateLabel")}
+                  >
+                    <Pencil className="mr-1 size-3.5" />
+                    {t("editor.knowledge.editing.updateLabel")}
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
       <div className="flex items-start justify-between gap-3 border-t pt-3">
         <div className="space-y-0.5">

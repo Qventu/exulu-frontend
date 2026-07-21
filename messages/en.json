@@ -457,8 +457,8 @@
         "description": "What the agent can read, remember and retrieve.",
         "disabled": "disabled",
         "editing": {
-          "createLabel": "Create items",
-          "updateLabel": "Update items",
+          "createLabel": "Create",
+          "updateLabel": "Update",
           "skipApprovalTitle": "Skip chat approval",
           "skipApprovalDescription": "Writes run without an approval prompt in the chat. Only enable for trusted automation agents."
         },

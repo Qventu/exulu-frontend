@@ -457,8 +457,8 @@
         "description": "Was der Agent lesen, sich merken und abrufen kann.",
         "disabled": "deaktiviert",
         "editing": {
-          "createLabel": "Einträge erstellen",
-          "updateLabel": "Einträge aktualisieren",
+          "createLabel": "Erstellen",
+          "updateLabel": "Aktualisieren",
           "skipApprovalTitle": "Chat-Freigabe überspringen",
           "skipApprovalDescription": "Schreibvorgänge laufen ohne Freigabe-Abfrage im Chat. Nur für vertrauenswürdige Automatisierungs-Agenten aktivieren."
         },
