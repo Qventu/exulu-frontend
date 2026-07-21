@@ -2663,6 +2663,9 @@
           "title": "Match CSV columns to fields"
         },
         "review": {
+          "accessHint": "Applies to newly created items only.",
+          "accessLabel": "Access: {mode}",
+          "accessSubject": "imported item",
           "blankClearsWarning": "Blank cells in mapped columns will clear those fields on updated items.",
           "emptyCell": "—",
           "filePlaceholder": "Storage URL or key",

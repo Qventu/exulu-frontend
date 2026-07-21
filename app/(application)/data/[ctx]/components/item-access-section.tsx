@@ -34,7 +34,7 @@ export interface ItemAccessSectionProps {
   ) => void;
 }
 
-const MODE_LABEL_KEY: Record<string, string> = {
+export const MODE_LABEL_KEY: Record<string, string> = {
   private: "workspace.access.modePrivate",
   users: "workspace.access.modeUsers",
   roles: "workspace.access.modeRoles",

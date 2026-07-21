@@ -1,11 +1,12 @@
 "use client";
 
 import { useApolloClient } from "@apollo/client";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
 
+import { RBACControl } from "@/components/rbac";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +16,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
 import { filesApi } from "@/lib/api/files";
 import { coerceValue } from "@/lib/import/coerce";
@@ -36,7 +42,7 @@ import {
   fileKeysOf,
   findMissingFileKeys,
 } from "@/lib/import/verify-files";
-import type { ImportRow } from "@/lib/import/types";
+import type { BatchAccess, ImportRow } from "@/lib/import/types";
 import type { Context } from "@/types/models/context";
 
 import {
@@ -44,6 +50,8 @@ import {
   GET_ITEMS_BY_IDS,
   PAGINATION_POSTFIX,
 } from "../../../queries";
+
+import { MODE_LABEL_KEY } from "../item-access-section";
 
 import { StepAddData } from "./step-add-data";
 import { StepMapColumns } from "./step-map-columns";
@@ -81,7 +89,23 @@ export function ImportWizardDialog({
   const rowsRef = React.useRef(rows);
   rowsRef.current = rows;
 
-  const runner = useImportRunner(context.id, fields);
+  // Batch access (spec 2026-07-21-bulk-import-rights-mode): one setting for
+  // the whole run, applied to CREATED rows only. Defaults to the context's
+  // defaultRightsMode — sending it explicitly is what makes that config
+  // effective (CreateOne otherwise forces private).
+  const defaultBatchAccess = React.useCallback(
+    (): BatchAccess => ({
+      rights_mode: context.configuration?.defaultRightsMode ?? "private",
+      users: [],
+      roles: [],
+      teams: [],
+    }),
+    [context],
+  );
+  const [batchAccess, setBatchAccess] =
+    React.useState<BatchAccess>(defaultBatchAccess);
+
+  const runner = useImportRunner(context.id, fields, batchAccess);
   const running = runner.phase === "running";
   const phaseRef = React.useRef(runner.phase);
   phaseRef.current = runner.phase;
@@ -102,6 +126,7 @@ export function ImportWizardDialog({
       setMapping([]);
       setRows([]);
       setFileFieldTarget(null);
+      setBatchAccess(defaultBatchAccess());
       runner.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -470,6 +495,48 @@ export function ImportWizardDialog({
                   total: rows.length,
                 })}
               </span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="outline">
+                    <Lock aria-hidden="true" className="size-4" />
+                    {t("workspace.import.review.accessLabel", {
+                      mode: t(
+                        MODE_LABEL_KEY[batchAccess.rights_mode] ??
+                          "workspace.access.modePrivate",
+                      ),
+                    })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  className="max-h-[60vh] w-[420px] overflow-y-auto"
+                >
+                  <div className="space-y-3">
+                    <RBACControl
+                      modalMode
+                      subjectLabel={t("workspace.import.review.accessSubject")}
+                      initialRightsMode={batchAccess.rights_mode}
+                      initialUsers={batchAccess.users}
+                      initialRoles={batchAccess.roles}
+                      initialTeams={batchAccess.teams}
+                      onChange={(rights_mode, users, roles, teams) =>
+                        setBatchAccess({
+                          rights_mode,
+                          users,
+                          roles,
+                          teams: teams ?? [],
+                        })
+                      }
+                    />
+                    {rows.some((r) => r.action === "update") &&
+                      batchAccess.rights_mode !== "private" && (
+                        <p className="text-sm text-muted-foreground">
+                          {t("workspace.import.review.accessHint")}
+                        </p>
+                      )}
+                  </div>
+                </PopoverContent>
+              </Popover>
               <Button
                 type="button"
                 disabled={validRows.length === 0 || verifying}

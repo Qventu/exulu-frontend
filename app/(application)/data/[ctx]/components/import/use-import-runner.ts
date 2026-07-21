@@ -3,17 +3,26 @@
 import { useApolloClient } from "@apollo/client";
 import * as React from "react";
 
-import { rowIsValid } from "@/lib/import/rows";
+import { mergeBatchAccess, rowIsValid } from "@/lib/import/rows";
 import { runImport } from "@/lib/import/runner";
 import type { RunSummary } from "@/lib/import/runner";
-import type { ImportField, ImportRow, RowRunState } from "@/lib/import/types";
+import type {
+  BatchAccess,
+  ImportField,
+  ImportRow,
+  RowRunState,
+} from "@/lib/import/types";
 import { uploadFileToS3 } from "@/lib/import/upload";
 
 import { CREATE_ITEM, UPDATE_ITEM } from "../../../queries";
 
 export type ImportPhase = "edit" | "running" | "done";
 
-export function useImportRunner(contextId: string, fields: ImportField[]) {
+export function useImportRunner(
+  contextId: string,
+  fields: ImportField[],
+  batchAccess: BatchAccess,
+) {
   const client = useApolloClient();
   const [phase, setPhase] = React.useState<ImportPhase>("edit");
   const [rowStates, setRowStates] = React.useState<
@@ -41,7 +50,7 @@ export function useImportRunner(contextId: string, fields: ImportField[]) {
           createItem: async (input) => {
             await client.mutate({
               mutation: CREATE_ITEM(contextId, []),
-              variables: { input },
+              variables: { input: mergeBatchAccess(input, batchAccess) },
             });
           },
           updateItem: async (id, input) => {
@@ -67,7 +76,7 @@ export function useImportRunner(contextId: string, fields: ImportField[]) {
         // List refresh is best-effort; the import itself succeeded.
       }
     },
-    [client, contextId, fields],
+    [client, contextId, fields, batchAccess],
   );
 
   const cancel = React.useCallback(() => {

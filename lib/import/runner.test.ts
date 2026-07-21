@@ -51,7 +51,9 @@ const effects = () => ({
     async (file: File) => `bucket/user_1/uuid-_EXULU_${file.name}`,
   ),
   createItem: vi.fn(async () => {}),
-  updateItem: vi.fn(async () => {}),
+  updateItem: vi.fn(
+    async (_id: string, _input: Record<string, unknown>) => {},
+  ),
 });
 
 describe("runImport", () => {
