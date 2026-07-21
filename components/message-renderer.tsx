@@ -35,6 +35,14 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Agent } from "@/types/models/agent"
 import { ImageGenerationWidget } from "./image-generation/image-generation-widget"
 
+import { buildMessageHtmlDocument, copyMessageFormatted } from "@/lib/export/message-export"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
 import {
   computeContextSearchData,
   computeUntypedToolData,
@@ -44,6 +52,37 @@ import {
   type ToolDataCache,
   type ToolReasoningStep,
 } from "./message-renderer-tool-data"
+
+// Only the visible answer (text parts) is exported — reasoning/tool parts
+// stay out of copies and downloads.
+function messageMarkdown(message: UIMessage): string {
+  return (message.parts ?? [])
+    .filter((part: any) => part?.type === 'text' && typeof part.text === 'string')
+    .map((part: any) => part.text)
+    .join('\n\n')
+}
+
+function downloadMessage(message: UIMessage, format: 'html' | 'md') {
+  const markdown = messageMarkdown(message)
+  const isHtml = format === 'html'
+  const content = isHtml ? buildMessageHtmlDocument(markdown) : markdown
+  const blob = new Blob([content], { type: isHtml ? 'text/html' : 'text/markdown' })
+  const url = URL.createObjectURL(blob)
+
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `message-${new Date().getTime()}.${format}`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+
+  toast.success("Downloaded message", {
+    description: isHtml
+      ? "The message was downloaded as a formatted HTML file."
+      : "The message was downloaded as a Markdown file.",
+  })
+}
 
 function camelCaseToLabel(camelCaseString) {
   if (!camelCaseString || typeof camelCaseString !== 'string') {
@@ -1180,7 +1219,10 @@ const MessageItem = memo(function MessageItem({
                       className={cn(
                         "mt-2 transition-opacity duration-150 motion-reduce:transition-none",
                         message.role === 'assistant' && !isLastAssistantMessage &&
-                        "[@media(hover:hover)_and_(pointer:fine)]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-focus-within:opacity-100"
+                        // has-[[data-state=open]] keeps the row visible while a
+                        // portaled child menu (Download) is open — hover and
+                        // focus-within both leave the row in that state.
+                        "[@media(hover:hover)_and_(pointer:fine)]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-focus-within:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:has-[[data-state=open]]:opacity-100"
                       )}
                     >
                       {(showActions && message.role === 'assistant' && onRegenerate) && (
@@ -1197,10 +1239,17 @@ const MessageItem = memo(function MessageItem({
                         <MessageAction
                           className="mr-1"
                           onClick={() => {
-                            navigator.clipboard.writeText(
-                              message.parts?.map((part: any) => part?.text || "").join('\n')
-                            )
-                            toast.success("Copied message", { description: "The message was copied to your clipboard." })
+                            copyMessageFormatted(messageMarkdown(message))
+                              .then((flavor) => {
+                                toast.success("Copied message", {
+                                  description: flavor === 'rich'
+                                    ? "Formatted copy — paste into email or WhatsApp."
+                                    : "The message was copied as text.",
+                                })
+                              })
+                              .catch(() => {
+                                toast.error("Copy failed", { description: "Clipboard is not available in this browser." })
+                              })
                           }}
                           label="Copy"
                         >
@@ -1225,32 +1274,21 @@ const MessageItem = memo(function MessageItem({
                         </MessageAction>
                       )}
                       {showActions && message.role === 'assistant' && (
-                        <MessageAction
-                          className="mr-1"
-                          onClick={() => {
-                            const messageText = message.parts?.map((part: any) => part?.text || "").join('\n')
-
-                            // Create a blob with the text content
-                            const blob = new Blob([messageText], { type: 'text/plain' })
-                            const url = URL.createObjectURL(blob)
-
-                            // Create a temporary link and trigger download
-                            const a = document.createElement('a')
-                            a.href = url
-                            a.download = `message-${new Date().getTime()}.txt`
-                            document.body.appendChild(a)
-                            a.click()
-
-                            // Cleanup
-                            document.body.removeChild(a)
-                            URL.revokeObjectURL(url)
-
-                            toast.success("Downloaded message", { description: "The message was downloaded as a text file." })
-                          }}
-                          label="Download"
-                        >
-                          <DownloadIcon className="size-3" />
-                        </MessageAction>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <MessageAction className="mr-1" label="Download">
+                              <DownloadIcon className="size-3" />
+                            </MessageAction>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => downloadMessage(message, 'html')}>
+                              Formatted (HTML)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => downloadMessage(message, 'md')}>
+                              Markdown
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                       {showEdit && message.role === 'user' && (
                         <MessageAction
