@@ -1,16 +1,18 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { getTranslations } from "next-intl/server";
 
 import { getAuthOptions } from "@/app/api/auth/[...nextauth]/options";
 import { fetchPublicAgentMeta, verifyGuestPassword } from "@/lib/api/public-agents";
 import { decideGate } from "@/lib/public-agents/gate";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
-import { CenteredNote } from "../components/centered-note";
+import { PublicNote } from "../components/public-note";
 import { PublicChatScreen } from "./components/public-chat-screen";
 import { GuestPasswordGate } from "./guest-password-gate";
 
+// NO getTranslations here — server pages must not use next-intl/server
+// (i18n/config.ts intentionally has no default export / server pathway).
+// Terminal-state copy renders client-side in PublicNote.
 export const dynamic = "force-dynamic";
 
 export default async function PublicAgentPage({
@@ -19,21 +21,13 @@ export default async function PublicAgentPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const t = await getTranslations("publicAgents");
 
   const meta = await fetchPublicAgentMeta(id);
   if (meta === "notfound") {
-    return (
-      <CenteredNote title={t("notFound.title")} description={t("notFound.description")} />
-    );
+    return <PublicNote kind="notFound" />;
   }
   if (meta === null) {
-    return (
-      <CenteredNote
-        title={t("misconfigured.title")}
-        description={t("misconfigured.description")}
-      />
-    );
+    return <PublicNote kind="misconfigured" />;
   }
 
   const pw = (await cookies()).get(`guest_pw_${id}`)?.value;
