@@ -9,9 +9,9 @@
  * polls every 10 s while the run is non-terminal so a resolved approval
  * shows the resumed state without a manual refresh.
  *
- * Renders null unless ROUTINES_RUNS_V2_SUPPORTED and the session's Plan-1
- * metadata cross-link ({ routine_id, job_result_id, trigger }) is present —
- * mounting it unconditionally in SessionScreen is free today.
+ * Renders null unless the session's Plan-1 metadata cross-link
+ * ({ routine_id, job_result_id, trigger }) is present — mounting it
+ * unconditionally in SessionScreen is free.
  *
  * Data via lib/routine-runs (chat may not import the workflows feature —
  * eslint feature isolation). Both lookups use errorPolicy "all": a caller
@@ -27,7 +27,6 @@ import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ROUTINES_RUNS_V2_SUPPORTED } from "@/lib/routine-runs/flags";
 import {
   ALL_RUN_STATES,
   isTerminalRunState,
@@ -66,7 +65,7 @@ export function RunSessionBanner({ session }: { session: AgentSession }) {
     typeof meta?.routine_id === "string" && meta.routine_id !== ""
       ? meta.routine_id
       : null;
-  const enabled = ROUTINES_RUNS_V2_SUPPORTED && jobResultId !== null;
+  const enabled = jobResultId !== null;
 
   const { data, stopPolling } = useQuery<{
     job_resultById?: {

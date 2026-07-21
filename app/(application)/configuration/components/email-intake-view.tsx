@@ -13,13 +13,11 @@
  */
 
 import { useMutation, useQuery } from "@apollo/client";
-import { Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
 
 import { CopyField } from "@/components/primitives/copy-field";
-import { EmptyState } from "@/components/primitives/empty-state";
 import { FormSection } from "@/components/primitives/form-section";
 import { PageHeader } from "@/components/primitives/page-header";
 import { PageShell } from "@/components/primitives/page-shell";
@@ -35,7 +33,6 @@ import {
   UPDATE_EMAIL_INBOUND_CONFIG,
   type EmailInboundConfig,
 } from "@/lib/email-inbound/queries";
-import { ROUTINES_EMAIL_TRIGGER_SUPPORTED } from "@/lib/routine-runs/flags";
 
 const CHECKLIST_STEPS = [
   "step1",
@@ -53,22 +50,8 @@ export function EmailIntakeView() {
   const { data, loading, refetch } = useQuery<{
     emailInboundConfig?: EmailInboundConfig | null;
   }>(EMAIL_INBOUND_CONFIG, {
-    skip: !ROUTINES_EMAIL_TRIGGER_SUPPORTED,
     fetchPolicy: "cache-and-network",
   });
-
-  if (!ROUTINES_EMAIL_TRIGGER_SUPPORTED) {
-    return (
-      <PageShell variant="narrow">
-        <EmptyState
-          variant="quiet"
-          icon={Mail}
-          title={t("unavailableTitle")}
-          description={t("unavailableDescription")}
-        />
-      </PageShell>
-    );
-  }
 
   const config = data?.emailInboundConfig ?? null;
 

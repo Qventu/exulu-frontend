@@ -68,7 +68,6 @@ import {
 import { DeleteRoutineDialog } from "../../components/delete-routine-dialog";
 import { RunRoutineDialog } from "../../components/run-routine-dialog";
 import { RUN_WORKFLOW } from "../../queries";
-import { ROUTINES_EMAIL_TRIGGER_SUPPORTED } from "../../schema-flags";
 import type { Routine } from "../../types";
 import { useRoutineEditor, useRoutineWorkbench, useScrollSpy } from "../hooks";
 import { AccessSection } from "../sections/access";
@@ -119,9 +118,7 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
   const sectionIds = React.useMemo(
     () =>
       ROUTINE_SECTION_IDS.filter(
-        (id) =>
-          (id !== "danger" || workbench.access.canDelete) &&
-          (id !== "triggers" || ROUTINES_EMAIL_TRIGGER_SUPPORTED),
+        (id) => id !== "danger" || workbench.access.canDelete,
       ),
     [workbench.access.canDelete],
   );

@@ -1,7 +1,5 @@
-// Server-side route guard for /runs — same predicate as the flag-gated nav
-// entry (workflows:read). Guarded with an INLINE requirement (not the nav id)
-// because the nav entry only exists while ROUTINES_RUNS_V2_SUPPORTED is true,
-// and guardRoute("runs") would throw on the id while the flag is off.
+// Server-side route guard for /runs — same predicate as the nav entry
+// (workflows:read). Guarded with an INLINE requirement for flexibility.
 import type { ReactNode } from "react";
 
 import { guardRoute } from "@/lib/route-guard";

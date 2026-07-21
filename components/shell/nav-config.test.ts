@@ -15,11 +15,9 @@ import {
   type NavConfig,
 } from "@/components/shell/nav-config";
 import type { RightArea, RightsUser } from "@/lib/rights";
-import { ROUTINES_RUNS_V2_SUPPORTED } from "@/lib/routine-runs/flags";
 import type { UserRole } from "@/types/models/user-role";
 
-/** The runs entry ships flag-gated (email-routines design §7.3). */
-const RUNS_ROWS = ROUTINES_RUNS_V2_SUPPORTED ? ["runs"] : [];
+const RUNS_ROWS = ["runs"];
 
 const emptyRole: UserRole = {
   id: "role-1",
@@ -393,10 +391,8 @@ describe("activeEntryFor (§1.3 rule 4: first-segment equality + aliases)", () =
     expect(activeEntryFor("/")?.id).toBe("home");
   });
 
-  it("matches /runs to the flag-gated runs entry", () => {
-    expect(activeEntryFor("/runs")?.id ?? null).toBe(
-      ROUTINES_RUNS_V2_SUPPORTED ? "runs" : null,
-    );
+  it("matches /runs to the runs entry", () => {
+    expect(activeEntryFor("/runs")?.id ?? null).toBe("runs");
   });
 
   it("never substring-matches (audit H7): /users/data is Users, not Knowledge", () => {

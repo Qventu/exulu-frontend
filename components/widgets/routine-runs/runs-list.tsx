@@ -12,8 +12,7 @@
  * each other (eslint feature isolation) — widgets + lib are the shared
  * altitude.
  *
- * Callers gate rendering behind ROUTINES_RUNS_V2_SUPPORTED — this component
- * assumes the Plan-1 `routineRuns` API exists.
+ * Assumes the Plan-1 `routineRuns` API exists.
  */
 
 import { useMutation, useQuery } from "@apollo/client";

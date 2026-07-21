@@ -74,14 +74,3 @@ export const ROUTINES_LAST_RUN_SORT_SUPPORTED = false;
  * cells). 10 rows -> <=10 cache-hits-after-first-load, not 30/row.
  */
 export const ROUTINES_AGENTS_BATCH_SUPPORTED = false;
-
-/**
- * Email-triggered-routines flags (design 2026-07-15). Defined in
- * lib/routine-runs/flags.ts because shell + runs/chat/configuration features
- * consume them and may not import this feature folder; re-exported here so
- * the workflows feature keeps ONE flag import point. Flip them THERE.
- */
-export {
-  ROUTINES_EMAIL_TRIGGER_SUPPORTED,
-  ROUTINES_RUNS_V2_SUPPORTED,
-} from "@/lib/routine-runs/flags";

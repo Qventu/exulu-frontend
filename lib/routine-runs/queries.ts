@@ -2,10 +2,6 @@
  * GraphQL operations for the Plan-1 routine-runs API. Lives in lib/ so the
  * workflows feature, the runs feature, the chat feature AND the shell badge
  * can all import it (eslint feature isolation forbids cross-feature imports).
- *
- * Every operation except ROUTINE_RUN_DETAIL-style by-id lookups is gated by
- * ROUTINES_RUNS_V2_SUPPORTED at the CALL SITE (skip:) — the documents
- * themselves are inert strings.
  */
 
 import { gql } from "@apollo/client";
@@ -82,7 +78,7 @@ export const RETRY_ROUTINE_RUN = gql`
 /**
  * Chat banner lookup: session.metadata.job_result_id → run state. Uses the
  * existing auto-generated job_resultById; `trigger`/`workflow` are Plan-1
- * columns, so callers MUST skip this unless ROUTINES_RUNS_V2_SUPPORTED.
+ * columns.
  */
 export const ROUTINE_RUN_FOR_SESSION = gql`
   query RoutineRunForSession($id: ID!) {

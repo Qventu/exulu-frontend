@@ -38,7 +38,6 @@ import {
 } from "lucide-react";
 
 import { can, type Requirement, type RightsUser } from "@/lib/rights";
-import { ROUTINES_RUNS_V2_SUPPORTED } from "@/lib/routine-runs/flags";
 
 /**
  * Persona-altitude groups, top to bottom in descending frequency-of-use and
@@ -195,21 +194,15 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     // Read role gets the item + read-only page (workflows.md row 187).
     requires: { area: "workflows", level: "read" },
   },
-  // Global runs console (email-routines design §7.3) — ships flag-gated so
-  // the frontend can merge before the Plan-1 backend. The /runs layout
-  // guards with the same inline requirement (flag-independent).
-  ...(ROUTINES_RUNS_V2_SUPPORTED
-    ? ([
-        {
-          id: "runs",
-          group: "build",
-          route: "/runs",
-          i18nKey: "navigation.runs",
-          icon: Activity,
-          requires: { area: "workflows", level: "read" },
-        },
-      ] as const)
-    : []),
+  // Global runs console (email-routines design §7.3).
+  {
+    id: "runs",
+    group: "build",
+    route: "/runs",
+    i18nKey: "navigation.runs",
+    icon: Activity,
+    requires: { area: "workflows", level: "read" },
+  },
   {
     id: "automation",
     group: "build",

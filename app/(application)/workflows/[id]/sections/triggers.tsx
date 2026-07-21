@@ -6,8 +6,6 @@
  * anchored <section> for useScrollSpy, DetailSection wrapper, Apollo
  * queries/mutations with the standard toast contract, ConfirmDialog delete.
  *
- * - Gated by ROUTINES_EMAIL_TRIGGER_SUPPORTED (also filtered out of the
- *   workbench section list — the null return here is defense in depth).
  * - "Not configured" CTA: emailInboundConfig is super_admin-only, so ONLY a
  *   definitive SA answer can veto the form. Non-SA admins get an authz error
  *   (errorPolicy "all") and see the form optimistically — the upsert
@@ -52,7 +50,6 @@ import {
   GET_WORKFLOW_TRIGGERS,
   UPSERT_WORKFLOW_EMAIL_TRIGGER,
 } from "../../queries";
-import { ROUTINES_EMAIL_TRIGGER_SUPPORTED } from "../../schema-flags";
 import type { Routine, RoutineAccess } from "../../types";
 import {
   DEFAULT_EMAIL_TRIGGER_CONFIG,
@@ -78,7 +75,6 @@ export function TriggersSection({ routine, access }: TriggersSectionProps) {
   const configQuery = useQuery<{
     emailInboundConfig?: EmailInboundConfig | null;
   }>(EMAIL_INBOUND_CONFIG, {
-    skip: !ROUTINES_EMAIL_TRIGGER_SUPPORTED,
     fetchPolicy: "cache-first",
     errorPolicy: "all",
   });
@@ -87,11 +83,8 @@ export function TriggersSection({ routine, access }: TriggersSectionProps) {
     workflowTriggers?: WorkflowTriggerRow[];
   }>(GET_WORKFLOW_TRIGGERS, {
     variables: { workflow: routine.id },
-    skip: !ROUTINES_EMAIL_TRIGGER_SUPPORTED,
     fetchPolicy: "cache-and-network",
   });
-
-  if (!ROUTINES_EMAIL_TRIGGER_SUPPORTED) return null;
 
   const trigger =
     (data?.workflowTriggers ?? []).find((row) => row.type === "email") ?? null;

@@ -2095,9 +2095,7 @@
       "toast": {
         "saved": "E-Mail-Eingangseinstellungen gespeichert",
         "saveFailed": "E-Mail-Eingangseinstellungen konnten nicht gespeichert werden"
-      },
-      "unavailableTitle": "E-Mail-Eingang ist noch nicht verfügbar",
-      "unavailableDescription": "Diese Oberfläche benötigt ein Backend, das die E-Mail-Eingangs-API unterstützt."
+      }
     },
     "editor": {
       "defaultValue": "Standard: {value}",
@@ -3973,9 +3971,7 @@
   },
   "runs": {
     "title": "Läufe",
-    "description": "Alle Routine-Läufe in Ihrem Arbeitsbereich — Einträge mit Handlungsbedarf zuerst.",
-    "unavailableTitle": "Läufe ist noch nicht verfügbar",
-    "unavailableDescription": "Diese Seite benötigt ein Backend, das die Routine-Läufe-API unterstützt."
+    "description": "Alle Routine-Läufe in Ihrem Arbeitsbereich — Einträge mit Handlungsbedarf zuerst."
   },
   "settings": {
     "account": {

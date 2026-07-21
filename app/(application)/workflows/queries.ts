@@ -228,8 +228,7 @@ export const DELETE_WORKFLOW_SCHEDULE = gql`
 `;
 
 /* ------------------------------------------------------------------------- */
-/* Email trigger (Plan-2 API — every call site is gated by
-   ROUTINES_EMAIL_TRIGGER_SUPPORTED; the documents are inert until then). */
+/* Email trigger (Plan-2 API). */
 
 const WORKFLOW_TRIGGER_SELECTION = `
   id
@@ -309,52 +308,6 @@ export const GET_JOB_RESULTS = gql`
         hasPreviousPage
         hasNextPage
       }
-    }
-  }
-`;
-
-export const GET_JOB_RESULTS_LIGHT = gql`
-  query GetJobResultsLight(
-    $page: Int!
-    $limit: Int!
-    $filters: [FilterJob_result]
-    $sort: SortBy = { field: "createdAt", direction: DESC }
-  ) {
-    job_resultsPagination(
-      page: $page
-      limit: $limit
-      sort: $sort
-      filters: $filters
-    ) {
-      items {
-        id
-        state
-        label
-        createdAt
-      }
-      pageInfo {
-        pageCount
-        itemCount
-        currentPage
-        hasPreviousPage
-        hasNextPage
-      }
-    }
-  }
-`;
-
-export const GET_JOB_RESULT_BY_ID = gql`
-  query GetJobResultById($id: ID!) {
-    job_resultById(id: $id) {
-      id
-      job_id
-      state
-      error
-      label
-      result
-      metadata
-      createdAt
-      updatedAt
     }
   }
 `;

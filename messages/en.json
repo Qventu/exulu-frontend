@@ -2095,9 +2095,7 @@
       "toast": {
         "saved": "Email intake settings saved",
         "saveFailed": "Could not save email intake settings"
-      },
-      "unavailableTitle": "Email intake isn't available yet",
-      "unavailableDescription": "This surface needs a backend that supports the email-inbound API."
+      }
     },
     "editor": {
       "defaultValue": "Default: {value}",
@@ -3973,9 +3971,7 @@
   },
   "runs": {
     "title": "Runs",
-    "description": "Every routine run across your workspace — items needing attention first.",
-    "unavailableTitle": "Runs isn't available yet",
-    "unavailableDescription": "This page needs a backend that supports the routine-runs API."
+    "description": "Every routine run across your workspace — items needing attention first."
   },
   "settings": {
     "account": {
