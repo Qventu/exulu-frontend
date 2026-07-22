@@ -6,11 +6,10 @@
  * needs-attention lens, show-filtered toggle) above expandable run rows with
  * Open session / Cancel / Retry actions.
  *
- * Lives in the widgets tier because BOTH the per-routine Runs section
- * (app/(application)/workflows) and the global /runs page
- * (app/(application)/runs) render it, and feature folders may not import
- * each other (eslint feature isolation) — widgets + lib are the shared
- * altitude.
+ * Lives in the widgets tier and is rendered twice inside the workflows
+ * feature: the routines list page's runs console (app/(application)/
+ * workflows, unscoped) and the per-routine Runs section
+ * (app/(application)/workflows/[id], scoped via `workflow`).
  *
  * Assumes the Plan-1 `routineRuns` API exists.
  */

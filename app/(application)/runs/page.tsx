@@ -1,9 +1,10 @@
 /**
- * /runs — global runs console (email-routines design §7.3). Thin server
- * page; the guard lives in layout.tsx. `?workflow=<id>` (used by the chat
- * run banner) pre-scopes the list to one routine.
+ * /runs — redirect stub. The global runs console lives on /workflows
+ * underneath the routines table; scoped links land on the routine subpage's
+ * anchored runs section. The URL shipped publicly, so it must keep resolving.
+ * No guard: both destinations guard themselves.
  */
-import { RunsClient } from "./runs-client";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -13,5 +14,9 @@ export default async function RunsPage({
   searchParams: Promise<{ workflow?: string }>;
 }) {
   const { workflow } = await searchParams;
-  return <RunsClient workflow={workflow} />;
+  redirect(
+    workflow
+      ? `/workflows/${encodeURIComponent(workflow)}#runs`
+      : "/workflows",
+  );
 }
