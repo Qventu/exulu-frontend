@@ -49,10 +49,12 @@ export function ProjectBudgetIndicator({
           aria-label={t("bar.detailsAria", { name: projectName })}
           // min-h-11 = 44px touch target below md (responsive.md DoD),
           // matching the instructions-active button beside it.
-          className="flex min-h-11 w-44 items-center gap-2 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:min-h-0"
+          className="flex min-h-11 w-52 items-center gap-2 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:min-h-0"
         >
           <BudgetBar budget={budget} compact className="flex-1" />
-          <span className="text-xs tabular-nums">{usedPct}%</span>
+          <span className="whitespace-nowrap text-xs tabular-nums">
+            {usedPct}% <span aria-hidden="true">·</span> {t("bar.label")}
+          </span>
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 space-y-1 text-xs">

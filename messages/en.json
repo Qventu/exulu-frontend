@@ -946,6 +946,7 @@
     },
     "bar": {
       "detailsAria": "Budget details for {name}",
+      "label": "Budget",
       "usedOfMax": "{spend} of {max} used",
       "remainingDuration": "{remaining} remaining · {duration}",
       "projected": "Projected ≈ {amount} by reset",
