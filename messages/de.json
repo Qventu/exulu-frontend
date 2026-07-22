@@ -3161,7 +3161,6 @@
     "projects": "Projekte",
     "prompts": "Prompts",
     "routines": "Routinen",
-    "runs": "Läufe",
     "search": "Suchen…",
     "sendFeedback": "Feedback senden",
     "settings": "Einstellungen",
@@ -3973,10 +3972,6 @@
     "pagination": "Seite {page} von {pages}",
     "previousPage": "Vorherige Seite",
     "nextPage": "Nächste Seite"
-  },
-  "runs": {
-    "title": "Läufe",
-    "description": "Alle Routine-Läufe in Ihrem Arbeitsbereich — Einträge mit Handlungsbedarf zuerst."
   },
   "settings": {
     "account": {
