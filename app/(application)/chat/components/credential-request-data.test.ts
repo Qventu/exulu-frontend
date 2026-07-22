@@ -1,11 +1,13 @@
 import type { DynamicToolUIPart } from "ai";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   extractCredentialRequest,
   extractOauthRequest,
   isAllowedSubmitUrl,
   mapSubmitResponse,
+  markCredentialSubmitted,
+  readCredentialSubmitted,
 } from "./credential-request-data";
 
 const toolPart = (overrides: Record<string, unknown>): DynamicToolUIPart =>
@@ -80,5 +82,44 @@ describe("mapSubmitResponse", () => {
       message: "validation failed: bad key",
     });
     expect(mapSubmitResponse(500, null)).toEqual({ kind: "error", message: "HTTP 500" });
+  });
+});
+describe("credential submitted persistence", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("is a safe no-op without a window (SSR / node)", () => {
+    expect(readCredentialSubmitted("c1")).toBe(false);
+    expect(() => markCredentialSubmitted("c1")).not.toThrow();
+  });
+
+  it("round-trips through localStorage when a window exists", () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => void store.set(k, v),
+      },
+    });
+    expect(readCredentialSubmitted("call-9")).toBe(false);
+    markCredentialSubmitted("call-9");
+    expect(readCredentialSubmitted("call-9")).toBe(true);
+    expect(readCredentialSubmitted("call-other")).toBe(false);
+  });
+
+  it("swallows storage errors", () => {
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: () => {
+          throw new Error("denied");
+        },
+        setItem: () => {
+          throw new Error("denied");
+        },
+      },
+    });
+    expect(readCredentialSubmitted("c1")).toBe(false);
+    expect(() => markCredentialSubmitted("c1")).not.toThrow();
   });
 });

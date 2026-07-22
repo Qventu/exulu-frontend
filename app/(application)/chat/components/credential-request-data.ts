@@ -87,3 +87,29 @@ export function mapSubmitResponse(
   if (status === 401 && /expired/i.test(error)) return { kind: "expired" };
   return { kind: "error", message: error };
 }
+
+/**
+ * Durable submitted-state per tool call (localStorage, the stable-key
+ * convention of pre-approved-tool-calls-*). Component-local state alone is
+ * not enough: the card can remount mid-stream, and after a refresh the
+ * historical part would re-render a stale form over an expired nonce.
+ */
+const SUBMITTED_KEY_PREFIX = "credential-submitted-";
+
+export function readCredentialSubmitted(toolCallId: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(SUBMITTED_KEY_PREFIX + toolCallId) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function markCredentialSubmitted(toolCallId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SUBMITTED_KEY_PREFIX + toolCallId, "1");
+  } catch {
+    // localStorage unavailable — success state simply won't persist.
+  }
+}

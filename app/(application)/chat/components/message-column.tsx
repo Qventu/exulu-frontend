@@ -24,7 +24,7 @@ import type {
   DynamicToolUIPart,
 } from "ai";
 import { useTranslations } from "next-intl";
-import { useCallback, useContext, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { UserContext } from "@/app/(application)/authenticated";
 import {
@@ -140,15 +140,18 @@ function makeUntypedToolPart(
       if (guestMode) {
         return <CredentialGuestNotice key={callId} />;
       }
+      const toolCallId = untypedToolPart.toolCallId ?? callId;
       return credentialRequest ? (
         <CredentialRequestCard
           key={callId}
+          toolCallId={toolCallId}
           payload={credentialRequest}
           onSubmitted={onCredentialResume}
         />
       ) : (
         <OauthConnectCard
           key={callId}
+          toolCallId={toolCallId}
           payload={oauthRequest!}
           providerLabel={styleToolName}
           onSubmitted={onCredentialResume}
@@ -212,14 +215,25 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
   // §2.4 auto-resume: one visible follow-up user message via the existing
   // transport (the question_ask pattern) — the model re-invokes the tool,
   // which now finds stored credentials.
-  const sendUserMessage = controller.sendUserMessage;
-  const handleCredentialResume = useCallback(
-    (provider: string) => {
-      void sendUserMessage(t("credentials.resumeMessage", { provider }));
-    },
-    [sendUserMessage, t],
-  );
+  // Refs, not deps: controller.sendUserMessage is a fresh function every
+  // render, and a changing dep here would recreate the UntypedToolPart
+  // component TYPE each render — React would then remount every generic
+  // tool part and wipe the credential card's submitted state mid-stream.
+  const sendUserMessageRef = useRef(controller.sendUserMessage);
+  const tRef = useRef(t);
+  useEffect(() => {
+    sendUserMessageRef.current = controller.sendUserMessage;
+    tRef.current = t;
+  });
+  const handleCredentialResume = useCallback((provider: string) => {
+    void sendUserMessageRef.current(
+      tRef.current("credentials.resumeMessage", { provider }),
+    );
+  }, []);
 
+  /* eslint-disable react-hooks/refs -- false positive: the factory only
+     CAPTURES handleCredentialResume; its ref reads happen in a click
+     handler, never during render. */
   const UntypedToolPartComponent = useMemo(
     () =>
       makeUntypedToolPart(
@@ -229,6 +243,7 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
       ),
     [controller.approveToolForChat, handleCredentialResume, guestMode],
   );
+  /* eslint-enable react-hooks/refs */
 
   // Single focal point (item 31, fixes U9): the agent's own visual when one
   // is configured, otherwise the platform logo — never both.
