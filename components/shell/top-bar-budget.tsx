@@ -12,10 +12,16 @@
  * "nothing shows"); the indicator now lives in the chrome and is always
  * visible, with a click/focus Popover carrying the spend / remaining /
  * projection detail (keyboard- and touch-reachable, unlike a hover tooltip).
+ * The popover footer links to /settings#usage for the detailed per-model
+ * usage view.
  */
 
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
+import * as React from "react";
 
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -37,6 +43,10 @@ const DOT_COLOR: Record<string, string> = {
 
 export function TopBarBudget({ budget }: { budget: BudgetInfo | null }) {
   const t = useTranslations("budgets");
+  // Controlled so the "Details" link can close the popover on navigation —
+  // the trigger persists in the top bar across client-side route changes,
+  // so Radix would otherwise leave it open.
+  const [open, setOpen] = React.useState(false);
 
   // No budget (or none enabled for this user) — render nothing.
   if (!budget || budget.max_budget == null || budget.max_budget <= 0) {
@@ -65,7 +75,7 @@ export function TopBarBudget({ budget }: { budget: BudgetInfo | null }) {
       });
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -88,6 +98,20 @@ export function TopBarBudget({ budget }: { budget: BudgetInfo | null }) {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64 space-y-1 text-xs">
         <BudgetDetailLines budget={budget} />
+        <div className="pt-1">
+          <Button
+            asChild
+            variant="link"
+            size="sm"
+            className="h-auto gap-1 p-0 text-xs"
+            onClick={() => setOpen(false)}
+          >
+            <Link href="/settings#usage">
+              {t("bar.details")}
+              <ChevronRight aria-hidden="true" className="size-3" />
+            </Link>
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );

@@ -34,12 +34,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type {
+  BatchAccess,
   CellError,
   ImportField,
   ImportRow,
   RowRunState,
 } from "@/lib/import/types";
 import { cn } from "@/lib/utils";
+
+import { MODE_LABEL_KEY } from "../item-access-section";
 
 const UNSET = "__unset__";
 
@@ -59,6 +62,11 @@ export interface StepReviewGridProps {
   /** Run finished — rows never queued (invalid) show a Skipped badge. */
   finished: boolean;
   rowStates: Record<string, { state: RowRunState; error?: string }>;
+  /**
+   * Batch rights mode from the footer control — shown read-only per row as
+   * a visual cue that the setting applies to every created item.
+   */
+  batchAccessMode: BatchAccess["rights_mode"];
   onCellChange: (rowKey: string, fieldName: string, raw: string) => void;
   onKeyCellBlur: () => void;
   onRemoveRow: (rowKey: string) => void;
@@ -253,6 +261,7 @@ export function StepReviewGrid({
   running,
   finished,
   rowStates,
+  batchAccessMode,
   onCellChange,
   onKeyCellBlur,
   onRemoveRow,
@@ -323,6 +332,29 @@ export function StepReviewGrid({
       header: "",
       cell: ({ row }) => statusFor(row.original),
     };
+    // Read-only per-row echo of the footer's batch access setting; update
+    // rows keep their existing access, so they show an em dash instead.
+    const access: ColumnDef<ImportRow> = {
+      id: "__access",
+      header: t("workspace.import.review.accessColumn"),
+      cell: ({ row }) =>
+        row.original.action === "update" ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="flex h-8 items-center text-sm text-muted-foreground">
+                {t("workspace.import.review.emptyCell")}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t("workspace.import.review.accessKept")}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <span className="flex h-8 items-center whitespace-nowrap text-sm text-muted-foreground">
+            {t(MODE_LABEL_KEY[batchAccessMode] ?? "workspace.access.modePrivate")}
+          </span>
+        ),
+    };
     const fieldColumns = displayFields.map<ColumnDef<ImportRow>>((field) => ({
       id: field.name,
       header: field.label + (field.required ? " *" : ""),
@@ -355,7 +387,7 @@ export function StepReviewGrid({
         </Button>
       ),
     };
-    return [status, ...fieldColumns, remove];
+    return [status, access, ...fieldColumns, remove];
     // statusFor closes over rows/rowStates/running/finished — recompute with them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -363,6 +395,7 @@ export function StepReviewGrid({
     running,
     finished,
     rowStates,
+    batchAccessMode,
     onCellChange,
     onKeyCellBlur,
     onRemoveRow,

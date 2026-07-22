@@ -20,7 +20,13 @@
  * no behavior differences.
  */
 
-import { ChevronRight, Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
+import {
+  ChevronRight,
+  Monitor,
+  Moon,
+  Sun,
+  type LucideIcon,
+} from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useTheme } from "next-themes";
@@ -49,6 +55,7 @@ import { locales, type Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
 
 import { usePersonalSystemPrompt, type SettingsUser } from "../hooks";
+import { UsageSection } from "./usage-section";
 
 export function SettingsView() {
   const t = useTranslations("settings");
@@ -103,6 +110,8 @@ export function SettingsView() {
         >
           <AccountRows user={user} />
         </FormSection>
+
+        <UsageSection />
       </div>
     </PageShell>
   );
@@ -118,7 +127,11 @@ const THEME_OPTIONS: ReadonlyArray<{
   // Same labels as the user menu — one vocabulary for one mechanism.
   { value: "light", icon: Sun, i18nKey: "navigation.userMenu.themeLight" },
   { value: "dark", icon: Moon, i18nKey: "navigation.userMenu.themeDark" },
-  { value: "system", icon: Monitor, i18nKey: "navigation.userMenu.themeSystem" },
+  {
+    value: "system",
+    icon: Monitor,
+    i18nKey: "navigation.userMenu.themeSystem",
+  },
 ];
 
 /**
@@ -179,7 +192,10 @@ function ThemeControl() {
                 }
               />
             ) : null}
-            <Icon aria-hidden="true" className="relative z-10 size-4 shrink-0" />
+            <Icon
+              aria-hidden="true"
+              className="relative z-10 size-4 shrink-0"
+            />
             <span className="relative z-10 truncate">{t(i18nKey)}</span>
           </ToggleGroupItem>
         );
@@ -347,9 +363,7 @@ function AccountRows({ user }: { user: SettingsUser | null }) {
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
 
-  const fullName = [user?.firstname, user?.lastname]
-    .filter(Boolean)
-    .join(" ");
+  const fullName = [user?.firstname, user?.lastname].filter(Boolean).join(" ");
   const roleName =
     typeof user?.role === "object" && user?.role !== null
       ? user.role.name
