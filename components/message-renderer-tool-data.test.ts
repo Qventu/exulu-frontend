@@ -60,6 +60,22 @@ describe("computeUntypedToolData", () => {
     expect(data.part).toBe(part);
   });
 
+  it("passes a credentialRequest short-circuit output through with ok=true", () => {
+    const output = {
+      credentialRequest: {
+        provider: "moco",
+        fields: [],
+        submitUrl: "http://localhost:9001/credentials/submit",
+        nonce: "n",
+      },
+      result: null,
+    };
+    const part = toolPart({ output });
+    const data = computeUntypedToolData(part);
+    expect(data.ok).toBe(true);
+    expect((data.part.output as any).credentialRequest.provider).toBe("moco");
+  });
+
   it("detects the image_generation_widget result shape", () => {
     const widget = { type: "image_generation_widget", prompt: "p" };
     const data = computeUntypedToolData(
