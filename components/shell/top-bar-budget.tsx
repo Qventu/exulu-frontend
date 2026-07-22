@@ -21,9 +21,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { BudgetDetailLines } from "@/components/budget-details";
 import {
   computeBudgetProjection,
-  durationLabel,
   formatUsd,
   type BudgetInfo,
 } from "@/lib/budget";
@@ -44,7 +44,6 @@ export function TopBarBudget({ budget }: { budget: BudgetInfo | null }) {
   }
 
   const projection = computeBudgetProjection(budget);
-  const remaining = Math.max((budget.max_budget ?? 0) - budget.spend, 0);
 
   // "percent" mode hides the exact USD figures from the indicator and shows a
   // percentage instead (admin setting user_budget_display). Note: per product
@@ -53,10 +52,6 @@ export function TopBarBudget({ budget }: { budget: BudgetInfo | null }) {
   const percentMode = budget.display === "percent";
   const usedPct = Math.round(projection.percentUsed);
   const leftPct = Math.max(0, 100 - usedPct);
-  const projectedPct =
-    projection.projectedPercent != null
-      ? Math.round(projection.projectedPercent)
-      : null;
 
   // Chip face + accessible name — never leak USD in percent mode.
   const chipLabel = percentMode
@@ -92,63 +87,7 @@ export function TopBarBudget({ budget }: { budget: BudgetInfo | null }) {
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64 space-y-1 text-xs">
-        <p className="font-medium">
-          {percentMode
-            ? t("bar.percentUsed", { percent: usedPct })
-            : t("bar.usedOfMax", {
-                spend: formatUsd(budget.spend),
-                max: formatUsd(budget.max_budget),
-              })}
-        </p>
-        <p>
-          {percentMode
-            ? t("bar.percentRemainingDuration", {
-                percent: leftPct,
-                duration: durationLabel(budget.budget_duration),
-              })
-            : t("bar.remainingDuration", {
-                remaining: formatUsd(remaining),
-                duration: durationLabel(budget.budget_duration),
-              })}
-        </p>
-        {percentMode
-          ? projectedPct != null && (
-              <p
-                className={
-                  projection.overPace
-                    ? "text-amber-600 dark:text-amber-400"
-                    : undefined
-                }
-              >
-                {projection.overPace
-                  ? t("bar.projectedPercentOverPace", { percent: projectedPct })
-                  : t("bar.projectedPercent", { percent: projectedPct })}
-              </p>
-            )
-          : projection.projected != null && (
-              <p
-                className={
-                  projection.overPace
-                    ? "text-amber-600 dark:text-amber-400"
-                    : undefined
-                }
-              >
-                {projection.overPace
-                  ? t("bar.projectedOverPace", {
-                      amount: formatUsd(projection.projected),
-                    })
-                  : t("bar.projected", {
-                      amount: formatUsd(projection.projected),
-                    })}
-              </p>
-            )}
-        {budget.budget_reset_at ? (
-          <p className="text-muted-foreground">
-            {t("bar.resetsOn", {
-              date: new Date(budget.budget_reset_at).toLocaleDateString(),
-            })}
-          </p>
-        ) : null}
+        <BudgetDetailLines budget={budget} />
       </PopoverContent>
     </Popover>
   );
