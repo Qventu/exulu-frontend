@@ -3,20 +3,18 @@
 /**
  * Knowledge base editing — config sheet content for the knowledge_base_editor
  * tool in the Tools section. One compact row per knowledge base: checkbox +
- * name, with a Create/Update pill toggle-group when enabled. Explicit opt-in:
- * deselecting both pills (or the checkbox) removes the context. Each handler
+ * name, with labeled Create/Update switches when enabled. Explicit opt-in:
+ * turning both switches off (or unchecking the row) removes the context. Each handler
  * writes exactly ONE config entry through `update` — the sheet's update path
  * maps over the staged tools per call, so two updates in one handler would
  * drop the first.
  */
 
-import { Pencil, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import type { ToolConfigEntry } from "../tool-config-fields";
 import { parseKbEditingConfig, type KbWritePermission } from "./config-schema";
@@ -48,11 +46,9 @@ export function KbEditingConfigPanel({
     applyKnowledgeBases(next);
   };
 
-  const setPermissions = (id: string, enabled: string[]) => {
-    const perm: KbWritePermission = {
-      create: enabled.includes("create"),
-      update: enabled.includes("update"),
-    };
+  const setPermission = (id: string, key: "create" | "update", on: boolean) => {
+    const current = parsed.knowledgeBases[id] ?? { create: false, update: false };
+    const perm: KbWritePermission = { ...current, [key]: on };
     const next = { ...parsed.knowledgeBases };
     if (!perm.create && !perm.update) {
       delete next[id];
@@ -86,32 +82,24 @@ export function KbEditingConfigPanel({
                 <span className="truncate text-sm font-medium">{ctx.name}</span>
               </label>
               {isOn && (
-                <ToggleGroup
-                  type="multiple"
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0"
-                  value={[
-                    ...(perms.create ? ["create"] : []),
-                    ...(perms.update ? ["update"] : []),
-                  ]}
-                  onValueChange={(next) => setPermissions(ctx.id, next)}
-                >
-                  <ToggleGroupItem
-                    value="create"
-                    aria-label={t("editor.knowledge.editing.createLabel")}
-                  >
-                    <Plus className="mr-1 size-3.5" />
+                <div className="flex shrink-0 items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
                     {t("editor.knowledge.editing.createLabel")}
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value="update"
-                    aria-label={t("editor.knowledge.editing.updateLabel")}
-                  >
-                    <Pencil className="mr-1 size-3.5" />
+                    <Switch
+                      checked={perms.create}
+                      onCheckedChange={(v) => setPermission(ctx.id, "create", v)}
+                      aria-label={t("editor.knowledge.editing.createLabel")}
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
                     {t("editor.knowledge.editing.updateLabel")}
-                  </ToggleGroupItem>
-                </ToggleGroup>
+                    <Switch
+                      checked={perms.update}
+                      onCheckedChange={(v) => setPermission(ctx.id, "update", v)}
+                      aria-label={t("editor.knowledge.editing.updateLabel")}
+                    />
+                  </label>
+                </div>
               )}
             </div>
           );
