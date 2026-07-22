@@ -55,6 +55,7 @@ import { locales, type Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
 
 import { usePersonalSystemPrompt, type SettingsUser } from "../hooks";
+import { ConnectionsSection } from "./connections-section";
 import { UsageSection } from "./usage-section";
 
 export function SettingsView() {
@@ -112,6 +113,8 @@ export function SettingsView() {
         </FormSection>
 
         <UsageSection />
+
+        <ConnectionsSection />
       </div>
     </PageShell>
   );

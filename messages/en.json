@@ -4002,6 +4002,20 @@
       "description": "Choose how the interface is themed. System follows your device setting.",
       "title": "Appearance"
     },
+    "connections": {
+      "connectedOn": "Connected {date}",
+      "description": "Tool credentials you have saved. Revoking one makes the tool ask again in chat.",
+      "empty": "No connected tools yet — tools will ask for credentials in chat when they need them.",
+      "error": "Couldn't load your connections.",
+      "retry": "Retry",
+      "revoke": "Revoke",
+      "revokeConfirmAction": "Revoke",
+      "revokeConfirmDescription": "The stored credentials for {provider} are deleted. The next time a tool needs them, the form appears again in chat.",
+      "revokeConfirmTitle": "Revoke {provider}?",
+      "revokeErrorTitle": "Couldn't revoke credentials",
+      "revokedTitle": "Credentials revoked",
+      "title": "Connections"
+    },
     "description": "How the IMP looks, speaks, and responds to you.",
     "language": {
       "confirmAction": "Change language",

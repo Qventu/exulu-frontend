@@ -4002,6 +4002,20 @@
       "description": "Wählen Sie das Erscheinungsbild der Oberfläche. „System“ folgt der Einstellung Ihres Geräts.",
       "title": "Erscheinungsbild"
     },
+    "connections": {
+      "connectedOn": "Verbunden am {date}",
+      "description": "Gespeicherte Tool-Zugangsdaten. Nach dem Widerruf fragt das Tool im Chat erneut.",
+      "empty": "Noch keine verbundenen Tools — Tools fragen im Chat nach Zugangsdaten, wenn sie sie brauchen.",
+      "error": "Deine Verbindungen konnten nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "revoke": "Widerrufen",
+      "revokeConfirmAction": "Widerrufen",
+      "revokeConfirmDescription": "Die gespeicherten Zugangsdaten für {provider} werden gelöscht. Wenn ein Tool sie das nächste Mal braucht, erscheint das Formular erneut im Chat.",
+      "revokeConfirmTitle": "{provider} widerrufen?",
+      "revokeErrorTitle": "Zugangsdaten konnten nicht widerrufen werden",
+      "revokedTitle": "Zugangsdaten widerrufen",
+      "title": "Verbindungen"
+    },
     "description": "Wie das IMP für Sie aussieht, spricht und antwortet.",
     "language": {
       "confirmAction": "Sprache ändern",
