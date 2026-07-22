@@ -1,5 +1,8 @@
 "use client"
 
+import { useTranslations } from "next-intl"
+
+import { BudgetDetailLines } from "@/components/budget-details"
 import {
     Tooltip,
     TooltipContent,
@@ -8,7 +11,6 @@ import {
 } from "@/components/ui/tooltip"
 import {
     computeBudgetProjection,
-    durationLabel,
     formatUsd,
     type BudgetInfo,
 } from "@/lib/budget"
@@ -27,7 +29,12 @@ const clamp = (n: number) => Math.max(0, Math.min(100, n))
  * - fill width animates via a CSS transition on width
  * - colour: green (on track) / amber (≥80% or on track to exceed) / red (over)
  * - the dashed marker shows the projected spend by the reset date
- * Used in the admin overview, the BudgetEditor, and the in-chat indicator.
+ * - display-aware: `budget.display === "percent"` renders percentages only
+ *   (inline numbers and tooltip switch to the bar.percent* strings — no USD
+ *   anywhere). Absent / "amount" keeps the dollar rendering; admin queries
+ *   never set `display`, so admin surfaces are unchanged.
+ * Used in the admin overview, the BudgetEditor, the in-chat indicator, and
+ * the project-detail header indicator.
  */
 export function BudgetBar({
     budget,
@@ -38,6 +45,8 @@ export function BudgetBar({
     compact?: boolean
     className?: string
 }) {
+    const t = useTranslations("budgets")
+
     if (!budget || budget.max_budget == null || budget.max_budget <= 0) {
         return (
             <span className={cn("text-xs text-muted-foreground", className)}>
@@ -49,7 +58,7 @@ export function BudgetBar({
     const p = computeBudgetProjection(budget)
     const usedPct = clamp(p.percentUsed)
     const projPct = p.projectedPercent != null ? clamp(p.projectedPercent) : null
-    const remaining = Math.max((budget.max_budget ?? 0) - budget.spend, 0)
+    const percentMode = budget.display === "percent"
 
     return (
         <TooltipProvider>
@@ -64,7 +73,7 @@ export function BudgetBar({
                         >
                             <div
                                 className={cn(
-                                    "h-full rounded-full transition-[width] duration-500 ease-out",
+                                    "h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none",
                                     FILL_COLORS[p.level],
                                 )}
                                 style={{ width: `${usedPct}%` }}
@@ -79,30 +88,26 @@ export function BudgetBar({
                         </div>
                         {!compact && (
                             <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-                                <span>
-                                    {formatUsd(budget.spend)} / {formatUsd(budget.max_budget)}
-                                </span>
-                                <span>{Math.round(p.percentUsed)}%</span>
+                                {percentMode ? (
+                                    <span>
+                                        {t("bar.percentUsed", {
+                                            percent: Math.round(p.percentUsed),
+                                        })}
+                                    </span>
+                                ) : (
+                                    <>
+                                        <span>
+                                            {formatUsd(budget.spend)} / {formatUsd(budget.max_budget)}
+                                        </span>
+                                        <span>{Math.round(p.percentUsed)}%</span>
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>
                 </TooltipTrigger>
                 <TooltipContent className="space-y-1 text-xs">
-                    <div className="font-medium">
-                        {formatUsd(budget.spend)} of {formatUsd(budget.max_budget)} used
-                    </div>
-                    <div>{formatUsd(remaining)} remaining · {durationLabel(budget.budget_duration)}</div>
-                    {p.projected != null && (
-                        <div className={p.overPace ? "text-amber-500" : undefined}>
-                            Projected ≈ {formatUsd(p.projected)} by reset
-                            {p.overPace ? " (over pace)" : ""}
-                        </div>
-                    )}
-                    {budget.budget_reset_at && (
-                        <div className="text-muted-foreground">
-                            Resets {new Date(budget.budget_reset_at).toLocaleDateString()}
-                        </div>
-                    )}
+                    <BudgetDetailLines budget={budget} />
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>
