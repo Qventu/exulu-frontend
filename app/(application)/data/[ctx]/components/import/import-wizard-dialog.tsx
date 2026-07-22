@@ -449,6 +449,7 @@ export function ImportWizardDialog({
                 running={running}
                 finished={runner.phase === "done"}
                 rowStates={runner.rowStates}
+                batchAccessMode={batchAccess.rights_mode}
                 onCellChange={handleCellChange}
                 onKeyCellBlur={handleKeyCellBlur}
                 onRemoveRow={handleRemoveRow}

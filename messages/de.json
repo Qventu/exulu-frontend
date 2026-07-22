@@ -2661,7 +2661,9 @@
           "title": "CSV-Spalten den Feldern zuordnen"
         },
         "review": {
+          "accessColumn": "Zugriff",
           "accessHint": "Gilt nur für neu erstellte Einträge.",
+          "accessKept": "Bestehender Zugriff bleibt erhalten.",
           "accessLabel": "Zugriff: {mode}",
           "accessSubject": "importiertes Element",
           "blankClearsWarning": "Leere Zellen in zugeordneten Spalten löschen diese Felder bei aktualisierten Einträgen.",
