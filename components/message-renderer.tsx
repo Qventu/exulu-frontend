@@ -1398,6 +1398,11 @@ const getToolPreview = (input: any): string | null => {
 
 const parseToolOutput = (output: any): any => {
   if (output == null) return null;
+  // Auth short-circuit payloads (nonce + submitUrl) must never render in a
+  // chip — the credential card owns this shape (spec 2026-07-22 §2.2).
+  if (typeof output === 'object' && (output.credentialRequest || output.oauth?.authorizationUrl)) {
+    return null;
+  }
   if (typeof output === 'string') {
     try { return JSON.parse(output); } catch { return output; }
   }
