@@ -4398,7 +4398,10 @@
       "postProcessing": "Nachbearbeitung",
       "postProcessingEmpty": "Keine Nachbearbeitungsergebnisse.",
       "rerun": "Erneut ausführen",
+      "run": "Ausführen",
       "resultFailed": "Fehlgeschlagen",
+      "resultPending": "Noch nicht ausgeführt.",
+      "deletedPrompt": "Prompt nicht mehr verfügbar",
       "resultRunning": "Wird ausgeführt…",
       "meetingNoAudio": "Für Meeting-Aufnahmen ist keine Audiovorschau verfügbar."
     },
