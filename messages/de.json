@@ -1076,6 +1076,22 @@
     }
   },
   "chat": {
+    "credentials": {
+      "badOrigin": "Diese Zugangsdaten-Anfrage zeigt auf einen unerwarteten Server und wurde blockiert. Bitte Administrator kontaktieren.",
+      "connectDescription": "Dieses Tool benötigt Zugriff auf dein {provider}-Konto. Deine Werte werden verschlüsselt gespeichert und dem KI-Modell nie angezeigt.",
+      "connectTitle": "{provider} verbinden",
+      "connected": "Mit {provider} verbunden",
+      "expired": "Dieses Formular ist abgelaufen. Bitte den Agenten erneut fragen — es erscheint ein neues Formular.",
+      "guestNotice": "Dieses Tool benötigt Zugangsdaten. Melde dich in der Exulu-Hauptanwendung an, um es zu verbinden.",
+      "noSession": "Keine aktive Sitzung — bitte erneut anmelden, um Zugangsdaten zu übermitteln.",
+      "oauthConnect": "Verbinden",
+      "oauthDescription": "Dieses Tool benötigt eine Autorisierung. Verbinde dein Konto im neuen Tab und komm dann hierher zurück.",
+      "oauthDone": "Verbunden — erneut versuchen",
+      "required": "Erforderlich",
+      "resumeMessage": "{provider}-Zugangsdaten gespeichert — bitte erneut versuchen.",
+      "submit": "Speichern & erneut versuchen",
+      "submitting": "Prüfe…"
+    },
     "runBanner": {
       "label": "Routine-Lauf — {name}",
       "fallbackName": "Routine",

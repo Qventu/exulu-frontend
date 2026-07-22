@@ -1076,6 +1076,22 @@
     }
   },
   "chat": {
+    "credentials": {
+      "badOrigin": "This credential request points at an unexpected server and was blocked. Contact your administrator.",
+      "connectDescription": "This tool needs access to your {provider} account. Your values are stored encrypted and are never shown to the AI model.",
+      "connectTitle": "Connect {provider}",
+      "connected": "Connected to {provider}",
+      "expired": "This form expired. Ask the agent to try again — it will show a fresh form.",
+      "guestNotice": "This tool needs credentials. Sign in to the main Exulu app to connect it.",
+      "noSession": "No active session — sign in again to submit credentials.",
+      "oauthConnect": "Connect",
+      "oauthDescription": "This tool needs authorization. Connect your account in the new tab, then come back here.",
+      "oauthDone": "I've connected — retry",
+      "required": "Required",
+      "resumeMessage": "{provider} credentials saved — please retry.",
+      "submit": "Save & retry",
+      "submitting": "Checking…"
+    },
     "runBanner": {
       "label": "Routine run — {name}",
       "fallbackName": "Routine",
