@@ -175,7 +175,9 @@ function PublicChatBody({
         {/* Mirror session-screen.tsx: MessageColumn owns the conversation
             scroll (flex-1), the Composer is bottom chrome in a shrink-0 wrap. */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <MessageColumn controller={controller} />
+          {/* guestMode: credential/oauth short-circuits render a sign-in
+              notice, never the live form (spec §4). */}
+          <MessageColumn controller={controller} guestMode />
           <div className="shrink-0">
             {/* guestMode: no ＋ menu (prompts/knowledge/capabilities are
                 internal-platform surfaces) in ANY public mode. */}

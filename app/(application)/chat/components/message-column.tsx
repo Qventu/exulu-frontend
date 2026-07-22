@@ -24,7 +24,7 @@ import type {
   DynamicToolUIPart,
 } from "ai";
 import { useTranslations } from "next-intl";
-import { useContext, useMemo, useState } from "react";
+import { useCallback, useContext, useMemo, useState } from "react";
 
 import { UserContext } from "@/app/(application)/authenticated";
 import {
@@ -53,6 +53,15 @@ import type { Agent } from "@/types/models/agent";
 import type { ChatSessionController } from "../hooks";
 import { CHAT_COLUMN } from "./chat-shell";
 import {
+  CredentialGuestNotice,
+  CredentialRequestCard,
+  OauthConnectCard,
+} from "./credential-request-card";
+import {
+  extractCredentialRequest,
+  extractOauthRequest,
+} from "./credential-request-data";
+import {
   extractReferencedItems,
   FeedbackDialog,
   type FeedbackTarget,
@@ -62,6 +71,11 @@ import { findTrajectoryRefForFeedback } from "./trajectory-ref";
 
 export interface MessageColumnProps {
   controller: ChatSessionController;
+  /** Public /public/agents surfaces: credential/oauth short-circuits render
+   *  a sign-in notice instead of the live form (spec §4 — guests must never
+   *  receive a usable nonce flow, and the public page keeps the JWT
+   *  server-side so a submit could not authenticate anyway). */
+  guestMode?: boolean;
 }
 
 /**
@@ -79,7 +93,11 @@ export interface MessageColumnProps {
  * file/s3-key contract today, so there is nothing reliable to attach;
  * surface the labeled action here once the backend defines one.
  */
-function makeUntypedToolPart(onApproveForChat: (toolId: string) => void) {
+function makeUntypedToolPart(
+  onApproveForChat: (toolId: string) => void,
+  onCredentialResume: (provider: string) => void,
+  guestMode: boolean,
+) {
   const UntypedToolPart = ({
     agent: _agent,
     untypedToolPart,
@@ -110,6 +128,30 @@ function makeUntypedToolPart(onApproveForChat: (toolId: string) => void) {
           part={untypedToolPart}
           addToolApprovalResponse={addToolApprovalResponse}
           onApproveForChat={onApproveForChat}
+        />
+      );
+    }
+
+    // Auth short-circuits (spec §2.2): render the credential form / connect
+    // button instead of the generic collapsed Tool block. Never for guests.
+    const credentialRequest = extractCredentialRequest(untypedToolPart);
+    const oauthRequest = credentialRequest ? null : extractOauthRequest(untypedToolPart);
+    if (credentialRequest || oauthRequest) {
+      if (guestMode) {
+        return <CredentialGuestNotice key={callId} />;
+      }
+      return credentialRequest ? (
+        <CredentialRequestCard
+          key={callId}
+          payload={credentialRequest}
+          onSubmitted={onCredentialResume}
+        />
+      ) : (
+        <OauthConnectCard
+          key={callId}
+          payload={oauthRequest!}
+          providerLabel={styleToolName}
+          onSubmitted={onCredentialResume}
         />
       );
     }
@@ -150,7 +192,7 @@ function makeUntypedToolPart(onApproveForChat: (toolId: string) => void) {
   return UntypedToolPart;
 }
 
-export function MessageColumn({ controller }: MessageColumnProps) {
+export function MessageColumn({ controller, guestMode = false }: MessageColumnProps) {
   const t = useTranslations("chat");
   const { user } = useContext(UserContext);
   const { agent, messages, status } = controller;
@@ -167,9 +209,25 @@ export function MessageColumn({ controller }: MessageColumnProps) {
     [user],
   );
 
+  // §2.4 auto-resume: one visible follow-up user message via the existing
+  // transport (the question_ask pattern) — the model re-invokes the tool,
+  // which now finds stored credentials.
+  const sendUserMessage = controller.sendUserMessage;
+  const handleCredentialResume = useCallback(
+    (provider: string) => {
+      void sendUserMessage(t("credentials.resumeMessage", { provider }));
+    },
+    [sendUserMessage, t],
+  );
+
   const UntypedToolPartComponent = useMemo(
-    () => makeUntypedToolPart(controller.approveToolForChat),
-    [controller.approveToolForChat],
+    () =>
+      makeUntypedToolPart(
+        controller.approveToolForChat,
+        handleCredentialResume,
+        guestMode,
+      ),
+    [controller.approveToolForChat, handleCredentialResume, guestMode],
   );
 
   // Single focal point (item 31, fixes U9): the agent's own visual when one
