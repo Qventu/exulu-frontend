@@ -121,6 +121,96 @@ export function durationLabel(duration: string | null | undefined): string {
   return BUDGET_DURATIONS.find((d) => d.value === duration)?.label ?? (duration ?? "—");
 }
 
+/** True when a budget exists and has a positive cap — the shared "should we
+ *  render an indicator at all" predicate. */
+export function hasCappedBudget(b: BudgetInfo | null | undefined): b is BudgetInfo {
+  return !!b && b.max_budget != null && b.max_budget > 0;
+}
+
+/** One line of the shared budget detail block (popovers / tooltips). `key` is
+ *  an i18n key under the "budgets" namespace, `values` its interpolations.
+ *  Kept as data rather than JSX so the percent-mode "never leak USD" contract
+ *  is unit-testable in the node vitest environment. */
+export type BudgetDetailLine = {
+  key:
+    | "bar.usedOfMax"
+    | "bar.percentUsed"
+    | "bar.remainingDuration"
+    | "bar.percentRemainingDuration"
+    | "bar.projected"
+    | "bar.projectedOverPace"
+    | "bar.projectedPercent"
+    | "bar.projectedPercentOverPace"
+    | "bar.resetsOn";
+  values: Record<string, string | number>;
+  /** Headline line (rendered font-medium). */
+  emphasis?: boolean;
+  tone?: "warn" | "muted";
+};
+
+/**
+ * Build the used / remaining / projection / reset-date lines shown in budget
+ * popovers and tooltips. `display === "percent"` selects the percent-only
+ * variants (no USD value anywhere — the admin setting user_budget_display);
+ * absent / "amount" keeps the dollar variants. Mirrors the line selection
+ * previously inlined in TopBarBudget.
+ */
+export function buildBudgetDetailLines(b: BudgetInfo): BudgetDetailLine[] {
+  const percentMode = b.display === "percent";
+  const p = computeBudgetProjection(b);
+  const usedPct = Math.round(p.percentUsed);
+  const leftPct = Math.max(0, 100 - usedPct);
+  const remaining = Math.max((b.max_budget ?? 0) - b.spend, 0);
+
+  const lines: BudgetDetailLine[] = [
+    percentMode
+      ? { key: "bar.percentUsed", values: { percent: usedPct }, emphasis: true }
+      : {
+          key: "bar.usedOfMax",
+          values: { spend: formatUsd(b.spend), max: formatUsd(b.max_budget) },
+          emphasis: true,
+        },
+    percentMode
+      ? {
+          key: "bar.percentRemainingDuration",
+          values: { percent: leftPct, duration: durationLabel(b.budget_duration) },
+        }
+      : {
+          key: "bar.remainingDuration",
+          values: { remaining: formatUsd(remaining), duration: durationLabel(b.budget_duration) },
+        },
+  ];
+
+  if (percentMode) {
+    const projectedPct = p.projectedPercent != null ? Math.round(p.projectedPercent) : null;
+    if (projectedPct != null) {
+      const line: BudgetDetailLine = {
+        key: p.overPace ? "bar.projectedPercentOverPace" : "bar.projectedPercent",
+        values: { percent: projectedPct },
+      };
+      if (p.overPace) line.tone = "warn";
+      lines.push(line);
+    }
+  } else if (p.projected != null) {
+    const line: BudgetDetailLine = {
+      key: p.overPace ? "bar.projectedOverPace" : "bar.projected",
+      values: { amount: formatUsd(p.projected) },
+    };
+    if (p.overPace) line.tone = "warn";
+    lines.push(line);
+  }
+
+  if (b.budget_reset_at) {
+    lines.push({
+      key: "bar.resetsOn",
+      values: { date: new Date(b.budget_reset_at).toLocaleDateString() },
+      tone: "muted",
+    });
+  }
+
+  return lines;
+}
+
 /**
  * The standardized reset date a duration defaults to, mirroring LiteLLM's
  * scheme (duration_parser._handle_day_reset): daily → next midnight, weekly →
