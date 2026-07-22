@@ -3638,6 +3638,10 @@
       "created": "Erstellt",
       "updated": "Aktualisiert"
     },
+    "runsConsole": {
+      "title": "Läufe",
+      "description": "Alle Routine-Läufe in Ihrem Arbeitsbereich — Einträge mit Handlungsbedarf zuerst."
+    },
     "runs": {
       "title": "Läufe",
       "count": "{count, plural, =0 {keine Läufe} one {# Lauf} other {# Läufe}}",

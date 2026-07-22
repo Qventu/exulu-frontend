@@ -14,6 +14,9 @@
  * NO primary action on the PageHeader: routines are created exclusively from
  * chat (workflows.md §3). The EmptyState carries the "Open chat" link; the
  * mobile topbar surfaces a quiet "Open chat" shortcut.
+ *
+ * The global runs console (design §7.3) renders below the table: the shared
+ * RoutineRunsList, unscoped, routine column + needs-attention lens on.
  */
 
 import { MessageSquare } from "lucide-react";
@@ -27,6 +30,7 @@ import { PageHeader } from "@/components/primitives/page-header";
 import { PageShell } from "@/components/primitives/page-shell";
 import { MobileTopbarAction } from "@/components/shell/mobile-topbar";
 import { Button } from "@/components/ui/button";
+import { RoutineRunsList } from "@/components/widgets/routine-runs/runs-list";
 
 import { routineAccess } from "./access";
 import { RoutineList } from "./components/routine-list";
@@ -214,6 +218,25 @@ export function RoutinesClient() {
           />
         )}
       </div>
+
+      {/* Global runs console (email-routines design §7.3): every readable
+          routine's runs, routine column on, needs-attention lens on by
+          default. Rendered in both table branches — runs can reference
+          since-deleted routines. */}
+      <section
+        aria-labelledby="runs-console-heading"
+        className="flex flex-col gap-3"
+      >
+        <div className="flex flex-col gap-1">
+          <h2 id="runs-console-heading" className="text-lg font-medium">
+            {t("runsConsole.title")}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {t("runsConsole.description")}
+          </p>
+        </div>
+        <RoutineRunsList showRoutineColumn defaultNeedsAttention />
+      </section>
 
       {/* Run dialog (page-level — Quick-Run + row overflow Run) */}
       <RunRoutineDialog
