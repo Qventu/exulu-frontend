@@ -4399,7 +4399,10 @@
       "postProcessing": "Post-processing",
       "postProcessingEmpty": "No post-processing results.",
       "rerun": "Re-run",
+      "run": "Run",
       "resultFailed": "Failed",
+      "resultPending": "Not run yet.",
+      "deletedPrompt": "Prompt no longer available",
       "resultRunning": "Running…",
       "meetingNoAudio": "Audio preview isn't available for meeting recordings."
     },

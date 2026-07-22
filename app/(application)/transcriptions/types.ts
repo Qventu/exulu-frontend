@@ -150,6 +150,21 @@ export function isMeetingJob(job: Pick<Job, "source">): boolean {
   return job.source === "recall";
 }
 
+/** Parse post_processing_prompts (JSON string or array) tolerantly. */
+export function parsePostProcessingPrompts(
+  raw: Job["post_processing_prompts"],
+): PostProcessingPrompt[] {
+  if (!raw) return [];
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw) as PostProcessingPrompt[];
+    } catch {
+      return [];
+    }
+  }
+  return raw;
+}
+
 /** Parse post_processing_outputs (JSON string or array) tolerantly. */
 export function parsePostProcessingOutputs(
   raw: Job["post_processing_outputs"],
