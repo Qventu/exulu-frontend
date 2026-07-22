@@ -39,6 +39,7 @@ import { MobileTopbarAction } from "@/components/shell/mobile-topbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { hasCappedBudget } from "@/lib/budget";
 
 import {
   MAX_PROJECT_ITEMS,
@@ -53,6 +54,7 @@ import { UPDATE_PROJECT } from "../queries";
 import { type AddItemsOptions, FilesTab } from "./files-tab";
 import { NewSessionDialog } from "./new-session-dialog";
 import { ProjectAvatar } from "./project-avatar";
+import { ProjectBudgetIndicator } from "./project-budget-indicator";
 import { SessionsTab } from "./sessions-tab";
 import { SettingsTab } from "./settings-tab";
 import { ProjectDetailSkeleton } from "./skeletons";
@@ -242,21 +244,31 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
         // (projects.md §3 detail header spec).
         truncateDescription
         meta={
-          project.custom_instructions ? (
-            // Quiet trust line (philosophy §8): chats here inherit
-            // instructions — one click shows them.
-            <button
-              type="button"
-              onClick={() => setTab("settings")}
-              // min-h-11 = 44px touch target below md (responsive.md DoD).
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-sm text-xs text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:min-h-0"
-            >
-              <span>{t("detail.instructionsActive")}</span>
-              <span aria-hidden="true">·</span>
-              <span className="underline underline-offset-2">
-                {t("detail.viewInstructions")}
-              </span>
-            </button>
+          hasCappedBudget(project.budget) || project.custom_instructions ? (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              {/* Read-only usage (spec 2026-07-20): members see what the
+                  project has spent; details in a click/keyboard popover. */}
+              <ProjectBudgetIndicator
+                budget={project.budget}
+                projectName={project.name}
+              />
+              {project.custom_instructions ? (
+                // Quiet trust line (philosophy §8): chats here inherit
+                // instructions — one click shows them.
+                <button
+                  type="button"
+                  onClick={() => setTab("settings")}
+                  // min-h-11 = 44px touch target below md (responsive.md DoD).
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-sm text-xs text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:min-h-0"
+                >
+                  <span>{t("detail.instructionsActive")}</span>
+                  <span aria-hidden="true">·</span>
+                  <span className="underline underline-offset-2">
+                    {t("detail.viewInstructions")}
+                  </span>
+                </button>
+              ) : undefined}
+            </div>
           ) : undefined
         }
         action={

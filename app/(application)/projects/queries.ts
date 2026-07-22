@@ -74,11 +74,17 @@ export const GET_PROJECTS_BY_IDS = gql`
   }
 `;
 
-/** Verbatim copy of GET_PROJECT_BY_ID. */
+/**
+ * GET_PROJECT_BY_ID + the computed `budget` field (admin view or project
+ * member view — spec docs/superpowers/specs/2026-07-20-project-budget-
+ * visibility-design.md). `budget` is deliberately NOT in PROJECT_FIELDS so
+ * list queries and mutation payloads skip the LiteLLM hydration round-trip.
+ */
 export const GET_PROJECT_BY_ID = gql`
   query GetProjectById($id: ID!) {
     projectById(id: $id) {
       ${PROJECT_FIELDS}
+      budget
     }
   }
 `;
