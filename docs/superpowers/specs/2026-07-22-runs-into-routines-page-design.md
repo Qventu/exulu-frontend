@@ -16,8 +16,9 @@ or nav destination. Instead, the runs list belongs on the Routines page
   collapsible). The needs-attention lens stays on by default, keeping it short.
 - **Nav badge:** the polled needs-attention count moves to the **Routines** nav
   item (not dropped).
-- **Old URL:** `/runs` shipped on `origin/main`, so it becomes a redirect stub
-  rather than a 404.
+- **Old URL:** `/runs` was never deployed anywhere (user-confirmed 2026-07-22;
+  being on `origin/main` ≠ deployed), so the route is deleted outright — no
+  redirect stub.
 
 ## Changes
 
@@ -62,13 +63,11 @@ i18n: the standalone page's top-level `runs.*` namespace dies with the page. Its
   offset),
 - without → `/workflows`.
 
-### 4. /runs redirect stub
+### 4. /runs route deleted
 
-- Delete `app/(application)/runs/runs-client.tsx` and
-  `app/(application)/runs/layout.tsx` (a redirect needs no guard — the
-  destinations guard themselves).
-- `app/(application)/runs/page.tsx` becomes a server `redirect()`:
-  `?workflow=<id>` → `/workflows/<id>#runs`, otherwise → `/workflows`.
+- Delete the entire `app/(application)/runs/` folder (`page.tsx`,
+  `runs-client.tsx`, `layout.tsx`). No redirect: the URL never reached any
+  deployment, so nothing external links to it.
 
 ## Not in scope
 
@@ -84,5 +83,4 @@ i18n: the standalone page's top-level `runs.*` namespace dies with the page. Its
   failures (FE: nav-config test + entity-types lint).
 - Manual: /workflows shows the runs section under the table in both the
   populated and empty-routines branches; sidebar badge appears on Routines;
-  `/runs` and `/runs?workflow=<id>` redirect correctly; chat banner "View run"
-  lands on the subpage runs section.
+  chat banner "View run" lands on the subpage runs section.

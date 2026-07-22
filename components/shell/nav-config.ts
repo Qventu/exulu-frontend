@@ -11,7 +11,6 @@
 
 import type { LucideIcon } from "lucide-react";
 import {
-  Activity,
   BarChart3,
   BookCheck,
   Bot,
@@ -192,15 +191,6 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     i18nKey: "navigation.routines",
     icon: ListChecks,
     // Read role gets the item + read-only page (workflows.md row 187).
-    requires: { area: "workflows", level: "read" },
-  },
-  // Global runs console (email-routines design §7.3).
-  {
-    id: "runs",
-    group: "build",
-    route: "/runs",
-    i18nKey: "navigation.runs",
-    icon: Activity,
     requires: { area: "workflows", level: "read" },
   },
   {

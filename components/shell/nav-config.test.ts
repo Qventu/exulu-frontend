@@ -17,8 +17,6 @@ import {
 import type { RightArea, RightsUser } from "@/lib/rights";
 import type { UserRole } from "@/types/models/user-role";
 
-const RUNS_ROWS = ["runs"];
-
 const emptyRole: UserRole = {
   id: "role-1",
   name: "test-role",
@@ -69,7 +67,6 @@ describe("the table itself (§1.2)", () => {
       "prompts",
       "skills",
       "routines",
-      ...RUNS_ROWS,
       "automation",
       "feedback",
       "evals",
@@ -136,12 +133,11 @@ describe("single-right matrix (Phase 1 exit criterion)", () => {
     ]);
   });
 
-  it("workflows:read → routines + runs (flagged) + automation (n8n flag on)", () => {
+  it("workflows:read → routines + automation (n8n flag on)", () => {
     expect(ids(userWith({ workflows: "read" }))).toEqual([
       "home",
       ...ALL_USER_BODY,
       "routines",
-      ...RUNS_ROWS,
       "automation",
       ...FOOTER,
     ]);
@@ -282,7 +278,6 @@ describe("persona matrix (§1.3)", () => {
       "prompts",
       "skills",
       "routines",
-      ...RUNS_ROWS,
       "automation",
       "feedback",
     ]);
@@ -344,7 +339,6 @@ describe("persona matrix (§1.3)", () => {
       "prompts",
       "skills",
       "routines",
-      ...RUNS_ROWS,
       "automation",
     ]);
     expect(
@@ -389,10 +383,6 @@ describe("activeEntryFor (§1.3 rule 4: first-segment equality + aliases)", () =
 
   it("matches the root path to Home", () => {
     expect(activeEntryFor("/")?.id).toBe("home");
-  });
-
-  it("matches /runs to the runs entry", () => {
-    expect(activeEntryFor("/runs")?.id ?? null).toBe("runs");
   });
 
   it("never substring-matches (audit H7): /users/data is Users, not Knowledge", () => {

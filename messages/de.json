@@ -3161,7 +3161,6 @@
     "projects": "Projekte",
     "prompts": "Prompts",
     "routines": "Routinen",
-    "runs": "Läufe",
     "search": "Suchen…",
     "sendFeedback": "Feedback senden",
     "settings": "Einstellungen",
@@ -3638,6 +3637,10 @@
       "created": "Erstellt",
       "updated": "Aktualisiert"
     },
+    "runsConsole": {
+      "title": "Läufe",
+      "description": "Alle Routine-Läufe in Ihrem Arbeitsbereich — Einträge mit Handlungsbedarf zuerst."
+    },
     "runs": {
       "title": "Läufe",
       "count": "{count, plural, =0 {keine Läufe} one {# Lauf} other {# Läufe}}",
@@ -3969,10 +3972,6 @@
     "pagination": "Seite {page} von {pages}",
     "previousPage": "Vorherige Seite",
     "nextPage": "Nächste Seite"
-  },
-  "runs": {
-    "title": "Läufe",
-    "description": "Alle Routine-Läufe in Ihrem Arbeitsbereich — Einträge mit Handlungsbedarf zuerst."
   },
   "settings": {
     "account": {

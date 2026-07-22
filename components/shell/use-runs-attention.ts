@@ -5,7 +5,7 @@
  * (email-routines design §7.3): polls routineRunsNeedingAttentionCount
  * every ~10 s, backing off to 60 s while the query errors (recovers on the
  * next success). Zero network unless the account can read workflows —
- * mirrors the /runs nav entry's gate exactly.
+ * mirrors the Routines nav entry's gate exactly.
  *
  * Shell tier: lib + Apollo imports only (no app/*).
  */

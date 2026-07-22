@@ -3,8 +3,8 @@
 /**
  * RunSessionBanner — slim banner above the conversation when the opened
  * session belongs to a routine run (email-routines design §7.4): routine
- * name, trigger, live run state, link back to the run (global /runs page,
- * pre-scoped to the routine). The approval card itself is the untouched
+ * name, trigger, live run state, link back to the run (the routine
+ * subpage's anchored runs section). The approval card itself is the untouched
  * tool-call-approval.tsx; this banner only reflects the run's state — it
  * polls every 10 s while the run is non-terminal so a resolved approval
  * shows the resumed state without a manual refresh.
@@ -109,7 +109,9 @@ export function RunSessionBanner({ session }: { session: AgentSession }) {
   const stateLabel = (ALL_RUN_STATES as readonly string[]).includes(run.state)
     ? tState(run.state)
     : run.state;
-  const runsHref = run.workflow ? `/runs?workflow=${run.workflow}` : "/runs";
+  const runsHref = run.workflow
+    ? `/workflows/${encodeURIComponent(run.workflow)}#runs`
+    : "/workflows";
 
   return (
     <div className={cn(CHAT_COLUMN, "shrink-0 pt-2")}>
