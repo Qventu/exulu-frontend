@@ -248,6 +248,12 @@ git commit -m "feat(routines): global runs console below the routines table"
 
 ### Task 3: /runs becomes a redirect stub
 
+> **SUPERSEDED during execution (2026-07-22):** the user confirmed `/runs` was
+> never deployed anywhere, so the whole `app/(application)/runs/` folder is
+> deleted instead — no redirect stub, and the nav test asserting
+> `activeEntryFor("/runs")` is dropped as moot. Steps below kept for the
+> record.
+
 **Files:**
 - Modify: `app/(application)/runs/page.tsx` (full rewrite)
 - Delete: `app/(application)/runs/runs-client.tsx`

@@ -385,10 +385,6 @@ describe("activeEntryFor (§1.3 rule 4: first-segment equality + aliases)", () =
     expect(activeEntryFor("/")?.id).toBe("home");
   });
 
-  it("matches no entry for /runs (folded into /workflows; route is a redirect)", () => {
-    expect(activeEntryFor("/runs")).toBeNull();
-  });
-
   it("never substring-matches (audit H7): /users/data is Users, not Knowledge", () => {
     expect(activeEntryFor("/users/data")?.id).toBe("users");
   });
