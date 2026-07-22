@@ -3,8 +3,9 @@
 /**
  * Knowledge base editing — config sheet content for the knowledge_base_editor
  * tool in the Tools section. One compact row per knowledge base: checkbox +
- * name, with labeled Create/Update switches when enabled. Explicit opt-in:
- * turning both switches off (or unchecking the row) removes the context. Each handler
+ * name, with labeled Create/Update switches when enabled. The switches only
+ * change permissions; only the checkbox adds/removes the context (a both-off
+ * row grants nothing — the backend parser drops it). Each handler
  * writes exactly ONE config entry through `update` — the sheet's update path
  * maps over the staged tools per call, so two updates in one handler would
  * drop the first.
@@ -46,15 +47,12 @@ export function KbEditingConfigPanel({
     applyKnowledgeBases(next);
   };
 
+  // Only changes the one permission — never adds/removes the row itself, so
+  // flipping a switch can't visibly toggle the row checkbox. A both-off row
+  // stays listed; the backend grants nothing for it (explicit opt-in).
   const setPermission = (id: string, key: "create" | "update", on: boolean) => {
     const current = parsed.knowledgeBases[id] ?? { create: false, update: false };
-    const perm: KbWritePermission = { ...current, [key]: on };
-    const next = { ...parsed.knowledgeBases };
-    if (!perm.create && !perm.update) {
-      delete next[id];
-    } else {
-      next[id] = perm;
-    }
+    const next = { ...parsed.knowledgeBases, [id]: { ...current, [key]: on } };
     applyKnowledgeBases(next);
   };
 
@@ -83,22 +81,22 @@ export function KbEditingConfigPanel({
               </label>
               {isOn && (
                 <div className="flex shrink-0 items-center gap-4">
-                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-2 text-sm text-muted-foreground">
                     {t("editor.knowledge.editing.createLabel")}
                     <Switch
                       checked={perms.create}
                       onCheckedChange={(v) => setPermission(ctx.id, "create", v)}
                       aria-label={t("editor.knowledge.editing.createLabel")}
                     />
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  </span>
+                  <span className="flex items-center gap-2 text-sm text-muted-foreground">
                     {t("editor.knowledge.editing.updateLabel")}
                     <Switch
                       checked={perms.update}
                       onCheckedChange={(v) => setPermission(ctx.id, "update", v)}
                       aria-label={t("editor.knowledge.editing.updateLabel")}
                     />
-                  </label>
+                  </span>
                 </div>
               )}
             </div>

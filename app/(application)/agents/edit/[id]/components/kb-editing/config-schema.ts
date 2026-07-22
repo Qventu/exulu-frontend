@@ -43,7 +43,10 @@ export const parseKbEditingConfig = (
   if (kbsRaw && typeof kbsRaw === "object" && !Array.isArray(kbsRaw)) {
     for (const [id, value] of Object.entries(kbsRaw as Record<string, unknown>)) {
       const parsed = permissionSchema.safeParse(value);
-      if (parsed.success && (parsed.data.create || parsed.data.update)) {
+      // Both-false entries are kept: the row stays visible in the config
+      // sheet (flipping its last switch off must not uncheck it). The
+      // backend parser drops them, so a both-false entry grants nothing.
+      if (parsed.success) {
         result.knowledgeBases[id] = parsed.data;
       }
     }
