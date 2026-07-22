@@ -945,6 +945,7 @@
       "partialError": "Einige Budgetdaten konnten nicht geladen werden."
     },
     "bar": {
+      "details": "Details",
       "detailsAria": "Budgetdetails für {name}",
       "label": "Budget",
       "usedOfMax": "{spend} von {max} verbraucht",
@@ -4003,6 +4004,25 @@
       "savedTitle": "Einstellungen gespeichert",
       "saving": "Wird gespeichert…",
       "title": "Persönlicher System-Prompt"
+    },
+    "usage": {
+      "colFailed": "Fehlgeschlagen",
+      "colModel": "Modell",
+      "colRequests": "Anfragen",
+      "colSpend": "Ausgaben",
+      "colTokens": "Tokens",
+      "description": "Welche Modelle Sie zuletzt genutzt haben und wie viel.",
+      "empty": "Keine Nutzung in diesem Zeitraum.",
+      "error": "Ihre Nutzungsdaten konnten nicht geladen werden.",
+      "range7": "7 Tage",
+      "range30": "30 Tage",
+      "range90": "90 Tage",
+      "rangeLabel": "Zeitraum",
+      "retry": "Erneut versuchen",
+      "title": "Nutzung",
+      "totalRequests": "Anfragen",
+      "totalSpend": "Ausgaben",
+      "totalTokens": "Tokens"
     }
   },
   "skills": {

@@ -945,6 +945,7 @@
       "partialError": "Some budget data couldn't be loaded."
     },
     "bar": {
+      "details": "Details",
       "detailsAria": "Budget details for {name}",
       "label": "Budget",
       "usedOfMax": "{spend} of {max} used",
@@ -4003,6 +4004,25 @@
       "savedTitle": "Settings saved",
       "saving": "Saving…",
       "title": "Personal system prompt"
+    },
+    "usage": {
+      "colFailed": "Failed",
+      "colModel": "Model",
+      "colRequests": "Requests",
+      "colSpend": "Spend",
+      "colTokens": "Tokens",
+      "description": "Which models you used recently and how much.",
+      "empty": "No usage in this period.",
+      "error": "Couldn't load your usage.",
+      "range7": "7 days",
+      "range30": "30 days",
+      "range90": "90 days",
+      "rangeLabel": "Time range",
+      "retry": "Retry",
+      "title": "Usage",
+      "totalRequests": "Requests",
+      "totalSpend": "Spend",
+      "totalTokens": "Tokens"
     }
   },
   "skills": {
