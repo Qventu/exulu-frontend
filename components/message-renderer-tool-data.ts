@@ -202,6 +202,20 @@ export function computeUntypedToolData(
     }
   }
 
+  // Auth short-circuits (tool-credentials spec 2026-07-22 §2.2): the oauth
+  // variant carries model-facing text in `result` (not JSON) and the
+  // credentialRequest variant carries result: null — both must reach the
+  // untyped tool renderer, which owns the connect/credential cards. Without
+  // this guard the oauth text falls into the unparseable-result ok=false
+  // branch below and nothing renders.
+  if (
+    output &&
+    typeof output === "object" &&
+    (output.credentialRequest || output.oauth?.authorizationUrl)
+  ) {
+    return base;
+  }
+
   let result: any = output?.result;
   if (typeof result === "string") {
     try {

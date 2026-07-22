@@ -1087,6 +1087,7 @@
       "oauthConnect": "Verbinden",
       "oauthDescription": "Dieses Tool benötigt eine Autorisierung. Verbinde dein Konto im neuen Tab und komm dann hierher zurück.",
       "oauthDone": "Verbunden — erneut versuchen",
+      "oauthResumeMessage": "{provider} verbunden — bitte erneut versuchen.",
       "required": "Erforderlich",
       "resumeMessage": "{provider}-Zugangsdaten gespeichert — bitte erneut versuchen.",
       "submit": "Speichern & erneut versuchen",

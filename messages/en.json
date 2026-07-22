@@ -1087,6 +1087,7 @@
       "oauthConnect": "Connect",
       "oauthDescription": "This tool needs authorization. Connect your account in the new tab, then come back here.",
       "oauthDone": "I've connected — retry",
+      "oauthResumeMessage": "{provider} connected — please retry.",
       "required": "Required",
       "resumeMessage": "{provider} credentials saved — please retry.",
       "submit": "Save & retry",

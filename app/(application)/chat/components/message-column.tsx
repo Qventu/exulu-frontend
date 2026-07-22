@@ -95,7 +95,7 @@ export interface MessageColumnProps {
  */
 function makeUntypedToolPart(
   onApproveForChat: (toolId: string) => void,
-  onCredentialResume: (provider: string) => void,
+  onCredentialResume: (provider: string, kind?: "credentials" | "oauth") => void,
   guestMode: boolean,
 ) {
   const UntypedToolPart = ({
@@ -154,7 +154,7 @@ function makeUntypedToolPart(
           toolCallId={toolCallId}
           payload={oauthRequest!}
           providerLabel={styleToolName}
-          onSubmitted={onCredentialResume}
+          onSubmitted={(provider) => onCredentialResume(provider, "oauth")}
         />
       );
     }
@@ -225,11 +225,19 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
     sendUserMessageRef.current = controller.sendUserMessage;
     tRef.current = t;
   });
-  const handleCredentialResume = useCallback((provider: string) => {
-    void sendUserMessageRef.current(
-      tRef.current("credentials.resumeMessage", { provider }),
-    );
-  }, []);
+  const handleCredentialResume = useCallback(
+    (provider: string, kind: "credentials" | "oauth" = "credentials") => {
+      void sendUserMessageRef.current(
+        tRef.current(
+          kind === "oauth"
+            ? "credentials.oauthResumeMessage"
+            : "credentials.resumeMessage",
+          { provider },
+        ),
+      );
+    },
+    [],
+  );
 
   /* eslint-disable react-hooks/refs -- false positive: the factory only
      CAPTURES handleCredentialResume; its ref reads happen in a click

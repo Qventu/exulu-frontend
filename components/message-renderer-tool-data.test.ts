@@ -60,6 +60,17 @@ describe("computeUntypedToolData", () => {
     expect(data.part).toBe(part);
   });
 
+  it("passes an oauth short-circuit output through with ok=true despite the non-JSON result text", () => {
+    const output = {
+      result: "Authorization required. Show the user this link: https://auth.atlassian.com/authorize?x=1",
+      oauth: { authorizationUrl: "https://auth.atlassian.com/authorize?x=1" },
+    };
+    const part = toolPart({ output });
+    const data = computeUntypedToolData(part);
+    expect(data.ok).toBe(true);
+    expect((data.part.output as any).oauth.authorizationUrl).toContain("atlassian");
+  });
+
   it("passes a credentialRequest short-circuit output through with ok=true", () => {
     const output = {
       credentialRequest: {
