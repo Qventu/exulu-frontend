@@ -82,10 +82,11 @@ export function AppSidebar({ user, onSendFeedback }: AppSidebarProps) {
     [user, config],
   );
 
-  // Needs-attention badge on the flag-gated /runs entry (design §7.3).
+  // Needs-attention badge on the Routines entry (design §7.3 — the runs
+  // console lives on /workflows underneath the routines table).
   const runsAttentionCount = useRunsAttentionCount(user);
   const badges = React.useMemo<Partial<Record<string, number>>>(
-    () => ({ runs: runsAttentionCount }),
+    () => ({ routines: runsAttentionCount }),
     [runsAttentionCount],
   );
 
