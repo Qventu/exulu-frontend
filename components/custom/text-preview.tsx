@@ -45,7 +45,7 @@ export function TextPreview({
                 onClick={downloadAsFile}
                 className="cursor-pointer text-sm text-left w-full hover:bg-accent/70 active:bg-accent transition-all rounded-lg p-3 group border border-transparent hover:border-border hover:shadow-sm"
             >
-                <span className="block leading-relaxed text-foreground/90 group-hover:text-foreground transition-colors">
+                <span className="block break-words leading-relaxed text-foreground/90 group-hover:text-foreground transition-colors">
                     {text?.slice(0, displayLength)}
                     <span className="text-muted-foreground">...</span>
                 </span>
@@ -61,7 +61,7 @@ export function TextPreview({
         <Dialog>
             <DialogTrigger asChild>
                 <button className="cursor-pointer text-sm text-left w-full hover:bg-accent/70 active:bg-accent transition-all rounded-lg p-3 group border border-transparent hover:border-border hover:shadow-sm">
-                    <span className="block leading-relaxed text-foreground/90 group-hover:text-foreground transition-colors">
+                    <span className="block break-words leading-relaxed text-foreground/90 group-hover:text-foreground transition-colors">
                         {text?.slice(0, displayLength)}
                         {isTruncated && <span className="text-muted-foreground">...</span>}
                     </span>
