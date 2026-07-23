@@ -74,8 +74,12 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   const { agents, agentName, loading: agentsLoading } = useProjectAgents();
   const { favoriteIds, toggleFavorite } = useFavoriteProjects();
   const deleteProjectCascade = useDeleteProjectCascade();
-  const { downloadCoworkConfig, downloadClaudeCodeConfig, downloadContinueDevConfig } =
-    useProjectConfigDownloads(projectId, project?.name ?? "");
+  const {
+    downloadCoworkConfig,
+    downloadClaudeCodeConfig,
+    downloadContinueDevConfig,
+    downloadJunieConfig,
+  } = useProjectConfigDownloads(projectId, project?.name ?? "");
 
   /* ------------------------- URL-backed tab state ------------------------- */
 
@@ -304,8 +308,13 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
                 {
                   label: t("detail.downloadContinueDevConfig"),
                   icon: Download,
-                  dividerAfter: true,
                   onSelect: downloadContinueDevConfig,
+                },
+                {
+                  label: t("detail.downloadJunieConfig"),
+                  icon: Download,
+                  dividerAfter: true,
+                  onSelect: downloadJunieConfig,
                 },
                 {
                   label: t("detail.editDetails"),
