@@ -20,6 +20,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import {
+  Archive,
   Brain,
   FileText,
   FolderOpen,
@@ -44,6 +45,7 @@ export interface AttachMenuProps {
   onOpenPrompts: () => void;
   onOpenContext: () => void;
   onOpenCapabilities: () => void;
+  onCompactRequest: () => void;
 }
 
 function MenuEntry({
@@ -95,6 +97,7 @@ export function AttachMenu({
   onOpenPrompts,
   onOpenContext,
   onOpenCapabilities,
+  onCompactRequest,
 }: AttachMenuProps) {
   const t = useTranslations("chat");
   const [open, setOpen] = React.useState(false);
@@ -112,6 +115,19 @@ export function AttachMenu({
   const disabledCount = capabilityIds.filter((id) =>
     controller.disabledTools.includes(id),
   ).length;
+
+  const session = controller.session;
+  const isNewSession = !session || session.id === "new";
+  const isBusy =
+    controller.status === "streaming" || controller.status === "submitted";
+  const compactDisabled = isNewSession || isBusy || controller.compacting;
+  const compactDisabledDescription = isNewSession
+    ? t("attach.compactDisabledNew")
+    : isBusy
+      ? t("attach.compactDisabledStreaming")
+      : controller.compacting
+        ? t("attach.compactDisabledRunning")
+        : t("attach.compactDescription");
 
   const select = (action: () => void) => {
     setOpen(false);
@@ -185,6 +201,13 @@ export function AttachMenu({
             onSelect={() => select(onOpenCapabilities)}
           />
         )}
+        <MenuEntry
+          icon={Archive}
+          label={t("attach.compact")}
+          description={compactDisabledDescription}
+          disabled={compactDisabled}
+          onSelect={() => select(onCompactRequest)}
+        />
       </PopoverContent>
     </Popover>
   );
