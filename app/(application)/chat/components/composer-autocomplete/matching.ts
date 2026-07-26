@@ -138,6 +138,10 @@ export function filterSuggestions(items: Suggestion[], query: string): Suggestio
   );
   const isPrefix = (item: Suggestion) =>
     item.name.toLowerCase().startsWith(q) || item.displayName.toLowerCase().startsWith(q);
+  // Ranking within substringMatches: commands first, then non-commands;
+  // prefix matches ahead of non-prefix within each kind bucket. Callers
+  // typically pass single-kind lists but the mixed-list case (the
+  // "ranks commands before matching tools" test) has to work too.
   return [
     ...commandHits,
     ...substringMatches.filter((m) => m.kind === "command" && isPrefix(m)),
