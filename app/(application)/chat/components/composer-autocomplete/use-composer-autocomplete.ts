@@ -9,6 +9,7 @@
 
 import * as React from "react";
 import { useLazyQuery } from "@apollo/client";
+import { useTranslations } from "next-intl";
 
 import { sessionFilesApi, type SessionFile } from "@/lib/api/session-files";
 import type { AgentTool } from "@/types/models/agent";
@@ -45,6 +46,10 @@ export interface UseComposerAutocompleteArgs {
   input: string;
   setInput: (value: string) => void;
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
+  /** Called when the user Enter/Tab/clicks on a command row. Args is
+   *  the trigger query with the command name stripped, trimmed. Empty
+   *  string means "no args" — the caller decides how to interpret. */
+  onExecuteCommand: (id: string, args: string) => void;
 }
 
 export interface ComposerAutocomplete {
@@ -69,8 +74,27 @@ export function useComposerAutocomplete({
   input,
   setInput,
   inputRef,
+  onExecuteCommand,
 }: UseComposerAutocompleteArgs): ComposerAutocomplete {
   const { agent, maxInputLength } = controller;
+
+  const t = useTranslations("chat");
+
+  // Static command registry (v1: one entry). Kept inline; promote to its own
+  // module when a second command lands. Args typed as string (never undefined)
+  // so onExecuteCommand branches on kind, not arg presence.
+  const COMMANDS = React.useMemo<Suggestion[]>(
+    () => [
+      {
+        id: "cmd:compact",
+        kind: "command",
+        name: "compact",
+        displayName: "compact",
+        description: t("commands.compact.description"),
+      },
+    ],
+    [t],
+  );
 
   // ── Caret tracking ───────────────────────────────────────────────────────
   const [caret, setCaret] = React.useState(0);
@@ -94,7 +118,7 @@ export function useComposerAutocomplete({
     [agent.tools],
   );
   const skills = React.useMemo(() => agent.skills ?? [], [agent.skills]);
-  const slashEnabled = tools.length > 0 || skills.length > 0;
+  const slashEnabled = tools.length > 0 || skills.length > 0 || COMMANDS.length > 0;
   const atEnabled = Boolean(agent.sandbox_enabled);
 
   const trigger = React.useMemo(
@@ -202,17 +226,20 @@ export function useComposerAutocomplete({
     [sessionFiles],
   );
 
-  // ── Filtering (flat, group-ordered: tools then skills / files) ──────────
+  // ── Filtering (flat, group-ordered: commands then tools then skills / files) ──────────
   const items = React.useMemo<Suggestion[]>(() => {
     if (!trigger) return [];
     if (trigger.kind === "/") {
+      // Commands rank first (rule enforced by filterSuggestions when the
+      // query starts with a command name; otherwise substring matches).
       return [
+        ...filterSuggestions(COMMANDS, trigger.query),
         ...filterSuggestions(toolItems, trigger.query),
         ...filterSuggestions(skillItems, trigger.query),
       ];
     }
     return filterSuggestions(fileItems, trigger.query);
-  }, [trigger, toolItems, skillItems, fileItems]);
+  }, [trigger, COMMANDS, toolItems, skillItems, fileItems]);
 
   const menuOpen =
     !!trigger &&
@@ -230,6 +257,24 @@ export function useComposerAutocomplete({
   const applySuggestion = React.useCallback(
     (item: Suggestion) => {
       if (!trigger) return;
+
+      // Commands execute instead of inserting text. Args = trigger.query
+      // with the command name stripped from the front (case-insensitive)
+      // and trimmed. The submit-time interception path (composer.tsx)
+      // uses a regex on the full input instead.
+      if (item.kind === "command") {
+        const q = trigger.query;
+        const lowerQ = q.toLowerCase();
+        const lowerName = item.name.toLowerCase();
+        const rest = lowerQ.startsWith(lowerName) ? q.slice(item.name.length) : q;
+        setEscapedKey(triggerKey(trigger));
+        onExecuteCommand(item.id, rest.trim());
+        // Clear the whole textarea so the command doesn't linger as text.
+        setInput("");
+        inputRef.current?.focus();
+        return;
+      }
+
       const result = insertToken(input, trigger, caret, item.name);
       if (result.text.length > maxInputLength) {
         // Would overflow the input cap: skip the insert, dismiss the menu.
@@ -249,7 +294,7 @@ export function useComposerAutocomplete({
         setCaret(result.caret);
       });
     },
-    [trigger, input, caret, maxInputLength, setInput, inputRef],
+    [trigger, input, caret, maxInputLength, setInput, inputRef, onExecuteCommand],
   );
 
   // ── Keyboard contract (returns true when the event was consumed) ────────
