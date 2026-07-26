@@ -110,8 +110,11 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
   // Shared helper: compact conversation and show a success toast.
   // Declared before useComposerAutocomplete so its onExecuteCommand closure
   // can reference it without a use-before-declaration error.
+  // Returns true when compaction was accepted, false when the controller
+  // no-ops (new session / streaming / already compacting). The caller uses
+  // the return value to decide whether to restore the cleared input.
   const executeCompactCommand = useCallback(
-    async (steer?: string) => {
+    async (steer?: string): Promise<boolean> => {
       const cleaned = steer?.trim();
       const ok = await controller.compactConversation(
         cleaned && cleaned.length > 0 ? cleaned : undefined,
@@ -120,8 +123,20 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
       // On failure controller.compactConversation already calls setError with
       // the right key (context.insufficientError or the raw server message);
       // no extra toast here to avoid double-surfacing.
+      return ok;
     },
     [controller, t],
+  );
+
+  // Memoized command handler — avoids busting the applySuggestion closure
+  // inside useComposerAutocomplete on every render.
+  const handleExecuteCommand = useCallback(
+    (id: string, args: string) => {
+      // Only one command exists today. Branch on id to keep the surface
+      // extensible if a second one lands (v1: cmd:compact).
+      if (id === "cmd:compact") void executeCompactCommand(args);
+    },
+    [executeCompactCommand],
   );
 
   // Inline "/" (tools & skills) and "@" (session files) autocomplete
@@ -131,13 +146,8 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
     input,
     setInput,
     inputRef,
-    onExecuteCommand: (id, args) => {
-      // Only one command exists today. Branch on id to keep the surface
-      // extensible if a second one lands (v1: cmd:compact).
-      if (id === "cmd:compact") {
-        void executeCompactCommand(args);
-      }
-    },
+    onExecuteCommand: handleExecuteCommand,
+    guestMode,
   });
 
   // Overlay flags (Esc priority chain, item 77).
@@ -306,11 +316,16 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
     // Slash-command interception: users can type "/compact [focus...]" and
     // hit Enter without opening the menu. Runs even when contextBlocked,
     // since compaction is the way OUT of the blocked state.
-    const compactParse = parseCompactInput(input);
-    if (compactParse.isCompact) {
-      setInput("");
-      await executeCompactCommand(compactParse.steer);
-      return;
+    // Skipped in guest mode — guests have no access to /compact.
+    if (!guestMode) {
+      const compactParse = parseCompactInput(input);
+      if (compactParse.isCompact) {
+        const text = input;
+        setInput("");
+        const ok = await executeCompactCommand(compactParse.steer);
+        if (!ok) setInput(text);
+        return;
+      }
     }
 
     if (contextBlocked) {

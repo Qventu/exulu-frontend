@@ -264,8 +264,11 @@ describe("parseCompactInput", () => {
     expect(parseCompactInput("  /compact  ")).toEqual({ isCompact: true, steer: undefined });
   });
 
-  it("rejects inputs that only contain '/compact' mid-text", () => {
+  it("rejects '/compact' when it is not at the start of the input", () => {
     expect(parseCompactInput("hey /compact")).toEqual({ isCompact: false });
+  });
+
+  it("treats a newline after '/compact' as the steer separator", () => {
     expect(parseCompactInput("/compact\nsecond line")).toEqual({
       isCompact: true,
       steer: "second line",

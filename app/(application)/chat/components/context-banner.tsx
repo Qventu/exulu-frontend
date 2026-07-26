@@ -157,7 +157,10 @@ export function ContextBanner({
         ) : !blocked ? (
           <button
             type="button"
-            onClick={() => setDismissedAtPct(percent)}
+            onClick={() => {
+              setDismissedAtPct(percent);
+              onCloseManual?.();
+            }}
             aria-label={t("context.dismiss")}
             className="-my-1 -mr-1 flex size-6 shrink-0 items-center justify-center rounded-md transition-colors duration-150 hover:bg-accent"
           >

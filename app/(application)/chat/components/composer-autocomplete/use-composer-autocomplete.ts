@@ -50,6 +50,9 @@ export interface UseComposerAutocompleteArgs {
    *  the trigger query with the command name stripped, trimmed. Empty
    *  string means "no args" — the caller decides how to interpret. */
   onExecuteCommand: (id: string, args: string) => void;
+  /** When true (guest/public chat), the "/" command menu is suppressed and
+   *  no command rows appear. Defaults to false. */
+  guestMode?: boolean;
 }
 
 export interface ComposerAutocomplete {
@@ -75,6 +78,7 @@ export function useComposerAutocomplete({
   setInput,
   inputRef,
   onExecuteCommand,
+  guestMode = false,
 }: UseComposerAutocompleteArgs): ComposerAutocomplete {
   const { agent, maxInputLength } = controller;
 
@@ -83,17 +87,21 @@ export function useComposerAutocomplete({
   // Static command registry (v1: one entry). Kept inline; promote to its own
   // module when a second command lands. Args typed as string (never undefined)
   // so onExecuteCommand branches on kind, not arg presence.
+  // Commands are hidden in guest mode (public/password/guest-auth chat).
   const COMMANDS = React.useMemo<Suggestion[]>(
-    () => [
-      {
-        id: "cmd:compact",
-        kind: "command",
-        name: "compact",
-        displayName: "compact",
-        description: t("commands.compact.description"),
-      },
-    ],
-    [t],
+    () =>
+      guestMode
+        ? []
+        : [
+            {
+              id: "cmd:compact",
+              kind: "command",
+              name: "compact",
+              displayName: "compact",
+              description: t("commands.compact.description"),
+            },
+          ],
+    [t, guestMode],
   );
 
   // ── Caret tracking ───────────────────────────────────────────────────────
@@ -264,9 +272,9 @@ export function useComposerAutocomplete({
       // uses a regex on the full input instead.
       if (item.kind === "command") {
         const q = trigger.query;
-        const lowerQ = q.toLowerCase();
-        const lowerName = item.name.toLowerCase();
-        const rest = lowerQ.startsWith(lowerName) ? q.slice(item.name.length) : q;
+        const rest = q.toLowerCase().startsWith(item.name.toLowerCase())
+          ? q.slice(item.name.length)
+          : q;
         setEscapedKey(triggerKey(trigger));
         onExecuteCommand(item.id, rest.trim());
         // Clear the whole textarea so the command doesn't linger as text.

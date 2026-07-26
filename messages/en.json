@@ -1149,7 +1149,6 @@
     "commands": {
       "compact": {
         "description": "Summarize earlier messages to free context",
-        "label": "compact",
         "successToast": "Conversation compacted"
       }
     },

@@ -1149,7 +1149,6 @@
     "commands": {
       "compact": {
         "description": "Frühere Nachrichten zusammenfassen, um Kontext freizugeben",
-        "label": "compact",
         "successToast": "Konversation komprimiert"
       }
     },
