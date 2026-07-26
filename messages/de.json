@@ -1119,6 +1119,11 @@
       "addKnowledge": "Wissen hinzufügen",
       "addKnowledgeDescription": "Kontexte oder Elemente für diesen Chat anheften",
       "addKnowledgeManagedNote": "Verwalteter Kontext: Der Agent durchsucht nur, was du hier hinzufügst.",
+      "compact": "Konversation komprimieren",
+      "compactDescription": "Frühere Nachrichten zusammenfassen, um Kontext freizugeben",
+      "compactDisabledNew": "Sende zuerst eine Nachricht, bevor du komprimierst.",
+      "compactDisabledRunning": "Komprimierung läuft bereits.",
+      "compactDisabledStreaming": "Warte, bis die aktuelle Antwort fertig ist.",
       "disabledCount": "{count} aus",
       "insertPrompt": "Prompt einfügen",
       "insertPromptDescription": "Eine Vorlage aus der Bibliothek verwenden",
@@ -1141,24 +1146,34 @@
       "title": "Skills & Tools",
       "tools": "Tools"
     },
+    "commands": {
+      "compact": {
+        "description": "Frühere Nachrichten zusammenfassen, um Kontext freizugeben",
+        "successToast": "Konversation komprimiert"
+      }
+    },
     "context": {
-      "warnTitle": "Kontextlimit fast erreicht",
-      "warnBody": "Diese Unterhaltung nutzt {percent}% des Kontextfensters des Modells. Komprimiere sie, damit der Agent schnell und präzise bleibt.",
-      "blockedTitle": "Kontextlimit erreicht",
       "blockedBody": "Diese Unterhaltung passt nicht mehr in das Kontextfenster des Modells. Komprimiere sie, um fortzufahren.",
+      "blockedToastDescription": "Komprimiere die Unterhaltung, bevor du neue Nachrichten sendest.",
+      "blockedToastTitle": "Kontextlimit erreicht",
+      "blockedTitle": "Kontextlimit erreicht",
       "compact": "Unterhaltung komprimieren",
       "compacting": "Unterhaltung wird zusammengefasst…",
-      "steerToggle": "Etwas, das im Detail erhalten bleiben soll?",
-      "steerPlaceholder": "z. B. die genauen Zahlen aus den Serviceberichten behalten",
       "dismiss": "Ausblenden",
       "insufficientError": "Diese Unterhaltung kann nicht weiter komprimiert werden — bitte starte einen neuen Chat.",
-      "blockedToastTitle": "Kontextlimit erreicht",
-      "blockedToastDescription": "Komprimiere die Unterhaltung, bevor du neue Nachrichten sendest.",
-      "placeholderBlocked": "Komprimiere die Unterhaltung, um fortzufahren…"
+      "manualBody": "Fasse frühere Nachrichten in einem Checkpoint zusammen, um Kontext freizugeben. Ältere Nachrichten bleiben im Verlauf; das Modell sieht nur die Zusammenfassung.",
+      "manualClose": "Schließen",
+      "manualTitle": "Konversation komprimieren",
+      "placeholderBlocked": "Komprimiere die Unterhaltung, um fortzufahren…",
+      "steerPlaceholder": "z. B. die genauen Zahlen aus den Serviceberichten behalten",
+      "steerToggle": "Etwas, das im Detail erhalten bleiben soll?",
+      "warnBody": "Diese Unterhaltung nutzt {percent}% des Kontextfensters des Modells. Komprimiere sie, damit der Agent schnell und präzise bleibt.",
+      "warnTitle": "Kontextlimit fast erreicht"
     },
     "composer": {
       "attachmentsLabel": "Anhänge",
       "autocomplete": {
+        "commandsGroup": "Befehle",
         "filesError": "Sitzungsdateien konnten nicht geladen werden",
         "filesGroup": "Sitzungsdateien",
         "listLabel": "Vorschläge zur Autovervollständigung",

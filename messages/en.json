@@ -1119,6 +1119,11 @@
       "addKnowledge": "Add knowledge",
       "addKnowledgeDescription": "Pin contexts or items for this chat",
       "addKnowledgeManagedNote": "Managed context: the agent only searches what you add here.",
+      "compact": "Compact conversation",
+      "compactDescription": "Summarize earlier messages to free context",
+      "compactDisabledNew": "Send at least one message before compacting.",
+      "compactDisabledRunning": "Compaction is already running.",
+      "compactDisabledStreaming": "Wait for the current response to finish.",
       "disabledCount": "{count} off",
       "insertPrompt": "Insert prompt",
       "insertPromptDescription": "Use a template from the library",
@@ -1141,24 +1146,34 @@
       "title": "Skills & tools",
       "tools": "Tools"
     },
+    "commands": {
+      "compact": {
+        "description": "Summarize earlier messages to free context",
+        "successToast": "Conversation compacted"
+      }
+    },
     "context": {
-      "warnTitle": "Approaching the context limit",
-      "warnBody": "This conversation uses {percent}% of the model's context window. Compact it to keep the agent fast and accurate.",
-      "blockedTitle": "Context limit reached",
       "blockedBody": "This conversation no longer fits the model's context window. Compact it to continue.",
+      "blockedToastDescription": "Compact the conversation before sending new messages.",
+      "blockedToastTitle": "Context limit reached",
+      "blockedTitle": "Context limit reached",
       "compact": "Compact conversation",
       "compacting": "Summarizing conversation…",
-      "steerToggle": "Anything to preserve in detail?",
-      "steerPlaceholder": "e.g. keep the exact figures from the service reports",
       "dismiss": "Dismiss",
       "insufficientError": "This conversation can't be compacted further — please start a new chat.",
-      "blockedToastTitle": "Context limit reached",
-      "blockedToastDescription": "Compact the conversation before sending new messages.",
-      "placeholderBlocked": "Compact the conversation to continue…"
+      "manualBody": "Summarize earlier messages into a checkpoint to free context. Older messages stay in your history; the model will only see the summary.",
+      "manualClose": "Close",
+      "manualTitle": "Compact conversation",
+      "placeholderBlocked": "Compact the conversation to continue…",
+      "steerPlaceholder": "e.g. keep the exact figures from the service reports",
+      "steerToggle": "Anything to preserve in detail?",
+      "warnBody": "This conversation uses {percent}% of the model's context window. Compact it to keep the agent fast and accurate.",
+      "warnTitle": "Approaching the context limit"
     },
     "composer": {
       "attachmentsLabel": "Attachments",
       "autocomplete": {
+        "commandsGroup": "Commands",
         "filesError": "Couldn't load session files",
         "filesGroup": "Session files",
         "listLabel": "Autocomplete suggestions",

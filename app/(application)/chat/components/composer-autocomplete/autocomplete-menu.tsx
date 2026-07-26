@@ -10,7 +10,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { File, Sparkles, Wrench, type LucideIcon } from "lucide-react";
+import { Archive, File, Sparkles, Wrench, type LucideIcon } from "lucide-react";
 
 import { Loading } from "@/components/primitives/loading";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ import type { Suggestion } from "./matching";
 import { optionId, type ComposerAutocomplete } from "./use-composer-autocomplete";
 
 const KIND_ICON: Record<Suggestion["kind"], LucideIcon> = {
+  command: Archive,
   tool: Wrench,
   skill: Sparkles,
   file: File,
@@ -50,6 +51,7 @@ export function AutocompleteMenu({
   if (!menuOpen) return null;
 
   const groupLabel: Record<Suggestion["kind"], string> = {
+    command: t("composer.autocomplete.commandsGroup"),
     tool: t("composer.autocomplete.toolsGroup"),
     skill: t("composer.autocomplete.skillsGroup"),
     file: t("composer.autocomplete.filesGroup"),

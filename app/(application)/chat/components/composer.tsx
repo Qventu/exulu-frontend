@@ -68,6 +68,7 @@ import { SavePresetModal } from "./save-preset-modal";
 import { AutocompleteMenu } from "./composer-autocomplete/autocomplete-menu";
 import { HighlightOverlay } from "./composer-autocomplete/highlight-overlay";
 import { useComposerAutocomplete } from "./composer-autocomplete/use-composer-autocomplete";
+import { parseCompactInput } from "./composer-autocomplete/matching";
 
 export interface ComposerProps {
   controller: ChatSessionController;
@@ -105,6 +106,39 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Shared helper: compact conversation and show a success toast.
+  // Declared before useComposerAutocomplete so its onExecuteCommand closure
+  // can reference it without a use-before-declaration error.
+  // Returns true when compaction was accepted, false when the controller
+  // no-ops (new session / streaming / already compacting). The caller uses
+  // the return value to decide whether to restore the cleared input.
+  const executeCompactCommand = useCallback(
+    async (steer?: string): Promise<boolean> => {
+      const cleaned = steer?.trim();
+      const ok = await controller.compactConversation(
+        cleaned && cleaned.length > 0 ? cleaned : undefined,
+      );
+      if (ok) toast.success(t("commands.compact.successToast"));
+      // On failure controller.compactConversation already calls setError with
+      // the right key (context.insufficientError or the raw server message);
+      // no extra toast here to avoid double-surfacing.
+      return ok;
+    },
+    [controller, t],
+  );
+
+  // Memoized command handler — avoids busting the applySuggestion closure
+  // inside useComposerAutocomplete on every render.
+  const handleExecuteCommand = useCallback(
+    (id: string, args: string) => {
+      // Only one command exists today. Branch on id to keep the surface
+      // extensible if a second one lands (v1: cmd:compact).
+      if (id === "cmd:compact") void executeCompactCommand(args);
+    },
+    [executeCompactCommand],
+  );
+
   // Inline "/" (tools & skills) and "@" (session files) autocomplete
   // (spec 2026-07-07). Pure logic in composer-autocomplete/matching.ts.
   const autocomplete = useComposerAutocomplete({
@@ -112,6 +146,8 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
     input,
     setInput,
     inputRef,
+    onExecuteCommand: handleExecuteCommand,
+    guestMode,
   });
 
   // Overlay flags (Esc priority chain, item 77).
@@ -124,6 +160,10 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
   const [activePreset, setActivePreset] = useState<ContextPreset | null>(null);
   // Preset being edited via SavePresetModal's edit mode (metadata + sharing).
   const [editingPreset, setEditingPreset] = useState<ContextPreset | null>(null);
+
+  // Composer-local: AttachMenu → ContextBanner (manual mode) handshake.
+  // Cleared by ContextBanner on close/success via onCloseManual.
+  const [manualCompactOpen, setManualCompactOpen] = useState(false);
 
   // Speech-to-text state machine (item 62). Feature hidden unless the shared
   // config enables transcription (EXULU_USE_LITELLM + TRANSCRIPTION_MODEL).
@@ -272,6 +312,21 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
   // ── Send / stop (items 60/61) ───────────────────────────────────────────
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
+
+    // Slash-command interception: users can type "/compact [focus...]" and
+    // hit Enter without opening the menu. Runs even when contextBlocked,
+    // since compaction is the way OUT of the blocked state.
+    // Skipped in guest mode — guests have no access to /compact.
+    if (!guestMode) {
+      const compactParse = parseCompactInput(input);
+      if (compactParse.isCompact) {
+        const text = input;
+        setInput("");
+        const ok = await executeCompactCommand(compactParse.steer);
+        if (!ok) setInput(text);
+        return;
+      }
+    }
 
     if (contextBlocked) {
       toast.error(t("context.blockedToastTitle"), {
@@ -488,7 +543,11 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
 
       <div className={CHAT_COLUMN}>
         {/* Context-window warn/blocked banner (context-window-management §5b) */}
-        <ContextBanner controller={controller} />
+        <ContextBanner
+          controller={controller}
+          manualOpen={manualCompactOpen}
+          onCloseManual={() => setManualCompactOpen(false)}
+        />
 
         {/* Managed-context one-time dismissible hint (item 72) */}
         {controller.managedContextEnabled && !managedHintDismissed && (
@@ -525,6 +584,7 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
                   onOpenPrompts={() => setPromptSelectorOpen(true)}
                   onOpenContext={() => setContextModalOpen(true)}
                   onOpenCapabilities={() => setCapabilitiesOpen(true)}
+                  onCompactRequest={() => setManualCompactOpen(true)}
                 />
                 {/* Skills & tools surface (items 69/70 + 50 revocation). Mounted
                     here so its desktop popover anchors beside the ＋ trigger. */}

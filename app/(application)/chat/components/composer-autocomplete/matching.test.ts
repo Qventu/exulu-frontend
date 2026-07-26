@@ -5,6 +5,7 @@ import {
   findTokenRanges,
   insertToken,
   isAutoHidden,
+  parseCompactInput,
   type Suggestion,
 } from "./matching";
 
@@ -187,5 +188,98 @@ describe("isAutoHidden", () => {
     expect(isAutoHidden("my rep", 3)).toBe(false); // matches exist
     expect(isAutoHidden("webx", 0)).toBe(false); // zero matches but single word: show "No matches"
     expect(isAutoHidden("", 0)).toBe(false);
+  });
+});
+
+const cmd = (name: string, extra?: Partial<Suggestion>): Suggestion => ({
+  id: `cmd:${name}`,
+  kind: "command",
+  name,
+  displayName: name,
+  ...extra,
+});
+
+describe("filterSuggestions (command prefix rule)", () => {
+  const compact = cmd("compact", { description: "Summarize earlier messages" });
+  const tools = [sug("run_code"), sug("search_docs")];
+
+  it("keeps a command visible when the query is exactly the command name", () => {
+    expect(filterSuggestions([compact, ...tools], "compact").map((s) => s.name)).toEqual([
+      "compact",
+    ]);
+  });
+
+  it("keeps a command visible when the query is command name + space + args", () => {
+    expect(
+      filterSuggestions([compact, ...tools], "compact focus on the deploy").map((s) => s.name),
+    ).toEqual(["compact"]);
+  });
+
+  it("ranks commands before matching tools", () => {
+    const co = sug("count_rows");
+    expect(filterSuggestions([co, compact], "co").map((s) => s.name)).toEqual([
+      "compact",
+      "count_rows",
+    ]);
+  });
+
+  it("is case-insensitive on the command name", () => {
+    expect(filterSuggestions([compact], "COMPACT foo").map((s) => s.name)).toEqual(["compact"]);
+  });
+
+  it("does not match commands mid-word (e.g. /compactx)", () => {
+    expect(filterSuggestions([compact], "compactx").map((s) => s.name)).toEqual([]);
+  });
+
+  it("still returns commands via normal substring matching (partial name)", () => {
+    // "comp" is a substring of "compact" — normal substring rule catches it too
+    expect(filterSuggestions([compact], "comp").map((s) => s.name)).toEqual(["compact"]);
+  });
+});
+
+describe("parseCompactInput", () => {
+  it("matches '/compact' with no args", () => {
+    expect(parseCompactInput("/compact")).toEqual({ isCompact: true, steer: undefined });
+  });
+
+  it("matches '/compact ' (trailing space) with no args", () => {
+    expect(parseCompactInput("/compact ")).toEqual({ isCompact: true, steer: undefined });
+  });
+
+  it("captures trailing text as steer", () => {
+    expect(parseCompactInput("/compact focus on the deploy")).toEqual({
+      isCompact: true,
+      steer: "focus on the deploy",
+    });
+  });
+
+  it("trims the captured steer", () => {
+    expect(parseCompactInput("/compact   keep the numbers   ")).toEqual({
+      isCompact: true,
+      steer: "keep the numbers",
+    });
+  });
+
+  it("trims outer whitespace on the input", () => {
+    expect(parseCompactInput("  /compact  ")).toEqual({ isCompact: true, steer: undefined });
+  });
+
+  it("rejects '/compact' when it is not at the start of the input", () => {
+    expect(parseCompactInput("hey /compact")).toEqual({ isCompact: false });
+  });
+
+  it("treats a newline after '/compact' as the steer separator", () => {
+    expect(parseCompactInput("/compact\nsecond line")).toEqual({
+      isCompact: true,
+      steer: "second line",
+    });
+  });
+
+  it("rejects '/compactx'", () => {
+    expect(parseCompactInput("/compactx")).toEqual({ isCompact: false });
+  });
+
+  it("rejects the empty string", () => {
+    expect(parseCompactInput("")).toEqual({ isCompact: false });
   });
 });
