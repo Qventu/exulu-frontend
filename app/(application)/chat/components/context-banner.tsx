@@ -18,7 +18,15 @@ import { cn } from "@/lib/utils";
 import type { ChatSessionController } from "../hooks";
 import { deriveContextBudget } from "../lib/context-budget";
 
-export function ContextBanner({ controller }: { controller: ChatSessionController }) {
+export function ContextBanner({
+  controller,
+  manualOpen = false,
+  onCloseManual,
+}: {
+  controller: ChatSessionController;
+  manualOpen?: boolean;
+  onCloseManual?: () => void;
+}) {
   const t = useTranslations("chat");
   const { contextState, contextWindow, contextOccupancy, compacting, session, status } = controller;
 
@@ -30,7 +38,21 @@ export function ContextBanner({ controller }: { controller: ChatSessionControlle
   const budget = contextWindow ? deriveContextBudget(contextWindow) : null;
   const percent = budget ? Math.min(999, Math.round((contextOccupancy / budget.usableWindow) * 100)) : 0;
 
-  if (contextState === "ok" || !session || session.id === "new") return null;
+  // Manual mode wins only when there is no warn/blocked state to show — a
+  // real context alert takes visual priority and its own copy stays. The X
+  // still clears manualOpen (the close handler runs regardless of copy).
+  const manualMode = manualOpen && contextState === "ok";
+
+  // Manual mode is entered by the AttachMenu '+' entry — the steer input
+  // IS the reason the user opened it, so pre-open it as soon as manualMode
+  // flips true. Runs once per open-transition; if the user closes the
+  // steer input manually while manualMode is still true, we don't reopen.
+  React.useEffect(() => {
+    if (manualMode) setSteerOpen(true);
+  }, [manualMode]);
+
+  if (!session || session.id === "new") return null;
+  if (contextState === "ok" && !manualOpen) return null;
   const blocked = contextState === "blocked";
   if (!blocked && dismissedAtPct !== null && percent < dismissedAtPct + 5) return null;
 
@@ -42,6 +64,7 @@ export function ContextBanner({ controller }: { controller: ChatSessionControlle
       setSteer("");
       setSteerOpen(false);
       setDismissedAtPct(null);
+      onCloseManual?.();
     }
   };
 
@@ -51,17 +74,31 @@ export function ContextBanner({ controller }: { controller: ChatSessionControlle
       aria-live="polite"
       className={cn(
         "mb-2 rounded-md border px-3 py-2 text-xs",
-        "border-warning/50 bg-warning/10",
-        blocked ? "text-foreground" : "text-muted-foreground",
+        manualMode
+          ? "border-border bg-muted/30 text-foreground"
+          : "border-warning/50 bg-warning/10",
+        !manualMode && (blocked ? "text-foreground" : "text-muted-foreground"),
       )}
     >
       <div className="flex items-start gap-2">
-        <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-warning" aria-hidden="true" />
+        {manualMode ? (
+          <Archive className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+        ) : (
+          <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-warning" aria-hidden="true" />
+        )}
         <div className="min-w-0 flex-1">
           <span className="font-medium text-foreground">
-            {blocked ? t("context.blockedTitle") : t("context.warnTitle")}
+            {manualMode
+              ? t("context.manualTitle")
+              : blocked
+                ? t("context.blockedTitle")
+                : t("context.warnTitle")}
           </span>{" "}
-          — {blocked ? t("context.blockedBody") : t("context.warnBody", { percent })}
+          — {manualMode
+            ? t("context.manualBody")
+            : blocked
+              ? t("context.blockedBody")
+              : t("context.warnBody", { percent })}
           {steerOpen && (
             <input
               type="text"
@@ -104,7 +141,20 @@ export function ContextBanner({ controller }: { controller: ChatSessionControlle
             )}
           </div>
         </div>
-        {!blocked && (
+        {manualMode ? (
+          <button
+            type="button"
+            onClick={() => {
+              setSteerOpen(false);
+              setSteer("");
+              onCloseManual?.();
+            }}
+            aria-label={t("context.manualClose")}
+            className="-my-1 -mr-1 flex size-6 shrink-0 items-center justify-center rounded-md transition-colors duration-150 hover:bg-accent"
+          >
+            <X className="size-3.5" aria-hidden="true" />
+          </button>
+        ) : !blocked ? (
           <button
             type="button"
             onClick={() => setDismissedAtPct(percent)}
@@ -113,7 +163,7 @@ export function ContextBanner({ controller }: { controller: ChatSessionControlle
           >
             <X className="size-3.5" aria-hidden="true" />
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );
