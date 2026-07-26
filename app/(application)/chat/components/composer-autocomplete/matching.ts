@@ -129,27 +129,21 @@ export function filterSuggestions(items: Suggestion[], query: string): Suggestio
   const commandHits = items.filter(commandNameMatches);
   const commandHitIds = new Set(commandHits.map((c) => c.id));
 
-  const allMatches = items.filter(
+  const substringMatches = items.filter(
     (item) =>
       !commandHitIds.has(item.id) &&
       (item.name.toLowerCase().includes(q) ||
         item.displayName.toLowerCase().includes(q) ||
         (item.description?.toLowerCase().includes(q) ?? false)),
   );
-
-  // Separate commands and non-commands from all matches
-  const commandMatches = allMatches.filter((item) => item.kind === "command");
-  const nonCommandMatches = allMatches.filter((item) => item.kind !== "command");
-
   const isPrefix = (item: Suggestion) =>
     item.name.toLowerCase().startsWith(q) || item.displayName.toLowerCase().startsWith(q);
-
   return [
     ...commandHits,
-    ...commandMatches.filter(isPrefix),
-    ...commandMatches.filter((m) => !isPrefix(m)),
-    ...nonCommandMatches.filter(isPrefix),
-    ...nonCommandMatches.filter((m) => !isPrefix(m)),
+    ...substringMatches.filter((m) => m.kind === "command" && isPrefix(m)),
+    ...substringMatches.filter((m) => m.kind !== "command" && isPrefix(m)),
+    ...substringMatches.filter((m) => m.kind === "command" && !isPrefix(m)),
+    ...substringMatches.filter((m) => m.kind !== "command" && !isPrefix(m)),
   ];
 }
 
