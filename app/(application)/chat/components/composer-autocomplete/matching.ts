@@ -20,8 +20,8 @@ export interface TokenRange {
 }
 
 export interface Suggestion {
-  id: string; // unique row id, e.g. "tool:web_search" / "file:<s3key>"
-  kind: "tool" | "skill" | "file";
+  id: string; // unique row id, e.g. "tool:web_search" / "file:<s3key>" / "cmd:<name>"
+  kind: "tool" | "skill" | "file" | "command";
   name: string; // exact machine name inserted after the trigger char
   displayName: string; // prettified for display
   description?: string;
@@ -103,19 +103,55 @@ export function findTokenRanges(
  * Case-insensitive substring filter over name, display name, and description.
  * Prefix matches (on name or display name) rank first; order is otherwise
  * stable. An empty/whitespace-only query returns everything.
+ *
+ * Command-name prefix rule: a command whose name is a case-insensitive
+ * prefix of the query followed by whitespace or end-of-string stays
+ * visible even when the query includes args (e.g. "compact focus on X").
+ * All commands rank before tools in the results.
  */
 export function filterSuggestions(items: Suggestion[], query: string): Suggestion[] {
   const q = query.toLowerCase().trim();
   if (!q) return items;
-  const matches = items.filter(
+
+  // Command-name prefix rule: a command whose name is a case-insensitive
+  // prefix of the query followed by whitespace or end-of-string stays
+  // visible even when the query includes args (e.g. "compact focus on X").
+  // Args are ignored for suggestion display; the executor reads them from
+  // the trigger's query. Commands surfaced by this rule always rank first.
+  const commandNameMatches = (item: Suggestion) => {
+    if (item.kind !== "command") return false;
+    const name = item.name.toLowerCase();
+    if (!q.startsWith(name)) return false;
+    const nextChar = q.charAt(name.length);
+    return nextChar === "" || /\s/.test(nextChar);
+  };
+
+  const commandHits = items.filter(commandNameMatches);
+  const commandHitIds = new Set(commandHits.map((c) => c.id));
+
+  const allMatches = items.filter(
     (item) =>
       item.name.toLowerCase().includes(q) ||
       item.displayName.toLowerCase().includes(q) ||
       (item.description?.toLowerCase().includes(q) ?? false),
   );
+
+  // Separate commands and non-commands from all matches
+  const commandMatches = allMatches.filter(
+    (item) => item.kind === "command" && !commandHitIds.has(item.id),
+  );
+  const nonCommandMatches = allMatches.filter((item) => item.kind !== "command");
+
   const isPrefix = (item: Suggestion) =>
     item.name.toLowerCase().startsWith(q) || item.displayName.toLowerCase().startsWith(q);
-  return [...matches.filter(isPrefix), ...matches.filter((m) => !isPrefix(m))];
+
+  return [
+    ...commandHits,
+    ...commandMatches.filter(isPrefix),
+    ...commandMatches.filter((m) => !isPrefix(m)),
+    ...nonCommandMatches.filter(isPrefix),
+    ...nonCommandMatches.filter((m) => !isPrefix(m)),
+  ];
 }
 
 /**
@@ -147,4 +183,22 @@ export function insertToken(
  */
 export function isAutoHidden(query: string, matchCount: number): boolean {
   return matchCount === 0 && /\s/.test(query);
+}
+
+/**
+ * Regex-based parser for the `/compact` submit-time interception path.
+ * Pure — mirrors the module's node-testable contract. Returns `steer`
+ * trimmed to `undefined` when only whitespace, so callers can spread it
+ * straight into the compact executor without a second guard.
+ *
+ * Not called by the menu-selection path, which has the trigger.query in
+ * hand and doesn't need to re-scan the full input.
+ */
+export function parseCompactInput(
+  input: string,
+): { isCompact: true; steer?: string } | { isCompact: false } {
+  const match = input.trim().match(/^\/compact(?:\s+([\s\S]*))?$/);
+  if (!match) return { isCompact: false };
+  const steer = match[1]?.trim();
+  return { isCompact: true, steer: steer && steer.length > 0 ? steer : undefined };
 }
