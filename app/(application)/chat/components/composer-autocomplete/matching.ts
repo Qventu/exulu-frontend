@@ -131,15 +131,14 @@ export function filterSuggestions(items: Suggestion[], query: string): Suggestio
 
   const allMatches = items.filter(
     (item) =>
-      item.name.toLowerCase().includes(q) ||
-      item.displayName.toLowerCase().includes(q) ||
-      (item.description?.toLowerCase().includes(q) ?? false),
+      !commandHitIds.has(item.id) &&
+      (item.name.toLowerCase().includes(q) ||
+        item.displayName.toLowerCase().includes(q) ||
+        (item.description?.toLowerCase().includes(q) ?? false)),
   );
 
   // Separate commands and non-commands from all matches
-  const commandMatches = allMatches.filter(
-    (item) => item.kind === "command" && !commandHitIds.has(item.id),
-  );
+  const commandMatches = allMatches.filter((item) => item.kind === "command");
   const nonCommandMatches = allMatches.filter((item) => item.kind !== "command");
 
   const isPrefix = (item: Suggestion) =>
