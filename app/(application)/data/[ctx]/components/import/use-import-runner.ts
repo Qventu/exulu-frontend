@@ -14,7 +14,7 @@ import type {
 } from "@/lib/import/types";
 import { uploadFileToS3 } from "@/lib/import/upload";
 
-import { CREATE_ITEM, UPDATE_ITEM } from "../../../queries";
+import { CREATE_ITEM, GET_ITEMS, UPDATE_ITEM } from "../../../queries";
 
 export type ImportPhase = "edit" | "running" | "done";
 
@@ -70,11 +70,15 @@ export function useImportRunner(
       setSummary(result);
       setPhase("done");
       try {
-        // Refresh the (dynamic per-context) items list queries.
-        await client.refetchQueries({ include: "active" });
-      } catch {
+        // Refresh the items table behind the dialog. Targeted at the list
+        // document (same gql string the table's useQuery holds) instead of
+        // `include: "active"`, which swept every mounted query in the app.
+        await client.refetchQueries({ include: [GET_ITEMS(contextId, [])] });
+      } catch (e) {
         // List refresh is best-effort; the import itself succeeded.
+        console.warn("[import] items list refresh failed", e);
       }
+      return result;
     },
     [client, contextId, fields, batchAccess],
   );

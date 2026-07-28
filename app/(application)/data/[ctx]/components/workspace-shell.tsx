@@ -79,6 +79,17 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
     router.push(`/data/${context.id}/items/${newItemId}`);
   };
 
+  // Imported rows sort to page 1 (updatedAt DESC). A stale ?page= param would
+  // keep the refreshed table on a page that can't show them — and it survives
+  // browser reloads, so it reads as "the import didn't work". Drop it.
+  const onImported = () => {
+    const url = new URLSearchParams(params?.toString() ?? "");
+    if (!url.has("page")) return;
+    url.delete("page");
+    const q = url.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+  };
+
   return (
     <PageShell variant="full-bleed">
       <div className="flex flex-col gap-6 p-4 md:p-8">
@@ -148,6 +159,7 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
         open={importOpen}
         onOpenChange={setImportOpen}
         context={context}
+        onImported={onImported}
       />
     </PageShell>
   );

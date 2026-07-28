@@ -64,12 +64,15 @@ export interface ImportWizardDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   context: Context;
+  /** Fired after a run that created or updated at least one item. */
+  onImported?: () => void;
 }
 
 export function ImportWizardDialog({
   open,
   onOpenChange,
   context,
+  onImported,
 }: ImportWizardDialogProps) {
   const t = useTranslations("knowledge");
   const client = useApolloClient();
@@ -235,22 +238,28 @@ export function ImportWizardDialog({
     }
   };
 
-  const handleCellChange = (rowKey: string, fieldName: string, raw: string) => {
-    setRows((prev) =>
-      prev.map((row) => {
-        if (row.key !== rowKey) return row;
-        const field = fields.find((f) => f.name === fieldName);
-        if (!field) return row;
-        const next = {
-          ...row,
-          cells: { ...row.cells, [fieldName]: coerceValue(field, raw) },
-        };
-        return validateRow(next, fields);
-      }),
-    );
-  };
+  // The three grid callbacks below must keep a stable identity across row
+  // edits: they feed StepReviewGrid's column memo, and a new identity there
+  // remounts every cell editor mid-keystroke (dropping input focus).
+  const handleCellChange = React.useCallback(
+    (rowKey: string, fieldName: string, raw: string) => {
+      setRows((prev) =>
+        prev.map((row) => {
+          if (row.key !== rowKey) return row;
+          const field = fields.find((f) => f.name === fieldName);
+          if (!field) return row;
+          const next = {
+            ...row,
+            cells: { ...row.cells, [fieldName]: coerceValue(field, raw) },
+          };
+          return validateRow(next, fields);
+        }),
+      );
+    },
+    [fields],
+  );
 
-  const handleKeyCellBlur = () => {
+  const handleKeyCellBlur = React.useCallback(() => {
     setVerifying(true);
     void verifyRows(rowsRef.current)
       .then((verified) => {
@@ -294,21 +303,32 @@ export function ImportWizardDialog({
         });
       })
       .finally(() => setVerifying(false));
-  };
+  }, [verifyRows, fields, t]);
 
-  const handleRemoveRow = (rowKey: string) => {
+  const handleRemoveRow = React.useCallback((rowKey: string) => {
     setRows((prev) => prev.filter((r) => r.key !== rowKey));
-  };
+  }, []);
 
-  const displayFields = React.useMemo(() => {
+  // Key the display-field memo on the resolved column names, not on `rows`:
+  // rows change on every keystroke, and a fresh `displayFields` identity would
+  // rebuild the grid's columns and remount the focused cell editor.
+  const displayFieldNames = React.useMemo(() => {
     const present = new Set<string>();
     for (const row of rows)
       for (const key of Object.keys(row.cells)) present.add(key);
-    return fields.filter(
-      (f) =>
-        f.name === "name" || present.has(f.name) || (f.required && !f.core),
+    return JSON.stringify(
+      fields
+        .filter(
+          (f) =>
+            f.name === "name" || present.has(f.name) || (f.required && !f.core),
+        )
+        .map((f) => f.name),
     );
   }, [rows, fields]);
+  const displayFields = React.useMemo(() => {
+    const names = new Set<string>(JSON.parse(displayFieldNames));
+    return fields.filter((f) => names.has(f.name));
+  }, [displayFieldNames, fields]);
 
   const hasBlankUpdateCells = React.useMemo(
     () =>
@@ -356,6 +376,12 @@ export function ImportWizardDialog({
   const handleOpenChange = (next: boolean) => {
     if (!next && running) return; // must cancel first
     onOpenChange(next);
+  };
+
+  const startRun = () => {
+    void runner.run(rowsRef.current).then((summary) => {
+      if (summary.created + summary.updated > 0) onImported?.();
+    });
   };
 
   const canContinueFromAdd =
@@ -549,7 +575,7 @@ export function ImportWizardDialog({
                 <Button
                   type="button"
                   disabled={validRows.length === 0 || verifying}
-                  onClick={() => void runner.run(rowsRef.current)}
+                  onClick={startRun}
                 >
                   {validRows.length === rows.length
                     ? t("workspace.import.review.importAll", {
@@ -581,10 +607,7 @@ export function ImportWizardDialog({
                 </Button>
               )}
               {remainingCount > 0 && (
-                <Button
-                  type="button"
-                  onClick={() => void runner.run(rowsRef.current)}
-                >
+                <Button type="button" onClick={startRun}>
                   {failedCount > 0
                     ? t("workspace.import.run.retryFailed")
                     : t("workspace.import.review.importValid", {
