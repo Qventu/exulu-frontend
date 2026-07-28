@@ -224,7 +224,7 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
       >
         <SheetContent
           side="right"
-          className="w-full overflow-y-auto sm:max-w-2xl"
+          className="w-full overflow-y-auto sm:max-w-4xl"
         >
           <SheetHeader>
             <SheetTitle>
