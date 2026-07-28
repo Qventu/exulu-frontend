@@ -4001,6 +4001,29 @@
       "cron": "Cron",
       "tries": "Attempts"
     },
+    "bulk": {
+      "selectAll": "Select all",
+      "selectRow": "Select run",
+      "selected": "{count} selected",
+      "cancel": "Cancel ({count})",
+      "delete": "Delete ({count})",
+      "clear": "Clear",
+      "cancelConfirm": {
+        "title": "Cancel {count, plural, one {# run} other {# runs}}?",
+        "description": "The selected runs will stop. This cannot be undone.",
+        "confirmLabel": "Cancel runs"
+      },
+      "deleteConfirm": {
+        "title": "Delete {count, plural, one {# run} other {# runs}}?",
+        "description": "The selected runs and their transcripts will be permanently deleted. This cannot be undone.",
+        "confirmLabel": "Delete runs"
+      },
+      "toast": {
+        "cancelled": "{count, plural, one {# run cancelled} other {# runs cancelled}}",
+        "deleted": "{count, plural, one {# run deleted} other {# runs deleted}}",
+        "partial": "{ok} done, {failed} failed"
+      }
+    },
     "cancelConfirm": {
       "title": "Cancel this run?",
       "description": "The run is stopped and marked as cancelled. Steps that already ran are not undone.",

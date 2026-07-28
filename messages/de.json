@@ -4001,6 +4001,29 @@
       "cron": "Cron",
       "tries": "Versuche"
     },
+    "bulk": {
+      "selectAll": "Alle auswählen",
+      "selectRow": "Lauf auswählen",
+      "selected": "{count} ausgewählt",
+      "cancel": "Abbrechen ({count})",
+      "delete": "Löschen ({count})",
+      "clear": "Leeren",
+      "cancelConfirm": {
+        "title": "{count, plural, one {# Lauf} other {# Läufe}} abbrechen?",
+        "description": "Die ausgewählten Läufe werden gestoppt. Dies kann nicht rückgängig gemacht werden.",
+        "confirmLabel": "Läufe abbrechen"
+      },
+      "deleteConfirm": {
+        "title": "{count, plural, one {# Lauf} other {# Läufe}} löschen?",
+        "description": "Die ausgewählten Läufe und ihre Transkripte werden dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "confirmLabel": "Läufe löschen"
+      },
+      "toast": {
+        "cancelled": "{count, plural, one {# Lauf abgebrochen} other {# Läufe abgebrochen}}",
+        "deleted": "{count, plural, one {# Lauf gelöscht} other {# Läufe gelöscht}}",
+        "partial": "{ok} erledigt, {failed} fehlgeschlagen"
+      }
+    },
     "cancelConfirm": {
       "title": "Diesen Lauf abbrechen?",
       "description": "Der Lauf wird gestoppt und als abgebrochen markiert. Bereits ausgeführte Schritte werden nicht rückgängig gemacht.",

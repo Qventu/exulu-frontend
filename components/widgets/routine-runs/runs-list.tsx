@@ -56,6 +56,7 @@ import {
   formatRunDuration,
   KNOWN_FILTERED_REASONS,
   mapRunDot,
+  partitionSelection,
   RUN_STATE_BADGE,
   RUN_TRIGGERS,
   runTitle,
@@ -132,6 +133,41 @@ export function RoutineRunsList({
   const runs = data?.routineRuns?.items ?? [];
   const total = data?.routineRuns?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+  const { cancellable, deletable } = partitionSelection(runs, selectedIds);
+  const selectedCount = runs.filter((r) => selectedIds.has(r.id)).length;
+  const allSelected = runs.length > 0 && selectedCount === runs.length;
+  const someSelected = selectedCount > 0 && !allSelected;
+
+  const toggleSelectAll = (checked: boolean) =>
+    setSelectedIds(checked ? new Set(runs.map((r) => r.id)) : new Set());
+
+  const [bulkConfirm, setBulkConfirm] = React.useState<
+    "cancel" | "delete" | null
+  >(null);
+
+  const runBulk = async () => {
+    if (!bulkConfirm) return;
+    const ids = bulkConfirm === "cancel" ? cancellable : deletable;
+    const mutate = bulkConfirm === "cancel" ? cancelMutate : deleteMutate;
+    const results = await Promise.allSettled(
+      ids.map((id) => mutate({ variables: { id } })),
+    );
+    const ok = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.length - ok;
+    if (failed === 0) {
+      toast.success(
+        t(bulkConfirm === "cancel" ? "bulk.toast.cancelled" : "bulk.toast.deleted", {
+          count: ok,
+        }),
+      );
+    } else {
+      toast.error(t("bulk.toast.partial", { ok, failed }));
+    }
+    setBulkConfirm(null);
+    setSelectedIds(new Set());
+    await refetch();
+  };
 
   const filterKey = JSON.stringify(filter);
   React.useEffect(() => {
@@ -290,6 +326,50 @@ export function RoutineRunsList({
         </div>
       </div>
 
+      {runs.length > 0 ? (
+        <div className="flex items-center gap-3 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+          <Checkbox
+            checked={allSelected ? true : someSelected ? "indeterminate" : false}
+            onCheckedChange={(checked) => toggleSelectAll(checked === true)}
+            aria-label={t("bulk.selectAll")}
+          />
+          {selectedCount > 0 ? (
+            <>
+              <span className="text-muted-foreground">
+                {t("bulk.selected", { count: selectedCount })}
+              </span>
+              <div className="ml-auto flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={cancellable.length === 0}
+                  onClick={() => setBulkConfirm("cancel")}
+                >
+                  {t("bulk.cancel", { count: cancellable.length })}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={deletable.length === 0}
+                  onClick={() => setBulkConfirm("delete")}
+                >
+                  {t("bulk.delete", { count: deletable.length })}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  {t("bulk.clear")}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <span className="text-muted-foreground">{t("bulk.selectAll")}</span>
+          )}
+        </div>
+      ) : null}
+
       {/* List */}
       {loading && runs.length === 0 ? (
         <div className="space-y-2">
@@ -382,6 +462,29 @@ export function RoutineRunsList({
         variant="destructive"
         confirmLabel={t("deleteConfirm.confirmLabel")}
         onConfirm={handleConfirmDelete}
+      />
+      <ConfirmDialog
+        open={bulkConfirm !== null}
+        onOpenChange={(open) => {
+          if (!open) setBulkConfirm(null);
+        }}
+        title={
+          bulkConfirm === "delete"
+            ? t("bulk.deleteConfirm.title", { count: deletable.length })
+            : t("bulk.cancelConfirm.title", { count: cancellable.length })
+        }
+        description={
+          bulkConfirm === "delete"
+            ? t("bulk.deleteConfirm.description")
+            : t("bulk.cancelConfirm.description")
+        }
+        variant="destructive"
+        confirmLabel={
+          bulkConfirm === "delete"
+            ? t("bulk.deleteConfirm.confirmLabel")
+            : t("bulk.cancelConfirm.confirmLabel")
+        }
+        onConfirm={runBulk}
       />
     </div>
   );
