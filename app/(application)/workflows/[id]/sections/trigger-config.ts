@@ -95,6 +95,25 @@ function clampInt(value: unknown, fallback: number, min: number): number {
   return Math.max(min, Math.round(parsed));
 }
 
+/** Which signing-secret sub-view to render. */
+export type SigningSecretView = "reveal" | "enabled" | "generate";
+
+/**
+ * Picks the signing-secret view. The one-time revealed secret takes precedence
+ * over `has_signing_secret`: right after generating, the mutation returns the
+ * secret AND a refetch flips `has_signing_secret` to true — without this
+ * precedence the reveal is immediately replaced by the scheme-only "enabled"
+ * view (the secret flickers then disappears).
+ */
+export function signingSecretView(
+  hasSigningSecret: boolean,
+  revealedSecret: string | null,
+): SigningSecretView {
+  if (revealedSecret) return "reveal";
+  if (hasSigningSecret) return "enabled";
+  return "generate";
+}
+
 /** Defensive parse of the trigger's config JSON into a fully-shaped form model. */
 export function normalizeEmailTriggerConfig(
   input: unknown,

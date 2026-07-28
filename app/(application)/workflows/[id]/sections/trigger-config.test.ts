@@ -8,6 +8,7 @@ import {
   isValidSenderEntry,
   MAX_FILTER_PATTERN_LENGTH,
   normalizeEmailTriggerConfig,
+  signingSecretView,
   validateFilterPattern,
 } from "./trigger-config";
 
@@ -117,5 +118,20 @@ describe("normalizeEmailTriggerConfig", () => {
     expect(normalized.filtered_run_retention).toBe(0);
     expect(normalized.rate_limit_per_hour).toBe(1);
     expect(normalized.sender_rate_limit_per_hour).toBe(10);
+  });
+});
+
+describe("signingSecretView", () => {
+  it("shows the just-revealed secret even after has_signing_secret flips true (the reveal-flicker bug)", () => {
+    // After generating, the mutation returns the secret AND the refetch sets
+    // has_signing_secret=true; the reveal must still win, not the scheme view.
+    expect(signingSecretView(true, "s3cr3t")).toBe("reveal");
+    expect(signingSecretView(false, "s3cr3t")).toBe("reveal");
+  });
+  it("shows the enabled (scheme) view when a secret exists but none was revealed this session", () => {
+    expect(signingSecretView(true, null)).toBe("enabled");
+  });
+  it("shows the generate view when there is no secret", () => {
+    expect(signingSecretView(false, null)).toBe("generate");
   });
 });

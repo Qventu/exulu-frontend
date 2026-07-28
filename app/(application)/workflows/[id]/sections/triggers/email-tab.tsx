@@ -54,6 +54,7 @@ import {
   FILTER_FIELDS,
   isValidSenderEntry,
   normalizeEmailTriggerConfig,
+  signingSecretView,
   validateFilterPattern,
   type EmailTriggerFilterRule,
   type FilterField,
@@ -212,6 +213,10 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
   const disabled =
     !access.canWrite || upsertState.loading || deleteState.loading;
   const actionDisabled = !access.canWrite || !trigger?.id;
+  const signingView = signingSecretView(
+    trigger?.has_signing_secret ?? false,
+    signingSecretOnce,
+  );
 
   // ---------------------------------------------------------------------------
   // Handlers
@@ -648,7 +653,27 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
             </p>
           </div>
 
-          {trigger.has_signing_secret ? (
+          {signingView === "reveal" ? (
+            // Just generated this session: show the secret ONCE. This must win
+            // over the "enabled" view — the generate refetch flips
+            // has_signing_secret=true, which would otherwise hide the reveal.
+            <div className="space-y-1">
+              <CopyField
+                label={t("triggers.signing.secretLabel")}
+                value={signingSecretOnce ?? ""}
+                mono
+                masked
+              />
+              <p className="text-xs text-muted-foreground">
+                {t("triggers.signing.revealNote")}
+              </p>
+              <CopyField
+                label={t("triggers.signing.schemeLabel")}
+                value="X-Exulu-Signature: sha256=HMAC-SHA256(body, secret)"
+                mono
+              />
+            </div>
+          ) : signingView === "enabled" ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Badge variant="secondary">{t("triggers.signing.enabled")}</Badge>
@@ -682,24 +707,6 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
                 >
                   {t("triggers.signing.generate")}
                 </Button>
-              ) : null}
-              {signingSecretOnce ? (
-                <div className="space-y-1">
-                  <CopyField
-                    label={t("triggers.signing.secretLabel")}
-                    value={signingSecretOnce}
-                    mono
-                    masked
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {t("triggers.signing.revealNote")}
-                  </p>
-                  <CopyField
-                    label={t("triggers.signing.schemeLabel")}
-                    value="X-Exulu-Signature: sha256=HMAC-SHA256(body, secret)"
-                    mono
-                  />
-                </div>
               ) : null}
             </div>
           )}
