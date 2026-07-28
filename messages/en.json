@@ -3933,6 +3933,11 @@
         "deleteFailed": "Could not remove email trigger",
         "invalidSender": "Enter a full address or a *@domain wildcard",
         "invalidFilters": "Fix the invalid filter rules before saving"
+      },
+      "api": {
+        "description": "Trigger this routine programmatically by calling the GraphQL API.",
+        "tokenHint": "Authenticate with a personal API token —",
+        "tokenLink": "get one here."
       }
     },
     "runActionLabel": "Run"

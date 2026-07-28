@@ -3933,6 +3933,11 @@
         "deleteFailed": "E-Mail-Auslöser konnte nicht entfernt werden",
         "invalidSender": "Geben Sie eine vollständige Adresse oder einen *@domain-Platzhalter ein",
         "invalidFilters": "Korrigieren Sie die ungültigen Filterregeln vor dem Speichern"
+      },
+      "api": {
+        "description": "Löse diese Routine programmatisch über die GraphQL-API aus.",
+        "tokenHint": "Authentifiziere dich mit einem persönlichen API-Token —",
+        "tokenLink": "hier erhältst du eines."
       }
     },
     "runActionLabel": "Ausführen"
