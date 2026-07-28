@@ -235,7 +235,10 @@ const WORKFLOW_TRIGGER_SELECTION = `
   workflow
   type
   enabled
-  address
+  webhook_url
+  has_webhook
+  has_signing_secret
+  last_fired_at
   config
   run_as_user
   createdAt
@@ -270,6 +273,32 @@ export const DELETE_WORKFLOW_TRIGGER = gql`
   mutation DeleteWorkflowTrigger($id: ID!) {
     deleteWorkflowTrigger(id: $id) {
       id
+    }
+  }
+`;
+
+export const REGENERATE_WORKFLOW_TRIGGER_SECRET = gql`
+  mutation RegenerateWorkflowTriggerSecret($id: ID!) {
+    regenerateWorkflowTriggerSecret(id: $id) { ${WORKFLOW_TRIGGER_SELECTION} }
+  }
+`;
+
+export const SET_WORKFLOW_TRIGGER_SIGNING_SECRET = gql`
+  mutation SetWorkflowTriggerSigningSecret($id: ID!, $enable: Boolean!) {
+    setWorkflowTriggerSigningSecret(id: $id, enable: $enable) {
+      ${WORKFLOW_TRIGGER_SELECTION}
+      signing_secret_once
+    }
+  }
+`;
+
+export const TEST_FIRE_WORKFLOW_TRIGGER = gql`
+  mutation TestFireWorkflowTrigger($id: ID!, $contentType: String!, $payload: String!) {
+    testFireWorkflowTrigger(id: $id, contentType: $contentType, payload: $payload) {
+      outcome
+      jobResultId
+      filteredReason
+      error
     }
   }
 `;
