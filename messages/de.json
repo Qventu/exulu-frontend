@@ -2102,7 +2102,7 @@
       "description": "Eingehende E-Mails für Routinen — Anbieter, Domain und Webhook-Zugangsdaten.",
       "enabled": "E-Mail-Eingang aktivieren",
       "provider": "Anbieter",
-      "providerMailgunEu": "Mailgun (EU-Region) — der einzige unterstützte Anbieter in v1.",
+      "providerMailgunEu": "Mailgun (EU-Region).",
       "domainLabel": "Eingangsdomain",
       "domainPlaceholder": "mail.ihre-firma.de",
       "signingKeyLabel": "Webhook-Signaturschlüssel",
@@ -2117,7 +2117,7 @@
       "checklist": {
         "step1": "Mailgun-EU-Konto anlegen und die Empfangsdomain hinzufügen (z. B. mail.ihre-firma.de).",
         "step2": "MX-Einträge (mxa.eu.mailgun.org, mxb.eu.mailgun.org) und TXT-Verifizierungseinträge veröffentlichen.",
-        "step3": "EINE Catch-all-Route anlegen: match_recipient(\".*@ihre-domain\") → forward auf die Webhook-URL unten → stop().",
+        "step3": "EINE Catch-all-Route anlegen: match_recipient(\".*@ihre-domain\") → forward auf die Webhook-URL oben → stop().",
         "step4": "Die Nachrichtenspeicherung des Kontos/der Domain auf 0 setzen und explizit prüfen — die Speicherdauer ist KEINE Routen-Einstellung.",
         "step5": "Den HTTP-Webhook-Signaturschlüssel der Domain in das Feld oben kopieren und den E-Mail-Eingang aktivieren.",
         "step6": "Eine Test-E-Mail senden und prüfen, dass sich \"Letzter Webhook empfangen\" aktualisiert."

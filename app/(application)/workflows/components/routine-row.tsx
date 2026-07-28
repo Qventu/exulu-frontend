@@ -144,8 +144,8 @@ export function RunCell({
       className="size-11 md:size-8 md:w-auto md:px-3"
     >
       <Play aria-hidden="true" className="size-3.5 md:mr-1" />
-      <span className="hidden md:inline">{t("run")}</span>
-      <span className="sr-only md:hidden">{t("run")}</span>
+      <span className="hidden md:inline">{t("runActionLabel")}</span>
+      <span className="sr-only md:hidden">{t("runActionLabel")}</span>
     </Button>
   );
 

@@ -2102,7 +2102,7 @@
       "description": "Inbound email for routines — provider, domain and webhook credentials.",
       "enabled": "Enable email intake",
       "provider": "Provider",
-      "providerMailgunEu": "Mailgun (EU region) — the only supported provider in v1.",
+      "providerMailgunEu": "Mailgun (EU region).",
       "domainLabel": "Inbound domain",
       "domainPlaceholder": "mail.your-company.com",
       "signingKeyLabel": "Webhook signing key",
@@ -2117,7 +2117,7 @@
       "checklist": {
         "step1": "Create a Mailgun EU account and add the receiving domain (e.g. mail.your-company.com).",
         "step2": "Publish the MX records (mxa.eu.mailgun.org, mxb.eu.mailgun.org) and the TXT verification records.",
-        "step3": "Create ONE catch-all route: match_recipient(\".*@your-domain\") → forward to the webhook URL below → stop().",
+        "step3": "Create ONE catch-all route: match_recipient(\".*@your-domain\") → forward to the webhook URL above → stop().",
         "step4": "Set the account/domain message retention to 0 and verify it explicitly — retention is NOT a per-route setting.",
         "step5": "Copy the domain's HTTP webhook signing key into the field above and enable email intake.",
         "step6": "Send a test email and confirm \"Last webhook received\" updates."
