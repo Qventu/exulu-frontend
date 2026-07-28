@@ -1005,6 +1005,14 @@ export function useChatSessions({
         agent: {
           eq: agentId,
         },
+        // Exclude routine/workflow run sessions from chat history. Knex
+        // compiles { eq: null } to WHERE run IS NULL (see backend
+        // convert-graphql-filter-operator-to-pg-query). New run sessions carry
+        // a non-null run; pre-existing ones (no backfill) still have run = null
+        // and are not excluded.
+        run: {
+          eq: null,
+        },
         ...(search && search.length >= 3
           ? {
               title: {
