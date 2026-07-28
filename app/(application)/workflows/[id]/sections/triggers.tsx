@@ -796,7 +796,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
                 </span>
               ) : testResult.outcome === "filtered" ? (
                 <span className="text-muted-foreground">
-                  {t("triggers.test.result.filtered")}: {testResult.filteredReason}
+                  {t("triggers.test.result.filtered", { reason: testResult.filteredReason ?? "" })}
                 </span>
               ) : testResult.outcome === "dropped" ? (
                 <span className="text-muted-foreground">
@@ -804,7 +804,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
                 </span>
               ) : (
                 <span className="text-destructive">
-                  {testResult.error ?? t("triggers.test.result.error")}
+                  {t("triggers.test.result.error", { message: testResult.error ?? "" })}
                 </span>
               )}
             </div>
