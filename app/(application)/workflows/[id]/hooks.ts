@@ -244,6 +244,7 @@ export const routineEditorSchema = z.object({
     .nullable()
     .optional(),
   agent: z.string().min(1, { message: "An agent is required." }),
+  queue: z.string().min(1, { message: "A queue is required." }),
 });
 
 export type RoutineFormValues = z.infer<typeof routineEditorSchema>;
@@ -313,6 +314,7 @@ export function useRoutineEditor(routine: Routine): UseRoutineEditor {
       name: routine.name ?? "",
       description: routine.description ?? "",
       agent: routine.agent ?? "",
+      queue: routine.queue ?? "",
     },
   });
 
@@ -403,6 +405,7 @@ export function useRoutineEditor(routine: Routine): UseRoutineEditor {
           description: values.description?.trim() || null,
           rights_mode: rbac.rights_mode,
           agent: values.agent,
+          queue: values.queue,
           RBAC: RBACPayload,
           // Forward the parent-held steps_json (byte-equivalent w/ the killed
           // dialog's UPDATE behavior — it always sent steps_json on update).
@@ -435,6 +438,7 @@ export function useRoutineEditor(routine: Routine): UseRoutineEditor {
       name: routine.name ?? "",
       description: routine.description ?? "",
       agent: routine.agent ?? "",
+      queue: routine.queue ?? "",
     });
     setRbac(defaultRbac(routine));
     // NB: stepsJson is intentionally untouched — discard only affects Basics

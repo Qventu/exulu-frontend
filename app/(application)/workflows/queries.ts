@@ -34,6 +34,7 @@ const RBAC_SELECTION = `
 const TEMPLATE_ITEM_SELECTION = `
   id
   agent
+  queue
   name
   description
   rights_mode
@@ -85,6 +86,7 @@ export const GET_WORKFLOW_TEMPLATE_BY_ID = gql`
       id
       name
       agent
+      queue
       description
       rights_mode
       steps_json
@@ -148,6 +150,7 @@ export const UPDATE_WORKFLOW_TEMPLATE = gql`
     $RBAC: RBACInput
     $steps_json: JSON
     $agent: String
+    $queue: String
   ) {
     workflow_templatesUpdateOneById(
       id: $id
@@ -158,6 +161,7 @@ export const UPDATE_WORKFLOW_TEMPLATE = gql`
         RBAC: $RBAC
         steps_json: $steps_json
         agent: $agent
+        queue: $queue
       }
     ) {
       item {
@@ -167,6 +171,7 @@ export const UPDATE_WORKFLOW_TEMPLATE = gql`
         created_by
         rights_mode
         agent
+        queue
         variables
         RBAC {
           ${RBAC_SELECTION}

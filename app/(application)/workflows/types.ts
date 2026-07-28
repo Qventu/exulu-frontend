@@ -36,6 +36,8 @@ export interface Routine {
   description?: string | null;
   /** Agent id (string). May be empty when the agent was removed. */
   agent: string;
+  /** Queue name the routine runs on (workflow_templates.queue). Required to run. */
+  queue?: string | null;
   /** Resolver-derived display name; populated by useAgentsForPage. */
   agentName?: string | null;
   /** Agent queue (if any); populated by useAgentsForPage. */
