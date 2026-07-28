@@ -3753,7 +3753,7 @@
         "access": "Access",
         "steps": "Steps",
         "schedule": "Schedule",
-        "triggers": "Email trigger",
+        "triggers": "Triggers",
         "runs": "Runs",
         "queue": "Queue",
         "danger": "Danger zone"
@@ -3938,6 +3938,11 @@
         "description": "Trigger this routine programmatically by calling the GraphQL API.",
         "tokenHint": "Authenticate with a personal API token —",
         "tokenLink": "get one here."
+      },
+      "tabs": {
+        "email": "Email",
+        "schedule": "Schedule",
+        "api": "API"
       }
     },
     "runActionLabel": "Run"

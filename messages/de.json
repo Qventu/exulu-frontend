@@ -3753,7 +3753,7 @@
         "access": "Zugriff",
         "steps": "Schritte",
         "schedule": "Zeitplan",
-        "triggers": "E-Mail-Auslöser",
+        "triggers": "Auslöser",
         "runs": "Läufe",
         "queue": "Warteschlange",
         "danger": "Gefahrenzone"
@@ -3938,6 +3938,11 @@
         "description": "Löse diese Routine programmatisch über die GraphQL-API aus.",
         "tokenHint": "Authentifiziere dich mit einem persönlichen API-Token —",
         "tokenLink": "hier erhältst du eines."
+      },
+      "tabs": {
+        "email": "E-Mail",
+        "schedule": "Zeitplan",
+        "api": "API"
       }
     },
     "runActionLabel": "Ausführen"
