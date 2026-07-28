@@ -32,7 +32,16 @@ export interface WorkflowTriggerRow {
   workflow: string;
   type: string;
   enabled: boolean;
-  address: string;
+  /** @deprecated replaced by webhook_url + has_webhook */
+  address?: string;
+  /** Writer-visible webhook URL (null for read-only viewers). */
+  webhook_url?: string | null;
+  /** True when the trigger has a live webhook secret. */
+  has_webhook?: boolean;
+  /** True when a signing secret is configured for this trigger. */
+  has_signing_secret?: boolean;
+  /** ISO timestamp of the last inbound fire, or null. */
+  last_fired_at?: string | null;
   config: unknown;
   run_as_user?: number | null;
   createdAt?: string;

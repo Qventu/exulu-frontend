@@ -1,33 +1,33 @@
 "use client";
 
 /**
- * TriggersSection — per-routine email trigger editor for /workflows/[id]
- * (email-routines design §7.1). Mirrors the ScheduleSection pattern:
+ * TriggersSection — per-routine webhook trigger editor for /workflows/[id]
+ * (generic-webhook design). Mirrors the ScheduleSection pattern:
  * anchored <section> for useScrollSpy, DetailSection wrapper, Apollo
  * queries/mutations with the standard toast contract, ConfirmDialog delete.
  *
- * - "Not configured" CTA: emailInboundConfig is super_admin-only, so ONLY a
- *   definitive SA answer can veto the form. Non-SA admins get an authz error
- *   (errorPolicy "all") and see the form optimistically — the upsert
- *   mutation is the authoritative server-side gate and surfaces "email
- *   inbound not configured" as a save error.
+ * - Renders unconditionally — no emailInboundConfig dependency. Editing is
+ *   gated by access.canWrite (mirrors the existing ScheduleSection gating).
+ * - The webhook URL is generated server-side on first save and returned on
+ *   subsequent fetches only to writers (null for read-only viewers).
+ * - The signing secret is revealed exactly once on generation; subsequent
+ *   reads return has_signing_secret=true but never the raw secret.
  * - No RBAC payload: the server checks routine write access (incl. teams)
  *   + workflows:write and captures run_as_user/run_as_role itself (§3.1).
- * - The address is generated server-side on first save; the form is
- *   remounted per trigger identity (key=) so state hydrates without effects.
+ * - The form is remounted per trigger identity (key=) so state hydrates
+ *   without effects — mirrors the email-trigger pattern exactly.
  */
 
 import { useMutation, useQuery } from "@apollo/client";
-import { Mail, Plus, Trash2, X } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { Plus, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
 
-import { UserContext } from "@/app/(application)/authenticated";
 import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { CopyField } from "@/components/primitives/copy-field";
 import { DetailSection } from "@/components/primitives/detail-section";
-import { EmptyState } from "@/components/primitives/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,14 +40,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import {
-  EMAIL_INBOUND_CONFIG,
-  type EmailInboundConfig,
-} from "@/lib/email-inbound/queries";
 
 import {
   DELETE_WORKFLOW_TRIGGER,
   GET_WORKFLOW_TRIGGERS,
+  REGENERATE_WORKFLOW_TRIGGER_SECRET,
+  SET_WORKFLOW_TRIGGER_SIGNING_SECRET,
+  TEST_FIRE_WORKFLOW_TRIGGER,
   UPSERT_WORKFLOW_EMAIL_TRIGGER,
 } from "../../queries";
 import type { Routine, RoutineAccess } from "../../types";
@@ -69,15 +68,6 @@ export interface TriggersSectionProps {
 
 export function TriggersSection({ routine, access }: TriggersSectionProps) {
   const t = useTranslations("routines");
-  const userContext = React.useContext(UserContext);
-  const isSuperAdmin = userContext?.user?.super_admin === true;
-
-  const configQuery = useQuery<{
-    emailInboundConfig?: EmailInboundConfig | null;
-  }>(EMAIL_INBOUND_CONFIG, {
-    fetchPolicy: "cache-first",
-    errorPolicy: "all",
-  });
 
   const { data, loading, refetch } = useQuery<{
     workflowTriggers?: WorkflowTriggerRow[];
@@ -88,11 +78,6 @@ export function TriggersSection({ routine, access }: TriggersSectionProps) {
 
   const trigger =
     (data?.workflowTriggers ?? []).find((row) => row.type === "email") ?? null;
-  const inbound = configQuery.data?.emailInboundConfig;
-  const knownNotConfigured =
-    !configQuery.loading &&
-    !configQuery.error &&
-    (!inbound || inbound.enabled !== true || !inbound.inbound_domain);
 
   return (
     <section id="triggers" className="scroll-mt-20" tabIndex={-1}>
@@ -107,22 +92,7 @@ export function TriggersSection({ routine, access }: TriggersSectionProps) {
             : t("triggers.metaNone")
         }
       >
-        {knownNotConfigured ? (
-          <EmptyState
-            variant="quiet"
-            icon={Mail}
-            title={t("triggers.notConfigured.title")}
-            description={t("triggers.notConfigured.description")}
-            action={
-              isSuperAdmin
-                ? {
-                    label: t("triggers.notConfigured.cta"),
-                    href: "/configuration/email",
-                  }
-                : undefined
-            }
-          />
-        ) : loading && !data ? (
+        {loading && !data ? (
           <p className="text-sm text-muted-foreground">
             {t("triggers.loading")}
           </p>
@@ -139,6 +109,38 @@ export function TriggersSection({ routine, access }: TriggersSectionProps) {
     </section>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Test-panel payload samples
+// ---------------------------------------------------------------------------
+
+const TEST_PAYLOAD_JSON = JSON.stringify(
+  { from: "a@b.com", subject: "Test", text: "hello" },
+  null,
+  2,
+);
+const TEST_PAYLOAD_MIME = [
+  "From: a@b.com",
+  "To: webhook@example.com",
+  "Subject: Test",
+  "MIME-Version: 1.0",
+  "Content-Type: text/plain; charset=UTF-8",
+  "",
+  "hello",
+].join("\r\n");
+
+type TestContentType = "application/json" | "message/rfc822";
+
+type TestResult = {
+  outcome: string;
+  jobResultId?: string | null;
+  filteredReason?: string | null;
+  error?: string | null;
+};
+
+// ---------------------------------------------------------------------------
+// TriggerForm
+// ---------------------------------------------------------------------------
 
 interface TriggerFormProps {
   routine: Routine;
@@ -157,6 +159,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
     [trigger],
   );
 
+  // Core form state
   const [enabled, setEnabled] = React.useState(trigger?.enabled ?? false);
   const [senders, setSenders] = React.useState<string[]>(
     initial.allowed_senders,
@@ -174,13 +177,44 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
   const [senderRate, setSenderRate] = React.useState(
     initial.sender_rate_limit_per_hour,
   );
-  const [deleteOpen, setDeleteOpen] = React.useState(false);
 
+  // Dialog / reveal state
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [confirmRegen, setConfirmRegen] = React.useState(false);
+  const [signingSecretOnce, setSigningSecretOnce] = React.useState<
+    string | null
+  >(null);
+
+  // Test panel state
+  const [testContentType, setTestContentType] =
+    React.useState<TestContentType>("application/json");
+  const [testPayload, setTestPayload] = React.useState(TEST_PAYLOAD_JSON);
+  const [testResult, setTestResult] = React.useState<TestResult | null>(null);
+
+  // Keep payload sample in sync with content-type selection
+  const handleTestContentTypeChange = (value: string) => {
+    const ct = value as TestContentType;
+    setTestContentType(ct);
+    setTestPayload(
+      ct === "message/rfc822" ? TEST_PAYLOAD_MIME : TEST_PAYLOAD_JSON,
+    );
+    setTestResult(null);
+  };
+
+  // Mutations
   const [upsertMutate, upsertState] = useMutation(
     UPSERT_WORKFLOW_EMAIL_TRIGGER,
   );
   const [deleteMutate, deleteState] = useMutation(DELETE_WORKFLOW_TRIGGER);
+  const [regenMutate, regenState] = useMutation(
+    REGENERATE_WORKFLOW_TRIGGER_SECRET,
+  );
+  const [signingMutate, signingState] = useMutation(
+    SET_WORKFLOW_TRIGGER_SIGNING_SECRET,
+  );
+  const [testMutate, testState] = useMutation(TEST_FIRE_WORKFLOW_TRIGGER);
 
+  // Derived
   const config = {
     allowed_senders: senders,
     filters,
@@ -196,6 +230,11 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
   );
   const disabled =
     !access.canWrite || upsertState.loading || deleteState.loading;
+  const actionDisabled = !access.canWrite || !trigger?.id;
+
+  // ---------------------------------------------------------------------------
+  // Handlers
+  // ---------------------------------------------------------------------------
 
   const addSender = () => {
     const value = senderInput.trim().toLowerCase();
@@ -240,8 +279,85 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
     }
   };
 
+  const handleRegen = async () => {
+    if (!trigger?.id) return;
+    try {
+      await regenMutate({ variables: { id: trigger.id } });
+      toast.success(t("regenerate"));
+      await onSaved();
+    } catch (err) {
+      toast.error(t("triggers.toast.saveFailed"), {
+        description: (err as Error).message,
+      });
+    }
+  };
+
+  const handleGenerateSigning = async () => {
+    if (!trigger?.id) return;
+    setSigningSecretOnce(null);
+    try {
+      const result = await signingMutate({
+        variables: { id: trigger.id, enable: true },
+      });
+      const secret =
+        result.data?.setWorkflowTriggerSigningSecret?.signing_secret_once;
+      if (secret) setSigningSecretOnce(secret);
+      toast.success(t("signing.generated"));
+      await onSaved();
+    } catch (err) {
+      toast.error(t("triggers.toast.saveFailed"), {
+        description: (err as Error).message,
+      });
+    }
+  };
+
+  const handleRemoveSigning = async () => {
+    if (!trigger?.id) return;
+    setSigningSecretOnce(null);
+    try {
+      await signingMutate({ variables: { id: trigger.id, enable: false } });
+      toast.success(t("signing.removed"));
+      await onSaved();
+    } catch (err) {
+      toast.error(t("triggers.toast.saveFailed"), {
+        description: (err as Error).message,
+      });
+    }
+  };
+
+  const handleSendTest = async () => {
+    if (!trigger?.id) return;
+    setTestResult(null);
+    try {
+      const result = await testMutate({
+        variables: {
+          id: trigger.id,
+          contentType: testContentType,
+          payload: testPayload,
+        },
+      });
+      const res = result.data?.testFireWorkflowTrigger;
+      if (res) setTestResult(res as TestResult);
+    } catch (err) {
+      setTestResult({ outcome: "error", error: (err as Error).message });
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Relative timestamp helper
+  // ---------------------------------------------------------------------------
+
+  const lastFiredDisplay = trigger?.last_fired_at
+    ? formatDistanceToNow(new Date(trigger.last_fired_at), { addSuffix: true })
+    : null;
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
   return (
     <div className="space-y-5">
+      {/* Enable toggle */}
       <div className="flex items-center gap-3">
         <Switch
           id="email-trigger-enabled"
@@ -252,13 +368,57 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
         <Label htmlFor="email-trigger-enabled">{t("triggers.enable")}</Label>
       </div>
 
-      {trigger?.address ? (
-        <CopyField value={trigger.address} label={t("triggers.addressLabel")} />
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          {t("triggers.addressPending")}
-        </p>
-      )}
+      {/* Webhook URL + Regenerate */}
+      <div className="space-y-2">
+        {trigger?.webhook_url ? (
+          <>
+            <CopyField
+              label={t("webhookUrlLabel")}
+              value={trigger.webhook_url}
+              mono
+            />
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={actionDisabled || regenState.loading}
+                onClick={() => setConfirmRegen(true)}
+              >
+                {t("regenerate")}
+              </Button>
+              {lastFiredDisplay ? (
+                <span className="text-xs text-muted-foreground">
+                  {t("lastFiredLabel")}: {lastFiredDisplay}
+                </span>
+              ) : trigger ? (
+                <span className="text-xs text-muted-foreground">
+                  {t("lastFiredNever")}
+                </span>
+              ) : null}
+            </div>
+          </>
+        ) : trigger ? (
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">
+              {t("webhookUrlHidden")}
+            </p>
+            {lastFiredDisplay ? (
+              <p className="text-xs text-muted-foreground">
+                {t("lastFiredLabel")}: {lastFiredDisplay}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {t("lastFiredNever")}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {t("webhookUrlPending")}
+          </p>
+        )}
+      </div>
 
       {/* Allowed senders — chips (exact address or *@domain glob) */}
       <div className="space-y-2">
@@ -468,6 +628,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
         {t("triggers.securityHint")}
       </p>
 
+      {/* Save / delete */}
       {access.canWrite ? (
         <div className="flex flex-wrap gap-2">
           <Button
@@ -493,6 +654,168 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
         </div>
       ) : null}
 
+      {/* ------------------------------------------------------------------- */}
+      {/* Signing secret subsection                                            */}
+      {/* ------------------------------------------------------------------- */}
+      {trigger?.id ? (
+        <div className="space-y-3 rounded-md border border-border p-4">
+          <div>
+            <p className="text-sm font-medium">{t("signing.title")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("signing.description")}
+            </p>
+          </div>
+
+          {trigger.has_signing_secret ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{t("signing.enabled")}</Badge>
+                {access.canWrite ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={signingState.loading}
+                    onClick={handleRemoveSigning}
+                  >
+                    {t("signing.remove")}
+                  </Button>
+                ) : null}
+              </div>
+              <CopyField
+                label={t("signing.schemeLabel")}
+                value="X-Exulu-Signature: sha256=HMAC-SHA256(body, secret)"
+                mono
+              />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {access.canWrite ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={signingState.loading || actionDisabled}
+                  onClick={handleGenerateSigning}
+                >
+                  {t("signing.generate")}
+                </Button>
+              ) : null}
+              {signingSecretOnce ? (
+                <div className="space-y-1">
+                  <CopyField
+                    label={t("signing.secretLabel")}
+                    value={signingSecretOnce}
+                    mono
+                    masked
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t("signing.revealNote")}
+                  </p>
+                  <CopyField
+                    label={t("signing.schemeLabel")}
+                    value="X-Exulu-Signature: sha256=HMAC-SHA256(body, secret)"
+                    mono
+                  />
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {/* ------------------------------------------------------------------- */}
+      {/* Test panel                                                           */}
+      {/* ------------------------------------------------------------------- */}
+      {trigger?.id ? (
+        <div className="space-y-3 rounded-md border border-border p-4">
+          <div>
+            <p className="text-sm font-medium">{t("test.title")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("test.realSendNote")}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="test-content-type">{t("test.contentType")}</Label>
+            <Select
+              value={testContentType}
+              onValueChange={handleTestContentTypeChange}
+              disabled={actionDisabled}
+            >
+              <SelectTrigger id="test-content-type" className="w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="application/json">
+                  application/json
+                </SelectItem>
+                <SelectItem value="message/rfc822">message/rfc822</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="test-payload">{t("test.payload")}</Label>
+            <textarea
+              id="test-payload"
+              value={testPayload}
+              onChange={(e) => setTestPayload(e.target.value)}
+              disabled={actionDisabled}
+              rows={6}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={actionDisabled || testState.loading}
+            onClick={handleSendTest}
+          >
+            {testState.loading ? t("test.sending") : t("test.send")}
+          </Button>
+
+          {testResult ? (
+            <div className="rounded-md border border-border bg-muted/40 p-3 text-sm">
+              {testResult.outcome === "fired" ? (
+                <span className="text-foreground">
+                  {t("test.result.fired")}
+                  {testResult.jobResultId ? (
+                    <>
+                      {" — "}
+                      <a
+                        href={`?run=${testResult.jobResultId}`}
+                        className="underline underline-offset-2"
+                      >
+                        {testResult.jobResultId}
+                      </a>
+                    </>
+                  ) : null}
+                </span>
+              ) : testResult.outcome === "filtered" ? (
+                <span className="text-muted-foreground">
+                  {t("test.result.filtered")}: {testResult.filteredReason}
+                </span>
+              ) : testResult.outcome === "dropped" ? (
+                <span className="text-muted-foreground">
+                  {t("test.result.dropped")}
+                </span>
+              ) : (
+                <span className="text-destructive">
+                  {testResult.error ?? t("test.result.error")}
+                </span>
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* ------------------------------------------------------------------- */}
+      {/* Dialogs                                                              */}
+      {/* ------------------------------------------------------------------- */}
+
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -501,6 +824,16 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
         variant="destructive"
         onConfirm={handleConfirmDelete}
         confirmLabel={t("triggers.delete.confirmLabel")}
+      />
+
+      <ConfirmDialog
+        open={confirmRegen}
+        onOpenChange={setConfirmRegen}
+        title={t("regenerateConfirm.title")}
+        description={t("regenerateConfirm.description")}
+        variant="destructive"
+        onConfirm={handleRegen}
+        confirmLabel={t("regenerateConfirm.confirmLabel")}
       />
     </div>
   );
