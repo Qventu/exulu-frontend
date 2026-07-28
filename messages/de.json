@@ -2097,38 +2097,6 @@
   },
   "configuration": {
     "description": "Gestalten Sie das IMP im Stil Ihrer Organisation — Änderungen gelten für alle Benutzer.",
-    "emailIntake": {
-      "title": "E-Mail-Eingang",
-      "description": "Eingehende E-Mails für Routinen — Anbieter, Domain und Webhook-Zugangsdaten.",
-      "enabled": "E-Mail-Eingang aktivieren",
-      "provider": "Anbieter",
-      "providerMailgunEu": "Mailgun (EU-Region).",
-      "domainLabel": "Eingangsdomain",
-      "domainPlaceholder": "mail.ihre-firma.de",
-      "signingKeyLabel": "Webhook-Signaturschlüssel",
-      "signingKeyStored": "Ein Signaturschlüssel ist hinterlegt — neuen Wert eingeben, um ihn zu ersetzen.",
-      "signingKeyPlaceholder": "Mailgun HTTP-Webhook-Signaturschlüssel einfügen",
-      "webhookUrlLabel": "Webhook-URL",
-      "webhookUrlHint": "Richten Sie die forward()-Aktion Ihrer Mailgun-Route auf diese URL.",
-      "webhookUrlPending": "Speichern Sie die Einstellungen einmal, um die Webhook-URL zu sehen.",
-      "lastWebhookLabel": "Letzter Webhook empfangen:",
-      "lastWebhookNever": "noch nie — senden Sie eine Test-E-Mail, sobald DNS und Route eingerichtet sind.",
-      "checklistTitle": "Einrichtungs-Checkliste",
-      "checklist": {
-        "step1": "Mailgun-EU-Konto anlegen und die Empfangsdomain hinzufügen (z. B. mail.ihre-firma.de).",
-        "step2": "MX-Einträge (mxa.eu.mailgun.org, mxb.eu.mailgun.org) und TXT-Verifizierungseinträge veröffentlichen.",
-        "step3": "EINE Catch-all-Route anlegen: match_recipient(\".*@ihre-domain\") → forward auf die Webhook-URL oben → stop().",
-        "step4": "Die Nachrichtenspeicherung des Kontos/der Domain auf 0 setzen und explizit prüfen — die Speicherdauer ist KEINE Routen-Einstellung.",
-        "step5": "Den HTTP-Webhook-Signaturschlüssel der Domain in das Feld oben kopieren und den E-Mail-Eingang aktivieren.",
-        "step6": "Eine Test-E-Mail senden und prüfen, dass sich \"Letzter Webhook empfangen\" aktualisiert."
-      },
-      "save": "Einstellungen speichern",
-      "saving": "Wird gespeichert…",
-      "toast": {
-        "saved": "E-Mail-Eingangseinstellungen gespeichert",
-        "saveFailed": "E-Mail-Eingangseinstellungen konnten nicht gespeichert werden"
-      }
-    },
     "editor": {
       "defaultValue": "Standard: {value}",
       "invalidValue": "Kein erkennbarer Farbwert — wird genau so veröffentlicht wie eingegeben.",
@@ -3874,8 +3842,37 @@
       "metaDisabled": "Deaktiviert",
       "loading": "E-Mail-Auslöser wird geladen…",
       "enable": "Diese Routine starten, wenn eine E-Mail eintrifft",
-      "addressLabel": "Eingangsadresse",
-      "addressPending": "Die dedizierte Adresse wird beim ersten Speichern des Auslösers erzeugt.",
+      "webhookUrlLabel": "Webhook-URL",
+      "webhookUrlHidden": "URL verborgen — Sie haben nur Lesezugriff.",
+      "webhookUrlPending": "Speichern Sie den Auslöser einmal, um die Webhook-URL zu erzeugen.",
+      "regenerate": "URL neu generieren",
+      "regenerated": "Webhook-URL neu generiert",
+      "regenerateConfirm": {
+        "title": "Webhook-URL neu generieren?",
+        "description": "Die alte URL funktioniert sofort nicht mehr. Aktualisieren Sie anschließend Ihren Weiterleitungsdienst.",
+        "confirmLabel": "Neu generieren"
+      },
+      "lastFiredLabel": "Zuletzt empfangen:",
+      "lastFiredNever": "noch nie — senden Sie eine Test-Payload oder richten Sie Ihren Weiterleitungsdienst ein.",
+      "signing": {
+        "title": "Signierte Payloads erforderlich",
+        "enabledLabel": "Signierung aktiviert",
+        "generate": "Signaturgeheimnis generieren",
+        "remove": "Signaturgeheimnis entfernen",
+        "revealNote": "Speichern Sie dieses Geheimnis jetzt — es wird nicht erneut angezeigt.",
+        "schemeLabel": "Signatur-Header"
+      },
+      "test": {
+        "title": "Test-Payload senden",
+        "contentType": "Inhaltstyp",
+        "payload": "Payload",
+        "send": "Test senden",
+        "realSendNote": "Dies startet einen echten Lauf und zählt gegen die Ratenlimits dieses Auslösers.",
+        "fired": "Ausgelöst — Lauf gestartet.",
+        "filtered": "Gefiltert: {reason}",
+        "dropped": "Verworfen (kein Lauf erstellt).",
+        "error": "Fehler: {message}"
+      },
       "senders": {
         "label": "Erlaubte Absender",
         "hint": "Exakte Adressen oder *@domain-Platzhalter. Leer lassen, um alle Absender zuzulassen.",
@@ -3926,11 +3923,6 @@
         "deleteFailed": "E-Mail-Auslöser konnte nicht entfernt werden",
         "invalidSender": "Geben Sie eine vollständige Adresse oder einen *@domain-Platzhalter ein",
         "invalidFilters": "Korrigieren Sie die ungültigen Filterregeln vor dem Speichern"
-      },
-      "notConfigured": {
-        "title": "E-Mail-Eingang ist nicht konfiguriert",
-        "description": "Ein Super-Admin muss zuerst den Anbieter für eingehende E-Mails verbinden, bevor Routinen E-Mails empfangen können.",
-        "cta": "E-Mail-Einstellungen öffnen"
       }
     },
     "runActionLabel": "Ausführen"

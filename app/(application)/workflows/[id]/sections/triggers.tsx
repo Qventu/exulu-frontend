@@ -283,7 +283,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
     if (!trigger?.id) return;
     try {
       await regenMutate({ variables: { id: trigger.id } });
-      toast.success(t("regenerate"));
+      toast.success(t("regenerated"));
       await onSaved();
     } catch (err) {
       toast.error(t("triggers.toast.saveFailed"), {
