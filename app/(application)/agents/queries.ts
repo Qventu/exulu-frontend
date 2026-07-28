@@ -129,12 +129,6 @@ export const GET_AGENT_DETAIL = gql`
       systemInstructions
       slug
       category
-      workflows {
-        enabled
-        queue {
-          name
-        }
-      }
       streaming
       capabilities {
         text

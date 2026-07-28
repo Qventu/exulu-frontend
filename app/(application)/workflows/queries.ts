@@ -354,12 +354,6 @@ export const GET_AGENT_BY_ID = gql`
     agentById(id: $id) {
       id
       name
-      workflows {
-        enabled
-        queue {
-          name
-        }
-      }
     }
   }
 `;

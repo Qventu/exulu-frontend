@@ -127,12 +127,6 @@ authenticationInformation
 systemInstructions
 slug
 category
-workflows {
-  enabled
-  queue {
-    name
-  }
-}
 streaming
 capabilities {
   text

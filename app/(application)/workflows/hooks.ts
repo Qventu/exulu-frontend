@@ -148,7 +148,6 @@ export function useRoutinesIndex() {
 interface AgentRecord {
   id: string;
   name: string;
-  queueName?: string | null;
 }
 
 export function useAgentsForPage(agentIds: string[]) {
@@ -177,7 +176,6 @@ export function useAgentsForPage(agentIds: string[]) {
             agentById?: {
               id: string;
               name: string;
-              workflows?: { queue?: { name?: string | null } | null } | null;
             };
           }>({
             query: GET_AGENT_BY_ID,
@@ -189,7 +187,6 @@ export function useAgentsForPage(agentIds: string[]) {
             return {
               id: data.agentById.id,
               name: data.agentById.name,
-              queueName: data.agentById.workflows?.queue?.name ?? null,
             } satisfies AgentRecord;
           })
           .catch(() => null),

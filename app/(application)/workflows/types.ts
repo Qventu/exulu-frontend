@@ -40,8 +40,6 @@ export interface Routine {
   queue?: string | null;
   /** Resolver-derived display name; populated by useAgentsForPage. */
   agentName?: string | null;
-  /** Agent queue (if any); populated by useAgentsForPage. */
-  agentQueueName?: string | null;
   created_by: number;
   rights_mode: RoutineRightsMode;
   RBAC: RoutineRbac;
@@ -72,7 +70,7 @@ export interface RoutinePanelSelection {
 export interface RunRoutineRequest {
   /** Workflow template id (the GraphQL identifier is "workflow"). */
   id: string;
-  /** Resolved at row-press from the agent's queue (undefined -> immediate). */
+  /** The routine's queue (workflow_templates.queue); undefined -> immediate. */
   queue?: string;
   /** Variable names to render input fields for. */
   variables?: string[];

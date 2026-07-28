@@ -29,12 +29,6 @@ export interface Agent {
     image?: string;
     /** FK to models.id — replaces legacy provider + providerapikey columns. */
     model?: string;
-    workflows?: {
-        enabled: boolean;
-        queue?: {
-            name: string;
-        };
-    };
     firewall?: {
         enabled: boolean;
         scanners?: {

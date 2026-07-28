@@ -60,9 +60,8 @@ export const AGENT_IMAGE_UPDATE_SUPPORTED = true;
  * Full AGENT_FIELDS (queries/queries.ts:114-166) plus the two read-side
  * restorations — firewall (item 69) and RBAC.teams (item 45). All
  * fetched-but-unsurfaced fields are KEPT (slug, streaming, maxContextLength,
- * authenticationInformation, workflows) per the relocation-contract-
- * completeness note (agents.md §1 tail). Slug + id surface in Developer
- * (item 35).
+ * authenticationInformation) per the relocation-contract-completeness note
+ * (agents.md §1 tail). Slug + id surface in Developer (item 35).
  */
 export const AGENT_EDITOR_FIELDS = `
   id
@@ -90,12 +89,6 @@ export const AGENT_EDITOR_FIELDS = `
   systemInstructions
   slug
   category
-  workflows {
-    enabled
-    queue {
-      name
-    }
-  }
   streaming
   capabilities {
     text
