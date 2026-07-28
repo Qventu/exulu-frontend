@@ -17,6 +17,7 @@ import {
   mapRunDot,
   needsAttention,
   NON_FILTERED_STATES,
+  partitionSelection,
   RUN_STATE_BADGE,
   RUN_TRIGGERS,
   runTitle,
@@ -252,5 +253,30 @@ describe("canDeleteRun", () => {
     for (const s of ["waiting", "active", "waiting_approval"]) {
       expect(canDeleteRun(s)).toBe(false);
     }
+  });
+});
+
+describe("partitionSelection", () => {
+  const runs = [
+    { id: "a", state: "active" },       // cancellable
+    { id: "b", state: "completed" },    // deletable
+    { id: "c", state: "waiting_approval" }, // cancellable
+    { id: "d", state: "cancelled" },    // deletable
+    { id: "e", state: "failed" },       // deletable, but not selected below
+  ];
+  it("splits the selection into cancellable and deletable id lists", () => {
+    expect(
+      partitionSelection(runs, new Set(["a", "b", "c", "d"])),
+    ).toEqual({ cancellable: ["a", "c"], deletable: ["b", "d"] });
+  });
+  it("ignores ids not present in runs and returns empty lists for an empty selection", () => {
+    expect(partitionSelection(runs, new Set(["zzz"]))).toEqual({
+      cancellable: [],
+      deletable: [],
+    });
+    expect(partitionSelection(runs, new Set())).toEqual({
+      cancellable: [],
+      deletable: [],
+    });
   });
 });

@@ -143,6 +143,28 @@ export function isTerminalRunState(state: string): boolean {
   );
 }
 
+export interface SelectionPartition {
+  /** selected run ids that can be cancelled (canCancelRun). */
+  cancellable: string[];
+  /** selected run ids that can be deleted (canDeleteRun / terminal). */
+  deletable: string[];
+}
+
+/** Splits the selected run ids into the subset each bulk action can act on. */
+export function partitionSelection(
+  runs: { id: string; state: string }[],
+  selectedIds: ReadonlySet<string>,
+): SelectionPartition {
+  const cancellable: string[] = [];
+  const deletable: string[] = [];
+  for (const run of runs) {
+    if (!selectedIds.has(run.id)) continue;
+    if (canCancelRun(run.state)) cancellable.push(run.id);
+    else if (canDeleteRun(run.state)) deletable.push(run.id);
+  }
+  return { cancellable, deletable };
+}
+
 export function needsAttention(state: string): boolean {
   return state === "waiting_approval";
 }
