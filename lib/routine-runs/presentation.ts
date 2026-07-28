@@ -128,6 +128,11 @@ export function canRetryRun(state: string): boolean {
   return state === "failed" || state === "cancelled";
 }
 
+/** deleteRoutineRun domain: terminal runs only (mirrors TERMINAL_JOB_STATES). */
+export function canDeleteRun(state: string): boolean {
+  return isTerminalRunState(state);
+}
+
 /** Mirrors Plan 1 TERMINAL_JOB_STATES. */
 export function isTerminalRunState(state: string): boolean {
   return (

@@ -7,6 +7,7 @@ import {
   ALL_RUN_STATES,
   buildRoutineRunsVariables,
   canCancelRun,
+  canDeleteRun,
   canRetryRun,
   DEFAULT_RUNS_FILTER,
   filteredReason,
@@ -240,5 +241,16 @@ describe("buildRoutineRunsVariables", () => {
     expect(new Date(vars.to as string).getTime()).toBe(
       new Date("2026-07-15T12:30").getTime(),
     );
+  });
+});
+
+describe("canDeleteRun", () => {
+  it("is true for terminal states, false for live states", () => {
+    for (const s of ["completed", "failed", "filtered", "cancelled"]) {
+      expect(canDeleteRun(s)).toBe(true);
+    }
+    for (const s of ["waiting", "active", "waiting_approval"]) {
+      expect(canDeleteRun(s)).toBe(false);
+    }
   });
 });

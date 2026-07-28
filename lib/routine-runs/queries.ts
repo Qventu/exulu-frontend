@@ -75,6 +75,12 @@ export const RETRY_ROUTINE_RUN = gql`
   }
 `;
 
+export const DELETE_ROUTINE_RUN = gql`
+  mutation DeleteRoutineRun($id: ID!) {
+    deleteRoutineRun(id: $id)
+  }
+`;
+
 /**
  * Chat banner lookup: session.metadata.job_result_id → run state. Uses the
  * existing auto-generated job_resultById; `trigger`/`workflow` are Plan-1

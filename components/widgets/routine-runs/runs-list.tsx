@@ -48,6 +48,7 @@ import {
   ALL_RUN_STATES,
   buildRoutineRunsVariables,
   canCancelRun,
+  canDeleteRun,
   canRetryRun,
   DEFAULT_RUNS_FILTER,
   filteredReason,
@@ -62,6 +63,7 @@ import {
 } from "@/lib/routine-runs/presentation";
 import {
   CANCEL_ROUTINE_RUN,
+  DELETE_ROUTINE_RUN,
   RETRY_ROUTINE_RUN,
   ROUTINE_RUNS,
 } from "@/lib/routine-runs/queries";
@@ -98,6 +100,9 @@ export function RoutineRunsList({
   const [cancelTarget, setCancelTarget] = React.useState<RoutineRun | null>(
     null,
   );
+  const [deleteTarget, setDeleteTarget] = React.useState<RoutineRun | null>(
+    null,
+  );
 
   // Debounced text search — 300 ms, resets to page 1 on change.
   React.useEffect(() => {
@@ -119,6 +124,7 @@ export function RoutineRunsList({
   });
 
   const [cancelMutate] = useMutation(CANCEL_ROUTINE_RUN);
+  const [deleteMutate] = useMutation(DELETE_ROUTINE_RUN);
   const [retryMutate, retryState] = useMutation(RETRY_ROUTINE_RUN);
 
   const runs = data?.routineRuns?.items ?? [];
@@ -156,6 +162,20 @@ export function RoutineRunsList({
       toast.error(t("toast.retryFailed"), {
         description: (err as Error).message,
       });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutate({ variables: { id: deleteTarget.id } });
+      toast.success(t("toast.deleted"));
+      await refetch();
+    } catch (err) {
+      toast.error(t("toast.deleteFailed"), {
+        description: (err as Error).message,
+      });
+      throw err; // keep ConfirmDialog open
     }
   };
 
@@ -280,6 +300,7 @@ export function RoutineRunsList({
                 setShowRawById((m) => ({ ...m, [run.id]: !m[run.id] }))
               }
               onCancel={() => setCancelTarget(run)}
+              onDelete={() => setDeleteTarget(run)}
               onRetry={() => handleRetry(run)}
               retrying={retryState.loading}
               stateLabel={stateLabel}
@@ -329,6 +350,17 @@ export function RoutineRunsList({
         confirmLabel={t("cancelConfirm.confirmLabel")}
         onConfirm={handleConfirmCancel}
       />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t("deleteConfirm.title")}
+        description={t("deleteConfirm.description")}
+        variant="destructive"
+        confirmLabel={t("deleteConfirm.confirmLabel")}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
@@ -341,6 +373,7 @@ interface RunRowProps {
   showRaw: boolean;
   onToggleRaw: () => void;
   onCancel: () => void;
+  onDelete: () => void;
   onRetry: () => void;
   retrying: boolean;
   stateLabel: (state: string) => string;
@@ -355,6 +388,7 @@ function RunRow({
   showRaw,
   onToggleRaw,
   onCancel,
+  onDelete,
   onRetry,
   retrying,
   stateLabel,
@@ -536,6 +570,11 @@ function RunRow({
                 onClick={onRetry}
               >
                 {t("row.retry")}
+              </Button>
+            ) : null}
+            {canDeleteRun(run.state) ? (
+              <Button variant="destructive" size="sm" onClick={onDelete}>
+                {t("row.delete")}
               </Button>
             ) : null}
             <Button

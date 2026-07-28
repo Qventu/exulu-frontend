@@ -3989,6 +3989,7 @@
       "openSession": "Unterhaltung öffnen",
       "cancel": "Lauf abbrechen",
       "retry": "Erneut ausführen",
+      "delete": "Löschen",
       "showRaw": "Rohdaten anzeigen",
       "hideRaw": "Rohdaten ausblenden",
       "errorHeading": "Fehler",
@@ -4005,11 +4006,18 @@
       "description": "Der Lauf wird gestoppt und als abgebrochen markiert. Bereits ausgeführte Schritte werden nicht rückgängig gemacht.",
       "confirmLabel": "Lauf abbrechen"
     },
+    "deleteConfirm": {
+      "title": "Diesen Lauf löschen?",
+      "description": "Der Lauf und sein Transkript werden dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden.",
+      "confirmLabel": "Lauf löschen"
+    },
     "toast": {
       "cancelled": "Lauf abgebrochen",
       "cancelFailed": "Lauf konnte nicht abgebrochen werden",
       "retried": "Lauf erneut eingereiht",
-      "retryFailed": "Lauf konnte nicht erneut gestartet werden"
+      "retryFailed": "Lauf konnte nicht erneut gestartet werden",
+      "deleted": "Lauf gelöscht",
+      "deleteFailed": "Lauf konnte nicht gelöscht werden"
     },
     "emptyTitle": "Keine Läufe",
     "emptyDescription": "Keine Läufe entsprechen den aktuellen Filtern.",
