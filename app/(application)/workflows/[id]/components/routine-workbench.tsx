@@ -13,11 +13,11 @@
  *      SectionNav (sticky lg+, chip row <lg) wired to useScrollSpy
  *      div.min-w-0 > div.mx-auto.max-w-3xl.space-y-12 >
  *        <BasicsSection />     (id="basics")
- *        <AccessSection />     (id="access")
- *        <StepsSection />      (id="steps")  read-only preview + Sheet trigger
- *        <ScheduleSection />   (id="schedule")
- *        <RunsSection />       (id="runs")
  *        <QueueSection />      (id="queue")
+ *        <AccessSection />     (id="access")
+ *        <StepsSection />      (id="steps")
+ *        <TriggersSection />   (id="triggers") — Email · Schedule · API tabs
+ *        <RunsSection />       (id="runs")
  *        <DangerSection />     (id="danger") — Delete (canDelete only)
  *    SaveBar + useUnsavedChangesGuard (page-level, for Basics + Access)
  *    Subpage-local overlays (single-overlay invariant):
@@ -75,7 +75,6 @@ import { BasicsSection } from "../sections/basics";
 import { DangerSection } from "../sections/danger";
 import { QueueSection } from "../sections/queue";
 import { RunsSection } from "../sections/runs";
-import { ScheduleSection } from "../sections/schedule";
 import { StepsSection } from "../sections/steps";
 import { TriggersSection } from "../sections/triggers";
 import { RoutineHeader } from "./routine-header";
@@ -83,12 +82,11 @@ import { StepsEditorSheet } from "./steps-editor-sheet";
 
 export const ROUTINE_SECTION_IDS = [
   "basics",
+  "queue",
   "access",
   "steps",
-  "schedule",
   "triggers",
   "runs",
-  "queue",
   "danger",
 ] as const;
 export type RoutineSectionId = (typeof ROUTINE_SECTION_IDS)[number];
@@ -179,6 +177,7 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
         <div className="min-w-0">
           <div className="mx-auto max-w-3xl space-y-12">
             <BasicsSection {...sectionProps} />
+            <QueueSection {...sectionProps} />
             <AccessSection {...sectionProps} />
             <StepsSection
               routine={routine}
@@ -186,13 +185,11 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
               canWrite={workbench.access.canWrite}
               onOpenSheet={workbench.openStepsSheet}
             />
-            <ScheduleSection routine={routine} access={workbench.access} />
             <TriggersSection routine={routine} access={workbench.access} />
             <RunsSection
               routine={routine}
               onRetry={(prefill) => workbench.openRun(prefill)}
             />
-            <QueueSection {...sectionProps} />
             <DangerSection {...sectionProps} />
           </div>
         </div>
