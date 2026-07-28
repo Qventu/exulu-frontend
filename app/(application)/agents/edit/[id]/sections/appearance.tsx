@@ -1,18 +1,8 @@
 "use client";
 
-/**
- * Appearance section — items 9-14 (avatar + AI generation via
- * AgentAvatarGenerator, one overlay launched from a page section — never
- * modal-on-modal), 55 (Lottie idle/responding uploads + previews, s3-gated
- * as today). Avatar staged via setImage and saved through $image
- * (AGENT_IMAGE_UPDATE_SUPPORTED).
- */
-
 import { Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
-
-import { AgentAvatarGenerator } from "@/app/(application)/agents/components/agent-avatar-generator";
 import AgentVisual from "@/components/lottie";
 import { Button } from "@/components/ui/button";
 import { ConfigContext } from "@/components/shell/config-context";
@@ -76,15 +66,6 @@ export function AppearanceSection({ agent, editor }: EditorSectionProps) {
           </div>
         </div>
       </div>
-
-      {AGENT_IMAGE_UPDATE_SUPPORTED && (
-        <AgentAvatarGenerator
-          agentName={agent.name ?? ""}
-          open={generatorOpen}
-          onOpenChange={setGeneratorOpen}
-          onSelect={(url) => editor.setImage(url)}
-        />
-      )}
 
       {/* Custom Lottie visualizations (item 55) — s3-gated */}
       {configContext?.fileUploads?.s3endpoint && (

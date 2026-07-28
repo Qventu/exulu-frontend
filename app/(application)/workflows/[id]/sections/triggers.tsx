@@ -369,58 +369,6 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
         <Label htmlFor="email-trigger-enabled">{t("triggers.enable")}</Label>
       </div>
 
-      {/* Webhook URL + Regenerate */}
-      <div className="space-y-2">
-        {trigger?.webhook_url ? (
-          <>
-            <CopyField
-              label={t("triggers.webhookUrlLabel")}
-              value={trigger.webhook_url}
-              mono
-            />
-            <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={actionDisabled || regenState.loading}
-                onClick={() => setConfirmRegen(true)}
-              >
-                {t("triggers.regenerate")}
-              </Button>
-              {lastFiredDisplay ? (
-                <span className="text-xs text-muted-foreground">
-                  {t("triggers.lastFiredLabel")}: {lastFiredDisplay}
-                </span>
-              ) : trigger ? (
-                <span className="text-xs text-muted-foreground">
-                  {t("triggers.lastFiredNever")}
-                </span>
-              ) : null}
-            </div>
-          </>
-        ) : trigger ? (
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">
-              {t("triggers.webhookUrlHidden")}
-            </p>
-            {lastFiredDisplay ? (
-              <p className="text-xs text-muted-foreground">
-                {t("triggers.lastFiredLabel")}: {lastFiredDisplay}
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                {t("triggers.lastFiredNever")}
-              </p>
-            )}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            {t("triggers.webhookUrlPending")}
-          </p>
-        )}
-      </div>
-
       {/* Allowed senders — chips (exact address or *@domain glob) */}
       <div className="space-y-2">
         <Label htmlFor="trigger-sender-input">
@@ -654,6 +602,58 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
           ) : null}
         </div>
       ) : null}
+
+        {/* Webhook URL + Regenerate */}
+        <div className="space-y-2">
+        {trigger?.webhook_url ? (
+          <>
+            <CopyField
+              label={t("triggers.webhookUrlLabel")}
+              value={trigger.webhook_url}
+              mono
+            />
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={actionDisabled || regenState.loading}
+                onClick={() => setConfirmRegen(true)}
+              >
+                {t("triggers.regenerate")}
+              </Button>
+              {lastFiredDisplay ? (
+                <span className="text-xs text-muted-foreground">
+                  {t("triggers.lastFiredLabel")}: {lastFiredDisplay}
+                </span>
+              ) : trigger ? (
+                <span className="text-xs text-muted-foreground">
+                  {t("triggers.lastFiredNever")}
+                </span>
+              ) : null}
+            </div>
+          </>
+        ) : trigger ? (
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">
+              {t("triggers.webhookUrlHidden")}
+            </p>
+            {lastFiredDisplay ? (
+              <p className="text-xs text-muted-foreground">
+                {t("triggers.lastFiredLabel")}: {lastFiredDisplay}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {t("triggers.lastFiredNever")}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {t("triggers.webhookUrlPending")}
+          </p>
+        )}
+      </div>
 
       {/* ------------------------------------------------------------------- */}
       {/* Signing secret subsection                                            */}
