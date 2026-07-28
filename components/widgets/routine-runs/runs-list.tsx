@@ -33,6 +33,7 @@ import { RelativeTime } from "@/components/primitives/relative-time";
 import { StatusDot } from "@/components/primitives/status-dot";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -103,6 +104,7 @@ export function RoutineRunsList({
   const [deleteTarget, setDeleteTarget] = React.useState<RoutineRun | null>(
     null,
   );
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
 
   // Debounced text search — 300 ms, resets to page 1 on change.
   React.useEffect(() => {
@@ -131,6 +133,11 @@ export function RoutineRunsList({
   const total = data?.routineRuns?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
+  const filterKey = JSON.stringify(filter);
+  React.useEffect(() => {
+    setSelectedIds(new Set());
+  }, [filterKey]);
+
   const patchFilter = (patch: Partial<RunsFilterState>) =>
     setFilter((f) => ({ ...f, ...patch, page: 1 }));
 
@@ -138,6 +145,15 @@ export function RoutineRunsList({
     (ALL_RUN_STATES as readonly string[]).includes(state)
       ? t(`state.${state}`)
       : state;
+
+  const toggleSelected = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
 
   const handleConfirmCancel = async () => {
     if (!cancelTarget) return;
@@ -309,6 +325,8 @@ export function RoutineRunsList({
               retrying={retryState.loading}
               stateLabel={stateLabel}
               t={t}
+              selected={selectedIds.has(run.id)}
+              onSelectChange={(checked) => toggleSelected(run.id, checked)}
             />
           ))}
         </ul>
@@ -382,6 +400,8 @@ interface RunRowProps {
   retrying: boolean;
   stateLabel: (state: string) => string;
   t: ReturnType<typeof useTranslations>;
+  selected: boolean;
+  onSelectChange: (checked: boolean) => void;
 }
 
 function RunRow({
@@ -397,6 +417,8 @@ function RunRow({
   retrying,
   stateLabel,
   t,
+  selected,
+  onSelectChange,
 }: RunRowProps) {
   const mapped = mapRunDot(run.state);
   const badge = triggerBadge(run);
@@ -423,56 +445,69 @@ function RunRow({
 
   return (
     <li className={cn(run.state === "filtered" && "opacity-60")}>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
+      <div
         className={cn(
-          "flex w-full min-h-11 items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/50",
+          "grid grid-cols-[auto_1fr] items-center gap-3 px-3",
           expanded && "bg-muted/30",
         )}
       >
-        <StatusDot status={mapped.status} pulse={mapped.pulse} />
-        <Badge
-          variant="outline"
-          className={cn(RUN_STATE_BADGE[run.state] ?? "")}
-        >
-          {stateLabel(run.state)}
-        </Badge>
-        <Badge
-          variant="outline"
-          className="max-w-44 truncate font-normal text-muted-foreground"
-        >
-          {triggerLabel}
-        </Badge>
-        <span className="hidden min-w-0 flex-1 truncate text-sm sm:inline">
-          {showRoutineColumn && run.workflowName ? (
-            <span className="text-muted-foreground">
-              {run.workflowName}
-              {title !== "" && title !== run.workflowName ? " — " : ""}
-            </span>
-          ) : null}
-          {title !== run.workflowName || !showRoutineColumn ? title : null}
-        </span>
-        {run.createdAt ? (
-          <RelativeTime
-            date={run.createdAt}
-            className="ml-auto shrink-0 text-xs text-muted-foreground sm:ml-0"
-          />
-        ) : null}
-        {duration ? (
-          <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground md:inline">
-            {duration}
-          </span>
-        ) : null}
-        <ChevronDown
-          aria-hidden
-          className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-transform",
-            expanded && "rotate-180",
-          )}
+        <Checkbox
+          checked={selected}
+          onCheckedChange={(checked) => onSelectChange(checked === true)}
+          aria-label={t("bulk.selectRow")}
         />
-      </button>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          className="grid min-h-11 grid-cols-[auto_150px_190px_minmax(0,1fr)_auto_auto_auto] items-center gap-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+        >
+          <StatusDot status={mapped.status} pulse={mapped.pulse} />
+          <Badge
+            variant="outline"
+            className={cn("justify-self-start", RUN_STATE_BADGE[run.state] ?? "")}
+          >
+            {stateLabel(run.state)}
+          </Badge>
+          <Badge
+            variant="outline"
+            className="max-w-full justify-self-start truncate font-normal text-muted-foreground"
+          >
+            {triggerLabel}
+          </Badge>
+          <span className="hidden min-w-0 truncate text-sm sm:block">
+            {showRoutineColumn && run.workflowName ? (
+              <span className="text-muted-foreground">
+                {run.workflowName}
+                {title !== "" && title !== run.workflowName ? " — " : ""}
+              </span>
+            ) : null}
+            {title !== run.workflowName || !showRoutineColumn ? title : null}
+          </span>
+          {run.createdAt ? (
+            <RelativeTime
+              date={run.createdAt}
+              className="shrink-0 text-xs text-muted-foreground"
+            />
+          ) : (
+            <span />
+          )}
+          {duration ? (
+            <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground md:block">
+              {duration}
+            </span>
+          ) : (
+            <span className="hidden md:block" />
+          )}
+          <ChevronDown
+            aria-hidden
+            className={cn(
+              "size-4 shrink-0 text-muted-foreground transition-transform",
+              expanded && "rotate-180",
+            )}
+          />
+        </button>
+      </div>
 
       {expanded ? (
         <div className="space-y-3 border-t bg-muted/10 px-3 py-3">
