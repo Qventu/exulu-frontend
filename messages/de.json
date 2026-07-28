@@ -3856,22 +3856,29 @@
       "lastFiredNever": "noch nie — senden Sie eine Test-Payload oder richten Sie Ihren Weiterleitungsdienst ein.",
       "signing": {
         "title": "Signierte Payloads erforderlich",
-        "enabledLabel": "Signierung aktiviert",
+        "description": "Hängt eine HMAC-SHA256-Signatur an jeden eingehenden Aufruf, damit der Handler die Herkunft prüfen kann.",
+        "enabled": "Signierung aktiviert",
         "generate": "Signaturgeheimnis generieren",
+        "generated": "Signaturgeheimnis generiert",
         "remove": "Signaturgeheimnis entfernen",
+        "removed": "Signaturgeheimnis entfernt",
         "revealNote": "Speichern Sie dieses Geheimnis jetzt — es wird nicht erneut angezeigt.",
-        "schemeLabel": "Signatur-Header"
+        "schemeLabel": "Signatur-Header",
+        "secretLabel": "Signaturgeheimnis"
       },
       "test": {
         "title": "Test-Payload senden",
         "contentType": "Inhaltstyp",
         "payload": "Payload",
         "send": "Test senden",
+        "sending": "Wird gesendet…",
         "realSendNote": "Dies startet einen echten Lauf und zählt gegen die Ratenlimits dieses Auslösers.",
-        "fired": "Ausgelöst — Lauf gestartet.",
-        "filtered": "Gefiltert: {reason}",
-        "dropped": "Verworfen (kein Lauf erstellt).",
-        "error": "Fehler: {message}"
+        "result": {
+          "fired": "Ausgelöst — Lauf gestartet.",
+          "filtered": "Gefiltert: {reason}",
+          "dropped": "Verworfen (kein Lauf erstellt).",
+          "error": "Fehler: {message}"
+        }
       },
       "senders": {
         "label": "Erlaubte Absender",

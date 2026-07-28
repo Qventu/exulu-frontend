@@ -3856,22 +3856,29 @@
       "lastFiredNever": "never — send a test payload or wire up your forwarder.",
       "signing": {
         "title": "Require signed payloads",
-        "enabledLabel": "Signing enabled",
+        "description": "Attach an HMAC-SHA256 signature to every inbound request so the handler can verify its origin.",
+        "enabled": "Signing enabled",
         "generate": "Generate signing secret",
+        "generated": "Signing secret generated",
         "remove": "Remove signing secret",
+        "removed": "Signing secret removed",
         "revealNote": "Store this secret now — it will not be shown again.",
-        "schemeLabel": "Signature header"
+        "schemeLabel": "Signature header",
+        "secretLabel": "Signing secret"
       },
       "test": {
         "title": "Send a test payload",
         "contentType": "Content type",
         "payload": "Payload",
         "send": "Send test",
+        "sending": "Sending…",
         "realSendNote": "This starts a real run and counts against this trigger's rate limits.",
-        "fired": "Fired — run started.",
-        "filtered": "Filtered: {reason}",
-        "dropped": "Dropped (no run created).",
-        "error": "Error: {message}"
+        "result": {
+          "fired": "Fired — run started.",
+          "filtered": "Filtered: {reason}",
+          "dropped": "Dropped (no run created).",
+          "error": "Error: {message}"
+        }
       },
       "senders": {
         "label": "Allowed senders",

@@ -283,7 +283,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
     if (!trigger?.id) return;
     try {
       await regenMutate({ variables: { id: trigger.id } });
-      toast.success(t("regenerated"));
+      toast.success(t("triggers.regenerated"));
       await onSaved();
     } catch (err) {
       toast.error(t("triggers.toast.saveFailed"), {
@@ -302,7 +302,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
       const secret =
         result.data?.setWorkflowTriggerSigningSecret?.signing_secret_once;
       if (secret) setSigningSecretOnce(secret);
-      toast.success(t("signing.generated"));
+      toast.success(t("triggers.signing.generated"));
       await onSaved();
     } catch (err) {
       toast.error(t("triggers.toast.saveFailed"), {
@@ -316,7 +316,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
     setSigningSecretOnce(null);
     try {
       await signingMutate({ variables: { id: trigger.id, enable: false } });
-      toast.success(t("signing.removed"));
+      toast.success(t("triggers.signing.removed"));
       await onSaved();
     } catch (err) {
       toast.error(t("triggers.toast.saveFailed"), {
@@ -373,7 +373,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
         {trigger?.webhook_url ? (
           <>
             <CopyField
-              label={t("webhookUrlLabel")}
+              label={t("triggers.webhookUrlLabel")}
               value={trigger.webhook_url}
               mono
             />
@@ -385,15 +385,15 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
                 disabled={actionDisabled || regenState.loading}
                 onClick={() => setConfirmRegen(true)}
               >
-                {t("regenerate")}
+                {t("triggers.regenerate")}
               </Button>
               {lastFiredDisplay ? (
                 <span className="text-xs text-muted-foreground">
-                  {t("lastFiredLabel")}: {lastFiredDisplay}
+                  {t("triggers.lastFiredLabel")}: {lastFiredDisplay}
                 </span>
               ) : trigger ? (
                 <span className="text-xs text-muted-foreground">
-                  {t("lastFiredNever")}
+                  {t("triggers.lastFiredNever")}
                 </span>
               ) : null}
             </div>
@@ -401,21 +401,21 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
         ) : trigger ? (
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">
-              {t("webhookUrlHidden")}
+              {t("triggers.webhookUrlHidden")}
             </p>
             {lastFiredDisplay ? (
               <p className="text-xs text-muted-foreground">
-                {t("lastFiredLabel")}: {lastFiredDisplay}
+                {t("triggers.lastFiredLabel")}: {lastFiredDisplay}
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                {t("lastFiredNever")}
+                {t("triggers.lastFiredNever")}
               </p>
             )}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            {t("webhookUrlPending")}
+            {t("triggers.webhookUrlPending")}
           </p>
         )}
       </div>
@@ -660,16 +660,16 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
       {trigger?.id ? (
         <div className="space-y-3 rounded-md border border-border p-4">
           <div>
-            <p className="text-sm font-medium">{t("signing.title")}</p>
+            <p className="text-sm font-medium">{t("triggers.signing.title")}</p>
             <p className="text-xs text-muted-foreground">
-              {t("signing.description")}
+              {t("triggers.signing.description")}
             </p>
           </div>
 
           {trigger.has_signing_secret ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Badge variant="secondary">{t("signing.enabled")}</Badge>
+                <Badge variant="secondary">{t("triggers.signing.enabled")}</Badge>
                 {access.canWrite ? (
                   <Button
                     type="button"
@@ -678,12 +678,12 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
                     disabled={signingState.loading}
                     onClick={handleRemoveSigning}
                   >
-                    {t("signing.remove")}
+                    {t("triggers.signing.remove")}
                   </Button>
                 ) : null}
               </div>
               <CopyField
-                label={t("signing.schemeLabel")}
+                label={t("triggers.signing.schemeLabel")}
                 value="X-Exulu-Signature: sha256=HMAC-SHA256(body, secret)"
                 mono
               />
@@ -698,22 +698,22 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
                   disabled={signingState.loading || actionDisabled}
                   onClick={handleGenerateSigning}
                 >
-                  {t("signing.generate")}
+                  {t("triggers.signing.generate")}
                 </Button>
               ) : null}
               {signingSecretOnce ? (
                 <div className="space-y-1">
                   <CopyField
-                    label={t("signing.secretLabel")}
+                    label={t("triggers.signing.secretLabel")}
                     value={signingSecretOnce}
                     mono
                     masked
                   />
                   <p className="text-xs text-muted-foreground">
-                    {t("signing.revealNote")}
+                    {t("triggers.signing.revealNote")}
                   </p>
                   <CopyField
-                    label={t("signing.schemeLabel")}
+                    label={t("triggers.signing.schemeLabel")}
                     value="X-Exulu-Signature: sha256=HMAC-SHA256(body, secret)"
                     mono
                   />
@@ -730,14 +730,14 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
       {trigger?.id ? (
         <div className="space-y-3 rounded-md border border-border p-4">
           <div>
-            <p className="text-sm font-medium">{t("test.title")}</p>
+            <p className="text-sm font-medium">{t("triggers.test.title")}</p>
             <p className="text-xs text-muted-foreground">
-              {t("test.realSendNote")}
+              {t("triggers.test.realSendNote")}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="test-content-type">{t("test.contentType")}</Label>
+            <Label htmlFor="test-content-type">{t("triggers.test.contentType")}</Label>
             <Select
               value={testContentType}
               onValueChange={handleTestContentTypeChange}
@@ -756,7 +756,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="test-payload">{t("test.payload")}</Label>
+            <Label htmlFor="test-payload">{t("triggers.test.payload")}</Label>
             <textarea
               id="test-payload"
               value={testPayload}
@@ -774,14 +774,14 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
             disabled={actionDisabled || testState.loading}
             onClick={handleSendTest}
           >
-            {testState.loading ? t("test.sending") : t("test.send")}
+            {testState.loading ? t("triggers.test.sending") : t("triggers.test.send")}
           </Button>
 
           {testResult ? (
             <div className="rounded-md border border-border bg-muted/40 p-3 text-sm">
               {testResult.outcome === "fired" ? (
                 <span className="text-foreground">
-                  {t("test.result.fired")}
+                  {t("triggers.test.result.fired")}
                   {testResult.jobResultId ? (
                     <>
                       {" — "}
@@ -796,15 +796,15 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
                 </span>
               ) : testResult.outcome === "filtered" ? (
                 <span className="text-muted-foreground">
-                  {t("test.result.filtered")}: {testResult.filteredReason}
+                  {t("triggers.test.result.filtered")}: {testResult.filteredReason}
                 </span>
               ) : testResult.outcome === "dropped" ? (
                 <span className="text-muted-foreground">
-                  {t("test.result.dropped")}
+                  {t("triggers.test.result.dropped")}
                 </span>
               ) : (
                 <span className="text-destructive">
-                  {testResult.error ?? t("test.result.error")}
+                  {testResult.error ?? t("triggers.test.result.error")}
                 </span>
               )}
             </div>
@@ -829,11 +829,11 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
       <ConfirmDialog
         open={confirmRegen}
         onOpenChange={setConfirmRegen}
-        title={t("regenerateConfirm.title")}
-        description={t("regenerateConfirm.description")}
+        title={t("triggers.regenerateConfirm.title")}
+        description={t("triggers.regenerateConfirm.description")}
         variant="destructive"
         onConfirm={handleRegen}
-        confirmLabel={t("regenerateConfirm.confirmLabel")}
+        confirmLabel={t("triggers.regenerateConfirm.confirmLabel")}
       />
     </div>
   );
