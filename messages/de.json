@@ -3852,7 +3852,7 @@
         "description": "Die alte URL funktioniert sofort nicht mehr. Aktualisieren Sie anschließend Ihren Weiterleitungsdienst.",
         "confirmLabel": "Neu generieren"
       },
-      "lastFiredLabel": "Zuletzt empfangen:",
+      "lastFiredLabel": "Zuletzt empfangen",
       "lastFiredNever": "noch nie — senden Sie eine Test-Payload oder richten Sie Ihren Weiterleitungsdienst ein.",
       "signing": {
         "title": "Signierte Payloads erforderlich",

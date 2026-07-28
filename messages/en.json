@@ -3852,7 +3852,7 @@
         "description": "The old URL stops working immediately. Update your forwarder afterwards.",
         "confirmLabel": "Regenerate"
       },
-      "lastFiredLabel": "Last received:",
+      "lastFiredLabel": "Last received",
       "lastFiredNever": "never — send a test payload or wire up your forwarder.",
       "signing": {
         "title": "Require signed payloads",

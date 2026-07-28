@@ -289,6 +289,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
       toast.error(t("triggers.toast.saveFailed"), {
         description: (err as Error).message,
       });
+      throw err; // keep ConfirmDialog open
     }
   };
 
@@ -785,12 +786,10 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
                   {testResult.jobResultId ? (
                     <>
                       {" — "}
-                      <a
-                        href={`?run=${testResult.jobResultId}`}
-                        className="underline underline-offset-2"
-                      >
-                        {testResult.jobResultId}
-                      </a>
+                      {/* TODO: deep-link to the run via the workbench openRun overlay (follow-up). */}
+                      <span className="font-mono">
+                        run #{testResult.jobResultId}
+                      </span>
                     </>
                   ) : null}
                 </span>
