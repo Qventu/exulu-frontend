@@ -169,10 +169,10 @@ export function RoutineRunsList({
     await refetch();
   };
 
-  const filterKey = JSON.stringify(filter);
+  const selectionResetKey = JSON.stringify({ filter, workflow, pageSize });
   React.useEffect(() => {
     setSelectedIds(new Set());
-  }, [filterKey]);
+  }, [selectionResetKey]);
 
   const patchFilter = (patch: Partial<RunsFilterState>) =>
     setFilter((f) => ({ ...f, ...patch, page: 1 }));
