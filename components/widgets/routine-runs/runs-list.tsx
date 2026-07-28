@@ -240,17 +240,21 @@ export function RoutineRunsList({
           aria-label={t("filters.searchPlaceholder")}
         />
 
-        <Button
-          type="button"
-          size="sm"
-          variant={filter.needsAttention ? "default" : "outline"}
-          aria-pressed={filter.needsAttention}
-          onClick={() =>
-            patchFilter({ needsAttention: !filter.needsAttention })
-          }
-        >
-          {t("filters.needsAttention")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="needs-attention-filter"
+            checked={filter.needsAttention}
+            onCheckedChange={(checked) =>
+              patchFilter({ needsAttention: checked })
+            }
+          />
+          <Label
+            htmlFor="needs-attention-filter"
+            className="text-xs text-muted-foreground"
+          >
+            {t("filters.needsAttention")}
+          </Label>
+        </div>
 
         <div className="flex items-center gap-2">
           <Switch
