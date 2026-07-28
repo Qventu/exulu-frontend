@@ -364,6 +364,15 @@ export const GET_AGENT_BY_ID = gql`
   }
 `;
 
+/** Registered BullMQ queues (backend Query.queues) for the routine queue select. */
+export const GET_AVAILABLE_QUEUES = gql`
+  query GetAvailableQueues {
+    queues {
+      name
+    }
+  }
+`;
+
 /**
  * Lightweight agents listing for the Basics agent dropdown. Bounded page
  * (limit 100) ordered by name — matches the rest of the platform's agent

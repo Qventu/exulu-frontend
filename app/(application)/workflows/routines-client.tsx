@@ -39,7 +39,6 @@ import { RoutinesEmptyState } from "./components/empty-state";
 import { DeleteRoutineDialog } from "./components/delete-routine-dialog";
 import { RunRoutineDialog } from "./components/run-routine-dialog";
 import {
-  useAgentsForPage,
   useLastRunForPage,
   useRoutineMutations,
   useRoutinesIndex,
@@ -69,13 +68,8 @@ export function RoutinesClient() {
   } = useRoutinesIndex();
 
   // Batched lookups for the visible page — replace per-row queries.
-  const agentIds = React.useMemo(
-    () => items.map((r) => r.agent).filter(Boolean),
-    [items],
-  );
   const workflowIds = React.useMemo(() => items.map((r) => r.id), [items]);
 
-  const agents = useAgentsForPage(agentIds);
   const lastRunById = useLastRunForPage(workflowIds);
   const scheduleById = useSchedulesForPage(workflowIds);
 
@@ -97,11 +91,10 @@ export function RoutinesClient() {
     [user],
   );
 
-  // Resolve queueName via the agents map (used for run dialog wiring).
+  // Resolve the routine's queue (used for run dialog wiring).
   const queueNameOf = React.useCallback(
-    (routine: Routine): string | null =>
-      agents[routine.agent]?.queueName ?? null,
-    [agents],
+    (routine: Routine): string | null => routine.queue ?? null,
+    [],
   );
 
   /* ---- Run wiring -------------------------------------------------------- */

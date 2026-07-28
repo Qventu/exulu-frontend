@@ -192,10 +192,7 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
               routine={routine}
               onRetry={(prefill) => workbench.openRun(prefill)}
             />
-            <QueueSection
-              queueName={workbench.queueName}
-              onManageQueue={workbench.openQueue}
-            />
+            <QueueSection {...sectionProps} />
             <DangerSection {...sectionProps} />
           </div>
         </div>

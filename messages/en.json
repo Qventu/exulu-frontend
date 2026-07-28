@@ -3696,7 +3696,10 @@
     },
     "queue": {
       "title": "Queue",
-      "none": "No queue configured for this routine's agent.",
+      "description": "The queue this routine's runs are enqueued on.",
+      "label": "Queue",
+      "placeholder": "Select a queue",
+      "noneAvailable": "No queues are registered. Register a queue in ExuluApp.create to run this routine.",
       "manage": "Manage queue",
       "sheetTitle": "Queue: {name}",
       "runPrefix": "Routine run:",

@@ -155,7 +155,7 @@ export function useRoutineWorkbench(routine: Routine): UseRoutineWorkbench {
   const agents = useAgentsForPage(agentIds);
   const agentRecord = routine.agent ? agents[routine.agent] : undefined;
   const agentName = agentRecord?.name ?? null;
-  const queueName = agentRecord?.queueName ?? null;
+  const queueName = routine.queue ?? null;
 
   // Single-overlay state machine.
   const [overlay, setOverlay] = React.useState<RoutineWorkbenchOverlay>({

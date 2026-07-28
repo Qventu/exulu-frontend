@@ -3696,7 +3696,10 @@
     },
     "queue": {
       "title": "Warteschlange",
-      "none": "Keine Warteschlange für den Agenten dieser Routine konfiguriert.",
+      "description": "Die Warteschlange, in die Läufe dieser Routine eingereiht werden.",
+      "label": "Warteschlange",
+      "placeholder": "Warteschlange auswählen",
+      "noneAvailable": "Es sind keine Warteschlangen registriert. Registriere eine Warteschlange in ExuluApp.create, um diese Routine auszuführen.",
       "manage": "Warteschlange verwalten",
       "sheetTitle": "Warteschlange: {name}",
       "runPrefix": "Routinenlauf:",
