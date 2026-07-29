@@ -2556,7 +2556,14 @@
           "title": "Elemente im Bulk verarbeiten"
         },
         "processError": "Verarbeitung konnte nicht geplant werden",
-        "processScheduled": "Verarbeitung geplant"
+        "processScheduled": "Verarbeitung geplant",
+        "setAccess": {
+          "apply": "Anwenden",
+          "description": "{count, plural, one {Zugriffseinstellungen auf # ausgewähltes Element anwenden.} other {Zugriffseinstellungen auf # ausgewählte Elemente anwenden.}}",
+          "error": "Zugriff konnte nicht aktualisiert werden",
+          "success": "{count, plural, one {Zugriff für # Element aktualisiert} other {Zugriff für # Elemente aktualisiert}}",
+          "title": "Zugriff festlegen"
+        }
       },
       "calculated": {
         "lastProcessedAt": "Zuletzt verarbeitet am"
@@ -2707,6 +2714,7 @@
           "clearSelection": "Auswahl aufheben",
           "delete": "Löschen",
           "selected": "{count, plural, one {# Element ausgewählt} other {# Elemente ausgewählt}}",
+          "setAccess": "Zugriff festlegen",
           "unarchive": "Archivierung aufheben"
         },
         "addFirst": "Erstes Element hinzufügen",

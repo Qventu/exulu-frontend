@@ -433,6 +433,19 @@ export const UPDATE_ITEM = (context: string) => gql`
   }
 `;
 
+export const BULK_UPDATE_ITEM_RBAC = (context: string) => gql`
+  mutation BulkUpdateRBAC${context}(
+    $ids: [ID!]!
+    $rights_mode: String!
+    $rbac: RBACInput
+  ) {
+    ${context}_itemsBulkUpdateRBAC(ids: $ids, rights_mode: $rights_mode, RBAC: $rbac) {
+      message
+      itemCount
+    }
+  }
+`;
+
 export const DELETE_ITEM = (context: string, fields: string[]) => gql`
   mutation DeleteOneById${context}($id: ID!) {
     ${context}_itemsRemoveOneById(id: $id) {

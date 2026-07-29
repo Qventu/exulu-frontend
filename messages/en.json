@@ -2556,7 +2556,14 @@
           "title": "Process items in bulk"
         },
         "processError": "Couldn't schedule processing",
-        "processScheduled": "Processing scheduled"
+        "processScheduled": "Processing scheduled",
+        "setAccess": {
+          "apply": "Apply",
+          "description": "{count, plural, one {Apply access settings to # selected item.} other {Apply access settings to # selected items.}}",
+          "error": "Couldn't update access",
+          "success": "{count, plural, one {Access updated for # item} other {Access updated for # items}}",
+          "title": "Set access"
+        }
       },
       "calculated": {
         "lastProcessedAt": "Last processed at"
@@ -2707,6 +2714,7 @@
           "clearSelection": "Clear selection",
           "delete": "Delete",
           "selected": "{count, plural, one {# item selected} other {# items selected}}",
+          "setAccess": "Set access",
           "unarchive": "Unarchive"
         },
         "addFirst": "Add your first item",

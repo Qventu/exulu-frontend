@@ -51,6 +51,7 @@ import {
   useContextItemFavourites,
 } from "../../hooks";
 
+import { BulkAccessDialog } from "./bulk-access-dialog";
 import { ItemsActionBar } from "./items-action-bar";
 import { ItemsEmpty } from "./items-empty";
 import { DELETE_ITEM, UPDATE_ITEM } from "../../queries";
@@ -95,6 +96,7 @@ export function ItemsTable({
   const client = useApolloClient();
 
   const [selection, setSelection] = React.useState<Set<string>>(new Set());
+  const [accessDialogOpen, setAccessDialogOpen] = React.useState(false);
 
   // local search state echoed to URL on debounce
   const [searchInput, setSearchInput] = React.useState(search);
@@ -259,9 +261,20 @@ export function ItemsTable({
           onUnarchive={handleBulkUnarchive}
           onDelete={handleBulkDelete}
           pending={updateItemResult.loading || deleteItemResult.loading}
+          onSetAccess={() => setAccessDialogOpen(true)}
           onClear={() => setSelection(new Set())}
         />
       )}
+      <BulkAccessDialog
+        open={accessDialogOpen}
+        onOpenChange={setAccessDialogOpen}
+        context={context}
+        ids={Array.from(selection)}
+        onApplied={() => {
+          setSelection(new Set());
+          refetch();
+        }}
+      />
 
       {/* Skeleton / Empty / Table */}
       {showSkeleton ? (
