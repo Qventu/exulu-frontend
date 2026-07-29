@@ -614,7 +614,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
                 </span>
               ) : trigger ? (
                 <span className="text-xs text-muted-foreground">
-                  {t("triggers.lastFiredNever")}
+                  {t("triggers.lastFiredLabel")}: {t("triggers.lastFiredNever")}
                 </span>
               ) : null}
             </div>
