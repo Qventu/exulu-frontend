@@ -11,6 +11,8 @@ import {
   canRetryRun,
   DEFAULT_RUNS_FILTER,
   filteredReason,
+  formatCompactTokens,
+  formatRunCost,
   formatRunDuration,
   isTerminalRunState,
   KNOWN_FILTERED_REASONS,
@@ -278,5 +280,42 @@ describe("partitionSelection", () => {
       cancellable: [],
       deletable: [],
     });
+  });
+});
+
+describe("formatCompactTokens", () => {
+  it("renders — for null/undefined", () => {
+    expect(formatCompactTokens(null)).toBe("—");
+    expect(formatCompactTokens(undefined)).toBe("—");
+  });
+  it("renders raw integers below 1000", () => {
+    expect(formatCompactTokens(0)).toBe("0");
+    expect(formatCompactTokens(940)).toBe("940");
+  });
+  it("renders k for thousands, trimming .0", () => {
+    expect(formatCompactTokens(5000)).toBe("5k");
+    expect(formatCompactTokens(12340)).toBe("12.3k");
+  });
+  it("renders M for millions, trimming .0", () => {
+    expect(formatCompactTokens(1_200_000)).toBe("1.2M");
+    expect(formatCompactTokens(3_000_000)).toBe("3M");
+  });
+});
+
+describe("formatRunCost", () => {
+  it("renders — for null/undefined and $0 for zero", () => {
+    expect(formatRunCost(null)).toBe("—");
+    expect(formatRunCost(undefined)).toBe("—");
+    expect(formatRunCost(0)).toBe("$0");
+  });
+  it("uses 2 decimals at or above $1", () => {
+    expect(formatRunCost(1.5)).toBe("$1.50");
+  });
+  it("uses 3 decimals between 1 cent and $1", () => {
+    expect(formatRunCost(0.021)).toBe("$0.021");
+  });
+  it("uses 4 decimals for sub-cent, flooring the tiniest to <$0.0001", () => {
+    expect(formatRunCost(0.0004)).toBe("$0.0004");
+    expect(formatRunCost(0.00001)).toBe("<$0.0001");
   });
 });

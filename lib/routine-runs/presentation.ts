@@ -249,3 +249,22 @@ export function buildRoutineRunsVariables(
   if (filter.needsAttention) vars.needsAttention = true;
   return vars;
 }
+
+/** "—" for null; compact integer/k/M (one decimal, trailing .0 trimmed). */
+export function formatCompactTokens(n?: number | null): string {
+  if (n == null || !Number.isFinite(n)) return "—";
+  const trim = (x: number) => x.toFixed(1).replace(/\.0$/, "");
+  if (n < 1000) return String(Math.round(n));
+  if (n < 1_000_000) return `${trim(n / 1000)}k`;
+  return `${trim(n / 1_000_000)}M`;
+}
+
+/** "—" for null; approximate USD with precision scaled to magnitude. */
+export function formatRunCost(usd?: number | null): string {
+  if (usd == null || !Number.isFinite(usd)) return "—";
+  if (usd === 0) return "$0";
+  if (usd >= 1) return `$${usd.toFixed(2)}`;
+  if (usd >= 0.01) return `$${usd.toFixed(3)}`;
+  if (usd < 0.0001) return "<$0.0001";
+  return `$${usd.toFixed(4)}`;
+}
