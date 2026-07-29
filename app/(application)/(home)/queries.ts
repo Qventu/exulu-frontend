@@ -104,7 +104,7 @@ export const GET_AGENT_SESSIONS_STATISTICS = gql`
 
 export const GET_WORKFLOW_RUNS_STATISTICS = gql`
   query WorkflowRunsStatistics($from: Date!, $to: Date!) {
-    jobsStatistics(filters: {
+    job_resultsStatistics(filters: {
       type: { eq: "workflow" }
       createdAt: { and: [{ gte: $from }, { lte: $to }] }
     }) {

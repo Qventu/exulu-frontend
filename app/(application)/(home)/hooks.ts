@@ -100,12 +100,16 @@ export function useResumeSessions(limit = 4): {
   });
 
   const sessions = React.useMemo<ResumeSession[]>(() => {
-    const items = sessionsQuery.data?.agent_sessionsPagination?.items ?? [];
+    // Filter nulls defensively: a resolver error on one row nulls that array
+    // element (GraphQL partial data), and an unguarded map on it crashes the
+    // whole dashboard.
+    const items = (sessionsQuery.data?.agent_sessionsPagination?.items ?? []).filter(
+      (session) => session != null,
+    );
     const names = new Map(
-      (agentsQuery.data?.agentsPagination?.items ?? []).map((agent) => [
-        String(agent.id),
-        agent.name ?? null,
-      ]),
+      (agentsQuery.data?.agentsPagination?.items ?? [])
+        .filter((agent) => agent != null)
+        .map((agent) => [String(agent.id), agent.name ?? null]),
     );
     return items.map((session) => {
       const agentId =
@@ -200,7 +204,7 @@ export function useSessionsStat(skip = false): StatPair {
  * design/pages/analytics.md §4), so this card stays GraphQL-driven too.
  */
 export function useWorkflowRunsStat(skip: boolean): StatPair {
-  return useStatPair(GET_WORKFLOW_RUNS_STATISTICS, "jobsStatistics", skip);
+  return useStatPair(GET_WORKFLOW_RUNS_STATISTICS, "job_resultsStatistics", skip);
 }
 
 // ---------------------------------------------------------------------------
