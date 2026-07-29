@@ -9,7 +9,7 @@
  * 21 (bulk delete via ConfirmDialog).
  */
 
-import { Archive, PackageOpen, Trash2, X } from "lucide-react";
+import { Archive, PackageOpen, ShieldCheck, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
@@ -23,6 +23,7 @@ export interface ItemsActionBarProps {
   onArchive: () => Promise<void> | void;
   onUnarchive: () => Promise<void> | void;
   onDelete: () => Promise<void> | void;
+  onSetAccess: () => void;
   onClear: () => void;
 }
 
@@ -33,6 +34,7 @@ export function ItemsActionBar({
   onArchive,
   onUnarchive,
   onDelete,
+  onSetAccess,
   onClear,
 }: ItemsActionBarProps) {
   const t = useTranslations("knowledge");
@@ -82,6 +84,17 @@ export function ItemsActionBar({
             {t("workspace.items.action.archive")}
           </Button>
         )}
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="h-11 md:h-9"
+          disabled={pending}
+          onClick={onSetAccess}
+        >
+          <ShieldCheck aria-hidden="true" className="mr-2 size-4" />
+          {t("workspace.items.action.setAccess")}
+        </Button>
         <Button
           type="button"
           variant="ghost"
