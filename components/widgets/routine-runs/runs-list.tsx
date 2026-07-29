@@ -53,6 +53,8 @@ import {
   canRetryRun,
   DEFAULT_RUNS_FILTER,
   filteredReason,
+  formatCompactTokens,
+  formatRunCost,
   formatRunDuration,
   KNOWN_FILTERED_REASONS,
   mapRunDot,
@@ -563,7 +565,7 @@ function RunRow({
           type="button"
           onClick={onToggle}
           aria-expanded={expanded}
-          className="grid min-h-11 grid-cols-[auto_150px_190px_minmax(0,1fr)_auto_auto_auto] items-center gap-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+          className="grid min-h-11 grid-cols-[auto_150px_190px_minmax(0,1fr)_auto_auto_auto_auto_auto] items-center gap-3 py-2.5 text-left transition-colors hover:bg-muted/50"
         >
           <StatusDot status={mapped.status} pulse={mapped.pulse} />
           <Badge
@@ -602,6 +604,19 @@ function RunRow({
           ) : (
             <span className="hidden md:block" />
           )}
+          <span
+            className="hidden shrink-0 text-xs tabular-nums text-muted-foreground lg:block"
+            aria-label={`${t("row.tokensIn")}: ${run.inputTokens ?? "—"}, ${t("row.tokensOut")}: ${run.outputTokens ?? "—"}`}
+          >
+            {"↑"}{formatCompactTokens(run.inputTokens)}{" ↓"}{formatCompactTokens(run.outputTokens)}
+          </span>
+          <span
+            className="shrink-0 text-xs tabular-nums text-muted-foreground"
+            title={t("row.costTooltip")}
+            aria-label={`${t("row.cost")}: ${formatRunCost(run.costUsd)}`}
+          >
+            {formatRunCost(run.costUsd)}
+          </span>
           <ChevronDown
             aria-hidden
             className={cn(

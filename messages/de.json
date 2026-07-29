@@ -3999,7 +3999,11 @@
       "from": "Von",
       "subject": "Betreff",
       "cron": "Cron",
-      "tries": "Versuche"
+      "tries": "Versuche",
+      "tokensIn": "Eingabe-Tokens",
+      "tokensOut": "Ausgabe-Tokens",
+      "cost": "Ca. Kosten",
+      "costTooltip": "Näherungswert — Modell-Listenpreise, ohne Cache-Rabatte und Nicht-LLM-Aufrufe"
     },
     "bulk": {
       "selectAll": "Alle auswählen",

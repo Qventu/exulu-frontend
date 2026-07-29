@@ -20,6 +20,9 @@ const ROUTINE_RUN_SELECTION = `
   tries
   createdAt
   updatedAt
+  inputTokens
+  outputTokens
+  costUsd
 `;
 
 export const ROUTINE_RUNS = gql`

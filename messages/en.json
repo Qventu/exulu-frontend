@@ -3999,7 +3999,11 @@
       "from": "From",
       "subject": "Subject",
       "cron": "Cron",
-      "tries": "Attempts"
+      "tries": "Attempts",
+      "tokensIn": "Input tokens",
+      "tokensOut": "Output tokens",
+      "cost": "Approx. cost",
+      "costTooltip": "Approximate — model list prices, excludes cache discounts and non-LLM calls"
     },
     "bulk": {
       "selectAll": "Select all",

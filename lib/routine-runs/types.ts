@@ -31,6 +31,11 @@ export interface RoutineRun {
   tries?: number | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+  /** Cumulative agent-LLM tokens for the run (from metadata.tokens). */
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  /** Approximate $ cost (catalog list prices, agent-LLM only); null if unpriced. */
+  costUsd?: number | null;
 }
 
 export interface RoutineRunPage {
