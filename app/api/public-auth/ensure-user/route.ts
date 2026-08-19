@@ -119,12 +119,35 @@ export async function POST(req: NextRequest) {
       // who ticks the box again has it recorded; an unticked box leaves an
       // earlier consent untouched. Withdrawal is a separate, deliberate action
       // (the toggle under "Meine Daten") — not a forgotten checkbox.
+
+      // A returning user who registered before consent was collected (Exulu's
+      // public-agents pages show no checkbox) may be giving explicit processing
+      // consent for the first time right now. Record it — COALESCE so an
+      // existing timestamp is never moved.
+      if (parsed.processingConsent) {
+        await client.query(
+          `UPDATE users
+              SET processing_consent_at = COALESCE(processing_consent_at, $1),
+                  "updatedAt" = $1
+            WHERE id = $2`,
+          [new Date(), row.id],
+        );
+      }
+
       if (parsed.marketingConsent) {
         await client.query(
           `UPDATE users
               SET marketing_consent = true,
                   marketing_consent_at = COALESCE(marketing_consent_at, $1),
                   marketing_consent_withdrawn_at = NULL,
+                  -- Deliberately stores the most recently accepted wording, not
+                  -- the first. This means consent_version may advance while
+                  -- marketing_consent_at stays at the original grant time —
+                  // the pair becomes approximate once multiple versions circulate.
+                  -- A gapless history (which version was accepted when) requires
+                  -- the consent-events table from spec §5. Today only one version
+                  -- exists ("2026-08-18"), so the inconsistency is not yet
+                  -- reachable in practice.
                   consent_version = COALESCE($2, consent_version),
                   "updatedAt" = $1
             WHERE id = $3`,
