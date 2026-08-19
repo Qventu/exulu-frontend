@@ -7,6 +7,11 @@ export type EnsureUserValidation =
       password: string | null;
       firstname: string;
       lastname: string;
+      // True only when the caller explicitly presented a processing-consent
+      // checkbox and the user ticked it. False on the legacy public-agents path,
+      // which never shows such a checkbox. The route uses this to decide whether
+      // to write processing_consent_at — a null means "not asked", not "unknown".
+      processingConsent: boolean;
       marketingConsent: boolean;
       consentVersion: string;
       source: string;
@@ -61,6 +66,9 @@ export function validateEnsureUserInput(body: unknown): EnsureUserValidation {
       password,
       firstname: "",
       lastname: "",
+      // The legacy caller never presents a consent checkbox, so we must not
+      // record any timestamp — doing so would fabricate consent evidence.
+      processingConsent: false,
       marketingConsent: false,
       consentVersion: "",
       source: "",
@@ -89,6 +97,9 @@ export function validateEnsureUserInput(body: unknown): EnsureUserValidation {
     password,
     firstname,
     lastname,
+    // processing_consent was present and true (checked above) — the user was
+    // explicitly asked and agreed. The route may write processing_consent_at.
+    processingConsent: true,
     marketingConsent: b?.marketing_consent === true,
     consentVersion: str(b?.consent_version),
     source: str(b?.source),

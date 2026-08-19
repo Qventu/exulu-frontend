@@ -192,7 +192,10 @@ export async function POST(req: NextRequest) {
         false,
         externalRole.id,
         externalTeam.id,
-        now,
+        // Only write a timestamp when the user was actually shown and ticked
+        // the processing-consent checkbox. null = "not asked", which is
+        // auditable; a fabricated timestamp for an unasked consent is not.
+        parsed.processingConsent ? now : null,
         parsed.marketingConsent,
         parsed.marketingConsent ? now : null,
         parsed.source || null,

@@ -11,6 +11,7 @@ describe("validateEnsureUserInput", () => {
       password: null,
       firstname: "",
       lastname: "",
+      processingConsent: false,
       marketingConsent: false,
       consentVersion: "",
       source: "",
@@ -25,6 +26,7 @@ describe("validateEnsureUserInput", () => {
       password: "12345678",
       firstname: "",
       lastname: "",
+      processingConsent: false,
       marketingConsent: false,
       consentVersion: "",
       source: "",
@@ -66,6 +68,7 @@ describe("validateEnsureUserInput — lead fields", () => {
     if (!r.ok) return;
     expect(r.firstname).toBe("Ada");
     expect(r.lastname).toBe("Lovelace");
+    expect(r.processingConsent).toBe(true);
     expect(r.marketingConsent).toBe(true);
     expect(r.consentVersion).toBe("2026-08-18");
     expect(r.source).toBe("eu-ai-act-bot");
@@ -98,5 +101,23 @@ describe("validateEnsureUserInput — lead fields", () => {
     if (!r.ok) return;
     expect(r.firstname).toBe("");
     expect(r.marketingConsent).toBe(false);
+  });
+
+  it("legacy callers get no processing-consent timestamp", () => {
+    // Art. 7(1) GDPR: you must be able to *demonstrate* that consent was given.
+    // A timestamp claiming a consent that never happened is not a missing record —
+    // it is a fabricated one. The public-agents pages never show a consent
+    // checkbox, so processingConsent must be false for their requests.
+    // The route translates false → null for processing_consent_at, meaning
+    // "not asked", which is honest and auditable.
+    for (const body of [
+      { email: "a@b.de" },
+      { email: "a@b.de", password: "longenough" },
+    ]) {
+      const r = validateEnsureUserInput(body);
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      expect(r.processingConsent).toBe(false);
+    }
   });
 });
