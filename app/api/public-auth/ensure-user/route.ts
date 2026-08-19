@@ -134,20 +134,23 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // consent_version deliberately stores the most recently accepted wording,
+      // not the first. So it may advance while marketing_consent_at stays at the
+      // original grant time, and the pair becomes approximate once several
+      // versions circulate. A gapless history — which version was accepted when
+      // — needs the consent-events table named in spec §5. Today only one
+      // version exists ("2026-08-18"), so the case is not yet reachable.
+      //
+      // This note lives in TypeScript, not inside the SQL string. A stray "//"
+      // in that string once reached Postgres verbatim and failed the whole
+      // statement with a syntax error at runtime — a comment for maintainers has
+      // no business being shipped over the wire on every registration.
       if (parsed.marketingConsent) {
         await client.query(
           `UPDATE users
               SET marketing_consent = true,
                   marketing_consent_at = COALESCE(marketing_consent_at, $1),
                   marketing_consent_withdrawn_at = NULL,
-                  -- Deliberately stores the most recently accepted wording, not
-                  -- the first. This means consent_version may advance while
-                  -- marketing_consent_at stays at the original grant time —
-                  // the pair becomes approximate once multiple versions circulate.
-                  -- A gapless history (which version was accepted when) requires
-                  -- the consent-events table from spec §5. Today only one version
-                  -- exists ("2026-08-18"), so the inconsistency is not yet
-                  -- reachable in practice.
                   consent_version = COALESCE($2, consent_version),
                   "updatedAt" = $1
             WHERE id = $3`,
