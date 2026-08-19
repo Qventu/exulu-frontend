@@ -113,4 +113,24 @@ describe("otpRateLimited", () => {
       expect(await otpRateLimited(c, ip, now)).toBe(false); // signin/email
     }
   });
+
+  it("takes limits from the environment when set", () => {
+    // Development needs looser numbers than production: five sends per address
+    // per hour is right for a real person but locks a developer out after five
+    // debugging attempts.
+    process.env.OTP_LIMIT_EMAIL_1H = "500";
+    expect(EMAIL_LIMITS("a@b.de")[1].limit).toBe(500);
+    delete process.env.OTP_LIMIT_EMAIL_1H;
+    expect(EMAIL_LIMITS("a@b.de")[1].limit).toBe(5);
+  });
+
+  it("ignores a malformed limit rather than disabling the guard", () => {
+    // A typo must not silently switch the protection off. Falling back to the
+    // strict default is the safe direction, and the warning says so.
+    process.env.OTP_LIMIT_EMAIL_1H = "viele";
+    expect(EMAIL_LIMITS("a@b.de")[1].limit).toBe(5);
+    process.env.OTP_LIMIT_EMAIL_1H = "0";
+    expect(EMAIL_LIMITS("a@b.de")[1].limit).toBe(5);
+    delete process.env.OTP_LIMIT_EMAIL_1H;
+  });
 });

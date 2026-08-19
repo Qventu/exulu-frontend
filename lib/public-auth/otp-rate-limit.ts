@@ -24,6 +24,30 @@ const MIN_15 = 15 * 60_000;
 const HOUR = 60 * 60_000;
 
 /**
+ * Reads a limit from the environment, falling back to the production value.
+ *
+ * These exist because the production numbers are unusable while developing:
+ * five sends per address per hour is right for a real person, who needs one
+ * code and maybe a resend — but someone debugging the flow burns one per
+ * attempt and is locked out after five, for an hour, by their own protection.
+ * The alternative was deleting counter rows by hand between attempts.
+ *
+ * Raising these in production weakens a real control, so the defaults are the
+ * strict values and any change has to be a deliberate act.
+ */
+const grenze = (name: string, vorgabe: number): number => {
+  const roh = process.env[name];
+  if (!roh) return vorgabe;
+  const wert = Number.parseInt(roh, 10);
+  // A typo must not silently disable the limiter — fall back loudly instead.
+  if (!Number.isFinite(wert) || wert <= 0) {
+    console.warn(`[EXULU] ignoring invalid ${name}="${roh}", using ${vorgabe}`);
+    return vorgabe;
+  }
+  return wert;
+};
+
+/**
  * Per-IP budget: protects the service from one noisy source.
  *
  * Note that ONE registration spends TWO of these: the client calls
@@ -33,8 +57,8 @@ const HOUR = 60 * 60_000;
  * bounding how much junk one address can push into the users table.
  */
 export const IP_LIMITS = (ip: string): Counter[] => [
-  { key: `ip:${ip}:15m`, limit: 15, windowMs: MIN_15 },
-  { key: `ip:${ip}:1h`, limit: 40, windowMs: HOUR },
+  { key: `ip:${ip}:15m`, limit: grenze("OTP_LIMIT_IP_15M", 15), windowMs: MIN_15 },
+  { key: `ip:${ip}:1h`, limit: grenze("OTP_LIMIT_IP_1H", 40), windowMs: HOUR },
 ];
 
 /**
@@ -49,8 +73,16 @@ export const IP_LIMITS = (ip: string): Counter[] => [
  * plus two resends, which is what a person needs when the first mail is slow.
  */
 export const EMAIL_LIMITS = (email: string): Counter[] => [
-  { key: `email:${email.toLowerCase()}:15m`, limit: 3, windowMs: MIN_15 },
-  { key: `email:${email.toLowerCase()}:1h`, limit: 5, windowMs: HOUR },
+  {
+    key: `email:${email.toLowerCase()}:15m`,
+    limit: grenze("OTP_LIMIT_EMAIL_15M", 3),
+    windowMs: MIN_15,
+  },
+  {
+    key: `email:${email.toLowerCase()}:1h`,
+    limit: grenze("OTP_LIMIT_EMAIL_1H", 5),
+    windowMs: HOUR,
+  },
 ];
 
 interface Queryable {
