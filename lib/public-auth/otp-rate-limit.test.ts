@@ -86,4 +86,31 @@ describe("otpRateLimited", () => {
       expect(e.limit).toBeLessThan(ipLimits[i].limit);
     });
   });
+
+  it("gives a person enough sends for one signup plus resends", async () => {
+    // A registration calls ensure-user and then signin/email back to back.
+    // While BOTH charged the email budget, a single signup spent two of three
+    // per quarter hour — one attempt plus a resend and the person was locked
+    // out of their own signup by a 429 they could do nothing about.
+    //
+    // ensure-user now charges the IP only (it sends no mail), so these three
+    // are three genuine sends: the initial code plus two resends.
+    const c = fakeClient();
+    const mail = EMAIL_LIMITS("a@b.de");
+    expect(await otpRateLimited(c, mail, now)).toBe(false); // erster Code
+    expect(await otpRateLimited(c, mail, now)).toBe(false); // erneut senden
+    expect(await otpRateLimited(c, mail, now)).toBe(false); // erneut senden
+    expect(await otpRateLimited(c, mail, now)).toBe(true);  // jetzt reicht es
+  });
+
+  it("leaves room for a shared office IP", async () => {
+    // One NAT, several colleagues trying it after a demo. Two IP charges per
+    // registration, so the budget has to carry roughly seven of them.
+    const c = fakeClient();
+    const ip = IP_LIMITS("1.2.3.4");
+    for (let registrierung = 0; registrierung < 7; registrierung++) {
+      expect(await otpRateLimited(c, ip, now)).toBe(false); // ensure-user
+      expect(await otpRateLimited(c, ip, now)).toBe(false); // signin/email
+    }
+  });
 });

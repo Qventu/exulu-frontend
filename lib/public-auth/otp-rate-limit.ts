@@ -23,10 +23,18 @@ export interface Counter {
 const MIN_15 = 15 * 60_000;
 const HOUR = 60 * 60_000;
 
-/** Per-IP budget: protects the service from one noisy source. */
+/**
+ * Per-IP budget: protects the service from one noisy source.
+ *
+ * Note that ONE registration spends TWO of these: the client calls
+ * ensure-user and then signin/email, and both guard on the IP. The limits are
+ * sized accordingly — 15 per quarter hour is roughly seven registrations, which
+ * a single office behind one NAT can plausibly need after a demo, while still
+ * bounding how much junk one address can push into the users table.
+ */
 export const IP_LIMITS = (ip: string): Counter[] => [
-  { key: `ip:${ip}:15m`, limit: 5, windowMs: MIN_15 },
-  { key: `ip:${ip}:1h`, limit: 20, windowMs: HOUR },
+  { key: `ip:${ip}:15m`, limit: 15, windowMs: MIN_15 },
+  { key: `ip:${ip}:1h`, limit: 40, windowMs: HOUR },
 ];
 
 /**
@@ -35,6 +43,10 @@ export const IP_LIMITS = (ip: string): Counter[] => [
  * Deliberately tighter than the IP budget. An attacker controls many IPs but
  * cannot change their victim's address, so this is the dimension that actually
  * caps how often one person can be written to.
+ *
+ * Counted ONLY where mail is actually sent — see the note on that below. The
+ * three per quarter hour are therefore three genuine sends: the initial code
+ * plus two resends, which is what a person needs when the first mail is slow.
  */
 export const EMAIL_LIMITS = (email: string): Counter[] => [
   { key: `email:${email.toLowerCase()}:15m`, limit: 3, windowMs: MIN_15 },

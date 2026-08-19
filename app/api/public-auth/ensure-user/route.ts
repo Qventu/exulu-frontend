@@ -7,7 +7,6 @@ import { checkHoneypot, checkTiming } from "@/lib/public-auth/consent-core";
 import {
   otpRateLimited,
   IP_LIMITS,
-  EMAIL_LIMITS,
 } from "@/lib/public-auth/otp-rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -77,16 +76,20 @@ export async function POST(req: NextRequest) {
 
   const client = await pool.connect();
   try {
-    // Rate limit on both dimensions. The email dimension is the one that
-    // protects a third party from being mailed repeatedly; the IP dimension
-    // only protects us. Runs after validation so a malformed body cannot burn
-    // someone else's budget.
-    if (
-      await otpRateLimited(client, [
-        ...IP_LIMITS(ip),
-        ...EMAIL_LIMITS(parsed.email),
-      ])
-    ) {
+    // IP only — deliberately NOT the email budget.
+    //
+    // That budget exists to stop a third party being buried in mail, and this
+    // route sends no mail: it creates or touches a row. The route that actually
+    // sends is signin/email, and that is where the address is charged.
+    //
+    // Counting here too was a real defect, not a nicety. The client calls
+    // ensure-user and signin/email back to back, so a single registration spent
+    // TWO of three per quarter hour — one attempt plus a resend and the person
+    // was locked out of their own signup, with a 429 they could do nothing
+    // about. Filling the users table with junk is what the IP budget is for.
+    //
+    // Runs after validation so a malformed body cannot burn anyone's budget.
+    if (await otpRateLimited(client, IP_LIMITS(ip))) {
       return NextResponse.json(
         { detail: "Too many requests." },
         { status: 429 },
