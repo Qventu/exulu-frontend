@@ -5,18 +5,30 @@ import { validateEnsureUserInput } from "@/lib/public-auth/ensure-user-core";
 describe("validateEnsureUserInput", () => {
   it("accepts a plain email (OTP flow), normalizing it", () => {
     const r = validateEnsureUserInput({ email: "  A@B.Co " });
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.email).toBe("a@b.co");
-    expect(r.password).toBeNull();
+    expect(r).toEqual({
+      ok: true,
+      email: "a@b.co",
+      password: null,
+      firstname: "",
+      lastname: "",
+      marketingConsent: false,
+      consentVersion: "",
+      source: "",
+    });
   });
 
   it("accepts email + password (register flow), min 8 chars", () => {
     const r = validateEnsureUserInput({ email: "a@b.co", password: "12345678" });
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.email).toBe("a@b.co");
-    expect(r.password).toBe("12345678");
+    expect(r).toEqual({
+      ok: true,
+      email: "a@b.co",
+      password: "12345678",
+      firstname: "",
+      lastname: "",
+      marketingConsent: false,
+      consentVersion: "",
+      source: "",
+    });
   });
 
   it("rejects short passwords", () => {
@@ -38,7 +50,7 @@ describe("validateEnsureUserInput", () => {
 });
 
 describe("validateEnsureUserInput — lead fields", () => {
-  const gut = {
+  const valid = {
     email: "a@b.de",
     firstname: "Ada",
     lastname: "Lovelace",
@@ -49,7 +61,7 @@ describe("validateEnsureUserInput — lead fields", () => {
   };
 
   it("accepts a complete body and normalises the names", () => {
-    const r = validateEnsureUserInput({ ...gut, firstname: "  Ada  " });
+    const r = validateEnsureUserInput({ ...valid, firstname: "  Ada  " });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.firstname).toBe("Ada");
@@ -61,21 +73,21 @@ describe("validateEnsureUserInput — lead fields", () => {
 
   it("rejects a body without the mandatory processing consent", () => {
     // Art. 7 GDPR: without this we may not store the data at all.
-    const r = validateEnsureUserInput({ ...gut, processing_consent: false });
+    const r = validateEnsureUserInput({ ...valid, processing_consent: false });
     expect(r.ok).toBe(false);
   });
 
   it("defaults marketing consent to false when absent", () => {
-    const { marketing_consent, ...ohne } = gut;
-    const r = validateEnsureUserInput(ohne);
+    const { marketing_consent, ...without } = valid;
+    const r = validateEnsureUserInput(without);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.marketingConsent).toBe(false);
   });
 
   it("rejects empty names", () => {
-    expect(validateEnsureUserInput({ ...gut, firstname: "   " }).ok).toBe(false);
-    expect(validateEnsureUserInput({ ...gut, lastname: "" }).ok).toBe(false);
+    expect(validateEnsureUserInput({ ...valid, firstname: "   " }).ok).toBe(false);
+    expect(validateEnsureUserInput({ ...valid, lastname: "" }).ok).toBe(false);
   });
 
   it("still accepts the old password-only body", () => {

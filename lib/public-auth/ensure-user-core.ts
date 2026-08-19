@@ -48,9 +48,13 @@ export function validateEnsureUserInput(body: unknown): EnsureUserValidation {
 
   // Lead-capture shape: recognised by the presence of the processing-consent
   // key. Its absence means the legacy caller, which stores no lead data.
-  const istLead = b !== null && "processing_consent" in b;
+  // NOTE: `"processing_consent" in b` would throw if b were a primitive. That
+  // cannot happen here because the email check above rejects any body where
+  // b?.email is not a valid string — primitives yield undefined for ?., so they
+  // fail the regex before reaching this line. Do not reorder those two checks.
+  const isLead = b !== null && "processing_consent" in b;
 
-  if (!istLead) {
+  if (!isLead) {
     return {
       ok: true,
       email: rawEmail,
