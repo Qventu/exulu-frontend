@@ -71,6 +71,12 @@ export const IP_LIMITS = (ip: string): Counter[] => [
  * Counted ONLY where mail is actually sent — see the note on that below. The
  * three per quarter hour are therefore three genuine sends: the initial code
  * plus two resends, which is what a person needs when the first mail is slow.
+ *
+ * The hourly cap sits at ten rather than the quarter-hourly three times four.
+ * Someone who mistypes their address, corrects it, waits for a slow mail and
+ * tries again crosses several windows in one sitting, and being turned away at
+ * that point costs a lead for no security gain: ten mails to one address in an
+ * hour is still an effective cap against using us to bury a third party.
  */
 export const EMAIL_LIMITS = (email: string): Counter[] => [
   {
@@ -80,7 +86,7 @@ export const EMAIL_LIMITS = (email: string): Counter[] => [
   },
   {
     key: `email:${email.toLowerCase()}:1h`,
-    limit: grenze("OTP_LIMIT_EMAIL_1H", 5),
+    limit: grenze("OTP_LIMIT_EMAIL_1H", 10),
     windowMs: HOUR,
   },
 ];

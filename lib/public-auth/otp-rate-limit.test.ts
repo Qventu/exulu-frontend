@@ -121,16 +121,16 @@ describe("otpRateLimited", () => {
     process.env.OTP_LIMIT_EMAIL_1H = "500";
     expect(EMAIL_LIMITS("a@b.de")[1].limit).toBe(500);
     delete process.env.OTP_LIMIT_EMAIL_1H;
-    expect(EMAIL_LIMITS("a@b.de")[1].limit).toBe(5);
+    expect(EMAIL_LIMITS("a@b.de")[1].limit).toBe(10);
   });
 
   it("ignores a malformed limit rather than disabling the guard", () => {
     // A typo must not silently switch the protection off. Falling back to the
     // strict default is the safe direction, and the warning says so.
     process.env.OTP_LIMIT_EMAIL_1H = "viele";
-    expect(EMAIL_LIMITS("a@b.de")[1].limit).toBe(5);
+    expect(EMAIL_LIMITS("a@b.de")[1].limit).toBe(10);
     process.env.OTP_LIMIT_EMAIL_1H = "0";
-    expect(EMAIL_LIMITS("a@b.de")[1].limit).toBe(5);
+    expect(EMAIL_LIMITS("a@b.de")[1].limit).toBe(10);
     delete process.env.OTP_LIMIT_EMAIL_1H;
   });
 });
