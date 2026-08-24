@@ -16,7 +16,11 @@ export interface AgentSession {
     rights_mode: ExuluRightsMode
     RBAC?: {
         type?: string;
-        users?: Array<{ id: number; rights: 'read' | 'write' }>;
+        // `id` is `ID!` in the SDL, so it deserialises to a **string** even for
+        // the numeric users.id it points at. It was typed `number` here, which
+        // hid a broken `u.id === user.id` behind a passing type-check and
+        // locked shared users out of chats. Compare with lib/same-entity-id.
+        users?: Array<{ id: string | number; rights: 'read' | 'write' }>;
         roles?: Array<{ id: string; rights: 'read' | 'write' }>;
         teams?: Array<{ id: string; rights: 'read' | 'write' }>;
         // projects?: Array<{ id: string; rights: 'read' | 'write' }>;

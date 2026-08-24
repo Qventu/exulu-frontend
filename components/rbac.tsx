@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { sameEntityId, toNumericId } from "@/lib/same-entity-id";
 import {
   Popover,
   PopoverContent,
@@ -47,6 +48,19 @@ const VISIBILITY_OPTIONS = [
 
 type Modes = 'private' | 'users' | 'roles' | 'teams' | 'public' /* | 'projects' */
 
+/**
+ * A user id as it may *arrive*: RBAC subject ids are `ID!` in the SDL and
+ * deserialise to strings, while ids picked out of the user search come back
+ * from `users.id` (`Float`) as numbers.
+ */
+type IncomingUserId = string | number
+
+// Ids are normalised with toNumericId on the way into state, so this
+// component's arrays — and what onChange hands back — hold one consistent type.
+// Without it, ids from a query ("22") and ids from the user search (22) sat in
+// the same array and every `===` between them was false: permission edits and
+// removals were silently dropped on save.
+
 export function RBACControl({
   allowedModes,
   initialRightsMode,
@@ -68,14 +82,18 @@ export function RBACControl({
    */
   subjectLabel?: string,
   initialRightsMode: 'private' | 'users' | 'roles' | 'teams' | 'public' /* | 'projects' */ | undefined,
-  initialUsers: { id: number, rights: 'read' | 'write' }[] | undefined,
+  // Accepts either shape (see IncomingUserId); normalised to numbers on the way
+  // in, so onChange always emits the numeric ids the API expects.
+  initialUsers: { id: IncomingUserId, rights: 'read' | 'write' }[] | undefined,
   initialRoles: { id: string, rights: 'read' | 'write' }[] | undefined,
   initialTeams?: { id: string, rights: 'read' | 'write' }[] | undefined,
   // initialProjects: { id: string, rights: 'read' | 'write' }[] | undefined,
   onChange: (rights_mode: Modes, users: { id: number, rights: 'read' | 'write' }[], roles: { id: string, rights: 'read' | 'write' }[], teams: { id: string, rights: 'read' | 'write' }[]/* , projects: { id: string, rights: 'read' | 'write' }[] */) => void
 }) {
   const [visibility, setVisibility] = useState<Modes | undefined>(initialRightsMode)
-  const [selectedUsers, setSelectedUsers] = useState<{ id: number, rights: 'read' | 'write' }[]>(initialUsers || [])
+  const [selectedUsers, setSelectedUsers] = useState<{ id: number, rights: 'read' | 'write' }[]>(
+    () => (initialUsers || []).map(u => ({ ...u, id: toNumericId(u.id) }))
+  )
   const [selectedRoles, setSelectedRoles] = useState<{ id: string, rights: 'read' | 'write' }[]>(initialRoles || [])
   const [selectedTeams, setSelectedTeams] = useState<{ id: string, rights: 'read' | 'write' }[]>(initialTeams || [])
   const [hydratedUsers, setHydratedUsers] = useState<User[]>([])
@@ -269,11 +287,11 @@ export function RBACControl({
               <div className="mt-2">
                 <div className="text-xs text-muted-foreground mb-1">Search Results:</div>
                 <div className="max-h-50 overflow-y-auto border rounded-lg">
-                  {usersData.usersPagination.items.filter(user => !selectedUsers.some(selected => selected.id === user.id)).map((user: any) => (
+                  {usersData.usersPagination.items.filter(user => !selectedUsers.some(selected => sameEntityId(selected.id, user.id))).map((user: any) => (
                     <label key={user.id} className="flex items-center space-x-2 p-2 hover:bg-muted/50 cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={selectedUsers.some(selected => selected.id === user.id)}
+                        checked={selectedUsers.some(selected => sameEntityId(selected.id, user.id))}
                         onChange={(e) => {
                           setSelectedUsers(prev => [...prev, { id: user.id, rights: 'read' }])
                           setHydratedUsers(prev => [...prev, {
@@ -310,14 +328,14 @@ export function RBACControl({
                         onValueChange={(value: 'read' | 'write') => {
                           setSelectedUsers(prev =>
                             prev.map(selected =>
-                              selected.id === user.id
+                              sameEntityId(selected.id, user.id)
                                 ? { ...selected, rights: value }
                                 : selected
                             )
                           )
                           setHydratedUsers(prev =>
                             prev.map(hydratedUser =>
-                              hydratedUser.id === user.id
+                              sameEntityId(hydratedUser.id, user.id)
                                 ? { ...hydratedUser, rights: value }
                                 : hydratedUser
                             )
@@ -337,8 +355,8 @@ export function RBACControl({
                         variant="ghost"
                         className="h-5 w-5 p-0 hover:bg-blue-100"
                         onClick={() => {
-                          setSelectedUsers(prev => prev.filter(selected => selected.id !== user.id))
-                          setHydratedUsers(prev => prev.filter(hydratedUser => hydratedUser.id !== user.id))
+                          setSelectedUsers(prev => prev.filter(selected => !sameEntityId(selected.id, user.id)))
+                          setHydratedUsers(prev => prev.filter(hydratedUser => !sameEntityId(hydratedUser.id, user.id)))
                         }}
                       >
                         <Trash2 className="w-3 h-3" />
@@ -580,7 +598,7 @@ export function RBACControl({
                         // Update selectedUsers state
                         setSelectedUsers(prev =>
                           prev.map(selected =>
-                            selected.id === user.id
+                            sameEntityId(selected.id, user.id)
                               ? { ...selected, rights: value }
                               : selected
                           )
@@ -588,7 +606,7 @@ export function RBACControl({
                         // Update hydratedUsers state if this user is in the first 5
                         setHydratedUsers(prev =>
                           prev.map(hydratedUser =>
-                            hydratedUser.id === user.id
+                            sameEntityId(hydratedUser.id, user.id)
                               ? { ...hydratedUser, rights: value }
                               : hydratedUser
                           )
@@ -608,8 +626,8 @@ export function RBACControl({
                       variant="ghost"
                       className="h-8 w-8 p-0 hover:bg-destructive/10"
                       onClick={() => {
-                        setSelectedUsers(prev => prev.filter(selected => selected.id !== user.id))
-                        setHydratedUsers(prev => prev.filter(hydratedUser => hydratedUser.id !== user.id))
+                        setSelectedUsers(prev => prev.filter(selected => !sameEntityId(selected.id, user.id)))
+                        setHydratedUsers(prev => prev.filter(hydratedUser => !sameEntityId(hydratedUser.id, user.id)))
                       }}
                     >
                       <Trash2 className="w-4 h-4" />

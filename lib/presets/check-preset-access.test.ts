@@ -91,3 +91,47 @@ describe("checkPresetWriteAccess", () => {
     expect(checkPresetWriteAccess(preset({ rights_mode: undefined }), other)).toBe(false);
   });
 });
+
+// The cases above all use numeric ids, which is the assumption that hid the
+// 2026-08-24 lockout: RBAC subject ids are `ID!` in the SDL and deserialise to
+// strings, while user.id is a number. Which type arrives depends on the query,
+// so the predicate has to tolerate both. See lib/same-entity-id.ts.
+describe("checkPresetWriteAccess — id type tolerance", () => {
+  it("users: a string id in the RBAC list matches a numeric user.id", () => {
+    const p = preset({
+      rights_mode: "users",
+      RBAC: { users: [{ id: "3" as unknown as number, rights: "write" }] },
+    });
+    expect(checkPresetWriteAccess(p, other)).toBe(true);
+  });
+
+  it("users: a string read entry is still read-only", () => {
+    const p = preset({
+      rights_mode: "users",
+      RBAC: { users: [{ id: "3" as unknown as number, rights: "read" }] },
+    });
+    expect(checkPresetWriteAccess(p, other)).toBe(false);
+  });
+
+  it("users: a string id for a different user still denies", () => {
+    const p = preset({
+      rights_mode: "users",
+      RBAC: { users: [{ id: "99" as unknown as number, rights: "write" }] },
+    });
+    expect(checkPresetWriteAccess(p, other)).toBe(false);
+  });
+
+  it("creator: a string created_by matches a numeric user.id", () => {
+    const p = preset({ created_by: "1" as unknown as number });
+    expect(checkPresetWriteAccess(p, owner)).toBe(true);
+  });
+
+  it("does not confuse id 3 with id 33", () => {
+    const p = preset({
+      created_by: 999,
+      rights_mode: "users",
+      RBAC: { users: [{ id: "33" as unknown as number, rights: "write" }] },
+    });
+    expect(checkPresetWriteAccess(p, other)).toBe(false);
+  });
+});

@@ -1,5 +1,16 @@
 import { PromptLibrary } from "@/types/models/prompt-library";
 import { UserWithRole } from "@/types/models/user";
+import { sameEntityId } from "@/lib/same-entity-id";
+
+/**
+ * RBAC predicates for prompts.
+ *
+ * Every id comparison here goes through `sameEntityId`: RBAC subject ids are
+ * `ID!` in the SDL and deserialise to strings, while users.id is `Float` and
+ * arrives as a number. Which side is which varies by query, so the comparison
+ * is deliberately tolerant of both rather than assuming one. A plain `===`
+ * here silently locked shared users out of prompts entirely.
+ */
 
 /**
  * Checks if a user has write access to a prompt
@@ -12,48 +23,42 @@ export function checkPromptWriteAccess(
   prompt: PromptLibrary,
   user: UserWithRole
 ): boolean {
-  const isPrivate = prompt.rights_mode === "private";
-  const isPublic = prompt.rights_mode === "public";
-  const byUsers = prompt.rights_mode === "users";
-  const byRoles = prompt.rights_mode === "roles";
-  const isAdmin = user.super_admin;
-  const isCreator = prompt.created_by === user.id.toString();
-
-  let writeAccess = false;
-
-  // Creator always has write access
-  if (isCreator) {
-    writeAccess = true;
-  }
-
-  // Private: only creator + admins
-  if (isPrivate && !isCreator && !isAdmin) {
-    writeAccess = false;
+  if (user.super_admin) {
+    return true;
   }
 
   // Public: everyone has write access
-  if (isPublic) {
-    writeAccess = true;
+  if (prompt.rights_mode === "public") {
+    return true;
   }
 
-  // By users: check if user has write permission
-  if (byUsers) {
-    const userAccess = prompt.RBAC?.users?.find((u) => u.id === user.id);
-    writeAccess = userAccess?.rights === "write";
+  // The creator can always write to their own prompt, whatever the sharing
+  // mode. Sharing does not add the owner to the prompt's own RBAC list, so
+  // without this an owner who shared a prompt lost the ability to edit it.
+  if (sameEntityId(prompt.created_by, user.id)) {
+    return true;
   }
 
-  // By roles: check if user's role has write permission
-  if (byRoles) {
-    const roleAccess = prompt.RBAC?.roles?.find((r) => r.id === user.role?.id);
-    writeAccess = roleAccess?.rights === "write";
+  // Private: creator + admins only, both handled above.
+  if (prompt.rights_mode === "private") {
+    return false;
   }
 
-  // Admin override
-  if (isAdmin) {
-    writeAccess = true;
+  if (prompt.rights_mode === "users") {
+    return (
+      prompt.RBAC?.users?.find((u) => sameEntityId(u.id, user.id))?.rights ===
+      "write"
+    );
   }
 
-  return writeAccess;
+  if (prompt.rights_mode === "roles") {
+    return (
+      prompt.RBAC?.roles?.find((r) => sameEntityId(r.id, user.role?.id))
+        ?.rights === "write"
+    );
+  }
+
+  return false;
 }
 
 /**
@@ -67,43 +72,37 @@ export function checkPromptReadAccess(
   prompt: PromptLibrary,
   user: UserWithRole
 ): boolean {
-  const isPrivate = prompt.rights_mode === "private";
-  const isPublic = prompt.rights_mode === "public";
-  const byUsers = prompt.rights_mode === "users";
-  const byRoles = prompt.rights_mode === "roles";
-  const isAdmin = user.super_admin;
-  const isCreator = prompt.created_by === user.id.toString();
-
   // Creator always has read access
-  if (isCreator) {
+  if (sameEntityId(prompt.created_by, user.id)) {
     return true;
   }
 
   // Admin always has read access
-  if (isAdmin) {
+  if (user.super_admin) {
     return true;
   }
 
   // Private: only creator + admins
-  if (isPrivate) {
+  if (prompt.rights_mode === "private") {
     return false;
   }
 
   // Public: everyone has read access
-  if (isPublic) {
+  if (prompt.rights_mode === "public") {
     return true;
   }
 
-  // By users: check if user has read or write permission
-  if (byUsers) {
-    const userAccess = prompt.RBAC?.users?.find((u) => u.id === user.id);
-    return userAccess !== undefined;
+  // By users: presence in the list is enough — read or write both grant read.
+  if (prompt.rights_mode === "users") {
+    return prompt.RBAC?.users?.find((u) => sameEntityId(u.id, user.id)) !== undefined;
   }
 
   // By roles: check if user's role has read or write permission
-  if (byRoles) {
-    const roleAccess = prompt.RBAC?.roles?.find((r) => r.id === user.role?.id);
-    return roleAccess !== undefined;
+  if (prompt.rights_mode === "roles") {
+    return (
+      prompt.RBAC?.roles?.find((r) => sameEntityId(r.id, user.role?.id)) !==
+      undefined
+    );
   }
 
   // By projects: would need project context to check

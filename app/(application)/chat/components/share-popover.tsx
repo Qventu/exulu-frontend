@@ -45,6 +45,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toNumericId } from "@/lib/same-entity-id";
 import { cn } from "@/lib/utils";
 import type { AgentSession } from "@/types/models/agent-session";
 
@@ -64,6 +65,14 @@ type RbacDraft = {
   roles: Array<{ id: string; rights: "read" | "write" }>;
 };
 
+/**
+ * session.RBAC.users arrives with string ids (`ID!`); the draft — and every
+ * comparison downstream of it — wants the numeric users.id. Normalise at the
+ * seed so the draft never mixes both. See lib/same-entity-id.ts.
+ */
+const seedUsers = (session: AgentSession): RbacDraft["users"] =>
+  (session.RBAC?.users || []).map((u) => ({ ...u, id: toNumericId(u.id) }));
+
 export function SharePopover({
   session,
   creatorEmail,
@@ -74,7 +83,7 @@ export function SharePopover({
   const [accessOpen, setAccessOpen] = React.useState(false);
   const [rbac, setRbac] = React.useState<RbacDraft>(() => ({
     rights_mode: session.rights_mode || "private",
-    users: session.RBAC?.users || [],
+    users: seedUsers(session),
     roles: session.RBAC?.roles || [],
   }));
   const [updateRbac, { loading: saving }] = useMutation(
@@ -86,7 +95,7 @@ export function SharePopover({
     if (open) {
       setRbac({
         rights_mode: session.rights_mode || "private",
-        users: session.RBAC?.users || [],
+        users: seedUsers(session),
         roles: session.RBAC?.roles || [],
       });
       setAccessOpen(false);
