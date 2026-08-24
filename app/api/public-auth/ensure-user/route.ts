@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 
 import { pool } from "@/app/api/auth/[...nextauth]/options";
+import { isWorkforceEmail } from "@/lib/auth/domain-allowlist";
 import { validateEnsureUserInput } from "@/lib/public-auth/ensure-user-core";
 import { checkHoneypot, checkTiming } from "@/lib/public-auth/consent-core";
 import {
@@ -72,6 +73,25 @@ export async function POST(req: NextRequest) {
   const parsed = validateEnsureUserInput(body);
   if (!parsed.ok) {
     return NextResponse.json({ detail: parsed.error }, { status: parsed.status });
+  }
+
+  // Workforce addresses cannot hold public accounts (spec §4.3/§4.4 keep the
+  // two populations apart). Without this, registering a colleague's work
+  // address here created a `type='external'` row that permanently shadowed
+  // their internal account: user lookup is by email alone, so the internal
+  // shell then bounced them to /public/agents on every visit — Google SSO
+  // included — with no way to undo it from the UI.
+  //
+  // Runs before any database work, and unlike the bot checks above it answers
+  // honestly instead of a decoy `{ ok: true }`: whether a domain is internal
+  // is a property of the address the caller already typed, so saying so leaks
+  // nothing about who is registered. Silently accepting would be worse — the
+  // person would sit at an OTP prompt for a mail that is never coming.
+  if (isWorkforceEmail(parsed.email, process.env.ALLOWED_EMAIL_DOMAINS)) {
+    return NextResponse.json(
+      { detail: "This address belongs to an internal account. Please sign in instead." },
+      { status: 403 },
+    );
   }
 
   const client = await pool.connect();
