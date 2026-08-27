@@ -1130,7 +1130,7 @@ const MessageItem = memo(function MessageItem({
 
                 if (part.type === 'source-url') {
                   return (
-                    <Sources key={`${message.id}-${i}`}>
+                    <Sources key={`${message.id}-${i}`} data-demo-id="chat-sources">
                       <SourcesTrigger
                         count={message.parts?.filter(
                           (part) => part.type === 'source-url'

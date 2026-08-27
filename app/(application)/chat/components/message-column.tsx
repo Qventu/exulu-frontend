@@ -160,7 +160,7 @@ function makeUntypedToolPart(
     }
 
     return (
-      <Tool key={callId} className="mt-3" defaultOpen={false}>
+      <Tool key={callId} className="mt-3" defaultOpen={false} data-demo-id="chat-tool-trace">
         <ToolHeader
           title={styleToolName}
           className="capitalize"

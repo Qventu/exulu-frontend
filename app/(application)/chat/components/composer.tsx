@@ -574,6 +574,7 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
         <form
           onSubmit={submit}
           className="relative rounded-lg border bg-card p-2"
+          data-demo-id="chat-composer"
         >
           <AutocompleteMenu autocomplete={autocomplete} />
           <div className="flex items-end gap-1.5">
