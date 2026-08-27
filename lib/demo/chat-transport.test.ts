@@ -62,7 +62,10 @@ describe("DemoChatTransport", () => {
       },
     });
     const chunks = await drain(await t.sendMessages({ abortSignal: controller.signal } as any));
-    expect(chunks.length).toBeLessThan(5);
+    // The loop checks signal?.aborted BEFORE enqueuing, so the first chunk
+    // (text-start) is enqueued, then sleep fires abort(), then the next
+    // iteration breaks immediately. Exactly 1 chunk reaches the reader.
+    expect(chunks.length).toBe(1);
   });
 
   it("has no stream to reconnect to", async () => {

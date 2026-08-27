@@ -33,7 +33,7 @@ export class DemoChatTransport implements ChatTransport<UIMessage> {
   }
 
   sendMessages = async (
-    options: { abortSignal?: AbortSignal } & Record<string, unknown>,
+    options: Parameters<ChatTransport<UIMessage>["sendMessages"]>[0],
   ): Promise<ReadableStream<UIMessageChunk>> => {
     // Clamp rather than wrap: re-answering the first question after the script
     // ends would read as a glitch, whereas repeating the last answer reads as
