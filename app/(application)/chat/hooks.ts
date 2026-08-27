@@ -33,6 +33,10 @@ import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
 
+import { DemoChatTransport } from "@/lib/demo/chat-transport";
+import { getCurrentPosition, turnsFor } from "@/lib/demo/current-position";
+import { isDemoMode } from "@/lib/demo/flag";
+
 import { UserContext } from "@/app/(application)/authenticated";
 import { ConfigContext } from "@/components/shell/config-context";
 import { getPresignedUrl } from "@/components/primitives/file-picker";
@@ -383,39 +387,41 @@ export function useChatSession({
         setError(err?.message || t("errors.unexpected"));
       }
     },
-    transport: new DefaultChatTransport({
-      api: `${configContext?.backend}${agent.slug}/${agent.id}`,
-      // only send the last message to the server: we load
-      // the history from the database.
-      prepareSendMessagesRequest: async ({ messages, id: chatId, body }) => {
-        const token = await getToken();
-        if (!token) {
-          throw new Error("No valid session token available.");
-        }
-        const session = currentSessionRef.current;
-        if (!session) {
-          throw new Error("No session available.");
-        }
-        const override = modelOverrideRef.current;
-        return {
-          body: {
-            ...body,
-            message: messages[messages.length - 1],
-            id: chatId,
-            session: session.id,
+    transport: isDemoMode()
+      ? new DemoChatTransport({ turns: turnsFor(getCurrentPosition().chapter) })
+      : new DefaultChatTransport({
+          api: `${configContext?.backend}${agent.slug}/${agent.id}`,
+          // only send the last message to the server: we load
+          // the history from the database.
+          prepareSendMessagesRequest: async ({ messages, id: chatId, body }) => {
+            const token = await getToken();
+            if (!token) {
+              throw new Error("No valid session token available.");
+            }
+            const session = currentSessionRef.current;
+            if (!session) {
+              throw new Error("No session available.");
+            }
+            const override = modelOverrideRef.current;
+            return {
+              body: {
+                ...body,
+                message: messages[messages.length - 1],
+                id: chatId,
+                session: session.id,
+              },
+              headers: {
+                User: user.id,
+                Session: session.id,
+                Authorization: `Bearer ${token}`,
+                Stream: "true",
+                ...(override && override !== agent.model
+                  ? { "X-Exulu-Model-Override": override }
+                  : {}),
+              },
+            };
           },
-          headers: {
-            User: user.id,
-            Session: session.id,
-            Authorization: `Bearer ${token}`,
-            Stream: "true",
-            ...(override && override !== agent.model
-              ? { "X-Exulu-Model-Override": override }
-              : {}),
-          },
-        };
-      },
-    }),
+        }),
   });
 
   const contextOccupancy = React.useMemo(() => computeContextOccupancy(messages), [messages]);

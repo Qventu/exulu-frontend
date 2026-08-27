@@ -199,3 +199,23 @@ const BASE: DemoWorld = {
 export function techdocWorld(_step: number): DemoWorld {
   return BASE;
 }
+
+import type { ScriptedTurn } from "../script";
+
+export const TECHDOC_TURNS: ScriptedTurn[] = [
+  {
+    id: "techdoc-turn-1",
+    toolCalls: [
+      {
+        toolCallId: "tc-search-1",
+        toolName: "searchContexts",
+        input: { query: "door contact chain fault", contexts: ["ctx-techdoc", "ctx-vorschriften"] },
+        output: { passages: 7, contexts: ["ctx-techdoc"] },
+      },
+    ],
+    text: "PLACEHOLDER pending Newlift approval — replace with the real production exchange.",
+    sources: [
+      { sourceId: "src-1", url: "https://example.test/techdoc.pdf", title: "Controller manual, §4.2" },
+    ],
+  },
+];

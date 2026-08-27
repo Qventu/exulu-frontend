@@ -14,6 +14,8 @@ import { ConfigContextProvider } from "@/components/shell/config-context";
 import { configApi, BackendConfigType } from "@/lib/api/config";
 import { LanguageProvider } from "@/components/shell/language-provider";
 import { LOCALE_COOKIE, Locale, defaultLocale } from "@/i18n/config";
+import { isDemoMode } from "@/lib/demo/flag";
+import { getDemoUser } from "@/lib/demo/user";
 
 // viewport-fit=cover so env(safe-area-inset-*) resolves on notched devices —
 // the shell's mobile top bar and drawer pad themselves with it
@@ -37,15 +39,26 @@ export default async function RootLayout({
     const headersList = await headers()
     const pathname = headersList.get('x-next-pathname') || '/';
 
-    const user = await serverSideAuthCheck();
-    if (!user) return redirect(`/login${pathname ? `?destination=${pathname}` : ''}`);
+    const demoMode = isDemoMode();
+
+    const user = demoMode
+      ? getDemoUser()
+      : await (async () => {
+          const u = await serverSideAuthCheck();
+          if (!u) return redirect(`/login${pathname ? `?destination=${pathname}` : ''}`);
+          return u;
+        })();
 
     // External (self-registered) users never enter the internal shell —
     // public-agents spec §4.4. Everything they may use lives under /public.
-    if ((user as any).type === "external") return redirect("/public/agents");
+    if (!demoMode && user.type === "external") return redirect("/public/agents");
 
-    const backend = await configApi.backend();
-    const json: BackendConfigType = await backend.json();
+    const json: BackendConfigType = demoMode
+      ? {}
+      : await (async () => {
+          const backend = await configApi.backend();
+          return backend.json() as Promise<BackendConfigType>;
+        })();
 
     // Load messages for the current locale
     const messages = (await import(`../../messages/${locale}.json`)).default;
@@ -88,7 +101,7 @@ export default async function RootLayout({
         ...json
     }
 
-    const themeConfig = await configApi.theme();
+    const themeConfig = demoMode ? { light: {}, dark: {} } : await configApi.theme();
 
     return (
         <html lang={locale} suppressHydrationWarning>

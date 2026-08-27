@@ -11,6 +11,11 @@ import { setContext } from "@apollo/client/link/context";
 import { SessionProvider } from "next-auth/react";
 import * as React from "react";
 
+import { createDemoLink } from "@/lib/demo/apollo-link";
+import { getCurrentPosition } from "@/lib/demo/current-position";
+import { getWorld } from "@/lib/demo/fixtures";
+import { isDemoMode } from "@/lib/demo/flag";
+
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import {
   AppSidebar,
@@ -144,7 +149,10 @@ const Authenticated = ({
       };
     });
 
-    const link = ApolloLink.from([basic, authLink, new HttpLink({ uri: uri })]);
+    const terminating = isDemoMode()
+      ? createDemoLink(() => getWorld(getCurrentPosition()))
+      : new HttpLink({ uri: uri });
+    const link = ApolloLink.from([basic, authLink, terminating]);
 
     return new ApolloClient({
       uri: uri,
