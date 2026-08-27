@@ -1,7 +1,7 @@
 import { ApolloLink, Observable } from "@apollo/client/core";
 import type { DemoWorld } from "./types";
 
-type Resolver = (world: DemoWorld, variables: Record<string, unknown>) => unknown;
+type Resolver = (world: DemoWorld, variables: Record<string, unknown>) => Record<string, unknown>;
 
 /**
  * Operation name -> resolver. Keys must match the operation names in the
@@ -37,10 +37,7 @@ export function createDemoLink(
         return;
       }
       observer.next({
-        data: resolver(getWorldForNow(), operation.variables ?? {}) as Record<
-          string,
-          unknown
-        >,
+        data: resolver(getWorldForNow(), operation.variables ?? {}),
       });
       observer.complete();
     });

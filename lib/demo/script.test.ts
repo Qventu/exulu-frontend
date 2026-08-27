@@ -60,3 +60,27 @@ describe("buildChunks", () => {
     expect(chunks.map((c) => c.type)).toEqual(["text-start", "text-delta", "text-end"]);
   });
 });
+
+describe("splitIntoDeltas (via buildChunks reassembly)", () => {
+  function reassemble(text: string): string {
+    return buildChunks({ id: "x", toolCalls: [], text, sources: [] })
+      .filter((c): c is Extract<typeof c, { type: "text-delta" }> => c.type === "text-delta")
+      .map((c) => c.delta)
+      .join("");
+  }
+
+  it("preserves leading whitespace", () => {
+    const text = "  indented line";
+    expect(reassemble(text)).toBe(text);
+  });
+
+  it("preserves a string that is only whitespace", () => {
+    const text = "   ";
+    expect(reassemble(text)).toBe(text);
+  });
+
+  it("preserves leading and trailing whitespace together", () => {
+    const text = "  hello world  ";
+    expect(reassemble(text)).toBe(text);
+  });
+});

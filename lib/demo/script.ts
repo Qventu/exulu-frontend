@@ -21,9 +21,12 @@ export interface ScriptedTurn {
   sources: ScriptedSource[];
 }
 
-/** One delta per word, keeping the trailing space so deltas rejoin exactly. */
+/** One delta per word, keeping surrounding whitespace so deltas rejoin exactly. */
 function splitIntoDeltas(text: string): string[] {
-  return text.match(/\S+\s*/g) ?? [];
+  // \s*\S+\s* captures leading whitespace, the word, and trailing whitespace so
+  // that deltas rejoin to reproduce the input exactly — including leading spaces.
+  // A text that is entirely whitespace has no \S+ anchor, so return it as-is.
+  return text.match(/\s*\S+\s*/g) ?? (text.length > 0 ? [text] : []);
 }
 
 /**
