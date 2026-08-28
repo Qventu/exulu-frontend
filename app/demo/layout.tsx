@@ -35,7 +35,17 @@ export default async function DemoLayout({
       </head>
       <body className={cn("bg-background font-sans antialiased", fontVariables)}>
         <LanguageProvider initialLocale="en" initialMessages={messages}>
-          <TourProvider>{children}</TourProvider>
+          {/*
+            TourProvider derives its position from ?tour= via useSearchParams,
+            which opts its subtree into client rendering. Without a boundary
+            here that bails out the entire route and `next build` fails to
+            prerender /demo/tour at all. tsc, eslint and the unit tests all
+            pass regardless — the production build is the only gate that
+            catches it, which is why it belongs in the pre-push routine.
+          */}
+          <React.Suspense fallback={null}>
+            <TourProvider>{children}</TourProvider>
+          </React.Suspense>
         </LanguageProvider>
       </body>
     </html>

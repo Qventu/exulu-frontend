@@ -1,0 +1,152 @@
+import type { PopperPlacement, StepOptions } from "shepherd.js";
+
+import {
+  type DemoChapter,
+  type DemoStep,
+  type TourPosition,
+  nextPosition,
+  prevPosition,
+} from "./tour";
+
+/**
+ * Translates the tour into Shepherd step options.
+ *
+ * Kept as pure functions in lib/ rather than inline in the overlay so the
+ * translation is testable in node. The decisions encoded here — whether the
+ * visitor may still type, how long to wait for an element that has not
+ * rendered, where each button navigates — are the ones that quietly break a
+ * chapter, and a component that only runs in a browser is a component nobody
+ * asserts on.
+ *
+ * The types come from Shepherd itself via `import type`, which is erased at
+ * compile time: this module keeps zero runtime dependency on the package (the
+ * tests below run with no DOM) while still failing `tsc` if a future version
+ * renames an option. An earlier draft declared the option shape structurally
+ * and would have accepted a misspelled option forever.
+ */
+
+/**
+ * Narrower than Shepherd's own `StepOptionsButton`, whose `action` is typed
+ * `(this: Tour) => void`. Ours never uses `this` — every button navigates
+ * through the router — and the plain signature is also what lets the tests
+ * call `action()` directly.
+ */
+export interface DemoTourButton {
+  text: string;
+  action: () => void;
+  secondary?: boolean;
+}
+
+/**
+ * Assignability to Shepherd's `StepOptions` is not asserted here; it is proved
+ * at the point of use, where `tour.addSteps()` takes these. That is a real
+ * call site rather than a ceremonial type test, so it cannot drift.
+ */
+export type DemoStepOptions = Omit<
+  StepOptions,
+  "attachTo" | "buttons" | "text" | "title"
+> & {
+  id: string;
+  title: string;
+  text: string;
+  buttons: DemoTourButton[];
+  attachTo?: { element: string; on: PopperPlacement };
+};
+
+export interface StepHandlers {
+  onNext: () => void;
+  onPrev: () => void;
+  hasPrev: boolean;
+  hasNext: boolean;
+}
+
+/**
+ * Long enough for a route change plus an Apollo round trip and, on chapter 3,
+ * the wizard drawer's open animation. Short enough that a genuinely missing
+ * anchor still surfaces as an unattached step rather than a hang.
+ *
+ * Deliberately NOT paired with Shepherd's `skipMissingElement`. Skipping would
+ * turn a broken anchor into a silently shorter tour, and this branch has
+ * already shipped two anchors that pointed at nothing — a step floating in the
+ * middle of the screen is the louder failure, which is what we want.
+ */
+export const ANCHOR_WAIT_MS = 4000;
+
+export function shepherdStepFor(
+  step: DemoStep,
+  handlers: StepHandlers,
+): DemoStepOptions {
+  const buttons: DemoTourButton[] = [];
+  if (handlers.hasPrev) {
+    // `secondary: true` is what adds `shepherd-button-secondary`; passing the
+    // class as well would be duplicating what the option already does.
+    buttons.push({ text: "Back", action: handlers.onPrev, secondary: true });
+  }
+  if (handlers.hasNext) {
+    buttons.push({ text: "Next", action: handlers.onNext });
+  }
+
+  return {
+    id: step.id,
+    title: step.title,
+    text: step.body,
+    // A step with no anchor is a full-screen beat (chapter openers, the
+    // knowledge-item reveal). Shepherd centres those, which is what we want.
+    ...(step.anchor
+      ? {
+          // "bottom" is a preference, not a constraint: Shepherd runs
+          // floating-ui's flip middleware, so a step anchored to something at
+          // the bottom of the viewport — the chat composer — flips above it
+          // instead of rendering off-screen.
+          attachTo: {
+            element: `[data-demo-id="${step.anchor}"]`,
+            on: "bottom" as PopperPlacement,
+          },
+          waitForElement: ANCHOR_WAIT_MS,
+          // Chapter 3 points at a 55-row glossary well below the fold. Without
+          // this the popover opens against an element nobody can see.
+          scrollTo: { behavior: "smooth", block: "center" },
+        }
+      : {}),
+    // The composer is an anchor the visitor is asked to TYPE into (chapters 1
+    // and 4). Blocking clicks on the target would make those steps impossible
+    // to complete — the demo would highlight the box and refuse the keystroke.
+    canClickTarget: true,
+    modalOverlayOpeningPadding: 4,
+    buttons,
+  };
+}
+
+/**
+ * The whole tour, in Shepherd's order.
+ *
+ * Each step's buttons navigate to a target derived from THAT STEP'S OWN
+ * position, computed once here. Shepherd holds these closures for the lifetime
+ * of the tour while the URL changes underneath it, so a button that asked
+ * "where am I now?" would be reading a position captured when the tour was
+ * built. Asking "where does this step go?" has no such lifetime problem — the
+ * structure is static.
+ */
+export function shepherdStepsFor(
+  chapters: DemoChapter[],
+  navigate: (target: TourPosition) => void,
+): DemoStepOptions[] {
+  return chapters.flatMap((chapter) =>
+    chapter.steps.map((step, index) => {
+      const position: TourPosition = { chapter: chapter.id, step: index };
+      const forward = nextPosition(chapters, position);
+      const back = prevPosition(chapters, position);
+
+      return shepherdStepFor(step, {
+        onNext: () => {
+          if (forward) navigate(forward);
+        },
+        onPrev: () => {
+          if (back) navigate(back);
+        },
+        hasNext: Boolean(forward),
+        hasPrev: Boolean(back),
+      });
+    }),
+  );
+}

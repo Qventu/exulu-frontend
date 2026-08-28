@@ -1,0 +1,96 @@
+/**
+ * Shepherd's stylesheet hardcodes its colours — a #3288e6 button, a #e6e6e6
+ * header, white panels — with no CSS custom properties to hook into. Left
+ * alone it renders a bright blue tooltip on a violet-branded product, and in
+ * dark mode the grey header and white panel are unreadable.
+ *
+ * So these override by selector against the app's own tokens from globals.css.
+ * Both themes come out right for free, because the tokens are already
+ * redefined under .dark.
+ */
+
+.shepherd-element {
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+  max-width: 380px;
+}
+
+/* The arrow is a rotated square that has to match the panel it points off,
+   including the border, or it reads as a stray diamond. */
+.shepherd-arrow::before {
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+}
+
+/* Shepherd gives a titled step a filled header block. We want the title to sit
+   on the same surface as the body, so the fill is removed rather than
+   recoloured — and with it the separately-coloured arrow that matched it. */
+.shepherd-has-title .shepherd-content .shepherd-header,
+.shepherd-header {
+  background: transparent;
+  padding: 0.875rem 0.875rem 0;
+}
+
+.shepherd-element.shepherd-has-title[data-popper-placement^="bottom"]
+  > .shepherd-arrow::before {
+  background: hsl(var(--popover));
+}
+
+.shepherd-title {
+  color: hsl(var(--popover-foreground));
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.shepherd-text {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  line-height: 1.5;
+  padding: 0.5rem 0.875rem 0;
+}
+
+.shepherd-footer {
+  gap: 0.5rem;
+  padding: 0.875rem;
+}
+
+.shepherd-button {
+  background: hsl(var(--primary));
+  border-radius: var(--radius);
+  color: hsl(var(--primary-foreground));
+  font-size: 0.8125rem;
+  font-weight: 500;
+  /* Shepherd's default is a 1.5rem horizontal pad and a .5s transition on
+     every property, which makes the buttons look sluggish next to the
+     product's own. */
+  padding: 0.4rem 0.9rem;
+  transition: background-color 0.15s ease;
+  margin-right: 0;
+}
+
+.shepherd-button:not(:disabled):hover {
+  background: hsl(var(--primary) / 0.9);
+  color: hsl(var(--primary-foreground));
+}
+
+.shepherd-button.shepherd-button-secondary {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.shepherd-button.shepherd-button-secondary:not(:disabled):hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+/* The cutout in the modal overlay. Softened from Shepherd's .5 so the
+   surrounding product stays legible — the point of the demo is the product
+   behind the tooltip, not the tooltip. */
+.shepherd-modal-overlay-container.shepherd-modal-is-visible {
+  opacity: 0.4;
+}
