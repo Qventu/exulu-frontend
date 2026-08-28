@@ -60,6 +60,8 @@ export interface ItemEmbeddingsSectionProps {
   item: Item;
   onGenerate: () => void;
   onDelete: () => void;
+  /** Expanded on mount, for `?section=embeddings` deep links. */
+  defaultOpen?: boolean;
 }
 
 const PAGE_SIZE = 10;
@@ -69,9 +71,14 @@ export function ItemEmbeddingsSection({
   item,
   onGenerate,
   onDelete,
+  defaultOpen = false,
 }: ItemEmbeddingsSectionProps) {
   const t = useTranslations("knowledge");
-  const chunks: Chunk[] = ((item as unknown as { chunks?: Chunk[] }).chunks ?? []);
+  // Read straight off the item. This used to launder through `as unknown as`
+  // because Item declared the chunk's owning-item field as `source` while the
+  // API returns `chunk_source`, so the real type and the local one had nothing
+  // in common. The type now matches the selection set.
+  const chunks: Chunk[] = item.chunks ?? [];
   const totalChunks =
     typeof item.chunks_count === "number" ? item.chunks_count : chunks.length;
 
@@ -110,7 +117,7 @@ export function ItemEmbeddingsSection({
   return (
     <DetailSection
       title={t("workspace.sections.embeddings")}
-      defaultOpen={false}
+      defaultOpen={defaultOpen}
       meta={meta}
       actions={
         <OverflowMenu

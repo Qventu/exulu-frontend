@@ -64,7 +64,47 @@ export const CHAPTERS: DemoChapter[] = [
       },
     ],
   },
-  { id: "ingestion", title: "How it learned that", steps: [stub("ingestion-intro", "How it learned that")] },
+  {
+    id: "ingestion",
+    title: "How it learned that",
+    // Runs on the product's real knowledge routes, and on the exact document
+    // chapter 1 answered from — FST2XTchanges-customer-DE.docx. The tour claims
+    // to show where the answer came from, so it has to be that document and not
+    // a representative one.
+    steps: [
+      {
+        id: "ingestion-library",
+        route: "/data/software_documentation_context",
+        anchor: "knowledge-items",
+        title: "Nobody uploaded these",
+        body: "Nine documents, pulled straight from Newlift's own storage. German and English versions of the same manual sit side by side — the assistant is not told which to read, it works that out per question.",
+      },
+      {
+        id: "ingestion-pipeline",
+        route:
+          "/data/software_documentation_context/items/d92dd3f2-2803-41e4-8136-a1a0ccb99e6c",
+        anchor: "item-pipeline",
+        title: "Four stages, and you can watch all four",
+        body: "This is the document that answered chapter 1. Ingested, processed, embedded, retrievable — with real timestamps: read at 22:35:01, searchable seventeen seconds later. Nothing here is a black box you have to trust.",
+      },
+      {
+        id: "ingestion-chunks",
+        route:
+          "/data/software_documentation_context/items/d92dd3f2-2803-41e4-8136-a1a0ccb99e6c?section=embeddings",
+        anchor: "item-chunks",
+        title: "What retrieval actually searches",
+        body: "The manual is split into 93 passages, each embedded separately. These are the real ones. Search does not run over a document — it runs over these, which is why an answer can cite a paragraph instead of a filename.",
+      },
+      {
+        id: "ingestion-loop",
+        route:
+          "/data/software_documentation_context/items/d92dd3f2-2803-41e4-8136-a1a0ccb99e6c?section=embeddings",
+        anchor: null,
+        title: "And it stays current",
+        body: "When Newlift publishes a revision, the pipeline re-reads it and the old passages are replaced. No retraining, no re-uploading, no waiting on us. Next: how the assistant decides which knowledge base a question should reach in the first place.",
+      },
+    ],
+  },
   {
     id: "config",
     title: "Making it yours",
@@ -107,7 +147,10 @@ export const CHAPTERS: DemoChapter[] = [
         route: "/agents/edit/demo-agent-newton?wizard=behavior",
         anchor: "agent-wizard-behavior",
         title: "And how hard to look",
-        body: "How many passes, how many results, which reranker, when to give up and say it does not know. Chapter 4 showed that last one mattering.",
+        // Was "Chapter 4 showed that last one mattering", which pointed
+        // backwards at a chapter that comes next — memory is chapter 4 and
+        // configuration is chapter 3.
+        body: "How many passes, how many results, which reranker, when to give up and say it does not know. That last one is the whole of the next chapter.",
       },
     ],
   },

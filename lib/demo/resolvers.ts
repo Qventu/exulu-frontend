@@ -123,6 +123,36 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
     },
   }),
 
+  // --- /data/[ctx]/items/[itemId] (chapter 2: ingestion) ------------------
+  // The item detail page polls this every 5s to drive the pipeline stepper.
+  // Empty is the truth and also what we want on screen: an empty list means no
+  // stage is in flight, so the stepper renders all four stages settled rather
+  // than showing a spinner that never resolves in a world with no workers.
+  GetItemActiveJobs: () => ({
+    job_resultsPagination: { items: [] },
+  }),
+
+  // Derived from the fixture rather than hardcoded, so the health panel cannot
+  // drift from the documents the list is showing. stuck/stale are zero because
+  // nothing is stuck or stale in a scripted world — inventing a non-zero count
+  // would put a warning badge on the screen whose point is a healthy pipeline.
+  GetContextHealth: (world, variables) => {
+    const id = String(variables.id ?? "");
+    const items = world.itemsByContext?.[id] ?? world.items;
+    return {
+      contextById: {
+        id,
+        item_count: items.length,
+        chunk_total: items.reduce(
+          (sum, item) => sum + (item.chunks_count ?? 0),
+          0,
+        ),
+        stuck_count: 0,
+        stale_count: 0,
+      },
+    };
+  },
+
   // --- /evals (chapter 5: proving accuracy) -------------------------------
   // All three are *Pagination wrappers; pageInfo is selected, so omitting it
   // leaves the tables unable to render their footers.

@@ -1,5 +1,6 @@
 import type { TourPosition } from "../tour";
 import type { DemoWorld } from "../types";
+import { ingestionWorld } from "./chapter-ingestion";
 import { memoryWorld } from "./chapter-memory";
 import { DEMO_AGENT_ID, DEMO_AGENT_SLUG, techdocWorld } from "./chapter-techdoc";
 
@@ -14,6 +15,8 @@ export function getWorld(pos: TourPosition): DemoWorld {
   switch (pos.chapter) {
     case "techdoc":
       return clone(techdocWorld(pos.step));
+    case "ingestion":
+      return clone(ingestionWorld(pos.step));
     case "memory":
       return clone(memoryWorld(pos.step));
     // The remaining chapters reuse chapter 1's world until their own plans

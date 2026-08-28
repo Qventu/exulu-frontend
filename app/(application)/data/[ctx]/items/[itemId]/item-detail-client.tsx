@@ -24,7 +24,7 @@
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { Archive, Info, PackageOpen, Save, Trash2, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import { ConfigContext } from "@/components/shell/config-context";
@@ -128,6 +128,12 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
     refetch,
     onDeleted: () => router.push(`/data/${context.id}?tab=items`),
   });
+
+  // Deep link to a collapsed section, e.g. /…/items/<id>?section=embeddings.
+  // Read once for the initial open state rather than kept in sync: this only
+  // decides how the page arrives, and forcing the section back open when the
+  // visitor collapses it would be a URL fighting a user.
+  const openSection = useSearchParams().get("section");
 
   // Click-to-edit: an empty field tile opens edit mode focused on that field.
   const [focusField, setFocusField] = React.useState<string | null>(null);
@@ -337,12 +343,19 @@ export function ItemDetailClient({ context, itemId }: ItemDetailClientProps) {
             onEditField={handleEditField}
             focusField={focusField}
           />
-          <ItemEmbeddingsSection
-            context={context}
-            item={item}
-            onGenerate={editor.triggerGenerate}
-            onDelete={() => editor.setConfirm("delete-embeddings")}
-          />
+          {/* Anchored for the guided tour, which walks a visitor from a cited
+              answer to the passages behind it. `?section=embeddings` opens the
+              section on arrival: it is collapsed by default, and a tour step
+              cannot point at a table inside a closed panel. */}
+          <div data-demo-id="item-chunks">
+            <ItemEmbeddingsSection
+              context={context}
+              item={item}
+              onGenerate={editor.triggerGenerate}
+              onDelete={() => editor.setConfirm("delete-embeddings")}
+              defaultOpen={openSection === "embeddings"}
+            />
+          </div>
           {context.embedder ? (
             <ItemEntitiesSection context={context} item={item} />
           ) : null}

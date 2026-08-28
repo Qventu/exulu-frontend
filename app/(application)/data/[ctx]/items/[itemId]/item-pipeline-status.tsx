@@ -186,7 +186,7 @@ export function ItemPipelineStatus({
       : t("workspace.itemDetail.rerunEmbed");
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-demo-id="item-pipeline">
       {/* Stepper (done / running / pending, connected) on the left; the single
           next-step action on the right. The plain-language end state lives
           inline as the terminal "Ready to search" step — no separate summary,

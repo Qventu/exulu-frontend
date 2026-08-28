@@ -208,7 +208,10 @@ export function ItemsTable({
   const showEmpty = !loading && items.length === 0;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
+    <div
+      className="flex min-h-0 flex-1 flex-col gap-4"
+      data-demo-id="knowledge-items"
+    >
       {/* Toolbar: search, Filters, view switch */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center">
         <div className="relative w-full md:max-w-sm">

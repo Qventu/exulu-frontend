@@ -24,7 +24,15 @@ export interface Item {
         chunk_index: number;
         chunk_content: string;
         chunk_metadata: Record<string, any>;
-        source: string;
+        /**
+         * The owning item's id. Named `chunk_source` because that is the field
+         * every `chunks { ... }` selection asks for (data/queries.ts,
+         * projects/queries.ts) and therefore the one the API returns. It was
+         * declared as `source`, which matched nothing — which is why
+         * item-embeddings-section.tsx had to launder the item through
+         * `as unknown as` to read its own chunks.
+         */
+        chunk_source: string;
         chunk_created_at: string;
         chunk_updated_at: string;
     }[];

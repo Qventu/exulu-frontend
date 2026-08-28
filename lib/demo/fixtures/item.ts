@@ -17,6 +17,21 @@ import type { Item } from "@/types/models/item";
  * field this factory does not yet fill.
  */
 
+/**
+ * One embedded passage, in the shape the product's `chunks { ... }` selection
+ * asks for. Every field is selected, so every field must be present — the same
+ * missing-field rule the items themselves are subject to.
+ */
+export interface DemoChunk {
+  chunk_id: string;
+  chunk_index: number;
+  chunk_content: string;
+  chunk_source: string;
+  chunk_created_at: string;
+  chunk_updated_at: string;
+  chunk_metadata: Record<string, unknown>;
+}
+
 export interface DemoItemInput {
   id: string;
   name: string;
@@ -29,6 +44,25 @@ export interface DemoItemInput {
   type?: string;
   information?: string;
   source?: string;
+  /**
+   * Set for items synced from a source system. Chapter 2's documents come from
+   * a storage bucket and carry their object path here; everything else in the
+   * tour is unsynced and leaves this null.
+   */
+  external_id?: string | null;
+  /**
+   * Default to createdAt, which is right for hand-made fixtures. Chapter 2
+   * overrides both: the gap between them — processed at 22:35:01, embedded at
+   * 22:35:18 — is the pipeline actually running, and collapsing them onto one
+   * timestamp would erase the point of the chapter.
+   */
+  last_processed_at?: string;
+  embeddings_updated_at?: string;
+  /**
+   * Inline chunks, for items whose detail page the tour opens. Absent on the
+   * rest: the list view never selects them.
+   */
+  chunks?: DemoChunk[];
 }
 
 export function demoItem(input: DemoItemInput): Item {
@@ -39,10 +73,10 @@ export function demoItem(input: DemoItemInput): Item {
     // undefined value identically, so `undefined` here is a missing field.
     description: input.description ?? "",
     // Null is what the API returns for an item that was not synced from a
-    // source system — which is every item in the tour.
-    external_id: null,
-    embeddings_updated_at: updatedAt,
-    last_processed_at: updatedAt,
+    // source system, which is most of the tour.
+    external_id: input.external_id ?? null,
+    embeddings_updated_at: input.embeddings_updated_at ?? updatedAt,
+    last_processed_at: input.last_processed_at ?? updatedAt,
     tags: input.tags ?? [],
     chunks_count: input.chunks_count ?? 1,
     updatedAt,
