@@ -35,11 +35,14 @@ import {
 import { configApi, type BackendConfigType } from "@/lib/api/config";
 import { can, type Requirement, type RightsUser } from "@/lib/rights";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
+import { isDemoMode } from "@/lib/demo/flag";
+import { getDemoUser } from "@/lib/demo/user";
 
 // serverSideAuthCheck is wrapped in React.cache at its source, so the root
 // layout's call and every guard in the same render pass share one DB
 // round-trip per request.
-const getSessionUser = serverSideAuthCheck;
+const getSessionUser = async () =>
+  isDemoMode() ? getDemoUser() : serverSideAuthCheck();
 
 /**
  * The server-derived slice of NavConfig the guards need. The transcription /
