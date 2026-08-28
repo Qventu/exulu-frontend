@@ -39,6 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { chunkPreviewText } from "@/lib/chunk-preview";
 import { cn } from "@/lib/utils";
 import type { Item } from "@EXULU_SHARED/models/item";
 import type { Context } from "@/types/models/context";
@@ -150,7 +151,7 @@ export function ItemEmbeddingsSection({
                     </TableCell>
                     <TableCell>
                       <p className="line-clamp-3 whitespace-pre-wrap text-sm">
-                        {chunk.chunk_content}
+                        {chunkPreviewText(chunk.chunk_content)}
                       </p>
                     </TableCell>
                     <TableCell>

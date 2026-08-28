@@ -1,5 +1,6 @@
 'use client';
 
+import { chunkPreviewText } from '@/lib/chunk-preview';
 import { cn } from '@/lib/utils';
 import type { ComponentProps, HTMLAttributes } from 'react';
 import { isValidElement, memo, useMemo, useState, useEffect } from 'react';
@@ -483,7 +484,7 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
             <div className="text-sm">
               {preview ? preview : (
                 <Response parseIncompleteMarkdown={false}>
-                  {chunk.chunk_content}
+                  {chunkPreviewText(chunk.chunk_content)}
                 </Response>
               )}
             </div>
