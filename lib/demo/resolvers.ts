@@ -1,4 +1,11 @@
 import { CONTEXT_SEARCH_TOOL, AGENTIC_RETRIEVAL_TOOL } from "./fixtures/agent-editor";
+import {
+  ALGI_AGENT,
+  ALGI_EMAIL_TRIGGER,
+  ALGI_ROUTINE,
+  ALGI_RUNS,
+  ALGI_RUNS_NEEDING_ATTENTION,
+} from "./fixtures/chapter-email";
 import { MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
 import { CONTEXTS } from "./fixtures/contexts";
 import {
@@ -40,6 +47,25 @@ export type DemoResolver = (
 ) => Record<string, unknown>;
 
 const KNOWN_CONTEXT_IDS = new Set(CONTEXTS.map((c) => c.id));
+
+/** The routine as the list and detail screens select it. */
+const routineItem = () => ({
+  id: ALGI_ROUTINE.id,
+  agent: ALGI_ROUTINE.agent,
+  queue: ALGI_ROUTINE.queue,
+  name: ALGI_ROUTINE.name,
+  description: ALGI_ROUTINE.description,
+  rights_mode: ALGI_ROUTINE.rights_mode,
+  created_by: ALGI_ROUTINE.created_by,
+  steps_json: ALGI_ROUTINE.steps_json,
+  variables: ALGI_ROUTINE.variables,
+  createdAt: ALGI_ROUTINE.createdAt,
+  updatedAt: ALGI_ROUTINE.updatedAt,
+  // ROUTINES_RBAC_TEAMS_SUPPORTED is false, so `teams` is not selected and is
+  // deliberately absent — answering it would be harmless, but omitting a
+  // field that IS selected is the error this file keeps making.
+  RBAC: { type: "public", users: [], roles: [] },
+});
 
 /** Every *Pagination selection includes pageInfo; the tables read it. */
 const page = (itemCount: number) => ({
@@ -109,8 +135,131 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // --- app shell (every page) ---------------------------------------------
   // The sidebar polls this on every route, so it is shell-wide rather than
   // chapter-specific. Zero is the truth for a tour with no live runs.
+  // Real for the whole tour, not just chapter 6: ALGI genuinely has one run
+  // sitting in waiting_approval, so the badge shows a 1 and the chapter's
+  // "something is waiting for a human" step points at a number the sidebar
+  // was already displaying. Derived from the runs rather than written as a
+  // literal, so trimming the fixture cannot leave the badge lying.
   RoutineRunsNeedingAttentionCount: () => ({
-    routineRunsNeedingAttentionCount: 0,
+    routineRunsNeedingAttentionCount: ALGI_RUNS_NEEDING_ATTENTION,
+  }),
+
+  // --- /workflows (chapter 6: the ALGI email routine) ---------------------
+  // Named "workflow_template" in the API and "Routine" in the UI; both appear
+  // below because the operations keep the old name.
+  GetWorkflowTemplates: () => ({
+    workflow_templatesPagination: {
+      pageInfo: page(1),
+      items: [routineItem()],
+    },
+  }),
+
+  GetWorkflowTemplateById: () => ({
+    workflow_templateById: {
+      id: ALGI_ROUTINE.id,
+      name: ALGI_ROUTINE.name,
+      agent: ALGI_ROUTINE.agent,
+      queue: ALGI_ROUTINE.queue,
+      description: ALGI_ROUTINE.description,
+      rights_mode: ALGI_ROUTINE.rights_mode,
+      steps_json: ALGI_ROUTINE.steps_json,
+      variables: ALGI_ROUTINE.variables,
+      createdAt: ALGI_ROUTINE.createdAt,
+      updatedAt: ALGI_ROUTINE.updatedAt,
+      RBAC: { type: "public", users: [], roles: [] },
+    },
+  }),
+
+  // The Triggers section. `webhook_url` is null and the two has_* booleans are
+  // true: the endpoint exists, and the demo says so without publishing it.
+  // Its secrets were never read out of the database in the first place.
+  GetWorkflowTriggers: () => ({
+    workflowTriggers: [
+      {
+        id: ALGI_EMAIL_TRIGGER.id,
+        workflow: ALGI_EMAIL_TRIGGER.workflow,
+        type: ALGI_EMAIL_TRIGGER.type,
+        enabled: ALGI_EMAIL_TRIGGER.enabled,
+        webhook_url: null,
+        has_webhook: true,
+        has_signing_secret: true,
+        last_fired_at: ALGI_EMAIL_TRIGGER.last_fired_at,
+        config: ALGI_EMAIL_TRIGGER.config,
+        run_as_user: ALGI_EMAIL_TRIGGER.run_as_user,
+        createdAt: ALGI_ROUTINE.createdAt,
+        updatedAt: ALGI_EMAIL_TRIGGER.last_fired_at,
+      },
+    ],
+  }),
+
+  // The runs console. Honours the filters the UI actually sends, because the
+  // chapter points at the needs-attention lens and at the two filtered rows —
+  // a resolver that returned all 25 regardless would make both steps narrate
+  // something the screen contradicts.
+  RoutineRuns: (_world, variables) => {
+    let items = ALGI_RUNS;
+
+    const states = variables.states as string[] | undefined;
+    if (Array.isArray(states) && states.length) {
+      items = items.filter((run) => states.includes(run.state));
+    }
+    const triggers = variables.triggers as string[] | undefined;
+    if (Array.isArray(triggers) && triggers.length) {
+      items = items.filter((run) => triggers.includes(run.trigger ?? ""));
+    }
+    if (variables.needsAttention === true) {
+      items = items.filter((run) => run.state === "waiting_approval");
+    }
+    const search = (variables.search as string | undefined)?.toLowerCase();
+    if (search) {
+      items = items.filter((run) =>
+        `${run.trigger_metadata?.subject ?? ""} ${run.trigger_metadata?.from ?? ""}`
+          .toLowerCase()
+          .includes(search),
+      );
+    }
+
+    return {
+      routineRuns: {
+        total: items.length,
+        items: items.map((run) => ({
+          // Spread first, then fill the fields the selection asks for that the
+          // export did not carry. Tokens and cost are null rather than
+          // invented: the runs are real, and nobody measured these.
+          job_id: null,
+          error: null,
+          updatedAt: run.createdAt ?? null,
+          inputTokens: null,
+          outputTokens: null,
+          costUsd: null,
+          ...run,
+        })),
+      },
+    };
+  },
+
+  // Null, and that is the truth rather than a gap: this routine has no cron.
+  // It is triggered by mail arriving, which is the whole point of the chapter
+  // — a scheduled routine would be a weaker claim. Returning null is also what
+  // the Schedule tab needs to render its "not scheduled" state instead of
+  // hanging.
+  GetWorkflowSchedule: () => ({ workflowSchedule: null }),
+
+  RoutinesGetAgentById: () => ({
+    agentById: { id: ALGI_AGENT.id, name: ALGI_AGENT.name },
+  }),
+
+  RoutinesGetAgentsList: (world) => ({
+    agentsPagination: {
+      items: [...world.agents, ALGI_AGENT].map(({ id, name }) => ({
+        id,
+        name,
+      })),
+    },
+  }),
+
+  GetAvailableQueues: () => ({
+    queues: [{ name: "mail_processing_queue" }, { name: "default" }],
   }),
 
   // --- /data (chapter 2: document understanding) --------------------------

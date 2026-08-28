@@ -343,7 +343,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-demo-id="routine-email-trigger">
       {/* Enable toggle */}
       <div className="flex items-center gap-3">
         <Switch

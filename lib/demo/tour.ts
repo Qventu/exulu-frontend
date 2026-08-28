@@ -1,3 +1,5 @@
+import { ALGI_ROUTINE_ID } from "./fixtures/chapter-email";
+
 export type DemoChapterId =
   | "techdoc"
   | "ingestion"
@@ -235,7 +237,48 @@ export const CHAPTERS: DemoChapter[] = [
       },
     ],
   },
-  { id: "email", title: "Working while you sleep", steps: [stub("email-intro", "Working while you sleep")] },
+  {
+    id: "email",
+    title: "Working while you sleep",
+    // A DIFFERENT CUSTOMER, deliberately. Chapters 1-5 are Newlift's technical
+    // documentation; this is ALGI, who make hydraulic elevator systems, and
+    // every screen is their live deployment. The point of the switch is that a
+    // prospect stops watching one company's clever setup and starts seeing a
+    // product two companies run.
+    //
+    // The routine, the trigger, the 25 runs and the session are all real. What
+    // was redacted and why is in scripts/build-algi-*-fixture.py.
+    steps: [
+      {
+        id: "email-routine",
+        route: "/workflows",
+        anchor: "routine-runs",
+        title: "A different company, the same product",
+        body: "This is ALGI, who build hydraulic elevator systems — a second deployment, not a second demo. Their spare-parts desk gets quote requests by email all day. One routine answers them.",
+      },
+      {
+        id: "email-trigger",
+        route: `/workflows/${ALGI_ROUTINE_ID}`,
+        anchor: "routine-email-trigger",
+        title: "The inbox is the trigger",
+        body: "Only mail from their own domain runs it — 60 an hour, 10 from any one sender. No integration to build: they forward to an address and the routine picks it up.",
+      },
+      {
+        id: "email-runs",
+        route: `/workflows/${ALGI_ROUTINE_ID}`,
+        anchor: "routine-runs",
+        title: "Including the ones that did not work",
+        body: "Twenty-five real runs. Fourteen finished, eight failed, one is waiting for a human — and two were refused outright, because a hosting provider's setup notice is not from their domain. Every automation looks like this. Most demos only show you the first column.",
+      },
+      {
+        id: "email-quote",
+        route: `/workflows/${ALGI_ROUTINE_ID}`,
+        anchor: null,
+        title: "And it learns from the desk it works for",
+        body: "Inside one of those runs, a salesperson corrects the draft three times — always offer the piston ring with that seal kit, always quote our commission number — and each correction is written to memory as it happens. Chapter 4 argued corrections should be first-class. This is that, in someone's inbox, months before we made the argument.",
+      },
+    ],
+  },
   { id: "meetings", title: "Capturing what is said", steps: [stub("meetings-intro", "Capturing what is said")] },
 ];
 

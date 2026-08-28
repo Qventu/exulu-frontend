@@ -10,6 +10,7 @@ import {
   GET_USER_CONTEXT_ITEM_FAVOURITES,
 } from "@/app/(application)/data/queries";
 import { ROUTINE_RUNS_ATTENTION_COUNT } from "@/lib/routine-runs/queries";
+import { ALGI_RUNS_NEEDING_ATTENTION } from "./fixtures/chapter-email";
 import { runDemoOperation as run } from "./test-support";
 
 /**
@@ -75,11 +76,22 @@ describe("/data page operations", () => {
 });
 
 describe("app shell operations (every page)", () => {
-  it("answers the sidebar's routines-attention count", async () => {
+  it("answers the sidebar's routines-attention count from the real runs", async () => {
     // Unmapped, this warned on every single app route — the first thing the
     // browser console showed once the tour reached the real pages.
+    //
+    // It answered a hardcoded 0 until chapter 6 brought in ALGI's actual runs,
+    // one of which genuinely sits in waiting_approval. The badge now shows a 1
+    // on every screen of the tour, and chapter 6's step about work waiting for
+    // a human points at a number the sidebar had been displaying all along.
+    //
+    // Asserted against the fixture rather than the literal 1, so trimming a
+    // run changes both together instead of leaving the badge lying.
     const data = await run(ROUTINE_RUNS_ATTENTION_COUNT);
-    expect(data.routineRunsNeedingAttentionCount).toBe(0);
+    expect(data.routineRunsNeedingAttentionCount).toBe(
+      ALGI_RUNS_NEEDING_ATTENTION,
+    );
+    expect(ALGI_RUNS_NEEDING_ATTENTION).toBeGreaterThan(0);
   });
 });
 

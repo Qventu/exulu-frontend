@@ -234,7 +234,7 @@ export function RoutineRunsList({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-demo-id="routine-runs">
       {/* Filter bar (design §7.2: state, trigger source, date range, search) */}
       <div className="flex flex-wrap items-center gap-2">
         <Select
