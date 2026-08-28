@@ -65,6 +65,29 @@ export async function runDemoQueryThroughCache(
   return result.data as Record<string, unknown>;
 }
 
+/**
+ * The mutation equivalent.
+ *
+ * A separate function rather than a flag because ApolloClient.query() rejects
+ * a mutation document outright — it throws an invariant about expecting a
+ * query, which reads like a resolver bug and is not one. Mutations need the
+ * cache for the same reason queries do: the selection set is what gets
+ * written, so a field the mutation asks for and the resolver omits is a
+ * console error on whatever screen the user just clicked Save on.
+ */
+export async function runDemoMutationThroughCache(
+  document: Parameters<typeof execute>[1]["query"],
+  variables: Record<string, unknown> = {},
+  at: TourPosition = { chapter: "ingestion", step: 0 },
+) {
+  const client = new ApolloClient({
+    link: strictDemoLink(at),
+    cache: new InMemoryCache(),
+  });
+  const result = await client.mutate({ mutation: document, variables });
+  return result.data as Record<string, unknown>;
+}
+
 /** Turns the production warn-and-continue fallback into a test failure. */
 function strictDemoLink(at: TourPosition): ApolloLink {
   return createDemoLink(

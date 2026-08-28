@@ -190,6 +190,17 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
     };
   },
 
+  // Reachable only because lib/demo/config.ts reports workers as enabled,
+  // which is what removes the "not configured" banner from chapter 5's screen
+  // — the same flag un-disables these Run buttons. This maps the consequence
+  // rather than leaving an error toast behind an enabled button.
+  //
+  // Zero queued is the literal truth: there are no workers behind the tour.
+  // Simulating a run would mean inventing streamed per-case results, which is
+  // a much larger fabrication than the static scores already disclosed in
+  // fixtures/evals.ts.
+  RunEval: () => ({ runEval: { jobs: [], count: 0 } }),
+
   // One query per run column, filtered by a label prefix. Honouring that
   // filter is not optional: each column averages EVERY row it is handed, so a
   // resolver that ignored the filter would give both runs the same average —
@@ -275,6 +286,75 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   }),
 
   EditorToolCategories: () => ({ toolCategories: ["knowledge"] }),
+
+  // Save. The editor is a real, editable screen and the tour walks a visitor
+  // right through it, so the Save button is one stray click away at all times
+  // — and unmapped it produced an error toast on the chapter arguing the
+  // product is configurable without an engineer.
+  //
+  // Echoes the submitted values back over the fixture, which is what the
+  // editor needs to leave its dirty state and show a success toast. Nothing
+  // persists: the next read comes from the fixture again. That is a fair
+  // trade for a scripted tour — the alternative is either a failure the
+  // visitor caused by accident, or a mutable demo world that would let one
+  // visitor's edits leak into the next one's tour.
+  //
+  // Every field the mutation SELECTS is listed, not every field it accepts:
+  // the selection set is what Apollo writes to the cache, and a missing one
+  // is a console error on the same screen. AGENT_FIREWALL_SUPPORTED and
+  // AGENT_RBAC_TEAMS_SUPPORTED are false, so `firewall` and `RBAC.teams` are
+  // not selected and are deliberately absent here; `image` is, and is not.
+  UpdateAgentEditor: (world, variables) => {
+    // Typed, not cast to a bare record: the fallbacks below are the agent's
+    // real fields, and losing that typing is how a renamed one would slip
+    // through as undefined — which reads to Apollo as a missing field.
+    const agent = world.agents[0];
+    const submitted = (name: string, fallback: unknown) =>
+      variables[name] !== undefined ? variables[name] : fallback;
+
+    return {
+      agentsUpdateOneById: {
+        item: {
+          id: agent.id,
+          name: submitted("name", agent.name),
+          description: submitted("description", agent.description),
+          feedback: submitted("feedback", agent.feedback ?? true),
+          suggestions_enabled: submitted(
+            "suggestions_enabled",
+            agent.suggestions_enabled ?? true,
+          ),
+          sandbox_enabled: submitted(
+            "sandbox_enabled",
+            agent.sandbox_enabled ?? false,
+          ),
+          max_tool_steps: submitted("max_tool_steps", 20),
+          welcomemessage: submitted("welcomemessage", agent.welcomemessage),
+          defaultagent: submitted("defaultagent", agent.defaultagent ?? true),
+          instructions: submitted("instructions", agent.instructions),
+          memory: submitted("memory", null),
+          category: submitted("category", null),
+          animation_idle: submitted("animation_idle", null),
+          animation_responding: submitted("animation_responding", null),
+          rights_mode: submitted("rights_mode", agent.rights_mode ?? "public"),
+          active: submitted("active", agent.active ?? true),
+          model: submitted("model", null),
+          image: submitted("image", null),
+          guest_access: submitted("guest_access", false),
+          guest_auth_mode: submitted("guest_auth_mode", null),
+          // Note the name: the mutation returns guest_HAS_password, never the
+          // password itself. Echoing `guest_password` here would answer a
+          // field nothing selected and miss the one that is.
+          guest_has_password: false,
+          guest_cover_image: submitted("guest_cover_image", null),
+          RBAC: variables.RBAC ?? {
+            type: "agent",
+            users: [],
+            roles: [],
+          },
+        },
+      },
+    };
+  },
 
   // The editor mounts a model selector and an Access section alongside the
   // Knowledge section the chapter is about. All three were unmapped and logged

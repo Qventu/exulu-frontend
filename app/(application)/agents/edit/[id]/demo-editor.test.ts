@@ -1,9 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { runDemoQueryThroughCache } from "@/lib/demo/test-support";
+import {
+  runDemoMutationThroughCache,
+  runDemoQueryThroughCache,
+} from "@/lib/demo/test-support";
 
 import {
   GET_CONTEXTS_EDITOR,
+  UPDATE_AGENT_EDITOR,
   GET_SKILLS_EDITOR,
   GET_TOOL_CATEGORIES_EDITOR,
   GET_TOOLS_EDITOR,
@@ -103,6 +107,62 @@ describe("the wizard has knowledge bases to show", () => {
       }
 
       expect(spy.mock.calls.map((c) => String(c[0]))).toEqual([]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+/**
+ * Save.
+ *
+ * The editor is a real, editable screen that the tour walks a visitor through,
+ * so the Save button is always one stray click away. Unmapped it produced an
+ * error toast — on the chapter whose argument is that the product is
+ * configurable without an engineer.
+ */
+describe("saving does not break the chapter", () => {
+  const save = (variables: Record<string, unknown>) =>
+    runDemoMutationThroughCache(
+      UPDATE_AGENT_EDITOR,
+      { id: "demo-agent-newton", ...variables },
+      { chapter: "config", step: 0 },
+    );
+
+  it("echoes the submitted values back", async () => {
+    const data = await save({ name: "Newton (edited)", active: false });
+    const item = (
+      data.agentsUpdateOneById as { item: { name: string; active: boolean } }
+    ).item;
+
+    expect(item.name).toBe("Newton (edited)");
+    expect(item.active).toBe(false);
+  });
+
+  it("falls back to the fixture for anything not submitted", async () => {
+    const data = await save({ name: "Newton (edited)" });
+    const item = (
+      data.agentsUpdateOneById as { item: { description: string } }
+    ).item;
+
+    // Undefined is not the same as "clear this field": the editor sends only
+    // what it holds, and answering null for the rest would blank the form on
+    // the response it just received.
+    expect(item.description).toBeTruthy();
+  });
+
+  it("answers every field the mutation selects", async () => {
+    // The selection set is what Apollo writes to the cache, so a field the
+    // mutation asks for and the resolver omits is a console error on the
+    // screen the visitor just clicked Save on. This is the guard that keeps
+    // the resolver honest as the mutation grows.
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await save({ name: "Newton (edited)" });
+      expect(
+        spy.mock.calls.map((c) => String(c[0])),
+        "Apollo logged while writing the save result — a selected field is missing from the resolver",
+      ).toEqual([]);
     } finally {
       spy.mockRestore();
     }
