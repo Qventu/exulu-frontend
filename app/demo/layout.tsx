@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import { LanguageProvider } from "@/components/shell/language-provider";
 import { ThemeProvider } from "@/components/shell/theme-provider";
+import { ConfigContextProvider } from "@/components/shell/config-context";
+import { demoConfig } from "@/lib/demo/config";
 import { TourProvider } from "@/components/demo/tour-provider";
 import { isDemoMode } from "@/lib/demo/flag";
 
@@ -35,6 +37,15 @@ export default async function DemoLayout({
         <link rel="icon" href={process.env.BACKEND + "/favicon.png"} type="image/png" />
       </head>
       <body className={cn("bg-background font-sans antialiased", fontVariables)}>
+        {/*
+          Mounted here too, not only in the (application) layout. The chat
+          surface reads it — composer.tsx gates the microphone on
+          transcription.enabled, credential-request-card.tsx builds URLs from
+          backend — and in this route group useContext(ConfigContext) was
+          returning null, so those consumers silently took their absent-config
+          branch on the tour's flagship screen.
+        */}
+        <ConfigContextProvider config={demoConfig()}>
         <LanguageProvider initialLocale="en" initialMessages={messages}>
           {/*
             The SAME provider and props as the (application) layout, and that
@@ -65,6 +76,7 @@ export default async function DemoLayout({
             </React.Suspense>
           </ThemeProvider>
         </LanguageProvider>
+        </ConfigContextProvider>
       </body>
     </html>
   );

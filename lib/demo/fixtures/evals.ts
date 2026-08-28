@@ -89,6 +89,55 @@ export const TEST_CASES = [
   },
 ];
 
+/**
+ * Per-case scores, as `job_results` rows.
+ *
+ * THESE NUMBERS ARE INVENTED. Everything else the tour shows is real Newlift
+ * data; this is the one place it is not, and it cannot be otherwise — scoring
+ * a case means executing a run against a live model, and the demo has no
+ * backend. The questions are real, the suite structure is real, the scoring
+ * mechanism is the product's own; the digits are illustrative.
+ *
+ * They are shaped to show the MECHANISM rather than to claim a result: the
+ * earlier run fails one case, the later run passes it, so a visitor sees what
+ * a regression looks like and how the average crosses the pass threshold. The
+ * chapter's narration deliberately makes no claim about how much any
+ * particular change improved accuracy, because nothing here measured that.
+ *
+ * `label` carries both ids because that is how the product joins a result to a
+ * cell: eval-run-column.tsx filters on `label contains "eval-run-<runId>"` and
+ * then matches a cell with `label.includes(caseId) && label.includes(runId)`.
+ * `result` must be a NUMBER — the average filters on `typeof === "number"`,
+ * so a numeric string would render per-case scores and then a blank average.
+ */
+const scoreRow = (runId: string, caseId: string, score: number, at: string) => ({
+  id: `jobresult-${runId}-${caseId}`,
+  job_id: `job-${runId}-${caseId}`,
+  state: "completed",
+  error: null,
+  label: `eval-run-${runId}-${caseId}`,
+  result: score,
+  metadata: null,
+  createdAt: at,
+  updatedAt: at,
+});
+
+const BASELINE_AT = "2026-08-20T09:12:00.000Z";
+const NIGHTLY_AT = "2026-08-27T11:04:00.000Z";
+
+export const EVAL_JOB_RESULTS = [
+  // The earlier run misses the terminology case badly and lands the set
+  // average below the 80 threshold.
+  scoreRow("evalrun-2026-08-20", "case-nothalt-cop", 58, BASELINE_AT),
+  scoreRow("evalrun-2026-08-20", "case-lsu-reset", 84, BASELINE_AT),
+  scoreRow("evalrun-2026-08-20", "case-fst2xt-fahrkurve", 79, BASELINE_AT),
+
+  // The later run passes all three.
+  scoreRow("evalrun-2026-08-27", "case-nothalt-cop", 92, NIGHTLY_AT),
+  scoreRow("evalrun-2026-08-27", "case-lsu-reset", 88, NIGHTLY_AT),
+  scoreRow("evalrun-2026-08-27", "case-fst2xt-fahrkurve", 90, NIGHTLY_AT),
+];
+
 export const EVAL_RUNS = [
   {
     id: "evalrun-2026-08-27",

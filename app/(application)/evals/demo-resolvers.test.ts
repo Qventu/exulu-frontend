@@ -5,6 +5,8 @@ import { runDemoOperation as run } from "@/lib/demo/test-support";
 import {
   GET_EVAL_RUNS,
   GET_EVAL_SETS,
+  GET_EVAL_SET_BY_ID,
+  GET_JOB_RESULTS,
   GET_TEST_CASES,
 } from "@/queries/queries";
 
@@ -92,5 +94,74 @@ describe("demo resolvers answer the evals pages", () => {
         ).toBe(true);
       }
     }
+  });
+});
+
+/**
+ * The results matrix on /evals/[id]. Both of these were found by opening the
+ * page rather than by any test: the set detail query was unmapped, so the page
+ * rendered loading skeletons indefinitely with nothing in the console, and the
+ * per-case scores did not exist at all, so every cell read "Not started".
+ */
+describe("the results matrix has data to draw", () => {
+  it("resolves the set the detail page opens", async () => {
+    const data = await run(GET_EVAL_SET_BY_ID, {
+      id: "evalset-techdoc-regression",
+    });
+    expect((data.eval_setById as { id: string })?.id).toBe(
+      "evalset-techdoc-regression",
+    );
+  });
+
+  it("scopes job results to the run that asked for them", async () => {
+    // Load-bearing, and silently so. Each run column averages EVERY row it is
+    // handed, so a resolver that ignored the label filter would hand both runs
+    // all six results and print the same average under each — while the
+    // per-case cells still looked correct, because those match on the label a
+    // second time. The averages are the number a prospect actually reads.
+    const forNightly = await run(GET_JOB_RESULTS, {
+      page: 1,
+      limit: 500,
+      filters: [{ label: { contains: "eval-run-evalrun-2026-08-27" } }],
+    });
+    const items = (
+      forNightly.job_resultsPagination as {
+        items: { label: string; result: number; state: string }[];
+      }
+    ).items;
+
+    expect(items).toHaveLength(3);
+    expect(items.every((r) => r.label.includes("evalrun-2026-08-27"))).toBe(true);
+    expect(items.some((r) => r.label.includes("evalrun-2026-08-20"))).toBe(false);
+
+    // `result` must be a NUMBER: eval-run-column.tsx averages only over
+    // `typeof result === "number"`, so numeric strings would render per-case
+    // scores and then a blank average row.
+    expect(items.every((r) => typeof r.result === "number")).toBe(true);
+    expect(items.every((r) => r.state === "completed")).toBe(true);
+  });
+
+  it("gives the two runs different averages, which is the chapter's point", async () => {
+    const avg = async (runId: string) => {
+      const data = await run(GET_JOB_RESULTS, {
+        page: 1,
+        limit: 500,
+        filters: [{ label: { contains: `eval-run-${runId}` } }],
+      });
+      const rows = (
+        data.job_resultsPagination as { items: { result: number }[] }
+      ).items;
+      return rows.reduce((sum, r) => sum + r.result, 0) / rows.length;
+    };
+
+    const baseline = await avg("evalrun-2026-08-20");
+    const nightly = await avg("evalrun-2026-08-27");
+
+    // The earlier run sits below the suite's 80 pass threshold and the later
+    // one above it, so the matrix shows a red cell becoming green. These
+    // numbers are illustrative — see the fixture header — but the RELATIONSHIP
+    // is what the chapter narrates, so it is pinned here.
+    expect(baseline).toBeLessThan(80);
+    expect(nightly).toBeGreaterThan(80);
   });
 });

@@ -14,6 +14,7 @@ import { ConfigContextProvider } from "@/components/shell/config-context";
 import { configApi, BackendConfigType } from "@/lib/api/config";
 import { LanguageProvider } from "@/components/shell/language-provider";
 import { LOCALE_COOKIE, Locale, defaultLocale } from "@/i18n/config";
+import { DEMO_BACKEND_CONFIG } from "@/lib/demo/config";
 import { isDemoMode } from "@/lib/demo/flag";
 import { getDemoUser } from "@/lib/demo/user";
 import { TourOverlay } from "@/components/demo/tour-overlay";
@@ -54,8 +55,12 @@ export default async function RootLayout({
     // public-agents spec §4.4. Everything they may use lives under /public.
     if (!demoMode && user.type === "external") return redirect("/public/agents");
 
+    // `{}` here is what put "Background workers are not configured" on the
+    // tour's evals screen — the banner renders whenever workers.enabled is
+    // falsy, and an empty config is falsy. lib/demo/config.ts justifies each
+    // value it claims.
     const json: BackendConfigType = demoMode
-      ? {}
+      ? DEMO_BACKEND_CONFIG
       : await (async () => {
           const backend = await configApi.backend();
           return backend.json() as Promise<BackendConfigType>;

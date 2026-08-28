@@ -1,7 +1,12 @@
 import { CONTEXT_SEARCH_TOOL, AGENTIC_RETRIEVAL_TOOL } from "./fixtures/agent-editor";
 import { MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
 import { CONTEXTS } from "./fixtures/contexts";
-import { EVAL_RUNS, EVAL_SETS, TEST_CASES } from "./fixtures/evals";
+import {
+  EVAL_JOB_RESULTS,
+  EVAL_RUNS,
+  EVAL_SETS,
+  TEST_CASES,
+} from "./fixtures/evals";
 import {
   MEMORY_SCROLLBACK,
   MEMORY_SCROLLBACK_ROWS,
@@ -163,6 +168,15 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
     },
   }),
 
+  // The set detail page, which is where chapter 5 spends most of its time.
+  // Unmapped this returns {}, and the page has no error state for that — it
+  // simply renders loading skeletons forever. No console error either, which
+  // is why the list screen looked finished and this one was never noticed.
+  GetEvalSetById: (_world, variables) => ({
+    eval_setById:
+      EVAL_SETS.find((set) => set.id === variables.id) ?? EVAL_SETS[0],
+  }),
+
   GetTestCases: (_world, variables) => {
     // The cases library is filtered by eval set when opened from a set. Honour
     // it: an unfiltered list would show the regulatory case inside the techdoc
@@ -174,6 +188,18 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
     return {
       test_casesPagination: { pageInfo: page(items.length), items },
     };
+  },
+
+  // One query per run column, filtered by a label prefix. Honouring that
+  // filter is not optional: each column averages EVERY row it is handed, so a
+  // resolver that ignored the filter would give both runs the same average —
+  // the mean of all six results — while the per-case cells still looked right.
+  GetJobResults: (_world, variables) => {
+    const needle = filterValue(variables, "label");
+    const items = needle
+      ? EVAL_JOB_RESULTS.filter((row) => row.label.includes(needle))
+      : EVAL_JOB_RESULTS;
+    return { job_resultsPagination: { pageInfo: page(items.length), items } };
   },
 
   GetEvalRuns: (_world, variables) => {
