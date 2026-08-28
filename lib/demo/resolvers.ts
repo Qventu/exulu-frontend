@@ -1,5 +1,11 @@
 import { CONTEXT_SEARCH_TOOL, AGENTIC_RETRIEVAL_TOOL } from "./fixtures/agent-editor";
+import { MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
+import { CONTEXTS } from "./fixtures/contexts";
 import { EVAL_RUNS, EVAL_SETS, TEST_CASES } from "./fixtures/evals";
+import {
+  MEMORY_SCROLLBACK,
+  MEMORY_SCROLLBACK_ROWS,
+} from "./fixtures/memory-turns";
 import { DEMO_USER_ID } from "./user";
 import type { DemoWorld } from "./types";
 
@@ -27,6 +33,8 @@ export type DemoResolver = (
   world: DemoWorld,
   variables: Record<string, unknown>,
 ) => Record<string, unknown>;
+
+const KNOWN_CONTEXT_IDS = new Set(CONTEXTS.map((c) => c.id));
 
 /** Every *Pagination selection includes pageInfo; the tables read it. */
 const page = (itemCount: number) => ({
@@ -56,6 +64,40 @@ function evalSetIdFrom(variables: Record<string, unknown>): string | null {
     }
   }
   return null;
+}
+
+/** Reads a `{ field: { eq: value } }`-style filter argument. */
+function filterValue(
+  variables: Record<string, unknown>,
+  field: string,
+): string | null {
+  const filters = variables?.filters;
+  const list = Array.isArray(filters) ? filters : filters ? [filters] : [];
+  for (const filter of list) {
+    const candidate = (filter as Record<string, unknown>)?.[field];
+    if (typeof candidate === "string") return candidate;
+    if (candidate && typeof candidate === "object") {
+      const nested = Object.values(candidate as Record<string, unknown>).find(
+        (v) => typeof v === "string",
+      );
+      if (typeof nested === "string") return nested;
+    }
+  }
+  return null;
+}
+
+/**
+ * The scripted conversation history, as `agent_messages` rows. Only chapter
+ * 4's session has scrollback; every other session opens empty and the whole
+ * conversation is streamed live by DemoChatTransport.
+ */
+function scrollbackRows(variables: Record<string, unknown>) {
+  const sessionId = filterValue(variables, "session");
+  if (sessionId && sessionId !== MEMORY_SESSION_ID) return [];
+  return MEMORY_SCROLLBACK.map((message, index) => ({
+    ...MEMORY_SCROLLBACK_ROWS[index],
+    content: JSON.stringify(message),
+  }));
 }
 
 export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
@@ -169,7 +211,89 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   EditorToolCategories: () => ({ toolCategories: ["knowledge"] }),
   EditorSkills: () => ({ skillsPagination: { items: [] } }),
   EditorVariables: () => ({ variablesPagination: { items: [] } }),
+
+  // --- /chat/[agent]/[session] (chapters 1 and 4) -------------------------
+  // Both are server-rendered by the real chat route.
+  GetAgentSessionById: (world, variables) => ({
+    agent_sessionById:
+      world.sessions.find((s) => s.id === variables.id) ?? world.sessions[0],
+  }),
+
+  // `content` is a JSON STRING: the page does JSON.parse(item.content) to get
+  // back a UIMessage. Returning an object here throws inside the page.
+  //
+  // The page requests DESC and then reverses, so honour the sort direction
+  // rather than assuming — feedback-detail-panel.tsx asks for the same
+  // operation and would otherwise render the conversation backwards.
+  GetAgentSessionMessages: (_world, variables) => {
+    const rows = scrollbackRows(variables);
+    const direction = (
+      (variables?.sort as { direction?: string })?.direction ?? "ASC"
+    ).toUpperCase();
+    const items = direction === "DESC" ? [...rows].reverse() : rows;
+    return {
+      agent_messagesPagination: { pageInfo: page(items.length), items },
+    };
+  },
 };
+
+/**
+ * Per-context item operations are GENERATED, not written by hand: /data/[ctx]
+ * builds `query <ctx>Pagination` and `query <ctx>ById` from the context id at
+ * runtime (data/queries.ts GET_ITEMS / GET_ITEM_BY_ID). There is no fixed set
+ * of names to enumerate, so these are matched by shape instead — which means
+ * every knowledge base in the tour gets a working detail page, not just the
+ * ones somebody remembered to add.
+ *
+ * Note the response field is `<ctx>_itemsPagination` while the OPERATION is
+ * `<ctx>Pagination`. They differ, and returning the operation name as the field
+ * yields a page that renders its empty state.
+ */
+function dynamicResolver(operationName: string): DemoResolver | undefined {
+  // Gated on the real context ids rather than matching any `<x>Pagination`.
+  // A loose pattern would quietly answer operations nobody has mapped, and the
+  // unmapped-operation warning is the diagnostic that has caught every missing
+  // resolver so far (GetAgentById, GetAgents, RoutineRunsNeedingAttentionCount).
+  // Silencing it to save a few lines would be a bad trade.
+  const isContext = (id: string) => KNOWN_CONTEXT_IDS.has(id);
+
+  const paginationMatch = /^([a-z0-9_]+)Pagination$/.exec(operationName);
+  if (paginationMatch && isContext(paginationMatch[1])) {
+    const ctx = paginationMatch[1];
+    return (world) => {
+      const items = world.itemsByContext?.[ctx] ?? world.items;
+      return {
+        [`${ctx}_itemsPagination`]: { pageInfo: page(items.length), items },
+      };
+    };
+  }
+
+  const byIdMatch = /^([a-z0-9_]+)ById$/.exec(operationName);
+  if (byIdMatch && isContext(byIdMatch[1])) {
+    const ctx = byIdMatch[1];
+    return (world, variables) => {
+      const items = world.itemsByContext?.[ctx] ?? world.items;
+      return {
+        [`${ctx}_itemsById`]:
+          items.find((i) => i.id === variables.id) ?? items[0] ?? null,
+      };
+    };
+  }
+
+  return undefined;
+}
+
+/**
+ * The single lookup both transports use: explicit table first, generated
+ * operations second. Returns undefined when nothing matches, which the callers
+ * turn into a warning plus an empty result.
+ */
+export function resolverFor(
+  operationName: string | null,
+): DemoResolver | undefined {
+  if (!operationName) return undefined;
+  return DEMO_RESOLVERS[operationName] ?? dynamicResolver(operationName);
+}
 
 /**
  * Reads the operation name from either a gql DocumentNode or a raw query

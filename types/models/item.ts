@@ -12,7 +12,10 @@ export interface Item {
     last_processed_at?: string;
     chunks_count?: number;
     updatedAt?: string;
-    external_id?: string;
+    // Nullable in the API: items created in-app rather than synced from a
+    // source system have no external id. Consumers already read it as
+    // `external_id ?? ""` / `|| row.id`.
+    external_id?: string | null;
     source?: string;
     tags?: string[];
     textlength?: number;

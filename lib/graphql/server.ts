@@ -3,7 +3,7 @@ import { getAuthOptions } from "@/app/api/auth/[...nextauth]/options";
 import { getCurrentPosition } from "@/lib/demo/current-position";
 import { getWorld } from "@/lib/demo/fixtures";
 import { isDemoMode } from "@/lib/demo/flag";
-import { DEMO_RESOLVERS, operationNameOf } from "@/lib/demo/resolvers";
+import { operationNameOf, resolverFor } from "@/lib/demo/resolvers";
 
 export async function fetchGraphQLServerSide(query: string, variables: any) {
     // Demo mode serves fixtures instead of calling a backend, exactly as the
@@ -20,7 +20,7 @@ export async function fetchGraphQLServerSide(query: string, variables: any) {
     // rendering the real product.
     if (isDemoMode()) {
       const operationName = operationNameOf(query);
-      const resolver = operationName ? DEMO_RESOLVERS[operationName] : undefined;
+      const resolver = resolverFor(operationName);
       if (!resolver) {
         console.warn(
           `[demo] unmapped server-side GraphQL operation: ${operationName ?? "<unnamed>"}`,

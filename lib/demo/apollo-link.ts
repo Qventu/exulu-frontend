@@ -1,5 +1,5 @@
 import { ApolloLink, Observable } from "@apollo/client/core";
-import { DEMO_RESOLVERS } from "./resolvers";
+import { resolverFor } from "./resolvers";
 import type { DemoWorld } from "./types";
 
 /**
@@ -20,7 +20,7 @@ export function createDemoLink(
 ): ApolloLink {
   return new ApolloLink((operation) => {
     return new Observable((observer) => {
-      const resolver = DEMO_RESOLVERS[operation.operationName];
+      const resolver = resolverFor(operation.operationName);
       if (!resolver) {
         onUnmapped(operation.operationName);
         observer.next({ data: {} });

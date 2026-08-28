@@ -76,4 +76,17 @@ export const CONTEXTS: Context[] = [
     "Service database",
     "Structured service records.",
   ),
+  // The agent's own memory. It is a context like any other, which is exactly
+  // the point chapter 4 makes: a correction an engineer gives in chat becomes
+  // a durable, inspectable, editable knowledge item rather than a hidden
+  // fine-tune. The id is the production one — the memory Newton writes in
+  // chapter 4 cites `context: newton_memory_context`.
+  //
+  // Unlike the six above, this description is written for the tour rather than
+  // lifted from the production retrieval instructions.
+  context(
+    "newton_memory_context",
+    "Newton's memory",
+    "Facts, preferences and insights Newton has been taught by engineers during conversations.",
+  ),
 ];

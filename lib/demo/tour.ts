@@ -66,7 +66,43 @@ export const CHAPTERS: DemoChapter[] = [
   },
   { id: "ingestion", title: "How it learned that", steps: [stub("ingestion-intro", "How it learned that")] },
   { id: "config", title: "Making it yours", steps: [stub("config-intro", "Making it yours")] },
-  { id: "memory", title: "Correcting it", steps: [stub("memory-intro", "Correcting it")] },
+  {
+    id: "memory",
+    title: "Correcting it",
+    steps: [
+      {
+        id: "memory-miss",
+        route: "/demo/tour",
+        anchor: "chat-messages",
+        title: "When it doesn't know, it says so",
+        body: "An engineer asks for an exact menu path. The assistant offers what the documents do contain, cites it, and is explicit that the precise path is not among them. No invented answer.",
+      },
+      {
+        id: "memory-correct",
+        route: "/demo/tour",
+        anchor: "chat-composer",
+        title: "The engineer corrects it",
+        body: "Send the correction. This is the real message a Newlift engineer sent, giving the right path and asking the assistant to remember it.",
+      },
+      // MEMORY_WRITTEN_AT_STEP in fixtures/chapter-memory.ts is tied to this
+      // index: the new memory must not appear in the knowledge base before the
+      // visitor has actually sent the correction.
+      {
+        id: "memory-write",
+        route: "/demo/tour",
+        anchor: "chat-tool-trace",
+        title: "The correction becomes a memory",
+        body: "Remembering is a visible tool call, not a hidden side effect. You can see exactly what was stored.",
+      },
+      {
+        id: "memory-item",
+        route: "/data/newton_memory_context",
+        anchor: null,
+        title: "And a knowledge item you own",
+        body: "The memory lands in a knowledge base like any other — readable, editable, deletable, and auditable. Nothing was fine-tuned into a model where you cannot reach it.",
+      },
+    ],
+  },
   { id: "evals", title: "Proving it", steps: [stub("evals-intro", "Proving it")] },
   { id: "email", title: "Working while you sleep", steps: [stub("email-intro", "Working while you sleep")] },
   { id: "meetings", title: "Capturing what is said", steps: [stub("meetings-intro", "Capturing what is said")] },

@@ -4,6 +4,7 @@ import type { Context } from "@/types/models/context";
 import { CONTEXTS as REAL_CONTEXTS } from "./contexts";
 import type { Item } from "@/types/models/item";
 import type { DemoWorld } from "../types";
+import { demoItem } from "./item";
 
 export const DEMO_AGENT_ID = "demo-agent-newton";
 export const DEMO_AGENT_SLUG = "chat";
@@ -37,7 +38,7 @@ const AGENT: Agent = {
 const CONTEXTS: Context[] = REAL_CONTEXTS;
 
 const ITEMS: Item[] = [
-  {
+  demoItem({
     id: "item-ctrl-3000-manual",
     name: "CTRL-3000 Service Manual Rev. 4",
     description: "Full service manual for the CTRL-3000 elevator control board.",
@@ -45,9 +46,8 @@ const ITEMS: Item[] = [
     tags: ["ctrl-3000", "service-manual", "fault-codes"],
     chunks_count: 248,
     createdAt: "2025-03-12T09:00:00.000Z",
-    updatedAt: "2025-03-12T09:00:00.000Z",
-  },
-  {
+  }),
+  demoItem({
     id: "item-en81-20",
     name: "EN 81-20:2024 Safety rules for lifts",
     description: "European standard for safety rules for the construction and installation of lifts.",
@@ -55,8 +55,7 @@ const ITEMS: Item[] = [
     tags: ["en81", "safety", "installation"],
     chunks_count: 412,
     createdAt: "2025-01-08T10:30:00.000Z",
-    updatedAt: "2025-01-08T10:30:00.000Z",
-  },
+  }),
 ];
 
 const SESSIONS: AgentSession[] = [

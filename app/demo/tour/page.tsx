@@ -4,6 +4,7 @@ import { SessionScreen } from "@/app/(application)/chat/components/session-scree
 import { Spotlight } from "@/components/demo/spotlight";
 import { TourBubble } from "@/components/demo/tour-bubble";
 import { useTour } from "@/components/demo/tour-provider";
+import { scrollbackFor } from "@/lib/demo/current-position";
 
 import { DemoChatProviders } from "./demo-chat-providers";
 
@@ -21,9 +22,15 @@ import { DemoChatProviders } from "./demo-chat-providers";
  * citations all render through the genuine components.
  */
 export default function TourPage() {
-  const { step, world } = useTour();
+  const { position, step, world } = useTour();
 
   const agent = world.agents[0];
+
+  // Chapter 4 opens mid-conversation: the correction it demonstrates only lands
+  // if the answer being corrected is already on screen. Keyed so that switching
+  // chapters through the Tour bubble remounts the chat with the right history
+  // rather than appending chapter 4's scrollback to chapter 1's transcript.
+  const scrollback = scrollbackFor(position.chapter);
 
   // Hand the surface an existing session rather than null. On null (the /new
   // path) the first send lazily creates one through a GraphQL mutation, which
@@ -39,9 +46,10 @@ export default function TourPage() {
 
       <DemoChatProviders agent={agent}>
         <SessionScreen
+          key={position.chapter}
           agent={agent}
           initialSession={session}
-          initialMessages={[]}
+          initialMessages={scrollback}
         />
       </DemoChatProviders>
     </div>

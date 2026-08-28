@@ -15,4 +15,10 @@ export interface DemoWorld {
   contexts: Context[];
   items: Item[];
   sessions: AgentSession[];
+  /**
+   * Items belonging to a specific knowledge base, keyed by context id, for the
+   * per-context `<ctx>Pagination` / `<ctx>ById` operations behind /data/[ctx].
+   * `items` stays the flat default for contexts with no entry here.
+   */
+  itemsByContext?: Record<string, Item[]>;
 }
