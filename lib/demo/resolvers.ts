@@ -1,4 +1,5 @@
 import { CONTEXT_SEARCH_TOOL, AGENTIC_RETRIEVAL_TOOL } from "./fixtures/agent-editor";
+import { EVAL_RUNS, EVAL_SETS, TEST_CASES } from "./fixtures/evals";
 import { DEMO_USER_ID } from "./user";
 import type { DemoWorld } from "./types";
 
@@ -27,6 +28,36 @@ export type DemoResolver = (
   variables: Record<string, unknown>,
 ) => Record<string, unknown>;
 
+/** Every *Pagination selection includes pageInfo; the tables read it. */
+const page = (itemCount: number) => ({
+  pageCount: 1,
+  itemCount,
+  currentPage: 1,
+  hasPreviousPage: false,
+  hasNextPage: false,
+});
+
+/**
+ * Pulls an eval_set_id out of the product's filter argument shape, which is a
+ * list of `{ field: { operator: value } }`-ish entries rather than a flat map.
+ * Returns null when unfiltered.
+ */
+function evalSetIdFrom(variables: Record<string, unknown>): string | null {
+  const filters = variables?.filters;
+  if (!Array.isArray(filters)) return null;
+  for (const filter of filters) {
+    const candidate = (filter as { eval_set_id?: unknown })?.eval_set_id;
+    if (typeof candidate === "string") return candidate;
+    if (candidate && typeof candidate === "object") {
+      const nested = Object.values(candidate as Record<string, unknown>).find(
+        (v) => typeof v === "string",
+      );
+      if (typeof nested === "string") return nested;
+    }
+  }
+  return null;
+}
+
 export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // --- app shell (every page) ---------------------------------------------
   // The sidebar polls this on every route, so it is shell-wide rather than
@@ -49,6 +80,39 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
       recently_viewed_items: [],
     },
   }),
+
+  // --- /evals (chapter 5: proving accuracy) -------------------------------
+  // All three are *Pagination wrappers; pageInfo is selected, so omitting it
+  // leaves the tables unable to render their footers.
+  GetEvalSets: () => ({
+    eval_setsPagination: {
+      pageInfo: page(EVAL_SETS.length),
+      items: EVAL_SETS,
+    },
+  }),
+
+  GetTestCases: (_world, variables) => {
+    // The cases library is filtered by eval set when opened from a set. Honour
+    // it: an unfiltered list would show the regulatory case inside the techdoc
+    // suite, which is exactly the mistake the suite exists to catch.
+    const setId = evalSetIdFrom(variables);
+    const items = setId
+      ? TEST_CASES.filter((c) => c.eval_set_id === setId)
+      : TEST_CASES;
+    return {
+      test_casesPagination: { pageInfo: page(items.length), items },
+    };
+  },
+
+  GetEvalRuns: (_world, variables) => {
+    const setId = evalSetIdFrom(variables);
+    const items = setId
+      ? EVAL_RUNS.filter((r) => r.eval_set_id === setId)
+      : EVAL_RUNS;
+    return {
+      eval_runsPagination: { pageInfo: page(items.length), items },
+    };
+  },
 
   // --- server-rendered detail routes --------------------------------------
   // These reach fetchGraphQLServerSide rather than Apollo. They were found by

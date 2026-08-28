@@ -11,6 +11,12 @@ import {
   GET_USER_CONTEXT_ITEM_FAVOURITES,
 } from "@/app/(application)/data/queries";
 import { ROUTINE_RUNS_ATTENTION_COUNT } from "@/lib/routine-runs/queries";
+import {
+  GET_EVAL_RUNS,
+  GET_EVAL_SETS,
+  GET_TEST_CASES,
+} from "@/queries/queries";
+import { DEMO_AGENT_ID } from "./fixtures";
 import { createDemoLink } from "./apollo-link";
 import { getWorld } from "./fixtures";
 
@@ -85,6 +91,63 @@ describe("/data page operations", () => {
     const user = data.userById as Record<string, unknown>;
     expect(user).toHaveProperty("favourite_items");
     expect(user).toHaveProperty("recently_viewed_items");
+  });
+});
+
+describe("/evals operations", () => {
+  it("answers all three eval queries under their pagination wrappers", async () => {
+    const vars = { page: 1, limit: 50 };
+    const sets = await run(GET_EVAL_SETS, vars);
+    const cases = await run(GET_TEST_CASES, vars);
+    const runs = await run(GET_EVAL_RUNS, vars);
+
+    for (const [label, wrapper] of [
+      ["eval_setsPagination", sets.eval_setsPagination],
+      ["test_casesPagination", cases.test_casesPagination],
+      ["eval_runsPagination", runs.eval_runsPagination],
+    ] as const) {
+      const w = wrapper as { pageInfo: unknown; items: unknown[] };
+      expect(w, `${label} missing`).toBeTruthy();
+      // pageInfo is in the selection set; without it the tables cannot render.
+      expect(w.pageInfo, `${label}.pageInfo missing`).toBeTruthy();
+      expect(w.items.length, `${label} empty`).toBeGreaterThan(0);
+    }
+  });
+
+  it("filters test cases by eval set rather than showing every suite's cases", async () => {
+    const all = await run(GET_TEST_CASES, { page: 1, limit: 50 });
+    const filtered = await run(GET_TEST_CASES, {
+      page: 1,
+      limit: 50,
+      filters: [{ eval_set_id: "evalset-regulatory" }],
+    });
+    const allItems = (all.test_casesPagination as { items: unknown[] }).items;
+    const someItems = (filtered.test_casesPagination as { items: { eval_set_id: string }[] }).items;
+
+    expect(someItems.length).toBeLessThan(allItems.length);
+    expect(someItems.every((c) => c.eval_set_id === "evalset-regulatory")).toBe(true);
+  });
+
+  it("only references agents and knowledge sources the demo world contains", async () => {
+    const runsData = await run(GET_EVAL_RUNS, { page: 1, limit: 50 });
+    const casesData = await run(GET_TEST_CASES, { page: 1, limit: 50 });
+    const contextData = await run(GET_CONTEXTS_EDITOR);
+
+    const knownContexts = new Set(
+      (contextData.contexts as { items: { id: string }[] }).items.map((c) => c.id),
+    );
+    const agentIds = new Set([DEMO_AGENT_ID]);
+
+    for (const r of (runsData.eval_runsPagination as { items: { agent_id: string }[] }).items) {
+      expect(agentIds.has(r.agent_id), `run targets unknown agent: ${r.agent_id}`).toBe(true);
+    }
+    for (const c of (casesData.test_casesPagination as {
+      items: { expected_knowledge_sources: string[] }[];
+    }).items) {
+      for (const src of c.expected_knowledge_sources ?? []) {
+        expect(knownContexts.has(src), `case expects unknown context: ${src}`).toBe(true);
+      }
+    }
   });
 });
 
