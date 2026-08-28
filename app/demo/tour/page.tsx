@@ -25,6 +25,13 @@ export default function TourPage() {
 
   const agent = world.agents[0];
 
+  // Hand the surface an existing session rather than null. On null (the /new
+  // path) the first send lazily creates one through a GraphQL mutation, which
+  // the demo link does not answer — the send then fails with "Failed to create
+  // the conversation". Supplying a session skips that branch entirely, so the
+  // demo never needs mutation support.
+  const session = world.sessions[0] ?? null;
+
   return (
     <div className="relative flex h-full min-h-dvh flex-col bg-background">
       <Spotlight anchor={step?.anchor ?? null} />
@@ -33,7 +40,7 @@ export default function TourPage() {
       <DemoChatProviders agent={agent}>
         <SessionScreen
           agent={agent}
-          initialSession={null}
+          initialSession={session}
           initialMessages={[]}
         />
       </DemoChatProviders>

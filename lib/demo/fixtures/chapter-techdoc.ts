@@ -176,7 +176,11 @@ const SESSIONS: AgentSession[] = [
     project: "demo-project",
     title: "Fault E47 on CTRL-3000",
     metadata: null,
-    created_by: "demo-user",
+    // Must equal getDemoUser().id. checkChatSessionWriteAccess grants write to
+    // the session's creator; with rights_mode "private" and no RBAC entries,
+    // any other value falls through to `return false` and the tour renders a
+    // read-only composer.
+    created_by: 0,
     session_items: [],
     rights_mode: "private",
     createdAt: "2026-08-27T08:00:00.000Z",
