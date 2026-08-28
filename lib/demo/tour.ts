@@ -279,7 +279,37 @@ export const CHAPTERS: DemoChapter[] = [
       },
     ],
   },
-  { id: "meetings", title: "Capturing what is said", steps: [stub("meetings-intro", "Capturing what is said")] },
+  {
+    id: "meetings",
+    title: "Capturing what is said",
+    // Still ALGI. The recordings, titles, durations and statuses are real; the
+    // work instruction in the last step is the ONE artefact in the tour the
+    // product did not produce, and the copy says so rather than implying
+    // otherwise. See fixtures/chapter-meetings.ts.
+    steps: [
+      {
+        id: "meetings-list",
+        route: "/transcriptions",
+        anchor: "transcriptions",
+        title: "Seventeen hours nobody has time to re-listen to",
+        body: "Twenty-eight of ALGI's own meetings, recorded by a bot that joins the call. Production planning, customer service, training. Three were cancelled and one failed — this is a real list, not a tidy one.",
+      },
+      {
+        id: "meetings-transcript",
+        route: "/transcriptions",
+        anchor: "transcriptions",
+        title: "And this is what half an hour of it looks like",
+        body: "Six people, interrupting each other, finishing sentences two turns later. Nearly half the lines are three words or fewer. Nobody is going to read this — which is the point, and the reason a recording on its own is worth very little.",
+      },
+      {
+        id: "meetings-guide",
+        route: "/transcriptions",
+        anchor: null,
+        title: "So point it at a prompt instead",
+        body: "The same conversation, turned into a work instruction: check the release, do not infer ventilation from whether the cabin has a door, schedule variants separately, name the open points. Written from that recording — everything that was decided, none of the noise. Every other screen in this tour came out of a live system; this one document we drafted by hand, because ALGI has not run this step yet.",
+      },
+    ],
+  },
 ];
 
 function chapterIndex(chapters: DemoChapter[], id: DemoChapterId): number {

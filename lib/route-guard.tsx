@@ -35,6 +35,7 @@ import {
 import { configApi, type BackendConfigType } from "@/lib/api/config";
 import { can, type Requirement, type RightsUser } from "@/lib/rights";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
+import { demoConfig } from "@/lib/demo/config";
 import { isDemoMode } from "@/lib/demo/flag";
 import { getDemoUser } from "@/lib/demo/user";
 
@@ -53,12 +54,26 @@ const getSessionUser = async () =>
  */
 async function serverNavConfig(): Promise<NavConfig> {
   let recallEnabled = false;
-  try {
-    const res = await configApi.backend();
-    const json: BackendConfigType = await res.json();
-    recallEnabled = json.recall?.enabled === true;
-  } catch {
-    recallEnabled = false;
+  if (isDemoMode()) {
+    // The demo describes a deployment, and lib/demo/config.ts is where that
+    // description lives — the client ConfigContext already reads it. Without
+    // this branch the two disagreed: the client was told recall was on while
+    // the server asked a backend that is not there, caught the failure and
+    // reported it off. The Transcriptions nav entry vanished and the route
+    // answered "You don't have access to this page", which is how chapter 7
+    // first rendered in the browser.
+    //
+    // It also skips an HTTP call that could only ever fail, on every guarded
+    // route in the tour.
+    recallEnabled = demoConfig().recall?.enabled === true;
+  } else {
+    try {
+      const res = await configApi.backend();
+      const json: BackendConfigType = await res.json();
+      recallEnabled = json.recall?.enabled === true;
+    } catch {
+      recallEnabled = false;
+    }
   }
   return {
     transcription: {

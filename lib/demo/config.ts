@@ -36,11 +36,19 @@ const DEMO_BACKEND_CONFIG: BackendConfigType = {
   // guarantee — the same gap as Save on the agent editor.
   workers: { enabled: true, redisHost: "demo" },
 
-  // Both false, and both honest: the tour has no LiteLLM gateway and no Recall
-  // integration behind it, and neither feature appears in any chapter. If
-  // chapter 7 grows a meetings integration, `recall` is the flag to revisit.
   liteLLM: { enabled: false },
-  recall: { enabled: false },
+
+  // TRUE, and this is the flag chapter 7 turns on. ALGI genuinely records
+  // their meetings with a Recall bot — the twenty-eight recordings in
+  // fixtures/chapter-meetings.ts came from it — so a deployment that reports
+  // recall as disabled would be describing a different customer.
+  //
+  // It is also load-bearing rather than cosmetic: nav-config gates the
+  // Transcriptions entry on `transcription.enabled || recall.enabled`, and
+  // /transcriptions guards its route on the same flag. With both false the
+  // sidebar hid the entry AND the URL rendered "You don't have access to this
+  // page", which is how chapter 7 first appeared in the browser.
+  recall: { enabled: true },
 };
 
 export function demoConfig(): ConfigContextType {

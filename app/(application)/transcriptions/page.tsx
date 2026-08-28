@@ -141,7 +141,11 @@ function TranscriptionsPageInner() {
   const newButtonDisabled = composerOpen;
 
   return (
-    <PageShell variant="content" className="max-w-4xl">
+    <PageShell
+      variant="content"
+      className="max-w-4xl"
+      data-demo-id="transcriptions"
+    >
       <MobileTopbarAction>
         <Button
           type="button"

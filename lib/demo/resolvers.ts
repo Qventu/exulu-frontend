@@ -6,6 +6,12 @@ import {
   ALGI_RUNS,
   ALGI_RUNS_NEEDING_ATTENTION,
 } from "./fixtures/chapter-email";
+import {
+  ALGI_MEETINGS,
+  ALGI_MEETING_ID,
+  TRANSCRIPT_EXCERPT,
+  type MeetingRecording,
+} from "./fixtures/chapter-meetings";
 import { MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
 import { CONTEXTS } from "./fixtures/contexts";
 import {
@@ -47,6 +53,42 @@ export type DemoResolver = (
 ) => Record<string, unknown>;
 
 const KNOWN_CONTEXT_IDS = new Set(CONTEXTS.map((c) => c.id));
+
+/**
+ * A recording as /transcriptions selects it. The nulls are the fields dropped
+ * at export (storage key, join link, bot and whisper ids) — see
+ * scripts/build-algi-meetings-fixture.py.
+ */
+const transcriptionJob = (meeting: MeetingRecording) => ({
+  id: meeting.id,
+  audio_s3key: null,
+  title: meeting.title,
+  status: meeting.status,
+  whisper_job_id: null,
+  language: meeting.language,
+  duration_seconds: meeting.duration_seconds,
+  speakers: {},
+  project_id: null,
+  target_rights_mode: "public",
+  target_rbac_users: [],
+  target_rbac_roles: [],
+  saved_item_id: null,
+  error: null,
+  rights_mode: "public",
+  created_by: DEMO_USER_ID,
+  createdAt: meeting.createdAt,
+  updatedAt: meeting.updatedAt,
+  source: meeting.source,
+  meeting_url: null,
+  recall_bot_id: null,
+  bot_status: meeting.bot_status,
+  // Scheduled join time for a bot that has not dialled in yet. Null for every
+  // recording here because all 28 have already run — and omitting it cost one
+  // Apollo error per row, 28 on first paint, which is how this was found.
+  join_at: null,
+  post_processing_prompts: [],
+  post_processing_outputs: null,
+});
 
 /** The routine as the list and detail screens select it. */
 const routineItem = () => ({
@@ -142,6 +184,56 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // literal, so trimming the fixture cannot leave the badge lying.
   RoutineRunsNeedingAttentionCount: () => ({
     routineRunsNeedingAttentionCount: ALGI_RUNS_NEEDING_ATTENTION,
+  }),
+
+  // --- /transcriptions (chapter 7: what was said in the room) -------------
+  // The selection asks for far more than the list renders — storage keys, the
+  // meeting join URL, bot and whisper ids. Those are answered as null rather
+  // than omitted: an absent SELECTED field is a console error, which is a
+  // different failure from a deliberately empty one. The nulls are also the
+  // honest answer, since those columns were dropped at export.
+  GetTranscriptionJobs: () => ({
+    transcription_jobsPagination: {
+      pageInfo: { itemCount: ALGI_MEETINGS.length },
+      items: ALGI_MEETINGS.map(transcriptionJob),
+    },
+  }),
+
+  GetTranscriptionJob: (_world, variables) => {
+    const meeting =
+      ALGI_MEETINGS.find((m) => m.id === variables.id) ?? ALGI_MEETINGS[0];
+    return {
+      transcription_jobById: {
+        ...transcriptionJob(meeting),
+        // Only the opening minutes, and only for the meeting the chapter
+        // opens. Everything else returns an empty transcript rather than
+        // another meeting's words — a visitor who clicks a different row
+        // should find nothing, not somebody else's conversation.
+        raw_segments:
+          meeting.id === ALGI_MEETING_ID
+            ? TRANSCRIPT_EXCERPT.map((line) => ({
+                speaker: line.speaker,
+                text: line.text,
+              }))
+            : [],
+      },
+    };
+  },
+
+  // Recording is on, with no cap configured — which is what ALGI runs. A
+  // percentage bar climbing toward a limit would imply a metered feature the
+  // tour does not otherwise mention.
+  GetMeetingRecordingUsage: () => ({
+    meetingRecordingUsage: {
+      enabled: true,
+      used_seconds: ALGI_MEETINGS.reduce(
+        (sum, m) => sum + (m.duration_seconds ?? 0),
+        0,
+      ),
+      limit_seconds: null,
+      percent: null,
+      exceeded: false,
+    },
   }),
 
   // --- /workflows (chapter 6: the ALGI email routine) ---------------------
