@@ -141,8 +141,48 @@ describe("the conversation the correction answers is on screen", () => {
     expect(text).not.toContain("HAUPTMENUE/Konfig/Inbetriebnahme");
   });
 
-  it("does not leak scrollback into chapters that stream from scratch", () => {
-    expect(scrollbackFor("techdoc")).toHaveLength(0);
+  it("keeps each chapter's scrollback to itself", () => {
+    // This asserted chapter 1 had NO scrollback, from when it opened on an
+    // empty conversation and asked the visitor to type. It now opens
+    // mid-exchange for the same reason chapter 4 does: two of its three steps
+    // anchor to things that exist only once a message has been sent, and a
+    // visitor who just clicks Next never sends one.
+    //
+    // What still matters is that the two do not bleed into each other.
+    const techdoc = scrollbackFor("techdoc");
+    const memory = scrollbackFor("memory", 0);
+
+    expect(techdoc.length).toBeGreaterThan(0);
+    expect(memory.length).toBeGreaterThan(0);
+
+    const textOf = (messages: typeof techdoc) =>
+      messages
+        .flatMap((m) => m.parts)
+        .map((p) => (p.type === "text" ? p.text : ""))
+        .join(" ");
+
+    expect(textOf(techdoc)).toContain("Nothalt COP");
+    expect(textOf(techdoc)).not.toContain("Kalibrierfahrt");
+    expect(textOf(memory)).not.toContain("Nothalt COP");
+  });
+
+  it("puts the correction on screen only once the chapter reaches it", () => {
+    // Before the correction step the visitor must see the assistant failing to
+    // find the menu path — that failure is what the chapter is about. From the
+    // step that narrates the memory write onwards, the exchange is present
+    // whether or not the visitor typed it, so the tool call that step anchors
+    // to exists either way.
+    const before = scrollbackFor("memory", MEMORY_WRITTEN_AT_STEP - 1);
+    const after = scrollbackFor("memory", MEMORY_WRITTEN_AT_STEP);
+
+    const hasMemoryToolCall = (messages: typeof before) =>
+      messages.some((m) =>
+        m.parts.some((p) => p.type === "tool-Create_Newton_Memory_Item"),
+      );
+
+    expect(hasMemoryToolCall(before)).toBe(false);
+    expect(hasMemoryToolCall(after)).toBe(true);
+    expect(after.length).toBeGreaterThan(before.length);
   });
 });
 

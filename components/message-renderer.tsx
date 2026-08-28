@@ -18,7 +18,7 @@ import { TrajectoryReuseIndicator } from "./trajectory-reuse-indicator"
 import { trajectoryReuseFromMessage } from "@/app/(application)/chat/components/trajectory-ref"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { memo, useState, useEffect, useContext, useRef } from "react"
+import { Fragment, memo, useState, useEffect, useContext, useRef } from "react"
 import { ConfigContext } from "@/components/shell/config-context"
 import { UserContext } from "@/app/(application)/authenticated"
 import { getToken } from "@/lib/api/client"
@@ -875,7 +875,7 @@ const MessageItem = memo(function MessageItem({
                     });
                   }
 
-                  return <>
+                  return <Fragment key={`txt-${message.id}-${i}`}>
                     {isEditing ? (
                       <div className="items-center gap-2" key={`${message.id}-${i}` + "_edit"}>
                         <div>
@@ -916,7 +916,7 @@ const MessageItem = memo(function MessageItem({
                         </Response>
                       </div>
                     )}
-                  </>
+                  </Fragment>
                 }
 
                 if (part.type?.toLowerCase() === 'tool-todo_write') {
@@ -1018,7 +1018,7 @@ const MessageItem = memo(function MessageItem({
                   const contextSearchStreaming =
                     status !== "ready" && status !== "error" && isLastMessage && message.role === 'assistant';
                   return (
-                    <>
+                    <Fragment key={`cs-${message.id}-${i}`}>
                       <ReasoningVisualisation
                         reasoning={data.reasoning}
                         streaming={contextSearchStreaming}
@@ -1035,7 +1035,7 @@ const MessageItem = memo(function MessageItem({
                       {data.metricsLine && (
                         <div className="mt-1 text-xs text-muted-foreground">{data.metricsLine}</div>
                       )}
-                    </>
+                    </Fragment>
                   )
                 }
 
@@ -1091,7 +1091,7 @@ const MessageItem = memo(function MessageItem({
                       return null;
                     }
                     return (
-                      <>
+                      <Fragment key={`ut-${message.id}-${i}`}>
                         <ReasoningVisualisation
                           reasoning={data.reasoning}
                           streaming={status !== "ready" && status !== "error" && isLastMessage && message.role === 'assistant'}
@@ -1107,7 +1107,7 @@ const MessageItem = memo(function MessageItem({
                         {data.metricsLine && (
                           <div className="mt-1 text-xs text-muted-foreground">{data.metricsLine}</div>
                         )}
-                      </>
+                      </Fragment>
                     )
                   }
                   // No untyped renderer wired (consumer didn't pass the full
@@ -1645,7 +1645,10 @@ const ContextSearchResults = ({
 
       {
         state === "output-available" && items?.length > 0 && !streaming && (
-          <div className="my-3 border rounded-lg overflow-hidden bg-card">
+          <div
+            className="my-3 border rounded-lg overflow-hidden bg-card"
+            data-demo-id="chat-retrieval"
+          >
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
               <CollapsibleTrigger className="w-full">
                 <div className="flex items-center justify-between p-4 hover:bg-accent/50 transition-colors">

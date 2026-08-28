@@ -46,10 +46,25 @@ describe("computeUntypedToolData", () => {
     expect(data.part).toBe(part);
   });
 
-  it("flags ok=false when output.result is an unparseable string (legacy: render nothing)", () => {
+  it("treats an unparseable output.result as text, like a bare string output", () => {
+    // This asserted ok=false — "legacy: render nothing" — until the demo work
+    // showed what that costs. The caller turns ok=false into `return null`, so
+    // a tool whose result is a plain status string is visible WHILE IT RUNS
+    // and disappears when it succeeds, because success is when the unparseable
+    // output arrives. Newlift's memory writes return "Created Newton Memory
+    // Item with the following ID: …", so every remembered fact vanished from
+    // the transcript at the moment it was remembered.
+    //
+    // The asymmetry was never a decision. A bare non-JSON string output has
+    // always rendered as text (the case above), and the oauth/credential guard
+    // further up exists precisely because that text also hit this branch and
+    // rendered nothing — the same bug, patched narrowly. This aligns the
+    // wrapped case with the bare one.
     const part = toolPart({ output: { result: "{broken" } });
     const data = computeUntypedToolData(part);
-    expect(data.ok).toBe(false);
+    expect(data.ok).toBe(true);
+    // Passed through unchanged: nothing parsed, so there is nothing to swap in.
+    expect(data.part).toBe(part);
   });
 
   it("passes through an output with no result and undefined output", () => {

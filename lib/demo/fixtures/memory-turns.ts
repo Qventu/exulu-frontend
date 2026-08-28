@@ -189,3 +189,35 @@ export const MEMORY_TURNS: ScriptedTurn[] = [
     sources: [],
   },
 ];
+
+/**
+ * The correction and its reply, as scrollback.
+ *
+ * The visitor is asked to send this themselves and the transport replays it
+ * when they do — but chapter 4's third step anchors to the memory tool call,
+ * and a visitor who simply clicks Next never sent anything. From that step on
+ * the exchange is on screen either way. See scrollbackFor().
+ */
+export const MEMORY_CORRECTION_EXCHANGE: UIMessage[] = [
+  {
+    id: "memory-correction-user",
+    role: "user",
+    parts: [{ type: "text", text: MEMORY_CORRECTION_PROMPT }],
+  },
+  {
+    id: "memory-correction-assistant",
+    role: "assistant",
+    parts: [
+      { type: "step-start" },
+      {
+        type: "tool-Create_Newton_Memory_Item",
+        toolCallId: MEMORY_TURNS[0].toolCalls[0].toolCallId,
+        state: "output-available",
+        input: MEMORY_TURNS[0].toolCalls[0].input,
+        output: MEMORY_TURNS[0].toolCalls[0].output,
+      },
+      { type: "step-start" },
+      { type: "text", text: MEMORY_TURNS[0].text },
+    ],
+  },
+] as unknown as UIMessage[];

@@ -456,6 +456,7 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
           variant="secondary"
           className="mx-1 inline-flex cursor-pointer items-center gap-1 text-xs font-normal hover:bg-secondary/80 m-1"
           title={`Source: ${itemName} (Chunk ${parseInt(chunkIndex) + 1})`}
+          data-demo-id="chat-citation"
         >
           <span className="max-w-[200px] truncate capitalize">{contextLabel} - {itemName}</span>
           {chunkIndex && <span className="text-muted-foreground">#{parseInt(chunkIndex) + 1}</span>}

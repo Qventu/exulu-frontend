@@ -221,7 +221,24 @@ export function computeUntypedToolData(
     try {
       result = JSON.parse(result);
     } catch {
-      return { ...base, ok: false };
+      // A non-JSON `result` renders as raw text, exactly as a non-JSON
+      // `output` already does thirty lines above. It used to return ok:false,
+      // which the caller turns into `return null` — the tool block vanished.
+      //
+      // The asymmetry was legacy behaviour rather than a decision, and it had
+      // already been patched around once: the oauth/credential guard above
+      // exists because that text is also non-JSON and "nothing renders".
+      //
+      // What it costs in practice: a tool whose result is a plain status
+      // string is visible while it runs — no output yet, so nothing to fail to
+      // parse — and disappears at the moment it succeeds. Newlift's memory
+      // writes return "Created Newton Memory Item with the following ID: …",
+      // so every remembered fact vanished from the transcript on success,
+      // which is the opposite of the transparency the feature is for.
+      //
+      // Only affects tool calls that currently render NOTHING, so no output a
+      // user sees today changes; things they could not see become visible.
+      return base;
     }
   }
 

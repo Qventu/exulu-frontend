@@ -54,14 +54,25 @@ export const CHAPTERS: DemoChapter[] = [
       {
         id: "techdoc-retrieval",
         route: "/demo/tour",
-        anchor: "chat-tool-trace",
+        // `chat-retrieval`, not `chat-tool-trace`. Context_Search does not use
+        // the generic tool block — message-renderer.tsx gives it a dedicated
+        // branch and its own card — so the anchor this step used could never
+        // have matched, whatever the visitor did. The anchor test only proves
+        // a data-demo-id is DECLARED somewhere in the source, not that it is
+        // the element this particular chapter renders.
+        anchor: "chat-retrieval",
         title: "Retrieval, in the open",
         body: "The assistant decides which knowledge bases to search, and shows its work.",
       },
       {
         id: "techdoc-answer",
         route: "/demo/tour",
-        anchor: "chat-sources",
+        // `chat-sources` is the source-URL block, which this agent never
+        // emits — its citations travel inline in the text and the renderer
+        // turns them into badges. The step is about those badges, so it points
+        // at one. Same mistake as the retrieval anchor above: a plausible
+        // data-demo-id that belongs to a different rendering path.
+        anchor: "chat-citation",
         title: "Every claim, sourced",
         body: "The answer cites the documents it came from. Open one to check it.",
       },

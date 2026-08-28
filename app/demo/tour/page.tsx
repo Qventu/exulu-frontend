@@ -52,7 +52,10 @@ export default function TourPage() {
   // if the answer being corrected is already on screen. Keyed so that switching
   // chapters through the Tour bubble remounts the chat with the right history
   // rather than appending chapter 4's scrollback to chapter 1's transcript.
-  const scrollback = scrollbackFor(position.chapter);
+  // Step-scoped, not just chapter-scoped: chapter 4's correction joins the
+  // scrollback at the step that narrates it, so the memory tool call that step
+  // anchors to is on screen whether or not the visitor typed the correction.
+  const scrollback = scrollbackFor(position.chapter, position.step);
 
   // Hand the surface an existing session rather than null. On null (the /new
   // path) the first send lazily creates one through a GraphQL mutation, which

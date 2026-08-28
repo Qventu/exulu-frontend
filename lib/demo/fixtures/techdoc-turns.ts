@@ -1,4 +1,10 @@
+import type { UIMessage } from "ai";
+
 import type { ScriptedTurn } from "../script";
+import RAW_FST_CHUNKS from "./chunks-fst2xt-de.json";
+
+/** Chunk 0 of the document chapter 1 cites, verbatim from the deployment. */
+const FST_CHUNK = RAW_FST_CHUNKS[0];
 
 /**
  * Chapter 1's script is a REAL, positively-rated exchange from the Newlift
@@ -71,15 +77,43 @@ export const TECHDOC_TURNS: ScriptedTurn[] = [
             "COP",
           ],
         },
+        // SHAPE MATTERS MORE THAN CONTENT HERE. This was `{ steps: [...] }`,
+        // which nothing reads: computeContextSearchData takes `reasoning` and
+        // `chunks` off the parsed result, so the retrieval card had no items
+        // and never rendered — for the whole life of the demo. Chapter 1's
+        // middle step, the one about retrieval being visible, was narrating an
+        // element that was not on the page.
+        //
+        // `chunks` carries ONE entry rather than the two the answer cites.
+        // Both citations are real, but only the software-documentation chunk's
+        // text was exported from Newlift before the tunnel closed, and the
+        // Zendesk one is not going to be invented to balance the card.
         output: {
           result: JSON.stringify({
-            steps: RETRIEVAL_STEPS.map((text) => ({
-              stepNumber: 1,
-              text,
-              toolCalls: [],
-              chunks: [],
-              tokens: 0,
-            })),
+            reasoning: RETRIEVAL_STEPS.map((text) => ({ text, tools: [] })),
+            text: [],
+            tools: [],
+            chunks: [
+              {
+                chunk_content: FST_CHUNK.chunk_content,
+                chunk_index: FST_CHUNK.chunk_index,
+                chunk_id: FST_CHUNK.chunk_id,
+                chunk_source: FST_CHUNK.chunk_source,
+                chunk_metadata: {},
+                chunk_created_at: FST_CHUNK.chunk_created_at,
+                chunk_updated_at: FST_CHUNK.chunk_updated_at,
+                item_id: "d92dd3f2-2803-41e4-8136-a1a0ccb99e6c",
+                item_external_id:
+                  "FST/Software/fuer_FST-2XT/FST2XTchanges-customer-DE.docx",
+                item_name: "FST2XTchanges-customer-DE.docx",
+                item_created_at: "2026-02-23T01:24:45.861Z",
+                item_updated_at: "2026-02-23T01:24:45.861Z",
+                context: {
+                  name: "software_documentation_context",
+                  id: "software_documentation_context",
+                },
+              },
+            ],
           }),
         },
       },
@@ -91,3 +125,53 @@ export const TECHDOC_TURNS: ScriptedTurn[] = [
     sources: [],
   },
 ];
+
+/** The question the engineer actually asked, from the tool call's own input. */
+export const TECHDOC_QUESTION =
+  'was bedeutet "Nothalt COP" im FST Fehlerspeicher?';
+
+/**
+ * The same exchange as scrollback — already on screen when chapter 1 opens.
+ *
+ * Chapter 1 used to start on an empty conversation and invite the visitor to
+ * type. Two of its three steps anchor to things that only exist once a message
+ * has been sent (the retrieval trace, the citations), so a visitor who simply
+ * pressed Next — which is what most people on a guided tour do — got step 2
+ * narrating "the assistant shows its work" over an empty screen. The tour
+ * cannot depend on an action nothing prompts or enforces.
+ *
+ * Reaching the controller's sendUserMessage from the tour would mean either an
+ * escape-hatch prop on SessionScreen or synthesising DOM events; opening
+ * mid-conversation needs neither, and chapter 4 already works this way.
+ *
+ * What is lost is watching the answer stream in, which was the theatre. What
+ * is kept is the artefact — the same tool trace, expandable, and the same
+ * inline citations — every time, for every visitor. The composer stays live,
+ * so anyone who types still gets a scripted reply.
+ */
+export const TECHDOC_SCROLLBACK: UIMessage[] = [
+  {
+    id: "techdoc-scrollback-user",
+    role: "user",
+    parts: [{ type: "text", text: TECHDOC_QUESTION }],
+  },
+  {
+    id: "techdoc-scrollback-assistant",
+    role: "assistant",
+    parts: [
+      { type: "step-start" },
+      {
+        // Shape copied from a real stored message, not guessed: the renderer
+        // discriminates on `type` and reads `state`, and a part missing either
+        // renders as nothing at all.
+        type: "tool-Context_Search",
+        toolCallId: TECHDOC_TURNS[0].toolCalls[0].toolCallId,
+        state: "output-available",
+        input: TECHDOC_TURNS[0].toolCalls[0].input,
+        output: TECHDOC_TURNS[0].toolCalls[0].output,
+      },
+      { type: "step-start" },
+      { type: "text", text: TECHDOC_TURNS[0].text },
+    ],
+  },
+] as unknown as UIMessage[];
