@@ -14,6 +14,7 @@ import {
   ChatShellContext,
   type ChatShellContextValue,
 } from "@/app/(application)/chat/components/chat-shell";
+import { AppSidebar } from "@/components/shell/app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { createDemoLink } from "@/lib/demo/apollo-link";
 import { getCurrentPosition } from "@/lib/demo/current-position";
@@ -69,6 +70,19 @@ export function DemoChatProviders({
   // the default null value would throw before the surface ever rendered.
   const userValue = React.useMemo(() => ({ user: getDemoUser() }), []);
 
+  // AppSidebar wants RightsUser & UserMenuUser, which is narrower than
+  // UserWithRole: super_admin is optional on the latter and required on the
+  // former. Narrowed the same way route-guard.tsx does it rather than cast —
+  // `=== true` also means an undefined value can never read as elevated.
+  const sidebarUser = React.useMemo(() => {
+    const demo = getDemoUser();
+    return {
+      super_admin: demo.super_admin === true,
+      role: demo.role,
+      email: demo.email,
+    };
+  }, []);
+
   // The history rail and new-chat plumbing are inert in a scripted tour: the
   // visitor cannot switch sessions, so the setters are stable no-ops rather
   // than state. beginLazyCreate must still return its end callback — the
@@ -93,12 +107,21 @@ export function DemoChatProviders({
       <UserContext.Provider value={userValue}>
         <ChatShellContext.Provider value={shell}>
           {/*
-            ChatHeader's nav trigger calls useSidebar, which throws outside a
-            provider. In the product this comes from AppShell; the tour has no
-            app shell, so it supplies its own. Collapsed by default — the tour
-            is the navigation here.
+            The product gets both the provider and the sidebar from AppShell.
+            The tour has no app shell, so it composes the same two pieces: the
+            provider (ChatHeader's nav trigger calls useSidebar and throws
+            without it) and the real AppSidebar, so prospects see the actual
+            product navigation rather than a chat surface floating alone.
+
+            AppSidebar reads ConfigContext with a `?? {}` fallback, so its
+            absence in demo mode degrades rather than throwing. Feedback is a
+            no-op: the dialog belongs to AppShell and posts to a backend the
+            demo does not have.
           */}
-          <SidebarProvider defaultOpen={false}>{children}</SidebarProvider>
+          <SidebarProvider defaultOpen>
+            <AppSidebar user={sidebarUser} onSendFeedback={() => {}} />
+            <main className="flex min-h-dvh flex-1 flex-col">{children}</main>
+          </SidebarProvider>
         </ChatShellContext.Provider>
       </UserContext.Provider>
     </ApolloProvider>
