@@ -1,0 +1,304 @@
+[
+  {
+    "id": "85828ca6-554c-41ea-83e2-4edb908f0f25",
+    "state": "completed",
+    "trigger": "email",
+    "session": "fa10c09e-5c6f-467c-8c0e-4c413d2a71b4",
+    "tries": 0,
+    "createdAt": "2026-08-14 09:22:37.236705+00",
+    "trigger_metadata": {
+      "from": "vertrieb@algi-hydraulic.de",
+      "subject": "WG: Anfrage 04072"
+    }
+  },
+  {
+    "id": "db76db3e-660d-4a0a-ade6-190c5eb70f25",
+    "state": "completed",
+    "trigger": "email",
+    "session": "a7f134a4-0000-4d6f-8ba3-b0faa8523934",
+    "tries": 0,
+    "createdAt": "2026-08-17 11:05:30.117798+00",
+    "trigger_metadata": {
+      "from": "service@algi-hydraulic.de",
+      "subject": "WG: Requestor Case# ⟨Vorgang⟩ & ⟨Kunde⟩ Case# ⟨Vorgang⟩ - Reparaturanfrage 18000240024 SL2: Heberkopfdichtung erneuern. CRM:0256126"
+    }
+  },
+  {
+    "id": "44357f16-cccd-442a-8d2d-bfe46bbc1c15",
+    "state": "completed",
+    "trigger": "email",
+    "session": "9b875cfa-27b9-46c9-b2fe-7cd13d17a41d",
+    "tries": 0,
+    "createdAt": "2026-08-17 11:21:57.580044+00",
+    "trigger_metadata": {
+      "from": "ersatzteile@algi-hydraulic.de",
+      "subject": "WG: Anfrage"
+    }
+  },
+  {
+    "id": "5a65eb83-a17f-4592-9cfe-0210e710cbb1",
+    "state": "completed",
+    "trigger": "email",
+    "session": "4a8e2af1-e09e-4c32-9827-baceddc0d0ed",
+    "tries": 0,
+    "createdAt": "2026-08-17 11:37:51.476007+00",
+    "trigger_metadata": {
+      "from": "technik@algi-hydraulic.de",
+      "subject": "WG: Angebot Stempeldichtungssatz für ⟨Kunde⟩  91701640"
+    }
+  },
+  {
+    "id": "76b9dd64-bd7d-4d46-9f9e-46407f086459",
+    "state": "completed",
+    "trigger": "email",
+    "session": "9afc3d2c-c781-48db-a54f-901e7e6e2f19",
+    "tries": 0,
+    "createdAt": "2026-08-17 12:27:52.329434+00",
+    "trigger_metadata": {
+      "from": "technik@algi-hydraulic.de",
+      "subject": "WG: Angebot"
+    }
+  },
+  {
+    "id": "fed58dbc-1a23-4ab6-a31c-e69fdd560e8a",
+    "state": "completed",
+    "trigger": "email",
+    "session": "24d1b856-af32-487d-8883-05dc6744b257",
+    "tries": 0,
+    "createdAt": "2026-08-18 06:28:15.881619+00",
+    "trigger_metadata": {
+      "from": "ersatzteile@algi-hydraulic.de",
+      "subject": "WG: Angebotsanfrage Stempeldichtung Aufzug 57936, ⟨Adresse⟩aße 1, 96146 Altendorf"
+    }
+  },
+  {
+    "id": "f74bb00b-fd2f-4a7f-8d51-7215a35bc8c2",
+    "state": "completed",
+    "trigger": "email",
+    "session": "2963f8bc-92e3-4ed9-9e74-80603227f9d8",
+    "tries": 0,
+    "createdAt": "2026-08-18 07:21:19.541899+00",
+    "trigger_metadata": {
+      "from": "vertrieb@algi-hydraulic.de",
+      "subject": "WG: Price and delivery time 2658446"
+    }
+  },
+  {
+    "id": "e2f3390d-df41-40de-9637-d5665699f535",
+    "state": "completed",
+    "trigger": "email",
+    "session": "cee16148-8ee8-446c-8bf4-1707c7daea2b",
+    "tries": 0,
+    "createdAt": "2026-08-18 07:53:00.598929+00",
+    "trigger_metadata": {
+      "from": "info@algi-hydraulic.de",
+      "subject": "AW: Price and delivery time 2658446/ALGI quote 26108776"
+    }
+  },
+  {
+    "id": "e14a244e-4e93-4f77-8688-d26fcb24e88b",
+    "state": "completed",
+    "trigger": "email",
+    "session": "c83758cd-e9ee-4327-bf43-154520e1b10c",
+    "tries": 0,
+    "createdAt": "2026-08-19 05:21:27.074662+00",
+    "trigger_metadata": {
+      "from": "vertrieb@algi-hydraulic.de",
+      "subject": "WG: Angebotsanfrage: Eq. 14918001210 / ZKD / ⟨Kunde⟩ Nummer: 07204739"
+    }
+  },
+  {
+    "id": "e73ceecf-e56a-4d59-b1ef-b95a3e4e7e75",
+    "state": "completed",
+    "trigger": "email",
+    "session": "e0ab2487-b5e1-485b-90c0-e0ee892bf9d0",
+    "tries": 0,
+    "createdAt": "2026-08-19 10:44:11.980658+00",
+    "trigger_metadata": {
+      "from": "technik@algi-hydraulic.de",
+      "subject": "WG: Angebotsanfrage Dichtungssatz | 47J1840"
+    }
+  },
+  {
+    "id": "a7cbdbdd-0e5d-46b9-b3a0-89c7389e99a5",
+    "state": "completed",
+    "trigger": "email",
+    "session": "cc51a836-2d70-4712-9c65-3ceaf10d69a9",
+    "tries": 0,
+    "createdAt": "2026-08-20 08:31:48.044014+00",
+    "trigger_metadata": {
+      "from": "service@algi-hydraulic.de",
+      "subject": "Ersatzteil anfrage"
+    }
+  },
+  {
+    "id": "0daa0116-1e8d-4189-b9b3-9d3b1c3be518",
+    "state": "completed",
+    "trigger": "email",
+    "session": "5f17a74e-cde3-4339-b303-c67cc9c92830",
+    "tries": 0,
+    "createdAt": "2026-08-21 06:39:23.325283+00",
+    "trigger_metadata": {
+      "from": "ersatzteile@algi-hydraulic.de",
+      "subject": "WG: Anfrage Angebot Dichtsatz Hydraulikheber"
+    }
+  },
+  {
+    "id": "5ca2e129-231e-4e31-8d4d-a4b04e70e0e7",
+    "state": "completed",
+    "trigger": "email",
+    "session": "fd11929e-88bc-4a6b-bbb1-e3f4b1f99e04",
+    "tries": 0,
+    "createdAt": "2026-08-24 09:14:29.651458+00",
+    "trigger_metadata": {
+      "from": "technik@algi-hydraulic.de",
+      "subject": "WG: Order for O-rings"
+    }
+  },
+  {
+    "id": "9dbcb66f-9e10-40a6-99b4-3c5d1d799215",
+    "state": "completed",
+    "trigger": "email",
+    "session": "a8a6cc68-9beb-412f-8c82-61e302220fb7",
+    "tries": 0,
+    "createdAt": "2026-08-26 08:59:56.85222+00",
+    "trigger_metadata": {
+      "from": "vertrieb@algi-hydraulic.de",
+      "subject": "WG: I26080039"
+    }
+  },
+  {
+    "id": "aa233909-a252-4a62-a11b-7a39ca064a39",
+    "state": "failed",
+    "trigger": "email",
+    "session": "13cc2c26-6a29-4772-b783-0fdc53ba17b1",
+    "tries": 0,
+    "createdAt": "2026-08-21 07:32:02.479996+00",
+    "trigger_metadata": {
+      "from": "ersatzteile@algi-hydraulic.de",
+      "subject": "WG: Anfrage Angebot Dichtsatz Hydraulikheber"
+    }
+  },
+  {
+    "id": "51a560b5-4ab5-4520-a9de-9d4e7894b647",
+    "state": "failed",
+    "trigger": "email",
+    "session": "8b96f9c9-6350-46b0-af54-ba4e5596fb45",
+    "tries": 0,
+    "createdAt": "2026-08-21 10:34:40.938705+00",
+    "trigger_metadata": {
+      "from": "service@algi-hydraulic.de",
+      "subject": "WG: Anfrage Angebot Dichtsatz Hydraulikheber"
+    }
+  },
+  {
+    "id": "b86264e3-48e0-49cf-9634-39163986e56d",
+    "state": "failed",
+    "trigger": "email",
+    "session": "dbe1b7f5-d053-4ef7-8d5e-07b84e12c2b0",
+    "tries": 0,
+    "createdAt": "2026-08-21 10:36:46.657689+00",
+    "trigger_metadata": {
+      "from": "service@algi-hydraulic.de",
+      "subject": "WG: Anfrage Angebot Dichtsatz Hydraulikheber"
+    }
+  },
+  {
+    "id": "a1877fcd-d3eb-43a0-a61d-99463913ac24",
+    "state": "failed",
+    "trigger": "email",
+    "session": "1ce12b9f-98c2-444a-9220-52835a06c2ca",
+    "tries": 0,
+    "createdAt": "2026-08-25 10:50:31.828551+00",
+    "trigger_metadata": {
+      "from": "vertrieb@algi-hydraulic.de",
+      "subject": "WG: Anfrage Pulsationsdämpfer G 95574"
+    }
+  },
+  {
+    "id": "50be237a-b1d0-40b8-bd09-f0d87e95a63d",
+    "state": "failed",
+    "trigger": "email",
+    "session": "7dd5dc4f-9dee-47e0-8057-761a883d7376",
+    "tries": 0,
+    "createdAt": "2026-08-26 08:59:26.874804+00",
+    "trigger_metadata": {
+      "from": "vertrieb@algi-hydraulic.de",
+      "subject": "WG: Anfrage"
+    }
+  },
+  {
+    "id": "3ed60b0f-3f28-4503-9c3d-edf804f7ebcc",
+    "state": "failed",
+    "trigger": "email",
+    "session": "3417d031-f21f-428c-aa79-2941c5ffd5df",
+    "tries": 0,
+    "createdAt": "2026-08-26 09:04:17.757074+00",
+    "trigger_metadata": {
+      "from": "vertrieb@algi-hydraulic.de",
+      "subject": "WG: ⟨Kunde⟩"
+    }
+  },
+  {
+    "id": "354d38ec-7a6d-413f-a486-b61855bd2275",
+    "state": "failed",
+    "trigger": "email",
+    "session": "1f9ed299-e581-4946-a605-88bc26e91690",
+    "tries": 0,
+    "createdAt": "2026-08-26 09:06:18.173203+00",
+    "trigger_metadata": {
+      "from": "info@algi-hydraulic.de",
+      "subject": "AW: ⟨Kunde⟩ /ALGI quote 26109044"
+    }
+  },
+  {
+    "id": "f83320f0-e836-4e49-b04e-962d22af30ca",
+    "state": "failed",
+    "trigger": "email",
+    "session": "c0c92e8e-56a6-44dd-85ab-a0d534601c45",
+    "tries": 0,
+    "createdAt": "2026-08-26 09:31:24.579254+00",
+    "trigger_metadata": {
+      "from": "vertrieb@algi-hydraulic.de",
+      "subject": "WG: Anfrage Dichtungen 98036"
+    }
+  },
+  {
+    "id": "7dd434c6-27f9-4fc3-897d-a461a21ab6d9",
+    "state": "filtered",
+    "trigger": "email",
+    "session": null,
+    "tries": 1,
+    "createdAt": "2026-08-11 08:47:28.069974+00",
+    "trigger_metadata": {
+      "from": "noreply@ionos.de",
+      "subject": "Ihr Mail Basic ist eingerichtet",
+      "filtered_reason": "sender_not_allowed"
+    }
+  },
+  {
+    "id": "c3d9658b-1db9-4356-bd72-11420984560b",
+    "state": "filtered",
+    "trigger": "email",
+    "session": null,
+    "tries": 1,
+    "createdAt": "2026-08-11 08:47:28.07505+00",
+    "trigger_metadata": {
+      "from": "noreply@ionos.de",
+      "subject": "Ihr Mail Basic ist eingerichtet",
+      "filtered_reason": "sender_not_allowed"
+    }
+  },
+  {
+    "id": "0ffccf21-78c0-42fe-9c63-3b613ab96d4a",
+    "state": "waiting_approval",
+    "trigger": "email",
+    "session": "65da0131-9c9d-46e4-bd2e-1cc31f71d4f3",
+    "tries": 0,
+    "createdAt": "2026-08-25 10:54:02.590354+00",
+    "trigger_metadata": {
+      "from": "vertrieb@algi-hydraulic.de",
+      "subject": "WG: DEMANDE DE DEVIS"
+    }
+  }
+]
