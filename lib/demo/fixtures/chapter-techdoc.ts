@@ -38,6 +38,9 @@ const CTX_TECHDOC: Context = {
     "wiring diagrams, fault-code tables, and maintenance procedures.",
   active: true,
   slug: "techdoc",
+  // Selected by GET_CONTEXTS. Optional on the Context type, but the /data
+  // library row reads it, so omitting it renders a blank embedding column.
+  embedder: { model: "text-embedding-3-large", queue: "embeddings" },
   configuration: {
     calculateVectors: "on_write",
     defaultRightsMode: "users",
@@ -95,6 +98,7 @@ const CTX_VORSCHRIFTEN: Context = {
     "safety components, and periodic inspections.",
   active: true,
   slug: "vorschriften",
+  embedder: { model: "text-embedding-3-large", queue: "embeddings" },
   configuration: {
     calculateVectors: "on_write",
     defaultRightsMode: "users",

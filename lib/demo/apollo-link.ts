@@ -1,18 +1,42 @@
 import { ApolloLink, Observable } from "@apollo/client/core";
+import { DEMO_USER_ID } from "./user";
 import type { DemoWorld } from "./types";
 
 type Resolver = (world: DemoWorld, variables: Record<string, unknown>) => Record<string, unknown>;
 
 /**
- * Operation name -> resolver. Keys must match the operation names in the
- * product's own documents (e.g. `query agents { ... }`), because that is what
- * Apollo puts on operation.operationName.
+ * Operation name -> resolver.
+ *
+ * Keys MUST be the operation names in the product's own gql documents, because
+ * that is what Apollo puts on `operation.operationName`. The first version of
+ * this table was written from plausible-looking guesses (`contexts`, `agents`,
+ * `items`) before any page was checked, and every single one was wrong — the
+ * pages rendered empty for weeks because unmapped operations return `{data:{}}`
+ * rather than failing. apollo-link.operations.test.ts now imports the real
+ * documents so that mistake cannot recur silently.
+ *
+ * Response shapes must match the query's selection set exactly, nesting
+ * included: GetContexts selects `contexts { items { ... } }`, so a flat array
+ * would satisfy TypeScript and render nothing.
  */
 const RESOLVERS: Record<string, Resolver> = {
-  agents: (world) => ({ agents: world.agents }),
-  contexts: (world) => ({ contexts: world.contexts }),
-  items: (world) => ({ items: world.items }),
-  agent_sessions: (world) => ({ agent_sessions: world.sessions }),
+  // --- /data (chapter 2: document understanding) --------------------------
+  GetContexts: (world) => ({ contexts: { items: world.contexts } }),
+
+  // Per-context icon overrides live in platform configuration. The demo ships
+  // none, so the page falls back to its default icons — an empty page is the
+  // correct answer here, not a missing one.
+  GetContextIcons: () => ({ platform_configurationsPagination: { items: [] } }),
+
+  // Favourites and recently-viewed are per-user personalisation the tour has
+  // no story for; empty lists keep the library rendering unadorned.
+  GetUserContextItemFavourites: () => ({
+    userById: {
+      id: String(DEMO_USER_ID),
+      favourite_items: [],
+      recently_viewed_items: [],
+    },
+  }),
 };
 
 /**

@@ -20,17 +20,20 @@ function run(link: ApolloLink, query: ReturnType<typeof gql>): Promise<any> {
 describe("createDemoLink", () => {
   it("resolves a known operation from the world", async () => {
     const link = createDemoLink(() => WORLD);
-    const result = await run(link, gql`query agents { agents { id name } }`);
-    expect(result.data.agents).toHaveLength(1);
-    expect(result.data.agents[0].id).toBe("a1");
+    // A REAL operation name. These tests originally used `query agents`, which
+    // no product document declares — so they passed against a resolver the app
+    // could never reach. Mechanics tests still have to speak the real protocol.
+    const result = await run(link, gql`query GetContexts { contexts { items { id name } } }`);
+    expect(result.data.contexts.items).toHaveLength(1);
+    expect(result.data.contexts.items[0].id).toBe("c1");
   });
 
   it("reads the world lazily, so stepping the tour changes results", async () => {
     let world = WORLD;
     const link = createDemoLink(() => world);
-    world = { ...WORLD, agents: [] } as unknown as DemoWorld;
-    const result = await run(link, gql`query agents { agents { id } }`);
-    expect(result.data.agents).toHaveLength(0);
+    world = { ...WORLD, contexts: [] } as unknown as DemoWorld;
+    const result = await run(link, gql`query GetContexts { contexts { items { id } } }`);
+    expect(result.data.contexts.items).toHaveLength(0);
   });
 
   it("returns empty data for an unmapped operation rather than throwing", async () => {
