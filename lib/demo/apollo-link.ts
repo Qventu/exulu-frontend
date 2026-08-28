@@ -39,6 +39,14 @@ const RESOLVERS: Record<string, Resolver> = {
     },
   }),
 
+  // --- app shell (every page) ---------------------------------------------
+  // The sidebar's Routines badge polls this on every app route, so it is not
+  // chapter-specific. Zero means no badge, which is the truth for a tour with
+  // no live runs.
+  RoutineRunsNeedingAttentionCount: () => ({
+    routineRunsNeedingAttentionCount: 0,
+  }),
+
   // --- /agents/edit/[id] (chapter 3: agent configuration) -----------------
   // The agent carries the knowledge-search config the wizard reads, so this
   // one resolver drives all six wizard steps.

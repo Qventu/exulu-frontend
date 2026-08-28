@@ -10,6 +10,7 @@ import {
   GET_CONTEXT_ICONS,
   GET_USER_CONTEXT_ITEM_FAVOURITES,
 } from "@/app/(application)/data/queries";
+import { ROUTINE_RUNS_ATTENTION_COUNT } from "@/lib/routine-runs/queries";
 import { createDemoLink } from "./apollo-link";
 import { getWorld } from "./fixtures";
 
@@ -84,6 +85,15 @@ describe("/data page operations", () => {
     const user = data.userById as Record<string, unknown>;
     expect(user).toHaveProperty("favourite_items");
     expect(user).toHaveProperty("recently_viewed_items");
+  });
+});
+
+describe("app shell operations (every page)", () => {
+  it("answers the sidebar's routines-attention count", async () => {
+    // Unmapped, this warned on every single app route — the first thing the
+    // browser console showed once the tour reached the real pages.
+    const data = await run(ROUTINE_RUNS_ATTENTION_COUNT);
+    expect(data.routineRunsNeedingAttentionCount).toBe(0);
   });
 });
 
