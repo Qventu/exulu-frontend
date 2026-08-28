@@ -81,7 +81,10 @@ export function KnowledgeSearchWizard({
             {t(`editor.knowledge.wizard.steps.${step}.description`)}
           </SheetDescription>
           {/* Step dots + jump navigation */}
-          <div className="flex items-center gap-1 pt-1">
+          <div
+            className="flex items-center gap-1 pt-1"
+            data-demo-id="agent-wizard-steps"
+          >
             {WIZARD_STEPS.map((s, i) => (
               <button
                 key={s}
@@ -102,7 +105,13 @@ export function KnowledgeSearchWizard({
           </div>
         </SheetHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto py-4">
+        {/* One dynamic anchor rather than six literal ones: exactly one step
+            body is mounted at a time, so `agent-wizard-<step>` names whichever
+            it is and the demo tour can spotlight any of them. */}
+        <div
+          className="flex-1 space-y-4 overflow-y-auto py-4"
+          data-demo-id={`agent-wizard-${step}`}
+        >
           {step === "sources" && (
             <KnowledgeBasesStep draft={draft} setDraft={setDraft} contexts={contexts} />
           )}

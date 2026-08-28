@@ -65,7 +65,52 @@ export const CHAPTERS: DemoChapter[] = [
     ],
   },
   { id: "ingestion", title: "How it learned that", steps: [stub("ingestion-intro", "How it learned that")] },
-  { id: "config", title: "Making it yours", steps: [stub("config-intro", "Making it yours")] },
+  {
+    id: "config",
+    title: "Making it yours",
+    // Every step here runs on the product's real agent editor. The `?wizard=`
+    // parameter is a genuine deep link into the retrieval wizard, not demo
+    // scaffolding — without it the tour would have to ask the visitor to find
+    // and open the right drawer step by hand, and a step whose anchor never
+    // mounts spotlights nothing.
+    steps: [
+      {
+        id: "config-overview",
+        route: "/agents/edit/demo-agent-newton",
+        anchor: "agent-agentic-retrieval",
+        title: "The whole assistant is configuration",
+        body: "No fine-tuning, no code. This is the same editor Newlift uses — and everything on the next few screens is their live production setup.",
+      },
+      {
+        id: "config-sources",
+        route: "/agents/edit/demo-agent-newton?wizard=sources",
+        anchor: "agent-wizard-sources",
+        title: "Six knowledge bases, three kinds",
+        body: "Manuals are read like documents, support tickets like conversations, the service database like records. Each is searched differently, and each carries a sentence telling the assistant when to reach for it.",
+      },
+      {
+        id: "config-routing",
+        route: "/agents/edit/demo-agent-newton?wizard=routing",
+        anchor: "agent-wizard-routing",
+        title: "Routing, in plain language",
+        body: "Five rules decide where a question goes first and where it falls back. They are written as sentences, not code — a domain expert can change them without an engineer.",
+      },
+      {
+        id: "config-vocabulary",
+        route: "/agents/edit/demo-agent-newton?wizard=vocabulary",
+        anchor: "agent-wizard-vocabulary",
+        title: "Teaching it your language",
+        body: "55 elevator abbreviations — ADM, SHK, UCM — plus product names matched loosely and standards matched exactly. This is why a question about the SHK finds the Sicherheitskreis pages.",
+      },
+      {
+        id: "config-behavior",
+        route: "/agents/edit/demo-agent-newton?wizard=behavior",
+        anchor: "agent-wizard-behavior",
+        title: "And how hard to look",
+        body: "How many passes, how many results, which reranker, when to give up and say it does not know. Chapter 4 showed that last one mattering.",
+      },
+    ],
+  },
   {
     id: "memory",
     title: "Correcting it",
@@ -139,4 +184,49 @@ export function prevPosition(chapters: DemoChapter[], pos: TourPosition): TourPo
 
 export function startOfChapter(id: DemoChapterId): TourPosition {
   return { chapter: id, step: 0 };
+}
+
+/**
+ * The tour position lives in the URL, as `?tour=<chapter>.<step>`.
+ *
+ * It has to. Chapters 3 and 4 end on the product's own routes — the agent
+ * editor, the knowledge base — which are in a different route group with its
+ * own layout, so React state in a provider does not survive the navigation.
+ * Held in the URL it does, and the position is shareable and reloadable as a
+ * bonus: a salesperson can send a prospect a link to step 3 of chapter 5.
+ */
+export const TOUR_PARAM = "tour";
+
+export function encodePosition(pos: TourPosition): string {
+  return `${pos.chapter}.${pos.step}`;
+}
+
+/**
+ * Returns null for anything unparseable, so a hand-edited or stale URL starts
+ * the tour from the beginning rather than rendering a chapter with no steps.
+ */
+export function parsePosition(
+  raw: string | null | undefined,
+  chapters: DemoChapter[] = CHAPTERS,
+): TourPosition | null {
+  if (!raw) return null;
+  const [chapterId, rawStep] = raw.split(".");
+  const chapter = chapters.find((c) => c.id === chapterId);
+  if (!chapter) return null;
+  const step = Number(rawStep);
+  if (!Number.isInteger(step) || step < 0 || step >= chapter.steps.length) {
+    return null;
+  }
+  return { chapter: chapter.id, step };
+}
+
+/** The href a step lives at: its route, carrying the position. */
+export function hrefFor(
+  pos: TourPosition,
+  chapters: DemoChapter[] = CHAPTERS,
+): string {
+  const step = resolveStep(chapters, pos);
+  const route = step?.route ?? "/demo/tour";
+  const sep = route.includes("?") ? "&" : "?";
+  return `${route}${sep}${TOUR_PARAM}=${encodePosition(pos)}`;
 }

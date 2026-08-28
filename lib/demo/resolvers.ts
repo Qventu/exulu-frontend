@@ -206,11 +206,26 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // (sections/knowledge.tsx:44). Returning an empty catalogue here is what hid
   // the wizard — the chapter's entire subject — while the page itself looked
   // fine.
-  EditorTools: () => ({ tools: { items: [AGENTIC_RETRIEVAL_TOOL] } }),
+  // total/page/limit are selected alongside items. Omitting them is not
+  // cosmetic here: an incomplete cache diff can leave useQuery with undefined
+  // data, and undefined data hides the card that IS chapter 3.
+  EditorTools: () => ({
+    tools: {
+      items: [AGENTIC_RETRIEVAL_TOOL],
+      total: 1,
+      page: 1,
+      limit: 20,
+    },
+  }),
 
   EditorToolCategories: () => ({ toolCategories: ["knowledge"] }),
-  EditorSkills: () => ({ skillsPagination: { items: [] } }),
-  EditorVariables: () => ({ variablesPagination: { items: [] } }),
+
+  // Empty lists still need their pageInfo: it is in the selection set, and a
+  // *Pagination wrapper without it writes an incomplete result to the cache.
+  EditorSkills: () => ({ skillsPagination: { pageInfo: page(0), items: [] } }),
+  EditorVariables: () => ({
+    variablesPagination: { pageInfo: page(0), items: [] },
+  }),
 
   // --- /chat/[agent]/[session] (chapters 1 and 4) -------------------------
   // Both are server-rendered by the real chat route.

@@ -16,6 +16,7 @@ import { LanguageProvider } from "@/components/shell/language-provider";
 import { LOCALE_COOKIE, Locale, defaultLocale } from "@/i18n/config";
 import { isDemoMode } from "@/lib/demo/flag";
 import { getDemoUser } from "@/lib/demo/user";
+import { TourOverlay } from "@/components/demo/tour-overlay";
 
 // viewport-fit=cover so env(safe-area-inset-*) resolves on notched devices —
 // the shell's mobile top bar and drawer pad themselves with it
@@ -148,6 +149,11 @@ export default async function RootLayout({
                                     </Authenticated>
                                 </div>
                             </main>
+                            {/* Chapters 3 and 4 end on product routes, which
+                                live in this group rather than under /demo.
+                                Without the overlay here the tour sends the
+                                visitor here and strands them with no way on. */}
+                            {demoMode && <TourOverlay />}
                             <SonnerToaster />
                         </ThemeProvider>
                     </LanguageProvider>

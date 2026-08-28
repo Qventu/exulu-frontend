@@ -8,7 +8,10 @@ export function TourBubble() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-80 rounded-xl border bg-background p-4 shadow-lg">
+    // z-[70]: above both the Sheet overlay (z-50) and the spotlight ring
+    // (z-[60]). The bubble is the only way to advance, so it must stay
+    // clickable on the steps that open a drawer over the page.
+    <div className="fixed bottom-6 right-6 z-[70] w-80 rounded-xl border bg-background p-4 shadow-lg">
       <button className="text-sm font-medium" onClick={() => setOpen((o) => !o)}>
         Tour {open ? "▾" : "▸"}
       </button>

@@ -280,7 +280,7 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
 
   return (
     <>
-      <Conversation>
+      <Conversation data-demo-id="chat-messages">
         {isEmpty && (
           <div className="flex size-full items-center justify-center overflow-y-hidden">
             <div

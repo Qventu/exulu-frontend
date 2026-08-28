@@ -9,6 +9,7 @@
 
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import { SettingRow } from "@/components/primitives/setting-row";
@@ -32,7 +33,7 @@ import { cn } from "@/lib/utils";
 
 import { KnowledgeSearchSummaryCard } from "../components/knowledge-search/summary-card";
 import {
-  KnowledgeSearchWizard, type WizardStepId,
+  KnowledgeSearchWizard, WIZARD_STEPS, type WizardStepId,
 } from "../components/knowledge-search/wizard";
 import type { ToolConfigEntry } from "../components/tool-config-fields";
 import type { EditorSectionProps } from "./types";
@@ -66,6 +67,22 @@ export function KnowledgeSection({ editor, refs }: EditorSectionProps) {
     setWizardStep(step);
     setWizardOpen(true);
   };
+
+  // Deep link: /agents/edit/<id>?wizard=<step> opens the retrieval wizard on
+  // that step. Lets a link point at one setting — "your routing rules are
+  // here" — instead of at the page plus instructions for finding it.
+  // Read once on mount rather than watched, so closing the drawer does not
+  // immediately reopen it while the param is still in the URL.
+  const searchParams = useSearchParams();
+  const requestedStep = searchParams.get("wizard");
+  React.useEffect(() => {
+    if (!requestedStep) return;
+    if (!WIZARD_STEPS.includes(requestedStep as WizardStepId)) return;
+    // The setters, not openWizard: they are stable, so the dependency list is
+    // honestly complete rather than silenced.
+    setWizardStep(requestedStep as WizardStepId);
+    setWizardOpen(true);
+  }, [requestedStep]);
 
   // Enabling stages the tool immediately (with empty config values → backend defaults)
   // and then opens the wizard. Closing the wizard without Apply keeps the tool enabled;
@@ -108,7 +125,10 @@ export function KnowledgeSection({ editor, refs }: EditorSectionProps) {
 
       {/* Agentic retrieval (item 56) — tool-existence-gated */}
       {refs.agenticRetrievalTool && (
-        <div className="space-y-3 rounded-lg border p-4">
+        <div
+          className="space-y-3 rounded-lg border p-4"
+          data-demo-id="agent-agentic-retrieval"
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-0.5">
               <p className="text-sm font-medium">

@@ -1,8 +1,7 @@
 "use client";
 
 import { SessionScreen } from "@/app/(application)/chat/components/session-screen";
-import { Spotlight } from "@/components/demo/spotlight";
-import { TourBubble } from "@/components/demo/tour-bubble";
+import { TourOverlay } from "@/components/demo/tour-overlay";
 import { useTour } from "@/components/demo/tour-provider";
 import { scrollbackFor } from "@/lib/demo/current-position";
 
@@ -22,7 +21,7 @@ import { DemoChatProviders } from "./demo-chat-providers";
  * citations all render through the genuine components.
  */
 export default function TourPage() {
-  const { position, step, world } = useTour();
+  const { position, world } = useTour();
 
   const agent = world.agents[0];
 
@@ -41,8 +40,7 @@ export default function TourPage() {
 
   return (
     <div className="relative flex h-full min-h-dvh flex-col bg-background">
-      <Spotlight anchor={step?.anchor ?? null} />
-      <TourBubble />
+      <TourOverlay />
 
       <DemoChatProviders agent={agent}>
         <SessionScreen
