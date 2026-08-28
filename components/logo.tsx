@@ -1,8 +1,9 @@
 "use client";
 
-import { ConfigContext } from "@/components/shell/config-context";
 import { useContext } from "react";
-import { useTheme } from "next-themes";
+
+import { ConfigContext } from "@/components/shell/config-context";
+import { cn } from "@/lib/utils";
 
 interface LogoProps {
     width?: number;
@@ -11,36 +12,51 @@ interface LogoProps {
     alt?: string;
 }
 
+/**
+ * Switches light/dark with CSS, not JavaScript.
+ *
+ * This used to branch on next-themes' `resolvedTheme`, which is undefined on
+ * the server: SSR therefore always emitted the LIGHT logo, and any dark-mode
+ * client immediately replaced it with the dark one. React reports that as a
+ * hydration mismatch ("some attributes of the server rendered HTML didn't
+ * match"), and it fired for every dark-mode user on every page with a logo.
+ *
+ * Rendering both and letting the `dark:` variant hide one is SSR-safe, because
+ * next-themes puts the class on <html> before paint and no branch is taken in
+ * JS at all. The browser only fetches the visible one.
+ */
 const Logo = ({ width = 64, height = 32, className = "", alt = "Logo" }: LogoProps) => {
     const configContext = useContext(ConfigContext);
-    // resolvedTheme (not theme): with the "system" preference, `theme` is the
-    // literal string "system" and never "dark", so the light logo was served
-    // to system-dark users (shell audit H5). resolvedTheme is always the
-    // effective "light" | "dark" (undefined on the server → light fallback,
-    // matching the previous first-paint behavior).
-    const { resolvedTheme } = useTheme()
+    const base = configContext?.backend ?? "";
+
+    // A logo that fails to load is worse than no logo: the browser renders the
+    // alt text as a grey block, which reads as a broken page rather than an
+    // unbranded one. Deployments without logo assets — the guided demo among
+    // them — should simply show nothing.
+    const hideOnError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+        event.currentTarget.style.display = "none";
+    };
+
     return (
         <>
-            {resolvedTheme !== "dark" && (
-                <img
-                    src={configContext?.backend + "/logo_light.png"}
-                    alt={alt}
-                    width={width}
-                    height={height}
-                    className={className}
-                />
-            )}
-            {resolvedTheme === "dark" && (
-                <img
-                    src={configContext?.backend + "/logo_dark.png"}
-                    alt={alt}
-                    width={width}
-                    height={height}
-                    className={className}
-                />
-            )}
+            <img
+                src={`${base}/logo_light.png`}
+                alt={alt}
+                width={width}
+                height={height}
+                className={cn(className, "dark:hidden")}
+                onError={hideOnError}
+            />
+            <img
+                src={`${base}/logo_dark.png`}
+                alt={alt}
+                width={width}
+                height={height}
+                className={cn(className, "hidden dark:block")}
+                onError={hideOnError}
+            />
         </>
-    )
-}
+    );
+};
 
 export default Logo;

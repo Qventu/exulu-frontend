@@ -1,4 +1,5 @@
 import { ALGI_ROUTINE_ID } from "./fixtures/chapter-email";
+import { ALGI_MEETING_ID } from "./fixtures/chapter-meetings";
 
 export type DemoChapterId =
   | "techdoc"
@@ -295,15 +296,20 @@ export const CHAPTERS: DemoChapter[] = [
         body: "Twenty-eight of ALGI's own meetings, recorded by a bot that joins the call. Production planning, customer service, training. Three were cancelled and one failed — this is a real list, not a tidy one.",
       },
       {
+        // ?review= opens the product's own review sheet. The first version of
+        // these two steps stayed on the list and NARRATED the transcript and
+        // the guide without either being on screen — the fixture existed and
+        // nothing rendered it, which an end-to-end walk caught immediately and
+        // per-chapter checks never would have.
         id: "meetings-transcript",
-        route: "/transcriptions",
-        anchor: "transcriptions",
+        route: `/transcriptions?review=${ALGI_MEETING_ID}`,
+        anchor: null,
         title: "And this is what half an hour of it looks like",
         body: "Six people, interrupting each other, finishing sentences two turns later. Nearly half the lines are three words or fewer. Nobody is going to read this — which is the point, and the reason a recording on its own is worth very little.",
       },
       {
         id: "meetings-guide",
-        route: "/transcriptions",
+        route: `/transcriptions?review=${ALGI_MEETING_ID}`,
         anchor: null,
         title: "So point it at a prompt instead",
         body: "The same conversation, turned into a work instruction: check the release, do not infer ventilation from whether the cabin has a door, schedule variants separately, name the open points. Written from that recording — everything that was decided, none of the noise. Every other screen in this tour came out of a live system; this one document we drafted by hand, because ALGI has not run this step yet.",

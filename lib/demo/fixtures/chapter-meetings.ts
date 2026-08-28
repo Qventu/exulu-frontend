@@ -126,6 +126,39 @@ export const GENERATED_GUIDE = {
   ],
 };
 
+/**
+ * The guide as the product stores it: one entry in `post_processing_outputs`,
+ * markdown in `output`.
+ *
+ * Rendered through the review sheet's own path rather than a surface invented
+ * for the demo. That was the first draft's mistake — the step narrated a
+ * document the visitor never saw, because the fixture existed and nothing
+ * displayed it. Putting it where a real run would put it means the tour shows
+ * the screen ALGI will see the day they press the button.
+ */
+export const GENERATED_GUIDE_MARKDOWN = [
+  `# ${GENERATED_GUIDE.title}`,
+  "",
+  `_${GENERATED_GUIDE.subtitle}_`,
+  "",
+  ...GENERATED_GUIDE.sections.flatMap((section) => [
+    `## ${section.heading}`,
+    "",
+    section.body,
+    "",
+  ]),
+].join("\n");
+
+export const GENERATED_GUIDE_OUTPUT = {
+  prompt_id: "prompt-arbeitsanweisung",
+  agent_id: "22d0fac2-1544-4175-aca5-7cd30626740b",
+  prompt_name: "Arbeitsanweisung aus Besprechung",
+  status: "done" as const,
+  output: GENERATED_GUIDE_MARKDOWN,
+  error: null,
+  ran_at: "2026-08-27T10:12:00.000Z",
+};
+
 /** Total recorded time, for the chapter's opening line. */
 export const ALGI_MEETING_HOURS = Math.round(
   ALGI_MEETINGS.reduce((sum, m) => sum + (m.duration_seconds ?? 0), 0) / 3600,

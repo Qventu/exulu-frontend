@@ -9,6 +9,7 @@ import {
 import {
   ALGI_MEETINGS,
   ALGI_MEETING_ID,
+  GENERATED_GUIDE_OUTPUT,
   TRANSCRIPT_EXCERPT,
   type MeetingRecording,
 } from "./fixtures/chapter-meetings";
@@ -87,7 +88,12 @@ const transcriptionJob = (meeting: MeetingRecording) => ({
   // Apollo error per row, 28 on first paint, which is how this was found.
   join_at: null,
   post_processing_prompts: [],
-  post_processing_outputs: null,
+  // Only the meeting chapter 7 opens carries a generated document. The other
+  // twenty-seven have none, which is true of ALGI's deployment today — the
+  // capability ships, they have not run it. Attaching a guide to all of them
+  // would claim they had.
+  post_processing_outputs:
+    meeting.id === ALGI_MEETING_ID ? [GENERATED_GUIDE_OUTPUT] : null,
 });
 
 /** The routine as the list and detail screens select it. */
@@ -209,12 +215,20 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
         // opens. Everything else returns an empty transcript rather than
         // another meeting's words — a visitor who clicks a different row
         // should find nothing, not somebody else's conversation.
+        // start/end are required, not decorative: the review sheet formats a
+        // timestamp per segment and rendered "NaN:NaN" on every line when the
+        // excerpt carried only speaker and text.
         raw_segments:
           meeting.id === ALGI_MEETING_ID
-            ? TRANSCRIPT_EXCERPT.map((line) => ({
-                speaker: line.speaker,
-                text: line.text,
-              }))
+            ? TRANSCRIPT_EXCERPT.map((line, index) => {
+                const [minutes, seconds] = line.at.split(":").map(Number);
+                const start = minutes * 60 + seconds;
+                const next = TRANSCRIPT_EXCERPT[index + 1];
+                const end = next
+                  ? next.at.split(":").reduce((m, s) => m * 60 + Number(s), 0)
+                  : start + 4;
+                return { start, end, speaker: line.speaker, text: line.text };
+              })
             : [],
       },
     };
