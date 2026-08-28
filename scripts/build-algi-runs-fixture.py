@@ -39,15 +39,29 @@ OUT = "lib/demo/fixtures/algi-runs.json"
 SUBJECT_REDACTIONS = [
     (r"ÖBB Bruck/\s*Mur", "⟨Kunde⟩"),
     (r"National Gallery", "⟨Kunde⟩"),
-    (r"Brückner Str\.?", "⟨Adresse⟩"),
-    (r"Giehl", "⟨Kunde⟩"),
+    # Matches the whole address, not its opening words. The first version of
+    # this rule was `Brückner Str\.?` and it left "aße 1, 96146 Altendorf"
+    # standing — the street number, postcode and town all survived, and the
+    # BANNED check below still passed because the word "Brückner" was gone.
+    # A partial redaction reads as a complete one, which is worse than none.
+    (r"[A-ZÄÖÜ][\wäöüß.-]*\s*(?:Str\.|Straße|Strasse|str\.|straße)\s*\d*[a-z]?", "⟨Adresse⟩"),
+    # Postcode + town, as a net for any address the rule above starts too late
+    # to catch. German postcodes are five digits; part numbers in these
+    # subjects are longer or carry letters, so this does not eat them.
+    (r"\b\d{5}\s+[A-ZÄÖÜ][\wäöüß.-]+(?:\s+[A-ZÄÖÜ][\wäöüß.-]+)?", "⟨Ort⟩"),
+    # NOT redacted, and worth recording why: "Giehl" was on this list until the
+    # email signatures showed the company is "ALGI Alfred Giehl GmbH & Co. KG".
+    # It is ALGI's own name, so "Giehl Nummer" is their internal reference —
+    # redacting it turned a sentence about ALGI's own paperwork into one about
+    # a mystery customer. Over-redaction is the safer failure, but it is still
+    # a failure, and one that only surfaced by reading the underlying data.
     (r"Requestor Case#\s*ESM-[0-9A-Za-z-]+", "Requestor Case# ⟨Vorgang⟩"),
     (r"BSC Case#\s*ESM-[0-9A-Za-z-]*", "⟨Kunde⟩ Case# ⟨Vorgang⟩"),
 ]
 
 # Asserted absent from the output. A redaction that silently stops matching —
 # because a subject was reworded upstream — is the failure this catches.
-BANNED = ["ÖBB", "National Gallery", "Brückner", "Giehl", "BSC", "ESM-"]
+BANNED = ["ÖBB", "National Gallery", "Brückner", "BSC", "ESM-", "Altendorf", "96146", "traße", "Str."]
 
 ROLES = ["vertrieb", "service", "ersatzteile", "technik", "info"]
 

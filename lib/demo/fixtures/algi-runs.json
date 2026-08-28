@@ -68,7 +68,7 @@
     "createdAt": "2026-08-18 06:28:15.881619+00",
     "trigger_metadata": {
       "from": "ersatzteile@algi-hydraulic.de",
-      "subject": "WG: Angebotsanfrage Stempeldichtung Aufzug 57936, ⟨Adresse⟩aße 1, 96146 Altendorf"
+      "subject": "WG: Angebotsanfrage Stempeldichtung Aufzug 57936, ⟨Adresse⟩, ⟨Ort⟩"
     }
   },
   {
@@ -104,7 +104,7 @@
     "createdAt": "2026-08-19 05:21:27.074662+00",
     "trigger_metadata": {
       "from": "vertrieb@algi-hydraulic.de",
-      "subject": "WG: Angebotsanfrage: Eq. 14918001210 / ZKD / ⟨Kunde⟩ Nummer: 07204739"
+      "subject": "WG: Angebotsanfrage: Eq. 14918001210 / ZKD / Giehl Nummer: 07204739"
     }
   },
   {
