@@ -125,8 +125,14 @@ export const CHAPTERS: DemoChapter[] = [
         id: "config-sources",
         route: "/agents/edit/demo-agent-newton?wizard=sources",
         anchor: "agent-wizard-sources",
-        title: "Six knowledge bases, three kinds",
-        body: "Manuals are read like documents, support tickets like conversations, the service database like records. Each is searched differently, and each carries a sentence telling the assistant when to reach for it.",
+        // Says SEVEN because the screen says seven. The Sources step lists
+        // seven checked knowledge bases and the summary card above it reads
+        // "7 knowledge bases" — the seventh is Newton's own memory, which the
+        // agentic retrieval config treats as a searchable source like any
+        // other. An earlier draft said six, counting only the document and
+        // ticket sources, and contradicted the card the visitor was looking at.
+        title: "Seven knowledge bases, read three different ways",
+        body: "Manuals are read like documents, support tickets like conversations, the service database like records. Each carries a sentence telling the assistant when to reach for it. The seventh is the assistant's own memory — which is the chapter after this one.",
       },
       {
         id: "config-routing",

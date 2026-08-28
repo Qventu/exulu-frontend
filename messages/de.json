@@ -747,6 +747,14 @@
       "pixel_art": "Pixel-Art",
       "vaporwave": "Vaporwave"
     },
+    "modelSelector": {
+      "emptyLitellm": "Keine Modelle gefunden.",
+      "inactive": "Inaktiv",
+      "loading": "Modelle werden geladen…",
+      "placeholder": "Modell auswählen",
+      "searchLitellm": "Modelle suchen…",
+      "staleLabel": "{value} — nicht verfügbar"
+    },
     "newAgent": "Neuer Agent",
     "noDescriptionAvailable": "Keine Beschreibung verfügbar",
     "openInChat": "Im Chat öffnen",

@@ -5,6 +5,7 @@ import {
   INGESTION_ITEM_ID,
 } from "@/lib/demo/fixtures/chapter-ingestion";
 import { runDemoQueryThroughCache } from "@/lib/demo/test-support";
+import { GET_ENTITIES_FOR_ITEM } from "@/queries/queries";
 
 import { GET_ITEM_BY_ID, GET_ITEMS } from "./queries";
 
@@ -97,6 +98,43 @@ describe("the knowledge base chapter 2 opens", () => {
   });
 });
 
+describe("the library is the same in every chapter", () => {
+  // Found by opening /data with a stale ?tour= value, which fell back to
+  // chapter 1's world and rendered two invented placeholder documents. The
+  // documents belonged to chapter 2's fixture, but getWorld() routes chapters
+  // 5, 6 and 7 to chapter 1's world by default — and chapter 1's own answer
+  // cites a document in this very context, so the one chapter that most needed
+  // the real library was showing a fake one.
+  it.each([
+    ["techdoc", 0],
+    ["ingestion", 0],
+    ["config", 0],
+    ["memory", 3],
+    ["evals", 0],
+    ["email", 0],
+    ["meetings", 0],
+  ])("shows the real documents during chapter %s", async (chapter, step) => {
+    const data = await runDemoQueryThroughCache(
+      listQuery,
+      {
+        context: INGESTION_CONTEXT_ID,
+        page: 1,
+        limit: 11,
+        sort: { field: "updatedAt", direction: "DESC" },
+        filters: [{ archived: { eq: false } }],
+      },
+      { chapter, step } as never,
+    );
+
+    const items = listItems(data);
+    expect(items).toHaveLength(9);
+    expect(items.map((i) => i.id)).toContain(INGESTION_ITEM_ID);
+    // The placeholders this replaced. Naming them is the point: a generic
+    // length check would pass on any nine documents.
+    expect(items.map((i) => i.name).join(" ")).not.toMatch(/CTRL-3000|EN 81-20/);
+  });
+});
+
 describe("the document detail page", () => {
   it("returns the chunks the chapter is about", async () => {
     const data = await runDetail();
@@ -131,6 +169,31 @@ describe("the document detail page", () => {
     expect(item.chunks.map((c) => c.chunk_id)).toContain(
       "02d50a8f-e703-4461-9c0c-5ab6c695cdfd",
     );
+  });
+
+  it("answers the entities section the page also mounts", async () => {
+    // Found in the browser console, not here: the detail page renders an
+    // Entities section for every context that has an embedder, and its
+    // operation is named `EntitiesForItem<ctx>` — context SUFFIXED, where the
+    // items operations are context-prefixed. So it matched neither dynamic
+    // pattern, fell through to the unmapped fallback, and logged an Apollo
+    // error on the screen chapter 2 ends on.
+    //
+    // The lesson is about coverage, not about this one query: a test only
+    // guards the operations somebody thought to run. runDemoQueryThroughCache
+    // throws on the unmapped fallback, so naming the query here is the guard.
+    //
+    // Empty is the truth, not a shortcut — the real context has zero rows in
+    // both its entities and chunk_entities tables.
+    const data = await runDemoQueryThroughCache(
+      GET_ENTITIES_FOR_ITEM(INGESTION_CONTEXT_ID),
+      { item: INGESTION_ITEM_ID },
+      at,
+    );
+
+    expect(
+      data[`${INGESTION_CONTEXT_ID}_itemsEntitiesForItem`],
+    ).toEqual([]);
   });
 
   it("answers every field the chunks selection asks for", async () => {

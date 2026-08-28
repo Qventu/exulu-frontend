@@ -111,8 +111,15 @@ export function memoryWorld(step: number): DemoWorld {
     ...base,
     sessions: [SESSION],
     // Keyed by context so /data/[ctx] can answer for whichever knowledge base
-    // is open. Chapter 4 only populates memory; the rest keep chapter 1's.
+    // is open. Chapter 4 only populates memory; the rest keep chapter 1's —
+    // which now means SPREADING the base rather than replacing it, since the
+    // real software documentation library lives in base.itemsByContext. A bare
+    // assignment dropped it, so opening Knowledge during chapter 4 showed the
+    // invented placeholder library instead of the real one.
     items: base.items,
-    itemsByContext: { [MEMORY_CONTEXT_ID]: memories },
+    itemsByContext: {
+      ...base.itemsByContext,
+      [MEMORY_CONTEXT_ID]: memories,
+    },
   };
 }

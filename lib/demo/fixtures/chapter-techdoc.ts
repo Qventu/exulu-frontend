@@ -5,6 +5,10 @@ import { CONTEXTS as REAL_CONTEXTS } from "./contexts";
 import type { Item } from "@/types/models/item";
 import type { DemoWorld } from "../types";
 import { demoItem } from "./item";
+import {
+  SOFTWARE_DOC_CONTEXT_ID,
+  SOFTWARE_DOC_ITEMS,
+} from "./software-docs";
 
 export const DEMO_AGENT_ID = "demo-agent-newton";
 export const DEMO_AGENT_SLUG = "chat";
@@ -87,6 +91,15 @@ const BASE: DemoWorld = {
   contexts: CONTEXTS,
   items: ITEMS,
   sessions: SESSIONS,
+  // The real software documentation library, in EVERY chapter's world rather
+  // than only chapter 2's. getWorld() sends chapters 5, 6 and 7 here by
+  // default, and chapter 1's own answer cites a document in this context — so
+  // when these lived in the ingestion fixture alone, opening Knowledge from any
+  // other chapter showed the two placeholders below instead of the documents
+  // the assistant had just quoted.
+  itemsByContext: {
+    [SOFTWARE_DOC_CONTEXT_ID]: SOFTWARE_DOC_ITEMS,
+  },
 };
 
 export function techdocWorld(_step: number): DemoWorld {

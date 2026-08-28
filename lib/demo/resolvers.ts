@@ -250,6 +250,25 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
 
   EditorToolCategories: () => ({ toolCategories: ["knowledge"] }),
 
+  // The editor mounts a model selector and an Access section alongside the
+  // Knowledge section the chapter is about. All three were unmapped and logged
+  // an Apollo error apiece on chapter 3's screen — found in the browser, not by
+  // demo-editor.test.ts, which only asserted the operations the agentic
+  // retrieval card needs.
+  //
+  // Empty is accurate rather than expedient: the tour has no LiteLLM
+  // deployment behind it, and no roles or teams. An empty ARRAY is a complete
+  // answer for the catalogue however many fields the selection lists, since
+  // there is no element to be missing one.
+  // Two documents select the same `litellmCatalog` root under two operation
+  // names — the chat surface's and the agent editor's — and the resolver table
+  // is keyed by OPERATION, so mapping one leaves the other unmapped. Mapping
+  // GetLiteLLMCatalog alone silenced chat and left the editor still erroring.
+  GetLiteLLMCatalog: () => ({ litellmCatalog: [] }),
+  GetAgentLiteLLMCatalog: () => ({ litellmCatalog: [] }),
+  GetUserRoles: () => ({ rolesPagination: { pageInfo: page(0), items: [] } }),
+  GetTeams: () => ({ teamsPagination: { pageInfo: page(0), items: [] } }),
+
   // Empty lists still need their pageInfo: it is in the selection set, and a
   // *Pagination wrapper without it writes an incomplete result to the cache.
   EditorSkills: () => ({ skillsPagination: { pageInfo: page(0), items: [] } }),
@@ -311,6 +330,22 @@ function dynamicResolver(operationName: string): DemoResolver | undefined {
         [`${ctx}_itemsPagination`]: { pageInfo: page(items.length), items },
       };
     };
+  }
+
+  // The item detail page renders an Entities section for every context with an
+  // embedder, so this fires on chapter 2's payoff screen. Note the shape: the
+  // OPERATION is `EntitiesForItem<ctx>` — context suffixed, not prefixed —
+  // which is why the two patterns below do not match it and it reached the
+  // unmapped fallback, logging an Apollo error on the screen the chapter ends
+  // on. Found by reading the browser console, not by any test.
+  //
+  // Empty is the truth rather than a convenience: the real deployment has zero
+  // rows in this context's entities and chunk_entities tables, so the section
+  // renders its empty state exactly as it does in production.
+  const entitiesMatch = /^EntitiesForItem([a-z0-9_]+)$/.exec(operationName);
+  if (entitiesMatch && isContext(entitiesMatch[1])) {
+    const ctx = entitiesMatch[1];
+    return () => ({ [`${ctx}_itemsEntitiesForItem`]: [] });
   }
 
   const byIdMatch = /^([a-z0-9_]+)ById$/.exec(operationName);
