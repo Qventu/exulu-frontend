@@ -1,4 +1,5 @@
 import { ApolloLink, Observable } from "@apollo/client/core";
+import { CONTEXT_SEARCH_TOOL } from "./fixtures/agent-editor";
 import { DEMO_USER_ID } from "./user";
 import type { DemoWorld } from "./types";
 
@@ -37,6 +38,46 @@ const RESOLVERS: Record<string, Resolver> = {
       recently_viewed_items: [],
     },
   }),
+
+  // --- /agents/edit/[id] (chapter 3: agent configuration) -----------------
+  // The agent carries the knowledge-search config the wizard reads, so this
+  // one resolver drives all six wizard steps.
+  AgentEditorById: (world) => ({
+    agentById: {
+      ...world.agents[0],
+      tools: [CONTEXT_SEARCH_TOOL],
+      skills: [],
+      capabilities: {
+        text: true,
+        images: true,
+        files: true,
+        audio: false,
+        video: false,
+      },
+      RBAC: { type: "agent", users: [], roles: [] },
+    },
+  }),
+
+  // The Sources step lists these to pick knowledge bases from. Their ids must
+  // match the keys in the tool config's knowledge_bases map, or every source
+  // renders as unknown.
+  EditorContexts: (world) => ({
+    contexts: {
+      items: world.contexts.map(({ id, name, description }) => ({
+        id,
+        name,
+        description,
+      })),
+    },
+  }),
+
+  // Tools, skills and variables are adjacent editor surfaces the tour does not
+  // visit. Empty pages render as empty pickers, which is honest — inventing
+  // entries would put fictional capabilities on screen.
+  EditorTools: () => ({ tools: { items: [] } }),
+  EditorToolCategories: () => ({ toolCategories: [] }),
+  EditorSkills: () => ({ skillsPagination: { items: [] } }),
+  EditorVariables: () => ({ variablesPagination: { items: [] } }),
 };
 
 /**

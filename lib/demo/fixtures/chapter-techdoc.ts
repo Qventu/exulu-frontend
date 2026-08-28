@@ -1,6 +1,7 @@
 import type { Agent } from "@/types/models/agent";
 import type { AgentSession } from "@/types/models/agent-session";
 import type { Context } from "@/types/models/context";
+import { CONTEXTS as REAL_CONTEXTS } from "./contexts";
 import type { Item } from "@/types/models/item";
 import type { DemoWorld } from "../types";
 
@@ -30,125 +31,10 @@ const AGENT: Agent = {
   rights_mode: "public",
 };
 
-const CTX_TECHDOC: Context = {
-  id: "ctx-techdoc",
-  name: "Technical documentation",
-  description:
-    "Manufacturer documentation for elevator control boards, including " +
-    "wiring diagrams, fault-code tables, and maintenance procedures.",
-  active: true,
-  slug: "techdoc",
-  // Selected by GET_CONTEXTS. Optional on the Context type, but the /data
-  // library row reads it, so omitting it renders a blank embedding column.
-  embedder: { model: "text-embedding-3-large", queue: "embeddings" },
-  configuration: {
-    calculateVectors: "on_write",
-    defaultRightsMode: "users",
-  },
-  processor: {
-    name: "pdf-extractor",
-    description: "Extracts text and tables from PDF technical manuals.",
-    queue: "default",
-    trigger: "upload",
-    timeoutInSeconds: 120,
-    generateEmbeddings: true,
-  },
-  sources: [
-    {
-      id: "src-manual-upload",
-      name: "Manual upload",
-      description: "Service engineers upload PDFs through the web interface.",
-      config: {},
-    },
-  ],
-  fields: [
-    {
-      name: "title",
-      label: "Title",
-      type: "shortText",
-      required: true,
-      editable: true,
-    },
-    {
-      name: "document_number",
-      label: "Document number",
-      type: "shortText",
-      editable: true,
-    },
-    {
-      name: "revision",
-      label: "Revision",
-      type: "shortText",
-      editable: true,
-    },
-    {
-      name: "content",
-      label: "Content",
-      type: "longText",
-      editable: false,
-    },
-  ],
-};
-
-const CTX_VORSCHRIFTEN: Context = {
-  id: "ctx-vorschriften",
-  name: "Standards & regulations",
-  description:
-    "Applicable EN, ISO, and DIN standards for elevator installations, " +
-    "safety components, and periodic inspections.",
-  active: true,
-  slug: "vorschriften",
-  embedder: { model: "text-embedding-3-large", queue: "embeddings" },
-  configuration: {
-    calculateVectors: "on_write",
-    defaultRightsMode: "users",
-  },
-  processor: {
-    name: "pdf-extractor",
-    description: "Extracts clauses and definitions from standards documents.",
-    queue: "default",
-    trigger: "upload",
-    timeoutInSeconds: 180,
-    generateEmbeddings: true,
-  },
-  sources: [
-    {
-      id: "src-standards-upload",
-      name: "Standards upload",
-      description: "Compliance team uploads current standards PDFs.",
-      config: {},
-    },
-  ],
-  fields: [
-    {
-      name: "title",
-      label: "Title",
-      type: "shortText",
-      required: true,
-      editable: true,
-    },
-    {
-      name: "standard_number",
-      label: "Standard number",
-      type: "shortText",
-      editable: true,
-    },
-    {
-      name: "edition",
-      label: "Edition",
-      type: "shortText",
-      editable: true,
-    },
-    {
-      name: "content",
-      label: "Content",
-      type: "longText",
-      editable: false,
-    },
-  ],
-};
-
-const CONTEXTS: Context[] = [CTX_TECHDOC, CTX_VORSCHRIFTEN];
+// The six real Newlift knowledge bases, with their production ids so that
+// chapter 1's citations and chapter 3's routing table refer to contexts the
+// tour actually shows. See ./contexts.ts.
+const CONTEXTS: Context[] = REAL_CONTEXTS;
 
 const ITEMS: Item[] = [
   {

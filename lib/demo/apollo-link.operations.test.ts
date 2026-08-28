@@ -2,6 +2,10 @@ import { ApolloLink, execute, type Observable } from "@apollo/client/core";
 import { describe, expect, it } from "vitest";
 
 import {
+  GET_AGENT_EDITOR,
+  GET_CONTEXTS_EDITOR,
+} from "@/app/(application)/agents/edit/[id]/queries";
+import {
   GET_CONTEXTS,
   GET_CONTEXT_ICONS,
   GET_USER_CONTEXT_ITEM_FAVOURITES,
@@ -80,5 +84,55 @@ describe("/data page operations", () => {
     const user = data.userById as Record<string, unknown>;
     expect(user).toHaveProperty("favourite_items");
     expect(user).toHaveProperty("recently_viewed_items");
+  });
+});
+
+describe("/agents/edit/[id] operations", () => {
+  it("answers AgentEditorById under agentById", async () => {
+    const data = await run(GET_AGENT_EDITOR, { id: "demo-agent-newton" });
+    expect(data.agentById).toBeTruthy();
+  });
+
+  it("carries a Context Search tool whose config the wizard can parse", async () => {
+    const data = await run(GET_AGENT_EDITOR, { id: "demo-agent-newton" });
+    const agent = data.agentById as { tools: { name: string; config: unknown[] }[] };
+    const tool = agent.tools.find((t) => /context.?search/i.test(t.name));
+    expect(tool, "no Context Search tool on the demo agent").toBeTruthy();
+
+    // The wizard reads JSON-typed options as STRINGS off `variable`. A nested
+    // object would leave every step silently showing its defaults.
+    const byName = Object.fromEntries(
+      (tool!.config as { name: string; type: string; variable: string }[]).map(
+        (c) => [c.name, c],
+      ),
+    );
+    for (const key of ["knowledge_bases", "routing", "vocabulary", "memory", "tuning"]) {
+      expect(byName[key], `missing config option: ${key}`).toBeTruthy();
+      expect(byName[key].type).toBe("json");
+      expect(() => JSON.parse(byName[key].variable)).not.toThrow();
+    }
+  });
+
+  it("routes and scopes vocabulary to knowledge bases that actually exist", async () => {
+    const data = await run(GET_AGENT_EDITOR, { id: "demo-agent-newton" });
+    const agent = data.agentById as { tools: { name: string; config: { name: string; variable: string }[] }[] };
+    const cfg = agent.tools[0].config;
+    const get = (n: string) => JSON.parse(cfg.find((c) => c.name === n)!.variable);
+
+    const contextData = await run(GET_CONTEXTS_EDITOR);
+    const known = new Set(
+      (contextData.contexts as { items: { id: string }[] }).items.map((c) => c.id),
+    );
+
+    // A routing rule pointing at a context the Sources step never lists renders
+    // as an unknown source — the incoherence this test exists to prevent.
+    for (const rule of get("routing").rules as { main: string[]; fallback: string[] }[]) {
+      for (const id of [...rule.main, ...rule.fallback]) {
+        expect(known.has(id), `routing references unknown context: ${id}`).toBe(true);
+      }
+    }
+    for (const id of Object.keys(get("knowledge_bases"))) {
+      expect(known.has(id), `knowledge_bases references unknown context: ${id}`).toBe(true);
+    }
   });
 });
