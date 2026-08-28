@@ -53,11 +53,13 @@ export default function EvalsPage() {
         }
       />
       <WorkersWarning />
-      <DataTable
-        columns={columns}
-        refreshNonce={refreshNonce}
-        refetchRef={refetchRef}
-      />
+      <div data-demo-id="evals-suites">
+        <DataTable
+          columns={columns}
+          refreshNonce={refreshNonce}
+          refetchRef={refetchRef}
+        />
+      </div>
     </PageShell>
   );
 }

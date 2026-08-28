@@ -243,11 +243,18 @@ export function EvalRunsTable({
     .join(" ");
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full overflow-x-auto" data-demo-id="evals-matrix">
       <div className="grid w-full min-w-fit" style={{ gridTemplateColumns }}>
         {/* Sticky first column — cases list */}
         <div className="sticky left-0 z-10 bg-background">
-          <div className="flex h-[60px] items-center border-b border-r p-3">
+          {/* 120px = the run lanes' TWO header rows: the metadata header
+              below, plus the per-run overflow-menu row that EvalRunColumn
+              renders itself. This column and the rail have only one header
+              each, so at 60px every row below them sat a row higher than the
+              scores it labels — the matrix read one case out of register,
+              which is unnoticeable while the cells say "Not started" and
+              badly misleading as soon as they carry numbers. */}
+          <div className="flex h-[120px] items-center border-b border-r p-3">
             <span className="text-xs text-muted-foreground">
               {tMatrix("caseColumnHeader")}
             </span>
@@ -281,7 +288,8 @@ export function EvalRunsTable({
         {/* "Show older runs" rail */}
         {hasMoreRuns ? (
           <div>
-            <div className="flex h-[60px] items-center justify-center border-b border-r bg-muted/30 p-2">
+            {/* 120px for the same reason as the case column above. */}
+            <div className="flex h-[120px] items-center justify-center border-b border-r bg-muted/30 p-2">
               <Button
                 variant="ghost"
                 size="sm"
@@ -310,7 +318,10 @@ export function EvalRunsTable({
                 the action menu + average row + cells. We split the visual
                 header from the lane so we can show metadata (name / agent
                 / date) without re-querying. */}
-            <div className="border-b border-r bg-muted/30 px-2 py-1.5 text-center">
+            {/* Fixed at 60px rather than sized by its content: three lines of
+                metadata came to 54px, so every lane started six pixels above
+                the case column even before the extra menu row below. */}
+            <div className="flex h-[60px] flex-col justify-center border-b border-r bg-muted/30 px-2 py-1.5 text-center">
               <div className="truncate text-xs font-semibold text-foreground">
                 {run.name}
               </div>

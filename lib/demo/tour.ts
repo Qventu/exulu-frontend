@@ -197,7 +197,44 @@ export const CHAPTERS: DemoChapter[] = [
       },
     ],
   },
-  { id: "evals", title: "Proving it", steps: [stub("evals-intro", "Proving it")] },
+  {
+    id: "evals",
+    title: "Proving it",
+    // The questions and the suite structure are real; the SCORES are not, and
+    // cannot be — scoring a case means executing a run against a live model.
+    // See the note in fixtures/evals.ts. The narration below is written to
+    // demonstrate the mechanism and deliberately claims no measured result.
+    steps: [
+      {
+        id: "evals-suites",
+        route: "/evals",
+        anchor: "evals-suites",
+        title: "The part nobody demos",
+        body: "Anyone can show you a good answer. The question is what happens to the other ten thousand. Two suites here: one for the technical documentation, one for questions that must be answered from the standards rather than the product manuals.",
+      },
+      {
+        id: "evals-matrix",
+        route: "/evals/evalset-techdoc-regression",
+        anchor: "evals-matrix",
+        title: "Every question, every run, one grid",
+        body: "Rows are questions a Newlift engineer actually asked. Columns are runs. A cell is what the assistant scored on that question in that run — so a change that helps one question and quietly breaks another has nowhere to hide.",
+      },
+      {
+        id: "evals-regression",
+        route: "/evals/evalset-techdoc-regression",
+        anchor: "evals-matrix",
+        title: "A regression is a red cell",
+        body: "The earlier run misses the terminology question badly and drags the suite average below its pass threshold. That is the whole mechanism: you set a bar, and every change is measured against the same questions rather than against an impression.",
+      },
+      {
+        id: "evals-sources",
+        route: "/evals/evalset-techdoc-regression",
+        anchor: null,
+        title: "And it checks where the answer came from",
+        body: "A case can require not just the right answer but the right source — a regulatory question has to be answered from EN and DIN, not from a product manual that happens to mention a number. Sounding right and being right are scored separately.",
+      },
+    ],
+  },
   { id: "email", title: "Working while you sleep", steps: [stub("email-intro", "Working while you sleep")] },
   { id: "meetings", title: "Capturing what is said", steps: [stub("meetings-intro", "Capturing what is said")] },
 ];
