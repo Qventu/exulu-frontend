@@ -157,7 +157,26 @@ const VOCABULARY = {
  * wizard parses this, so a plain nested object here would leave every step
  * showing defaults.
  */
+/**
+ * The deployment's tool catalogue entry. The Knowledge section looks for a tool
+ * with exactly this id before rendering the Agentic retrieval card
+ * (sections/knowledge.tsx:44) — an empty catalogue hides the wizard entirely
+ * while leaving the rest of the editor looking perfectly healthy.
+ */
+export const AGENTIC_RETRIEVAL_TOOL = {
+  id: "agentic_context_search",
+  name: "Context Search",
+  category: "knowledge",
+  description:
+    "Multi-phase retrieval over the configured knowledge bases: routing, search, rerank.",
+  type: "tool",
+};
+
 export const CONTEXT_SEARCH_TOOL = {
+  // Must match AGENTIC_RETRIEVAL_TOOL.id: the section matches the agent's
+  // installed tool against the catalogue by id, not by name.
+  id: "agentic_context_search",
+  type: "tool",
   name: "Context Search",
   config: [
     { name: "instructions", type: "string", variable: "" },
