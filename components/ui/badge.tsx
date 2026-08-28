@@ -29,12 +29,26 @@ const badgeVariants = cva(
 );
 
 export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends React.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof badgeVariants> {}
 
+/**
+ * Renders a <span>, not a <div>.
+ *
+ * Badges land inside paragraphs in two places that matter: the citation chips
+ * the assistant's answers render inside markdown <p> blocks, and the
+ * "enabled / disabled" chips beside section titles in the agent editor. A <div>
+ * inside a <p> is invalid HTML, so the browser closes the paragraph early and
+ * the server and client trees stop matching — which React reports as a
+ * hydration FAILURE and recovers from by regenerating the whole subtree on the
+ * client. On the chat surface that subtree is the entire conversation.
+ *
+ * Purely a correctness fix: the variants are already `inline-flex`, so a span
+ * and a div lay out identically here.
+ */
 function Badge({ className, variant, ...props }: BadgeProps) {
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+    <span className={cn(badgeVariants({ variant }), className)} {...props} />
   );
 }
 

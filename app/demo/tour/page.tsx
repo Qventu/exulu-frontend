@@ -1,6 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { SessionScreen } from "@/app/(application)/chat/components/session-screen";
+import { getWorld } from "@/lib/demo/fixtures";
 import { TourOverlay } from "@/components/demo/tour-overlay";
 import { useTour } from "@/components/demo/tour-provider";
 import { scrollbackFor } from "@/lib/demo/current-position";
@@ -21,9 +24,29 @@ import { DemoChatProviders } from "./demo-chat-providers";
  * citations all render through the genuine components.
  */
 export default function TourPage() {
-  const { position, world } = useTour();
+  const { position } = useTour();
 
-  const agent = world.agents[0];
+  // Pinned to the CHAPTER, not the position.
+  //
+  // getWorld() deep-clones, so reading the agent and session off the tour's
+  // step-scoped world handed SessionScreen a new object identity on every
+  // step. SessionScreenInner is React.memo'd on prop identity and rebuilds its
+  // chat controller when they change, so advancing the tour by one step threw
+  // away the conversation — including, on chapter 4, the correction the
+  // visitor had just sent and the memory tool call that the very next step is
+  // anchored to. The step said "you can see exactly what was stored" over an
+  // empty transcript.
+  //
+  // Neither value varies within a chapter, so deriving them from step 0 keeps
+  // the identities stable while leaving anything genuinely step-scoped — the
+  // knowledge items Apollo serves — untouched, since the demo link reads the
+  // live position itself.
+  const chapterWorld = useMemo(
+    () => getWorld({ chapter: position.chapter, step: 0 }),
+    [position.chapter],
+  );
+
+  const agent = chapterWorld.agents[0];
 
   // Chapter 4 opens mid-conversation: the correction it demonstrates only lands
   // if the answer being corrected is already on screen. Keyed so that switching
@@ -36,7 +59,7 @@ export default function TourPage() {
   // the demo link does not answer — the send then fails with "Failed to create
   // the conversation". Supplying a session skips that branch entirely, so the
   // demo never needs mutation support.
-  const session = world.sessions[0] ?? null;
+  const session = chapterWorld.sessions[0] ?? null;
 
   return (
     <div className="relative flex h-full min-h-dvh flex-col bg-background">
