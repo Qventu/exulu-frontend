@@ -7,8 +7,8 @@ reader, and to be hard on it.**
 Please run it in a real browser using the Claude in Chrome tools
 (`mcp__claude-in-chrome__*`) rather than reading the code and reasoning about
 it. Most of what matters here — pacing, whether the story lands, whether a
-screen looks broken — is only visible on screen. Several defects in this tour
-survived a full green test suite and were only found by looking at it.
+screen looks broken or the user experience is not exciting, these things are only 
+visible on screen.
 
 ---
 

@@ -54,10 +54,22 @@ export function KnowledgeSearchWizard({
   React.useEffect(() => {
     if (open) {
       setDraftState(parseWizardConfig(entries));
-      setStep(initialStep ?? "sources");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Follow `initialStep` whenever it changes, not only when the drawer opens.
+  //
+  // These were one effect keyed on `[open]`, which meant a deep link to
+  // ?wizard=<step> only landed on a full page load: navigate client-side while
+  // the drawer is already mounted and `open` does not change, so the step was
+  // never re-read. The drawer sat on Sources while the URL and the caller had
+  // both moved on. Split rather than adding `initialStep` to the deps above,
+  // because that would also re-parse the draft and discard in-progress edits
+  // every time the step changed.
+  React.useEffect(() => {
+    if (open) setStep(initialStep ?? "sources");
+  }, [open, initialStep]);
 
   const setDraft = React.useCallback(
     (updater: (prev: WizardConfig) => WizardConfig) => setDraftState((p) => updater(p)),
