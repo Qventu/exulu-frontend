@@ -43,6 +43,15 @@ export interface DemoStep {
    * visitor is meant to be looking at.
    */
   image?: string;
+  /**
+   * Terminal call to action, rendered as the step's primary button.
+   *
+   * A button rather than a link in the body: the last step has no Next, so
+   * without one the footer holds only "Back" and the tour ends by asking a
+   * question the visitor cannot answer. Putting the ask where every other step
+   * puts "Next" is what makes it the obvious thing to press.
+   */
+  cta?: { label: string; href: string };
 }
 
 export interface DemoChapter {
@@ -259,8 +268,18 @@ export const CHAPTERS: DemoChapter[] = [
     title: "Proving it",
     // The questions and the suite structure are real; the SCORES are not, and
     // cannot be — scoring a case means executing a run against a live model.
-    // See the note in fixtures/evals.ts. The narration below is written to
-    // demonstrate the mechanism and deliberately claims no measured result.
+    // See the note in fixtures/evals.ts.
+    //
+    // This comment used to claim the narration "deliberately claims no measured
+    // result". That was false. evals-regression said the earlier run "misses
+    // the terminology question badly" and "drags the suite average below its
+    // pass threshold" — two assertions about a measurement that never happened,
+    // sitting beside concrete numbers, real timestamps and a named model. A
+    // reviewer caught it. The comment was the worse half of the defect: it told
+    // the next reader this had already been thought about.
+    //
+    // The narration is now conditional about what a score means, and the
+    // disclosure is on screen at evals-matrix, worded like the meetings one.
     steps: [
       {
         id: "evals-suites",
@@ -268,21 +287,21 @@ export const CHAPTERS: DemoChapter[] = [
         route: "/evals",
         anchor: "evals-suites",
         title: "The part nobody demos",
-        body: "Anyone can show you a good answer. The question is what happens to the other ten thousand. Two suites here: one for the technical documentation, one for questions that must be answered from the standards rather than the product manuals.",
+        body: "Anyone can show you a good answer. The question is what happens to all the ones nobody watched. Two suites here: one for the technical documentation, one for questions that must be answered from the standards rather than the product manuals.",
       },
       {
         id: "evals-matrix",
         route: "/evals/evalset-techdoc-regression",
         anchor: "evals-matrix",
         title: "Every question, every run, one grid",
-        body: "Rows are questions a Newlift engineer actually asked. Columns are runs. A cell is what the assistant scored on that question in that run — so a change that helps one question and quietly breaks another has nowhere to hide.",
+        body: "Rows are questions a Newlift engineer actually asked. Columns are runs. A cell is what the assistant scored on that question in that run — so a change that helps one question and quietly breaks another has nowhere to hide. The questions and the suite are Newlift's; the scores in this grid are illustrative, because scoring a case means running it against a live model and this tour does not call one.",
       },
       {
         id: "evals-regression",
         route: "/evals/evalset-techdoc-regression",
         anchor: "evals-matrix",
         title: "A regression is a red cell",
-        body: "The earlier run misses the terminology question badly and drags the suite average below its pass threshold. That is the whole mechanism: you set a bar, and every change is measured against the same questions rather than against an impression.",
+        body: "A cell below the bar turns red, and one bad case pulls the run's average down with it. That is the whole mechanism: you set a threshold, and every change is measured against the same questions rather than against an impression of whether it got better.",
       },
       {
         id: "evals-sources",
@@ -380,20 +399,23 @@ export const CHAPTERS: DemoChapter[] = [
     // a Back button, which is twelve minutes of someone's attention followed
     // by no ask. Capture itself lives in HubSpot — this only has to make the
     // offer and give them a way to take it.
+    //
+    // The offer is the whitepaper's, restated. The PDF a lead reads before
+    // arriving here proposes something specific and bounded — ten manuals, two
+    // weeks, their own service team's questions — and the close used to invent
+    // a vaguer ask than the one they had already been made. Matching it means
+    // the collateral and the demo are one offer rather than two.
     steps: [
       {
         id: "contact-close",
+        image: "/demo/structure.webp",
         route: "/demo/tour",
         anchor: null,
         title: "See it on your own documents",
-        body: [
-          "Want a demo running on your own example documents? Or to talk through which agents would actually earn their place in your business?",
-          DEMO_BOOKING_URL
-            ? `<a href="${DEMO_BOOKING_URL}" target="_blank" rel="noopener noreferrer">Book a call with us</a>`
-            : "",
-        ]
-          .filter(Boolean)
-          .join(" "),
+        body: "Ten of your manuals, two weeks, real questions from your own service team — running on what you just walked through. Thirty minutes is enough to scope it.",
+        ...(DEMO_BOOKING_URL
+          ? { cta: { label: "Book a 30-minute call", href: DEMO_BOOKING_URL } }
+          : {}),
       },
     ],
   },

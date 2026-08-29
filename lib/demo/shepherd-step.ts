@@ -56,6 +56,8 @@ export type DemoStepOptions = Omit<
 export interface StepHandlers {
   onNext: () => void;
   onPrev: () => void;
+  /** Back to the first step. Only used on the last one. */
+  onRestart: () => void;
   hasPrev: boolean;
   hasNext: boolean;
 }
@@ -84,6 +86,29 @@ export function shepherdStepFor(
   }
   if (handlers.hasNext) {
     buttons.push({ text: "Next", action: handlers.onNext });
+  } else {
+    // The last step. Without this the footer holds "Back" and nothing else, so
+    // the tour makes its offer and then gives the visitor no way to take it —
+    // on the one screen whose entire job is conversion.
+    //
+    // "Start over" is present even when a booking link is configured, because
+    // the alternative is a terminal step with a single button that leaves the
+    // site. Someone who reached the end and wants to re-check a chapter should
+    // not have to reach for the browser's back button.
+    if (step.cta) {
+      const { href, label } = step.cta;
+      buttons.push({
+        text: label,
+        // noopener,noreferrer for the same reason the anchor form carried
+        // rel="noopener noreferrer": the opened page gets no handle on this one.
+        action: () => window.open(href, "_blank", "noopener,noreferrer"),
+      });
+    }
+    buttons.push({
+      text: "Start over",
+      action: handlers.onRestart,
+      secondary: Boolean(step.cta),
+    });
   }
 
   return {
@@ -153,6 +178,7 @@ export function shepherdStepsFor(
         onPrev: () => {
           if (back) navigate(back);
         },
+        onRestart: () => navigate({ chapter: chapters[0].id, step: 0 }),
         hasNext: Boolean(forward),
         hasPrev: Boolean(back),
       });

@@ -136,21 +136,58 @@ describe("CHAPTERS", () => {
   });
 });
 
+describe("the two chapters that show something invented", () => {
+  // Everything in the tour is real except two artefacts, and both have to say
+  // so ON SCREEN rather than in a comment. The evals disclosure shipped as a
+  // source comment only — and that comment additionally claimed the narration
+  // "deliberately claims no measured result" while the narration asserted a
+  // measured regression beside invented numbers. A reviewer found it by
+  // reading the screens. Nothing in this file could have, so these assert the
+  // visitor-facing half.
+  const bodies = (id: string) =>
+    CHAPTERS.find((c) => c.id === id)!
+      .steps.map((s) => s.body)
+      .join(" ");
+
+  it("tells the visitor the eval scores are not measurements", () => {
+    expect(bodies("evals")).toMatch(/illustrative/i);
+  });
+
+  it("never states a measured eval outcome", () => {
+    // The two phrasings that made invented numbers read as findings.
+    expect(bodies("evals")).not.toMatch(/misses the terminology question/i);
+    expect(bodies("evals")).not.toMatch(/drags the suite average/i);
+  });
+
+  it("tells the visitor the work instruction was written by hand", () => {
+    expect(bodies("meetings")).toMatch(/by hand/i);
+  });
+});
+
 describe("the closing call to action", () => {
   const closing = () => CHAPTERS.at(-1)!.steps[0].body;
 
-  it("makes the ask", () => {
+  it("makes the ask, in the whitepaper's own terms", () => {
     // The tour used to end on a Back button: twelve minutes of someone's
     // attention and then nothing. Whatever else changes here, the last thing
     // a visitor reads has to be an offer.
-    expect(closing()).toMatch(/your own example documents/i);
+    //
+    // And it has to be the SAME offer. The PDF a lead reads before arriving
+    // proposes something specific — ten manuals, two weeks, their own service
+    // team's questions — while the close used to invent a vaguer ask than the
+    // one they had already been made.
+    expect(closing()).toMatch(/ten of your manuals/i);
+    expect(closing()).toMatch(/two weeks/i);
   });
+
+  const closingStep = () => CHAPTERS.at(-1)!.steps[0];
 
   it("never renders a dead link or a placeholder", () => {
     // DEMO_BOOKING_URL is empty until the HubSpot meetings link exists. An
-    // empty href would render as a link that goes nowhere, and a literal
-    // placeholder would be worse — so the clause is dropped instead.
+    // empty href would render as a button that goes nowhere, and a literal
+    // placeholder would be worse — so no cta is attached at all.
     if (!DEMO_BOOKING_URL) {
+      expect(closingStep().cta).toBeUndefined();
       expect(closing()).not.toContain("<a ");
       expect(closing()).not.toContain("href");
       expect(closing()).not.toMatch(/TO_BE_FILLED|TODO|-----/);
@@ -159,10 +196,10 @@ describe("the closing call to action", () => {
 
   it("uses the booking link once it is set", () => {
     // The other direction: setting the constant must be the ONLY change
-    // needed. If this ever fails, the link was set and the copy did not follow.
+    // needed. If this ever fails, the link was set and the step did not follow.
     if (DEMO_BOOKING_URL) {
-      expect(closing()).toContain(DEMO_BOOKING_URL);
-      expect(closing()).toContain("rel=\"noopener noreferrer\"");
+      expect(closingStep().cta?.href).toBe(DEMO_BOOKING_URL);
+      expect(closingStep().cta?.label).toBeTruthy();
     }
   });
 });
