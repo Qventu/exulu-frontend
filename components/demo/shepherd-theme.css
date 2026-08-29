@@ -94,3 +94,29 @@
 .shepherd-modal-overlay-container.shepherd-modal-is-visible {
   opacity: 0.4;
 }
+
+/* Chapter schematics.
+ *
+ * The drawings are dark lines on a transparent background, which is invisible
+ * against the app's dark charcoal — so dark mode inverts them. One asset
+ * serves both themes; generating a light and a dark variant would be two files
+ * that drift apart the first time one is regenerated.
+ *
+ * `filter: invert()` on a transparent PNG/WebP flips the colour channels and
+ * leaves alpha alone, which is exactly right for monochrome line art and
+ * exactly wrong for anything with a photograph in it. These are line art.
+ */
+.shepherd-schematic {
+  display: block;
+  width: 100%;
+  max-height: 160px;
+  object-fit: contain;
+  margin-bottom: 0.75rem;
+  /* Pure black on white reads harsher than the surrounding UI text. */
+  opacity: 0.72;
+}
+
+.dark .shepherd-schematic {
+  filter: invert(1);
+  opacity: 0.6;
+}

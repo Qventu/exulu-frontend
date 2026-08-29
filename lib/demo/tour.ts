@@ -2,6 +2,7 @@ import { ALGI_ROUTINE_ID } from "./fixtures/chapter-email";
 import { ALGI_MEETING_ID } from "./fixtures/chapter-meetings";
 
 export type DemoChapterId =
+  | "intro"
   | "techdoc"
   | "ingestion"
   | "config"
@@ -18,6 +19,14 @@ export interface DemoStep {
   anchor: string | null;
   title: string;
   body: string;
+  /**
+   * Optional schematic, shown above the body. Path under /public.
+   *
+   * Only on chapter-opening steps: an illustration on every step would compete
+   * with the product screen the tour is pointing at, which is the thing the
+   * visitor is meant to be looking at.
+   */
+  image?: string;
 }
 
 export interface DemoChapter {
@@ -41,11 +50,26 @@ const stub = (id: string, title: string): DemoStep => ({
 
 export const CHAPTERS: DemoChapter[] = [
   {
+    id: "intro",
+    title: "What this is",
+    steps: [
+      {
+        id: "intro-overview",
+        route: "/demo/tour",
+        anchor: null,
+        image: "/demo/structure.webp",
+        title: "Seven things, about twelve minutes",
+        body: "This is a working Exulu deployment, not a slideshow — the screens are the product and the content is real customer data, from Newlift's technical documentation and ALGI's spare-parts desk. You will see an assistant answer a hard question and show its sources, where that knowledge came from, how it is configured and corrected, how it is tested, and two jobs it does with nobody watching. Move with Next, or jump about with the Tour button at any point.",
+      },
+    ],
+  },
+  {
     id: "techdoc",
     title: "Answering a hard question",
     steps: [
       {
         id: "techdoc-ask",
+        image: "/demo/ch1-answer.webp",
         route: "/demo/tour",
         anchor: "chat-composer",
         title: "A question with a precise answer",
@@ -88,6 +112,7 @@ export const CHAPTERS: DemoChapter[] = [
     steps: [
       {
         id: "ingestion-library",
+        image: "/demo/ch2-ingestion.webp",
         route: "/data/software_documentation_context",
         anchor: "knowledge-items",
         title: "Nobody uploaded these",
@@ -130,6 +155,7 @@ export const CHAPTERS: DemoChapter[] = [
     steps: [
       {
         id: "config-overview",
+        image: "/demo/ch3-config.webp",
         route: "/agents/edit/demo-agent-newton",
         anchor: "agent-agentic-retrieval",
         title: "The whole assistant is configuration",
@@ -180,6 +206,7 @@ export const CHAPTERS: DemoChapter[] = [
     steps: [
       {
         id: "memory-miss",
+        image: "/demo/ch4-memory.webp",
         route: "/demo/tour",
         anchor: "chat-messages",
         title: "When it doesn't know, it says so",
@@ -221,6 +248,7 @@ export const CHAPTERS: DemoChapter[] = [
     steps: [
       {
         id: "evals-suites",
+        image: "/demo/ch5-evals.webp",
         route: "/evals",
         anchor: "evals-suites",
         title: "The part nobody demos",
@@ -263,6 +291,7 @@ export const CHAPTERS: DemoChapter[] = [
     steps: [
       {
         id: "email-routine",
+        image: "/demo/ch6-email.webp",
         route: "/workflows",
         anchor: "routine-runs",
         title: "A different company, the same product",
@@ -301,6 +330,7 @@ export const CHAPTERS: DemoChapter[] = [
     steps: [
       {
         id: "meetings-list",
+        image: "/demo/ch7-meetings.webp",
         route: "/transcriptions",
         anchor: "transcriptions",
         title: "Seventeen hours nobody has time to re-listen to",

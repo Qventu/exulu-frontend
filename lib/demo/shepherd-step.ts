@@ -89,7 +89,16 @@ export function shepherdStepFor(
   return {
     id: step.id,
     title: step.title,
-    text: step.body,
+    // Shepherd's `text` takes an HTML string, which is how the schematic gets
+    // in without a custom renderer. The content is static and lives in this
+    // repo — no visitor input reaches it — so there is nothing to escape.
+    //
+    // The drawings are dark lines on transparency. `.shepherd-text img` in
+    // shepherd-theme.css inverts them under `.dark`, so one asset serves both
+    // themes rather than two files that can drift apart.
+    text: step.image
+      ? `<img src="${step.image}" alt="" class="shepherd-schematic" />${step.body}`
+      : step.body,
     // A step with no anchor is a full-screen beat (chapter openers, the
     // knowledge-item reveal). Shepherd centres those, which is what we want.
     ...(step.anchor
