@@ -117,7 +117,16 @@ export function memoryWorld(step: number): DemoWorld {
   const memories =
     step >= MEMORY_WRITTEN_AT_STEP
       ? [
-          { ...CORRECTION_MEMORY, createdAt: writtenAt, updatedAt: writtenAt },
+          {
+            ...CORRECTION_MEMORY,
+            createdAt: writtenAt,
+            updatedAt: writtenAt,
+            // The processing columns too, or the row reads "Updated: now" and
+            // "Processed: 7mo ago" side by side — the same contradiction one
+            // column across. A memory is embedded as it is written.
+            last_processed_at: writtenAt,
+            embeddings_updated_at: writtenAt,
+          },
           ...EXISTING_MEMORIES,
         ]
       : EXISTING_MEMORIES;

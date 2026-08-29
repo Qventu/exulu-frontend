@@ -183,8 +183,13 @@ function TranscriptionsPageInner() {
         />
       )}
 
-      {/* Monthly recording budget — shown only when a cap is configured. */}
-      {usage?.enabled && (
+      {/* Monthly recording budget — shown only when a cap is configured.
+          `enabled` alone was not that test: a workspace with recording on and
+          no cap has limit_seconds null, and the summary rendered it through
+          `?? 0` as "17h 16m 6s of 0s used (0%)" — a real numerator over a
+          denominator that does not exist. Checking for the cap is what the
+          comment always claimed this did. */}
+      {usage?.enabled && usage.limit_seconds != null && (
         <div className="space-y-1.5 rounded-lg border p-3">
           <div className="flex items-center justify-between gap-2 text-xs">
             <span className="font-medium text-muted-foreground">
