@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   CHAPTERS,
+  DEMO_BOOKING_URL,
   type DemoChapter,
   nextPosition,
   prevPosition,
@@ -88,6 +89,7 @@ describe("CHAPTERS", () => {
       "evals",
       "email",
       "meetings",
+      "contact",
     ]);
   });
 
@@ -99,12 +101,14 @@ describe("CHAPTERS", () => {
       const illustrated = chapter.steps.filter((s) => s.image);
       expect(
         illustrated.length,
-        `${chapter.id} should illustrate exactly one step`,
-      ).toBe(1);
-      expect(
-        chapter.steps[0].image,
-        `${chapter.id}'s schematic belongs on its opening step`,
-      ).toBeTruthy();
+        `${chapter.id} should illustrate at most one step`,
+      ).toBeLessThanOrEqual(1);
+      if (illustrated.length) {
+        expect(
+          chapter.steps[0].image,
+          `${chapter.id}'s schematic belongs on its opening step`,
+        ).toBeTruthy();
+      }
     }
   });
 
@@ -112,7 +116,8 @@ describe("CHAPTERS", () => {
     // A typo'd path is a broken image in a popover, which the anchor tests
     // cannot see and which looks worse than no illustration at all.
     for (const chapter of CHAPTERS) {
-      const image = chapter.steps[0].image!;
+      const image = chapter.steps[0].image;
+      if (!image) continue;
       expect(
         existsSync(join(process.cwd(), "public", image)),
         `${chapter.id} references a missing asset: ${image}`,
@@ -128,5 +133,36 @@ describe("CHAPTERS", () => {
 
   it("starts a chapter at step 0", () => {
     expect(startOfChapter("evals")).toEqual({ chapter: "evals", step: 0 });
+  });
+});
+
+describe("the closing call to action", () => {
+  const closing = () => CHAPTERS.at(-1)!.steps[0].body;
+
+  it("makes the ask", () => {
+    // The tour used to end on a Back button: twelve minutes of someone's
+    // attention and then nothing. Whatever else changes here, the last thing
+    // a visitor reads has to be an offer.
+    expect(closing()).toMatch(/your own example documents/i);
+  });
+
+  it("never renders a dead link or a placeholder", () => {
+    // DEMO_BOOKING_URL is empty until the HubSpot meetings link exists. An
+    // empty href would render as a link that goes nowhere, and a literal
+    // placeholder would be worse — so the clause is dropped instead.
+    if (!DEMO_BOOKING_URL) {
+      expect(closing()).not.toContain("<a ");
+      expect(closing()).not.toContain("href");
+      expect(closing()).not.toMatch(/TO_BE_FILLED|TODO|-----/);
+    }
+  });
+
+  it("uses the booking link once it is set", () => {
+    // The other direction: setting the constant must be the ONLY change
+    // needed. If this ever fails, the link was set and the copy did not follow.
+    if (DEMO_BOOKING_URL) {
+      expect(closing()).toContain(DEMO_BOOKING_URL);
+      expect(closing()).toContain("rel=\"noopener noreferrer\"");
+    }
   });
 });

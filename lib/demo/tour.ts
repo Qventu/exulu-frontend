@@ -1,6 +1,21 @@
 import { ALGI_ROUTINE_ID } from "./fixtures/chapter-email";
 import { ALGI_MEETING_ID } from "./fixtures/chapter-meetings";
 
+/**
+ * The closing step's booking link — a HubSpot meetings URL.
+ *
+ * ==> THIS IS THE LAST THING TO SET BEFORE THE DEMO GOES LIVE. <==
+ *
+ * Empty until that link exists. The closing step reads the emptiness and drops
+ * the invitation clause entirely rather than rendering a dead anchor or the
+ * word "TO_BE_FILLED" at a prospect — so an unset link costs the tour its ask,
+ * which is bad, instead of showing something broken, which is worse.
+ *
+ * tour.test.ts asserts that behaviour in both directions, so setting this is
+ * the only change needed: the link appears, and the copy comes with it.
+ */
+export const DEMO_BOOKING_URL = "";
+
 export type DemoChapterId =
   | "intro"
   | "techdoc"
@@ -9,7 +24,8 @@ export type DemoChapterId =
   | "memory"
   | "evals"
   | "email"
-  | "meetings";
+  | "meetings"
+  | "contact";
 
 export interface DemoStep {
   id: string;
@@ -354,6 +370,30 @@ export const CHAPTERS: DemoChapter[] = [
         anchor: null,
         title: "So point it at a prompt instead",
         body: "The same conversation, turned into a work instruction: check the release, do not infer ventilation from whether the cabin has a door, schedule variants separately, name the open points. Written from that recording — everything that was decided, none of the noise. Every other screen in this tour came out of a live system; this one document we drafted by hand, because ALGI has not run this step yet.",
+      },
+    ],
+  },
+  {
+    id: "contact",
+    title: "Talk to us",
+    // A bookend to the intro, and for the same reason: the tour used to end on
+    // a Back button, which is twelve minutes of someone's attention followed
+    // by no ask. Capture itself lives in HubSpot — this only has to make the
+    // offer and give them a way to take it.
+    steps: [
+      {
+        id: "contact-close",
+        route: "/demo/tour",
+        anchor: null,
+        title: "See it on your own documents",
+        body: [
+          "Want a demo running on your own example documents? Or to talk through which agents would actually earn their place in your business?",
+          DEMO_BOOKING_URL
+            ? `<a href="${DEMO_BOOKING_URL}" target="_blank" rel="noopener noreferrer">Book a call with us</a>`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
       },
     ],
   },
