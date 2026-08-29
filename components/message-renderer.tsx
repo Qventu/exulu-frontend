@@ -1796,7 +1796,7 @@ const SearchResultItem = ({ item }: { item: ItemWithChunks }) => {
         {/* Text Length Indicator */}
         {item.chunks && item.chunks.length > 0 && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <span className="text-xs">• {item.chunks.length} chunks</span>
+            <span className="text-xs">• {item.chunks.length} {item.chunks.length === 1 ? 'chunk' : 'chunks'}</span>
           </div>
         )}
         {/* TODO provide a dialog modal that allows the user to view the chunks */}

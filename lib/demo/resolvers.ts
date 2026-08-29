@@ -629,6 +629,13 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   GetAgentLiteLLMCatalog: () => ({ litellmCatalog: [] }),
   GetUserRoles: () => ({ rolesPagination: { pageInfo: page(0), items: [] } }),
   GetTeams: () => ({ teamsPagination: { pageInfo: page(0), items: [] } }),
+  // The composer's prompt-library picker fires this on every chat render, so
+  // it was the one unmapped operation left warning on every page of the tour.
+  // Empty is honest: the tour never opens the prompt library, and inventing
+  // saved prompts would put fabricated content one click off the path.
+  GetPrompts: () => ({
+    prompt_libraryPagination: { pageInfo: page(0), items: [] },
+  }),
 
   // Empty lists still need their pageInfo: it is in the selection set, and a
   // *Pagination wrapper without it writes an incomplete result to the cache.
