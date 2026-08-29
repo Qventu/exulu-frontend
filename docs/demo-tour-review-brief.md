@@ -22,7 +22,8 @@ Sales-assisted, low volume, high value per lead.
 The premise the whole thing rests on: **it is the real product, with real
 customer data, not a mockup.** Screens are the actual application. Content
 comes from two live deployments — Newlift (elevator control boards) and ALGI
-(hydraulic elevator systems). Chapters 1–5 are Newlift, 6–7 are ALGI.
+(hydraulic elevator systems). `techdoc` through `memory` are Newlift; `evals`,
+`email` and `meetings` are ALGI.
 
 The audience is technical and sceptical: service engineers, technical
 directors, operations people at elevator companies. Much of the content is
@@ -126,9 +127,10 @@ agrees with everything has not earned their keep.
 - Voice input in the composer is switched off; it needs an auth change that has
   not been agreed.
 - Clicking **Save** on the agent editor succeeds but does not persist. Deliberate.
-- The generated work instruction in chapter 8 was written by hand, not produced
-  by the product. The copy says so — judge whether that disclosure is enough,
-  but do not report the fact itself as a discovery.
+- The two knowingly-not-real things, both disclosed in the copy: the generated
+  work instruction in `meetings` was written by hand rather than produced by the
+  product, and the scores in the `evals` matrix are invented. Judge whether the
+  disclosures are enough — but do not report the facts themselves as discoveries.
 
 ## How to report back
 
