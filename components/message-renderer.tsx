@@ -1,6 +1,7 @@
 "use client"
 
 import { DynamicToolUIPart, UIMessage } from "ai"
+import { isDemoMode } from "@/lib/demo/flag"
 import { Message, MessageContent } from '@/components/ai-elements/message'
 import { Response } from '@/components/ai-elements/response'
 import { Reasoning, ReasoningTrigger, ReasoningContent } from "@/components/ai-elements/reasoning"
@@ -1635,7 +1636,15 @@ const ContextSearchResults = ({
   state: "input-streaming" | "input-available" | "output-available" | "output-error" | "approval-requested" | "approval-responded"
 }) => {
 
-  const [isOpen, setIsOpen] = useState(false);
+  // Collapsed in the product, open in the demo. The tour has a step that says
+  // the assistant "shows its work" and points here; with the panel shut it
+  // pointed at a closed box and showed nothing. Every other step works for a
+  // visitor who only ever clicks Next, and this one did not.
+  //
+  // Demo-only rather than a new default: in real use this card sits in a long
+  // conversation and opening every one of them by default would bury the
+  // answers between them.
+  const [isOpen, setIsOpen] = useState(isDemoMode());
   const [showAllItems, setShowAllItems] = useState(false);
   const uniqueContexts = new Set(items.map(item => item.context.name));
   const displayItems = showAllItems ? items : items.slice(0, 3);
@@ -1673,7 +1682,7 @@ const ContextSearchResults = ({
                         </span>
                         <span className="flex items-center gap-1">
                           <LayoutList className="h-3 w-3" />
-                          {totalChunks} chunks
+                          {totalChunks} {totalChunks === 1 ? 'chunk' : 'chunks'}
                         </span>
                       </div>
 

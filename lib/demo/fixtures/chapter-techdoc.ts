@@ -29,6 +29,24 @@ const AGENT: Agent = {
   feedback: true,
   suggestions_enabled: true,
   sandbox_enabled: false,
+  // The chapter that opens this editor says "everything on the next few screens
+  // is their live production setup" while Model and Category both rendered
+  // "Select a…" placeholders. A production agent with no model chosen is not a
+  // production agent, and it was the first thing visible behind the popover.
+  //
+  // `category` is one of the nine the editor offers (basics.tsx); `model` is
+  // the FK the agent carries and `modelName` is what the select displays when
+  // the catalogue has not resolved.
+  category: "knowledge",
+  model: "gemini-3.1-pro",
+  modelName: "gemini-3.1-pro",
+  providerName: "Google",
+  // Newton's memory context. Without it the same screen said two opposite
+  // things at once: the agentic-retrieval summary read "7 knowledge bases ·
+  // 5 routing rules · memory on" while the Long-term memory card directly
+  // beneath it read "disabled — choose a context". The tour then spends a
+  // whole chapter writing to that memory.
+  memory: "newton_memory_context",
   instructions:
     "You are Newton, a technical documentation assistant for Newlift GmbH. " +
     "Answer questions about elevator control board maintenance, fault codes, " +
@@ -41,33 +59,32 @@ const AGENT: Agent = {
 // tour actually shows. See ./contexts.ts.
 const CONTEXTS: Context[] = REAL_CONTEXTS;
 
-const ITEMS: Item[] = [
-  demoItem({
-    id: "item-ctrl-3000-manual",
-    name: "CTRL-3000 Service Manual Rev. 4",
-    description: "Full service manual for the CTRL-3000 elevator control board.",
-    source: "src-manual-upload",
-    tags: ["ctrl-3000", "service-manual", "fault-codes"],
-    chunks_count: 248,
-    createdAt: "2025-03-12T09:00:00.000Z",
-  }),
-  demoItem({
-    id: "item-en81-20",
-    name: "EN 81-20:2024 Safety rules for lifts",
-    description: "European standard for safety rules for the construction and installation of lifts.",
-    source: "src-standards-upload",
-    tags: ["en81", "safety", "installation"],
-    chunks_count: 412,
-    createdAt: "2025-01-08T10:30:00.000Z",
-  }),
-];
+// The default library, used for any context without its own list in
+// itemsByContext below.
+//
+// This was two invented placeholders — a "CTRL-3000 Service Manual Rev. 4"
+// with 248 chunks and an "EN 81-20:2024" with 412 — and they were the last
+// fabricated data left in the tour. Nothing on the scripted path opens a
+// context that falls back here, but the sidebar's Knowledge link does, and a
+// prospect who wanders into one found two manuals that do not exist wearing
+// chunk counts precise enough to look checkable.
+//
+// Defaulting to the real software-documentation library is not a perfect fit
+// for every context, but showing Newlift's actual documents beats showing
+// invented ones on a tour whose whole claim is that the data is real.
+const ITEMS: Item[] = SOFTWARE_DOC_ITEMS;
 
 const SESSIONS: AgentSession[] = [
   {
     id: "session-demo-techdoc-1",
     agent: DEMO_AGENT_ID,
     project: "demo-project",
-    title: "Fault E47 on CTRL-3000",
+    // Was "Fault E47 on CTRL-3000" — a fault code and a control board that
+    // appear nowhere else in the tour, in either whitepaper, or in Newlift's
+    // range, sitting in the page header above a conversation that is actually
+    // about Nothalt COP on the FST-2XT. The title is the first thing on screen
+    // in chapter 1 and it contradicted everything under it.
+    title: "Nothalt COP im FST-Fehlerspeicher",
     metadata: null,
     // Must equal getDemoUser().id. checkChatSessionWriteAccess grants write to
     // the session's creator; with rights_mode "private" and no RBAC entries,

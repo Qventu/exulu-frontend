@@ -58,6 +58,25 @@ export function DetailSection({
   const t = useTranslations("common");
   const [open, setOpen] = React.useState(defaultOpen);
 
+  // Follow `defaultOpen` when it CHANGES, rather than only on mount.
+  //
+  // A caller that deep-links a section open — /items/<id>?section=embeddings —
+  // mounts this component once and then changes the prop on a client-side
+  // navigation. Reading it only as initial state meant the link worked on a
+  // full page load and silently did nothing otherwise, so a step that says
+  // "these are the real passages" pointed at a closed panel.
+  //
+  // Comparing against the previous prop value rather than syncing to it is
+  // what keeps the deliberate behaviour intact: collapsing the section by hand
+  // still sticks, because the prop has not changed and nothing forces it back
+  // open. Callers passing a constant never trigger this at all.
+  const previousDefault = React.useRef(defaultOpen);
+  React.useEffect(() => {
+    if (defaultOpen === previousDefault.current) return;
+    previousDefault.current = defaultOpen;
+    setOpen(defaultOpen);
+  }, [defaultOpen]);
+
   // Plain titled block (no toggle).
   if (!collapsible) {
     return (

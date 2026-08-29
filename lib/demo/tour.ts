@@ -83,8 +83,8 @@ export const CHAPTERS: DemoChapter[] = [
         route: "/demo/tour",
         anchor: null,
         image: "/demo/structure.webp",
-        title: "Seven things, about twelve minutes",
-        body: "This is a working Exulu deployment, not a slideshow — the screens are the product and the content is real customer data, from Newlift's technical documentation and ALGI's spare-parts desk. You will see an assistant answer a hard question and show its sources, where that knowledge came from, how it is configured and corrected, how it is tested, and two jobs it does with nobody watching. Move with Next, or jump about with the Tour button at any point.",
+        title: "Seven chapters, about twelve minutes",
+        body: "This is a working OPEN IMP deployment, not a slideshow — the screens are the product and the content is real customer data, from Newlift's technical documentation and ALGI's spare-parts desk. You will see it answer a hard question and show its sources; where that knowledge came from; how it is configured, corrected and tested; and two jobs it does with nobody watching. Move with Next, or jump about with the Tour button at any point.",
       },
     ],
   },
@@ -98,7 +98,11 @@ export const CHAPTERS: DemoChapter[] = [
         route: "/demo/tour",
         anchor: "chat-composer",
         title: "A question with a precise answer",
-        body: "A service engineer asks about a specific fault condition. Watch how the assistant finds it.",
+        // Not "watch how the assistant finds it". Chapters open mid-conversation
+        // so that every step works for a visitor who only clicks Next, which
+        // means the answer is already on screen and nothing streams. The verb
+        // promised motion the design had deliberately traded away.
+        body: "A service engineer asks about a specific fault condition. Here is what came back, and where each part of it came from.",
       },
       {
         id: "techdoc-retrieval",
@@ -242,7 +246,11 @@ export const CHAPTERS: DemoChapter[] = [
         route: "/demo/tour",
         anchor: "chat-composer",
         title: "The engineer corrects it",
-        body: "Send the correction. This is the real message a Newlift engineer sent, giving the right path and asking the assistant to remember it.",
+        // Not "send the correction" — the composer is empty and there is nothing
+        // to send. Same trade as the opening step: the chapter opens
+        // mid-conversation so a click-only visitor sees everything, which means
+        // the correction has already been sent.
+        body: "This is the real message a Newlift engineer sent back: the right menu path, and a request to remember it.",
       },
       // MEMORY_WRITTEN_AT_STEP in fixtures/chapter-memory.ts is tied to this
       // index: the new memory must not appear in the knowledge base before the
@@ -351,7 +359,12 @@ export const CHAPTERS: DemoChapter[] = [
         route: `/workflows/${ALGI_ROUTINE_ID}`,
         anchor: null,
         title: "And it learns from the desk it works for",
-        body: "Inside one of those runs, a salesperson corrects the draft three times — always offer the piston ring with that seal kit, always quote our commission number — and each correction is written to memory as it happens. Chapter 4 argued corrections should be first-class. This is that, in someone's inbox, months before we made the argument.",
+        // Cross-references name the chapter rather than number it. There were
+        // three competing numberings on screen at once — the intro said seven,
+        // the badge said "1 of 9", and references like this used a third — and
+        // this line had ALREADY been renumbered once when a chapter moved.
+        // Names cannot drift when the order changes.
+        body: "Inside one of those runs, a salesperson corrects the draft three times — always offer the piston ring with that seal kit, always quote our commission number — and each correction is written to memory as it happens. Correcting it argued that corrections should be first-class. This is that, in someone's inbox, months before we made the argument.",
       },
     ],
   },
@@ -381,7 +394,11 @@ export const CHAPTERS: DemoChapter[] = [
         route: `/transcriptions?review=${ALGI_MEETING_ID}`,
         anchor: null,
         title: "And this is what half an hour of it looks like",
-        body: "Six people, interrupting each other, finishing sentences two turns later. Nearly half the lines are three words or fewer. Nobody is going to read this — which is the point, and the reason a recording on its own is worth very little.",
+        // "Six people" was wrong against every source: this excerpt carries
+        // four speakers and the full recording had seven. A number that matches
+        // nothing on screen is the cheapest possible thing for a sceptic to
+        // catch, on the chapter that most needs to look real.
+        body: "Four of the seven people in the room, in this stretch of it — interrupting each other, finishing sentences two turns later. Nearly half the lines are three words or fewer. Nobody is going to read this, which is the point, and the reason a recording on its own is worth very little.",
       },
       {
         id: "meetings-guide",

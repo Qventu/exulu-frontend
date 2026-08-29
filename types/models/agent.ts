@@ -29,6 +29,16 @@ export interface Agent {
     image?: string;
     /** FK to models.id — replaces legacy provider + providerapikey columns. */
     model?: string;
+    /**
+     * One of the nine the editor offers (agents/edit/[id]/sections/basics.tsx).
+     *
+     * Absent from this hand-maintained type while the API had it all along:
+     * the editor's agent fragment selects it (queries.ts:91) and the update
+     * mutation sends it (queries.ts:319). Same shape of drift as `source` vs
+     * `chunk_source` on Item — the type is written by hand, so nothing makes it
+     * agree with the schema until something needs the field.
+     */
+    category?: string;
     firewall?: {
         enabled: boolean;
         scanners?: {

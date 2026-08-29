@@ -102,9 +102,24 @@ const SESSION: AgentSession = {
 
 export function memoryWorld(step: number): DemoWorld {
   const base = techdocWorld(0);
+
+  // The correction is stamped when the world is built, not when this file was
+  // written. It carried a fixed January date, so the knowledge base listed the
+  // item the PREVIOUS step had just created as "Updated 7mo ago" — two
+  // consecutive steps contradicting each other on the chapter whose whole
+  // point is that a correction takes effect immediately.
+  //
+  // Reading the clock is safe here: memoryWorld runs inside a demo resolver,
+  // answering an Apollo query from the browser, so there is no server render
+  // for it to disagree with. The other memories keep their real dates — they
+  // genuinely predate the visit.
+  const writtenAt = new Date().toISOString();
   const memories =
     step >= MEMORY_WRITTEN_AT_STEP
-      ? [CORRECTION_MEMORY, ...EXISTING_MEMORIES]
+      ? [
+          { ...CORRECTION_MEMORY, createdAt: writtenAt, updatedAt: writtenAt },
+          ...EXISTING_MEMORIES,
+        ]
       : EXISTING_MEMORIES;
 
   return {
