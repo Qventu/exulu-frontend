@@ -234,9 +234,19 @@ export function RoutineRunsList({
   };
 
   return (
-    <div className="space-y-3" data-demo-id="routine-runs">
+    <div className="space-y-3">
       {/* Filter bar (design §7.2: state, trigger source, date range, search) */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* The demo tour anchors here rather than on the wrapper above. That
+          wrapper grows to roughly 1200px once the runs load, and a popover
+          placed against a block that tall is off-screen whichever way it
+          resolves: "bottom" sits below the section's bottom edge, and
+          floating-ui's flip then puts it above the section's top edge. The
+          filter bar is a fixed-height row at the top of the same section, so
+          it scrolls into view with the runs visible underneath it. */}
+      <div
+        className="flex flex-wrap items-center gap-2"
+        data-demo-id="routine-runs"
+      >
         <Select
           value={filter.state}
           onValueChange={(value) => patchFilter({ state: value })}

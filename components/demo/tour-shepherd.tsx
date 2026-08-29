@@ -13,6 +13,59 @@ import "./shepherd-theme.css";
 import { useTour } from "./tour-provider";
 
 /**
+ * Resolves `selector` repeatedly until it returns the same node, in the same
+ * place, on three consecutive frames — or the budget runs out.
+ *
+ * Both halves are load-bearing, because the two routes break differently:
+ *
+ * - On the chat route the answer is markdown that React re-renders as Apollo
+ *   results land, so the citation and retrieval spans are REPLACED after they
+ *   first appear. Shepherd keeps the node it resolved and ends up holding a
+ *   detached one, whose rect is all zeros — hence a popover in the top-left
+ *   corner of the viewport.
+ * - On the workflow route the runs list keeps the SAME node and grows into it,
+ *   from a placeholder to 1238px as the runs arrive. Identity never changes,
+ *   so an identity-only check returns immediately and Shepherd positions
+ *   against a rect that is about to be a thousand pixels taller.
+ *
+ * Three frames rather than one because React commits in batches, and a single
+ * frame of sameness can fall between two halves of one pass. It costs nothing
+ * when the anchor is already settled — the loop exits after about 50ms.
+ *
+ * Lives in this component rather than lib/demo/ because it is pure DOM: vitest
+ * runs this project in a node environment, so there is nothing here it could
+ * be tested against.
+ */
+async function waitForStableAnchor(
+  selector: string,
+  budgetMs = 3000,
+): Promise<Element | null> {
+  const deadline = performance.now() + budgetMs;
+  const shapeOf = (el: Element) => {
+    const r = el.getBoundingClientRect();
+    return `${Math.round(r.top)}:${Math.round(r.left)}:${Math.round(r.width)}:${Math.round(r.height)}`;
+  };
+
+  let last: Element | null = null;
+  let lastShape = "";
+  let stable = 0;
+
+  while (performance.now() < deadline) {
+    const current = document.querySelector(selector);
+    const shape = current ? shapeOf(current) : "";
+    if (current && current === last && shape === lastShape) {
+      if (++stable >= 3) return current;
+    } else {
+      stable = 0;
+      last = current;
+      lastShape = shape;
+    }
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+  }
+  return last;
+}
+
+/**
  * Drives Shepherd from the tour position in the URL.
  *
  * The division of labour is deliberate and one-directional: the URL says which
@@ -106,11 +159,64 @@ export function TourShepherd() {
   // step's entrance animation and scroll.
   const shown = useRef<string | null>(null);
 
+  // Bumped on every step change so a settle loop that is still running when the
+  // visitor clicks Next knows it has been superseded and must not reposition a
+  // step that is no longer on screen.
+  const generation = useRef(0);
+
   useEffect(() => {
     if (!tour || !step) return;
     if (shown.current === step.id) return;
     shown.current = step.id;
-    void tour.show(step.id);
+    const mine = ++generation.current;
+
+    void (async () => {
+      const selector = step.anchor ? `[data-demo-id="${step.anchor}"]` : null;
+      const before = selector ? document.querySelector(selector) : null;
+
+      void tour.show(step.id);
+      if (!selector) return;
+
+      // Shepherd's waitForElement waits for the anchor to EXIST, and that is
+      // not the same as the anchor being the node it will still be a moment
+      // later. On the chat route the answer is markdown that React re-renders
+      // as Apollo results land, so the citation and retrieval spans are
+      // replaced after they first appear. Shepherd resolves the selector once,
+      // at show() time, and keeps the element — so it ends up holding a node
+      // that is no longer in the document. A detached node's
+      // getBoundingClientRect() is all zeros, floating-ui positions against
+      // those zeros, and the popover lands in the top-left corner of the
+      // viewport straddling the sidebar.
+      //
+      // That is why the misplacement looked non-deterministic: it depends
+      // entirely on whether a re-render happened to land between show() and
+      // the visitor looking. Re-showing the same step re-resolves the selector,
+      // which is why clicking Back then Next always "fixed" it.
+      const settled = await waitForStableAnchor(selector);
+      if (mine !== generation.current) return;
+      if (!settled) return;
+
+      const rect = settled.getBoundingClientRect();
+      const onScreen = rect.top < window.innerHeight && rect.bottom > 0;
+      if (settled === before && document.contains(before) && onScreen) return;
+
+      // Scroll here rather than leaving it to Shepherd's own scrollTo. That
+      // option runs once inside show(), and on routes where the anchor arrives
+      // with an Apollo result there is nothing to scroll to at the moment it
+      // fires — the runs list on this chapter loads a second after the page
+      // does. Measured on chapter 7: anchor at y=2493 in a 903px viewport,
+      // window left at scrollY=42, popover correctly positioned relative to an
+      // anchor nobody could see.
+      if (!onScreen) {
+        settled.scrollIntoView({ block: "center", behavior: "auto" });
+        await new Promise((resolve) =>
+          requestAnimationFrame(() => resolve(null)),
+        );
+        if (mine !== generation.current) return;
+      }
+
+      void tour.show(step.id);
+    })();
   }, [tour, step]);
 
   return null;
