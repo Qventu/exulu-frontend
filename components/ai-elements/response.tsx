@@ -1,6 +1,7 @@
 'use client';
 
 import { chunkPreviewText } from '@/lib/chunk-preview';
+import { isDemoMode } from '@/lib/demo/flag';
 import { cn } from '@/lib/utils';
 import type { ComponentProps, HTMLAttributes } from 'react';
 import { isValidElement, memo, useMemo, useState, useEffect } from 'react';
@@ -568,7 +569,15 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
           <div className="text-sm text-muted-foreground">Context {context} not available.</div>
         )}
 
-        {itemId && (
+        {/* Hidden in demo mode. This archives an item for every user of the
+            deployment, and the demo tour is a public lead-generation asset that
+            invites an anonymous visitor to open a citation — so the visitor
+            would be one confirm away from a global admin action on someone
+            else's data. The demo transport almost certainly no-ops the
+            mutation, but "almost certainly" is the wrong standard for a
+            destructive control, and an unmapped operation would surface here as
+            a plausible-looking failure rather than a refusal. */}
+        {itemId && !isDemoMode() && (
           <div className="border-t pt-4 mt-2 space-y-3">
             <div className="flex items-start gap-2 text-xs text-muted-foreground">
               <AlertTriangle className="size-4 shrink-0 mt-0.5 text-amber-600" />

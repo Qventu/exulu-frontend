@@ -709,6 +709,51 @@ function dynamicResolver(operationName: string): DemoResolver | undefined {
     return () => ({ [`${ctx}_itemsEntitiesForItem`]: [] });
   }
 
+  // Opening a citation. The operation is `GetChunkById<ctx>` — context
+  // SUFFIXED and not underscore-separated (queries.ts:376), which is why none
+  // of the patterns around it matched and why this reached the unmapped
+  // fallback. The visitor saw "Chunk <guid> not found in context <ctx>" on the
+  // one step that says "Open one to check it".
+  //
+  // Every field the query selects is returned even when the chunk is missing,
+  // because Apollo does not fail an incomplete cache write — it logs a
+  // console.error per absent field and silently falls back to the raw network
+  // result, so a partial shape here is a defect that only shows up as console
+  // noise.
+  const chunkByIdMatch = /^GetChunkById([a-z0-9_]+)$/.exec(operationName);
+  if (chunkByIdMatch && isContext(chunkByIdMatch[1])) {
+    const ctx = chunkByIdMatch[1];
+    return (world, variables) => {
+      const items = world.itemsByContext?.[ctx] ?? world.items;
+      for (const item of items) {
+        const chunk = item.chunks?.find((c) => c.chunk_id === variables.id);
+        if (!chunk) continue;
+        return {
+          [`${ctx}_itemsChunkById`]: {
+            __typename: `${ctx}_itemsChunk`,
+            chunk_id: chunk.chunk_id,
+            chunk_content: chunk.chunk_content,
+            chunk_index: chunk.chunk_index,
+            chunk_source: chunk.chunk_source,
+            chunk_metadata: chunk.chunk_metadata ?? {},
+            chunk_created_at: chunk.chunk_created_at,
+            chunk_updated_at: chunk.chunk_updated_at,
+            item_id: item.id,
+            item_name: item.name,
+            item_external_id: item.external_id,
+            item_created_at: item.createdAt,
+            item_updated_at: item.updatedAt ?? item.createdAt,
+          },
+        };
+      }
+      // Null is the honest answer: the tour cites two chunks and only the
+      // software-documentation one was exported with its content. Returning a
+      // stand-in would put invented text behind a citation, which is the exact
+      // claim this chapter asks the visitor to test.
+      return { [`${ctx}_itemsChunkById`]: null };
+    };
+  }
+
   const byIdMatch = /^([a-z0-9_]+)ById$/.exec(operationName);
   if (byIdMatch && isContext(byIdMatch[1])) {
     const ctx = byIdMatch[1];
