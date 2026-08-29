@@ -44,6 +44,17 @@ STYLE = (
     "Restrained and clinical rather than decorative."
 )
 
+# Fraction of the frame height to keep, centred, before encoding.
+#
+# The model composes to the frame it is given, and a subject that does not fill
+# it leaves dead space. The door row occupies the middle band of a 3:2 frame,
+# so at popover height a third of the box was empty and the doors rendered
+# smaller than they needed to. Cropping here rather than by hand means
+# regenerating the image does not silently lose the crop.
+CROP = {
+    "structure": 0.45,
+}
+
 DEMO_PROMPTS = {
     # One test image to settle the style before generating a set.
     "style-test": (
@@ -160,6 +171,18 @@ def generate(name: str, size: str) -> None:
     # 1536px PNGs land at ~1.5 MB each; nine of those is 14 MB of page
     # weight for decoration. WebP at display width is ~45 KB with no visible
     # loss, so the PNG is an intermediate and the WebP is the asset.
+    if name in CROP:
+        info = subprocess.run(
+            ["sips", "-g", "pixelHeight", "-g", "pixelWidth", path],
+            capture_output=True, text=True, check=True,
+        ).stdout
+        height = int([l for l in info.splitlines() if "pixelHeight" in l][0].split(":")[1])
+        width = int([l for l in info.splitlines() if "pixelWidth" in l][0].split(":")[1])
+        subprocess.run(
+            ["sips", "-c", str(round(height * CROP[name])), str(width), path, "--out", path],
+            capture_output=True, check=True,
+        )
+
     # 800px is generous for decoration that never renders larger than a
     # popover; alpha costs WebP a lot, so this is where the weight is.
     webp = os.path.join(OUT_DIR, f"{name}.webp")
