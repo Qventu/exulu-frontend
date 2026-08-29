@@ -16,6 +16,8 @@
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
+import { DEMO_BRAND } from "@/lib/demo/brand";
+import { isDemoMode } from "@/lib/demo/flag";
 import { cn } from "@/lib/utils";
 
 export interface BrandProps {
@@ -25,6 +27,17 @@ export interface BrandProps {
 const Brand = React.forwardRef<HTMLDivElement, BrandProps>(
   ({ className }, ref) => {
     const t = useTranslations();
+
+    // The guided demo is campaign collateral for a named brand, and a lead
+    // arrives on it straight from an OPEN-branded PDF. Landing on a product
+    // calling itself "AI Studio" makes the whitepaper and the demo read as two
+    // different companies. Demo-scoped rather than a change to the message
+    // catalogue, which every other deployment shares.
+    const demo = isDemoMode();
+    const productName = demo
+      ? DEMO_BRAND.productName
+      : t("navigation.brand.productName");
+    const mark = demo ? DEMO_BRAND.mark : t("navigation.brand.mark");
 
     return (
       <div
@@ -38,7 +51,7 @@ const Brand = React.forwardRef<HTMLDivElement, BrandProps>(
       >
         {/* Expanded: the generic wordmark. */}
         <span className="truncate text-sm font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
-          {t("navigation.brand.productName")}
+          {productName}
         </span>
 
         {/* Rail: compact monogram tile, centered (navigation.md §2). */}
@@ -46,7 +59,7 @@ const Brand = React.forwardRef<HTMLDivElement, BrandProps>(
           aria-hidden="true"
           className="hidden size-6 shrink-0 select-none items-center justify-center rounded-md bg-sidebar-accent text-[10px] font-semibold tracking-tight text-sidebar-foreground group-data-[collapsible=icon]:flex"
         >
-          {t("navigation.brand.mark")}
+          {mark}
         </span>
       </div>
     );

@@ -1,4 +1,5 @@
 import "../globals.css";
+import { DEMO_BRAND } from "@/lib/demo/brand";
 import { fontVariables } from "@/lib/fonts";
 import type { Viewport } from "next";
 import * as React from "react";
@@ -107,13 +108,26 @@ export default async function RootLayout({
         ...json
     }
 
+    // Themes arrive from the backend as token overrides and are injected below.
+    // The demo has no backend to ask, and empty objects leave it on the default
+    // palette — the OPEN token set belongs here, as a fixture, once its light
+    // --primary is legible as a foreground colour (it is currently 2.19:1 on
+    // white and used as one in 135 places). Deliberately NOT a globals.css edit
+    // or a .theme-open class: this is the same path a themed customer
+    // deployment already uses, via configuration/theme-studio.
     const themeConfig = demoMode ? { light: {}, dark: {} } : await configApi.theme();
+
+    // Same reason as the logo: BACKEND names a host nothing is serving in demo
+    // mode, so the tab icon 404s for a lead arriving from a branded PDF.
+    const favicon = demoMode
+        ? DEMO_BRAND.favicon
+        : process.env.BACKEND + "/favicon.png";
 
     return (
         <html lang={locale} suppressHydrationWarning>
             <head>
-                <link rel="icon" href={process.env.BACKEND + "/favicon.png"} type="image/png" />
-                <link rel="apple-touch-icon" href={process.env.BACKEND + "/favicon.png"} />
+                <link rel="icon" href={favicon} type="image/png" />
+                <link rel="apple-touch-icon" href={favicon} />
                 <link rel="manifest" href="/manifest.webmanifest" />
                 <style
                     dangerouslySetInnerHTML={{

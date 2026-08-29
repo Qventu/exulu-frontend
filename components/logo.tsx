@@ -3,6 +3,8 @@
 import { useContext } from "react";
 
 import { ConfigContext } from "@/components/shell/config-context";
+import { DEMO_BRAND } from "@/lib/demo/brand";
+import { isDemoMode } from "@/lib/demo/flag";
 import { cn } from "@/lib/utils";
 
 interface LogoProps {
@@ -29,6 +31,14 @@ const Logo = ({ width = 64, height = 32, className = "", alt = "Logo" }: LogoPro
     const configContext = useContext(ConfigContext);
     const base = configContext?.backend ?? "";
 
+    // In demo mode `backend` names a host nothing is serving, so both sources
+    // 404 and the only thing keeping the page tidy was the onError below —
+    // which fires after first paint, leaving alt text as a grey block for as
+    // long as the shell takes to hydrate. Local paths avoid the round trip.
+    const demo = isDemoMode();
+    const lightSrc = demo ? DEMO_BRAND.logoLight : `${base}/logo_light.png`;
+    const darkSrc = demo ? DEMO_BRAND.logoDark : `${base}/logo_dark.png`;
+
     // A logo that fails to load is worse than no logo: the browser renders the
     // alt text as a grey block, which reads as a broken page rather than an
     // unbranded one. Deployments without logo assets — the guided demo among
@@ -40,7 +50,7 @@ const Logo = ({ width = 64, height = 32, className = "", alt = "Logo" }: LogoPro
     return (
         <>
             <img
-                src={`${base}/logo_light.png`}
+                src={lightSrc}
                 alt={alt}
                 width={width}
                 height={height}
@@ -48,7 +58,7 @@ const Logo = ({ width = 64, height = 32, className = "", alt = "Logo" }: LogoPro
                 onError={hideOnError}
             />
             <img
-                src={`${base}/logo_dark.png`}
+                src={darkSrc}
                 alt={alt}
                 width={width}
                 height={height}
