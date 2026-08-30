@@ -155,6 +155,22 @@ export function TourShepherd() {
         defaultStepOptions: {
           cancelIcon: { enabled: false },
           modalOverlayOpeningRadius: 6,
+          // Position the popover against the VIEWPORT, not the document.
+          //
+          // Shepherd appends it to document.body, and floating-ui's default
+          // "absolute" strategy makes it part of the page's scrollable
+          // overflow. On a tall window there is room below the composer, so the
+          // opening step's popover was placed there — past the bottom of the
+          // viewport — and the document grew to contain it. That showed up as a
+          // band of empty space under the chat and, because the window was now
+          // scrollable, wheel events went to the page instead of the chat's own
+          // scroller, so the transcript could not be scrolled at all.
+          //
+          // A fixed-strategy element is out of flow entirely and contributes no
+          // scroll height. Invisible on a short window, where the popover
+          // always flips above the composer and never overhangs anything —
+          // which is why this needed reporting from a taller screen.
+          floatingUIOptions: { strategy: "fixed" as const },
         },
       });
 
