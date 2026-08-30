@@ -92,6 +92,34 @@ export function TourShepherd() {
   // render, and a ref written during one that never commits is a write that
   // silently did not happen. This effect is declared before the one that
   // builds the tour, so the ref is populated by the time any button exists.
+  // Keep interactions with the popover from reading as "clicked outside".
+  //
+  // Radix's DismissableLayer decides a modal drawer should close by listening
+  // for pointerdown — and focusin — at the document and checking whether the
+  // target sits inside the drawer's own subtree. Shepherd appends its popover
+  // to document.body, so it never does. Pressing Next therefore dismissed the
+  // drawer the step was pointing at: the anchor was destroyed mid-click, the
+  // navigation sometimes lost the race and did not happen at all, and the
+  // popover re-pinned to the corner because its target had gone.
+  //
+  // Stopping the event at <body> is enough. Radix's listener is on the bubble
+  // path at the document, and <body> is the last hop before it — so the button
+  // inside the popover has already received the event and will still fire its
+  // click, while Radix never sees it. A capture-phase listener would be wrong
+  // here: it would stop the event on the way DOWN and the button would never
+  // get it either.
+  useEffect(() => {
+    const contain = (event: Event) => {
+      const target = event.target as Element | null;
+      if (target?.closest?.(".shepherd-element")) event.stopPropagation();
+    };
+    const types = ["pointerdown", "mousedown", "touchstart", "focusin"];
+    for (const type of types) document.body.addEventListener(type, contain);
+    return () => {
+      for (const type of types) document.body.removeEventListener(type, contain);
+    };
+  }, []);
+
   const navigate = useRef<(target: TourPosition) => void>(() => {});
   useEffect(() => {
     navigate.current = (target) => router.push(hrefFor(target, CHAPTERS));
@@ -216,6 +244,33 @@ export function TourShepherd() {
       }
 
       void tour.show(step.id);
+
+      // Last resort: confirm it actually landed somewhere, and retry if not.
+      //
+      // Everything above narrows the race; none of it closes it. The anchor can
+      // still be replaced between the settle check and Shepherd measuring it,
+      // which leaves the popover at 0,0 — the one position that is never a real
+      // placement, and exactly what a stranded step looks like. Detecting that
+      // and re-showing is cheaper than widening the settle window and hoping.
+      //
+      // The selector is re-queried each round rather than reusing `settled`.
+      // An earlier version tested `document.contains(settled)`, which is false
+      // precisely WHEN the anchor has been replaced — so the guard skipped the
+      // retry in the one case it existed for.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await new Promise((resolve) => setTimeout(() => resolve(null), 250));
+        if (mine !== generation.current) return;
+
+        const popover = [...document.querySelectorAll(".shepherd-element")].find(
+          (el) =>
+            !el.hasAttribute("hidden") && getComputedStyle(el).display !== "none",
+        );
+        const placed = popover?.getBoundingClientRect();
+        if (!placed || placed.top !== 0 || placed.left !== 0) return;
+        if (!document.querySelector(selector)) return;
+
+        void tour.show(step.id);
+      }
     })();
   }, [tour, step]);
 
