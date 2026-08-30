@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { LanguageProvider } from "@/components/shell/language-provider";
 import { ThemeProvider } from "@/components/shell/theme-provider";
 import { ConfigContextProvider } from "@/components/shell/config-context";
+import { DEMO_BRAND } from "@/lib/demo/brand";
 import { demoConfig } from "@/lib/demo/config";
 import { TourProvider } from "@/components/demo/tour-provider";
 import { isDemoMode } from "@/lib/demo/flag";
@@ -34,7 +35,10 @@ export default async function DemoLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="icon" href={process.env.BACKEND + "/favicon.png"} type="image/png" />
+        {/* Local, not `${BACKEND}/favicon.png`. This route group has its own
+            root layout, so the fix applied to the (application) layout did not
+            reach it — and these are the chapters a lead lands on first. */}
+        <link rel="icon" href={DEMO_BRAND.favicon} type="image/png" />
       </head>
       <body className={cn("bg-background font-sans antialiased", fontVariables)}>
         {/*
