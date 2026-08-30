@@ -49,7 +49,15 @@ export function scrollbackFor(
   chapter: DemoChapterId,
   step = 0,
 ): UIMessage[] {
-  if (chapter === "techdoc") return TECHDOC_SCROLLBACK;
+  // Empty on the step that ASKS, because that step types the question into the
+  // composer and lets the answer stream — see autotype.ts. Pre-loading it there
+  // would put the answer on screen before the question had been typed.
+  //
+  // Present from the next step on, so a visitor who deep-links or jumps via the
+  // Tour menu to a step about the retrieval card or a citation finds the
+  // conversation already there, rather than waiting through an animation for a
+  // step that assumes its result.
+  if (chapter === "techdoc") return step === 0 ? [] : TECHDOC_SCROLLBACK;
   if (chapter !== "memory") return [];
 
   // Chapter 4's correction is the visitor's to send, and the transport replays

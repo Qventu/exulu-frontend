@@ -142,15 +142,25 @@ describe("the conversation the correction answers is on screen", () => {
   });
 
   it("keeps each chapter's scrollback to itself", () => {
-    // This asserted chapter 1 had NO scrollback, from when it opened on an
-    // empty conversation and asked the visitor to type. It now opens
-    // mid-exchange for the same reason chapter 4 does: two of its three steps
-    // anchor to things that exist only once a message has been sent, and a
-    // visitor who just clicks Next never sends one.
+    // Third position for this assertion, and worth recording because it has
+    // gone back and forth: no scrollback when chapter 1 asked the visitor to
+    // type, then scrollback from step 0 when it opened mid-exchange so that
+    // clicking Next was enough, and now empty at step 0 again — the tour types
+    // the question itself and the answer streams, which is the flow a visitor
+    // needs to see and neither earlier version showed.
     //
-    // What still matters is that the two do not bleed into each other.
-    const techdoc = scrollbackFor("techdoc");
+    // From step 1 the scrollback is present, because those steps anchor to
+    // parts of the answer and must survive a deep link or a Tour-menu jump.
+    // The step-0 case is asserted below.
+    //
+    // What has held throughout: the two chapters must not bleed into each other.
+    const techdoc = scrollbackFor("techdoc", 1);
     const memory = scrollbackFor("memory", 0);
+
+    expect(
+      scrollbackFor("techdoc", 0),
+      "the step that types its own question must open on an empty conversation",
+    ).toEqual([]);
 
     expect(techdoc.length).toBeGreaterThan(0);
     expect(memory.length).toBeGreaterThan(0);

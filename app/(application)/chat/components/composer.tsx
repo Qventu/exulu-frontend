@@ -37,6 +37,7 @@ import { useQuery, useMutation } from "@apollo/client";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import TextareaAutosize from "react-textarea-autosize";
+import { useDemoAutotype } from "@/components/demo/use-autotype";
 import { toast } from "sonner";
 import { ArrowUp, Info, Lock, Mic, Square, Wallet, X } from "lucide-react";
 
@@ -352,6 +353,16 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
       setInput(text);
     }
   };
+
+  // The guided demo types its scripted question in and sends it, so a visitor
+  // watches the real flow — question going in, retrieval running, answer
+  // streaming — rather than a conversation that was already over when the page
+  // loaded. No-op outside demo mode.
+  useDemoAutotype({
+    setInput,
+    submit,
+    canSend: writeAccess && status !== "submitted" && status !== "streaming",
+  });
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Open suggestion menu owns arrows/Enter/Tab/Escape (spec 2026-07-07).

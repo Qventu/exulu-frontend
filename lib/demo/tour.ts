@@ -116,11 +116,12 @@ export const CHAPTERS: DemoChapter[] = [
         route: TECHDOC_CHAT,
         anchor: "chat-composer",
         title: "A question with a precise answer",
-        // Not "watch how the assistant finds it". Chapters open mid-conversation
-        // so that every step works for a visitor who only clicks Next, which
-        // means the answer is already on screen and nothing streams. The verb
-        // promised motion the design had deliberately traded away.
-        body: "A service engineer asks about a specific fault condition. Here is what came back, and where each part of it came from.",
+        // The motion verb is back, because the motion is back. This step used
+        // to open with the answer already rendered, so "watch it find it" was a
+        // promise the screen did not keep, and the copy got rewritten around
+        // the absence. autotype.ts now types the question and the transport
+        // streams the reply, so the sentence is literally true again.
+        body: "A service engineer asks about a specific fault condition. Watch it choose where to look, search, and answer — this is the retrieval running, not a recording of it.",
       },
       {
         id: "techdoc-retrieval",
@@ -268,7 +269,7 @@ export const CHAPTERS: DemoChapter[] = [
         // to send. Same trade as the opening step: the chapter opens
         // mid-conversation so a click-only visitor sees everything, which means
         // the correction has already been sent.
-        body: "This is the real message a Newlift engineer sent back: the right menu path, and a request to remember it.",
+        body: "Here is the real message a Newlift engineer sent back — the right menu path, and a request to remember it. Watch what the assistant does with it.",
       },
       // MEMORY_WRITTEN_AT_STEP in fixtures/chapter-memory.ts is tied to this
       // index: the new memory must not appear in the knowledge base before the
