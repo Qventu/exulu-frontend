@@ -70,6 +70,16 @@ export interface DemoStep {
    * puts "Next" is what makes it the obvious thing to press.
    */
   cta?: { label: string; href: string };
+  /**
+   * Turns off the dimming overlay for this step.
+   *
+   * The overlay exists to point at one element, which is wrong for a step whose
+   * subject is the whole screen changing. techdoc.0 anchors to the composer —
+   * correct, that is where the question is typed — but the answer then streams
+   * ABOVE it, and everything outside the composer's cutout was greyed out. The
+   * step said "watch it search and answer" over a dimmed transcript.
+   */
+  noDim?: boolean;
 }
 
 export interface DemoChapter {
@@ -112,9 +122,16 @@ export const CHAPTERS: DemoChapter[] = [
     steps: [
       {
         id: "techdoc-ask",
-        image: "/demo/ch1-answer.webp",
+        // No illustration on this step, deliberately. It is the chapter opener,
+        // which is normally where the schematic goes — but the popover is
+        // anchored to the composer at the bottom of the screen, so it flips
+        // upward over the transcript, and the image made it tall enough to
+        // cover the answer the step is telling the visitor to watch. A drawing
+        // of a board is worth less here than seeing the retrieval run.
         route: TECHDOC_CHAT,
         anchor: "chat-composer",
+        // The answer streams above the composer, so nothing may be dimmed.
+        noDim: true,
         title: "A question with a precise answer",
         // The motion verb is back, because the motion is back. This step used
         // to open with the answer already rendered, so "watch it find it" was a
@@ -264,6 +281,8 @@ export const CHAPTERS: DemoChapter[] = [
         id: "memory-correct",
         route: MEMORY_CHAT,
         anchor: "chat-composer",
+        // Same: the reply and the memory tool call arrive above the composer.
+        noDim: true,
         title: "The engineer corrects it",
         // Not "send the correction" — the composer is empty and there is nothing
         // to send. Same trade as the opening step: the chapter opens

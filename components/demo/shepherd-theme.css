@@ -110,6 +110,19 @@
   opacity: 0.4;
 }
 
+/* Steps that opt out of dimming (DemoStep.noDim).
+ *
+ * Spotlighting one element is wrong when the subject is the whole screen
+ * changing. The step that types the question anchors to the composer, which is
+ * where the typing happens — but the reply then streams ABOVE it, and the
+ * overlay greyed out the transcript the step was telling the visitor to watch.
+ *
+ * The overlay element stays mounted and keeps its pointer-events: none, so
+ * only the shading goes; nothing about hit-testing changes. */
+body.demo-tour-no-dim .shepherd-modal-overlay-container.shepherd-modal-is-visible {
+  opacity: 0;
+}
+
 /* Chapter schematics.
  *
  * The drawings are dark lines on a transparent background, which is invisible

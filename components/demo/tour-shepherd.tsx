@@ -198,6 +198,12 @@ export function TourShepherd() {
     shown.current = step.id;
     const mine = ++generation.current;
 
+    // Shepherd's overlay is a tour-wide option with no per-step switch, so the
+    // step's preference is carried on <body> and shepherd-theme.css keys off
+    // it. Set here rather than in a separate effect so it lands in the same
+    // commit as the show() below and cannot lag a step behind.
+    document.body.classList.toggle("demo-tour-no-dim", Boolean(step.noDim));
+
     void (async () => {
       const selector = step.anchor ? `[data-demo-id="${step.anchor}"]` : null;
       const before = selector ? document.querySelector(selector) : null;

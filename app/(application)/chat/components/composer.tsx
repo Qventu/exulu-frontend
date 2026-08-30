@@ -360,7 +360,11 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
   // loaded. No-op outside demo mode.
   useDemoAutotype({
     setInput,
-    submit,
+    // The scripted text, not whatever is in `input` — see use-autotype.ts.
+    sendText: (text) => {
+      setInput("");
+      return controller.sendUserMessage(text);
+    },
     canSend: writeAccess && status !== "submitted" && status !== "streaming",
   });
 

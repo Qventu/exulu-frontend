@@ -26,11 +26,22 @@ import { parsePosition } from "@/lib/demo/tour";
  */
 export function useDemoAutotype({
   setInput,
-  submit,
+  sendText,
   canSend,
 }: {
   setInput: (value: string) => void;
-  submit: () => void | Promise<void>;
+  /**
+   * Sends the given text, and takes it EXPLICITLY rather than reading the
+   * composer's input state.
+   *
+   * The first version called the composer's own submit(), which reads `input`
+   * from its render scope. The send fired a couple of hundred milliseconds
+   * after the last character was typed, but React had not necessarily
+   * committed that update yet, so the message went out truncated — the
+   * transcript showed a half-finished question above a complete answer.
+   * Typing is presentation; the text sent is never derived from it.
+   */
+  sendText: (text: string) => void | Promise<void>;
   /** False while a reply is streaming, or when the composer is read-only. */
   canSend: boolean;
 }) {
@@ -39,8 +50,8 @@ export function useDemoAutotype({
 
   // The live values, so the timer chain does not send through a stale closure
   // after a re-render.
-  const latest = useRef({ setInput, submit, canSend });
-  latest.current = { setInput, submit, canSend };
+  const latest = useRef({ setInput, sendText, canSend });
+  latest.current = { setInput, sendText, canSend };
 
   useEffect(() => {
     if (!isDemoMode() || !raw) return;
@@ -74,7 +85,7 @@ export function useDemoAutotype({
         // If a reply is already streaming, leave the text in the composer
         // rather than queueing a second send behind it.
         if (!latest.current.canSend) return;
-        void latest.current.submit();
+        void latest.current.sendText(script);
       },
     );
 
