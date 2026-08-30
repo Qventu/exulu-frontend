@@ -139,7 +139,21 @@ export function shepherdStepFor(
           waitForElement: ANCHOR_WAIT_MS,
           // Chapter 3 points at a 55-row glossary well below the fold. Without
           // this the popover opens against an element nobody can see.
-          scrollTo: { behavior: "smooth", block: "center" },
+          //
+          // "nearest", never "center". Shepherd passes these straight to
+          // scrollIntoView on the target, and chapter 1's target is the
+          // composer, which sits at the BOTTOM of its scroll container.
+          // Centring it scrolls that container down by several hundred pixels
+          // to put it in the middle, taking the session header out of view and
+          // leaving empty space below — the layout is untouched, the container
+          // is simply scrolled. "nearest" moves the minimum needed and does
+          // nothing when the target is already visible, which still satisfies
+          // the glossary case above.
+          //
+          // Note this scrolls the nearest scrollable ANCESTOR, not the window,
+          // so it leaves scrollY at 0 and the document no taller than the
+          // viewport — the two things I kept measuring to rule it out.
+          scrollTo: { behavior: "auto", block: "nearest" },
         }
       : {}),
     // The composer is an anchor the visitor is asked to TYPE into (chapters 1
