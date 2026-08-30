@@ -75,17 +75,31 @@ describe("prevPosition", () => {
 });
 
 describe("CHAPTERS", () => {
-  it("opens on the intro, then the seven chapters in spec order", () => {
-    // The spec's seven scenarios, with an eighth entry ahead of them. The
-    // intro is a chapter rather than a separate landing page so it inherits
-    // the navigation, the jump menu and the position-in-URL for free; it has
-    // no product screen of its own, which is why it is not "chapter 8".
+  it("keeps the chat chapters together at the front", () => {
+    // The intro is a chapter rather than a separate landing page so it
+    // inherits the navigation, the jump menu and the position-in-URL for free;
+    // it has no product screen of its own.
+    //
+    // `memory` follows `techdoc` rather than sitting after `config`, which is
+    // where the spec put it. The spec order sent a visitor chat → knowledge →
+    // agent editor → BACK to chat, and the return read as a mistake: you think
+    // you have finished with a surface and the tour drops you on it again.
+    //
+    // It also buried the strongest moment in the demo. "When it doesn't know,
+    // it says so" — an explicit refusal, with citations, in German — was the
+    // fifth chapter, reached by doubling back. It is now the second, while the
+    // conversation it belongs to is still the thing on screen.
+    //
+    // The cost was two forward references in `config` that set memory up; they
+    // are now backward references to something already seen, which is easier
+    // copy anyway. If this order is ever changed again, those two lines and
+    // ingestion's opener all point at neighbours and would need rewriting.
     expect(CHAPTERS.map((c) => c.id)).toEqual([
       "intro",
       "techdoc",
+      "memory",
       "ingestion",
       "config",
-      "memory",
       "evals",
       "email",
       "meetings",

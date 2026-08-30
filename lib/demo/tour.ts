@@ -168,6 +168,50 @@ export const CHAPTERS: DemoChapter[] = [
     ],
   },
   {
+    id: "memory",
+    title: "Correcting it",
+    steps: [
+      {
+        id: "memory-miss",
+        image: "/demo/ch4-memory.webp",
+        route: MEMORY_CHAT,
+        anchor: "chat-messages",
+        title: "When it doesn't know, it says so",
+        body: "An engineer asks for an exact menu path. The assistant offers what the documents do contain, cites it, and is explicit that the precise path is not among them. No invented answer.",
+      },
+      {
+        id: "memory-correct",
+        route: MEMORY_CHAT,
+        anchor: "chat-composer",
+        // Same: the reply and the memory tool call arrive above the composer.
+        noDim: true,
+        title: "The engineer corrects it",
+        // Not "send the correction" — the composer is empty and there is nothing
+        // to send. Same trade as the opening step: the chapter opens
+        // mid-conversation so a click-only visitor sees everything, which means
+        // the correction has already been sent.
+        body: "Here is the real message a Newlift engineer sent back — the right menu path, and a request to remember it. Watch what the assistant does with it.",
+      },
+      // MEMORY_WRITTEN_AT_STEP in fixtures/chapter-memory.ts is tied to this
+      // index: the new memory must not appear in the knowledge base before the
+      // visitor has actually sent the correction.
+      {
+        id: "memory-write",
+        route: MEMORY_CHAT,
+        anchor: "chat-tool-trace",
+        title: "The correction becomes a memory",
+        body: "Remembering is a visible tool call, not a hidden side effect. You can see exactly what was stored.",
+      },
+      {
+        id: "memory-item",
+        route: "/data/newton_memory_context",
+        anchor: null,
+        title: "And a knowledge item you own",
+        body: "The memory lands in a knowledge base like any other — readable, editable, deletable, and auditable. Nothing was fine-tuned into a model where you cannot reach it.",
+      },
+    ],
+  },
+  {
     id: "ingestion",
     title: "How it learned that",
     // Runs on the product's real knowledge routes, and on the exact document
@@ -189,7 +233,7 @@ export const CHAPTERS: DemoChapter[] = [
           "/data/software_documentation_context/items/d92dd3f2-2803-41e4-8136-a1a0ccb99e6c",
         anchor: "item-pipeline",
         title: "Four stages, and you can watch all four",
-        body: "This is the document that answered chapter 1. Ingested, processed, embedded, retrievable — with real timestamps: read at 22:35:01, searchable seventeen seconds later. Nothing here is a black box you have to trust.",
+        body: "This is the document behind the answer you just watched arrive. Ingested, processed, embedded, retrievable — with real timestamps: read at 22:35:01, searchable seventeen seconds later. Nothing here is a black box you have to trust.",
       },
       {
         id: "ingestion-chunks",
@@ -237,7 +281,7 @@ export const CHAPTERS: DemoChapter[] = [
         // other. An earlier draft said six, counting only the document and
         // ticket sources, and contradicted the card the visitor was looking at.
         title: "Seven knowledge bases, read three different ways",
-        body: "Manuals are read like documents, support tickets like conversations, the service database like records. Each carries a sentence telling the assistant when to reach for it. The seventh is the assistant's own memory — which is the chapter after this one.",
+        body: "Manuals are read like documents, support tickets like conversations, the service database like records. Each carries a sentence telling the assistant when to reach for it. The seventh is the assistant's own memory — the one the correction you just saw was written into.",
       },
       {
         id: "config-routing",
@@ -261,51 +305,7 @@ export const CHAPTERS: DemoChapter[] = [
         // Was "Chapter 4 showed that last one mattering", which pointed
         // backwards at a chapter that comes next — memory is chapter 4 and
         // configuration is chapter 3.
-        body: "How many passes, how many results, which reranker, when to give up and say it does not know. That last one is the whole of the next chapter.",
-      },
-    ],
-  },
-  {
-    id: "memory",
-    title: "Correcting it",
-    steps: [
-      {
-        id: "memory-miss",
-        image: "/demo/ch4-memory.webp",
-        route: MEMORY_CHAT,
-        anchor: "chat-messages",
-        title: "When it doesn't know, it says so",
-        body: "An engineer asks for an exact menu path. The assistant offers what the documents do contain, cites it, and is explicit that the precise path is not among them. No invented answer.",
-      },
-      {
-        id: "memory-correct",
-        route: MEMORY_CHAT,
-        anchor: "chat-composer",
-        // Same: the reply and the memory tool call arrive above the composer.
-        noDim: true,
-        title: "The engineer corrects it",
-        // Not "send the correction" — the composer is empty and there is nothing
-        // to send. Same trade as the opening step: the chapter opens
-        // mid-conversation so a click-only visitor sees everything, which means
-        // the correction has already been sent.
-        body: "Here is the real message a Newlift engineer sent back — the right menu path, and a request to remember it. Watch what the assistant does with it.",
-      },
-      // MEMORY_WRITTEN_AT_STEP in fixtures/chapter-memory.ts is tied to this
-      // index: the new memory must not appear in the knowledge base before the
-      // visitor has actually sent the correction.
-      {
-        id: "memory-write",
-        route: MEMORY_CHAT,
-        anchor: "chat-tool-trace",
-        title: "The correction becomes a memory",
-        body: "Remembering is a visible tool call, not a hidden side effect. You can see exactly what was stored.",
-      },
-      {
-        id: "memory-item",
-        route: "/data/newton_memory_context",
-        anchor: null,
-        title: "And a knowledge item you own",
-        body: "The memory lands in a knowledge base like any other — readable, editable, deletable, and auditable. Nothing was fine-tuned into a model where you cannot reach it.",
+        body: "How many passes, how many results, which reranker, and when to give up and say it does not know — the setting behind the refusal at the start of the tour.",
       },
     ],
   },
