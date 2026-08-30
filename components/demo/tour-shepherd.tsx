@@ -247,7 +247,12 @@ export function TourShepherd() {
       if (!settled) return;
 
       const rect = settled.getBoundingClientRect();
-      const onScreen = rect.top < window.innerHeight && rect.bottom > 0;
+      // A box with no height is an anchor that has not laid out yet, NOT an
+      // anchor that is off screen. The old test — `rect.bottom > 0` — could not
+      // tell those apart, so an unmounted composer read as "scroll to me".
+      const laidOut = rect.height > 0;
+      const onScreen =
+        laidOut && rect.top < window.innerHeight && rect.bottom > 0;
       if (settled === before && document.contains(before) && onScreen) return;
 
       // Scroll here rather than leaving it to Shepherd's own scrollTo. That
@@ -257,8 +262,25 @@ export function TourShepherd() {
       // does. Measured on chapter 7: anchor at y=2493 in a 903px viewport,
       // window left at scrollY=42, popover correctly positioned relative to an
       // anchor nobody could see.
-      if (!onScreen) {
-        settled.scrollIntoView({ block: "center", behavior: "auto" });
+      // "nearest", never "center".
+      //
+      // Centring is wrong for anything already near an edge, and the composer
+      // is pinned to the BOTTOM of the viewport: asking to centre it makes the
+      // browser scroll the whole page down by about four hundred pixels to put
+      // it in the middle. That took the session header off the top of the
+      // screen and left the band of empty space underneath — the layout was
+      // correct throughout, the page was simply scrolled.
+      //
+      // Invisible wherever the document happens to be exactly the viewport
+      // height, because then there is nothing to scroll and scrollIntoView is a
+      // no-op. "nearest" scrolls the minimum needed and does nothing at all for
+      // an anchor that is already visible.
+      if (laidOut && !onScreen) {
+        settled.scrollIntoView({
+          block: "nearest",
+          inline: "nearest",
+          behavior: "auto",
+        });
         await new Promise((resolve) =>
           requestAnimationFrame(() => resolve(null)),
         );
