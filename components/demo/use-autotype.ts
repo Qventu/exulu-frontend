@@ -70,24 +70,52 @@ export function useDemoAutotype({
     const timers: ReturnType<typeof setTimeout>[] = [];
     const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
 
+    // Wait for the composer to be laid out before typing a character.
+    //
+    // This used to start on a fixed delay, which was a guess about how long
+    // the chat takes to mount and a wrong one: measured on this route, the
+    // composer has no box until roughly six seconds after navigation, while
+    // typing began at nine hundred milliseconds. The visitor watched text
+    // appear inside a half-assembled page — the message list not yet sized, so
+    // the conversation sat at the top with a band of empty space beneath it.
+    //
+    // Polling for a real box is the honest test, and it is the same lesson as
+    // waitForStableAnchor in tour-shepherd.tsx: wait for the DOM to be ready
+    // rather than estimating how long ready takes.
+    const composerReady = async () => {
+      const deadline = performance.now() + 15000;
+      while (performance.now() < deadline) {
+        if (cancelled) return false;
+        const box = document
+          .querySelector('[data-demo-id="chat-composer"]')
+          ?.getBoundingClientRect();
+        if (box && box.height > 0 && box.bottom > 0) return true;
+        await new Promise((r) => requestAnimationFrame(() => r(null)));
+      }
+      return false;
+    };
+
     // One timer per character rather than an interval, so cancelling on
     // unmount or a step change cannot leave a half-typed question behind.
-    for (let i = 1; i <= script.length; i++) {
-      at(AUTOTYPE_START_MS + i * AUTOTYPE_CHAR_MS, () => {
-        if (!cancelled) latest.current.setInput(script.slice(0, i));
-      });
-    }
+    const start = () => {
+      for (let i = 1; i <= script.length; i++) {
+        at(AUTOTYPE_START_MS + i * AUTOTYPE_CHAR_MS, () => {
+          if (!cancelled) latest.current.setInput(script.slice(0, i));
+        });
+      }
 
-    at(
-      AUTOTYPE_START_MS + (script.length + 8) * AUTOTYPE_CHAR_MS,
-      () => {
+      at(AUTOTYPE_START_MS + (script.length + 8) * AUTOTYPE_CHAR_MS, () => {
         if (cancelled) return;
         // If a reply is already streaming, leave the text in the composer
         // rather than queueing a second send behind it.
         if (!latest.current.canSend) return;
         void latest.current.sendText(script);
-      },
-    );
+      });
+    };
+
+    void composerReady().then((ready) => {
+      if (ready && !cancelled) start();
+    });
 
     return () => {
       cancelled = true;
