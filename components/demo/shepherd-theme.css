@@ -18,6 +18,21 @@
     0 10px 15px -3px rgb(0 0 0 / 0.1),
     0 4px 6px -4px rgb(0 0 0 / 0.1);
   max-width: 380px;
+
+  /* Radix sets `pointer-events: none` on <body> for as long as a modal drawer
+     is open, exempting only the drawer's own content. Shepherd appends its
+     popover to document.body as a SIBLING of that drawer, so the popover
+     inherited the lock — painted on top (z-index 9999 against the drawer's 50)
+     and completely dead to the mouse.
+
+     Chapter 4 runs entirely inside the knowledge wizard drawer, so Back and
+     Next did nothing for all five of its steps. A visitor who got that far
+     could not leave except with the browser's back button.
+
+     Not caught earlier because the checks drove the buttons by calling
+     .click() on the element, which skips hit-testing entirely. Only a real
+     click at real coordinates goes through this. */
+  pointer-events: auto;
 }
 
 /* The arrow is a rotated square that has to match the panel it points off,
