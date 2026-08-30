@@ -12,16 +12,22 @@ function clone(world: DemoWorld): DemoWorld {
 }
 
 export function getWorld(pos: TourPosition): DemoWorld {
+  // Stamped onto the world so resolvers can reach the step they were built
+  // for. They are handed the world and the operation's variables, and neither
+  // carries it; the alternative — reading the module-level current position —
+  // is wrong on the server, where nothing writes it.
+  const at = (world: DemoWorld): DemoWorld => ({ ...clone(world), position: pos });
+
   switch (pos.chapter) {
     case "techdoc":
-      return clone(techdocWorld(pos.step));
+      return at(techdocWorld(pos.step));
     case "ingestion":
-      return clone(ingestionWorld(pos.step));
+      return at(ingestionWorld(pos.step));
     case "memory":
-      return clone(memoryWorld(pos.step));
+      return at(memoryWorld(pos.step));
     // The remaining chapters reuse chapter 1's world until their own plans
     // land, so the shell always has a coherent application behind every step.
     default:
-      return clone(techdocWorld(0));
+      return at(techdocWorld(0));
   }
 }

@@ -116,6 +116,19 @@ export default function proxy(request: NextRequest) {
     const validLocale = locales.includes(locale as Locale) ? locale : defaultLocale;
     requestHeaders.set('x-locale', validLocale);
 
+    // Where the guided demo currently is, forwarded so SERVER-side fixture
+    // reads are scoped to this request.
+    //
+    // lib/demo/current-position.ts keeps the position in a module-level
+    // variable, and the only thing that writes it is the client TourProvider.
+    // Server components therefore read the default — chapter 1, step 0 — no
+    // matter which chapter the visitor is on. Worse for a public demo: a module
+    // global is shared by every concurrent request, so two prospects browsing
+    // at once would resolve each other's data if it ever were written on the
+    // server. A request header is the correct scope for both.
+    const tour = request.nextUrl.searchParams.get('tour');
+    if (tour) requestHeaders.set('x-demo-tour', tour);
+
     const response = NextResponse.next({
         request: {
             headers: requestHeaders,

@@ -1,6 +1,8 @@
+import { headers } from "next/headers";
 import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/app/api/auth/[...nextauth]/options";
 import { getCurrentPosition } from "@/lib/demo/current-position";
+import { parsePosition } from "@/lib/demo/tour";
 import { getWorld } from "@/lib/demo/fixtures";
 import { isDemoMode } from "@/lib/demo/flag";
 import { operationNameOf, resolverFor } from "@/lib/demo/resolvers";
@@ -27,7 +29,18 @@ export async function fetchGraphQLServerSide(query: string, variables: any) {
         );
         return {};
       }
-      return resolver(getWorld(getCurrentPosition()), variables ?? {});
+      // Position from the request, falling back to the module global.
+      //
+      // getCurrentPosition() is only ever written by the client TourProvider,
+      // so on the server it returns the initial value forever — every
+      // server-rendered fixture read resolved against chapter 1 whatever the
+      // visitor was looking at. proxy.ts forwards ?tour= as a header so the
+      // position is scoped to the request that asked, which also means two
+      // visitors browsing at once cannot resolve each other's chapter.
+      const position =
+        parsePosition((await headers()).get("x-demo-tour")) ??
+        getCurrentPosition();
+      return resolver(getWorld(position), variables ?? {});
     }
 
     const authOptions = await getAuthOptions();

@@ -1,5 +1,23 @@
 import { ALGI_ROUTINE_ID } from "./fixtures/chapter-email";
 import { ALGI_MEETING_ID } from "./fixtures/chapter-meetings";
+import { MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
+import { DEMO_AGENT_ID, TECHDOC_SESSION_ID } from "./fixtures/chapter-techdoc";
+
+/**
+ * The chat chapters run on the product's own route, not a demo-only one.
+ *
+ * They used to render at /demo/tour — a parallel page that existed only
+ * because chapter 1 was built before fetchGraphQLServerSide learned to answer
+ * from fixtures. That page carried a SECOND root layout, and it drifted from
+ * the real one exactly as lib/graphql/server.ts warned it would: the theme
+ * provider went missing from it once, and the OPEN favicon a second time.
+ *
+ * The session id in the path is what the resolvers key scrollback off, so each
+ * chapter opens its own conversation without the route needing to know
+ * anything about the tour.
+ */
+const TECHDOC_CHAT = `/chat/${DEMO_AGENT_ID}/${TECHDOC_SESSION_ID}`;
+const MEMORY_CHAT = `/chat/${DEMO_AGENT_ID}/${MEMORY_SESSION_ID}`;
 
 /**
  * The closing step's booking link — a HubSpot meetings URL.
@@ -67,7 +85,7 @@ export interface TourPosition {
 
 const stub = (id: string, title: string): DemoStep => ({
   id,
-  route: "/demo/tour",
+  route: TECHDOC_CHAT,
   anchor: null,
   title,
   body: "Coming soon.",
@@ -80,7 +98,7 @@ export const CHAPTERS: DemoChapter[] = [
     steps: [
       {
         id: "intro-overview",
-        route: "/demo/tour",
+        route: TECHDOC_CHAT,
         anchor: null,
         image: "/demo/structure.webp",
         title: "Seven chapters, about twelve minutes",
@@ -95,7 +113,7 @@ export const CHAPTERS: DemoChapter[] = [
       {
         id: "techdoc-ask",
         image: "/demo/ch1-answer.webp",
-        route: "/demo/tour",
+        route: TECHDOC_CHAT,
         anchor: "chat-composer",
         title: "A question with a precise answer",
         // Not "watch how the assistant finds it". Chapters open mid-conversation
@@ -106,7 +124,7 @@ export const CHAPTERS: DemoChapter[] = [
       },
       {
         id: "techdoc-retrieval",
-        route: "/demo/tour",
+        route: TECHDOC_CHAT,
         // `chat-retrieval`, not `chat-tool-trace`. Context_Search does not use
         // the generic tool block — message-renderer.tsx gives it a dedicated
         // branch and its own card — so the anchor this step used could never
@@ -119,7 +137,7 @@ export const CHAPTERS: DemoChapter[] = [
       },
       {
         id: "techdoc-answer",
-        route: "/demo/tour",
+        route: TECHDOC_CHAT,
         // `chat-sources` is the source-URL block, which this agent never
         // emits — its citations travel inline in the text and the renderer
         // turns them into badges. The step is about those badges, so it points
@@ -236,14 +254,14 @@ export const CHAPTERS: DemoChapter[] = [
       {
         id: "memory-miss",
         image: "/demo/ch4-memory.webp",
-        route: "/demo/tour",
+        route: MEMORY_CHAT,
         anchor: "chat-messages",
         title: "When it doesn't know, it says so",
         body: "An engineer asks for an exact menu path. The assistant offers what the documents do contain, cites it, and is explicit that the precise path is not among them. No invented answer.",
       },
       {
         id: "memory-correct",
-        route: "/demo/tour",
+        route: MEMORY_CHAT,
         anchor: "chat-composer",
         title: "The engineer corrects it",
         // Not "send the correction" — the composer is empty and there is nothing
@@ -257,7 +275,7 @@ export const CHAPTERS: DemoChapter[] = [
       // visitor has actually sent the correction.
       {
         id: "memory-write",
-        route: "/demo/tour",
+        route: MEMORY_CHAT,
         anchor: "chat-tool-trace",
         title: "The correction becomes a memory",
         body: "Remembering is a visible tool call, not a hidden side effect. You can see exactly what was stored.",
@@ -426,7 +444,7 @@ export const CHAPTERS: DemoChapter[] = [
       {
         id: "contact-close",
         image: "/demo/structure.webp",
-        route: "/demo/tour",
+        route: TECHDOC_CHAT,
         anchor: null,
         title: "See it on your own documents",
         body: "Ten of your manuals, two weeks, real questions from your own service team — running on what you just walked through. Thirty minutes is enough to scope it.",
@@ -511,7 +529,7 @@ export function hrefFor(
   chapters: DemoChapter[] = CHAPTERS,
 ): string {
   const step = resolveStep(chapters, pos);
-  const route = step?.route ?? "/demo/tour";
+  const route = step?.route ?? TECHDOC_CHAT;
   const sep = route.includes("?") ? "&" : "?";
   return `${route}${sep}${TOUR_PARAM}=${encodePosition(pos)}`;
 }

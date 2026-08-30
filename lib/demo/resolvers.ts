@@ -14,7 +14,9 @@ import {
   type MeetingRecording,
 } from "./fixtures/chapter-meetings";
 import { MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
+import { TECHDOC_SESSION_ID } from "./fixtures/chapter-techdoc";
 import { CONTEXTS } from "./fixtures/contexts";
+import { scrollbackFor } from "./current-position";
 import {
   EVAL_JOB_RESULTS,
   EVAL_RUNS,
@@ -203,11 +205,40 @@ function filterValue(
  * 4's session has scrollback; every other session opens empty and the whole
  * conversation is streamed live by DemoChatTransport.
  */
-function scrollbackRows(variables: Record<string, unknown>) {
+function scrollbackRows(world: DemoWorld, variables: Record<string, unknown>) {
+  // The session in the path decides which conversation this is, so the real
+  // chat route needs to know nothing about the tour. Chapter 1 opens on the
+  // techdoc session and chapter 5 on the memory one.
   const sessionId = filterValue(variables, "session");
-  if (sessionId && sessionId !== MEMORY_SESSION_ID) return [];
-  return MEMORY_SCROLLBACK.map((message, index) => ({
-    ...MEMORY_SCROLLBACK_ROWS[index],
+  const chapter =
+    sessionId === MEMORY_SESSION_ID
+      ? "memory"
+      : sessionId === TECHDOC_SESSION_ID || !sessionId
+        ? "techdoc"
+        : null;
+  if (!chapter) return [];
+
+  // Step-scoped, not just chapter-scoped. Chapter 5's correction is the
+  // visitor's to send and the transport replays it when they do — but the step
+  // that anchors to the memory tool call has to work for someone who only
+  // clicks Next, so from that step on the exchange is present whether they
+  // typed it or not. Same threshold as the knowledge item in
+  // fixtures/chapter-memory.ts. Chapter 1's scrollback does not vary by step.
+  const messages = scrollbackFor(chapter, world.position?.step ?? 0);
+
+  return messages.map((message, index) => ({
+    // Real ids and timestamps where the export captured them. The memory rows
+    // run out once the correction exchange extends past the base scrollback,
+    // and chapter 1 has no row export at all — both fall back to a synthesised
+    // row. Only `content` is read by the page; the rest must simply be present
+    // and distinct, since an absent selected field is an Apollo cache error.
+    ...(chapter === "memory" && MEMORY_SCROLLBACK_ROWS[index]
+      ? MEMORY_SCROLLBACK_ROWS[index]
+      : {
+          id: `${sessionId ?? chapter}-scrollback-${index}`,
+          session: sessionId ?? TECHDOC_SESSION_ID,
+          createdAt: new Date(0).toISOString(),
+        }),
     content: JSON.stringify(message),
   }));
 }
@@ -720,14 +751,31 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
       world.sessions.find((s) => s.id === variables.id) ?? world.sessions[0],
   }),
 
+  // The chat sidebar's Recents list. Unmapped it returned nothing, so the panel
+  // said "No conversations yet" beside an open conversation — on the chapter
+  // whose whole claim is that this is a real deployment.
+  //
+  // Every field the list selects is returned, RBAC included: an absent selected
+  // field is an Apollo cache error rather than an empty state.
+  GetAgentSessions: (world) => {
+    const items = world.sessions.map((session) => ({
+      ...session,
+      user: session.created_by,
+      RBAC: { type: session.rights_mode ?? "private", users: [], roles: [] },
+    }));
+    return {
+      agent_sessionsPagination: { pageInfo: page(items.length), items },
+    };
+  },
+
   // `content` is a JSON STRING: the page does JSON.parse(item.content) to get
   // back a UIMessage. Returning an object here throws inside the page.
   //
   // The page requests DESC and then reverses, so honour the sort direction
   // rather than assuming — feedback-detail-panel.tsx asks for the same
   // operation and would otherwise render the conversation backwards.
-  GetAgentSessionMessages: (_world, variables) => {
-    const rows = scrollbackRows(variables);
+  GetAgentSessionMessages: (world, variables) => {
+    const rows = scrollbackRows(world, variables);
     const direction = (
       (variables?.sort as { direction?: string })?.direction ?? "ASC"
     ).toUpperCase();

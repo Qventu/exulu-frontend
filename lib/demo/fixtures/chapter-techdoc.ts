@@ -74,9 +74,12 @@ const CONTEXTS: Context[] = REAL_CONTEXTS;
 // invented ones on a tour whose whole claim is that the data is real.
 const ITEMS: Item[] = SOFTWARE_DOC_ITEMS;
 
+/** In the URL of every chat step: /chat/<agent>/<session>. */
+export const TECHDOC_SESSION_ID = "session-demo-techdoc-1";
+
 const SESSIONS: AgentSession[] = [
   {
-    id: "session-demo-techdoc-1",
+    id: TECHDOC_SESSION_ID,
     agent: DEMO_AGENT_ID,
     project: "demo-project",
     // Was "Fault E47 on CTRL-3000" — a fault code and a control board that
