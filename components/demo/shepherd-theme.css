@@ -110,6 +110,38 @@
   opacity: 0.4;
 }
 
+/* Pin the overlay to the viewport instead of sizing it in viewport UNITS.
+ *
+ * Shepherd ships `width: 100vw; height: 100vh`. Both are large-viewport units:
+ * they describe the viewport as if dynamic browser UI were retracted, and they
+ * ignore the scrollbar. On a window carrying extension toolbars they therefore
+ * resolve LARGER than the area actually on screen, the overlay overhangs, the
+ * document grows to contain it, and the page picks up scroll it should not
+ * have. The tour then scrolls that page to bring an anchor into view and takes
+ * the session header off the top with it — which is why the chat looked like
+ * it had lost its header and rail and gained a band of empty space underneath.
+ *
+ * `inset: 0` on a fixed element is exactly the viewport by definition, with no
+ * unit to resolve wrongly. The `auto` sizes stop Shepherd's vw/vh from
+ * fighting it.
+ *
+ * Invisible where the browser UI happens to be retracted — there 100vh equals
+ * the viewport and the overlay measures correctly, which is why this took a
+ * report from a differently-configured window to find. */
+/* Only the VISIBLE state. Shepherd collapses the overlay to height:0 when
+ * hidden, and that is what keeps a dormant tour out of the way — inflating it
+ * here would leave a full-screen node over the page between steps. */
+.shepherd-modal-overlay-container.shepherd-modal-is-visible {
+  inset: 0;
+  /* Percentages, not `auto`: this element is an <svg>, and `auto` collapses it
+     to the SVG intrinsic default of 300x150 rather than filling the inset box.
+     On a fixed element a percentage resolves against the initial containing
+     block, which IS the viewport — so this is the viewport by definition,
+     without a vw/vh unit that can resolve larger than the visible area. */
+  width: 100%;
+  height: 100%;
+}
+
 /* Steps that opt out of dimming (DemoStep.noDim).
  *
  * Spotlighting one element is wrong when the subject is the whole screen
