@@ -1,5 +1,7 @@
 import { getSession } from "next-auth/react";
 
+import { isDemoMode } from "@/lib/demo/flag";
+
 /**
  * Shared plumbing for the REST api modules in lib/api/*.
  *
@@ -46,6 +48,22 @@ export const getToken = async () => {
  * resolves `null` for 204 No Content.
  */
 export const request = async (path: string, method: string, body?: object) => {
+    // The guided demo answers GraphQL from fixtures on both transports, but
+    // REST was never covered -- these went straight to a backend that is not
+    // running and failed with ERR_CONNECTION_REFUSED.
+    //
+    // It only surfaced once the chat chapters moved onto the product's real
+    // route. The demo-only page they used to render on mounted a cut-down
+    // provider tree that never reached the session-files or follow-up
+    // suggestion calls; the real SessionScreen fires both on mount, and the
+    // components waiting on them sit unresolved directly above the composer.
+    //
+    // Empty rather than a rejection: every caller is an optional enrichment --
+    // attachments, suggestions -- and the demo genuinely has none of them. A
+    // thrown error would put a failure state on screen for something a visitor
+    // was never meant to notice.
+    if (isDemoMode()) return null;
+
     const uris = await getUris();
     const token = await getToken();
     if (!token) throw new Error("No valid session token available.");

@@ -678,6 +678,12 @@ export function useChatSession({
 
     (async () => {
       try {
+        // Follow-up suggestions are a REST call, so the demo's GraphQL
+        // fixtures never covered it. Left alone it fires at the backend the
+        // demo does not run and fails with ERR_CONNECTION_REFUSED, leaving the
+        // suggestion row unresolved directly above the composer.
+        if (isDemoMode()) return;
+
         const token = await getToken();
         if (!token) return;
 
