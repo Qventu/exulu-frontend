@@ -56,6 +56,39 @@ export type DemoResolver = (
 const KNOWN_CONTEXT_IDS = new Set(CONTEXTS.map((c) => c.id));
 
 /**
+ * One row of the LiteLLM catalogue, with every field GetAgentLiteLLMCatalog
+ * selects (agents/queries.ts:268). All of them, because Apollo does not fail an
+ * incomplete cache write — it logs a console.error per missing field and falls
+ * back to the raw network result, so a partial row is silent breakage.
+ *
+ * Capabilities and limits are the published ones for these models; costs are
+ * left null rather than guessed, since nothing in the tour renders them.
+ */
+const litellmModel = (
+  name: string,
+  upstream: string,
+  brand: string,
+): Record<string, unknown> => ({
+  __typename: "LiteLLMModel",
+  model_name: name,
+  active: true,
+  upstream_model: upstream,
+  type: "chat",
+  tags: [],
+  brand,
+  region: "eu",
+  max_tokens: 65536,
+  max_input_tokens: 1048576,
+  max_output_tokens: 65536,
+  supports_vision: true,
+  supports_function_calling: true,
+  supports_pdf_input: true,
+  supports_audio_input: false,
+  input_cost_per_million_tokens: null,
+  output_cost_per_million_tokens: null,
+});
+
+/**
  * A recording as /transcriptions selects it. The nulls are the fields dropped
  * at export (storage key, join link, bot and whisper ids) — see
  * scripts/build-algi-meetings-fixture.py.
@@ -626,7 +659,21 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // is keyed by OPERATION, so mapping one leaves the other unmapped. Mapping
   // GetLiteLLMCatalog alone silenced chat and left the editor still erroring.
   GetLiteLLMCatalog: () => ({ litellmCatalog: [] }),
-  GetAgentLiteLLMCatalog: () => ({ litellmCatalog: [] }),
+  // The agent's model has to be IN this catalogue or the selector marks it
+  // stale and renders "gemini-3.1-pro — unavailable" in destructive red, on the
+  // screen that claims to be a live production setup. An empty catalogue and a
+  // set model is the one combination that looks broken — worse than the "Select
+  // a model" placeholder this replaced, because red reads as an error rather
+  // than as something merely unconfigured.
+  //
+  // Only the models this deployment actually names: the agent's own, and the
+  // judge the eval runs use (fixtures/evals.ts).
+  GetAgentLiteLLMCatalog: () => ({
+    litellmCatalog: [
+      litellmModel("gemini-3.1-pro", "vertex_ai/gemini-3.1-pro", "Google"),
+      litellmModel("claude-sonnet-4-6", "anthropic/claude-sonnet-4-6", "Anthropic"),
+    ],
+  }),
   GetUserRoles: () => ({ rolesPagination: { pageInfo: page(0), items: [] } }),
   GetTeams: () => ({ teamsPagination: { pageInfo: page(0), items: [] } }),
   // The composer's prompt-library picker fires this on every chat render, so
@@ -635,6 +682,28 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // saved prompts would put fabricated content one click off the path.
   GetPrompts: () => ({
     prompt_libraryPagination: { pageInfo: page(0), items: [] },
+  }),
+
+  // The reranker the agent is actually configured with
+  // (fixtures/agent-editor.ts). Unmapped, the selector on the wizard's Behavior
+  // step had nothing to resolve the stored value against and rendered EMPTY —
+  // one panel away from a summary card reading "reranker: cohere/rerank-v4.0-pro".
+  //
+  // This one never reached the unmapped-operation warning during console
+  // checks, because the Behavior step only mounts once a visitor opens it.
+  // Walking the chapter is what surfaced it.
+  GetRerankers: () => ({
+    rerankers: {
+      items: [
+        {
+          __typename: "Reranker",
+          id: "cohere/rerank-v4.0-pro",
+          name: "cohere/rerank-v4.0-pro",
+          description:
+            "Re-scores retrieved passages against the question before the assistant sees them.",
+        },
+      ],
+    },
   }),
 
   // Empty lists still need their pageInfo: it is in the selection set, and a
