@@ -1,5 +1,6 @@
 import "../globals.css";
 import { DEMO_BRAND } from "@/lib/demo/brand";
+import { DEMO_THEME } from "@/lib/demo/theme";
 import { fontVariables } from "@/lib/fonts";
 import type { Viewport } from "next";
 import * as React from "react";
@@ -109,13 +110,17 @@ export default async function RootLayout({
     }
 
     // Themes arrive from the backend as token overrides and are injected below.
-    // The demo has no backend to ask, and empty objects leave it on the default
-    // palette — the OPEN token set belongs here, as a fixture, once its light
-    // --primary is legible as a foreground colour (it is currently 2.19:1 on
-    // white and used as one in 135 places). Deliberately NOT a globals.css edit
-    // or a .theme-open class: this is the same path a themed customer
-    // deployment already uses, via configuration/theme-studio.
-    const themeConfig = demoMode ? { light: {}, dark: {} } : await configApi.theme();
+    // The demo has no backend to ask, so it substitutes the OPEN token set at
+    // this one call site. Deliberately NOT a globals.css edit or a .theme-open
+    // class: this is the same path a themed customer deployment already uses
+    // via configuration/theme-studio, so the demo shows the product's own
+    // tenant theming rather than a coat of paint, and cannot reach anyone else.
+    //
+    // lib/demo/theme.ts records what is unfinished: Poppins and Playfair are
+    // not loaded and fall back, and the light palette's --primary is 2.19:1 as
+    // a foreground while being used as one in about 135 places. The demo forces
+    // dark below, which is what makes that survivable rather than fixed.
+    const themeConfig = demoMode ? DEMO_THEME : await configApi.theme();
 
     // Same reason as the logo: BACKEND names a host nothing is serving in demo
     // mode, so the tab icon 404s for a lead arriving from a branded PDF.
@@ -156,8 +161,17 @@ export default async function RootLayout({
                     <LanguageProvider initialLocale={locale} initialMessages={messages}>
                         <ThemeProvider
                             attribute="class"
-                            defaultTheme="system"
-                            enableSystem
+                            /* Dark by default in the demo, and NOT following
+                               the visitor's OS. A lead arrives from a dark
+                               OPEN-branded PDF, and the palette was designed
+                               dark-first: light mode's --primary is 2.19:1 as
+                               a foreground, so a visitor on a light-mode
+                               machine would have met the one combination that
+                               is close to illegible. Everywhere else keeps
+                               system, which is the product's own behaviour. */
+                            defaultTheme={demoMode ? "dark" : "system"}
+                            enableSystem={!demoMode}
+                            forcedTheme={demoMode ? "dark" : undefined}
                             disableTransitionOnChange>
                             {/* The ONE <main> landmark (a11y fix M11) — every
                                 inner content wrapper below this is a div. */}
