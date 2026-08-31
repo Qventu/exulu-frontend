@@ -35,6 +35,12 @@ export function TourBubble() {
   // position change. Each run starts fresh from attempt 1 but does NOT reset
   // accumulated lift — a later run may add to it, capped so total lift never
   // exceeds 240px.
+  //
+  // No requestAnimationFrame: Chrome suspends rAF entirely when
+  // document.visibilityState is "hidden" (background tabs). Any visitor who
+  // switches tabs during one of the 600/3000/9000 ms delays would silently lose
+  // the probe. rAF buys nothing here — this is a one-shot layout read, not a
+  // frame callback — so the setTimeout callback calls the probe logic directly.
   const rootRef = useRef<HTMLDivElement>(null);
   const [lift, setLift] = useState(0);
   useEffect(() => {
@@ -44,31 +50,28 @@ export function TourBubble() {
     const MAX_LIFT = 240;
     const probe = (attempt: number) => {
       if (cancelled || attempt > 3) return;
-      requestAnimationFrame(() => {
-        if (cancelled) return;
-        const el = rootRef.current;
-        if (!el) return;
-        const r = el.getBoundingClientRect();
-        const corners: Array<[number, number]> = [
-          [r.left + 4, r.top + 4], [r.right - 4, r.top + 4],
-          [r.left + 4, r.bottom - 4], [r.right - 4, r.bottom - 4],
-        ];
-        const hit = corners.some(([x, y]) =>
-          document.elementsFromPoint(x, y).some(
-            (n) =>
-              n instanceof Element &&
-              !el.contains(n) &&
-              !n.closest(".shepherd-element") &&
-              (n.matches(INTERACTIVE) ||
-                (n.closest?.(INTERACTIVE) !== null &&
-                  !el.contains(n.closest(INTERACTIVE)!))),
-          ),
-        );
-        if (hit) {
-          setLift((v) => Math.min(v + 80, MAX_LIFT));
-          probe(attempt + 1);
-        }
-      });
+      const el = rootRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const corners: Array<[number, number]> = [
+        [r.left + 4, r.top + 4], [r.right - 4, r.top + 4],
+        [r.left + 4, r.bottom - 4], [r.right - 4, r.bottom - 4],
+      ];
+      const hit = corners.some(([x, y]) =>
+        document.elementsFromPoint(x, y).some(
+          (n) =>
+            n instanceof Element &&
+            !el.contains(n) &&
+            !n.closest(".shepherd-element") &&
+            (n.matches(INTERACTIVE) ||
+              (n.closest?.(INTERACTIVE) !== null &&
+                !el.contains(n.closest(INTERACTIVE)!))),
+        ),
+      );
+      if (hit) {
+        setLift((v) => Math.min(v + 80, MAX_LIFT));
+        probe(attempt + 1);
+      }
     };
     // Schedule the full probe sequence at escalating delays so that late-
     // mounting routes (e.g. chat composer at ~6s) are still caught. Each
