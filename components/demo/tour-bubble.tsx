@@ -32,9 +32,12 @@ export function TourBubble() {
   // The chat route takes ~6s to mount its composer, so a single 600ms probe
   // sees an empty page and never fires again. Fix: schedule the WHOLE probe
   // sequence at three escalating delays (600ms, 3000ms, 9000ms) after each
-  // position change. Each run starts fresh from attempt 1 but does NOT reset
-  // accumulated lift — a later run may add to it, capped so total lift never
-  // exceeds 240px.
+  // position change. Each wave starts from attempt 1; accumulated lift is
+  // preserved and only grows (capped at 240px) so a later wave can add to
+  // earlier work. On a hit, the next attempt is itself scheduled via setTimeout
+  // so React commits the setLift update and layout settles before the next
+  // getBoundingClientRect — synchronous recursion would read the same unmoved
+  // rect for every attempt and always hit the 240px cap on the first wave.
   //
   // No requestAnimationFrame: Chrome suspends rAF entirely when
   // document.visibilityState is "hidden" (background tabs). Any visitor who
@@ -48,6 +51,7 @@ export function TourBubble() {
     let cancelled = false;
     const INTERACTIVE = "button, a, input, textarea, select, [role='button']";
     const MAX_LIFT = 240;
+    const timers: ReturnType<typeof setTimeout>[] = [];
     const probe = (attempt: number) => {
       if (cancelled || attempt > 3) return;
       const el = rootRef.current;
@@ -70,7 +74,9 @@ export function TourBubble() {
       );
       if (hit) {
         setLift((v) => Math.min(v + 80, MAX_LIFT));
-        probe(attempt + 1);
+        // Schedule the next attempt so React commits and layout settles before
+        // we read getBoundingClientRect again — 80px per confirmed re-probe.
+        timers.push(setTimeout(() => probe(attempt + 1), 150));
       }
     };
     // Schedule the full probe sequence at escalating delays so that late-
@@ -78,7 +84,7 @@ export function TourBubble() {
     // scheduled run starts from attempt 1; accumulated lift is preserved and
     // only grows (capped at MAX_LIFT) so a later wave can add to earlier work.
     const delays = [600, 3000, 9000];
-    const timers = delays.map((delay) => setTimeout(() => probe(1), delay));
+    delays.forEach((delay) => timers.push(setTimeout(() => probe(1), delay)));
     return () => {
       cancelled = true;
       timers.forEach(clearTimeout);
