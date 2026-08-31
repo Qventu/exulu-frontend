@@ -150,6 +150,56 @@ describe("CHAPTERS", () => {
   });
 });
 
+describe("the reading load", () => {
+  const words = (s: string) => s.split(/\s+/).filter(Boolean).length;
+
+  it("keeps every step under a paragraph", () => {
+    // The tour was reported as overwhelming, and the measurement agreed: 29
+    // steps and 1093 words, five and a half minutes of reading inside a
+    // twelve-minute tour. The worst offender was the OPENING step at 76 words,
+    // which is the worst possible place for the longest paragraph — patience
+    // is highest there and investment is zero.
+    //
+    // Density also ran opposite to attention: the two shortest steps were the
+    // ones reviewers singled out as best, and the heaviest clustered in the
+    // late chapters where attention is thinnest.
+    //
+    // 45 is not a magic number, it is roughly three lines in a 380px popover.
+    // The point of the cap is that copy grows back if nothing stops it.
+    for (const chapter of CHAPTERS) {
+      for (const step of chapter.steps) {
+        expect(
+          words(step.body),
+          `${step.id} is ${words(step.body)} words — trim it or split the step`,
+        ).toBeLessThanOrEqual(45);
+      }
+    }
+  });
+
+  it("opens on something short", () => {
+    // A visitor reads this before the tour has shown them anything.
+    expect(words(CHAPTERS[0].steps[0].body)).toBeLessThanOrEqual(32);
+  });
+
+  it("never puts two consecutive steps on the same anchor", () => {
+    // Two steps sharing an anchor means the screen does not change between
+    // them, so the tour reads as marking time and the visitor pays a click for
+    // nothing. Both pairs that did this — the evals grid and the routine runs
+    // — were merged; a reviewer had independently flagged the first as a stall.
+    for (const chapter of CHAPTERS) {
+      for (let i = 1; i < chapter.steps.length; i++) {
+        const previous = chapter.steps[i - 1];
+        const current = chapter.steps[i];
+        if (!current.anchor) continue;
+        expect(
+          current.anchor === previous.anchor && current.route === previous.route,
+          `${current.id} repeats ${previous.id}'s screen and anchor`,
+        ).toBe(false);
+      }
+    }
+  });
+});
+
 describe("the two chapters that show something invented", () => {
   // Everything in the tour is real except two artefacts, and both have to say
   // so ON SCREEN rather than in a comment. The evals disclosure shipped as a

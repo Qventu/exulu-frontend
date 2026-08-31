@@ -112,7 +112,7 @@ export const CHAPTERS: DemoChapter[] = [
         anchor: null,
         image: "/demo/structure.webp",
         title: "Seven chapters, about twelve minutes",
-        body: "This is a working OPEN IMP deployment, not a slideshow — the screens are the product and the content is real customer data, from Newlift's technical documentation and ALGI's spare-parts desk. You will see it answer a hard question and show its sources; where that knowledge came from; how it is configured, corrected and tested; and two jobs it does with nobody watching. Move with Next, or jump about with the Tour button at any point.",
+        body: "A working OPEN IMP deployment — real screens, real customer data, from Newlift and ALGI. Seven chapters, about twelve minutes. Next to move, or jump about with the Tour button.",
       },
     ],
   },
@@ -138,7 +138,7 @@ export const CHAPTERS: DemoChapter[] = [
         // promise the screen did not keep, and the copy got rewritten around
         // the absence. autotype.ts now types the question and the transport
         // streams the reply, so the sentence is literally true again.
-        body: "A service engineer asks about a specific fault condition. Watch it choose where to look, search, and answer — this is the retrieval running, not a recording of it.",
+        body: "A service engineer asks about a fault condition. Watch it search and answer.",
       },
       {
         id: "techdoc-retrieval",
@@ -190,7 +190,7 @@ export const CHAPTERS: DemoChapter[] = [
         // to send. Same trade as the opening step: the chapter opens
         // mid-conversation so a click-only visitor sees everything, which means
         // the correction has already been sent.
-        body: "Here is the real message a Newlift engineer sent back — the right menu path, and a request to remember it. Watch what the assistant does with it.",
+        body: "The engineer sends back the right menu path. Watch what it does with that.",
       },
       // MEMORY_WRITTEN_AT_STEP in fixtures/chapter-memory.ts is tied to this
       // index: the new memory must not appear in the knowledge base before the
@@ -336,18 +336,15 @@ export const CHAPTERS: DemoChapter[] = [
         body: "Anyone can show you a good answer. The question is what happens to all the ones nobody watched. Two suites here: one for the technical documentation, one for questions that must be answered from the standards rather than the product manuals.",
       },
       {
+        // Was two steps on the SAME anchor: the grid, then the red cell. The
+        // screen did not change between them, so the tour read as marking
+        // time — a reviewer called it a stall and the visitor pays a click for
+        // nothing. One step, one screen.
         id: "evals-matrix",
         route: "/evals/evalset-techdoc-regression",
         anchor: "evals-matrix",
         title: "Every question, every run, one grid",
-        body: "Rows are questions a Newlift engineer actually asked. Columns are runs. A cell is what the assistant scored on that question in that run — so a change that helps one question and quietly breaks another has nowhere to hide. The questions and the suite are Newlift's; the scores in this grid are illustrative, because scoring a case means running it against a live model and this tour does not call one.",
-      },
-      {
-        id: "evals-regression",
-        route: "/evals/evalset-techdoc-regression",
-        anchor: "evals-matrix",
-        title: "A regression is a red cell",
-        body: "A cell below the bar turns red, and one bad case pulls the run's average down with it. That is the whole mechanism: you set a threshold, and every change is measured against the same questions rather than against an impression of whether it got better.",
+        body: "Rows are questions Newlift engineers asked, columns are runs, and a cell below the bar turns red. A change that helps one question and quietly breaks another has nowhere to hide. The scores are illustrative — scoring needs a live model.",
       },
       {
         id: "evals-sources",
@@ -386,23 +383,14 @@ export const CHAPTERS: DemoChapter[] = [
         body: "Only mail from their own domain runs it — 60 an hour, 10 from any one sender. No integration to build: they forward to an address and the routine picks it up.",
       },
       {
+        // Same merge as the evals grid above, and for the same reason: both
+        // steps pointed at routine-runs, so the second one changed nothing on
+        // screen.
         id: "email-runs",
         route: `/workflows/${ALGI_ROUTINE_ID}`,
         anchor: "routine-runs",
         title: "Including the ones that did not work",
-        body: "Twenty-five real runs. Fourteen finished, eight failed, one is waiting for a human — and two were refused outright, because a hosting provider's setup notice is not from their domain. Every automation looks like this. Most demos only show you the first column.",
-      },
-      {
-        id: "email-quote",
-        route: `/workflows/${ALGI_ROUTINE_ID}`,
-        anchor: null,
-        title: "And it learns from the desk it works for",
-        // Cross-references name the chapter rather than number it. There were
-        // three competing numberings on screen at once — the intro said seven,
-        // the badge said "1 of 9", and references like this used a third — and
-        // this line had ALREADY been renumbered once when a chapter moved.
-        // Names cannot drift when the order changes.
-        body: "Inside one of those runs, a salesperson corrects the draft three times — always offer the piston ring with that seal kit, always quote our commission number — and each correction is written to memory as it happens. Correcting it argued that corrections should be first-class. This is that, in someone's inbox, months before we made the argument.",
+        body: "Twenty-five real runs. Fourteen finished, eight failed, one waits for a human, two were refused because a hosting provider's notice is not from their domain. Inside them a salesperson corrects the draft, and each correction is written to memory as it happens.",
       },
     ],
   },
@@ -436,14 +424,14 @@ export const CHAPTERS: DemoChapter[] = [
         // four speakers and the full recording had seven. A number that matches
         // nothing on screen is the cheapest possible thing for a sceptic to
         // catch, on the chapter that most needs to look real.
-        body: "Four of the seven people in the room, in this stretch of it — interrupting each other, finishing sentences two turns later. Nearly half the lines are three words or fewer. Nobody is going to read this, which is the point, and the reason a recording on its own is worth very little.",
+        body: "Four of the seven people in the room, interrupting each other, finishing sentences two turns later. Nearly half the lines are three words or fewer. Nobody will read this — which is why a recording on its own is worth little.",
       },
       {
         id: "meetings-guide",
         route: `/transcriptions?review=${ALGI_MEETING_ID}`,
         anchor: null,
         title: "So point it at a prompt instead",
-        body: "The same conversation, turned into a work instruction: check the release, do not infer ventilation from whether the cabin has a door, schedule variants separately, name the open points. Written from that recording — everything that was decided, none of the noise. Every other screen in this tour came out of a live system; this one document we drafted by hand, because ALGI has not run this step yet.",
+        body: "The same conversation as a work instruction: check the release, do not infer ventilation from the cabin door, name the open points. Everything decided, none of the noise. Every other screen here came from a live system; this one we wrote by hand.",
       },
     ],
   },

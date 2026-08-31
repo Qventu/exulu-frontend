@@ -17,6 +17,9 @@ export function TourBubble() {
   const [open, setOpen] = useState(false);
 
   const currentIndex = chapters.findIndex((c) => c.id === position.chapter);
+  const stepCount = chapters[currentIndex]?.steps.length ?? 1;
+  const hasMoreInChapter = position.step < stepCount - 1;
+  const nextChapter = chapters[currentIndex + 1];
 
   return (
     // Above Shepherd's own layers, which are fixed in its stylesheet: the
@@ -69,12 +72,38 @@ export function TourBubble() {
       >
         <span>Tour</span>
         <span className="text-xs font-normal text-muted-foreground">
+          {/* Chapter AND step. "3 of 9" alone hid how much of a chapter was
+              left, and chapters run from one step to five — a visitor entering
+              a five-step chapter had no way to know they had signed up for
+              four more clicks. That not-knowing is most of what made the tour
+              feel long. */}
           {currentIndex + 1} of {chapters.length}
+          {stepCount > 1 ? (
+            <span className="ml-1 opacity-70">
+              · {position.step + 1}/{stepCount}
+            </span>
+          ) : null}
           <span aria-hidden className="ml-2">
             {open ? "▾" : "▴"}
           </span>
         </span>
       </button>
+
+      {/* Skip the rest of this chapter.
+          Only while there IS a rest of it, and never on the last chapter —
+          a control that does nothing is worse than no control. A prospect who
+          only cares about two chapters should not have to click through the
+          other seven, and the jump menu above is a deliberate act they have to
+          think about first. */}
+      {hasMoreInChapter && nextChapter ? (
+        <button
+          type="button"
+          className="mt-1 w-full rounded-lg px-4 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          onClick={() => jumpTo(nextChapter.id)}
+        >
+          Skip to {nextChapter.title} →
+        </button>
+      ) : null}
     </div>
   );
 }
