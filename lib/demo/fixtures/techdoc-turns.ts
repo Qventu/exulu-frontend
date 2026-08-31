@@ -23,18 +23,18 @@ const FST_CHUNK = RAW_FST_CHUNKS[0];
 
 const RETRIEVAL_STEPS = [
   "Classified the request as: technical because: The user is asking for the meaning of a specific error code (Nothalt COP) in a technical system (FST error log).",
-  "Main contexts: tech_doc_context, Fallback contexts: new_servicedb_context, zendesk_context, custom_documents_context, software_documentation_context",
+  "Main contexts: tech_doc_context, Fallback contexts: new_servicedb_context, support_tickets_context, custom_documents_context, software_documentation_context",
   "Detected Product names in the question: FST",
   "Reranking 321 chunks",
   "Rerank_score min: 0.5979366, Rerank_score max: 0.8704211",
-  "Using fallback search in new_servicedb_context, zendesk_context, custom_documents_context, software_documentation_context",
+  "Using fallback search in new_servicedb_context, support_tickets_context, custom_documents_context, software_documentation_context",
   "Memory prioritizes specific document(s); pinning 2 file(s) into the search: FST2XTchanges-customer-DE.docx, MIPA_FST-3_DE.pdf",
 ];
 
 const CITE_SWDOC =
   "{item_name: FST2XTchanges-customer-DE.docx, item_id: d92dd3f2-2803-41e4-8136-a1a0ccb99e6c, context: software_documentation_context, chunk_id: 02d50a8f-e703-4461-9c0c-5ab6c695cdfd, chunk_index: 0}";
 const CITE_ZENDESK =
-  "{item_name: FST Meldung, item_id: e9e5c0df-d9cb-442e-ae13-85528da96a84, context: zendesk_context, chunk_id: ce3ecab9-ca4b-4cb0-b646-fccff533a445, chunk_index: 0}";
+  "{item_name: FST Meldung, item_id: e9e5c0df-d9cb-442e-ae13-85528da96a84, context: support_tickets_context, chunk_id: ce3ecab9-ca4b-4cb0-b646-fccff533a445, chunk_index: 0}";
 
 /**
  * The `{item_name: ...}` markers are not noise — message-renderer.tsx parses

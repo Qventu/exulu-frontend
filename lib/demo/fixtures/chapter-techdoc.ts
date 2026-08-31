@@ -16,14 +16,12 @@ export const DEMO_AGENT_SLUG = "chat";
 const AGENT: Agent = {
   id: DEMO_AGENT_ID,
   type: "agent",
-  name: "Technical Documentation Assistant",
+  name: "Technischer Dokumentationsassistent",
   slug: DEMO_AGENT_SLUG,
   description:
-    "Answers technical questions about elevator control boards using " +
-    "manufacturer documentation and applicable standards.",
+"Beantwortet technische Fragen zu Aufzugssteuerungen aus Herstellerdokumentation und einschlägigen Normen.",
   welcomemessage:
-    "Hello! I can help you troubleshoot elevator control boards and look up " +
-    "technical specifications. What would you like to know?",
+"Hallo! Ich helfe bei Fragen zu Aufzugssteuerungen und technischen Spezifikationen. Was möchten Sie wissen?",
   active: true,
   defaultagent: true,
   feedback: true,
@@ -48,9 +46,9 @@ const AGENT: Agent = {
   // whole chapter writing to that memory.
   memory: "newton_memory_context",
   instructions:
-    "You are Newton, a technical documentation assistant for Newlift GmbH. " +
-    "Answer questions about elevator control board maintenance, fault codes, " +
-    "and applicable EN/DIN standards. Always cite the source document.",
+"Du bist ein technischer Dokumentationsassistent eines Herstellers von Aufzugssteuerungen. " +
+    "Beantworte Fragen zu Wartung, Fehlercodes und einschlägigen EN/DIN-Normen. " +
+    "Belege jede Aussage mit dem Quelldokument.",
   rights_mode: "public",
 };
 

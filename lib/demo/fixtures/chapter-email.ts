@@ -83,7 +83,7 @@ export const ALGI_ROUTINE: Routine = {
  * never read: workflow_triggers also stores `secret` and `signing_secret`, and
  * those columns were excluded from the export rather than pulled and stripped.
  *
- * The allowlist is the load-bearing part for the chapter. `*@algi-hydraulic.de`
+ * The allowlist is the load-bearing part for the chapter. `*@aht-hydraulik.example`
  * is why the two IONOS notifications in the runs below are `filtered` rather
  * than processed — real noise, correctly refused.
  */
@@ -94,7 +94,7 @@ export const ALGI_EMAIL_TRIGGER = {
   enabled: true,
   config: {
     filters: [] as unknown[],
-    allowed_senders: ["*@algi-hydraulic.de"],
+    allowed_senders: ["*@aht-hydraulik.example"],
     rate_limit_per_hour: 60,
     sender_rate_limit_per_hour: 10,
     filtered_run_retention: 200,

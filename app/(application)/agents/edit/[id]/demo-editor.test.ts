@@ -100,7 +100,7 @@ describe("the wizard has knowledge bases to show", () => {
         "vorschriften_context",
         "software_documentation_context",
         "custom_documents_context",
-        "zendesk_context",
+        "support_tickets_context",
         "new_servicedb_context",
       ]) {
         expect(ids, `the wizard config routes to ${id}, which no context provides`).toContain(id);

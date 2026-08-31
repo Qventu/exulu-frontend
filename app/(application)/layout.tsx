@@ -38,7 +38,11 @@ export default async function RootLayout({
     const cookieStore = await cookies()
     const sidebarCookie = cookieStore.get("sidebar_state")?.value
     const defaultOpen = sidebarCookie === undefined ? true : sidebarCookie === "true"
-    const locale = (cookieStore.get(LOCALE_COOKIE)?.value as Locale) || defaultLocale;
+    // The demo is German end to end: the tour copy is German, the fixture
+    // content is German, and the product ships a full de.json — leaving the
+    // shell on the visitor's cookie meant German popovers over English labels.
+    const cookieLocale = (cookieStore.get(LOCALE_COOKIE)?.value as Locale) || defaultLocale;
+    const locale = isDemoMode() ? ("de" as Locale) : cookieLocale;
 
     const headersList = await headers()
     const pathname = headersList.get('x-next-pathname') || '/';

@@ -7,7 +7,7 @@
     "tries": 0,
     "createdAt": "2026-08-14 09:22:37.236705+00",
     "trigger_metadata": {
-      "from": "vertrieb@algi-hydraulic.de",
+      "from": "vertrieb@aht-hydraulik.example",
       "subject": "WG: Anfrage 04072"
     }
   },
@@ -19,7 +19,7 @@
     "tries": 0,
     "createdAt": "2026-08-17 11:05:30.117798+00",
     "trigger_metadata": {
-      "from": "service@algi-hydraulic.de",
+      "from": "service@aht-hydraulik.example",
       "subject": "WG: Requestor Case# ⟨Vorgang⟩ & ⟨Kunde⟩ Case# ⟨Vorgang⟩ - Reparaturanfrage 18000240024 SL2: Heberkopfdichtung erneuern. CRM:0256126"
     }
   },
@@ -31,7 +31,7 @@
     "tries": 0,
     "createdAt": "2026-08-17 11:21:57.580044+00",
     "trigger_metadata": {
-      "from": "ersatzteile@algi-hydraulic.de",
+      "from": "ersatzteile@aht-hydraulik.example",
       "subject": "WG: Anfrage"
     }
   },
@@ -43,7 +43,7 @@
     "tries": 0,
     "createdAt": "2026-08-17 11:37:51.476007+00",
     "trigger_metadata": {
-      "from": "technik@algi-hydraulic.de",
+      "from": "technik@aht-hydraulik.example",
       "subject": "WG: Angebot Stempeldichtungssatz für ⟨Kunde⟩  91701640"
     }
   },
@@ -55,7 +55,7 @@
     "tries": 0,
     "createdAt": "2026-08-17 12:27:52.329434+00",
     "trigger_metadata": {
-      "from": "technik@algi-hydraulic.de",
+      "from": "technik@aht-hydraulik.example",
       "subject": "WG: Angebot"
     }
   },
@@ -67,7 +67,7 @@
     "tries": 0,
     "createdAt": "2026-08-18 06:28:15.881619+00",
     "trigger_metadata": {
-      "from": "ersatzteile@algi-hydraulic.de",
+      "from": "ersatzteile@aht-hydraulik.example",
       "subject": "WG: Angebotsanfrage Stempeldichtung Aufzug 57936, ⟨Adresse⟩, ⟨Ort⟩"
     }
   },
@@ -79,7 +79,7 @@
     "tries": 0,
     "createdAt": "2026-08-18 07:21:19.541899+00",
     "trigger_metadata": {
-      "from": "vertrieb@algi-hydraulic.de",
+      "from": "vertrieb@aht-hydraulik.example",
       "subject": "WG: Price and delivery time 2658446"
     }
   },
@@ -91,8 +91,8 @@
     "tries": 0,
     "createdAt": "2026-08-18 07:53:00.598929+00",
     "trigger_metadata": {
-      "from": "info@algi-hydraulic.de",
-      "subject": "AW: Price and delivery time 2658446/ALGI quote 26108776"
+      "from": "info@aht-hydraulik.example",
+      "subject": "AW: Price and delivery time 2658446/AHT quote 26108776"
     }
   },
   {
@@ -103,7 +103,7 @@
     "tries": 0,
     "createdAt": "2026-08-19 05:21:27.074662+00",
     "trigger_metadata": {
-      "from": "vertrieb@algi-hydraulic.de",
+      "from": "vertrieb@aht-hydraulik.example",
       "subject": "WG: Angebotsanfrage: Eq. 14918001210 / ZKD / Giehl Nummer: 07204739"
     }
   },
@@ -115,7 +115,7 @@
     "tries": 0,
     "createdAt": "2026-08-19 10:44:11.980658+00",
     "trigger_metadata": {
-      "from": "technik@algi-hydraulic.de",
+      "from": "technik@aht-hydraulik.example",
       "subject": "WG: Angebotsanfrage Dichtungssatz | 47J1840"
     }
   },
@@ -127,7 +127,7 @@
     "tries": 0,
     "createdAt": "2026-08-20 08:31:48.044014+00",
     "trigger_metadata": {
-      "from": "service@algi-hydraulic.de",
+      "from": "service@aht-hydraulik.example",
       "subject": "Ersatzteil anfrage"
     }
   },
@@ -139,7 +139,7 @@
     "tries": 0,
     "createdAt": "2026-08-21 06:39:23.325283+00",
     "trigger_metadata": {
-      "from": "ersatzteile@algi-hydraulic.de",
+      "from": "ersatzteile@aht-hydraulik.example",
       "subject": "WG: Anfrage Angebot Dichtsatz Hydraulikheber"
     }
   },
@@ -151,7 +151,7 @@
     "tries": 0,
     "createdAt": "2026-08-24 09:14:29.651458+00",
     "trigger_metadata": {
-      "from": "technik@algi-hydraulic.de",
+      "from": "technik@aht-hydraulik.example",
       "subject": "WG: Order for O-rings"
     }
   },
@@ -163,7 +163,7 @@
     "tries": 0,
     "createdAt": "2026-08-26 08:59:56.85222+00",
     "trigger_metadata": {
-      "from": "vertrieb@algi-hydraulic.de",
+      "from": "vertrieb@aht-hydraulik.example",
       "subject": "WG: I26080039"
     }
   },
@@ -175,7 +175,7 @@
     "tries": 0,
     "createdAt": "2026-08-21 07:32:02.479996+00",
     "trigger_metadata": {
-      "from": "ersatzteile@algi-hydraulic.de",
+      "from": "ersatzteile@aht-hydraulik.example",
       "subject": "WG: Anfrage Angebot Dichtsatz Hydraulikheber"
     }
   },
@@ -187,7 +187,7 @@
     "tries": 0,
     "createdAt": "2026-08-21 10:34:40.938705+00",
     "trigger_metadata": {
-      "from": "service@algi-hydraulic.de",
+      "from": "service@aht-hydraulik.example",
       "subject": "WG: Anfrage Angebot Dichtsatz Hydraulikheber"
     }
   },
@@ -199,7 +199,7 @@
     "tries": 0,
     "createdAt": "2026-08-21 10:36:46.657689+00",
     "trigger_metadata": {
-      "from": "service@algi-hydraulic.de",
+      "from": "service@aht-hydraulik.example",
       "subject": "WG: Anfrage Angebot Dichtsatz Hydraulikheber"
     }
   },
@@ -211,7 +211,7 @@
     "tries": 0,
     "createdAt": "2026-08-25 10:50:31.828551+00",
     "trigger_metadata": {
-      "from": "vertrieb@algi-hydraulic.de",
+      "from": "vertrieb@aht-hydraulik.example",
       "subject": "WG: Anfrage Pulsationsdämpfer G 95574"
     }
   },
@@ -223,7 +223,7 @@
     "tries": 0,
     "createdAt": "2026-08-26 08:59:26.874804+00",
     "trigger_metadata": {
-      "from": "vertrieb@algi-hydraulic.de",
+      "from": "vertrieb@aht-hydraulik.example",
       "subject": "WG: Anfrage"
     }
   },
@@ -235,7 +235,7 @@
     "tries": 0,
     "createdAt": "2026-08-26 09:04:17.757074+00",
     "trigger_metadata": {
-      "from": "vertrieb@algi-hydraulic.de",
+      "from": "vertrieb@aht-hydraulik.example",
       "subject": "WG: ⟨Kunde⟩"
     }
   },
@@ -247,8 +247,8 @@
     "tries": 0,
     "createdAt": "2026-08-26 09:06:18.173203+00",
     "trigger_metadata": {
-      "from": "info@algi-hydraulic.de",
-      "subject": "AW: ⟨Kunde⟩ /ALGI quote 26109044"
+      "from": "info@aht-hydraulik.example",
+      "subject": "AW: ⟨Kunde⟩ /AHT quote 26109044"
     }
   },
   {
@@ -259,7 +259,7 @@
     "tries": 0,
     "createdAt": "2026-08-26 09:31:24.579254+00",
     "trigger_metadata": {
-      "from": "vertrieb@algi-hydraulic.de",
+      "from": "vertrieb@aht-hydraulik.example",
       "subject": "WG: Anfrage Dichtungen 98036"
     }
   },
@@ -297,7 +297,7 @@
     "tries": 0,
     "createdAt": "2026-08-25 10:54:02.590354+00",
     "trigger_metadata": {
-      "from": "vertrieb@algi-hydraulic.de",
+      "from": "vertrieb@aht-hydraulik.example",
       "subject": "WG: DEMANDE DE DEVIS"
     }
   }

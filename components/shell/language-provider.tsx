@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { NextIntlClientProvider } from 'next-intl';
 import { LOCALE_COOKIE, Locale, defaultLocale, locales } from '@/i18n/config';
+import { isDemoMode } from '@/lib/demo/flag';
 
 interface LanguageContextType {
   locale: Locale;
@@ -24,6 +25,12 @@ export function LanguageProvider({
   const [messages, setMessages] = useState(initialMessages);
 
   useEffect(() => {
+    // The demo pins German: its copy, fixtures and product surface are one
+    // language by design. This effect otherwise re-reads the visitor's old
+    // locale cookie and flips the shell back — the server rendered lang="de"
+    // and the client immediately reverted to English chrome under German
+    // popovers, which is exactly the mismatch the pin exists to prevent.
+    if (isDemoMode()) return;
     // Read locale from cookie on mount
     const cookieLocale = document.cookie
       .split('; ')

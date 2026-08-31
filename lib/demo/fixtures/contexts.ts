@@ -5,7 +5,7 @@ import type { Context } from "@/types/models/context";
  * real context ids.
  *
  * The ids matter beyond cosmetics: chapter 1's answer cites
- * `software_documentation_context` and `zendesk_context`, and chapter 3's
+ * `software_documentation_context` and `support_tickets_context`, and chapter 3's
  * knowledge-search config routes between all six by id. With invented ids the
  * chapters would quietly contradict each other — citations pointing at contexts
  * the tour never shows, and a routing table referencing knowledge bases absent
@@ -32,7 +32,7 @@ const context = (
   },
   processor: {
     name: "default",
-    description: "Splits documents into chunks and generates embeddings.",
+    description: "Zerlegt Dokumente in Passagen und erzeugt Embeddings.",
     queue: "processing",
     trigger: "on_write",
     timeoutInSeconds: 600,
@@ -48,32 +48,32 @@ const context = (
 export const CONTEXTS: Context[] = [
   context(
     "tech_doc_context",
-    "Technical documentation",
+    "Technische Dokumentation",
     "Technical manuals and datasheets for NEW LIFT controllers. Check here first for technical questions about products, error codes, parameters, and installation.",
   ),
   context(
     "vorschriften_context",
-    "Standards & regulations",
+    "Normen & Vorschriften",
     "Norms, standards, directives and regulations (DIN, EN, ISO, VDI, EU directives).",
   ),
   context(
     "software_documentation_context",
-    "Software documentation",
+    "Software-Dokumentation",
     "Software release notes, updates and change documentation.",
   ),
   context(
     "custom_documents_context",
-    "Custom documents",
+    "Eigene Dokumente",
     "Manually uploaded documents; broad backup source.",
   ),
   context(
-    "zendesk_context",
-    "Support tickets",
+    "support_tickets_context",
+    "Support-Tickets",
     "Support tickets and customer correspondence.",
   ),
   context(
     "new_servicedb_context",
-    "Service database",
+    "Servicedatenbank",
     "Structured service records.",
   ),
   // The agent's own memory. It is a context like any other, which is exactly
@@ -86,7 +86,7 @@ export const CONTEXTS: Context[] = [
   // lifted from the production retrieval instructions.
   context(
     "newton_memory_context",
-    "Newton's memory",
-    "Facts, preferences and insights Newton has been taught by engineers during conversations.",
+    "Assistenten-Gedächtnis",
+    "Fakten, Präferenzen und Erkenntnisse, die Techniker dem Assistenten im Gespräch beigebracht haben.",
   ),
 ];

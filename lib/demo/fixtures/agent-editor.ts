@@ -17,10 +17,10 @@
  *
  * ONE departure, recorded so nobody mistakes it for the record: production
  * gives new_servicedb_context the instructions "Support tickets and customer
- * correspondence." -- verbatim the same string as zendesk_context, evidently a
+ * correspondence." -- verbatim the same string as support_tickets_context, evidently a
  * copy-paste. Reproducing it would show the same sentence twice on the Sources
  * step and read as a bug in the product rather than in one config field. It is
- * "Structured service records." here. Everything else is byte-for-byte.
+ * "Strukturierte Servicedatensätze." here. Everything else is byte-for-byte.
  */
 
 const KNOWLEDGE_BASES = {
@@ -28,32 +28,32 @@ const KNOWLEDGE_BASES = {
     enabled: true,
     kind: "documents",
     instructions:
-      "Technical manuals and datasheets for NEW LIFT controllers. Check here first for technical questions about products, error codes, parameters, and installation.",
+      "Technische Handbücher und Datenblätter für FST-Steuerungen. Bei Fragen zu Produkten, Fehlercodes, Parametern und Installation zuerst hier nachschlagen.",
     overrides: {},
   },
   vorschriften_context: {
     enabled: true,
     kind: "documents",
     instructions:
-      "Norms, standards, directives and regulations (DIN, EN, ISO, VDI, EU directives).",
+      "Normen, Standards, Richtlinien und Vorschriften (DIN, EN, ISO, VDI, EU-Richtlinien).",
     overrides: {},
   },
   software_documentation_context: {
     enabled: true,
     kind: "documents",
-    instructions: "Software release notes, updates and change documentation.",
+    instructions: "Software-Release-Notes, Updates und Änderungsdokumentation.",
     overrides: {},
   },
   custom_documents_context: {
     enabled: true,
     kind: "documents",
-    instructions: "Manually uploaded documents; broad backup source.",
+    instructions: "Manuell hochgeladene Dokumente; breite Ausweichquelle.",
     overrides: {},
   },
-  zendesk_context: {
+  support_tickets_context: {
     enabled: true,
     kind: "conversations",
-    instructions: "Support tickets and customer correspondence.",
+    instructions: "Support-Tickets und Kundenkorrespondenz.",
     overrides: {
       limit: 10,
     },
@@ -61,7 +61,7 @@ const KNOWLEDGE_BASES = {
   new_servicedb_context: {
     enabled: true,
     kind: "records",
-    instructions: "Structured service records.",
+    instructions: "Strukturierte Servicedatensätze.",
     overrides: {
       limit: 10,
     },
@@ -72,13 +72,13 @@ const ROUTING = {
   rules: [
     {
       id: "technical",
-      label: "Technical",
+      label: "Technik",
       description:
-        "The question is related to a specific product, system or part, asks for things like dimensions, error codes, specifications, etc.",
+        "Die Frage betrifft ein konkretes Produkt, System oder Bauteil — Abmessungen, Fehlercodes, Spezifikationen und Ähnliches.",
       main: ["tech_doc_context"],
       fallback: [
         "new_servicedb_context",
-        "zendesk_context",
+        "support_tickets_context",
         "custom_documents_context",
         "software_documentation_context",
       ],
@@ -87,18 +87,18 @@ const ROUTING = {
       id: "service",
       label: "Service",
       description:
-        "The user specifically asks for a Ticket, or a correspondence with a client",
-      main: ["zendesk_context", "new_servicedb_context"],
+        "Es wird gezielt nach einem Ticket oder einer Kundenkorrespondenz gefragt.",
+      main: ["support_tickets_context", "new_servicedb_context"],
       fallback: ["custom_documents_context"],
     },
     {
       id: "software",
       label: "Software",
-      description: "The user specifically asks for software updates or changes",
+      description: "Es wird gezielt nach Software-Updates oder Änderungen gefragt.",
       main: ["software_documentation_context"],
       fallback: [
         "new_servicedb_context",
-        "zendesk_context",
+        "support_tickets_context",
         "tech_doc_context",
         "vorschriften_context",
         "custom_documents_context",
@@ -106,12 +106,12 @@ const ROUTING = {
     },
     {
       id: "regulatory",
-      label: "Regulatory",
+      label: "Vorschriften",
       description:
-        "The user specifically asks for a regulation, standard, or legal requirement",
+        "Es wird gezielt nach einer Vorschrift, Norm oder gesetzlichen Anforderung gefragt.",
       main: [
         "vorschriften_context",
-        "zendesk_context",
+        "support_tickets_context",
         "new_servicedb_context",
       ],
       fallback: [
@@ -122,14 +122,14 @@ const ROUTING = {
     },
     {
       id: "market",
-      label: "Market",
+      label: "Markt",
       description:
-        "The user asks for market information such as market share, market trends, market size, etc.",
+        "Es wird nach Marktinformationen gefragt — Marktanteile, Trends, Marktgröße und Ähnliches.",
       main: [
         "tech_doc_context",
         "vorschriften_context",
         "software_documentation_context",
-        "zendesk_context",
+        "support_tickets_context",
         "new_servicedb_context",
         "custom_documents_context",
       ],
@@ -367,7 +367,7 @@ const VOCABULARY = {
     {
       name: "Product names",
       description:
-        "NEW LIFT product and controller names such as FST, ECO, CBM-2. Return both stem and full form (FST-3 → FST and FST-3).",
+        "Produkt- und Steuerungsnamen wie FST, ECO, CBM-2. Stamm und volle Form zurückgeben (FST-3 → FST und FST-3).",
       examples: ["FST", "FST-2XT", "ECO", "CBM-2", "PAM", "EAZ"],
       strategy: "fuzzy",
       contexts: ["tech_doc_context"],
@@ -422,7 +422,7 @@ const VOCABULARY = {
     },
   ],
   styleHint:
-    "Deutsche technische Handbücher für Aufzugssteuerungen (NEW LIFT): Menüpfade, Parameter, Klemmen, Register, Bit-Belegungen, Funktionsnamen und Fehlercodes (z.B. S2-FEHL.CMP-INPUT).",
+    "Deutsche technische Handbücher für Aufzugssteuerungen: Menüpfade, Parameter, Klemmen, Register, Bit-Belegungen, Funktionsnamen und Fehlercodes (z.B. S2-FEHL.CMP-INPUT).",
 };
 
 /**

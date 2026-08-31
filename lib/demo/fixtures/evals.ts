@@ -61,7 +61,7 @@ export const TEST_CASES = [
     "Nothalt COP in the FST fault memory",
     'was bedeutet "Nothalt COP" im FST Fehlerspeicher?',
     "Identifies COP as the Car Operating Panel and the entry as the in-car emergency stop being pressed while stationary with doors open. Mentions V0188 naming and Elevision 4.0.",
-    ["software_documentation_context", "zendesk_context"],
+    ["software_documentation_context", "support_tickets_context"],
   ),
   testCase(
     "case-lsu-reset",
