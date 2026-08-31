@@ -31,13 +31,29 @@ const Logo = ({ width = 64, height = 32, className = "", alt = "Logo" }: LogoPro
     const configContext = useContext(ConfigContext);
     const base = configContext?.backend ?? "";
 
-    // In demo mode `backend` names a host nothing is serving, so both sources
-    // 404 and the only thing keeping the page tidy was the onError below —
-    // which fires after first paint, leaving alt text as a grey block for as
-    // long as the shell takes to hydrate. Local paths avoid the round trip.
-    const demo = isDemoMode();
-    const lightSrc = demo ? DEMO_BRAND.logoLight : `${base}/logo_light.png`;
-    const darkSrc = demo ? DEMO_BRAND.logoDark : `${base}/logo_dark.png`;
+    // The demo renders a monogram tile instead of an <img> at all. The mark
+    // assets do not exist yet, and the failure mode of a missing image is alt
+    // text painted as a grey block until onError fires — the reviewer met it
+    // on the tour's first screen. A monogram cannot fail to load, and when the
+    // real marks land, swapping this branch back to the local paths in
+    // lib/demo/brand.ts is the whole change.
+    if (isDemoMode()) {
+        return (
+            <span
+                aria-hidden="true"
+                className={cn(
+                    className,
+                    "inline-flex items-center justify-center rounded-md bg-primary font-semibold text-primary-foreground",
+                )}
+                style={{ width, height, fontSize: Math.max(11, height * 0.45) }}
+            >
+                {DEMO_BRAND.mark}
+            </span>
+        );
+    }
+
+    const lightSrc = `${base}/logo_light.png`;
+    const darkSrc = `${base}/logo_dark.png`;
 
     // A logo that fails to load is worse than no logo: the browser renders the
     // alt text as a grey block, which reads as a broken page rather than an

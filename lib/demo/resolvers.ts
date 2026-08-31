@@ -705,6 +705,33 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
       litellmModel("claude-sonnet-4-6", "anthropic/claude-sonnet-4-6", "Anthropic"),
     ],
   }),
+  // Five operations the reviewer's console pass surfaced as unmapped noise.
+  // GetQueue POLLS — the routine page asks every few seconds, so unmapped it
+  // warned continuously. Values are an idle queue, which is the truth of a
+  // demo where nothing executes.
+  GetQueue: (_w, variables) => ({
+    queue: {
+      __typename: "Queue",
+      name: variables.queue,
+      concurrency: { worker: 4, queue: 8 },
+      timeoutInSeconds: 600,
+      ratelimit: null,
+      isMaxed: false,
+      isPaused: false,
+      jobs: { paused: 0, completed: 25, failed: 8, waiting: 0, active: 0, delayed: 0 },
+    },
+  }),
+  GetEvals: () => ({ evals: { items: [] } }),
+  GetUniquePromptTags: () => ({ getUniquePromptTags: [] }),
+  GetVariablesLite: () => ({
+    variablesPagination: { pageInfo: page(0), items: [] },
+  }),
+  GetAgentsByIds: (world, variables) => ({
+    agentByIds: world.agents.filter((a) =>
+      (variables.ids as string[] | undefined)?.includes(a.id),
+    ),
+  }),
+
   GetUserRoles: () => ({ rolesPagination: { pageInfo: page(0), items: [] } }),
   GetTeams: () => ({ teamsPagination: { pageInfo: page(0), items: [] } }),
   // The composer's prompt-library picker fires this on every chat render, so
