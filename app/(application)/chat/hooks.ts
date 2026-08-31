@@ -388,7 +388,13 @@ export function useChatSession({
       }
     },
     transport: isDemoMode()
-      ? new DemoChatTransport({ turns: turnsFor(getCurrentPosition().chapter) })
+      ? new DemoChatTransport({
+          // Resolved per send, not captured here: this options object is built
+          // when the controller mounts, which can precede the tour writing its
+          // position, and a snapshot would leave the wrong chapter's script in
+          // place for good.
+          turns: () => turnsFor(getCurrentPosition().chapter),
+        })
       : new DefaultChatTransport({
           api: `${configContext?.backend}${agent.slug}/${agent.id}`,
           // only send the last message to the server: we load
