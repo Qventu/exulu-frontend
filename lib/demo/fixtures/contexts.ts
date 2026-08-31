@@ -49,32 +49,32 @@ export const CONTEXTS: Context[] = [
   context(
     "tech_doc_context",
     "Technische Dokumentation",
-    "Technical manuals and datasheets for NEW LIFT controllers. Check here first for technical questions about products, error codes, parameters, and installation.",
+    "Technische Handbücher und Datenblätter für FST-Steuerungen — Fehlercodes, Parameter, Installation.",
   ),
   context(
     "vorschriften_context",
     "Normen & Vorschriften",
-    "Norms, standards, directives and regulations (DIN, EN, ISO, VDI, EU directives).",
+    "Normen und Vorschriften: DIN, EN, ISO, VDI, EU-Richtlinien.",
   ),
   context(
     "software_documentation_context",
     "Software-Dokumentation",
-    "Software release notes, updates and change documentation.",
+    "Release-Notes und Änderungsdokumentation der Steuerungssoftware.",
   ),
   context(
     "custom_documents_context",
     "Eigene Dokumente",
-    "Manually uploaded documents; broad backup source.",
+    "Manuell hochgeladene Dokumente als breite Ausweichquelle.",
   ),
   context(
     "support_tickets_context",
     "Support-Tickets",
-    "Support tickets and customer correspondence.",
+    "Support-Tickets und Kundenkorrespondenz aus dem Servicealltag.",
   ),
   context(
     "new_servicedb_context",
     "Servicedatenbank",
-    "Structured service records.",
+    "Strukturierte Datensätze aus der Servicedatenbank.",
   ),
   // The agent's own memory. It is a context like any other, which is exactly
   // the point chapter 4 makes: a correction an engineer gives in chat becomes
