@@ -1477,7 +1477,7 @@
       "tokensExplainer": "Token sind die Einheiten, in denen KI-Nutzung gemessen wird – etwa ¾ Wort pro Token.",
       "total": "Token gesamt"
     },
-    "streaming": { "thinking": "Denke nach ...", "researching": "Recherchiere ...", "planning": "Plane ..." },
+    "streaming": { "thinking": "Denke nach ...", "researching": "Recherchiere ...", "planning": "Plane ...", "generating": "Erzeuge Antwort ...", "writing": "Schreibe ...", "responding": "Antworte ...", "finishingUp": "Fast fertig ...", "almostThere": "Gleich geschafft ...", "justAMoment": "Einen Moment ..." },
     "reasoning": {
       "showAll": "{count} weitere {count, plural, one {Schritt} other {Schritte}} – alle anzeigen",
       "showDetails": "{count} {count, plural, one {Denkschritt} other {Denkschritte}} – Details anzeigen"

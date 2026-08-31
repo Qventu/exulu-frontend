@@ -1477,7 +1477,7 @@
       "tokensExplainer": "Tokens are the units AI usage is measured in — roughly ¾ of a word each.",
       "total": "Total tokens"
     },
-    "streaming": { "thinking": "Thinking...", "researching": "Researching...", "planning": "Planning..." },
+    "streaming": { "thinking": "Thinking...", "researching": "Researching...", "planning": "Planning...", "generating": "Generating...", "writing": "Writing...", "responding": "Responding...", "finishingUp": "Finishing up...", "almostThere": "Almost there...", "justAMoment": "Just a moment..." },
     "reasoning": {
       "showAll": "{count} more reasoning {count, plural, one {step} other {steps}} - show all",
       "showDetails": "{count} reasoning {count, plural, one {step} other {steps}} - show details"

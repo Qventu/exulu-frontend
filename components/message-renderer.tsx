@@ -584,7 +584,7 @@ export function MessageRenderer({
   )
 }
 
-const STREAMING_PLACEHOLDER_KEYS = ["thinking", "researching", "planning"] as const
+const STREAMING_PLACEHOLDER_KEYS = ["thinking", "researching", "planning", "generating", "writing", "responding", "finishingUp", "almostThere", "justAMoment"] as const
 
 interface MessageItemProps {
   message: UIMessage
