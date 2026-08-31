@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { DynamicToolUIPart, UIMessage } from "ai"
 import { isDemoMode } from "@/lib/demo/flag"
 import { Message, MessageContent } from '@/components/ai-elements/message'
@@ -160,6 +161,7 @@ export function MessageRenderer({
   setMessages,
   handleFeedback
 }: MessageRendererProps) {
+  const t = useTranslations("chat")
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [editedText, setEditedText] = useState<string>("")
 
@@ -505,7 +507,7 @@ export function MessageRenderer({
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTextIndex((prevIndex) => (prevIndex + 1) % STREAMING_PLACEHOLDER_TEXTS.length);
+      setCurrentTextIndex((prevIndex) => (prevIndex + 1) % STREAMING_PLACEHOLDER_KEYS.length);
     }, 3000);
 
     return () => clearInterval(interval);
@@ -559,7 +561,7 @@ export function MessageRenderer({
             isEditing={editingMessageId === message.id}
             anyEditing={editingMessageId !== null}
             editedText={editingMessageId === message.id ? editedText : ""}
-            streamingLabel={showsStreamingPlaceholder ? STREAMING_PLACEHOLDER_TEXTS[currentTextIndex] : null}
+            streamingLabel={showsStreamingPlaceholder ? t(`streaming.${STREAMING_PLACEHOLDER_KEYS[currentTextIndex]}`) : null}
             prefersReducedMotion={prefersReducedMotion}
             onEditTextChange={setEditedText}
             onStartEdit={handleStartEdit}
@@ -582,17 +584,7 @@ export function MessageRenderer({
   )
 }
 
-const STREAMING_PLACEHOLDER_TEXTS = [
-  "Generating...",
-  "Thinking...",
-  "Researching...",
-  "Planning...",
-  "Writing...",
-  "Responding...",
-  "Finishing up...",
-  "Almost there...",
-  "Just a moment...",
-]
+const STREAMING_PLACEHOLDER_KEYS = ["thinking", "researching", "planning"] as const
 
 interface MessageItemProps {
   message: UIMessage
@@ -1508,7 +1500,7 @@ const ReasoningVisualisation = ({
   streaming: boolean;
   reasoning: ToolReasoningStep[] | undefined;
 }) => {
-
+  const t = useTranslations("chat")
   const [showAllReasoning, setShowAllReasoning] = useState(false);
 
   // Render a single reasoning step
@@ -1573,7 +1565,7 @@ const ReasoningVisualisation = ({
                 className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors group w-full"
               >
                 <div className="flex-1 border-t border-dashed border-muted-foreground/30 group-hover:border-foreground/30 transition-colors" />
-                <span className="shrink-0">{reasoning.length - 5} more reasoning {reasoning.length - 5 === 1 ? 'step' : 'steps'} - show all</span>
+                <span className="shrink-0">{t("reasoning.showAll", { count: reasoning.length - 5 })}</span>
                 <div className="flex-1 border-t border-dashed border-muted-foreground/30 group-hover:border-foreground/30 transition-colors" />
               </button>
             )}
@@ -1594,7 +1586,7 @@ const ReasoningVisualisation = ({
                 className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors group w-full"
               >
                 <div className="flex-1 border-t border-dashed border-muted-foreground/30 group-hover:border-foreground/30 transition-colors" />
-                <span className="shrink-0">{reasoning.length} reasoning {reasoning.length === 1 ? 'step' : 'steps'} - show details</span>
+                <span className="shrink-0">{t("reasoning.showDetails", { count: reasoning.length })}</span>
                 <div className="flex-1 border-t border-dashed border-muted-foreground/30 group-hover:border-foreground/30 transition-colors" />
               </button>
             )}
@@ -1644,6 +1636,7 @@ const ContextSearchResults = ({
   // Demo-only rather than a new default: in real use this card sits in a long
   // conversation and opening every one of them by default would bury the
   // answers between them.
+  const t = useTranslations("chat")
   const [isOpen, setIsOpen] = useState(isDemoMode());
   const [showAllItems, setShowAllItems] = useState(false);
   const uniqueContexts = new Set(items.map(item => item.context.name));
@@ -1667,22 +1660,22 @@ const ContextSearchResults = ({
                     </div>
                     <div className="text-left">
                       <div className="font-medium text-sm flex items-center gap-2">
-                        Context search results {contextNames}
+                        {t("retrieval.header", { contexts: contextNames })}
                       </div>
                       <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
                         {uniqueContexts.size > 0 && (
                           <span className="flex items-center gap-1">
                             <Database className="h-3 w-3" />
-                            {uniqueContexts.size} {uniqueContexts.size === 1 ? 'context' : 'contexts'}
+                            {t("retrieval.contexts", { count: uniqueContexts.size })}
                           </span>
                         )}
                         <span className="flex items-center gap-1">
                           <FileText className="h-3 w-3" />
-                          {items.length} {items.length === 1 ? 'item' : 'items'}
+                          {t("retrieval.items", { count: items.length })}
                         </span>
                         <span className="flex items-center gap-1">
                           <LayoutList className="h-3 w-3" />
-                          {totalChunks} {totalChunks === 1 ? 'chunk' : 'chunks'}
+                          {t("retrieval.chunks", { count: totalChunks })}
                         </span>
                       </div>
 
@@ -1701,16 +1694,22 @@ const ContextSearchResults = ({
                   {/* Search Parameters */}
                   {(input && Object.keys(input).length > 0) && (
                     <div className="p-4 bg-muted/30 border-b">
-                      <div className="text-xs font-medium text-muted-foreground mb-2">Search Parameters</div>
+                      <div className="text-xs font-medium text-muted-foreground mb-2">{t("retrieval.searchParams")}</div>
                       <div className="flex flex-wrap gap-2">
-                        {Object.entries(input).map(([key, value]) => (
-                          <Badge key={key} variant="outline" className="text-xs">
-                            <span className="font-medium">{camelCaseToLabel(key)}:</span>
-                            <span className="ml-1 font-normal">
-                              {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                            </span>
-                          </Badge>
-                        ))}
+                        {Object.entries(input).map(([key, value]) => {
+                          const knownKeys = ["userQuery", "importantKeyword", "relevantKeywords"] as const
+                          const label = (knownKeys as readonly string[]).includes(key)
+                            ? t(`retrieval.${key as typeof knownKeys[number]}`)
+                            : `${camelCaseToLabel(key)}:`
+                          return (
+                            <Badge key={key} variant="outline" className="text-xs">
+                              <span className="font-medium">{label}</span>
+                              <span className="ml-1 font-normal">
+                                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                              </span>
+                            </Badge>
+                          )
+                        })}
                       </div>
                     </div>
                   )}
@@ -1754,7 +1753,7 @@ const ContextSearchResults = ({
 };
 
 const SearchResultItem = ({ item }: { item: ItemWithChunks }) => {
-
+  const t = useTranslations("chat")
   const router = useRouter();
 
   const formatDate = (dateString?: string) => {
@@ -1796,7 +1795,7 @@ const SearchResultItem = ({ item }: { item: ItemWithChunks }) => {
         {/* Text Length Indicator */}
         {item.chunks && item.chunks.length > 0 && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <span className="text-xs">• {item.chunks.length} {item.chunks.length === 1 ? 'chunk' : 'chunks'}</span>
+            <span className="text-xs">• {t("retrieval.chunks", { count: item.chunks.length })}</span>
           </div>
         )}
         {/* TODO provide a dialog modal that allows the user to view the chunks */}

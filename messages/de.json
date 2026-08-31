@@ -1476,6 +1476,21 @@
       "title": "Nutzung",
       "tokensExplainer": "Token sind die Einheiten, in denen KI-Nutzung gemessen wird – etwa ¾ Wort pro Token.",
       "total": "Token gesamt"
+    },
+    "streaming": { "thinking": "Denke nach ...", "researching": "Recherchiere ...", "planning": "Plane ..." },
+    "reasoning": {
+      "showAll": "{count} weitere {count, plural, one {Schritt} other {Schritte}} – alle anzeigen",
+      "showDetails": "{count} {count, plural, one {Denkschritt} other {Denkschritte}} – Details anzeigen"
+    },
+    "retrieval": {
+      "header": "Suchergebnisse: {contexts}",
+      "contexts": "{count} {count, plural, one {Wissensbasis} other {Wissensbasen}}",
+      "items": "{count} {count, plural, one {Dokument} other {Dokumente}}",
+      "chunks": "{count} {count, plural, one {Passage} other {Passagen}}",
+      "searchParams": "Suchparameter",
+      "userQuery": "Anfrage:",
+      "importantKeyword": "Wichtigstes Stichwort:",
+      "relevantKeywords": "Relevante Stichwörter:"
     }
   },
   "common": {

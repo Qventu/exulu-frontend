@@ -1476,6 +1476,21 @@
       "title": "Usage",
       "tokensExplainer": "Tokens are the units AI usage is measured in — roughly ¾ of a word each.",
       "total": "Total tokens"
+    },
+    "streaming": { "thinking": "Thinking...", "researching": "Researching...", "planning": "Planning..." },
+    "reasoning": {
+      "showAll": "{count} more reasoning {count, plural, one {step} other {steps}} - show all",
+      "showDetails": "{count} reasoning {count, plural, one {step} other {steps}} - show details"
+    },
+    "retrieval": {
+      "header": "Context search results {contexts}",
+      "contexts": "{count} {count, plural, one {context} other {contexts}}",
+      "items": "{count} {count, plural, one {item} other {items}}",
+      "chunks": "{count} {count, plural, one {chunk} other {chunks}}",
+      "searchParams": "Search parameters",
+      "userQuery": "User query:",
+      "importantKeyword": "Important keyword:",
+      "relevantKeywords": "Relevant keywords:"
     }
   },
   "common": {
