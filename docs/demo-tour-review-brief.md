@@ -1,3 +1,11 @@
+> **SUPERSEDED — use [demo-tour-test-brief.md](./demo-tour-test-brief.md).**
+>
+> This document is kept for the reasoning in its "Please disagree" and
+> "Known and accepted" sections, and is wrong on every operational fact: the
+> `/demo/tour` route it tells you to open no longer exists, the tour is now 27
+> steps rather than 29, and the chapter order has changed (`memory` moved to
+> third). Following the instructions below will waste your time.
+
 # Review brief: the Exulu guided demo tour
 
 You are reviewing a guided product tour that has been built but never seen by
