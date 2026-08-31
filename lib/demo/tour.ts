@@ -362,7 +362,10 @@ export const CHAPTERS: DemoChapter[] = [
       {
         id: "meetings-guide",
         route: `/transcriptions?review=${ALGI_MEETING_ID}`,
-        anchor: null,
+        anchor: "meeting-guide",
+        // The outputs render at the BOTTOM of the review sheet's scroll;
+        // "start" brings the document itself on screen, not just its header.
+        scrollBlock: "start",
         title: "Also wird ein Dokument daraus",
         body: "Dieselbe Besprechung als Arbeitsanweisung: Freigabe prüfen, Lüftung nicht aus der Kabinentür ableiten, offene Punkte benennen. Alles Entschiedene, nichts vom Rauschen. Dieses eine Dokument entstand von Hand — der Kunde hat den Schritt noch nicht ausgeführt.",
       },
