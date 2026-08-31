@@ -28,15 +28,24 @@ export function TourBubble() {
   // hand-tuned offset per route (which rots as pages change), probe what is
   // actually under the four corners after each step lands and step upward in
   // 80px increments until the corners are clear or three nudges are spent.
+  //
+  // The chat route takes ~6s to mount its composer, so a single 600ms probe
+  // sees an empty page and never fires again. Fix: schedule the WHOLE probe
+  // sequence at three escalating delays (600ms, 3000ms, 9000ms) after each
+  // position change. Each run starts fresh from attempt 1 but does NOT reset
+  // accumulated lift — a later run may add to it, capped so total lift never
+  // exceeds 240px.
   const rootRef = useRef<HTMLDivElement>(null);
   const [lift, setLift] = useState(0);
   useEffect(() => {
     setLift(0);
     let cancelled = false;
     const INTERACTIVE = "button, a, input, textarea, select, [role='button']";
+    const MAX_LIFT = 240;
     const probe = (attempt: number) => {
       if (cancelled || attempt > 3) return;
       requestAnimationFrame(() => {
+        if (cancelled) return;
         const el = rootRef.current;
         if (!el) return;
         const r = el.getBoundingClientRect();
@@ -56,14 +65,21 @@ export function TourBubble() {
           ),
         );
         if (hit) {
-          setLift((v) => v + 80);
+          setLift((v) => Math.min(v + 80, MAX_LIFT));
           probe(attempt + 1);
         }
       });
     };
-    // Give the page a beat to lay out after the route/step change.
-    const t = setTimeout(() => probe(1), 600);
-    return () => { cancelled = true; clearTimeout(t); };
+    // Schedule the full probe sequence at escalating delays so that late-
+    // mounting routes (e.g. chat composer at ~6s) are still caught. Each
+    // scheduled run starts from attempt 1; accumulated lift is preserved and
+    // only grows (capped at MAX_LIFT) so a later wave can add to earlier work.
+    const delays = [600, 3000, 9000];
+    const timers = delays.map((delay) => setTimeout(() => probe(1), delay));
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
   }, [position.chapter, position.step]);
 
   return (
