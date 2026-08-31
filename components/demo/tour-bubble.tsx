@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useTour } from "./tour-provider";
 
@@ -21,11 +21,56 @@ export function TourBubble() {
   const hasMoreInChapter = position.step < stepCount - 1;
   const nextChapter = chapters[currentIndex + 1];
 
+  // Nudge the bubble up when it covers something interactive.
+  //
+  // Fixed bottom-right is over the send button on chat, Edit buttons on the
+  // transcript list, and the wizard's Continue on the editor. Rather than a
+  // hand-tuned offset per route (which rots as pages change), probe what is
+  // actually under the four corners after each step lands and step upward in
+  // 80px increments until the corners are clear or three nudges are spent.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [lift, setLift] = useState(0);
+  useEffect(() => {
+    setLift(0);
+    let cancelled = false;
+    const INTERACTIVE = "button, a, input, textarea, select, [role='button']";
+    const probe = (attempt: number) => {
+      if (cancelled || attempt > 3) return;
+      requestAnimationFrame(() => {
+        const el = rootRef.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const corners: Array<[number, number]> = [
+          [r.left + 4, r.top + 4], [r.right - 4, r.top + 4],
+          [r.left + 4, r.bottom - 4], [r.right - 4, r.bottom - 4],
+        ];
+        const hit = corners.some(([x, y]) =>
+          document.elementsFromPoint(x, y).some(
+            (n) =>
+              n instanceof Element &&
+              !el.contains(n) &&
+              !n.closest(".shepherd-element") &&
+              (n.matches(INTERACTIVE) ||
+                (n.closest?.(INTERACTIVE) !== null &&
+                  !el.contains(n.closest(INTERACTIVE)!))),
+          ),
+        );
+        if (hit) {
+          setLift((v) => v + 80);
+          probe(attempt + 1);
+        }
+      });
+    };
+    // Give the page a beat to lay out after the route/step change.
+    const t = setTimeout(() => probe(1), 600);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [position.chapter, position.step]);
+
   return (
     // Above Shepherd's own layers, which are fixed in its stylesheet: the
     // popover sits at 9999 and the modal overlay at 9997. The menu has to
     // clear both or it is buried by the overlay it is meant to escape.
-    <div className="fixed bottom-6 right-6 z-[10000] w-72">
+    <div ref={rootRef} style={{ transform: lift ? `translateY(-${lift}px)` : undefined }} className="fixed bottom-6 right-6 z-[10000] w-72">
       {open && (
         <ul className="mb-2 overflow-hidden rounded-lg border bg-popover shadow-lg">
           {chapters.map((chapter, index) => {
