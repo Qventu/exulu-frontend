@@ -134,7 +134,7 @@ export function shepherdStepFor(
           // instead of rendering off-screen.
           attachTo: {
             element: `[data-demo-id="${step.anchor}"]`,
-            on: "bottom" as PopperPlacement,
+            on: (step.placement ?? "bottom") as PopperPlacement,
           },
           waitForElement: ANCHOR_WAIT_MS,
           // Chapter 3 points at a 55-row glossary well below the fold. Without

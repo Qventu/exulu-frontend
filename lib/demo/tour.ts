@@ -88,6 +88,13 @@ export interface DemoStep {
    * and the step is about the list.
    */
   scrollBlock?: "start" | "nearest";
+  /**
+   * Which side of the anchor the popover prefers. floating-ui flips it when
+   * that side does not fit, so this is a preference, not a promise. Default
+   * "bottom". "left" for the wizard steps: bottom placement sat the popover
+   * across the drawer's own heading.
+   */
+  placement?: "top" | "bottom" | "left" | "right";
 }
 
 export interface DemoChapter {
@@ -247,6 +254,7 @@ export const CHAPTERS: DemoChapter[] = [
         id: "config-sources",
         route: "/agents/edit/demo-agent-newton?wizard=sources",
         anchor: "agent-wizard-sources",
+        placement: "left",
         title: "Sieben Wissensbasen, drei Lesarten",
         body: "Handbücher werden wie Dokumente gelesen, Support-Tickets wie Gespräche, die Servicedatenbank wie Datensätze. Jede Basis trägt einen Satz, wann der Assistent dort nachschlägt. Die siebte ist sein eigenes Gedächtnis — dort landete eben Ihre Korrektur.",
       },
@@ -254,6 +262,7 @@ export const CHAPTERS: DemoChapter[] = [
         id: "config-routing",
         route: "/agents/edit/demo-agent-newton?wizard=routing",
         anchor: "agent-wizard-routing",
+        placement: "left",
         title: "Routing, in ganzen Sätzen",
         body: "Fünf Regeln entscheiden, wo eine Frage zuerst landet und wohin sie ausweicht. Geschrieben als Sätze, nicht als Code — ein Fachexperte ändert sie ohne Entwickler.",
       },
@@ -261,6 +270,7 @@ export const CHAPTERS: DemoChapter[] = [
         id: "config-vocabulary",
         route: "/agents/edit/demo-agent-newton?wizard=vocabulary",
         anchor: "agent-wizard-vocabulary",
+        placement: "left",
         title: "Er lernt Ihre Sprache",
         body: "55 Abkürzungen aus der Aufzugstechnik — ADM, SHK, UCM — dazu Produktnamen und Normen. Deshalb findet eine Frage zum SHK die richtigen Seiten, egal wie sie formuliert ist.",
       },
@@ -268,6 +278,7 @@ export const CHAPTERS: DemoChapter[] = [
         id: "config-behavior",
         route: "/agents/edit/demo-agent-newton?wizard=behavior",
         anchor: "agent-wizard-behavior",
+        placement: "left",
         title: "Und wie gründlich er sucht",
         body: "Wie viele Suchdurchläufe, wie viele Treffer, wann er aufgibt und ehrlich passt — die Einstellung hinter der Absage aus Kapitel 3.",
       },

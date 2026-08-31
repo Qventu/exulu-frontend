@@ -62,6 +62,18 @@ describe("anchored steps point Shepherd at the right element", () => {
     expect(composer, "no composer step — has the anchor been renamed?").toBeTruthy();
     expect(shepherdStepFor(composer!, handlers).canClickTarget).toBe(true);
   });
+
+  it("honours a step's placement, defaulting to bottom", () => {
+    // The popover was covering the content some steps narrate — the wizard
+    // steps hid the drawer's own title. floating-ui still flips when the
+    // preferred side does not fit, so this is a preference, not a promise.
+    const anchored = allSteps.find((s) => s.anchor && !s.placement)!;
+    expect(shepherdStepFor(anchored, handlers).attachTo?.on).toBe("bottom");
+
+    const placed = allSteps.find((s) => s.placement === "left");
+    expect(placed, "no left-placed step — config wizard steps should be").toBeTruthy();
+    expect(shepherdStepFor(placed!, handlers).attachTo?.on).toBe("left");
+  });
 });
 
 describe("unanchored steps are full-screen beats", () => {
