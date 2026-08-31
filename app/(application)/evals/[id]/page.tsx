@@ -23,7 +23,7 @@
 import { useMutation, useQuery } from "@apollo/client";
 import { MoreHorizontal, Play, Plus, X, Pencil } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useContext, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -79,8 +79,12 @@ export default function EvalSetEditorPage() {
   const hasEvalsAccess = can(user, { area: "evals", level: "read" });
   const canWrite = can(user, { area: "evals", level: "write" });
 
+  // Deep link: ?tab=testCases opens the cases tab on arrival. Read once as
+  // the DEFAULT, not synced — switching tabs by hand must not fight the URL.
+  const requestedTab = useSearchParams().get("tab");
+  const initialTab = requestedTab === "testCases" ? "testCases" : "results";
   const [activeTab, setActiveTab] = useState<"results" | "testCases">(
-    "results",
+    initialTab,
   );
   const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -321,7 +325,7 @@ export default function EvalSetEditorPage() {
           <EvalRuns id={evalSetId} />
         </TabsContent>
 
-        <TabsContent value="testCases" className="mt-0 space-y-4">
+        <TabsContent value="testCases" className="mt-0 space-y-4" data-demo-id="evals-cases">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
               {t("testCases.toolbar.count", { count: caseCount })}

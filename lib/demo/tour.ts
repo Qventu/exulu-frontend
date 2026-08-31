@@ -296,8 +296,8 @@ export const CHAPTERS: DemoChapter[] = [
       },
       {
         id: "evals-sources",
-        route: "/evals/evalset-techdoc-regression",
-        anchor: null,
+        route: "/evals/evalset-techdoc-regression?tab=testCases",
+        anchor: "evals-cases",
         title: "Auch die Quelle wird geprüft",
         body: "Ein Testfall kann neben der richtigen Antwort die richtige Quelle verlangen — eine Normfrage muss aus EN und DIN beantwortet werden, nicht aus einem Produkthandbuch. Richtig klingen und richtig sein werden getrennt bewertet.",
       },
