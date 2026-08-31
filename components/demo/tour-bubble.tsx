@@ -77,7 +77,7 @@ export function TourBubble() {
               a five-step chapter had no way to know they had signed up for
               four more clicks. That not-knowing is most of what made the tour
               feel long. */}
-          {currentIndex + 1} of {chapters.length}
+          {currentIndex + 1} von {chapters.length}
           {stepCount > 1 ? (
             <span className="ml-1 opacity-70">
               · {position.step + 1}/{stepCount}
@@ -98,10 +98,13 @@ export function TourBubble() {
       {hasMoreInChapter && nextChapter ? (
         <button
           type="button"
-          className="mt-1 w-full rounded-lg px-4 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          // Opaque like the bubble above it. Transparent, this sat directly
+          // over table rows and buttons on /data and /transcriptions and was
+          // illegible — the reviewer hit it on both.
+          className="mt-1 w-full rounded-lg border bg-popover px-4 py-2 text-left text-xs text-muted-foreground shadow-lg transition-colors hover:bg-accent hover:text-accent-foreground"
           onClick={() => jumpTo(nextChapter.id)}
         >
-          Skip to {nextChapter.title} →
+          Kapitel überspringen: {nextChapter.title} →
         </button>
       ) : null}
     </div>

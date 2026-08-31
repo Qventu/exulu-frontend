@@ -214,7 +214,7 @@ describe("the two chapters that show something invented", () => {
       .join(" ");
 
   it("tells the visitor the eval scores are not measurements", () => {
-    expect(bodies("evals")).toMatch(/illustrative/i);
+    expect(bodies("evals")).toMatch(/beispielhaft/i);
   });
 
   it("never states a measured eval outcome", () => {
@@ -224,12 +224,12 @@ describe("the two chapters that show something invented", () => {
   });
 
   it("tells the visitor the work instruction was written by hand", () => {
-    expect(bodies("meetings")).toMatch(/by hand/i);
+    expect(bodies("meetings")).toMatch(/von Hand/i);
   });
 });
 
 describe("the closing call to action", () => {
-  const closing = () => CHAPTERS.at(-1)!.steps[0].body;
+  const closing = () => CHAPTERS.at(-1)!.steps.at(-1)!.body;
 
   it("makes the ask, in the whitepaper's own terms", () => {
     // The tour used to end on a Back button: twelve minutes of someone's
@@ -240,11 +240,11 @@ describe("the closing call to action", () => {
     // proposes something specific — ten manuals, two weeks, their own service
     // team's questions — while the close used to invent a vaguer ask than the
     // one they had already been made.
-    expect(closing()).toMatch(/ten of your manuals/i);
-    expect(closing()).toMatch(/two weeks/i);
+    expect(closing()).toMatch(/Zehn Ihrer Handbücher/i);
+    expect(closing()).toMatch(/zwei Wochen/i);
   });
 
-  const closingStep = () => CHAPTERS.at(-1)!.steps[0];
+  const closingStep = () => CHAPTERS.at(-1)!.steps.at(-1)!;
 
   it("never renders a dead link or a placeholder", () => {
     // DEMO_BOOKING_URL is empty until the HubSpot meetings link exists. An

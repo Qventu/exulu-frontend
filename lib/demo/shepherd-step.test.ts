@@ -80,23 +80,23 @@ describe("unanchored steps are full-screen beats", () => {
 describe("the footer buttons match where the visitor is", () => {
   it("offers Back and Next in the middle of the tour", () => {
     const options = shepherdStepFor(allSteps[1], handlers);
-    expect(options.buttons.map((b) => b.text)).toEqual(["Back", "Next"]);
+    expect(options.buttons.map((b) => b.text)).toEqual(["Zurück", "Weiter"]);
   });
 
   it("drops Back at the very start", () => {
     // Rendering a dead button is worse than rendering none: the visitor clicks
     // it, nothing happens, and they conclude the demo is broken.
     const first = shepherdStepFor(allSteps[0], { ...handlers, hasPrev: false });
-    expect(first.buttons.map((b) => b.text)).toEqual(["Next"]);
+    expect(first.buttons.map((b) => b.text)).toEqual(["Weiter"]);
   });
 
   it("replaces Next at the very end rather than leaving nothing", () => {
-    // This assertion used to read `toEqual(["Back"])` — it pinned the dead end
+    // This assertion used to read `toEqual(["Zurück"])` — it pinned the dead end
     // in place and passed for as long as the dead end existed. Dropping Next is
     // right; leaving only Back is not, because the last step is the one that
     // makes the ask. A reviewer found it on screen; this file had certified it.
     const last = shepherdStepFor(allSteps[0], { ...handlers, hasNext: false });
-    expect(last.buttons.map((b) => b.text)).toEqual(["Back", "Start over"]);
+    expect(last.buttons.map((b) => b.text)).toEqual(["Zurück", "Von vorn"]);
   });
 
   it("leads with the call to action when one is configured", () => {
@@ -105,15 +105,15 @@ describe("the footer buttons match where the visitor is", () => {
       { ...handlers, hasNext: false },
     );
     expect(withCta.buttons.map((b) => b.text)).toEqual([
-      "Back",
+      "Zurück",
       "Book a call",
-      "Start over",
+      "Von vorn",
     ]);
     // The ask is the primary; restarting steps aside for it.
     expect(withCta.buttons.find((b) => b.text === "Book a call")?.secondary).toBe(
       undefined,
     );
-    expect(withCta.buttons.find((b) => b.text === "Start over")?.secondary).toBe(
+    expect(withCta.buttons.find((b) => b.text === "Von vorn")?.secondary).toBe(
       true,
     );
   });
@@ -123,7 +123,7 @@ describe("the footer buttons match where the visitor is", () => {
     // class too is not wrong, just duplicated — and it drifts if Shepherd
     // renames it.
     const back = shepherdStepFor(allSteps[1], handlers).buttons.find(
-      (b) => b.text === "Back",
+      (b) => b.text === "Zurück",
     );
     expect(back?.secondary).toBe(true);
   });
@@ -143,7 +143,7 @@ describe("every step in the tour translates", () => {
       // with Back alone — a button that only goes backwards. What matters is
       // that every step offers a way ONWARD, so Back does not count here.
       expect(
-        options.buttons.filter((b) => b.text !== "Back").length,
+        options.buttons.filter((b) => b.text !== "Zurück").length,
         `${step.id} offers only Back — the visitor has nowhere to go`,
       ).toBeGreaterThan(0);
     }
@@ -174,7 +174,7 @@ describe("the whole tour wires its own navigation", () => {
   it("advances each step to the one after it", () => {
     const { steps, visited } = build();
     for (const step of steps) {
-      step.buttons.find((b) => b.text === "Next")?.action();
+      step.buttons.find((b) => b.text === "Weiter")?.action();
     }
     // Every step except the last has a Next, and each lands on its successor.
     expect(visited).toEqual(
@@ -198,29 +198,29 @@ describe("the whole tour wires its own navigation", () => {
     const { steps, visited } = build();
     const lastOfFirst = CHAPTERS[0].steps.length - 1;
 
-    steps[lastOfFirst].buttons.find((b) => b.text === "Next")!.action();
+    steps[lastOfFirst].buttons.find((b) => b.text === "Weiter")!.action();
     expect(visited).toEqual([`${CHAPTERS[1].id}.0`]);
 
-    steps[lastOfFirst + 1].buttons.find((b) => b.text === "Back")!.action();
+    steps[lastOfFirst + 1].buttons.find((b) => b.text === "Zurück")!.action();
     expect(visited[1]).toBe(`${CHAPTERS[0].id}.${lastOfFirst}`);
   });
 
   it("gives the first step no Back, and the last step somewhere to go", () => {
     const { steps } = build();
-    expect(steps[0].buttons.map((b) => b.text)).toEqual(["Next"]);
+    expect(steps[0].buttons.map((b) => b.text)).toEqual(["Weiter"]);
 
-    // Asserted `["Back"]` until a reviewer pointed out that a tour ending on a
+    // Asserted `["Zurück"]` until a reviewer pointed out that a tour ending on a
     // single Back button asks for the meeting and then offers no way to take
     // it. Whatever the last step's buttons are, one of them must lead forward.
     const last = steps[steps.length - 1].buttons;
-    expect(last.map((b) => b.text)).not.toEqual(["Back"]);
-    expect(last.some((b) => b.text !== "Back")).toBe(true);
+    expect(last.map((b) => b.text)).not.toEqual(["Zurück"]);
+    expect(last.some((b) => b.text !== "Zurück")).toBe(true);
   });
 
   it("sends Start over back to the very first step", () => {
     const { steps, visited } = build();
     steps[steps.length - 1].buttons
-      .find((b) => b.text === "Start over")!
+      .find((b) => b.text === "Von vorn")!
       .action();
     expect(visited).toEqual([`${CHAPTERS[0].id}.0`]);
   });

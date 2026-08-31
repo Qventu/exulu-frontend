@@ -82,10 +82,10 @@ export function shepherdStepFor(
   if (handlers.hasPrev) {
     // `secondary: true` is what adds `shepherd-button-secondary`; passing the
     // class as well would be duplicating what the option already does.
-    buttons.push({ text: "Back", action: handlers.onPrev, secondary: true });
+    buttons.push({ text: "Zurück", action: handlers.onPrev, secondary: true });
   }
   if (handlers.hasNext) {
-    buttons.push({ text: "Next", action: handlers.onNext });
+    buttons.push({ text: "Weiter", action: handlers.onNext });
   } else {
     // The last step. Without this the footer holds "Back" and nothing else, so
     // the tour makes its offer and then gives the visitor no way to take it —
@@ -105,7 +105,7 @@ export function shepherdStepFor(
       });
     }
     buttons.push({
-      text: "Start over",
+      text: "Von vorn",
       action: handlers.onRestart,
       secondary: Boolean(step.cta),
     });
@@ -153,7 +153,7 @@ export function shepherdStepFor(
           // Note this scrolls the nearest scrollable ANCESTOR, not the window,
           // so it leaves scrollY at 0 and the document no taller than the
           // viewport — the two things I kept measuring to rule it out.
-          scrollTo: { behavior: "auto", block: "nearest" },
+          scrollTo: { behavior: "auto", block: step.scrollBlock ?? "nearest" },
         }
       : {}),
     // The composer is an anchor the visitor is asked to TYPE into (chapters 1

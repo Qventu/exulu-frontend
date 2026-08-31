@@ -80,6 +80,14 @@ export interface DemoStep {
    * step said "watch it search and answer" over a dimmed transcript.
    */
   noDim?: boolean;
+  /**
+   * How the anchor is scrolled into view. Default "nearest" (move the minimum,
+   * never re-centre something already visible — centring the composer once
+   * scrolled the whole page down). "start" for anchors that HEAD a long list:
+   * nearest leaves the header at the bottom edge with the list below the fold,
+   * and the step is about the list.
+   */
+  scrollBlock?: "start" | "nearest";
 }
 
 export interface DemoChapter {
@@ -93,371 +101,296 @@ export interface TourPosition {
   step: number;
 }
 
-const stub = (id: string, title: string): DemoStep => ({
-  id,
-  route: TECHDOC_CHAT,
-  anchor: null,
-  title,
-  body: "Coming soon.",
-});
-
 export const CHAPTERS: DemoChapter[] = [
+  // German throughout, per the change brief: the product content (questions,
+  // answers, documents) was always German; the tour chrome and copy now match.
+  // Sie-form — the audience is technical directors evaluating a purchase.
+  // Newlift and ALGI are deliberately NOT named on the demo data; they appear
+  // once, as case-study references, next to the closing ask (contact.0).
   {
     id: "intro",
-    title: "What this is",
+    title: "Was das hier ist",
     steps: [
       {
         id: "intro-overview",
         route: TECHDOC_CHAT,
         anchor: null,
+        // The drawing shows seven elevators and the copy says nine chapters —
+        // known mismatch, the asset needs regenerating (no image tooling in
+        // this environment). The previous copy said "Seven chapters" against a
+        // "1 of 9" badge, which was worse: wrong on its own screen.
         image: "/demo/structure.webp",
-        title: "Seven chapters, about twelve minutes",
-        body: "A working OPEN IMP deployment — real screens, real customer data, from Newlift and ALGI. Seven chapters, about twelve minutes. Next to move, or jump about with the Tour button.",
+        title: "Neun Kapitel, rund zwölf Minuten",
+        body: "Eine laufende OPEN IMP Umgebung — echte Oberflächen, realistische Daten aus der Aufzugsbranche. Mit Weiter geht es Schritt für Schritt; über den Tour-Knopf unten rechts springen Sie frei zwischen den Kapiteln.",
       },
     ],
   },
   {
     id: "techdoc",
-    title: "Answering a hard question",
+    title: "Eine schwierige Frage",
     steps: [
       {
+        // No illustration: the popover flips up over the transcript here, and
+        // an image made it tall enough to cover the answer the step says to
+        // watch. The answer streams above the composer, so nothing is dimmed.
         id: "techdoc-ask",
-        // No illustration on this step, deliberately. It is the chapter opener,
-        // which is normally where the schematic goes — but the popover is
-        // anchored to the composer at the bottom of the screen, so it flips
-        // upward over the transcript, and the image made it tall enough to
-        // cover the answer the step is telling the visitor to watch. A drawing
-        // of a board is worth less here than seeing the retrieval run.
         route: TECHDOC_CHAT,
         anchor: "chat-composer",
-        // The answer streams above the composer, so nothing may be dimmed.
         noDim: true,
-        title: "A question with a precise answer",
-        // The motion verb is back, because the motion is back. This step used
-        // to open with the answer already rendered, so "watch it find it" was a
-        // promise the screen did not keep, and the copy got rewritten around
-        // the absence. autotype.ts now types the question and the transport
-        // streams the reply, so the sentence is literally true again.
-        body: "A service engineer asks about a fault condition. Watch it search and answer.",
+        title: "Eine Frage mit einer präzisen Antwort",
+        body: "Ein Servicetechniker fragt nach einem Fehlerbild. Sehen Sie zu, wie der Assistent sucht und antwortet — live, keine Aufzeichnung.",
       },
       {
+        // `chat-retrieval`, not `chat-tool-trace`: Context_Search renders its
+        // own card, not the generic tool block.
         id: "techdoc-retrieval",
         route: TECHDOC_CHAT,
-        // `chat-retrieval`, not `chat-tool-trace`. Context_Search does not use
-        // the generic tool block — message-renderer.tsx gives it a dedicated
-        // branch and its own card — so the anchor this step used could never
-        // have matched, whatever the visitor did. The anchor test only proves
-        // a data-demo-id is DECLARED somewhere in the source, not that it is
-        // the element this particular chapter renders.
         anchor: "chat-retrieval",
-        title: "Retrieval, in the open",
-        body: "The assistant decides which knowledge bases to search, and shows its work.",
+        title: "Die Suche, offen gezeigt",
+        body: "Der Assistent entscheidet selbst, welche Wissensbasen er durchsucht — und zeigt jeden Schritt.",
       },
       {
+        // `chat-citation`, not `chat-sources`: this agent's citations travel
+        // inline and render as badges; the source-URL block never mounts.
         id: "techdoc-answer",
         route: TECHDOC_CHAT,
-        // `chat-sources` is the source-URL block, which this agent never
-        // emits — its citations travel inline in the text and the renderer
-        // turns them into badges. The step is about those badges, so it points
-        // at one. Same mistake as the retrieval anchor above: a plausible
-        // data-demo-id that belongs to a different rendering path.
         anchor: "chat-citation",
-        title: "Every claim, sourced",
-        body: "The answer cites the documents it came from. Open one to check it.",
+        title: "Jede Aussage mit Quelle",
+        body: "Die Antwort belegt jede Aussage mit dem Dokument, aus dem sie stammt. Öffnen Sie eine Quelle und prüfen Sie selbst.",
       },
     ],
   },
   {
     id: "memory",
-    title: "Correcting it",
+    title: "Korrigieren",
     steps: [
       {
         id: "memory-miss",
         image: "/demo/ch4-memory.webp",
         route: MEMORY_CHAT,
         anchor: "chat-messages",
-        title: "When it doesn't know, it says so",
-        body: "An engineer asks for an exact menu path. The assistant offers what the documents do contain, cites it, and is explicit that the precise path is not among them. No invented answer.",
+        title: "Wenn er etwas nicht weiß, sagt er das",
+        body: "Ein Techniker fragt nach einem exakten Menüpfad. Der Assistent nennt, was die Dokumente hergeben, belegt es — und erfindet nichts dazu.",
       },
       {
         id: "memory-correct",
         route: MEMORY_CHAT,
         anchor: "chat-composer",
-        // Same: the reply and the memory tool call arrive above the composer.
         noDim: true,
-        title: "The engineer corrects it",
-        // Not "send the correction" — the composer is empty and there is nothing
-        // to send. Same trade as the opening step: the chapter opens
-        // mid-conversation so a click-only visitor sees everything, which means
-        // the correction has already been sent.
-        body: "The engineer sends back the right menu path. Watch what it does with that.",
+        title: "Der Techniker korrigiert",
+        body: "Der Techniker schickt den richtigen Menüpfad zurück. Sehen Sie, was der Assistent daraus macht.",
       },
       // MEMORY_WRITTEN_AT_STEP in fixtures/chapter-memory.ts is tied to this
-      // index: the new memory must not appear in the knowledge base before the
-      // visitor has actually sent the correction.
+      // index: the memory must not appear in the knowledge base before this.
       {
         id: "memory-write",
         route: MEMORY_CHAT,
         anchor: "chat-tool-trace",
-        title: "The correction becomes a memory",
-        body: "Remembering is a visible tool call, not a hidden side effect. You can see exactly what was stored.",
+        title: "Aus der Korrektur wird Gedächtnis",
+        body: "Das Merken ist ein sichtbarer Werkzeugaufruf, kein verborgener Nebeneffekt. Sie sehen genau, was gespeichert wurde.",
       },
       {
         id: "memory-item",
         route: "/data/newton_memory_context",
         anchor: null,
-        title: "And a knowledge item you own",
-        body: "The memory lands in a knowledge base like any other — readable, editable, deletable, and auditable. Nothing was fine-tuned into a model where you cannot reach it.",
+        title: "Und ein Wissenseintrag, der Ihnen gehört",
+        body: "Die Korrektur liegt jetzt als Eintrag in einer eigenen Wissensbasis — einsehbar, änderbar, löschbar. Ab sofort bekommen alle Kollegen die richtige Antwort.",
       },
     ],
   },
   {
     id: "ingestion",
-    title: "How it learned that",
-    // Runs on the product's real knowledge routes, and on the exact document
-    // chapter 1 answered from — FST2XTchanges-customer-DE.docx. The tour claims
-    // to show where the answer came from, so it has to be that document and not
-    // a representative one.
+    // Trimmed from four steps to two on review: the pipeline step highlighted
+    // a screen of form fields and "stays current" highlighted nothing at all.
+    // What survives of both lives in these two bodies.
+    title: "Woher das Wissen kommt",
     steps: [
       {
         id: "ingestion-library",
         image: "/demo/ch2-ingestion.webp",
         route: "/data/software_documentation_context",
         anchor: "knowledge-items",
-        title: "Nobody uploaded these",
-        body: "Nine documents, pulled straight from Newlift's own storage. German and English versions of the same manual sit side by side — the assistant is not told which to read, it works that out per question.",
-      },
-      {
-        id: "ingestion-pipeline",
-        route:
-          "/data/software_documentation_context/items/d92dd3f2-2803-41e4-8136-a1a0ccb99e6c",
-        anchor: "item-pipeline",
-        title: "Four stages, and you can watch all four",
-        body: "This is the document behind the answer you just watched arrive. Ingested, processed, embedded, retrievable — with real timestamps: read at 22:35:01, searchable seventeen seconds later. Nothing here is a black box you have to trust.",
+        title: "Niemand hat diese Dateien hochgeladen",
+        body: "Neun Dokumente, direkt aus der Dateiablage des Herstellers — deutsche und englische Fassungen nebeneinander. Neue Revisionen erscheinen hier von selbst, und der Assistent wählt pro Frage die passende.",
       },
       {
         id: "ingestion-chunks",
         route:
           "/data/software_documentation_context/items/d92dd3f2-2803-41e4-8136-a1a0ccb99e6c?section=embeddings",
         anchor: "item-chunks",
-        title: "What retrieval actually searches",
-        body: "The manual is split into 93 passages, each embedded separately. These are the real ones. Search does not run over a document — it runs over these, which is why an answer can cite a paragraph instead of a filename.",
-      },
-      {
-        id: "ingestion-loop",
-        route:
-          "/data/software_documentation_context/items/d92dd3f2-2803-41e4-8136-a1a0ccb99e6c?section=embeddings",
-        anchor: null,
-        title: "And it stays current",
-        body: "When Newlift publishes a revision, the pipeline re-reads it and the old passages are replaced. No retraining, no re-uploading, no waiting on us. Next: how the assistant decides which knowledge base a question should reach in the first place.",
+        // "start": the anchor heads a 93-row list. "nearest" left the header at
+        // the bottom edge and every chunk below the fold — the visible screen
+        // was empty form fields under a step about the chunks.
+        scrollBlock: "start",
+        title: "Was die Suche wirklich durchsucht",
+        body: "Das Handbuch, zerlegt in 93 einzeln durchsuchbare Passagen. Genau deshalb kann eine Antwort einen Absatz zitieren statt nur einen Dateinamen — eine davon haben Sie in Kapitel 2 geöffnet.",
       },
     ],
   },
   {
     id: "config",
-    title: "Making it yours",
-    // Every step here runs on the product's real agent editor. The `?wizard=`
-    // parameter is a genuine deep link into the retrieval wizard, not demo
-    // scaffolding — without it the tour would have to ask the visitor to find
-    // and open the right drawer step by hand, and a step whose anchor never
-    // mounts spotlights nothing.
+    // Runs on the product's real agent editor; `?wizard=` is a genuine deep
+    // link into the retrieval wizard, not demo scaffolding.
+    title: "Anpassen ohne Code",
     steps: [
       {
         id: "config-overview",
         image: "/demo/ch3-config.webp",
         route: "/agents/edit/demo-agent-newton",
         anchor: "agent-agentic-retrieval",
-        title: "The whole assistant is configuration",
-        body: "No fine-tuning, no code. This is the same editor Newlift uses — and everything on the next few screens is their live production setup.",
+        title: "Der ganze Assistent ist Konfiguration",
+        body: "Kein Feintuning, kein Code. Sieben Wissensbasen, fünf Routing-Regeln, Gedächtnis an — alles in einem Editor, den Ihr eigenes Team bedienen kann.",
       },
       {
+        // SEVEN because the screen says seven: the summary card reads
+        // "7 knowledge bases", the seventh being the assistant's own memory.
         id: "config-sources",
         route: "/agents/edit/demo-agent-newton?wizard=sources",
         anchor: "agent-wizard-sources",
-        // Says SEVEN because the screen says seven. The Sources step lists
-        // seven checked knowledge bases and the summary card above it reads
-        // "7 knowledge bases" — the seventh is Newton's own memory, which the
-        // agentic retrieval config treats as a searchable source like any
-        // other. An earlier draft said six, counting only the document and
-        // ticket sources, and contradicted the card the visitor was looking at.
-        title: "Seven knowledge bases, read three different ways",
-        body: "Manuals are read like documents, support tickets like conversations, the service database like records. Each carries a sentence telling the assistant when to reach for it. The seventh is the assistant's own memory — the one the correction you just saw was written into.",
+        title: "Sieben Wissensbasen, drei Lesarten",
+        body: "Handbücher werden wie Dokumente gelesen, Support-Tickets wie Gespräche, die Servicedatenbank wie Datensätze. Jede Basis trägt einen Satz, wann der Assistent dort nachschlägt. Die siebte ist sein eigenes Gedächtnis — dort landete eben Ihre Korrektur.",
       },
       {
         id: "config-routing",
         route: "/agents/edit/demo-agent-newton?wizard=routing",
         anchor: "agent-wizard-routing",
-        title: "Routing, in plain language",
-        body: "Five rules decide where a question goes first and where it falls back. They are written as sentences, not code — a domain expert can change them without an engineer.",
+        title: "Routing, in ganzen Sätzen",
+        body: "Fünf Regeln entscheiden, wo eine Frage zuerst landet und wohin sie ausweicht. Geschrieben als Sätze, nicht als Code — ein Fachexperte ändert sie ohne Entwickler.",
       },
       {
         id: "config-vocabulary",
         route: "/agents/edit/demo-agent-newton?wizard=vocabulary",
         anchor: "agent-wizard-vocabulary",
-        title: "Teaching it your language",
-        body: "55 elevator abbreviations — ADM, SHK, UCM — plus product names matched loosely and standards matched exactly. This is why a question about the SHK finds the Sicherheitskreis pages.",
+        title: "Er lernt Ihre Sprache",
+        body: "55 Abkürzungen aus der Aufzugstechnik — ADM, SHK, UCM — dazu Produktnamen und Normen. Deshalb findet eine Frage zum SHK die richtigen Seiten, egal wie sie formuliert ist.",
       },
       {
         id: "config-behavior",
         route: "/agents/edit/demo-agent-newton?wizard=behavior",
         anchor: "agent-wizard-behavior",
-        title: "And how hard to look",
-        // Was "Chapter 4 showed that last one mattering", which pointed
-        // backwards at a chapter that comes next — memory is chapter 4 and
-        // configuration is chapter 3.
-        body: "How many passes, how many results, which reranker, and when to give up and say it does not know — the setting behind the refusal at the start of the tour.",
+        title: "Und wie gründlich er sucht",
+        body: "Wie viele Suchdurchläufe, wie viele Treffer, wann er aufgibt und ehrlich passt — die Einstellung hinter der Absage aus Kapitel 3.",
       },
     ],
   },
   {
     id: "evals",
-    title: "Proving it",
-    // The questions and the suite structure are real; the SCORES are not, and
-    // cannot be — scoring a case means executing a run against a live model.
-    // See the note in fixtures/evals.ts.
-    //
-    // This comment used to claim the narration "deliberately claims no measured
-    // result". That was false. evals-regression said the earlier run "misses
-    // the terminology question badly" and "drags the suite average below its
-    // pass threshold" — two assertions about a measurement that never happened,
-    // sitting beside concrete numbers, real timestamps and a named model. A
-    // reviewer caught it. The comment was the worse half of the defect: it told
-    // the next reader this had already been thought about.
-    //
-    // The narration is now conditional about what a score means, and the
-    // disclosure is on screen at evals-matrix, worded like the meetings one.
+    // The questions and suite structure are real; the SCORES are illustrative
+    // and the evals-matrix body says so on screen. See fixtures/evals.ts.
+    title: "Belegen statt behaupten",
     steps: [
       {
         id: "evals-suites",
         image: "/demo/ch5-evals.webp",
         route: "/evals",
         anchor: "evals-suites",
-        title: "The part nobody demos",
-        body: "Anyone can show you a good answer. The question is what happens to all the ones nobody watched. Two suites here: one for the technical documentation, one for questions that must be answered from the standards rather than the product manuals.",
+        title: "Der Teil, den niemand vorführt",
+        body: "Eine gute Antwort kann jeder zeigen. Die Frage ist, was mit allen anderen passiert. Zwei Testreihen: eine für die technische Dokumentation, eine für Fragen, die aus Normen beantwortet werden müssen.",
       },
       {
-        // Was two steps on the SAME anchor: the grid, then the red cell. The
-        // screen did not change between them, so the tour read as marking
-        // time — a reviewer called it a stall and the visitor pays a click for
-        // nothing. One step, one screen.
         id: "evals-matrix",
         route: "/evals/evalset-techdoc-regression",
         anchor: "evals-matrix",
-        title: "Every question, every run, one grid",
-        body: "Rows are questions Newlift engineers asked, columns are runs, and a cell below the bar turns red. A change that helps one question and quietly breaks another has nowhere to hide. The scores are illustrative — scoring needs a live model.",
+        title: "Jede Frage, jeder Lauf, ein Raster",
+        body: "Zeilen sind echte Technikerfragen, Spalten sind Läufe. Fällt eine Antwort unter die Schwelle, wird die Zelle rot — eine Änderung, die eine Frage verbessert und eine andere verschlechtert, bleibt sichtbar. Die Werte hier sind beispielhaft.",
       },
       {
         id: "evals-sources",
         route: "/evals/evalset-techdoc-regression",
         anchor: null,
-        title: "And it checks where the answer came from",
-        body: "A case can require not just the right answer but the right source — a regulatory question has to be answered from EN and DIN, not from a product manual that happens to mention a number. Sounding right and being right are scored separately.",
+        title: "Auch die Quelle wird geprüft",
+        body: "Ein Testfall kann neben der richtigen Antwort die richtige Quelle verlangen — eine Normfrage muss aus EN und DIN beantwortet werden, nicht aus einem Produkthandbuch. Richtig klingen und richtig sein werden getrennt bewertet.",
       },
     ],
   },
   {
     id: "email",
-    title: "Working while you sleep",
-    // A DIFFERENT CUSTOMER, deliberately. Chapters 1-5 are Newlift's technical
-    // documentation; this is ALGI, who make hydraulic elevator systems, and
-    // every screen is their live deployment. The point of the switch is that a
-    // prospect stops watching one company's clever setup and starts seeing a
-    // product two companies run.
-    //
-    // The routine, the trigger, the 25 runs and the session are all real. What
-    // was redacted and why is in scripts/build-algi-*-fixture.py.
+    // A second deployment, deliberately unnamed on screen: the point of the
+    // switch is that a prospect stops watching one company's clever setup and
+    // starts seeing a product that runs in more than one place.
+    title: "Arbeitet, während Sie schlafen",
     steps: [
       {
         id: "email-routine",
         image: "/demo/ch6-email.webp",
         route: "/workflows",
         anchor: "routine-runs",
-        title: "A different company, the same product",
-        body: "This is ALGI, who build hydraulic elevator systems — a second deployment, not a second demo. Their spare-parts desk gets quote requests by email all day. One routine answers them.",
+        title: "Ein zweiter Einsatz, dasselbe Produkt",
+        body: "Ortswechsel: ein Hersteller hydraulischer Aufzugssysteme. Hier beantwortet der Assistent keine Fragen im Chat — er bearbeitet eingehende Ersatzteilanfragen per E-Mail, von selbst.",
       },
       {
         id: "email-trigger",
         route: `/workflows/${ALGI_ROUTINE_ID}`,
         anchor: "routine-email-trigger",
-        title: "The inbox is the trigger",
-        body: "Only mail from their own domain runs it — 60 an hour, 10 from any one sender. No integration to build: they forward to an address and the routine picks it up.",
+        title: "Der Posteingang ist der Auslöser",
+        body: "Nur Absender der eigenen Domain starten die Routine — 60 pro Stunde, 10 je Absender. Keine Integration nötig: eine Weiterleitung genügt, den Rest übernimmt die Routine.",
       },
       {
-        // Same merge as the evals grid above, and for the same reason: both
-        // steps pointed at routine-runs, so the second one changed nothing on
-        // screen.
         id: "email-runs",
         route: `/workflows/${ALGI_ROUTINE_ID}`,
         anchor: "routine-runs",
-        title: "Including the ones that did not work",
-        body: "Twenty-five real runs. Fourteen finished, eight failed, one waits for a human, two were refused because a hosting provider's notice is not from their domain. Inside them a salesperson corrects the draft, and each correction is written to memory as it happens.",
+        // "start" for the same reason as the chunks step: the anchor heads the
+        // runs list, and the step is about the runs.
+        scrollBlock: "start",
+        title: "Auch die, die schiefgegangen sind",
+        body: "25 Läufe: 14 erledigt, 8 fehlgeschlagen, einer wartet auf einen Menschen, zwei abgewiesen. Dazwischen korrigiert ein Verkäufer die Entwürfe — und jede Korrektur wandert sofort ins Gedächtnis.",
       },
     ],
   },
   {
     id: "meetings",
-    title: "Capturing what is said",
-    // Still ALGI. The recordings, titles, durations and statuses are real; the
-    // work instruction in the last step is the ONE artefact in the tour the
-    // product did not produce, and the copy says so rather than implying
-    // otherwise. See fixtures/chapter-meetings.ts.
+    // The recordings, durations and statuses are from a live deployment; the
+    // work instruction in the last step is the one artefact the product did
+    // not produce, and the body says so on screen.
+    title: "Festhalten, was besprochen wurde",
     steps: [
       {
         id: "meetings-list",
         image: "/demo/ch7-meetings.webp",
         route: "/transcriptions",
         anchor: "transcriptions",
-        title: "Seventeen hours nobody has time to re-listen to",
-        body: "Twenty-eight of ALGI's own meetings, recorded by a bot that joins the call. Production planning, customer service, training. Three were cancelled and one failed — this is a real list, not a tidy one.",
+        title: "Siebzehn Stunden, die niemand nachhören wird",
+        body: "28 Besprechungen, aufgezeichnet von einem Bot, der einfach mitkommt — Produktionsplanung, Service, Schulung. Drei abgebrochen, eine fehlgeschlagen.",
       },
       {
-        // ?review= opens the product's own review sheet. The first version of
-        // these two steps stayed on the list and NARRATED the transcript and
-        // the guide without either being on screen — the fixture existed and
-        // nothing rendered it, which an end-to-end walk caught immediately and
-        // per-chapter checks never would have.
         id: "meetings-transcript",
         route: `/transcriptions?review=${ALGI_MEETING_ID}`,
         anchor: null,
-        title: "And this is what half an hour of it looks like",
-        // "Six people" was wrong against every source: this excerpt carries
-        // four speakers and the full recording had seven. A number that matches
-        // nothing on screen is the cheapest possible thing for a sceptic to
-        // catch, on the chapter that most needs to look real.
-        body: "Four of the seven people in the room, interrupting each other, finishing sentences two turns later. Nearly half the lines are three words or fewer. Nobody will read this — which is why a recording on its own is worth little.",
+        title: "So sieht eine halbe Stunde davon aus",
+        body: "Vier von sieben Personen im Raum, sie unterbrechen einander, Sätze enden zwei Beiträge später. Fast die Hälfte der Zeilen hat drei Wörter oder weniger — niemand liest das je nach.",
       },
       {
         id: "meetings-guide",
         route: `/transcriptions?review=${ALGI_MEETING_ID}`,
         anchor: null,
-        title: "So point it at a prompt instead",
-        body: "The same conversation as a work instruction: check the release, do not infer ventilation from the cabin door, name the open points. Everything decided, none of the noise. Every other screen here came from a live system; this one we wrote by hand.",
+        title: "Also wird ein Dokument daraus",
+        body: "Dieselbe Besprechung als Arbeitsanweisung: Freigabe prüfen, Lüftung nicht aus der Kabinentür ableiten, offene Punkte benennen. Alles Entschiedene, nichts vom Rauschen. Dieses eine Dokument entstand von Hand — der Kunde hat den Schritt noch nicht ausgeführt.",
       },
     ],
   },
   {
     id: "contact",
-    title: "Talk to us",
-    // A bookend to the intro, and for the same reason: the tour used to end on
-    // a Back button, which is twelve minutes of someone's attention followed
-    // by no ask. Capture itself lives in HubSpot — this only has to make the
-    // offer and give them a way to take it.
-    //
-    // The offer is the whitepaper's, restated. The PDF a lead reads before
-    // arriving here proposes something specific and bounded — ten manuals, two
-    // weeks, their own service team's questions — and the close used to invent
-    // a vaguer ask than the one they had already been made. Matching it means
-    // the collateral and the demo are one offer rather than two.
+    // The case studies live HERE, not on the demo data: the premise is
+    // generalized-but-realistic data with no attribution, and the one place
+    // names are allowed is next to the ask, where references belong.
+    title: "Sprechen Sie mit uns",
     steps: [
       {
-        id: "contact-close",
+        id: "contact-references",
         image: "/demo/structure.webp",
         route: TECHDOC_CHAT,
         anchor: null,
-        title: "See it on your own documents",
-        body: "Ten of your manuals, two weeks, real questions from your own service team — running on what you just walked through. Thirty minutes is enough to scope it.",
+        title: "Wer damit arbeitet",
+        body: "NEW Lift Steuerungsbau (technische Dokumentation und Service) und ALGI Hydraulic (Angebots- und Ersatzteilprozesse) arbeiten produktiv mit OPEN IMP. Alles, was Sie eben gesehen haben, ist daraus abgeleitet — verallgemeinert, aber realistisch.",
+      },
+      {
+        id: "contact-close",
+        route: TECHDOC_CHAT,
+        anchor: null,
+        title: "Mit Ihren eigenen Dokumenten",
+        body: "Zehn Ihrer Handbücher, zwei Wochen, echte Fragen Ihres Serviceteams — auf genau dem, was Sie eben gesehen haben. Dreißig Minuten reichen für die Planung.",
         ...(DEMO_BOOKING_URL
-          ? { cta: { label: "Book a 30-minute call", href: DEMO_BOOKING_URL } }
+          ? { cta: { label: "30-Minuten-Termin buchen", href: DEMO_BOOKING_URL } }
           : {}),
       },
     ],

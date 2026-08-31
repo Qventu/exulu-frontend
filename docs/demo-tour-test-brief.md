@@ -5,14 +5,16 @@ Assume no prior knowledge of this project; everything you need is below.
 
 ## What it is
 
-Qventu sells a platform called **OPEN IMP**. This tour is a lead-generation
+OPEN Digital Experience GmbH sells a platform called **OPEN IMP**. This product tour is a lead-generation
 asset for the **elevator industry**: a prospect arrives from a marketing PDF,
-walks a scripted tour of a real deployment, and is asked to book a call.
+walks a scripted tour of a demo version of the platform, and is asked to book a call via a hubspot form.
 
-The premise it rests on: **it is the real product, with real customer data, not
-a mockup.** Screens are the actual application. Content comes from two live
-deployments — Newlift (elevator control boards) and ALGI (hydraulic elevator
-systems). Much of it is German, because the customers are.
+The premise it rests on: **it is the real product, with example data we adjusted from 
+actual elevator clients.** Screens are the actual application with data fixtures. But we 
+should not tell the lead which company the data is from, they do not care probably, 
+we can ideally showcase the Newlift and ALGI Hydraulic Case Studies as their own cards or
+statistics in a step in the flow, but we should not specifically indicate or show
+data from them, all data should be "generalized but realistic elevator data".
 
 Audience: technical and sceptical. Service engineers, technical directors,
 operations people.
@@ -32,7 +34,7 @@ Then open this and click **Next** all the way through, as a prospect would:
 http://localhost:3000/chat/demo-agent-newton/session-demo-techdoc-1?tour=intro.0
 ```
 
-Nothing happens for the first ~10 seconds while the chat mounts. That is
+Nothing happens for the first few seconds while the chat mounts. That is
 expected; note whether it feels too long.
 
 ## Drive it with Claude in Chrome
@@ -88,23 +90,19 @@ In rough order of value:
 
 1. **Does the story land?** Nine chapters, ~12 minutes. Does it build? Should
    anything be cut, shortened or moved? Does a prospect know what they are
-   being sold by the end?
-2. **Is anything misleading?** The tour claims to be real throughout. A screen
-   implying something the product does not do is the most serious finding
-   available. Two places are knowingly not-real and say so — check that the
-   disclosure is adequate rather than a fig leaf.
+   being sold by the end? Keep in mind in general audiences have some experience
+with tools like ChatGPT and Claude but not a lot of knowledge about AI specific
+technical terms.
+2. **Text tone** The text should excite the user, explaining benefits over
+technicalities, and should not reflect on itself (i.e. "here we choose not
+to show real data etc...").
 3. **Does anything look broken, ugly or unfinished?** Popovers covering the
    thing they describe, layout breaking, text overflowing, steps where the
    highlighted element is not the interesting one.
-4. **Is the copy right for a sceptical German-speaking engineer?**
-   Overclaiming, jargon, marketing register, sentences that run long.
-5. **Would a sceptical engineer believe it?** That is the real test.
-
-Lead with the three things most worth changing. For each: what you saw, which
-chapter and step, why it matters. Include screenshots — a description of a
-layout problem is much weaker than the frame. Separate **"this is broken"**
-from **"I would have done this differently"**, and say which you would block a
-launch on.
+IMPORTANT: generally review the experience, this includes the actual
+UX / UI itself, because we can make changes to the frontend as well. Because the
+frontend itself is the main star of the show, you should be critical if it is
+clear, understandable and visually interesting.
 
 ## Known and accepted — do not spend time here
 
@@ -120,21 +118,3 @@ launch on.
 - Clicking **Save** in the agent editor succeeds but does not persist.
 - Two artefacts are not product output and say so in the copy: the work
   instruction in chapter 8, and the scores in chapter 6's grid.
-
-## Please disagree
-
-Several decisions were argued for at length by whoever built this. Treat none
-of them as settled:
-
-- Chapters 2 and 3 **type for the visitor** rather than letting them type.
-- Chapter 5 shows **all 55 glossary terms**, on the theory that the length is
-  the point.
-- The illustrations are **deliberately plain** line drawings.
-- The intro is **a tour step, not a landing page** — the first thing a prospect
-  sees is a popover over a chat screen.
-- **Failures are shown on purpose** — failed email runs, a red eval cell,
-  cancelled recordings — on the theory that this is more credible than an
-  all-green fixture.
-
-If you think any of these is wrong, say so plainly. A reviewer who agrees with
-everything has not earned their keep.
