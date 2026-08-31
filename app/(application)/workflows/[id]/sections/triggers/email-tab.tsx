@@ -40,6 +40,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
+import { isDemoMode } from "@/lib/demo/flag";
+
 import {
   DELETE_WORKFLOW_TRIGGER,
   GET_WORKFLOW_TRIGGERS,
@@ -133,6 +135,12 @@ interface TriggerFormProps {
 
 function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
   const t = useTranslations("routines");
+
+  // The wire header is X-Exulu-Signature and real deployments must document
+  // it truthfully. The demo is OPEN-branded, so it shows the name the demo
+  // claims — a visitor cannot call this endpoint anyway.
+  const signatureScheme = `${isDemoMode() ? "X-OPEN" : "X-Exulu"}-Signature: sha256=HMAC-SHA256(body, secret)`;
+
   const initial = React.useMemo(
     () =>
       trigger
@@ -669,7 +677,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
               </p>
               <CopyField
                 label={t("triggers.signing.schemeLabel")}
-                value="X-Exulu-Signature: sha256=HMAC-SHA256(body, secret)"
+                value={signatureScheme}
                 mono
               />
             </div>
@@ -691,7 +699,7 @@ function TriggerForm({ routine, access, trigger, onSaved }: TriggerFormProps) {
               </div>
               <CopyField
                 label={t("triggers.signing.schemeLabel")}
-                value="X-Exulu-Signature: sha256=HMAC-SHA256(body, secret)"
+                value={signatureScheme}
                 mono
               />
             </div>
