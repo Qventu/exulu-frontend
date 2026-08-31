@@ -3271,6 +3271,7 @@
       "downloadClaudeCodeConfig": "Claude Code-Konfiguration herunterladen",
       "downloadContinueDevConfig": "continue.dev-Konfiguration herunterladen",
       "downloadCoworkConfig": "Cowork-Konfiguration herunterladen",
+      "downloadJunieConfig": "Junie-Konfiguration herunterladen",
       "downloadFailed": "Konfiguration konnte nicht erstellt werden. Bitte erneut versuchen.",
       "editDetails": "Details bearbeiten",
       "errorTitle": "Dieses Projekt konnte nicht geladen werden",

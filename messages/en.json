@@ -3271,6 +3271,7 @@
       "downloadClaudeCodeConfig": "Download Claude Code config",
       "downloadContinueDevConfig": "Download continue.dev config",
       "downloadCoworkConfig": "Download Cowork config",
+      "downloadJunieConfig": "Download Junie config",
       "downloadFailed": "Couldn't generate config. Please try again.",
       "editDetails": "Edit details",
       "errorTitle": "Couldn't load this project",
