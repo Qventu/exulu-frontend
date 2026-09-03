@@ -163,9 +163,15 @@ def generate(name: str, size: str) -> None:
         "model": MODEL,
         "prompt": f"{DEMO_PROMPTS[name]}\n\n{STYLE}",
         "size": size,
-        # Transparent so the drawing sits on whatever the app background is,
-        # in either theme, instead of a dark rectangle that nearly matches.
-        "background": "transparent",
+        # No background override. The old monochrome style needed a
+        # transparent PNG so dark-on-nothing line art could sit on whatever
+        # background the app gave it, inverted for dark mode. Neither half
+        # of that applies any more: OPEN's collage carries its own opaque
+        # lime-yellow field (#EFFE7C) as part of the artwork, so an opaque
+        # image is the point rather than a compromise, and Task 4 already
+        # removed the `.dark .shepherd-schematic { filter: invert(1) }` rule
+        # from shepherd-theme.css — inverting a full-colour collage would
+        # produce a photo negative, not a themed variant.
     }
     data = post(payload, key)
 
@@ -192,7 +198,9 @@ def generate(name: str, size: str) -> None:
         )
 
     # 800px is generous for decoration that never renders larger than a
-    # popover; alpha costs WebP a lot, so this is where the weight is.
+    # popover. The old monochrome art was mostly transparent alpha, which
+    # WebP encodes expensively; the new collage art is fully opaque, so file
+    # weight here now tracks flat-colour compression instead of alpha cost.
     webp = os.path.join(OUT_DIR, f"{name}.webp")
     subprocess.run(
         ["cwebp", "-quiet", "-q", "78", "-resize", "800", "0", path, "-o", webp],
