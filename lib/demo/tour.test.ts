@@ -195,7 +195,8 @@ describe("the reading load", () => {
     // ones reviewers singled out as best, and the heaviest clustered in the
     // late chapters where attention is thinnest.
     //
-    // 45 is not a magic number, it is roughly three lines in a 380px popover.
+    // 45 is not a magic number, it is roughly three lines in a 480px popover
+    // (.shepherd-element's max-width — see shepherd-theme.css).
     // The point of the cap is that copy grows back if nothing stops it.
     for (const chapter of CHAPTERS) {
       for (const step of chapter.steps) {

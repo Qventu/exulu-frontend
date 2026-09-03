@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isEmptyContent } from "../content";
+import { contentText, isEmptyContent } from "../content";
 import { isDemoSupported } from "../supported-routes";
 import { CHAPTERS } from "./index";
 
@@ -66,6 +66,18 @@ describe("chapter integrity", () => {
         if (block.kind !== "figure") continue;
         expect(existsSync(join(process.cwd(), "public", block.src)), `missing ${block.src}`).toBe(true);
       }
+    }
+  });
+
+  // Client confidentiality: the demo data is deliberately unattributed, and the
+  // two reference customers are named ONCE, next to the closing ask. Stated in
+  // prose until now — in contact.ts, the one file allowed to break the rule,
+  // which is exactly where an author stands when tempted.
+  it("names the reference customers only next to the ask", () => {
+    for (const { chapter, step } of everyStep) {
+      if (chapter.id === "contact") continue;
+      expect(contentText(step.content), `${chapter.id}/${step.id}`)
+        .not.toMatch(/new ?lift|algi/i);
     }
   });
 });

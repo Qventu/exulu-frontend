@@ -15,7 +15,7 @@ export const contactChapter: DemoChapter = {
       size: "wide",
       title: "Wer damit arbeitet",
       content: [
-        { kind: "figure", src: "/demo/structure.webp", alt: "Der Aufbau der Tour" },
+        { kind: "figure", src: "/demo/structure.webp", alt: "Anlagen unserer Referenzkunden" },
         {
           kind: "paragraph",
           text: "NEW Lift Steuerungsbau (technische Dokumentation und Service) und ALGI Hydraulic (Angebots- und Ersatzteilprozesse) arbeiten produktiv mit OPEN IMP. Alles, was Sie eben gesehen haben, ist daraus abgeleitet — verallgemeinert, aber realistisch.",

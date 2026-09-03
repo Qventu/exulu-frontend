@@ -14,10 +14,12 @@
  * app/(application)/layout.tsx, where demo mode substitutes the backend's
  * /theme response rather than editing globals.css.
  *
- * ASSETS ARE NOT HERE YET. logoLight/logoDark point at files that do not exist
- * in public/ — components/logo.tsx hides an image that fails to load, so the
- * header degrades to the wordmark rather than to a broken-image block. Drop the
- * real marks at these paths and they appear; no code change needed.
+ * ASSETS NOW LIVE at these paths, under public/demo/brand/. Landing them was
+ * not the drop-in swap this comment used to promise: components/logo.tsx used
+ * to render a monogram tile in demo mode rather than an <img> — because a
+ * missing image fails as a grey alt-text block, and a monogram cannot fail to
+ * load — so a code change was needed too. It now renders logoLight/logoDark
+ * directly, with onError hiding either one that fails to load.
  */
 export const DEMO_BRAND = {
   productName: "OPEN IMP",

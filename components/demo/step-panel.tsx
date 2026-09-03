@@ -38,8 +38,14 @@ function Block({ block }: { block: ContentBlock }) {
         </div>
       );
     case "figure":
-      // The drawings are OPEN-brand collage on transparency; see
-      // scripts/generate-demo-image.py for the house style.
+      // The drawings are OPEN-brand collage on an opaque lime field, not
+      // transparency — see scripts/generate-demo-image.py for the house style
+      // and why the request deliberately drops "background": "transparent".
+      //
+      // Plain <img>, not next/image: this renders inside step-content-host's
+      // detached createRoot, outside the Next tree that next/image depends on
+      // (no router, no image-optimisation context). Do not "fix" the eslint
+      // warning by switching it.
       return <img className="demo-block-figure" src={block.src} alt={block.alt ?? ""} />;
     case "sequence":
       return (
@@ -73,6 +79,14 @@ function Block({ block }: { block: ContentBlock }) {
   }
 }
 
+/**
+ * Dual-mounted: components/demo/tour-stage.tsx renders this inside the normal
+ * React tree, but components/demo/step-content-host.tsx also renders it into
+ * a `createRoot` on a detached div, outside every provider — no theme
+ * context, no next-intl, no Apollo, no `useTour`. Keep this component (and
+ * `Block` above) free of anything that reaches for one of those; it has no
+ * way to fail loudly if it does, only to render wrong in one of its two homes.
+ */
 export function StepPanel({ step }: { step: DemoStep }) {
   return (
     <motion.div

@@ -17,7 +17,6 @@
   box-shadow:
     0 10px 15px -3px rgb(0 0 0 / 0.1),
     0 4px 6px -4px rgb(0 0 0 / 0.1);
-  max-width: 380px;
 
   /* Radix sets `pointer-events: none` on <body> for as long as a modal drawer
      is open, exempting only the drawer's own content. Shepherd appends its
@@ -190,4 +189,15 @@ body.demo-tour-no-dim .shepherd-modal-overlay-container.shepherd-modal-is-visibl
   border-radius: 0.4rem;
 }
 
-.demo-block-figure { display: block; width: 100%; height: auto; border-radius: 0.5rem; }
+/* Capped on purpose. Shepherd's popover has no overflow handling of its own —
+   on a short viewport, floating-ui's shift middleware clamps the panel against
+   the edge and the footer (Back/Weiter) clips off the bottom. An anchored
+   popover with a figure that tall covers the very product surface the step is
+   pointing at, which defeats the step. Every generated asset is 800x534; at
+   .demo-step-wide's ~676px content width, `height: auto` alone renders that
+   ~451px tall. This has already shipped once at a smaller size — see the
+   ch1-answer note in lib/demo/chapters/techdoc.ts — so do not delete this as
+   redundant with `height: auto`. object-fit: contain keeps the whole image
+   visible (letterboxed) inside the capped box instead of the browser
+   distorting it to fill a height the aspect ratio does not agree with. */
+.demo-block-figure { display: block; width: 100%; height: auto; max-height: 12rem; object-fit: contain; border-radius: 0.5rem; }

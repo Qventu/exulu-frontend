@@ -15,10 +15,15 @@ export const introChapter: DemoChapter = {
       size: "wide",
       title: "Neun Kapitel, rund zwölf Minuten",
       content: [
-        // The drawing shows seven elevators and the copy says nine chapters —
-        // known mismatch, the asset needs regenerating (no image tooling in
-        // this environment). The previous copy said "Seven chapters" against
-        // a "1 of 9" badge, which was worse: wrong on its own screen.
+        // The drawing shows seven doors and the copy says nine chapters — a
+        // real mismatch, but not a stale asset: it WAS regenerated. The cause
+        // is scripts/generate-demo-image.py's "structure" prompt, which still
+        // asks for "Seven identical elevator landing doors" while this copy
+        // already says "Neun Kapitel". The follow-on narrative plan moves this
+        // to twelve chapters anyway, so reconcile the prompt and the copy
+        // together there rather than patching either alone now. The previous
+        // copy said "Seven chapters" against a "1 of 9" badge, which was
+        // worse: wrong on its own screen.
         { kind: "figure", src: "/demo/structure.webp", alt: "Der Aufbau der Tour" },
         {
           kind: "paragraph",

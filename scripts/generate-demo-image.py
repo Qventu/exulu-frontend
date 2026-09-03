@@ -44,7 +44,9 @@ MODEL = "gpt-image-2"
 # than like a generic SaaS product.
 #
 # Colours are exact, from the SVGs: lime #EFFE7C, ink #1A1A1A, lavender
-# #C0ACF9, sage #C9D08F, blush #FFE1DE, cream #FFFDF3.
+# #C0ACF9, sage #C9D08F, blush #FFE1DE, cream #FFFDF3 — the brand's full
+# palette. Only the first four are actually requested in the prompt below;
+# blush and cream are held in reserve, not currently asked for.
 STYLE = (
     "Bold editorial collage illustration in a flat graphic brand style. "
     "A solid lime-yellow field (#EFFE7C) as the background. Large flat "
@@ -83,10 +85,11 @@ DEMO_PROMPTS = {
     # The structure visual: the seven chapters as a hoistway, so the shape of
     # the tour reads as a machine rather than a slide deck.
     # LANDSCAPE BY DESIGN. The first version was a hoistway in cross-section:
-    # a good drawing, but a tall subject in a wide frame, and inside a 380px
-    # popover it reduced to an unreadable sliver. Seven landing doors in a row
-    # says the same thing — seven discrete stages, unmistakably an elevator —
-    # in the shape the frame actually is.
+    # a good drawing, but a tall subject in a wide frame, and even inside the
+    # wide 704px panel (.demo-step-wide, 44rem) it reduced to an unreadable
+    # sliver. Seven landing doors in a row says the same thing — seven
+    # discrete stages, unmistakably an elevator — in the shape the frame
+    # actually is.
     "structure": (
         "Seven identical elevator landing doors in a horizontal row, front "
         "elevation, evenly spaced across the full width of the frame. Each "
@@ -94,6 +97,10 @@ DEMO_PROMPTS = {
         "above it. A continuous floor line runs beneath all seven. The "
         "leftmost doors stand slightly open."
     ),
+    # Unreferenced by any chapter today: the techdoc chapter is deliberately
+    # unillustrated (see the comment on techdoc-ask in
+    # lib/demo/chapters/techdoc.ts — a figure there covered the answer the
+    # step points at). Kept, not deleted, for the follow-on narrative rebuild.
     "ch1-answer": (
         "A single elevator control board in flat orthographic view: relays, "
         "terminal blocks, a small seven-segment display module, ribbon cable "

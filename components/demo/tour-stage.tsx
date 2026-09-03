@@ -2,6 +2,8 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 
+import { nextPosition, prevPosition } from "@/lib/demo/tour";
+
 import { StepPanel } from "./step-panel";
 import { useTour } from "./tour-provider";
 
@@ -16,11 +18,15 @@ import { useTour } from "./tour-provider";
  * systems from ever being on screen together.
  */
 export function TourStage() {
-  const { step, next, prev, position, chapters } = useTour();
+  const { step, next, prev, jumpTo, position, chapters } = useTour();
   const isStage = step?.kind === "stage";
 
-  const hasPrev =
-    position.step > 0 || chapters.findIndex((c) => c.id === position.chapter) > 0;
+  // The same two functions the Shepherd footer (lib/demo/shepherd-step.ts)
+  // asks for its own hasPrev/hasNext, rather than a hand-rolled duplicate of
+  // that logic living here as well — the two are the single source of truth
+  // for "is there another step in that direction" and must never disagree.
+  const hasPrev = Boolean(prevPosition(chapters, position));
+  const hasNext = Boolean(nextPosition(chapters, position));
 
   return (
     <AnimatePresence>
@@ -55,17 +61,51 @@ export function TourStage() {
               <StepPanel step={step} />
             </div>
             {/* Its own footer: a stage never reaches Shepherd, so it never gets
-                Shepherd's buttons. Same handlers, so Back and Weiter behave
-                identically on both kinds of step. */}
+                Shepherd's buttons. Back is shared verbatim with the Shepherd
+                footer's handler and its hasPrev/hasNext test above. Weiter is
+                NOT shared past that: shepherdStepFor (lib/demo/shepherd-step.ts)
+                drops it on the tour's last step and offers a cta (if any) plus
+                "Von vorn" instead, because a Weiter that calls next() into a
+                null position does nothing — "rendering a dead button is worse
+                than rendering none" per that file's own comment. Mirrored here
+                rather than shared as code because Shepherd's version also
+                has to build shepherd.js button objects, which this component
+                has no use for. */}
             <div className="flex gap-3">
               {hasPrev ? (
                 <button type="button" className="shepherd-button shepherd-button-secondary" onClick={prev}>
                   Zurück
                 </button>
               ) : null}
-              <button type="button" className="shepherd-button" onClick={next}>
-                Weiter
-              </button>
+              {hasNext ? (
+                <button type="button" className="shepherd-button" onClick={next}>
+                  Weiter
+                </button>
+              ) : (
+                (() => {
+                  const cta = step.cta;
+                  return (
+                    <>
+                      {cta ? (
+                        <button
+                          type="button"
+                          className="shepherd-button"
+                          onClick={() => window.open(cta.href, "_blank", "noopener,noreferrer")}
+                        >
+                          {cta.label}
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className={`shepherd-button${cta ? " shepherd-button-secondary" : ""}`}
+                        onClick={() => jumpTo(chapters[0].id)}
+                      >
+                        Von vorn
+                      </button>
+                    </>
+                  );
+                })()
+              )}
             </div>
           </div>
         </motion.div>
