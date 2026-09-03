@@ -31,37 +31,42 @@ const Logo = ({ width = 64, height = 32, className = "", alt = "Logo" }: LogoPro
     const configContext = useContext(ConfigContext);
     const base = configContext?.backend ?? "";
 
-    // The demo renders a monogram tile instead of an <img> at all. The mark
-    // assets do not exist yet, and the failure mode of a missing image is alt
-    // text painted as a grey block until onError fires — the reviewer met it
-    // on the tour's first screen. A monogram cannot fail to load, and when the
-    // real marks land, swapping this branch back to the local paths in
-    // lib/demo/brand.ts is the whole change.
+    // A logo that fails to load is worse than no logo: the browser renders the
+    // alt text as a grey block, which reads as a broken page rather than an
+    // unbranded one. Hide failed images to degrade gracefully.
+    const hideOnError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+        event.currentTarget.style.display = "none";
+    };
+
+    // The demo mode renders the OPEN wordmark from public/demo/brand/ (light and
+    // dark variants). Both images render; CSS hides one based on the current
+    // theme to avoid hydration mismatches from JavaScript branching on
+    // resolvedTheme. If a path is missing or breaks, onError hides the image.
     if (isDemoMode()) {
         return (
-            <span
-                aria-hidden="true"
-                className={cn(
-                    className,
-                    "inline-flex items-center justify-center rounded-md bg-primary font-semibold text-primary-foreground",
-                )}
-                style={{ width, height, fontSize: Math.max(11, height * 0.45) }}
-            >
-                {DEMO_BRAND.mark}
-            </span>
+            <>
+                <img
+                    src={DEMO_BRAND.logoLight}
+                    alt={alt}
+                    width={width}
+                    height={height}
+                    className={cn(className, "dark:hidden")}
+                    onError={hideOnError}
+                />
+                <img
+                    src={DEMO_BRAND.logoDark}
+                    alt={alt}
+                    width={width}
+                    height={height}
+                    className={cn(className, "hidden dark:block")}
+                    onError={hideOnError}
+                />
+            </>
         );
     }
 
     const lightSrc = `${base}/logo_light.png`;
     const darkSrc = `${base}/logo_dark.png`;
-
-    // A logo that fails to load is worse than no logo: the browser renders the
-    // alt text as a grey block, which reads as a broken page rather than an
-    // unbranded one. Deployments without logo assets — the guided demo among
-    // them — should simply show nothing.
-    const hideOnError = (event: React.SyntheticEvent<HTMLImageElement>) => {
-        event.currentTarget.style.display = "none";
-    };
 
     return (
         <>
