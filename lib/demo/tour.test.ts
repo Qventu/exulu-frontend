@@ -9,6 +9,7 @@ import {
   prevPosition,
   resolveStep,
   startOfChapter,
+  startPosition,
 } from "./tour";
 
 const FIXTURE: DemoChapter[] = [
@@ -265,5 +266,24 @@ describe("the closing call to action", () => {
       expect(closingStep().cta?.href).toBe(DEMO_BOOKING_URL);
       expect(closingStep().cta?.label).toBeTruthy();
     }
+  });
+});
+
+describe("startPosition", () => {
+  it("is the first step of the first chapter", () => {
+    expect(startPosition(FIXTURE)).toEqual({ chapter: FIXTURE[0].id, step: 0 });
+  });
+
+  // The regression it exists for. components/demo/tour-provider.tsx carried a
+  // literal { chapter: "techdoc", step: 0 } written before the intro chapter
+  // was added, so a visitor with no ?tour= param opened on chapter 2 and never
+  // saw chapter 1. Deriving the position makes that unrepresentable.
+  it("tracks the real chapter list rather than a hardcoded id", () => {
+    expect(startPosition().chapter).toBe(CHAPTERS[0].id);
+    expect(startPosition().step).toBe(0);
+  });
+
+  it("resolves to a real step", () => {
+    expect(resolveStep(CHAPTERS, startPosition())).toBeDefined();
   });
 });

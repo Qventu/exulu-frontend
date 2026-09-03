@@ -24,7 +24,20 @@ export function getDemoUser(): UserWithRole {
     id: DEMO_USER_ID,
     email: "demo@example.test",
     type: "user",
-    super_admin: false,
+    // A super-admin, which is both the honest portrayal and the only way in.
+    // The person evaluating IMP is a technical director who would hold this;
+    // and /analytics is gated `super_admin` outright while /budgets wants
+    // `budget_management: read`, so a role-shaped demo user met AccessDenied on
+    // the two screens that make the cost-and-control argument.
+    //
+    // `can()` short-circuits on this flag, so it opens every guard and every
+    // nav entry — including the ones the tour never visits. That is deliberate:
+    // the sidebar should show what IMP does. lib/demo/supported-routes.ts is
+    // what keeps those entries from rendering as empty shells.
+    //
+    // The role below is now decorative for GATING, but not dead: other code
+    // reads role.name, and isElevated() still consults it.
+    super_admin: true,
     role: {
       id: "demo-role",
       name: "Demo",

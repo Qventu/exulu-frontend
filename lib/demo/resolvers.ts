@@ -243,6 +243,18 @@ function scrollbackRows(world: DemoWorld, variables: Record<string, unknown>) {
   }));
 }
 
+/**
+ * The agent an operation is asking for.
+ *
+ * Falls back to the first agent when the id is absent or unknown, so a chapter
+ * whose fixtures predate the gallery still renders rather than throwing — and
+ * a mistyped id in a tour route degrades to a populated screen instead of a
+ * blank one.
+ */
+function agentFor(world: DemoWorld, variables: Record<string, unknown>) {
+  return world.agents.find((a) => a.id === variables.id) ?? world.agents[0];
+}
+
 export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // --- app shell (every page) ---------------------------------------------
   // The sidebar polls this on every route, so it is shell-wide rather than
@@ -546,7 +558,14 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // These reach fetchGraphQLServerSide rather than Apollo. They were found by
   // the unmapped-operation warning firing on the server, which is exactly what
   // that warning is for.
-  GetAgentById: (world) => ({ agentById: world.agents[0] }),
+  // Keyed by the requested id, not `agents[0]`.
+  //
+  // A single-agent world made the shortcut invisible, but the demo is about to
+  // show a gallery of them: every agent in the list would have opened Newton.
+  // The fallback keeps the old behaviour for the fixtures that pass no id.
+  GetAgentById: (world, variables) => ({
+    agentById: agentFor(world, variables),
+  }),
 
   GetAgents: (world) => ({
     agentsPagination: {
@@ -561,9 +580,9 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   }),
 
   // --- /agents/edit/[id] (chapter 3: agent configuration) -----------------
-  AgentEditorById: (world) => ({
+  AgentEditorById: (world, variables) => ({
     agentById: {
-      ...world.agents[0],
+      ...agentFor(world, variables),
       tools: [CONTEXT_SEARCH_TOOL],
       skills: [],
       capabilities: {

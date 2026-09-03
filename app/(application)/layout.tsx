@@ -20,6 +20,8 @@ import { DEMO_BACKEND_CONFIG } from "@/lib/demo/config";
 import { isDemoMode } from "@/lib/demo/flag";
 import { getDemoUser } from "@/lib/demo/user";
 import { TourOverlay } from "@/components/demo/tour-overlay";
+import { DemoUnavailable } from "@/components/demo/demo-unavailable";
+import { isDemoSupported } from "@/lib/demo/supported-routes";
 
 // viewport-fit=cover so env(safe-area-inset-*) resolves on notched devices —
 // the shell's mobile top bar and drawer pad themselves with it
@@ -182,7 +184,24 @@ export default async function RootLayout({
                             <main className="grow flex min-w-0 w-full">
                                 <div className="grow flex flex-col min-w-0 w-full">
                                     <Authenticated sidebarDefaultOpen={defaultOpen} user={user}>
-                                        {children}
+                                        {/* The demo user is a super-admin, so
+                                            the sidebar offers every route —
+                                            including the ones with no fixtures
+                                            behind them, which rendered as empty
+                                            shells. Swapped INSIDE Authenticated
+                                            so the shell, sidebar and tour
+                                            overlay survive and the visitor can
+                                            navigate back out.
+
+                                            "/" is on the allowlist and must
+                                            stay there: replacing children means
+                                            the page never runs, and "/" is the
+                                            page that redirects into the tour. */}
+                                        {demoMode && !isDemoSupported(pathname) ? (
+                                            <DemoUnavailable />
+                                        ) : (
+                                            children
+                                        )}
                                     </Authenticated>
                                 </div>
                             </main>

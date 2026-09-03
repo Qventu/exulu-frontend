@@ -14,12 +14,16 @@ import {
   prevPosition,
   resolveStep,
   startOfChapter,
+  startPosition,
 } from "@/lib/demo/tour";
 import { setCurrentPosition } from "@/lib/demo/current-position";
 
 const TourContext = createContext<ReturnType<typeof useTourState> | null>(null);
 
-const START: TourPosition = { chapter: "techdoc", step: 0 };
+// Derived, not named. This was a literal { chapter: "techdoc", step: 0 }
+// written before the intro chapter existed, so every visitor arriving without
+// a ?tour= param opened on chapter 2 and never saw chapter 1.
+const START: TourPosition = startPosition();
 
 /**
  * Tour state is DERIVED from the URL, never mirrored into React state.

@@ -445,6 +445,22 @@ export function startOfChapter(id: DemoChapterId): TourPosition {
 }
 
 /**
+ * Where the demo begins.
+ *
+ * The one place that answers the question, because two places used to answer
+ * it differently: the provider's fallback was a literal
+ * `{ chapter: "techdoc", step: 0 }` from before the intro chapter existed, so
+ * anyone landing without a `?tour=` param — including every visitor arriving
+ * at the demo's own root URL — silently skipped chapter 1.
+ *
+ * Derived from the chapter list rather than named, so re-ordering the story
+ * moves the entry point with it instead of stranding a hardcoded id.
+ */
+export function startPosition(chapters: DemoChapter[] = CHAPTERS): TourPosition {
+  return { chapter: chapters[0].id, step: 0 };
+}
+
+/**
  * The tour position lives in the URL, as `?tour=<chapter>.<step>`.
  *
  * It has to. Chapters 3 and 4 end on the product's own routes — the agent

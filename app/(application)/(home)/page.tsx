@@ -11,6 +11,8 @@
 
 import { redirect } from "next/navigation";
 
+import { isDemoMode } from "@/lib/demo/flag";
+import { hrefFor, startPosition } from "@/lib/demo/tour";
 import { isElevated } from "@/lib/rights";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 
@@ -19,6 +21,22 @@ import { HomeDashboard } from "./components/home-dashboard";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  // The demo has no dashboard fixtures, so "/" is a doorway rather than a
+  // destination: it hands the visitor to the tour's first step.
+  //
+  // This branch must come FIRST. The check below it calls serverSideAuthCheck,
+  // which in demo mode asks an auth backend that is not there, returns null and
+  // bounces the visitor to /login — which is exactly what the deployed demo did
+  // at its own root URL. The (application) layout gets demo mode right
+  // (`demoMode ? getDemoUser() : ...`); this page never learned about it, and
+  // the comment below, written when that assumption held, is what made the bug
+  // look reasonable in review.
+  //
+  // hrefFor + startPosition are pure and import nothing client-only, so a
+  // server component may call them. The target is derived from the chapter
+  // list, so re-ordering the story moves the front door with it.
+  if (isDemoMode()) redirect(hrefFor(startPosition()));
+
   const user = await serverSideAuthCheck();
   // The (application) layout already gates unauthenticated requests; this is
   // the page-level belt-and-braces with the same destination preservation.
