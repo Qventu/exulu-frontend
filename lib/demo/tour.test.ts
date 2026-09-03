@@ -1,10 +1,12 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { contentText } from "./content";
 import {
   CHAPTERS,
   DEMO_BOOKING_URL,
   type DemoChapter,
+  type DemoStep,
   nextPosition,
   prevPosition,
   resolveStep,
@@ -17,14 +19,34 @@ const FIXTURE: DemoChapter[] = [
     id: "techdoc",
     title: "A",
     steps: [
-      { id: "a1", route: "/demo/tour", anchor: null, title: "t", body: "b" },
-      { id: "a2", route: "/demo/tour", anchor: null, title: "t", body: "b" },
+      {
+        id: "a1",
+        route: "/demo/tour",
+        anchor: null,
+        title: "t",
+        content: [{ kind: "paragraph", text: "b" }],
+      },
+      {
+        id: "a2",
+        route: "/demo/tour",
+        anchor: null,
+        title: "t",
+        content: [{ kind: "paragraph", text: "b" }],
+      },
     ],
   },
   {
     id: "ingestion",
     title: "B",
-    steps: [{ id: "b1", route: "/demo/tour", anchor: null, title: "t", body: "b" }],
+    steps: [
+      {
+        id: "b1",
+        route: "/demo/tour",
+        anchor: null,
+        title: "t",
+        content: [{ kind: "paragraph", text: "b" }],
+      },
+    ],
   },
 ];
 
@@ -108,21 +130,23 @@ describe("CHAPTERS", () => {
     ]);
   });
 
+  const hasFigure = (step: DemoStep) => step.content.some((b) => b.kind === "figure");
+
   it("illustrates chapter openings and nothing else", () => {
     // One schematic per chapter, on its first step. An image on every step
     // would compete with the product screen the tour is pointing at, which is
     // the thing the visitor is meant to be looking at.
     for (const chapter of CHAPTERS) {
-      const illustrated = chapter.steps.filter((s) => s.image);
+      const illustrated = chapter.steps.filter(hasFigure);
       expect(
         illustrated.length,
         `${chapter.id} should illustrate at most one step`,
       ).toBeLessThanOrEqual(1);
       if (illustrated.length) {
         expect(
-          chapter.steps[0].image,
+          hasFigure(chapter.steps[0]),
           `${chapter.id}'s schematic belongs on its opening step`,
-        ).toBeTruthy();
+        ).toBe(true);
       }
     }
   });
@@ -131,11 +155,11 @@ describe("CHAPTERS", () => {
     // A typo'd path is a broken image in a popover, which the anchor tests
     // cannot see and which looks worse than no illustration at all.
     for (const chapter of CHAPTERS) {
-      const image = chapter.steps[0].image;
-      if (!image) continue;
+      const figure = chapter.steps[0].content.find((b) => b.kind === "figure");
+      if (!figure) continue;
       expect(
-        existsSync(join(process.cwd(), "public", image)),
-        `${chapter.id} references a missing asset: ${image}`,
+        existsSync(join(process.cwd(), "public", figure.src)),
+        `${chapter.id} references a missing asset: ${figure.src}`,
       ).toBe(true);
     }
   });
@@ -153,6 +177,12 @@ describe("CHAPTERS", () => {
 
 describe("the reading load", () => {
   const words = (s: string) => s.split(/\s+/).filter(Boolean).length;
+  // Word count is measured over the prose only. A figure's alt text is for
+  // screen readers, not a sighted visitor's eyes, and folding it into this
+  // budget would make the cap track the schematic's accessibility label
+  // rather than the copy the visitor actually reads.
+  const proseOf = (step: DemoStep) =>
+    contentText(step.content.filter((b) => b.kind !== "figure"));
 
   it("keeps every step under a paragraph", () => {
     // The tour was reported as overwhelming, and the measurement agreed: 29
@@ -169,17 +199,15 @@ describe("the reading load", () => {
     // The point of the cap is that copy grows back if nothing stops it.
     for (const chapter of CHAPTERS) {
       for (const step of chapter.steps) {
-        expect(
-          words(step.body),
-          `${step.id} is ${words(step.body)} words — trim it or split the step`,
-        ).toBeLessThanOrEqual(45);
+        const w = words(proseOf(step));
+        expect(w, `${step.id} is ${w} words — trim it or split the step`).toBeLessThanOrEqual(45);
       }
     }
   });
 
   it("opens on something short", () => {
     // A visitor reads this before the tour has shown them anything.
-    expect(words(CHAPTERS[0].steps[0].body)).toBeLessThanOrEqual(32);
+    expect(words(proseOf(CHAPTERS[0].steps[0]))).toBeLessThanOrEqual(32);
   });
 
   it("never puts two consecutive steps on the same anchor", () => {
@@ -211,7 +239,7 @@ describe("the two chapters that show something invented", () => {
   // visitor-facing half.
   const bodies = (id: string) =>
     CHAPTERS.find((c) => c.id === id)!
-      .steps.map((s) => s.body)
+      .steps.map((s) => contentText(s.content))
       .join(" ");
 
   it("tells the visitor the eval scores are not measurements", () => {
@@ -230,7 +258,8 @@ describe("the two chapters that show something invented", () => {
 });
 
 describe("the closing call to action", () => {
-  const closing = () => CHAPTERS.at(-1)!.steps.at(-1)!.body;
+  const closingStep = () => CHAPTERS.at(-1)!.steps.at(-1)!;
+  const closing = () => contentText(closingStep().content);
 
   it("makes the ask, in the whitepaper's own terms", () => {
     // The tour used to end on a Back button: twelve minutes of someone's
@@ -244,8 +273,6 @@ describe("the closing call to action", () => {
     expect(closing()).toMatch(/Zehn Ihrer Handbücher/i);
     expect(closing()).toMatch(/zwei Wochen/i);
   });
-
-  const closingStep = () => CHAPTERS.at(-1)!.steps.at(-1)!;
 
   it("never renders a dead link or a placeholder", () => {
     // DEMO_BOOKING_URL is empty until the HubSpot meetings link exists. An

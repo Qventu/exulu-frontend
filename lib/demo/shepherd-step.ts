@@ -1,5 +1,6 @@
 import type { PopperPlacement, StepOptions } from "shepherd.js";
 
+import type { ContentBlock } from "./content";
 import {
   type DemoChapter,
   type DemoStep,
@@ -74,6 +75,33 @@ export interface StepHandlers {
  */
 export const ANCHOR_WAIT_MS = 4000;
 
+/** Interim block → HTML. Replaced wholesale by the React renderer in Task 4. */
+function blockToHtml(block: ContentBlock): string {
+  switch (block.kind) {
+    case "figure":
+      return `<img src="${block.src}" alt="${block.alt ?? ""}" class="shepherd-schematic" />`;
+    case "paragraph":
+      return `<p>${block.text}</p>`;
+    case "bullets":
+      return `<ul>${block.items.map((i) => `<li>${i}</li>`).join("")}</ul>`;
+    case "callout":
+      return `<blockquote>${block.text}</blockquote>`;
+    case "stat":
+      return `<p><strong>${block.value}</strong> ${block.label}</p>`;
+    case "sequence":
+      return `<ol>${block.steps.map((s) => `<li>${s}</li>`).join("")}</ol>`;
+    default: {
+      // Adding a ContentBlock kind without handling it here is a compile
+      // error, not a silently dropped string. tsconfig sets `strict` but not
+      // `noImplicitReturns`, so without this the return type would quietly
+      // widen to `string | undefined` and the new kind would render as
+      // nothing rather than fail the build.
+      const unhandled: never = block;
+      return unhandled;
+    }
+  }
+}
+
 export function shepherdStepFor(
   step: DemoStep,
   handlers: StepHandlers,
@@ -121,9 +149,12 @@ export function shepherdStepFor(
     // The drawings are dark lines on transparency. `.shepherd-text img` in
     // shepherd-theme.css inverts them under `.dark`, so one asset serves both
     // themes rather than two files that can drift apart.
-    text: step.image
-      ? `<img src="${step.image}" alt="" class="shepherd-schematic" />${step.body}`
-      : step.body,
+    //
+    // Interim: an HTML string built from the blocks. Task 4 replaces this
+    // whole property with a thunk returning a React-rendered element; until
+    // then this keeps the tour looking exactly as it did before the copy
+    // became data.
+    text: step.content.map(blockToHtml).join(""),
     // A step with no anchor is a full-screen beat (chapter openers, the
     // knowledge-item reveal). Shepherd centres those, which is what we want.
     ...(step.anchor
