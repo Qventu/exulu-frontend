@@ -2,11 +2,14 @@
 """
 Generates the demo illustrations via the OpenAI images API.
 
-Run from the frontend repo root, with the REAL key (not the truncated one from
-chat — it must end in ...Dhbd8OEAA):
+Run from the frontend repo root with OPENAI_API_KEY exported in the
+environment:
 
     export OPENAI_API_KEY='sk-proj-...'
-    python3 /tmp/generate-demo-image.py style-test
+    python3 scripts/generate-demo-image.py style-test
+
+The script rejects a value that looks like a truncated placeholder rather
+than a real key — see the length/ellipsis check in generate() below.
 
 The HTTP request goes through curl rather than urllib. The python.org build of
 Python 3.13 on macOS ships without the system certificate bundle, so urllib
@@ -54,13 +57,20 @@ STYLE = (
     "Flat vector look, not photographic, not 3D, no drop shadows."
 )
 
-# Fraction of the frame height to keep, centred, before encoding.
+# Per-image fraction of the frame height to keep, centred, before encoding —
+# keyed by image name, applied in generate() after the PNG comes back and
+# before the WebP export. It exists because the model composes to the frame
+# it is given, and a subject that does not fill that frame leaves dead space
+# that shrinks the subject once the image is scaled down to popover size.
+# Cropping here rather than by hand means regenerating an image does not
+# silently lose whatever crop it needed.
 #
-# The model composes to the frame it is given, and a subject that does not fill
-# it leaves dead space. The door row occupies the middle band of a 3:2 frame,
-# so at popover height a third of the box was empty and the doors rendered
-# smaller than they needed to. Cropping here rather than by hand means
-# regenerating the image does not silently lose the crop.
+# Currently empty: none of the collage-style images need it. Unlike the
+# monochrome line drawings this style replaced, the collage compositions
+# (lime field, halftone dots, dashed diagonals) fill the frame edge to edge
+# by construction, so the under-filled-frame problem this mechanism exists
+# for does not currently arise. Add an entry here if a future image does
+# under-fill its frame.
 CROP = {}
 
 DEMO_PROMPTS = {
