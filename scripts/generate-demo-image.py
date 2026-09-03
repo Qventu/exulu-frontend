@@ -30,18 +30,28 @@ import tempfile
 OUT_DIR = "public/demo"
 MODEL = "gpt-image-2"
 
-# The seven chapters are deliberately plain — real German transcripts, a red
-# failing eval cell, eight failed email runs. Illustration that competes with
-# that undercuts it. So the house style is a technical drawing: the visual
-# language of the industry being sold to, not of a marketing site.
+# The house style is OPEN's own, taken from the Frontify exports: editorial
+# collage, not technical drawing.
+#
+# The previous style was a monochrome engineering schematic, chosen because the
+# chapters show real German transcripts and a red failing eval cell, and
+# decoration would undercut them. That argument stands — it is simply answered
+# better by a brand than by restraint. OPEN's collage register is confident
+# without being decorative, and it makes the tour look like the company rather
+# than like a generic SaaS product.
+#
+# Colours are exact, from the SVGs: lime #EFFE7C, ink #1A1A1A, lavender
+# #C0ACF9, sage #C9D08F, blush #FFE1DE, cream #FFFDF3.
 STYLE = (
-    "Technical schematic line illustration in the style of an engineering "
-    "drawing. Thin uniform strokes, no fills, no shading, no gradients. "
-    "Monochrome: dark charcoal-grey lines on a fully transparent background "
-    "(the drawing is inverted in CSS for dark mode, so the lines must be dark). "
-    "Precise, orthographic, diagrammatic. No text, no labels, no lettering, "
-    "no numbers anywhere in the image. No people. Generous negative space. "
-    "Restrained and clinical rather than decorative."
+    "Bold editorial collage illustration in a flat graphic brand style. "
+    "A solid lime-yellow field (#EFFE7C) as the background. Large flat "
+    "geometric shapes in near-black ink (#1A1A1A) with no gradients and no "
+    "shading. Secondary flat shapes in soft lavender (#C0ACF9) and muted sage "
+    "(#C9D08F). Crisp white dashed diagonal lines crossing the background as a "
+    "pattern. Optional halftone dot fields whose dot size varies across the "
+    "field. High contrast, confident, generous negative space. "
+    "No text, no labels, no lettering, no numbers anywhere in the image. "
+    "Flat vector look, not photographic, not 3D, no drop shadows."
 )
 
 # Fraction of the frame height to keep, centred, before encoding.
@@ -51,9 +61,7 @@ STYLE = (
 # so at popover height a third of the box was empty and the doors rendered
 # smaller than they needed to. Cropping here rather than by hand means
 # regenerating the image does not silently lose the crop.
-CROP = {
-    "structure": 0.45,
-}
+CROP = {}
 
 DEMO_PROMPTS = {
     # One test image to settle the style before generating a set.
