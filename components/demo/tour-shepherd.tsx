@@ -216,6 +216,13 @@ export function TourShepherd() {
 
   useEffect(() => {
     if (!tour || !step) return;
+    // A stage step is rendered by TourStage. Leaving Shepherd on its previous
+    // step would put a popover behind the full-bleed scene.
+    if (step.kind === "stage") {
+      shown.current = step.id;
+      tour.hide();
+      return;
+    }
     if (shown.current === step.id) return;
     shown.current = step.id;
     const mine = ++generation.current;

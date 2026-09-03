@@ -48,6 +48,16 @@ describe("chapter integrity", () => {
     expect(order.indexOf("memory")).toBeGreaterThan(order.indexOf("techdoc"));
   });
 
+  // A stage covers the viewport, so an anchor it might point at is invisible.
+  // Carrying one means the step was authored as a popover and later converted.
+  it("never gives a stage step an anchor", () => {
+    for (const { chapter, step } of everyStep) {
+      if (step.kind === "stage") {
+        expect(step.anchor, `${chapter.id}/${step.id} is a stage with an anchor`).toBeNull();
+      }
+    }
+  });
+
   it("points every figure at a file that exists", async () => {
     const { existsSync } = await import("node:fs");
     const { join } = await import("node:path");

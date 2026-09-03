@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { TourBubble } from "./tour-bubble";
 import { TourProvider } from "./tour-provider";
 import { TourShepherd } from "./tour-shepherd";
+import { TourStage } from "./tour-stage";
 
 /**
  * The tour's chrome — the Shepherd popover with its modal spotlight, and the
@@ -28,6 +29,7 @@ export function TourOverlay() {
     <Suspense fallback={null}>
       <TourProvider>
         <TourShepherd />
+        <TourStage />
         <TourBubble />
       </TourProvider>
     </Suspense>
