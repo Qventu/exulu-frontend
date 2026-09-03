@@ -176,7 +176,12 @@ describe("every step in the tour translates", () => {
         renderContent,
       );
       expect(options.title, `${step.id} has no title`).toBeTruthy();
-      expect(options.text, `${step.id} has no body`).toBeTruthy();
+      // options.text is now a thunk (() => renderContent(step)), unconditionally
+      // set regardless of step.content — a function reference is always
+      // truthy, so asserting on it would never catch a step with no body.
+      // Assert on the source data instead, which is what this line always
+      // meant to check.
+      expect(step.content.length, `${step.id} has no body`).toBeGreaterThan(0);
       // "At least one button" was the old bar, and the last step cleared it
       // with Back alone — a button that only goes backwards. What matters is
       // that every step offers a way ONWARD, so Back does not count here.
