@@ -43,8 +43,19 @@ function useTourState() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const position =
-    parsePosition(searchParams.get(TOUR_PARAM), CHAPTERS) ?? START;
+  // Memoised on the raw param string, not recomputed per render.
+  //
+  // parsePosition returns a fresh object literal every call, so an
+  // unmemoised `position` changes identity on every render. That was
+  // harmless while it only fed two useMemos that returned equal values —
+  // but it also meant those memos never actually memoised, and the moment a
+  // live side effect depends on `position` (the auto-advance timer below)
+  // an unrelated re-render silently restarts it.
+  const rawPosition = searchParams.get(TOUR_PARAM);
+  const position = useMemo(
+    () => parsePosition(rawPosition, CHAPTERS) ?? START,
+    [rawPosition],
+  );
 
   const go = useCallback(
     (target: TourPosition | null) => {
