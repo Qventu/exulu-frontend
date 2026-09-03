@@ -21,6 +21,13 @@ const handlers = {
   hasNext: true,
 };
 
+/**
+ * A stand-in for the real React renderer (components/demo/step-content-host.tsx),
+ * which this node-only file must never import. Its return value is never
+ * inspected below — only whether and when it gets called.
+ */
+const renderContent = () => ({}) as HTMLElement;
+
 const allSteps: DemoStep[] = CHAPTERS.flatMap((c) => c.steps);
 
 describe("anchored steps point Shepherd at the right element", () => {
@@ -30,7 +37,7 @@ describe("anchored steps point Shepherd at the right element", () => {
     // SELECTOR rather than a bare id — `attachTo.element` is a CSS selector,
     // so passing "chat-composer" would silently match nothing.
     const step = allSteps.find((s) => s.anchor)!;
-    const options = shepherdStepFor(step, handlers);
+    const options = shepherdStepFor(step, handlers, renderContent);
 
     expect(options.attachTo?.element).toBe(`[data-demo-id="${step.anchor}"]`);
     expect(options.attachTo?.element.startsWith("[")).toBe(true);
@@ -43,7 +50,7 @@ describe("anchored steps point Shepherd at the right element", () => {
     // unattached in the centre of the screen — no error, just a tour that
     // stopped pointing at anything.
     for (const step of allSteps.filter((s) => s.anchor)) {
-      const options = shepherdStepFor(step, handlers);
+      const options = shepherdStepFor(step, handlers, renderContent);
       expect(options.waitForElement, `${step.id} would not wait`).toBe(
         ANCHOR_WAIT_MS,
       );
@@ -60,7 +67,9 @@ describe("anchored steps point Shepherd at the right element", () => {
     // highlighted and will not accept the message the tour just asked for.
     const composer = allSteps.find((s) => s.anchor === "chat-composer");
     expect(composer, "no composer step — has the anchor been renamed?").toBeTruthy();
-    expect(shepherdStepFor(composer!, handlers).canClickTarget).toBe(true);
+    expect(shepherdStepFor(composer!, handlers, renderContent).canClickTarget).toBe(
+      true,
+    );
   });
 
   it("honours a step's placement, defaulting to bottom", () => {
@@ -68,11 +77,15 @@ describe("anchored steps point Shepherd at the right element", () => {
     // steps hid the drawer's own title. floating-ui still flips when the
     // preferred side does not fit, so this is a preference, not a promise.
     const anchored = allSteps.find((s) => s.anchor && !s.placement)!;
-    expect(shepherdStepFor(anchored, handlers).attachTo?.on).toBe("bottom");
+    expect(shepherdStepFor(anchored, handlers, renderContent).attachTo?.on).toBe(
+      "bottom",
+    );
 
     const placed = allSteps.find((s) => s.placement === "left");
     expect(placed, "no left-placed step — config wizard steps should be").toBeTruthy();
-    expect(shepherdStepFor(placed!, handlers).attachTo?.on).toBe("left");
+    expect(shepherdStepFor(placed!, handlers, renderContent).attachTo?.on).toBe(
+      "left",
+    );
   });
 });
 
@@ -83,7 +96,7 @@ describe("unanchored steps are full-screen beats", () => {
     const step = allSteps.find((s) => !s.anchor);
     expect(step, "no unanchored step left — drop this test").toBeTruthy();
 
-    const options = shepherdStepFor(step!, handlers);
+    const options = shepherdStepFor(step!, handlers, renderContent);
     expect(options.attachTo).toBeUndefined();
     expect("waitForElement" in options).toBe(false);
   });
@@ -91,14 +104,18 @@ describe("unanchored steps are full-screen beats", () => {
 
 describe("the footer buttons match where the visitor is", () => {
   it("offers Back and Next in the middle of the tour", () => {
-    const options = shepherdStepFor(allSteps[1], handlers);
+    const options = shepherdStepFor(allSteps[1], handlers, renderContent);
     expect(options.buttons.map((b) => b.text)).toEqual(["Zurück", "Weiter"]);
   });
 
   it("drops Back at the very start", () => {
     // Rendering a dead button is worse than rendering none: the visitor clicks
     // it, nothing happens, and they conclude the demo is broken.
-    const first = shepherdStepFor(allSteps[0], { ...handlers, hasPrev: false });
+    const first = shepherdStepFor(
+      allSteps[0],
+      { ...handlers, hasPrev: false },
+      renderContent,
+    );
     expect(first.buttons.map((b) => b.text)).toEqual(["Weiter"]);
   });
 
@@ -107,7 +124,11 @@ describe("the footer buttons match where the visitor is", () => {
     // in place and passed for as long as the dead end existed. Dropping Next is
     // right; leaving only Back is not, because the last step is the one that
     // makes the ask. A reviewer found it on screen; this file had certified it.
-    const last = shepherdStepFor(allSteps[0], { ...handlers, hasNext: false });
+    const last = shepherdStepFor(
+      allSteps[0],
+      { ...handlers, hasNext: false },
+      renderContent,
+    );
     expect(last.buttons.map((b) => b.text)).toEqual(["Zurück", "Von vorn"]);
   });
 
@@ -115,6 +136,7 @@ describe("the footer buttons match where the visitor is", () => {
     const withCta = shepherdStepFor(
       { ...allSteps[0], cta: { label: "Book a call", href: "https://x.test" } },
       { ...handlers, hasNext: false },
+      renderContent,
     );
     expect(withCta.buttons.map((b) => b.text)).toEqual([
       "Zurück",
@@ -134,7 +156,7 @@ describe("the footer buttons match where the visitor is", () => {
     // `secondary: true` is what emits `shepherd-button-secondary`. Passing the
     // class too is not wrong, just duplicated — and it drifts if Shepherd
     // renames it.
-    const back = shepherdStepFor(allSteps[1], handlers).buttons.find(
+    const back = shepherdStepFor(allSteps[1], handlers, renderContent).buttons.find(
       (b) => b.text === "Zurück",
     );
     expect(back?.secondary).toBe(true);
@@ -144,11 +166,15 @@ describe("the footer buttons match where the visitor is", () => {
 describe("every step in the tour translates", () => {
   it("produces a titled, texted step with at least one way onward", () => {
     for (const [index, step] of allSteps.entries()) {
-      const options = shepherdStepFor(step, {
-        ...handlers,
-        hasPrev: index > 0,
-        hasNext: index < allSteps.length - 1,
-      });
+      const options = shepherdStepFor(
+        step,
+        {
+          ...handlers,
+          hasPrev: index > 0,
+          hasNext: index < allSteps.length - 1,
+        },
+        renderContent,
+      );
       expect(options.title, `${step.id} has no title`).toBeTruthy();
       expect(options.text, `${step.id} has no body`).toBeTruthy();
       // "At least one button" was the old bar, and the last step cleared it
@@ -172,9 +198,13 @@ describe("every step in the tour translates", () => {
 describe("the whole tour wires its own navigation", () => {
   const build = () => {
     const visited: string[] = [];
-    const steps = shepherdStepsFor(CHAPTERS, (target: TourPosition) => {
-      visited.push(encodePosition(target));
-    });
+    const steps = shepherdStepsFor(
+      CHAPTERS,
+      (target: TourPosition) => {
+        visited.push(encodePosition(target));
+      },
+      renderContent,
+    );
     return { steps, visited };
   };
 
@@ -235,5 +265,44 @@ describe("the whole tour wires its own navigation", () => {
       .find((b) => b.text === "Von vorn")!
       .action();
     expect(visited).toEqual([`${CHAPTERS[0].id}.0`]);
+  });
+});
+
+describe("step content rendering", () => {
+  const step = {
+    id: "s", route: "/chat", anchor: null, title: "t",
+    content: [{ kind: "paragraph" as const, text: "b" }],
+  };
+  const handlers = {
+    onNext: () => {}, onPrev: () => {}, onRestart: () => {},
+    hasPrev: false, hasNext: true,
+  };
+
+  // Shepherd's StepText accepts a function returning an HTMLElement. It must
+  // be a FUNCTION, not a value: tour-shepherd.tsx calls show() for the same
+  // step up to five times while settling an anchor, and a captured element
+  // would leak a React root on every one of them.
+  it("emits text as a thunk, not a rendered value", () => {
+    const options = shepherdStepFor(step, handlers, () => ({}) as HTMLElement);
+    expect(typeof options.text).toBe("function");
+  });
+
+  it("does not call the renderer until Shepherd asks", () => {
+    let calls = 0;
+    const options = shepherdStepFor(step, handlers, () => {
+      calls++;
+      return {} as HTMLElement;
+    });
+    expect(calls).toBe(0);
+    (options.text as () => HTMLElement)();
+    expect(calls).toBe(1);
+  });
+
+  it("widens the panel only when the step asks", () => {
+    expect(shepherdStepFor(step, handlers, () => ({}) as HTMLElement).classes)
+      .toBeUndefined();
+    expect(
+      shepherdStepFor({ ...step, size: "wide" }, handlers, () => ({}) as HTMLElement).classes,
+    ).toBe("demo-step-wide");
   });
 });

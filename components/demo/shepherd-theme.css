@@ -155,28 +155,39 @@ body.demo-tour-no-dim .shepherd-modal-overlay-container.shepherd-modal-is-visibl
   opacity: 0;
 }
 
-/* Chapter schematics.
- *
- * The drawings are dark lines on a transparent background, which is invisible
- * against the app's dark charcoal — so dark mode inverts them. One asset
- * serves both themes; generating a light and a dark variant would be two files
- * that drift apart the first time one is regenerated.
- *
- * `filter: invert()` on a transparent PNG/WebP flips the colour channels and
- * leaves alpha alone, which is exactly right for monochrome line art and
- * exactly wrong for anything with a photograph in it. These are line art.
- */
-.shepherd-schematic {
-  display: block;
-  width: 100%;
-  max-height: 160px;
-  object-fit: contain;
-  margin-bottom: 0.75rem;
-  /* Pure black on white reads harsher than the surrounding UI text. */
-  opacity: 0.72;
+/* The explainers are panels, not tooltips. 380px was a tooltip width; these
+   carry a heading, a figure and a sequence. */
+.shepherd-element { max-width: 30rem; }
+.shepherd-element.demo-step-wide { max-width: 44rem; }
+
+.demo-step-panel { display: flex; flex-direction: column; gap: 0.85rem; }
+.demo-block-paragraph { margin: 0; line-height: 1.55; }
+.demo-block-bullets { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.3rem; }
+
+/* Lime is OPEN's primary and already the theme's --primary, so the callout
+   borrows the token rather than hardcoding #EFFE7C — a themed deployment
+   restyles it for free. */
+.demo-block-callout {
+  margin: 0;
+  padding: 0.6rem 0.85rem;
+  border-left: 3px solid hsl(var(--primary));
+  background: hsl(var(--muted));
+  font-style: normal;
+}
+.demo-callout-quote { font-style: italic; }
+
+.demo-block-stat { display: flex; align-items: baseline; gap: 0.5rem; }
+.demo-stat-value { font-size: 1.9rem; font-weight: 600; line-height: 1; color: hsl(var(--primary)); }
+.demo-stat-label { color: hsl(var(--muted-foreground)); }
+
+.demo-block-sequence {
+  margin: 0; padding: 0; list-style: none;
+  display: grid; gap: 0.4rem;
+}
+.demo-block-sequence li {
+  padding: 0.45rem 0.7rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.4rem;
 }
 
-.dark .shepherd-schematic {
-  filter: invert(1);
-  opacity: 0.6;
-}
+.demo-block-figure { display: block; width: 100%; height: auto; border-radius: 0.5rem; }

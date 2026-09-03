@@ -1,6 +1,5 @@
 import type { PopperPlacement, StepOptions } from "shepherd.js";
 
-import type { ContentBlock } from "./content";
 import {
   type DemoChapter,
   type DemoStep,
@@ -49,7 +48,7 @@ export type DemoStepOptions = Omit<
 > & {
   id: string;
   title: string;
-  text: string;
+  text: () => HTMLElement;
   buttons: DemoTourButton[];
   attachTo?: { element: string; on: PopperPlacement };
 };
@@ -75,36 +74,19 @@ export interface StepHandlers {
  */
 export const ANCHOR_WAIT_MS = 4000;
 
-/** Interim block → HTML. Replaced wholesale by the React renderer in Task 4. */
-function blockToHtml(block: ContentBlock): string {
-  switch (block.kind) {
-    case "figure":
-      return `<img src="${block.src}" alt="${block.alt ?? ""}" class="shepherd-schematic" />`;
-    case "paragraph":
-      return `<p>${block.text}</p>`;
-    case "bullets":
-      return `<ul>${block.items.map((i) => `<li>${i}</li>`).join("")}</ul>`;
-    case "callout":
-      return `<blockquote>${block.text}</blockquote>`;
-    case "stat":
-      return `<p><strong>${block.value}</strong> ${block.label}</p>`;
-    case "sequence":
-      return `<ol>${block.steps.map((s) => `<li>${s}</li>`).join("")}</ol>`;
-    default: {
-      // Adding a ContentBlock kind without handling it here is a compile
-      // error, not a silently dropped string. tsconfig sets `strict` but not
-      // `noImplicitReturns`, so without this the return type would quietly
-      // widen to `string | undefined` and the new kind would render as
-      // nothing rather than fail the build.
-      const unhandled: never = block;
-      return unhandled;
-    }
-  }
-}
+/**
+ * Turns a step into the DOM Shepherd shows.
+ *
+ * Injected rather than imported so THIS module never touches React or the
+ * DOM — its node tests are the only assertions on how the tour navigates, and
+ * a React import would end them.
+ */
+export type ContentRenderer = (step: DemoStep) => HTMLElement;
 
 export function shepherdStepFor(
   step: DemoStep,
   handlers: StepHandlers,
+  renderContent: ContentRenderer,
 ): DemoStepOptions {
   const buttons: DemoTourButton[] = [];
   if (handlers.hasPrev) {
@@ -142,19 +124,12 @@ export function shepherdStepFor(
   return {
     id: step.id,
     title: step.title,
-    // Shepherd's `text` takes an HTML string, which is how the schematic gets
-    // in without a custom renderer. The content is static and lives in this
-    // repo — no visitor input reaches it — so there is nothing to escape.
-    //
-    // The drawings are dark lines on transparency. `.shepherd-text img` in
-    // shepherd-theme.css inverts them under `.dark`, so one asset serves both
-    // themes rather than two files that can drift apart.
-    //
-    // Interim: an HTML string built from the blocks. Task 4 replaces this
-    // whole property with a thunk returning a React-rendered element; until
-    // then this keeps the tour looking exactly as it did before the copy
-    // became data.
-    text: step.content.map(blockToHtml).join(""),
+    // A thunk, not a value. Shepherd's StepText allows an HTMLElement, and
+    // tour-shepherd.tsx re-shows the same step up to five times while an
+    // anchor settles — so a captured element would leak a React root per
+    // show. The host caches one element per step id and re-renders into it.
+    text: () => renderContent(step),
+    ...(step.size === "wide" ? { classes: "demo-step-wide" } : {}),
     // A step with no anchor is a full-screen beat (chapter openers, the
     // knowledge-item reveal). Shepherd centres those, which is what we want.
     ...(step.anchor
@@ -209,6 +184,7 @@ export function shepherdStepFor(
 export function shepherdStepsFor(
   chapters: DemoChapter[],
   navigate: (target: TourPosition) => void,
+  renderContent: ContentRenderer,
 ): DemoStepOptions[] {
   return chapters.flatMap((chapter) =>
     chapter.steps.map((step, index) => {
@@ -216,17 +192,21 @@ export function shepherdStepsFor(
       const forward = nextPosition(chapters, position);
       const back = prevPosition(chapters, position);
 
-      return shepherdStepFor(step, {
-        onNext: () => {
-          if (forward) navigate(forward);
+      return shepherdStepFor(
+        step,
+        {
+          onNext: () => {
+            if (forward) navigate(forward);
+          },
+          onPrev: () => {
+            if (back) navigate(back);
+          },
+          onRestart: () => navigate({ chapter: chapters[0].id, step: 0 }),
+          hasNext: Boolean(forward),
+          hasPrev: Boolean(back),
         },
-        onPrev: () => {
-          if (back) navigate(back);
-        },
-        onRestart: () => navigate({ chapter: chapters[0].id, step: 0 }),
-        hasNext: Boolean(forward),
-        hasPrev: Boolean(back),
-      });
+        renderContent,
+      );
     }),
   );
 }

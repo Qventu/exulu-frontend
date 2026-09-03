@@ -10,6 +10,7 @@ import { CHAPTERS, type TourPosition, hrefFor } from "@/lib/demo/tour";
 import "shepherd.js/dist/css/shepherd.css";
 import "./shepherd-theme.css";
 
+import { disposeStepContent, renderStepContent } from "./step-content-host";
 import { useTour } from "./tour-provider";
 
 /**
@@ -177,7 +178,11 @@ export function TourShepherd() {
       // This call is also the proof that DemoStepOptions is assignable to
       // Shepherd's StepOptions — no separate type assertion needed.
       created.addSteps(
-        shepherdStepsFor(CHAPTERS, (target) => navigate.current(target)),
+        shepherdStepsFor(
+          CHAPTERS,
+          (target) => navigate.current(target),
+          renderStepContent,
+        ),
       );
 
       setTour(created);
@@ -194,6 +199,7 @@ export function TourShepherd() {
       cancelled = true;
       // complete() tears down the popover, the overlay and the body classes.
       created?.complete();
+      disposeStepContent();
     };
   }, []);
 
