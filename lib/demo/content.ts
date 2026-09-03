@@ -41,6 +41,15 @@ export function contentText(blocks: ContentBlock[]): string {
           return block.alt ?? "";
         case "sequence":
           return block.steps.join(" ");
+        default: {
+          // Adding a ContentBlock kind without handling it here is a compile
+          // error, not a silently dropped string. tsconfig sets `strict` but
+          // not `noImplicitReturns`, so without this the return type would
+          // quietly widen to `string | undefined` and the new kind's text
+          // would vanish from every assertion that reads it.
+          const unhandled: never = block;
+          return unhandled;
+        }
       }
     })
     .join(" ");
