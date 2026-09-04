@@ -13,6 +13,7 @@ import {
   TRANSCRIPT_EXCERPT,
   type MeetingRecording,
 } from "./fixtures/chapter-meetings";
+import { KOSTEN_TEAMS } from "./fixtures/chapter-kosten";
 import { MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
 import { TECHDOC_SESSION_ID } from "./fixtures/chapter-techdoc";
 import { CONTEXTS } from "./fixtures/contexts";
@@ -750,6 +751,67 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
       (variables.ids as string[] | undefined)?.includes(a.id),
     ),
   }),
+
+  // --- /budgets (chapter 11: what it costs and who controls it) -----------
+  //
+  // Root field names verified against the real gql documents in
+  // queries/queries.ts, re-exported by app/(application)/budgets/queries.ts —
+  // NOT the plan's guessed names. GetWorkflowTemplatesWithBudgets disagreed:
+  // the document selects `workflow_templatesPagination`, matching the
+  // underscored name every other workflow_template operation in this file
+  // already uses, not the camelCase `workflowTemplatesPagination` the brief
+  // proposed.
+  //
+  // The teams come from fixtures/chapter-kosten.ts, the same source the
+  // analytics REST fixture attributes spend to — so the two halves of the
+  // chapter cannot disagree about who spent what while a prospect looks at
+  // them side by side. Every other roster is empty: no fabricated users,
+  // roles, projects, agents, or routines have a budget in this tour.
+  GetTeamsWithBudgets: () => ({
+    teamsPagination: {
+      pageInfo: page(KOSTEN_TEAMS.length),
+      items: KOSTEN_TEAMS.map((team) => ({
+        id: team.id,
+        name: team.name,
+        budget: { max_budget: team.budget, spend: 0, budget_duration: "30d" },
+      })),
+    },
+  }),
+  GetUsersWithBudgets: () => ({ usersPagination: { pageInfo: page(0), items: [] } }),
+  GetRolesWithBudgets: () => ({ rolesPagination: { pageInfo: page(0), items: [] } }),
+  GetProjectsWithBudgets: () => ({ projectsPagination: { pageInfo: page(0), items: [] } }),
+  GetAgentsWithBudgets: () => ({ agentsPagination: { pageInfo: page(0), items: [] } }),
+  GetWorkflowTemplatesWithBudgets: () => ({
+    workflow_templatesPagination: { pageInfo: page(0), items: [] },
+  }),
+
+  // --- id → name hydration for /analytics' breakdown card -----------------
+  //
+  // byTag rows carry ids; the breakdown card hydrates names via GraphQL.
+  // Root fields and shapes verified against queries/queries.ts (re-exported
+  // by app/(application)/analytics/queries.ts) and confirmed against how
+  // breakdown-chart-card.tsx actually reads each hydration result — several
+  // disagreed with the plan's guessed `{ <plural>: { items } }` shape:
+  //
+  //   - GetUsersByIds    → `userByIds`     (flat array, no pageInfo/items)
+  //   - GetProjectsByIds → `projectByIds`  (flat array, no pageInfo/items)
+  //   - GetTeamsByIds    → `teamsPagination.items` (no pageInfo selected)
+  //   - GetRolesByIds    → `rolesPagination.items` (no pageInfo selected;
+  //     no $ids variable either — the document fetches up to 200 and the
+  //     component matches client-side, since FilterRole has no `id` field)
+  //   - GetRoutinesByIds → `workflow_templatesPagination.items` (no pageInfo)
+  //
+  // GetAgentsByIds (agentByIds) is already mapped above.
+  //
+  // Teams is the only roster with entities, matching KOSTEN_ROSTERS in
+  // fixtures/chapter-kosten.ts.
+  GetTeamsByIds: () => ({
+    teamsPagination: { items: KOSTEN_TEAMS.map((t) => ({ id: t.id, name: t.name })) },
+  }),
+  GetUsersByIds: () => ({ userByIds: [] }),
+  GetProjectsByIds: () => ({ projectByIds: [] }),
+  GetRolesByIds: () => ({ rolesPagination: { items: [] } }),
+  GetRoutinesByIds: () => ({ workflow_templatesPagination: { items: [] } }),
 
   GetUserRoles: () => ({ rolesPagination: { pageInfo: page(0), items: [] } }),
   GetTeams: () => ({ teamsPagination: { pageInfo: page(0), items: [] } }),
