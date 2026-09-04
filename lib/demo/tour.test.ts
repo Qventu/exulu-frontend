@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { contentText } from "./content";
+import { getWorld } from "./fixtures";
 import {
   CHAPTERS,
   DEMO_BOOKING_URL,
@@ -119,6 +120,7 @@ describe("CHAPTERS", () => {
     // ingestion's opener all point at neighbours and would need rewriting.
     expect(CHAPTERS.map((c) => c.id)).toEqual([
       "daten",
+      "struktur",
       "techdoc",
       "memory",
       "ingestion",
@@ -226,20 +228,50 @@ describe("the reading load", () => {
     expect(words(proseOf(CHAPTERS[0].steps[0]))).toBeLessThanOrEqual(32);
   });
 
+  // Two consecutive worlds compared for equality, ignoring `position` —
+  // getWorld() stamps `{ ...clone(world), position: pos }` onto every world it
+  // returns, and `pos.step` always differs between two consecutive steps, so a
+  // naive deep-compare would report every pair as "changed" even when nothing
+  // else about the world moved. Excluding it is what makes this a check on the
+  // WORLD rather than a check that a different step number was requested.
+  const worldSignature = (chapterId: DemoChapter["id"], step: number) => {
+    const { position: _position, ...rest } = getWorld({ chapter: chapterId, step });
+    return JSON.stringify(rest);
+  };
+
   it("never puts two consecutive steps on the same anchor", () => {
-    // Two steps sharing an anchor means the screen does not change between
-    // them, so the tour reads as marking time and the visitor pays a click for
-    // nothing. Both pairs that did this — the evals grid and the routine runs
-    // — were merged; a reviewer had independently flagged the first as a stall.
+    // A shared anchor+route used to always mean "the screen does not change
+    // between them", so the tour reads as marking time and the visitor pays a
+    // click for nothing. Both pairs that did this — the evals grid and the
+    // routine runs — were merged; a reviewer had independently flagged the
+    // first as a stall.
+    //
+    // The anchor was a PROXY for "nothing changed", and that proxy was sound
+    // as long as every world was static and every transition was a click.
+    // advanceAfterMs (shipped after this rule) created a case the proxy
+    // can't see: struktur spotlights the same list across two steps on
+    // purpose, because the underlying world genuinely changes (3 contexts →
+    // 7 — the chapter's whole device) and the earlier step auto-advances, so
+    // no click is ever paid. Both harms named above are absent there.
+    //
+    // So a shared anchor+route is allowed ONLY when BOTH hold: the earlier
+    // step auto-advances (no click), AND the two worlds actually differ (the
+    // screen isn't just marking time). A manually-advanced stall, or an
+    // auto-advancing pair whose world never changes, still fails below.
     for (const chapter of CHAPTERS) {
       for (let i = 1; i < chapter.steps.length; i++) {
         const previous = chapter.steps[i - 1];
         const current = chapter.steps[i];
         if (!current.anchor) continue;
+        const sameScreen = current.anchor === previous.anchor && current.route === previous.route;
+        if (!sameScreen) continue;
+        const noClickPaid = previous.advanceAfterMs !== undefined;
+        const worldGenuinelyChanged =
+          worldSignature(chapter.id, i - 1) !== worldSignature(chapter.id, i);
         expect(
-          current.anchor === previous.anchor && current.route === previous.route,
+          noClickPaid && worldGenuinelyChanged,
           `${current.id} repeats ${previous.id}'s screen and anchor`,
-        ).toBe(false);
+        ).toBe(true);
       }
     }
   });

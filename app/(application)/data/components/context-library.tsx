@@ -156,7 +156,7 @@ export function ContextLibrary() {
         )}
 
         {rows.length > 0 && (
-          <div className="rounded-md border">
+          <div className="rounded-md border" data-demo-id="knowledge-contexts">
             <ul className="divide-y divide-border">
               {rows.map((row) => (
                 <LibraryRow

@@ -8,6 +8,11 @@ describe("getWorld", () => {
       for (let step = 0; step < chapter.steps.length; step++) {
         const world = getWorld({ chapter: chapter.id, step });
         expect(world.agents.length, `${chapter.id}:${step}`).toBeGreaterThan(0);
+        // struktur's whole premise is a knowledge-base list that starts EMPTY
+        // and fills across the chapter — see structureWorld and the
+        // "data-first chapter worlds" describe block below, which pins the
+        // exact 0/3/7 progression as the intended behaviour, not a bug.
+        if (chapter.id === "struktur" && step === 0) continue;
         expect(world.contexts.length, `${chapter.id}:${step}`).toBeGreaterThan(0);
       }
     }
