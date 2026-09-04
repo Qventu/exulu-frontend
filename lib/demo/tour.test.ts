@@ -258,6 +258,17 @@ describe("the reading load", () => {
     // step auto-advances (no click), AND the two worlds actually differ (the
     // screen isn't just marking time). A manually-advanced stall, or an
     // auto-advancing pair whose world never changes, still fails below.
+    //
+    // Known limit: worldSignature diffs the WHOLE world, not the slice the
+    // anchor actually renders. An auto-advancing pair that shares an anchor
+    // but changes only some anchor-irrelevant part of the world — leaving
+    // the anchored UI itself static — would still pass here, which is the
+    // same same-screen-different-metadata shape the "routine runs" stall
+    // had. Necessary but not sufficient: a reviewer must separately confirm
+    // the anchored content is what changed, not merely that something did.
+    // There's no automated check for that because there's no anchor→field
+    // map, and building one for a case that has never occurred in the tour
+    // would be speculative infrastructure.
     for (const chapter of CHAPTERS) {
       for (let i = 1; i < chapter.steps.length; i++) {
         const previous = chapter.steps[i - 1];
