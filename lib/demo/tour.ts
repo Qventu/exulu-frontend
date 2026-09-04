@@ -17,6 +17,7 @@ export type DemoChapterId =
   | "evals"
   | "email"
   | "meetings"
+  | "kosten"
   | "contact";
 
 export interface DemoStep {

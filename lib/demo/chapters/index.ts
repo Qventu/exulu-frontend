@@ -9,6 +9,7 @@ import { configChapter } from "./config";
 import { evalsChapter } from "./evals";
 import { emailChapter } from "./email";
 import { meetingsChapter } from "./meetings";
+import { kostenChapter } from "./kosten";
 import { contactChapter } from "./contact";
 
 /**
@@ -39,6 +40,6 @@ export const CHAPTERS: DemoChapter[] = [
   evalsChapter, //     8 · evidence
   emailChapter, //     9 · unattended work
   meetingsChapter, // 10 · meetings
-  // 11 · "Was es kostet" (/analytics + /budgets) is project 3 and lands here.
-  contactChapter, // 11 today, 12 once the cost chapter lands
+  kostenChapter, //   11 · what it costs, and who controls it
+  contactChapter, //  12 · the ask
 ];

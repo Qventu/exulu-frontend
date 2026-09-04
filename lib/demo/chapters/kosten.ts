@@ -1,0 +1,100 @@
+import type { DemoChapter } from "../tour";
+
+/**
+ * Chapter 11 — what it costs, and who controls it.
+ *
+ * THE ONLY CHAPTER WHOSE NUMBERS ARE INVENTED. Every other chapter shows
+ * something that happened: nine real documents with real chunk counts, a
+ * real meeting recording, real evals. No spend history was ever captured
+ * from the deployment, so these figures are constructed —
+ * lib/demo/fixtures/chapter-kosten.ts is the one source both /analytics and
+ * /budgets read, so the two screens cannot disagree about who spent what.
+ *
+ * That is allowed here on one condition, and the condition is load-bearing:
+ * the copy says so where a visitor reads it (the "Beispielwerte" callout
+ * below), and tour.test.ts's register of chapters that show something
+ * invented asserts the sentence stays. The evals chapter sets the same
+ * precedent for its scores.
+ *
+ * The argument is attribution and control — never savings. A demo that
+ * claims "cheaper than a headcount" invites an argument it cannot win and
+ * spends the credibility the previous ten chapters built. tour.test.ts's
+ * register also asserts the NEGATIVE: no step here may claim a return, even
+ * though the chapter's own honest disclaimer ("Wir behaupten hier keine
+ * Einsparung") contains the word "Einsparung" — the assertion forbids CLAIM
+ * PHRASINGS ("spart Ihnen", "rechnet sich", …), never that bare word, or it
+ * would fail on the very sentence that makes the chapter honest.
+ *
+ * Three steps, not two: /analytics' attribution point and its
+ * example-figures disclosure fit one step; /budgets carries both the
+ * control point (a limit enforced in operation) AND the closing
+ * no-savings-claim disclaimer, and the two together overran the popover
+ * word cap, so the disclaimer got its own step rather than being trimmed
+ * away.
+ *
+ * /budgets' second step also carries a short clause distinguishing what the
+ * two screens measure: /analytics sums a chosen window (14 days by default,
+ * ~€189; a 30d preset lands near the /budgets total) while /budgets shows a
+ * fixed monthly cap (€400 across the three teams). Nothing in the product
+ * itself marks that distinction, so a visitor who switches to the 30d
+ * preset and compares the two totals has no on-screen cue that they are
+ * looking at a rolling window next to a calendar-month limit rather than a
+ * discrepancy.
+ */
+export const kostenChapter: DemoChapter = {
+  id: "kosten",
+  title: "Was es kostet",
+  steps: [
+    {
+      id: "kosten-verbrauch",
+      route: "/analytics",
+      anchor: null,
+      size: "wide",
+      title: "Jede Anfrage hat einen Preis — und einen Absender",
+      content: [
+        {
+          kind: "figure",
+          src: "/demo/kosten.webp",
+          alt: "Verbrauch nach Team",
+        },
+        {
+          kind: "paragraph",
+          text: "Verbrauch wird laufend erfasst — pro Team, Nutzer und Assistent. Sie sehen, wofür ausgegeben wurde, nicht nur wie viel.",
+        },
+        {
+          kind: "callout",
+          tone: "fact",
+          text: "Die Zahlen auf diesem Bildschirm sind Beispielwerte, keine Messwerte — anders als die Dokumente und Auswertungen der vorigen Kapitel.",
+        },
+      ],
+    },
+    {
+      id: "kosten-kontrolle",
+      route: "/budgets",
+      anchor: null,
+      title: "Ein Limit ist eine Einstellung, kein Versprechen",
+      content: [
+        {
+          kind: "paragraph",
+          text: "Jedes Team bekommt ein monatliches Limit. Ist es erreicht, greift die Grenze im Betrieb — nicht in einer Richtlinie, an die sich jemand erinnern muss.",
+        },
+        {
+          kind: "paragraph",
+          text: "Der Zeitraum in der Analyse eben war frei wählbar; dieses Limit läuft fest pro Abrechnungsmonat.",
+        },
+      ],
+    },
+    {
+      id: "kosten-entscheidung",
+      route: "/budgets",
+      anchor: null,
+      title: "Keine Einsparung wird hier behauptet",
+      content: [
+        {
+          kind: "paragraph",
+          text: "Wer wie viel ausgeben darf, entscheiden Sie. Wir behaupten hier keine Einsparung — was die Einführung wert ist, hängt von Ihren Zahlen ab, nicht von unseren.",
+        },
+      ],
+    },
+  ],
+};

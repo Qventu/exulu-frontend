@@ -131,6 +131,7 @@ describe("CHAPTERS", () => {
       "evals",
       "email",
       "meetings",
+      "kosten",
       "contact",
     ]);
   });
@@ -302,14 +303,20 @@ describe("the reading load", () => {
   });
 });
 
-describe("the two chapters that show something invented", () => {
-  // Everything in the tour is real except two artefacts, and both have to say
-  // so ON SCREEN rather than in a comment. The evals disclosure shipped as a
-  // source comment only — and that comment additionally claimed the narration
-  // "deliberately claims no measured result" while the narration asserted a
-  // measured regression beside invented numbers. A reviewer found it by
-  // reading the screens. Nothing in this file could have, so these assert the
-  // visitor-facing half.
+describe("the chapters that show something invented", () => {
+  // Everything in the tour is real except a small, named set of artefacts,
+  // and every one of them has to say so ON SCREEN rather than in a comment.
+  // The evals disclosure shipped as a source comment only — and that comment
+  // additionally claimed the narration "deliberately claims no measured
+  // result" while the narration asserted a measured regression beside
+  // invented numbers. A reviewer found it by reading the screens. Nothing in
+  // this file could have, so these assert the visitor-facing half.
+  //
+  // This describe block used to be titled "the two chapters that show
+  // something invented" — a count baked into a name that went stale the
+  // moment `kosten` (invented spend figures) became a third. Titled without
+  // a count now so the next addition does not silently make the title false
+  // again.
   const bodies = (id: string) =>
     CHAPTERS.find((c) => c.id === id)!
       .steps.map((s) => contentText(s.content))
@@ -327,6 +334,25 @@ describe("the two chapters that show something invented", () => {
 
   it("tells the visitor the work instruction was written by hand", () => {
     expect(bodies("meetings")).toMatch(/von Hand/i);
+  });
+
+  it("tells the visitor the cost figures are examples, not measurements", () => {
+    expect(bodies("kosten")).toMatch(/Beispielwerte/i);
+  });
+
+  it("never claims the cost chapter proves a return", () => {
+    // kosten's own honest disclaimer reads "Wir behaupten hier keine
+    // Einsparung" — a denial, not a claim, and it contains the word
+    // "Einsparung". A naive `not.toMatch(/Einsparung/i)` would fail on the
+    // very sentence that makes the chapter honest, and the tempting fix
+    // would be to delete the disclaimer instead of the assertion. So this
+    // forbids CLAIM PHRASINGS a savings pitch would use, never the bare
+    // word: "spart Ihnen", "günstiger als", "amortisiert sich", "rechnet
+    // sich" and "zahlt sich aus" all assert a return; "keine Einsparung"
+    // asserts the opposite and must keep passing.
+    expect(bodies("kosten")).not.toMatch(
+      /spart Ihnen|günstiger als|amortisiert sich|rechnet sich|zahlt sich aus/i,
+    );
   });
 });
 
