@@ -19,8 +19,9 @@ import {
  * silence is deliberate for most callers: session files and follow-up
  * suggestions are optional enrichments, and a thrown error would put a
  * failure state on screen for something a visitor was never meant to
- * notice. So this answers exactly one path and returns null for the rest,
- * leaving that contract intact.
+ * notice. So this answers exactly two paths — /admin/litellm/tag-activity
+ * (/analytics) and /admin/budgets/settings (/budgets) — and returns null
+ * for the rest, leaving that contract intact.
  */
 const TAG_ACTIVITY = "/admin/litellm/tag-activity";
 const BUDGET_SETTINGS = "/admin/budgets/settings";
@@ -95,11 +96,12 @@ function jitter(date: string): number {
 }
 
 /**
- * Spend for one day, in EUR.
+ * Spend for one day, in USD (LiteLLM reports spend in USD, and that is what
+ * both screens render).
  *
  * Weekdays carry the work; weekends are a trickle. That shape is what makes
  * the chart read as a team using the product rather than as a generator
- * emitting numbers — and it is why the monthly total lands near the EUR 400
+ * emitting numbers — and it is why the monthly total lands near the USD 400
  * the spec fixes rather than being tuned directly.
  */
 function spendFor(date: string): number {
@@ -108,7 +110,7 @@ function spendFor(date: string): number {
   return Math.round((base + jitter(date) * 6 - 3) * 100) / 100;
 }
 
-// allocateSpend (largest-remainder / Hamilton apportionment over EUR cents)
+// allocateSpend (largest-remainder / Hamilton apportionment over USD cents)
 // now lives in fixtures/chapter-kosten.ts, shared with resolvers.ts — see
 // that file's docblock for why a per-share Math.round is not exact enough
 // for a chapter whose whole argument is attribution.

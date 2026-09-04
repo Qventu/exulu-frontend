@@ -319,7 +319,7 @@ describe("the chapters that show something invented", () => {
   // again.
   const bodies = (id: string) =>
     CHAPTERS.find((c) => c.id === id)!
-      .steps.map((s) => contentText(s.content))
+      .steps.map((s) => `${s.title} ${contentText(s.content)}`)
       .join(" ");
 
   it("tells the visitor the eval scores are not measurements", () => {
@@ -338,6 +338,16 @@ describe("the chapters that show something invented", () => {
 
   it("tells the visitor the cost figures are examples, not measurements", () => {
     expect(bodies("kosten")).toMatch(/Beispielwerte/i);
+  });
+
+  it("keeps the chapter's own denial that it claims a saving", () => {
+    // An absence assertion (see "never claims the cost chapter proves a
+    // return" below) cannot fail when the sentence carrying the denial is
+    // deleted — deleting the third step would leave that assertion green.
+    // This pins the denial's PRESENCE instead, so removing the step fails
+    // here. "Keine Einsparung wird hier behauptet" is the step's TITLE, not
+    // its body copy, which is why bodies() must fold in `s.title` too.
+    expect(bodies("kosten")).toMatch(/keine Einsparung/i);
   });
 
   it("never claims the cost chapter proves a return", () => {

@@ -45,12 +45,31 @@ import type { DemoChapter } from "../tour";
  *
  * /budgets' second step also carries a short clause distinguishing what the
  * two screens measure: /analytics sums a chosen window (14 days by default,
- * ~€189; a 30d preset lands near the /budgets total) while /budgets shows a
- * fixed monthly cap (€400 across the three teams). Nothing in the product
- * itself marks that distinction, so a visitor who switches to the 30d
- * preset and compares the two totals has no on-screen cue that they are
- * looking at a rolling window next to a calendar-month limit rather than a
- * discrepancy.
+ * ~$208.63 the day this was measured — a day-generator sum that drifts with
+ * the date it runs on, not a fixed figure; a 30d preset lands roughly near
+ * the /budgets total, not tightly) while /budgets shows a fixed monthly cap
+ * ($400 across the three teams). Nothing in the product itself marks that
+ * distinction, so a visitor who switches to the 30d preset and compares the
+ * two totals has no on-screen cue that they are looking at a rolling window
+ * next to a calendar-month limit rather than a discrepancy.
+ *
+ * CURRENCY: the product renders LiteLLM's spend in USD (kpi-strip.tsx's
+ * SPEND_CURRENCY, lib/budget.ts's formatUsd — both hardcode USD/en-US), and
+ * every dollar figure in this file and in fixtures/chapter-kosten.ts is USD
+ * accordingly. Don't "fix" the fixtures to EUR later.
+ *
+ * KNOWN HAZARD, NOT FIXED HERE: /analytics' own controls (RangePicker,
+ * KPIStrip's hrefFor) rebuild the URL from lensToSearchParams() alone
+ * (analytics-view.tsx's updateLens, kpi-strip.tsx's hrefFor), which drops
+ * any unknown query param including `?tour=` — and tour-provider.tsx falls
+ * back to the START position (chapter 1) once `?tour=` is gone. This does
+ * NOT bite in this chapter today: all three of its steps are `anchor: null`
+ * modal steps, so Shepherd's overlay sits above the range picker and the KPI
+ * tiles and swallows the click before it reaches them. It WOULD start biting
+ * the moment any /analytics step here (or elsewhere) is given a non-null
+ * `anchor` — that cuts a hole in the overlay onto the underlying controls.
+ * The tour engine serves all twelve chapters and is not being changed for a
+ * path this chapter cannot currently reach.
  */
 export const kostenChapter: DemoChapter = {
   id: "kosten",

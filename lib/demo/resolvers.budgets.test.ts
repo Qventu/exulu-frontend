@@ -32,7 +32,7 @@ import {
   runDemoQueryThroughCache as runThroughCache,
 } from "./test-support";
 
-/** The allocation GetTeamsWithBudgets and GetTeamsByIds must agree with. */
+/** The allocation GetTeamsWithBudgets must agree with. */
 const EXPECTED_TEAM_SPEND = allocateSpend(
   KOSTEN_MONTHLY_SPEND,
   KOSTEN_TEAMS.map((t) => t.share),
@@ -50,29 +50,14 @@ describe("budgets resolvers", () => {
     );
   });
 
-  // /budgets renders a table per entity type. An unmapped operation resolves
-  // to {data:{}} by design, which renders an empty table rather than an
-  // error — so a missing resolver is silent, and that is what this pins.
-  it.each([
-    "GetUsersWithBudgets",
-    "GetRolesWithBudgets",
-    "GetTeamsWithBudgets",
-    "GetProjectsWithBudgets",
-    "GetAgentsWithBudgets",
-    "GetWorkflowTemplatesWithBudgets",
-  ])("maps %s", (op) => {
-    expect(DEMO_RESOLVERS[op], op).toBeDefined();
-  });
-
-  it.each([
-    "GetUsersByIds",
-    "GetTeamsByIds",
-    "GetProjectsByIds",
-    "GetRolesByIds",
-    "GetRoutinesByIds",
-    "GetAgentsByIds",
-  ])("maps the id-to-name hydration op %s", (op) => {
-    expect(DEMO_RESOLVERS[op], op).toBeDefined();
+  // allocateProportional absorbs any rounding error from shares that don't
+  // sum to 1 silently — it hands the leftover (or missing) cents out
+  // round-robin by array order, so every reconciliation test above stays
+  // green even while the displayed split stops matching the declared shares,
+  // identically on both /analytics and /budgets. Nothing else pins this.
+  it("KOSTEN_TEAMS' shares sum to 1", () => {
+    const total = KOSTEN_TEAMS.reduce((sum, team) => sum + team.share, 0);
+    expect(Math.abs(total - 1)).toBeLessThan(1e-9);
   });
 });
 

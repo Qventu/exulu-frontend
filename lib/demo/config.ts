@@ -36,6 +36,10 @@ const DEMO_BACKEND_CONFIG: BackendConfigType = {
   // guarantee — the same gap as Save on the agent editor.
   workers: { enabled: true, redisHost: "demo" },
 
+  // FALSE: this hides /analytics' "Open LiteLLM admin" external link
+  // (analytics-view.tsx:184-192, gated on configContext.liteLLM.enabled).
+  // Flipping it on would put a link out of the demo into a real admin
+  // console on the very screen chapter 11 uses to make its case.
   liteLLM: { enabled: false },
 
   // TRUE, and this is the flag chapter 7 turns on. ALGI genuinely records

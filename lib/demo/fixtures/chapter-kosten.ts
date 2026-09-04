@@ -16,7 +16,7 @@
 export interface KostenTeam {
   id: string;
   name: string;
-  /** Monthly cap in EUR, as a customer would set it. */
+  /** Monthly cap in USD, as a customer would set it. */
   budget: number;
   /** Share of total spend, 0..1. Sums to 1 across the roster. */
   share: number;
@@ -38,11 +38,11 @@ export const KOSTEN_TEAMS: KostenTeam[] = [
  */
 export const KOSTEN_ROSTERS: Record<string, KostenTeam[]> = {
   team_id_: KOSTEN_TEAMS,
-  user_id_: KOSTEN_TEAMS,
 };
 
 /**
- * Canonical monthly spend (EUR), allocated across KOSTEN_TEAMS by `share`.
+ * Canonical monthly spend (USD — LiteLLM reports spend in USD and both
+ * screens render it as such), allocated across KOSTEN_TEAMS by `share`.
  *
  * Both screens read from this ONE number so their per-team spend agrees by
  * construction rather than by coincidence. /budgets has no date window — it
@@ -50,8 +50,10 @@ export const KOSTEN_ROSTERS: Record<string, KostenTeam[]> = {
  * allocate this constant directly (see resolvers.ts). /analytics' REST
  * fixture (rest-fixtures.ts) sums a day-by-day formula over whatever window
  * the caller requests, since a live chart needs a real window; that formula
- * was tuned so a 30-day window lands within a few euros of this number,
- * which is the figure the chapter was designed around.
+ * was tuned so a 30-day window lands roughly near this number, not tightly —
+ * measured at ~8% above it on one check (a day-generator sum drifts with the
+ * date it runs on, so the gap moves rather than holding still) — which is
+ * the figure the chapter was designed around.
  *
  * The three budget caps (250/150/100) were sized against this total so that
  * Technik and Service both cross the 80%-used warning band and Vertrieb
@@ -86,7 +88,7 @@ function allocateProportional(total: number, shares: number[]): number[] {
 }
 
 /**
- * EUR amounts (2dp) that split `total` across `shares` and sum to it
+ * USD amounts (2dp) that split `total` across `shares` and sum to it
  * exactly. Shared by rest-fixtures.ts and resolvers.ts so both allocate
  * spend the same way, whatever total each one is allocating.
  */

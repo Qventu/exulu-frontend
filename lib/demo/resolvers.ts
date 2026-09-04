@@ -65,10 +65,12 @@ const KNOWN_CONTEXT_IDS = new Set(CONTEXTS.map((c) => c.id));
 /**
  * Each team's slice of KOSTEN_MONTHLY_SPEND, allocated by `share` — the same
  * allocateSpend the REST fixture (rest-fixtures.ts) uses for /analytics'
- * byTag rows, against the same total. Computed once at module scope rather
- * than per call: it never varies with variables or world state, and a
- * per-call recompute would risk two call sites' rounding drifting apart even
- * though allocateSpend is deterministic today.
+ * byTag rows, but against a DIFFERENT total: /analytics allocates its
+ * chosen window's own sum, while /budgets (no date window) allocates this
+ * fixed monthly constant. Computed once at module scope rather than per
+ * call: it never varies with variables or world state, and a per-call
+ * recompute would risk two call sites' rounding drifting apart even though
+ * allocateSpend is deterministic today.
  *
  * This is what /budgets' GetTeamsWithBudgets reads instead of a literal 0 —
  * a literal made every team's projected usage 0%, which silently emptied

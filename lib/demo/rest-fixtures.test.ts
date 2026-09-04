@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { demoRestResponse } from "./rest-fixtures";
+import { KOSTEN_MONTHLY_SPEND } from "./fixtures/chapter-kosten";
 import type { TagActivityResponse } from "@/lib/litellm-activity";
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
@@ -88,12 +89,16 @@ describe("demoRestResponse — shape and scale", () => {
     expect(res.totals.spend).toBeCloseTo(summed, 6);
   });
 
-  // The spec fixes the scale at roughly EUR 400/month so a reader's attention
-  // stays on where the money goes rather than on the total.
-  it("lands near the specified monthly scale", () => {
+  // The spec fixes the scale at roughly USD 400/month so a reader's
+  // attention stays on where the money goes rather than on the total. Tied
+  // to KOSTEN_MONTHLY_SPEND (not hardcoded) so a reintroduced doubling of
+  // the constant fails here instead of hiding behind a wide band — the
+  // previous 250..600 guard was wide enough to swallow exactly that.
+  it("lands within 15% of the specified monthly scale", () => {
     const res = activity(daysAgo(29), daysAgo(0));
-    expect(res.totals.spend).toBeGreaterThan(250);
-    expect(res.totals.spend).toBeLessThan(600);
+    const tolerance = KOSTEN_MONTHLY_SPEND * 0.15;
+    expect(res.totals.spend).toBeGreaterThan(KOSTEN_MONTHLY_SPEND - tolerance);
+    expect(res.totals.spend).toBeLessThan(KOSTEN_MONTHLY_SPEND + tolerance);
   });
 
   it("attributes spend to the tags the caller asked for", () => {
