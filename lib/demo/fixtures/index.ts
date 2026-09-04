@@ -3,6 +3,9 @@ import type { DemoWorld } from "../types";
 import { ingestionWorld } from "./chapter-ingestion";
 import { memoryWorld } from "./chapter-memory";
 import { DEMO_AGENT_ID, DEMO_AGENT_SLUG, techdocWorld } from "./chapter-techdoc";
+import { structureWorld } from "./chapter-structure";
+import { aufnahmeWorld } from "./chapter-aufnahme";
+import { zugriffWorld } from "./chapter-zugriff";
 
 export { DEMO_AGENT_ID, DEMO_AGENT_SLUG };
 
@@ -25,6 +28,12 @@ export function getWorld(pos: TourPosition): DemoWorld {
       return at(ingestionWorld(pos.step));
     case "memory":
       return at(memoryWorld(pos.step));
+    case "struktur":
+      return at(structureWorld(pos.step));
+    case "aufnahme":
+      return at(aufnahmeWorld(pos.step));
+    case "zugriff":
+      return at(zugriffWorld(pos.step));
     // The remaining chapters reuse chapter 1's world until their own plans
     // land, so the shell always has a coherent application behind every step.
     default:

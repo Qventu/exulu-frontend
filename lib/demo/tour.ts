@@ -7,6 +7,10 @@ export { DEMO_BOOKING_URL, MEMORY_CHAT, TECHDOC_CHAT } from "./routes";
 
 export type DemoChapterId =
   | "intro"
+  | "daten"
+  | "struktur"
+  | "aufnahme"
+  | "zugriff"
   | "techdoc"
   | "ingestion"
   | "config"
