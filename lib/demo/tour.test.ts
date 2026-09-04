@@ -121,6 +121,7 @@ describe("CHAPTERS", () => {
     expect(CHAPTERS.map((c) => c.id)).toEqual([
       "daten",
       "struktur",
+      "aufnahme",
       "techdoc",
       "memory",
       "ingestion",
@@ -135,34 +136,61 @@ describe("CHAPTERS", () => {
   const hasFigure = (step: DemoStep) => step.content.some((b) => b.kind === "figure");
 
   it("illustrates chapter openings and nothing else", () => {
-    // One schematic per chapter, on its first step. An image on every step
-    // would compete with the product screen the tour is pointing at, which is
-    // the thing the visitor is meant to be looking at.
+    // At most one schematic per chapter — unconditional, regardless of what
+    // kind of step carries it. An image on every step would compete with the
+    // product screen the tour is pointing at, which is the thing the visitor
+    // is meant to be looking at.
+    //
+    // WHERE that one figure may sit depends on the step's kind, because a
+    // popover and a stage have different geometry:
+    //
+    // - POPOVER (kind unset or "popover") sits OVER a product screen. A
+    //   figure on anything but the chapter's first step competes with the
+    //   screen the tour is pointing at — the same "images compete" argument
+    //   above, applied to a single step — so it must be on chapter.steps[0].
+    //
+    // - STAGE (kind "stage") REPLACES the product screen full-bleed. There is
+    //   no product screen behind it to compete with, so the popover's
+    //   opening-step constraint does not apply — a stage's figure may sit
+    //   anywhere in the chapter. (daten.ts's stage figure happens to sit at
+    //   step 0 too, but that is incidental, not required by this rule: it is
+    //   the only stage this rule ever met before chapter 3 put one at
+    //   index 2.)
     for (const chapter of CHAPTERS) {
       const illustrated = chapter.steps.filter(hasFigure);
       expect(
         illustrated.length,
         `${chapter.id} should illustrate at most one step`,
       ).toBeLessThanOrEqual(1);
-      if (illustrated.length) {
-        expect(
-          hasFigure(chapter.steps[0]),
-          `${chapter.id}'s schematic belongs on its opening step`,
-        ).toBe(true);
+      if (illustrated.length === 1) {
+        const [step] = illustrated;
+        if (step.kind !== "stage") {
+          expect(
+            hasFigure(chapter.steps[0]),
+            `${chapter.id}'s schematic is on a popover (kind "${step.kind ?? "popover"}"), so the popover rule applies: it belongs on the chapter's opening step`,
+          ).toBe(true);
+        }
       }
     }
   });
 
   it("points every schematic at a file that exists", () => {
-    // A typo'd path is a broken image in a popover, which the anchor tests
-    // cannot see and which looks worse than no illustration at all.
+    // A typo'd path is a broken image, which the anchor tests cannot see and
+    // which looks worse than no illustration at all. Scans every step, not
+    // just chapter.steps[0]: a stage's figure can sit anywhere in the chapter
+    // (see the rule above), so limiting this to the opening step would leave
+    // a later stage figure's path unchecked — which is exactly chapter 3's
+    // shape, whose figure lives at index 2.
     for (const chapter of CHAPTERS) {
-      const figure = chapter.steps[0].content.find((b) => b.kind === "figure");
-      if (!figure) continue;
-      expect(
-        existsSync(join(process.cwd(), "public", figure.src)),
-        `${chapter.id} references a missing asset: ${figure.src}`,
-      ).toBe(true);
+      for (const step of chapter.steps) {
+        for (const block of step.content) {
+          if (block.kind !== "figure") continue;
+          expect(
+            existsSync(join(process.cwd(), "public", block.src)),
+            `${chapter.id}/${step.id} references a missing asset: ${block.src}`,
+          ).toBe(true);
+        }
+      }
     }
   });
 

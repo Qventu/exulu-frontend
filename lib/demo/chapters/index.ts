@@ -1,6 +1,7 @@
 import type { DemoChapter } from "../tour";
 import { datenChapter } from "./daten";
 import { strukturChapter } from "./struktur";
+import { aufnahmeChapter } from "./aufnahme";
 import { techdocChapter } from "./techdoc";
 import { memoryChapter } from "./memory";
 import { ingestionChapter } from "./ingestion";
@@ -22,6 +23,7 @@ import { contactChapter } from "./contact";
 export const CHAPTERS: DemoChapter[] = [
   datenChapter,
   strukturChapter,
+  aufnahmeChapter,
   techdocChapter,
   memoryChapter,
   ingestionChapter,
