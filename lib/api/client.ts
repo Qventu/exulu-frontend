@@ -1,6 +1,7 @@
 import { getSession } from "next-auth/react";
 
 import { isDemoMode } from "@/lib/demo/flag";
+import { demoRestResponse } from "@/lib/demo/rest-fixtures";
 
 /**
  * Shared plumbing for the REST api modules in lib/api/*.
@@ -62,7 +63,12 @@ export const request = async (path: string, method: string, body?: object) => {
     // attachments, suggestions -- and the demo genuinely has none of them. A
     // thrown error would put a failure state on screen for something a visitor
     // was never meant to notice.
-    if (isDemoMode()) return null;
+    //
+    // /analytics is the one demo screen driven by REST rather than GraphQL,
+    // so it needs a fixture where the others need silence. demoRestResponse
+    // answers that one path and returns null for everything else, which is
+    // exactly the behaviour described above.
+    if (isDemoMode()) return demoRestResponse(path, method);
 
     const uris = await getUris();
     const token = await getToken();
