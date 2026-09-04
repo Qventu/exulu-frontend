@@ -70,7 +70,7 @@ export const configChapter: DemoChapter = {
       content: [
         {
           kind: "paragraph",
-          text: "Wie viele Suchdurchläufe, wie viele Treffer, wann er aufgibt und ehrlich passt — die Einstellung hinter der Absage aus Kapitel 3.",
+          text: "Wie viele Suchdurchläufe, wie viele Treffer, wann er aufgibt und ehrlich passt — die Einstellung hinter der Absage aus Kapitel 6.",
         },
       ],
     },

@@ -99,25 +99,29 @@ describe("prevPosition", () => {
 });
 
 describe("CHAPTERS", () => {
-  it("keeps the chat chapters together at the front", () => {
-    // The intro is a chapter rather than a separate landing page so it
-    // inherits the navigation, the jump menu and the position-in-URL for free;
-    // it has no product screen of its own.
+  it("tells the story data-first, chat as the payoff", () => {
+    // The tour opens on the customer's mess of data (`daten`), then structures
+    // it (`struktur`), ingests a document (`aufnahme`) and permissions it
+    // (`zugriff`) — all BEFORE the visitor meets the chat. By the time
+    // `techdoc` opens, the citation it shows is a conclusion the visitor can
+    // check against what they just watched arrive, not a claim they have to
+    // take on faith.
     //
     // `memory` follows `techdoc` rather than sitting after `config`, which is
-    // where the spec put it. The spec order sent a visitor chat → knowledge →
-    // agent editor → BACK to chat, and the return read as a mistake: you think
-    // you have finished with a surface and the tour drops you on it again.
+    // where an earlier spec put it: a correction needs an answer to correct,
+    // and sending the visitor chat → knowledge → agent editor → BACK to chat
+    // read as a mistake — you think you have finished with a surface and the
+    // tour drops you on it again.
     //
-    // It also buried the strongest moment in the demo. "When it doesn't know,
-    // it says so" — an explicit refusal, with citations, in German — was the
-    // fifth chapter, reached by doubling back. It is now the second, while the
-    // conversation it belongs to is still the thing on screen.
+    // The old `ingestion` chapter (`lib/demo/chapters/ingestion.ts`) is gone;
+    // `aufnahme` took over its role in the tour. The `"ingestion"` id itself
+    // survives as a test-fixture position — see
+    // lib/demo/fixtures/chapter-ingestion.ts — but it names no chapter here.
     //
-    // The cost was two forward references in `config` that set memory up; they
-    // are now backward references to something already seen, which is easier
-    // copy anyway. If this order is ever changed again, those two lines and
-    // ingestion's opener all point at neighbours and would need rewriting.
+    // `config` still carries a backward reference to the refusal shown in
+    // `memory` ("Kapitel 6"); if this order changes again, that line and the
+    // forward references in `struktur` ("Kapitel 7") and `aufnahme`
+    // ("Kapitel 5") all point at neighbours and would need rewriting.
     expect(CHAPTERS.map((c) => c.id)).toEqual([
       "daten",
       "struktur",
@@ -125,7 +129,6 @@ describe("CHAPTERS", () => {
       "zugriff",
       "techdoc",
       "memory",
-      "ingestion",
       "config",
       "evals",
       "email",

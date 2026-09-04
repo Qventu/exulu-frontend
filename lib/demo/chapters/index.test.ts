@@ -81,3 +81,49 @@ describe("chapter integrity", () => {
     }
   });
 });
+
+describe("the narrative arc", () => {
+  // The reorder IS the point of this plan: the visitor meets the chat only
+  // after watching the knowledge that answers them get built and permissioned.
+  it("tells the story data-first", () => {
+    const order: string[] = CHAPTERS.map((c) => c.id);
+    const before = (a: string, b: string) =>
+      expect(order.indexOf(a), `${a} must precede ${b}`).toBeLessThan(order.indexOf(b));
+
+    before("daten", "struktur");
+    before("struktur", "aufnahme");
+    before("aufnahme", "zugriff");
+    before("zugriff", "techdoc");
+    // A correction needs an answer to correct.
+    before("techdoc", "memory");
+    before("memory", "config");
+    before("config", "contact");
+  });
+
+  it("opens on the problem, not on the product", () => {
+    expect(CHAPTERS[0].id).toBe("daten");
+    expect(CHAPTERS[0].steps[0].kind).toBe("stage");
+  });
+
+  // The old chapter said "Neun Kapitel" over a drawing of seven doors, a
+  // mismatch the original code documented as known. Whatever the copy claims,
+  // it must match the list.
+  it("states the real chapter count wherever it states one", () => {
+    const spelled: Record<number, string> = {
+      9: "Neun", 10: "Zehn", 11: "Elf", 12: "Zwölf",
+    };
+    const claimed = CHAPTERS.flatMap((c) => c.steps)
+      .flatMap((s) => s.content)
+      .map((b) => contentText([b]))
+      .filter((t) => /Kapitel/.test(t));
+    for (const text of claimed) {
+      for (const [count, word] of Object.entries(spelled)) {
+        if (Number(count) !== CHAPTERS.length) {
+          expect(text, `claims ${word} but there are ${CHAPTERS.length}`).not.toContain(
+            `${word} Kapitel`,
+          );
+        }
+      }
+    }
+  });
+});

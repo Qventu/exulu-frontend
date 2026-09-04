@@ -3,6 +3,15 @@ import { techdocWorld } from "./chapter-techdoc";
 import { SOFTWARE_DOC_CONTEXT_ID, SOFTWARE_DOC_ITEM_ID } from "./software-docs";
 
 /**
+ * NOT A TOUR CHAPTER ANYMORE. The `ingestion` tour chapter was retired when
+ * `aufnahme` took over its role in the narrative (the tour is now data-first:
+ * daten → struktur → aufnahme → zugriff → techdoc → ...). This fixture and the
+ * `"ingestion"` id survive on purpose, as a TEST fixture position rather than a
+ * tour chapter: `lib/demo/test-support.ts` uses `{ chapter: "ingestion", step: 0 }`
+ * as the default position for its demo-query helpers, and several test files
+ * key off it. Do not delete this as dead code — see CONTROLLER AMENDMENTS,
+ * Ruling 1, in the Task 6 brief for the full reasoning.
+ *
  * Chapter 2 — how a document becomes searchable knowledge.
  *
  * The documents themselves live in ./software-docs.ts, because every chapter's
