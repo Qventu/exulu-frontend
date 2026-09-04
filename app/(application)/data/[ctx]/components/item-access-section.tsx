@@ -53,24 +53,29 @@ export function ItemAccessSection({
     item.rights_mode ?? context.configuration?.defaultRightsMode ?? "private";
 
   return (
-    <DetailSection
-      title={t("workspace.sections.access")}
-      defaultOpen={false}
-      meta={
-        <Badge variant="outline" className="text-xs">
-          {t(MODE_LABEL_KEY[mode as string] ?? "workspace.access.modePrivate")}
-        </Badge>
-      }
-    >
-      <RBACControl
-        subjectLabel={t("workspace.access.subjectLabel")}
-        initialRightsMode={mode}
-        initialUsers={item.RBAC?.users}
-        initialRoles={item.RBAC?.roles}
-        onChange={(rights_mode, users, roles, teams) =>
-          onChange(rights_mode, users, roles, teams ?? [])
+    // Wrapped rather than passed as a prop: DetailSection has no pass-through
+    // for arbitrary DOM attributes, so this div — not the item page's outer
+    // shell — is the element the guided tour's spotlight cutout frames.
+    <div data-demo-id="item-access">
+      <DetailSection
+        title={t("workspace.sections.access")}
+        defaultOpen={false}
+        meta={
+          <Badge variant="outline" className="text-xs">
+            {t(MODE_LABEL_KEY[mode as string] ?? "workspace.access.modePrivate")}
+          </Badge>
         }
-      />
-    </DetailSection>
+      >
+        <RBACControl
+          subjectLabel={t("workspace.access.subjectLabel")}
+          initialRightsMode={mode}
+          initialUsers={item.RBAC?.users}
+          initialRoles={item.RBAC?.roles}
+          onChange={(rights_mode, users, roles, teams) =>
+            onChange(rights_mode, users, roles, teams ?? [])
+          }
+        />
+      </DetailSection>
+    </div>
   );
 }

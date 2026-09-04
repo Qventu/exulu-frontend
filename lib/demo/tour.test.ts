@@ -122,6 +122,7 @@ describe("CHAPTERS", () => {
       "daten",
       "struktur",
       "aufnahme",
+      "zugriff",
       "techdoc",
       "memory",
       "ingestion",
