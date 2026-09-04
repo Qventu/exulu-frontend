@@ -110,25 +110,21 @@ DEMO_PROMPTS = {
         "shape; the right path is interrupted by a closed barrier. Symmetrical "
         "composition, no faces, no figures."
     ),
-    # The structure visual: the chapters as a hoistway, so the shape of
-    # the tour reads as a machine rather than a slide deck.
-    # LANDSCAPE BY DESIGN. The first version was a hoistway in cross-section:
-    # a good drawing, but a tall subject in a wide frame, and even inside the
-    # wide 704px panel (.demo-step-wide, 44rem) it reduced to an unreadable
-    # sliver. Landing doors in a row say the same thing — discrete stages,
-    # unmistakably an elevator — in the shape the frame actually is.
+    # The structure visual. Originally built for intro.ts, where seven doors
+    # illustrated the tour's seven chapters — LANDSCAPE BY DESIGN, because the
+    # first version was a hoistway in cross-section: a good drawing, but a
+    # tall subject in a wide frame, and even inside the wide 704px panel
+    # (.demo-step-wide, 44rem) it reduced to an unreadable sliver. Landing
+    # doors in a row said the same thing in the shape the frame actually is.
     #
-    # DOOR COUNT TRACKS CHAPTERS.length (lib/demo/chapters/index.ts) — count
-    # the real array entries, not the reserved-slot comment for the not-yet-
-    # written "Was es kostet" chapter. Whoever changes the chapter list should
-    # revisit this prompt too.
-    #
-    # NOT RECONCILED as of Task 7 (2026-09-04): CHAPTERS.length is 11 real
-    # entries, past the ~9-door practical limit for a single legible row (see
-    # task-7-report.md). The prompt below is left at the stale count of seven
-    # rather than guessed at eleven, which would either miscount or clutter.
-    # Left for a design decision: redraw as a row of a different count,
-    # switch composition entirely, or accept the mismatch.
+    # intro.ts was deleted in Task 2. The ONLY current reference is
+    # contact.ts's "Anlagen unserer Referenzkunden" ("our reference
+    # customers' installations") step, where this image no longer means "the
+    # tour has this many chapters" — it means "elevators exist at customer
+    # sites", full stop. A prior version of this comment said the door count
+    # should track CHAPTERS.length (lib/demo/chapters/index.ts). That
+    # coupling is OBSOLETE — do not reinstate it. The count is decorative now;
+    # leave it at seven regardless of how many chapters the tour has.
     "structure": (
         "Seven identical elevator landing doors in a horizontal row, front "
         "elevation, evenly spaced across the full width of the frame. Each "
