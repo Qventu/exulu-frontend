@@ -21,6 +21,14 @@ import { SOFTWARE_DOC_CONTEXT_ID, SOFTWARE_DOC_ITEMS } from "./software-docs";
  */
 const COUNTS = [0, 4, 7, SOFTWARE_DOC_ITEMS.length];
 
+/**
+ * The step at which the knowledge base is fully ingested — derived from
+ * `COUNTS` rather than written again as a literal, so that chapter 4
+ * (`chapter-zugriff.ts`) cannot silently drift onto a half-filled base if
+ * `COUNTS` ever gains or loses entries.
+ */
+export const AUFNAHME_COMPLETE_STEP = COUNTS.length - 1;
+
 export function aufnahmeWorld(step: number): DemoWorld {
   const base = techdocWorld(0);
   const count = COUNTS[Math.min(Math.max(step, 0), COUNTS.length - 1)];
