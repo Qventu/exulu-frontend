@@ -13,7 +13,11 @@ import {
   TRANSCRIPT_EXCERPT,
   type MeetingRecording,
 } from "./fixtures/chapter-meetings";
-import { KOSTEN_TEAMS } from "./fixtures/chapter-kosten";
+import {
+  allocateSpend,
+  KOSTEN_MONTHLY_SPEND,
+  KOSTEN_TEAMS,
+} from "./fixtures/chapter-kosten";
 import { MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
 import { TECHDOC_SESSION_ID } from "./fixtures/chapter-techdoc";
 import { CONTEXTS } from "./fixtures/contexts";
@@ -57,6 +61,24 @@ export type DemoResolver = (
 ) => Record<string, unknown>;
 
 const KNOWN_CONTEXT_IDS = new Set(CONTEXTS.map((c) => c.id));
+
+/**
+ * Each team's slice of KOSTEN_MONTHLY_SPEND, allocated by `share` — the same
+ * allocateSpend the REST fixture (rest-fixtures.ts) uses for /analytics'
+ * byTag rows, against the same total. Computed once at module scope rather
+ * than per call: it never varies with variables or world state, and a
+ * per-call recompute would risk two call sites' rounding drifting apart even
+ * though allocateSpend is deterministic today.
+ *
+ * This is what /budgets' GetTeamsWithBudgets reads instead of a literal 0 —
+ * a literal made every team's projected usage 0%, which silently emptied
+ * the budgets-at-risk section and put /budgets and /analytics in direct
+ * disagreement about the same three teams' spend.
+ */
+const KOSTEN_TEAM_SPEND = allocateSpend(
+  KOSTEN_MONTHLY_SPEND,
+  KOSTEN_TEAMS.map((team) => team.share),
+);
 
 /**
  * One row of the LiteLLM catalogue, with every field GetAgentLiteLLMCatalog
@@ -767,13 +789,22 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // chapter cannot disagree about who spent what while a prospect looks at
   // them side by side. Every other roster is empty: no fabricated users,
   // roles, projects, agents, or routines have a budget in this tour.
+  //
+  // spend comes from KOSTEN_TEAM_SPEND, not a literal 0: KOSTEN_TEAMS.share
+  // is the SAME field the REST fixture allocates /analytics' byTag spend
+  // by, so a literal 0 here made /budgets show every team as unspent while
+  // /analytics showed real figures for the identical three teams.
   GetTeamsWithBudgets: () => ({
     teamsPagination: {
       pageInfo: page(KOSTEN_TEAMS.length),
-      items: KOSTEN_TEAMS.map((team) => ({
+      items: KOSTEN_TEAMS.map((team, i) => ({
         id: team.id,
         name: team.name,
-        budget: { max_budget: team.budget, spend: 0, budget_duration: "30d" },
+        budget: {
+          max_budget: team.budget,
+          spend: KOSTEN_TEAM_SPEND[i],
+          budget_duration: "30d",
+        },
       })),
     },
   }),

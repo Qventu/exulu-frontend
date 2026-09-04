@@ -5,7 +5,11 @@ import type {
   TagActivityResponse,
 } from "@/lib/litellm-activity";
 
-import { KOSTEN_ROSTERS, KOSTEN_TEAMS } from "./fixtures/chapter-kosten";
+import {
+  allocateSpend,
+  KOSTEN_ROSTERS,
+  KOSTEN_TEAMS,
+} from "./fixtures/chapter-kosten";
 
 /**
  * REST fixtures for the demo — the counterpart to resolvers.ts.
@@ -68,38 +72,10 @@ function spendFor(date: string): number {
   return Math.round((base + jitter(date) * 6 - 3) * 100) / 100;
 }
 
-/**
- * Split `totalCents` proportionally across `shares` so the parts always sum
- * back to `totalCents` exactly, using largest-remainder (Hamilton)
- * apportionment: floor every share's cents, then hand the leftover cents
- * one at a time to the shares with the largest fractional remainder.
- *
- * Rounding each share independently (`Math.round`) can miss the total by a
- * cent — e.g. 0.52/0.31/0.17 of 41603 cents rounds to 21634/12897/7073,
- * which sums to 41604. This chapter's entire argument is attribution: a
- * prospect who adds up the team figures must land exactly on the headline
- * number, so the breakdown has to reconcile on every window, not just most.
- */
-function allocateCents(totalCents: number, shares: number[]): number[] {
-  if (shares.length === 0) return [];
-  const raw = shares.map((s) => totalCents * s);
-  const floors = raw.map((r) => Math.floor(r));
-  const remainder = totalCents - floors.reduce((a, b) => a + b, 0);
-  const order = raw
-    .map((r, i) => ({ i, frac: r - Math.floor(r) }))
-    .sort((a, b) => b.frac - a.frac);
-  const out = [...floors];
-  for (let k = 0; k < remainder; k++) {
-    out[order[k % order.length].i] += 1;
-  }
-  return out;
-}
-
-/** EUR amounts (2dp) that split `total` across `shares` and sum to it exactly. */
-function allocateSpend(total: number, shares: number[]): number[] {
-  const totalCents = Math.round(total * 100);
-  return allocateCents(totalCents, shares).map((c) => c / 100);
-}
+// allocateSpend (largest-remainder / Hamilton apportionment over EUR cents)
+// now lives in fixtures/chapter-kosten.ts, shared with resolvers.ts — see
+// that file's docblock for why a per-share Math.round is not exact enough
+// for a chapter whose whole argument is attribution.
 
 function daysBetween(start: string, end: string): string[] {
   const out: string[] = [];

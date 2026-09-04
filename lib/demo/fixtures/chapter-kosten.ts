@@ -40,3 +40,57 @@ export const KOSTEN_ROSTERS: Record<string, KostenTeam[]> = {
   team_id_: KOSTEN_TEAMS,
   user_id_: KOSTEN_TEAMS,
 };
+
+/**
+ * Canonical monthly spend (EUR), allocated across KOSTEN_TEAMS by `share`.
+ *
+ * Both screens read from this ONE number so their per-team spend agrees by
+ * construction rather than by coincidence. /budgets has no date window — it
+ * shows the current period's spend against a cap — so its resolvers
+ * allocate this constant directly (see resolvers.ts). /analytics' REST
+ * fixture (rest-fixtures.ts) sums a day-by-day formula over whatever window
+ * the caller requests, since a live chart needs a real window; that formula
+ * was tuned so a 30-day window lands within a few euros of this number,
+ * which is the figure the chapter was designed around.
+ *
+ * The three budget caps (250/150/100) were sized against this total so that
+ * Technik and Service both cross the 80%-used warning band and Vertrieb
+ * stays clear — /budgets' "at risk" section has something to show, which a
+ * flat `spend: 0` silently defeated until this constant existed.
+ */
+export const KOSTEN_MONTHLY_SPEND = 400;
+
+/**
+ * Split `total` proportionally across `shares` using largest-remainder
+ * (Hamilton) apportionment: floor every share, then hand the leftover units
+ * one at a time to the shares with the largest fractional remainder.
+ *
+ * Rounding each share independently (`Math.round`) can miss the total by a
+ * unit — e.g. 0.52/0.31/0.17 of 41603 rounds to parts that sum to 41604.
+ * This chapter's entire argument is attribution: a prospect who adds the
+ * team figures back up must land exactly on the total.
+ */
+function allocateProportional(total: number, shares: number[]): number[] {
+  if (shares.length === 0) return [];
+  const raw = shares.map((s) => total * s);
+  const floors = raw.map((r) => Math.floor(r));
+  const remainder = total - floors.reduce((a, b) => a + b, 0);
+  const order = raw
+    .map((r, i) => ({ i, frac: r - Math.floor(r) }))
+    .sort((a, b) => b.frac - a.frac);
+  const out = [...floors];
+  for (let k = 0; k < remainder; k++) {
+    out[order[k % order.length].i] += 1;
+  }
+  return out;
+}
+
+/**
+ * EUR amounts (2dp) that split `total` across `shares` and sum to it
+ * exactly. Shared by rest-fixtures.ts and resolvers.ts so both allocate
+ * spend the same way, whatever total each one is allocating.
+ */
+export function allocateSpend(total: number, shares: number[]): number[] {
+  const totalCents = Math.round(total * 100);
+  return allocateProportional(totalCents, shares).map((c) => c / 100);
+}

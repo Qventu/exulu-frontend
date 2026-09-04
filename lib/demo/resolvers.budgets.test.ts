@@ -17,9 +17,18 @@ import {
   GET_USERS_BY_IDS,
 } from "@/app/(application)/analytics/queries";
 
-import { KOSTEN_TEAMS } from "./fixtures/chapter-kosten";
+import { allocateSpend, KOSTEN_MONTHLY_SPEND, KOSTEN_TEAMS } from "./fixtures/chapter-kosten";
 import { DEMO_RESOLVERS } from "./resolvers";
-import { runDemoOperation as run } from "./test-support";
+import {
+  runDemoOperation as run,
+  runDemoQueryThroughCache as runThroughCache,
+} from "./test-support";
+
+/** The allocation GetTeamsWithBudgets and GetTeamsByIds must agree with. */
+const EXPECTED_TEAM_SPEND = allocateSpend(
+  KOSTEN_MONTHLY_SPEND,
+  KOSTEN_TEAMS.map((t) => t.share),
+);
 
 const world = { agents: [], contexts: [], items: [], sessions: [] } as never;
 
@@ -76,17 +85,48 @@ describe("budgets resolvers", () => {
  * but weak: a resolver can exist and still answer the wrong root field,
  * which Apollo's cache turns into `data: undefined` (an empty table, no
  * error). These tests exercise the actual shape instead.
+ *
+ * Two ways of running a document, deliberately not interchangeable:
+ *
+ *   - runDemoQueryThroughCache — for the POPULATED cases (GetTeamsWithBudgets,
+ *     GetTeamsByIds). It goes through a real ApolloClient + InMemoryCache,
+ *     which diffs the resolver's result against the selection set. A row
+ *     missing a field the query selects — e.g. a future item added to
+ *     KOSTEN_TEAMS without a `budget`, or the `spend: 0` regression this
+ *     round of review caught — fails HERE, the same way an incomplete cache
+ *     write silently hands the real component `data: undefined` on screen.
+ *     runDemoOperation cannot catch that: per its own docstring
+ *     (test-support.ts), execute() "hands back whatever the resolver
+ *     returned", so a field-incomplete item would pass it.
+ *
+ *   - runDemoOperation — for the nine DELIBERATELY EMPTY operations. An
+ *     empty array has no item to be field-incomplete, so there is nothing
+ *     for a cache diff to catch that execute() would miss; the only thing
+ *     worth pinning is the root field name, which runDemoOperation already
+ *     asserts by reading `data[root]`.
  */
 describe("/budgets page operations answer the shape the queries ask for", () => {
-  it("answers GetTeamsWithBudgets with the KOSTEN_TEAMS roster", async () => {
-    const data = await run(GET_TEAMS_WITH_BUDGETS, { page: 1, limit: 25, filters: [] });
+  it("answers GetTeamsWithBudgets with the KOSTEN_TEAMS roster, through the cache", async () => {
+    // Through the cache, not execute(): a row missing a selected field (id,
+    // name, or budget) would leave `data` undefined here, which is exactly
+    // how this failure is silent on the real /budgets screen.
+    const data = await runThroughCache(GET_TEAMS_WITH_BUDGETS, {
+      page: 1,
+      limit: 25,
+      filters: [],
+    });
     const wrapper = data.teamsPagination as {
       pageInfo: unknown;
-      items: Array<{ id: string; name: string; budget: unknown }>;
+      items: Array<{ id: string; name: string; budget: { max_budget: number; spend: number } }>;
     };
     expect(wrapper.pageInfo).toBeTruthy();
+    expect(wrapper.items.map((t) => t.id)).toEqual(KOSTEN_TEAMS.map((t) => t.id));
     expect(wrapper.items.map((t) => t.name)).toEqual(KOSTEN_TEAMS.map((t) => t.name));
-    expect(wrapper.items.every((t) => Boolean(t.budget))).toBe(true);
+    // Pins the Finding-1 fix: spend must track KOSTEN_TEAMS.share, the same
+    // field the /analytics REST fixture allocates by — not a flat 0, which
+    // silently zeroed every team's projected usage and emptied the
+    // budgets-at-risk section.
+    expect(wrapper.items.map((t) => t.budget.spend)).toEqual(EXPECTED_TEAM_SPEND);
   });
 
   it.each([
@@ -109,10 +149,13 @@ describe("/budgets page operations answer the shape the queries ask for", () => 
 });
 
 describe("/analytics breakdown card id-hydration operations", () => {
-  it("answers GetTeamsByIds under teamsPagination.items with the KOSTEN_TEAMS roster", async () => {
-    const data = await run(GET_TEAMS_BY_IDS, { ids: KOSTEN_TEAMS.map((t) => t.id) });
+  it("answers GetTeamsByIds under teamsPagination.items with the KOSTEN_TEAMS roster, through the cache", async () => {
+    const data = await runThroughCache(GET_TEAMS_BY_IDS, {
+      ids: KOSTEN_TEAMS.map((t) => t.id),
+    });
     const items = (data.teamsPagination as { items: Array<{ id: string; name: string }> })
       .items;
+    expect(items.map((t) => t.id)).toEqual(KOSTEN_TEAMS.map((t) => t.id));
     expect(items.map((t) => t.name)).toEqual(KOSTEN_TEAMS.map((t) => t.name));
   });
 
