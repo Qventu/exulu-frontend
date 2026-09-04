@@ -118,7 +118,7 @@ describe("CHAPTERS", () => {
     // copy anyway. If this order is ever changed again, those two lines and
     // ingestion's opener all point at neighbours and would need rewriting.
     expect(CHAPTERS.map((c) => c.id)).toEqual([
-      "intro",
+      "daten",
       "techdoc",
       "memory",
       "ingestion",
@@ -195,13 +195,28 @@ describe("the reading load", () => {
     // ones reviewers singled out as best, and the heaviest clustered in the
     // late chapters where attention is thinnest.
     //
-    // 45 is not a magic number, it is roughly three lines in a 480px popover
-    // (.shepherd-element's max-width — see shepherd-theme.css).
-    // The point of the cap is that copy grows back if nothing stops it.
+    // The cap depends on the step's geometry, not a single magic number:
+    //
+    // - POPOVER (default, kind unset or "popover"): 45 words, roughly three
+    //   lines at a 480px popover width (.shepherd-element's max-width — see
+    //   shepherd-theme.css). This is the geometry the original 45 came from.
+    //
+    // - STAGE (kind "stage"): 90 words. A stage bypasses Shepherd entirely —
+    //   full-bleed inside a max-w-3xl (768px) wrapper with its own scroll
+    //   affordance, and nothing else on screen competing for attention. That
+    //   is roughly double the popover's width and reading room, so roughly
+    //   double the budget. It is still a real ceiling, for the same reason
+    //   the popover one is: copy grows back if nothing stops it.
     for (const chapter of CHAPTERS) {
       for (const step of chapter.steps) {
         const w = words(proseOf(step));
-        expect(w, `${step.id} is ${w} words — trim it or split the step`).toBeLessThanOrEqual(45);
+        const isStage = step.kind === "stage";
+        const cap = isStage ? 90 : 45;
+        const capName = isStage ? "stage" : "popover";
+        expect(
+          w,
+          `${step.id} is ${w} words — over the ${capName} cap of ${cap}; trim it or split the step`,
+        ).toBeLessThanOrEqual(cap);
       }
     }
   });

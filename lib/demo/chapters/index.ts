@@ -1,5 +1,5 @@
 import type { DemoChapter } from "../tour";
-import { introChapter } from "./intro";
+import { datenChapter } from "./daten";
 import { techdocChapter } from "./techdoc";
 import { memoryChapter } from "./memory";
 import { ingestionChapter } from "./ingestion";
@@ -19,7 +19,7 @@ import { contactChapter } from "./contact";
  * chat chapter. chapters/index.test.ts asserts that.
  */
 export const CHAPTERS: DemoChapter[] = [
-  introChapter,
+  datenChapter,
   techdocChapter,
   memoryChapter,
   ingestionChapter,

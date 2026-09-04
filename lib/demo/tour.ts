@@ -6,7 +6,6 @@ export { CHAPTERS } from "./chapters";
 export { DEMO_BOOKING_URL, MEMORY_CHAT, TECHDOC_CHAT } from "./routes";
 
 export type DemoChapterId =
-  | "intro"
   | "daten"
   | "struktur"
   | "aufnahme"
