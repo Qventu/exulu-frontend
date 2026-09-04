@@ -139,6 +139,15 @@ describe("the narrative arc", () => {
   // — never hardcoded — so moving the referenced chapter fails this test
   // instead of silently shipping a stale pointer to a prospect. Add a row
   // here whenever a new "Kapitel <n>" cross-reference is written.
+  //
+  // Both checks below are digit-boundary-safe: a `toMatch` substring check
+  // would let a stale "Kapitel 11" satisfy an expected "Kapitel 1" once a
+  // referenced chapter sits at position >= 10, so the regex requires no
+  // further digit after the match. And a chapter is expected to carry only
+  // the ONE cross-reference its row declares — checking that the full set of
+  // "Kapitel N" mentions in the chapter equals that single expectation, not
+  // just that it appears somewhere, so a stale sibling reference cannot hide
+  // behind a correct one.
   it("keeps digit-based chapter cross-references pointing at the truth", () => {
     const positionOf = (id: string) => {
       const index = CHAPTERS.findIndex((c) => c.id === id);
@@ -165,7 +174,13 @@ describe("the narrative arc", () => {
       expect(
         textOf(from),
         `${from}'s reference to ${to} should read "${expected}"`,
-      ).toContain(expected);
+      ).toMatch(new RegExp(`Kapitel ${positionOf(to)}(?!\\d)`));
+
+      const refs = textOf(from).match(/Kapitel \d+/g) ?? [];
+      expect(
+        new Set(refs),
+        `${from} should carry only its one cross-reference ("${expected}"), found: ${refs.join(", ")}`,
+      ).toEqual(new Set([expected]));
     }
   });
 });

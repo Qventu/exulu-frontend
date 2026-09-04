@@ -34,7 +34,17 @@ export const aufnahmeChapter: DemoChapter = {
           text: "Dokumente kommen aus dem Laufwerk, aus SharePoint, über die API — oder per Upload, wenn es einmal schnell gehen muss. Die Basis beginnt leer.",
         },
       ],
-      advanceAfterMs: 2000,
+      // This step is reached by a CROSS-ROUTE navigation (struktur's /data ->
+      // this chapter's /data/[ctx]) landing on an ANCHORED step
+      // ("knowledge-items"), and the auto-advance timer starts on the URL
+      // change, not once the anchor is actually on screen. shepherd-step.ts
+      // gives that anchor up to ANCHOR_WAIT_MS (4000ms) to resolve, so the
+      // budget here has to exceed navigation + Apollo + anchor resolution or
+      // this step — "Die Basis beginnt leer", the beat the whole 0 → 4 → 9
+      // fill depends on — gets skipped before a visitor ever reads it. Raised
+      // from 2000 to 3600, matching the same-class fix in struktur.ts
+      // (2200 -> 3600).
+      advanceAfterMs: 3600,
     },
     {
       id: "aufnahme-running",

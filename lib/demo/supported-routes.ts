@@ -34,6 +34,13 @@ export const DEMO_SUPPORTED_ROUTES = [
   "/projects",
   "/prompts",
   "/settings",
+  // Reachable from the knowledge library's empty state (LibraryEmpty's
+  // action links here), which chapter 2 (`struktur`, `struktur-empty`)
+  // deliberately renders on /data with zero contexts. Shepherd's overlay
+  // does not block clicks, so without this a visitor could one-click onto
+  // the "not available in this demo" notice and lose their `?tour=`
+  // position on the tour's second chapter.
+  "/explorer",
 ] as const;
 
 /**

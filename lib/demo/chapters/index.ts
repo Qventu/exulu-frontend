@@ -19,7 +19,7 @@ import { contactChapter } from "./contact";
  * ORDER IS LOAD-BEARING. The tour runs data-first: the customer's mess of data
  * (daten), structuring it (struktur), ingesting a document (aufnahme) and
  * permissioning it (zugriff) all come before the visitor ever meets the chat.
- * That is deliberate — the chat chapter follows the ingestion chapters on
+ * That is deliberate — the chat chapter follows the data chapters on
  * purpose, because by the time it opens, chapter 5's citation is a conclusion
  * the visitor can check against what they just watched arrive, not a claim
  * they have to take on faith.
@@ -40,5 +40,5 @@ export const CHAPTERS: DemoChapter[] = [
   emailChapter, //     9 · unattended work
   meetingsChapter, // 10 · meetings
   // 11 · "Was es kostet" (/analytics + /budgets) is project 3 and lands here.
-  contactChapter, //  12 · the ask
+  contactChapter, // 11 today, 12 once the cost chapter lands
 ];

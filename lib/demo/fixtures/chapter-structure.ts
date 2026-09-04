@@ -11,10 +11,10 @@ import { techdocWorld } from "./chapter-techdoc";
  * product's useQuery calls do not poll.
  *
  * The contexts are the REAL seven the deployment runs (contexts.ts) — the same
- * ids chapter 5's citations reference and chapter 7's routing table lists. The
- * partial step takes the first three in declaration order rather than a
- * curated subset: it is a moment of filling, not a claim about which three
- * matter.
+ * ids the `techdoc` chapter's citations reference and the `config` chapter's
+ * routing table lists. The partial step takes the first three in declaration
+ * order rather than a curated subset: it is a moment of filling, not a claim
+ * about which three matter.
  */
 export function structureWorld(step: number): DemoWorld {
   const base = techdocWorld(0);

@@ -9,10 +9,10 @@ const ITEM = `/data/${SOFTWARE_DOC_CONTEXT_ID}/items/${SOFTWARE_DOC_ITEM_ID}`;
  * Runs on the ITEM the previous chapter just ingested, so the permissions on
  * screen are visibly the permissions on a document the visitor watched arrive.
  *
- * Deliberately NOT the agent editor's access section: chapter 7 already runs
- * on that route, and sending the visitor there twice costs the story its
- * forward motion. This chapter owns the knowledge side; chapter 7 owns the
- * assistant side.
+ * Deliberately NOT the agent editor's access section: the `config` chapter
+ * already runs on that route, and sending the visitor there twice costs the
+ * story its forward motion. This chapter owns the knowledge side; `config`
+ * owns the assistant side.
  */
 export const zugriffChapter: DemoChapter = {
   id: "zugriff",

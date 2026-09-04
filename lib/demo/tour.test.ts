@@ -1,5 +1,3 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { contentText } from "./content";
 import { getWorld } from "./fixtures";
@@ -178,25 +176,9 @@ describe("CHAPTERS", () => {
     }
   });
 
-  it("points every schematic at a file that exists", () => {
-    // A typo'd path is a broken image, which the anchor tests cannot see and
-    // which looks worse than no illustration at all. Scans every step, not
-    // just chapter.steps[0]: a stage's figure can sit anywhere in the chapter
-    // (see the rule above), so limiting this to the opening step would leave
-    // a later stage figure's path unchecked — which is exactly chapter 3's
-    // shape, whose figure lives at index 2.
-    for (const chapter of CHAPTERS) {
-      for (const step of chapter.steps) {
-        for (const block of step.content) {
-          if (block.kind !== "figure") continue;
-          expect(
-            existsSync(join(process.cwd(), "public", block.src)),
-            `${chapter.id}/${step.id} references a missing asset: ${block.src}`,
-          ).toBe(true);
-        }
-      }
-    }
-  });
+  // Figure-path existence is owned by lib/demo/chapters/index.test.ts
+  // ("points every figure at a file that exists"), which already scans
+  // every step of every chapter, not just chapter.steps[0].
 
   it("gives every chapter at least one step", () => {
     for (const chapter of CHAPTERS) {

@@ -34,8 +34,11 @@ export function getWorld(pos: TourPosition): DemoWorld {
       return at(aufnahmeWorld(pos.step));
     case "zugriff":
       return at(zugriffWorld(pos.step));
-    // The remaining chapters reuse chapter 1's world until their own plans
-    // land, so the shell always has a coherent application behind every step.
+    // The remaining chapters reuse techdocWorld (the `techdoc` chapter's
+    // world at step 0) until their own plans land, so the shell always has a
+    // coherent application behind every step. NOT "chapter 1's world" — that
+    // phrase meant this same world back when techdoc opened the tour, but
+    // chapter 1 is `daten` now.
     default:
       return at(techdocWorld(0));
   }

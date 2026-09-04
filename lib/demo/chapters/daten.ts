@@ -22,6 +22,13 @@ export const datenChapter: DemoChapter = {
       route: TECHDOC_CHAT,
       anchor: null,
       kind: "stage",
+      // Inert here: shepherd-step.ts is what reads `size` to pick
+      // .demo-step-wide's max-width, and a stage step never reaches
+      // shepherd-step.ts (tour-shepherd.tsx filters stage steps out before
+      // building Shepherd steps at all — TourStage renders them directly,
+      // with its own fixed max-w-3xl). Kept anyway for consistency with the
+      // popover steps that DO read it, so a step's width intent is visible
+      // at a glance regardless of its kind.
       size: "wide",
       title: "Das Wissen ist längst da",
       content: [

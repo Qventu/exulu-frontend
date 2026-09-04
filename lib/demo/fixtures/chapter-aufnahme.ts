@@ -8,7 +8,13 @@ import { SOFTWARE_DOC_CONTEXT_ID, SOFTWARE_DOC_ITEMS } from "./software-docs";
  * Four worlds: empty, two partial, complete. The counts are deliberately
  * uneven (0, 4, 7, 9) because a linear fill reads as a progress bar and an
  * uneven one reads as work arriving — which is what ingestion actually looks
- * like when a queue drains.
+ * like when a queue drains. The 7 is never actually ON SCREEN, though: its
+ * step (`aufnahme-page`, index 2) is a stage — an opaque full-bleed takeover
+ * with no knowledge-items list behind it to show a count on — so what a
+ * visitor actually sees the list do is 0 → 4 → 9, not 0 → 4 → 7 → 9. The 7
+ * still matters as an intermediate WORLD (it is what the base looks like the
+ * moment the stage ends, ready for `aufnahme-items` to jump straight to 9),
+ * just not as a visible step in the fill.
  *
  * The documents are the REAL nine from software-docs.ts, not invented ones.
  * (The plan this fixture was written from said eighteen; software-docs.ts's
@@ -16,8 +22,9 @@ import { SOFTWARE_DOC_CONTEXT_ID, SOFTWARE_DOC_ITEMS } from "./software-docs";
  * existing `toHaveLength(9)` / 244-chunk assertions all agree the real
  * Newlift deployment has nine. Built against the real number rather than
  * padding the library with nine invented documents to match a stale plan.)
- * Chapter 5 cites FST2XTchanges-customer-DE.docx by id, so a visitor who later
- * sees that citation has already watched this exact file arrive.
+ * The `techdoc` chapter cites FST2XTchanges-customer-DE.docx by id, so a
+ * visitor who later sees that citation has already watched this exact file
+ * arrive.
  */
 const COUNTS = [0, 4, 7, SOFTWARE_DOC_ITEMS.length];
 
