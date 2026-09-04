@@ -170,6 +170,14 @@ DEMO_PROMPTS = {
         "orthographic elevation, with fine concentric arcs indicating sound, "
         "and a single sheet of paper resting on the table."
     ),
+    # Chapter 11. Attribution, not a total: one flow divided into labelled
+    # streams of differing thickness, each ending in its own vessel.
+    "kosten": (
+        "A single broad stream entering from the left and dividing into three "
+        "streams of visibly different widths, each ending in its own open "
+        "container of a different size. A horizontal line across each "
+        "container marks a fill limit. Flat diagrammatic side view."
+    ),
 }
 
 
