@@ -17,7 +17,15 @@ import {
   GET_USERS_BY_IDS,
 } from "@/app/(application)/analytics/queries";
 
-import { allocateSpend, KOSTEN_MONTHLY_SPEND, KOSTEN_TEAMS } from "./fixtures/chapter-kosten";
+import { DIMENSION_TAG_PREFIX } from "@/app/(application)/analytics/lens";
+
+import { kostenChapter } from "./chapters/kosten";
+import {
+  allocateSpend,
+  KOSTEN_MONTHLY_SPEND,
+  KOSTEN_ROSTERS,
+  KOSTEN_TEAMS,
+} from "./fixtures/chapter-kosten";
 import { DEMO_RESOLVERS } from "./resolvers";
 import {
   runDemoOperation as run,
@@ -184,5 +192,60 @@ describe("/analytics breakdown card id-hydration operations", () => {
   it("answers GetAgentsByIds under the flat agentByIds array (already mapped)", async () => {
     const data = await run(GET_AGENTS_BY_IDS, { ids: [] });
     expect(Array.isArray(data.agentByIds)).toBe(true);
+  });
+});
+
+/**
+ * The chapter's routes against the data behind them.
+ *
+ * Both product screens default to a view this tour has NO data for —
+ * /analytics to dimension=agents, /budgets to type=user — and both fail
+ * QUIETLY, with an empty-state card rather than an error: "Keine Daten für
+ * diese Ansicht" under a step claiming you can see what was spent on, and
+ * "Noch keine Budgets" under one claiming every team has a limit. Nothing
+ * throws, nothing logs, and the suite was green while the chapter's own
+ * screens contradicted it. So the query parameters that fix that are pinned
+ * to the fixtures that make them true, not left as string literals a later
+ * edit can drop.
+ */
+describe("chapter 11's routes land on views the fixtures populate", () => {
+  const paramOf = (route: string, key: string) =>
+    new URLSearchParams(route.split("?")[1] ?? "").get(key);
+
+  it("sends /analytics to a dimension KOSTEN_ROSTERS has a roster for", () => {
+    const steps = kostenChapter.steps.filter((s) => s.route.startsWith("/analytics"));
+    expect(steps.length).toBeGreaterThan(0);
+    for (const step of steps) {
+      const dimension = paramOf(step.route, "dimension");
+      expect(dimension, `${step.id} must pin a dimension`).toBeTruthy();
+      const prefix = DIMENSION_TAG_PREFIX[dimension as keyof typeof DIMENSION_TAG_PREFIX];
+      expect(prefix, `${step.id}: unknown dimension ${dimension}`).toBeTruthy();
+      expect(KOSTEN_ROSTERS[prefix] ?? [], `${step.id}: ${prefix} roster`).not.toHaveLength(0);
+    }
+  });
+
+  it("sends /budgets to an entity tab whose resolver returns rows", () => {
+    const byTab: Record<string, string> = {
+      user: "GetUsersWithBudgets",
+      role: "GetRolesWithBudgets",
+      team: "GetTeamsWithBudgets",
+      project: "GetProjectsWithBudgets",
+      agent: "GetAgentsWithBudgets",
+      workflow_template: "GetWorkflowTemplatesWithBudgets",
+    };
+    const steps = kostenChapter.steps.filter((s) => s.route.startsWith("/budgets"));
+    expect(steps.length).toBeGreaterThan(0);
+    for (const step of steps) {
+      const tab = paramOf(step.route, "type");
+      expect(tab, `${step.id} must pin an entity tab`).toBeTruthy();
+      const op = byTab[tab as string];
+      expect(op, `${step.id}: unknown tab ${tab}`).toBeTruthy();
+      const data = DEMO_RESOLVERS[op](world, { page: 1, limit: 25 }) as Record<
+        string,
+        { items: unknown[] }
+      >;
+      const items = Object.values(data)[0].items;
+      expect(items, `${step.id}: ${op} rows`).not.toHaveLength(0);
+    }
   });
 });

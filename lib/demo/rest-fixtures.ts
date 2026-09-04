@@ -1,3 +1,4 @@
+import type { BudgetSettings } from "@/lib/api/budgets";
 import type {
   TagActivityByTagByDayRow,
   TagActivityByTagRow,
@@ -22,16 +23,51 @@ import {
  * leaving that contract intact.
  */
 const TAG_ACTIVITY = "/admin/litellm/tag-activity";
+const BUDGET_SETTINGS = "/admin/budgets/settings";
 
-export function demoRestResponse(path: string, _method: string): unknown | null {
+export function demoRestResponse(path: string, method: string): unknown | null {
   const [pathname, query = ""] = path.split("?");
-  if (pathname !== TAG_ACTIVITY) return null;
-  const params = new URLSearchParams(query);
-  return tagActivity(
-    params.get("start_date") ?? isoDay(0),
-    params.get("end_date") ?? isoDay(0),
-    params.get("tag_prefix"),
-  );
+
+  if (pathname === TAG_ACTIVITY) {
+    const params = new URLSearchParams(query);
+    return tagActivity(
+      params.get("start_date") ?? isoDay(0),
+      params.get("end_date") ?? isoDay(0),
+      params.get("tag_prefix"),
+    );
+  }
+
+  // GET only. A PUT falls through to null, so saving from the policy dialog
+  // fails the way every other write in this read-only tour does, rather than
+  // silently pretending to persist.
+  if (pathname === BUDGET_SETTINGS && method === "GET") return budgetSettings();
+
+  return null;
+}
+
+/**
+ * The platform's default per-user budget policy — deliberately DISABLED.
+ *
+ * Not decoration, and not a number anyone invented. /budgets renders this in
+ * its header via DefaultPolicyChip, which has three branches: loading, load
+ * error, and a settled value. Without a fixture the demo's silence contract
+ * returns null, `getSettings` reads `.settings` off it and throws, and the
+ * chapter about controlling cost opens with an em-dash and a red "Erneut
+ * versuchen" retry link above its own headline.
+ *
+ * `enabled: false` renders "Kein Standardbudget pro Nutzer" — a settled
+ * state that asserts nothing. Switching it on would have meant inventing a
+ * per-user amount, and this tenant governs by TEAM limit, which is what the
+ * chapter's copy actually claims and what the table below the chip shows.
+ */
+function budgetSettings(): { settings: BudgetSettings } {
+  return {
+    settings: {
+      global_user_budget: { enabled: false, max_budget: 0, budget_duration: "30d" },
+      show_user_budget_in_chat: false,
+      user_budget_display: "amount",
+    },
+  };
 }
 
 /** YYYY-MM-DD, `offset` days from today. */

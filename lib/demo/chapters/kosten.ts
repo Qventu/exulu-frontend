@@ -32,6 +32,17 @@ import type { DemoChapter } from "../tour";
  * word cap, so the disclaimer got its own step rather than being trimmed
  * away.
  *
+ * BOTH routes carry a query parameter, and neither is cosmetic. /analytics
+ * defaults to dimension=agents and /budgets to type=user (DEFAULT_DIMENSION
+ * in analytics/lens.ts; the `type` fall-back in budgets-view.tsx), and this
+ * tour has spend for exactly one roster: the three teams. Landing on the
+ * defaults put "Keine Daten für diese Ansicht" under a step claiming
+ * "Sie sehen, wofür ausgegeben wurde" and "Noch keine Budgets" under one
+ * claiming "Jedes Team bekommt ein monatliches Limit" — the argument
+ * contradicted by the screen making it. hrefFor() already appends `tour=`
+ * with `&` when a route carries a query, and the route-allowlist test splits
+ * on "?", so both were anticipated.
+ *
  * /budgets' second step also carries a short clause distinguishing what the
  * two screens measure: /analytics sums a chosen window (14 days by default,
  * ~€189; a 30d preset lands near the /budgets total) while /budgets shows a
@@ -47,7 +58,7 @@ export const kostenChapter: DemoChapter = {
   steps: [
     {
       id: "kosten-verbrauch",
-      route: "/analytics",
+      route: "/analytics?dimension=teams",
       anchor: null,
       size: "wide",
       title: "Jede Anfrage hat einen Preis — und einen Absender",
@@ -70,7 +81,7 @@ export const kostenChapter: DemoChapter = {
     },
     {
       id: "kosten-kontrolle",
-      route: "/budgets",
+      route: "/budgets?type=team",
       anchor: null,
       title: "Ein Limit ist eine Einstellung, kein Versprechen",
       content: [
@@ -86,7 +97,7 @@ export const kostenChapter: DemoChapter = {
     },
     {
       id: "kosten-entscheidung",
-      route: "/budgets",
+      route: "/budgets?type=team",
       anchor: null,
       title: "Keine Einsparung wird hier behauptet",
       content: [

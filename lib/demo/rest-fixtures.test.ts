@@ -29,6 +29,24 @@ describe("demoRestResponse — routing", () => {
   it("does not answer a near-miss path", () => {
     expect(demoRestResponse("/admin/litellm/tag-activity-summary", "GET")).toBeNull();
   });
+
+  // Without this, getSettings() reads `.settings` off null, throws, and
+  // DefaultPolicyChip renders an em-dash and a retry link in the header of
+  // the very chapter that argues costs are under control.
+  it("answers the budget-settings path on GET with a settled policy", () => {
+    const res = demoRestResponse("/admin/budgets/settings", "GET") as {
+      settings: { global_user_budget: { enabled: boolean } };
+    } | null;
+    expect(res).not.toBeNull();
+    // Disabled on purpose: the chip's "no default policy" branch asserts
+    // nothing, where enabling it would invent a per-user amount for a tenant
+    // the chapter says governs by team.
+    expect(res!.settings.global_user_budget.enabled).toBe(false);
+  });
+
+  it("leaves budget-settings writes to the silence contract", () => {
+    expect(demoRestResponse("/admin/budgets/settings", "PUT")).toBeNull();
+  });
 });
 
 describe("demoRestResponse — time relativity", () => {
