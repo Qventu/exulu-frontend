@@ -39,11 +39,11 @@ export function turnsFor(chapter: DemoChapterId): ScriptedTurn[] {
 /**
  * Conversation already on screen when a chapter opens.
  *
- * Chapter 4 needs it: the correction it is about only makes sense after the
- * answer being corrected, and replaying those four exchanges live would mean
- * the visitor sending four messages before reaching the point. As scrollback
- * they read as a conversation picked up mid-flight, which is also how an
- * engineer would actually meet it.
+ * The memory chapter needs it: the correction it is about only makes sense
+ * after the answer being corrected, and replaying those four exchanges live
+ * would mean the visitor sending four messages before reaching the point. As
+ * scrollback they read as a conversation picked up mid-flight, which is also
+ * how an engineer would actually meet it.
  */
 export function scrollbackFor(
   chapter: DemoChapterId,
@@ -60,7 +60,7 @@ export function scrollbackFor(
   if (chapter === "techdoc") return step === 0 ? [] : TECHDOC_SCROLLBACK;
   if (chapter !== "memory") return [];
 
-  // Chapter 4's correction is the visitor's to send, and the transport replays
+  // Memory's correction is the visitor's to send, and the transport replays
   // it when they do. But step 3 anchors to the memory tool call, and a visitor
   // who just clicks Next never sent anything — so from that step on, the
   // exchange is on screen whether they typed it or not.

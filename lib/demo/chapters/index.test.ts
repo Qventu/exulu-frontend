@@ -126,4 +126,46 @@ describe("the narrative arc", () => {
       }
     }
   });
+
+  // The spelled-count check above guards a claim that does not currently
+  // exist in the copy. The failure that actually happened three times while
+  // building this order was narrower and sharper: a digit-based "Kapitel N"
+  // cross-reference pointing at a chapter's OLD position after a reorder
+  // moved it. Nothing above catches that, because nothing above knows what a
+  // reference is supposed to mean.
+  //
+  // Each row below names, in prose, which chapter a reference means. The
+  // expected digit is computed from that chapter's live position in CHAPTERS
+  // — never hardcoded — so moving the referenced chapter fails this test
+  // instead of silently shipping a stale pointer to a prospect. Add a row
+  // here whenever a new "Kapitel <n>" cross-reference is written.
+  it("keeps digit-based chapter cross-references pointing at the truth", () => {
+    const positionOf = (id: string) => {
+      const index = CHAPTERS.findIndex((c) => c.id === id);
+      expect(index, `no chapter with id "${id}"`).toBeGreaterThanOrEqual(0);
+      return index + 1;
+    };
+    const textOf = (id: string) =>
+      contentText(CHAPTERS.find((c) => c.id === id)!.steps.flatMap((s) => s.content));
+
+    const crossReferences: Array<{ from: string; to: string }> = [
+      // struktur explains that which knowledge bases an assistant may search
+      // is a per-assistant setting — shown in config's wizard.
+      { from: "struktur", to: "config" },
+      // aufnahme's closing step promises that the chunks it just built are
+      // what techdoc's search actually searches.
+      { from: "aufnahme", to: "techdoc" },
+      // config's search-behavior step calls back to the honest refusal shown
+      // in memory ("Wenn er etwas nicht weiß, sagt er das").
+      { from: "config", to: "memory" },
+    ];
+
+    for (const { from, to } of crossReferences) {
+      const expected = `Kapitel ${positionOf(to)}`;
+      expect(
+        textOf(from),
+        `${from}'s reference to ${to} should read "${expected}"`,
+      ).toContain(expected);
+    }
+  });
 });
