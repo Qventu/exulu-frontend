@@ -68,6 +68,39 @@ function spendFor(date: string): number {
   return Math.round((base + jitter(date) * 6 - 3) * 100) / 100;
 }
 
+/**
+ * Split `totalCents` proportionally across `shares` so the parts always sum
+ * back to `totalCents` exactly, using largest-remainder (Hamilton)
+ * apportionment: floor every share's cents, then hand the leftover cents
+ * one at a time to the shares with the largest fractional remainder.
+ *
+ * Rounding each share independently (`Math.round`) can miss the total by a
+ * cent — e.g. 0.52/0.31/0.17 of 41603 cents rounds to 21634/12897/7073,
+ * which sums to 41604. This chapter's entire argument is attribution: a
+ * prospect who adds up the team figures must land exactly on the headline
+ * number, so the breakdown has to reconcile on every window, not just most.
+ */
+function allocateCents(totalCents: number, shares: number[]): number[] {
+  if (shares.length === 0) return [];
+  const raw = shares.map((s) => totalCents * s);
+  const floors = raw.map((r) => Math.floor(r));
+  const remainder = totalCents - floors.reduce((a, b) => a + b, 0);
+  const order = raw
+    .map((r, i) => ({ i, frac: r - Math.floor(r) }))
+    .sort((a, b) => b.frac - a.frac);
+  const out = [...floors];
+  for (let k = 0; k < remainder; k++) {
+    out[order[k % order.length].i] += 1;
+  }
+  return out;
+}
+
+/** EUR amounts (2dp) that split `total` across `shares` and sum to it exactly. */
+function allocateSpend(total: number, shares: number[]): number[] {
+  const totalCents = Math.round(total * 100);
+  return allocateCents(totalCents, shares).map((c) => c / 100);
+}
+
 function daysBetween(start: string, end: string): string[] {
   const out: string[] = [];
   for (
@@ -111,13 +144,21 @@ function tagActivity(
   const totalSpend = Math.round(sum((r) => r.spend) * 100) / 100;
 
   const roster = prefix ? (KOSTEN_ROSTERS[prefix] ?? []) : KOSTEN_TEAMS;
+  const shares = roster.map((team) => team.share);
 
-  const byTag: TagActivityByTagRow[] = roster.map((team) => ({
+  // Token and request counts stay independently rounded: they're supporting
+  // detail, not the figure a prospect reconciles by hand, and per-team drift
+  // is at most a handful of units out of thousands — imperceptible where a
+  // one-cent miss on spend is not. Only currency (spend, below) gets the
+  // exact-reconciliation treatment.
+  const tagSpendSplit = allocateSpend(totalSpend, shares);
+
+  const byTag: TagActivityByTagRow[] = roster.map((team, i) => ({
     tag: `${prefix ?? "team_id_"}${team.id}`,
     prefix: prefix ?? "team_id_",
     id: team.id,
     name: team.name,
-    spend: Math.round(totalSpend * team.share * 100) / 100,
+    spend: tagSpendSplit[i],
     prompt_tokens: Math.round(sum((r) => r.prompt_tokens) * team.share),
     completion_tokens: Math.round(sum((r) => r.completion_tokens) * team.share),
     total_tokens: Math.round(sum((r) => r.total_tokens) * team.share),
@@ -126,14 +167,19 @@ function tagActivity(
     api_requests: Math.round(sum((r) => r.api_requests) * team.share),
   }));
 
-  const byTagByDay: TagActivityByTagByDayRow[] = roster.flatMap((team) =>
-    daily.map((row) => ({
+  // Each day's team split must sum to that day's own spend, not just the
+  // window total — the breakdown card can slice by day, and the same
+  // attribution argument applies there.
+  const dailySpendSplits = daily.map((row) => allocateSpend(row.spend, shares));
+
+  const byTagByDay: TagActivityByTagByDayRow[] = roster.flatMap((team, teamIndex) =>
+    daily.map((row, dayIndex) => ({
       tag: `${prefix ?? "team_id_"}${team.id}`,
       prefix: prefix ?? "team_id_",
       id: team.id,
       name: team.name,
       date: row.date,
-      spend: Math.round(row.spend * team.share * 100) / 100,
+      spend: dailySpendSplits[dayIndex][teamIndex],
       prompt_tokens: Math.round(row.prompt_tokens * team.share),
       completion_tokens: Math.round(row.completion_tokens * team.share),
       total_tokens: Math.round(row.total_tokens * team.share),
@@ -159,22 +205,25 @@ function tagActivity(
     daily,
     byTag,
     byTagByDay,
-    byModel: [
-      {
-        model: "vertex-gemini-2.5-flash",
-        spend: Math.round(totalSpend * 0.79 * 100) / 100,
-        total_tokens: Math.round(sum((r) => r.total_tokens) * 0.79),
-        successful_requests: Math.round(sum((r) => r.successful_requests) * 0.79),
-        failed_requests: 0,
-      },
-      {
-        model: "text-embedding-3-large",
-        spend: Math.round(totalSpend * 0.21 * 100) / 100,
-        total_tokens: Math.round(sum((r) => r.total_tokens) * 0.21),
-        successful_requests: Math.round(sum((r) => r.successful_requests) * 0.21),
-        failed_requests: 0,
-      },
-    ],
+    byModel: (() => {
+      const [flashSpend, embeddingSpend] = allocateSpend(totalSpend, [0.79, 0.21]);
+      return [
+        {
+          model: "vertex-gemini-2.5-flash",
+          spend: flashSpend,
+          total_tokens: Math.round(sum((r) => r.total_tokens) * 0.79),
+          successful_requests: Math.round(sum((r) => r.successful_requests) * 0.79),
+          failed_requests: 0,
+        },
+        {
+          model: "text-embedding-3-large",
+          spend: embeddingSpend,
+          total_tokens: Math.round(sum((r) => r.total_tokens) * 0.21),
+          successful_requests: Math.round(sum((r) => r.successful_requests) * 0.21),
+          failed_requests: 0,
+        },
+      ];
+    })(),
     pagination: { page: 1, total_pages: 1, total_count: byTag.length, has_more: false },
     tagPrefix: prefix,
   };

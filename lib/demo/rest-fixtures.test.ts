@@ -91,3 +91,54 @@ describe("demoRestResponse — shape and scale", () => {
     expect(res.totals.spend).toBeGreaterThan(0);
   });
 });
+
+describe("demoRestResponse — breakdown reconciliation", () => {
+  // Rounding each team's share of a total independently (Math.round per
+  // share) can miss the total by a cent: 0.52/0.31/0.17 of a total whose
+  // cents don't split evenly rounds to parts that sum to one cent more (or
+  // less) than the total itself. That only happens on SOME totals — measured
+  // at ~27% of rolling 30-day windows during review — so a single window
+  // would pass by coincidence on a lucky day and ship the bug. Sweep many
+  // distinct windows (shifting the whole 30-day range back one day at a
+  // time, which changes every underlying daily spend and therefore the
+  // fractional remainders) so a reintroduced independent-rounding bug cannot
+  // hide behind a lucky total. Comparing in integer cents (not toBeCloseTo)
+  // makes this an exact reconciliation, not an approximate one.
+  const WINDOWS = 90;
+
+  it("byTag spend sums exactly to totals.spend, across many windows", () => {
+    for (let offset = 0; offset < WINDOWS; offset++) {
+      const res = activity(daysAgo(29 + offset), daysAgo(offset), "team_id_");
+      const summedCents = res.byTag.reduce((s, r) => s + Math.round(r.spend * 100), 0);
+      expect(summedCents, `offset ${offset}: total ${res.totals.spend}`).toBe(
+        Math.round(res.totals.spend * 100),
+      );
+    }
+  });
+
+  it("byTagByDay spend sums exactly to each day's own spend, across many windows", () => {
+    for (let offset = 0; offset < WINDOWS; offset++) {
+      const start = daysAgo(29 + offset);
+      const end = daysAgo(offset);
+      const res = activity(start, end, "team_id_");
+      for (const day of res.daily) {
+        const summedCents = res.byTagByDay
+          .filter((r) => r.date === day.date)
+          .reduce((s, r) => s + Math.round(r.spend * 100), 0);
+        expect(summedCents, `offset ${offset} date ${day.date}`).toBe(
+          Math.round(day.spend * 100),
+        );
+      }
+    }
+  });
+
+  it("byModel spend sums exactly to totals.spend, across many windows", () => {
+    for (let offset = 0; offset < WINDOWS; offset++) {
+      const res = activity(daysAgo(29 + offset), daysAgo(offset));
+      const summedCents = res.byModel.reduce((s, r) => s + Math.round(r.spend * 100), 0);
+      expect(summedCents, `offset ${offset}: total ${res.totals.spend}`).toBe(
+        Math.round(res.totals.spend * 100),
+      );
+    }
+  });
+});
