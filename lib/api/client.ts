@@ -64,12 +64,13 @@ export const request = async (path: string, method: string, body?: object) => {
     // thrown error would put a failure state on screen for something a visitor
     // was never meant to notice.
     //
-    // /analytics and /budgets are the two demo screens driven by REST rather
-    // than GraphQL, so they need a fixture where the others need silence.
-    // demoRestResponse answers those two paths
-    // (/admin/litellm/tag-activity, /admin/budgets/settings) and returns
-    // null for everything else, which is exactly the behaviour described
-    // above.
+    // Two calls are not optional enrichments, so they need a fixture where
+    // the others need silence. /analytics is driven by REST outright
+    // (/admin/litellm/tag-activity), and /budgets -- GraphQL for its table
+    // and at-risk list -- reads /admin/budgets/settings for its header chip,
+    // whose load-error branch would otherwise greet chapter 11 with a retry
+    // link. demoRestResponse answers exactly those two paths and returns
+    // null for everything else, which is the behaviour described above.
     if (isDemoMode()) return demoRestResponse(path, method);
 
     const uris = await getUris();
