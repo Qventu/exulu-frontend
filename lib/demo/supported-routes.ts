@@ -41,8 +41,8 @@ export const DEMO_SUPPORTED_ROUTES = [
   // the "not available in this demo" notice and lose their `?tour=`
   // position on the tour's second chapter.
   "/explorer",
-  // Chapter 11 ("kosten") spends both its steps here: spend attribution and
-  // budget controls.
+  // Chapter 11 ("kosten") spends all three of its steps here: one on
+  // /analytics for spend attribution, two on /budgets for the controls.
   "/analytics",
   "/budgets",
 ] as const;
