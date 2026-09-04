@@ -82,14 +82,53 @@ DEMO_PROMPTS = {
         "a neat array of circuit boards, terminal strips and wiring ducts. "
         "Cutaway engineering view."
     ),
-    # The structure visual: the seven chapters as a hoistway, so the shape of
+    # Chapter 1. The problem, before any product: volume without order.
+    "daten-pile": (
+        "A large disordered heap of overlapping paper documents, folders, "
+        "technical drawings and envelopes, tumbling and scattered, filling the "
+        "lower half of the frame. No container, no shelf, no order — the pile "
+        "spills past the edges of the frame."
+    ),
+    # Chapter 2. The same volume, resolved into order. Deliberately echoes the
+    # composition of daten-pile so the two read as before and after.
+    "struktur": (
+        "Seven upright labelled archive boxes in a neat evenly spaced row on a "
+        "single shelf, front elevation, each box closed and identical in size, "
+        "with a document standing slightly proud of the leftmost box."
+    ),
+    # Chapter 3. The part no product screen can show.
+    "aufnahme-page": (
+        "A single document page shown three times in a left-to-right "
+        "progression: first as a dense technical drawing, then with its regions "
+        "outlined into blocks, then as a stack of small uniform rectangles. "
+        "Thin connecting arrows between the three stages."
+    ),
+    # Chapter 4. Two readers, one document, different access.
+    "zugriff": (
+        "One document at the centre with two paths leading away from it to "
+        "left and right. The left path is open and continues to a simple key "
+        "shape; the right path is interrupted by a closed barrier. Symmetrical "
+        "composition, no faces, no figures."
+    ),
+    # The structure visual: the chapters as a hoistway, so the shape of
     # the tour reads as a machine rather than a slide deck.
     # LANDSCAPE BY DESIGN. The first version was a hoistway in cross-section:
     # a good drawing, but a tall subject in a wide frame, and even inside the
     # wide 704px panel (.demo-step-wide, 44rem) it reduced to an unreadable
-    # sliver. Seven landing doors in a row says the same thing — seven
-    # discrete stages, unmistakably an elevator — in the shape the frame
-    # actually is.
+    # sliver. Landing doors in a row say the same thing — discrete stages,
+    # unmistakably an elevator — in the shape the frame actually is.
+    #
+    # DOOR COUNT TRACKS CHAPTERS.length (lib/demo/chapters/index.ts) — count
+    # the real array entries, not the reserved-slot comment for the not-yet-
+    # written "Was es kostet" chapter. Whoever changes the chapter list should
+    # revisit this prompt too.
+    #
+    # NOT RECONCILED as of Task 7 (2026-09-04): CHAPTERS.length is 11 real
+    # entries, past the ~9-door practical limit for a single legible row (see
+    # task-7-report.md). The prompt below is left at the stale count of seven
+    # rather than guessed at eleven, which would either miscount or clutter.
+    # Left for a design decision: redraw as a row of a different count,
+    # switch composition entirely, or accept the mismatch.
     "structure": (
         "Seven identical elevator landing doors in a horizontal row, front "
         "elevation, evenly spaced across the full width of the frame. Each "
