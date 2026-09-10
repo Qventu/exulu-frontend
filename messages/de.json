@@ -601,6 +601,10 @@
               "label": "Angeheftete Projektelemente durchsuchen",
               "hint": "Gehört ein Chat zu einem Projekt, durchsucht der Assistent automatisch die im Projekt angehefteten Elemente."
             },
+            "showSources": {
+              "label": "Quellen für externe Nutzer anzeigen",
+              "hint": "Wenn deaktiviert, werden Elementnamen, IDs und andere Quellenverweise für externe Nutzer und anonyme Gäste ausgeblendet. Interne Nutzer sehen Quellen weiterhin."
+            },
             "instructionsTitle": "Zusätzliche Anweisungen (optional)",
             "instructionsPlaceholder": "Freitextanweisungen für die Abruf-Pipeline.",
             "advancedTitle": "Erweiterte Feinabstimmung",
