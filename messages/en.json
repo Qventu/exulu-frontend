@@ -601,6 +601,10 @@
               "label": "Search attached project items",
               "hint": "When a chat belongs to a project, the assistant automatically searches the items pinned to that project."
             },
+            "showSources": {
+              "label": "Show sources to external users",
+              "hint": "When off, item names, IDs, and other source references are hidden from external users and anonymous guests. Internal users still see sources."
+            },
             "instructionsTitle": "Extra instructions (optional)",
             "instructionsPlaceholder": "Free-text guidance for the retrieval pipeline.",
             "advancedTitle": "Advanced tuning",
