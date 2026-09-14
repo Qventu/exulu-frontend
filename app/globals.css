@@ -477,11 +477,42 @@
  * attribute is there — a portalled node is a sibling of the tour's flex
  * row, not a descendant, so a custom property set on the row would never
  * cascade to it.
+ *
+ * [data-slot="sheet-overlay"] covers the wizard's own modal backdrop
+ * (components/ui/sheet.tsx) — a second node Radix portals to <body>
+ * alongside the [role="dialog"] content. Without it the backdrop still
+ * spanned the full viewport and sat above the panel in stacking order
+ * (the panel is a plain flow element; the backdrop is fixed + z-50),
+ * which dimmed the panel and, being on top, was the element the browser
+ * hit-tested first over that area. Inset it exactly like the dialog
+ * rather than disabling its pointer-events: the panel sits outside what
+ * the dialog is modal over, so it should not read as dimmed either.
+ * [role="dialog"] has no equivalent "add a data attribute" problem —
+ * Radix already puts role="dialog" on the content for us.
  */
 body[data-demo-tour="active"] [data-radix-popper-content-wrapper],
-body[data-demo-tour="active"] [role="dialog"] {
+body[data-demo-tour="active"] [role="dialog"],
+body[data-demo-tour="active"] [data-slot="sheet-overlay"] {
   max-width: calc(100vw - var(--tour-panel-w, 0px));
   margin-right: var(--tour-panel-w, 0px);
+}
+
+/* The inset above fixes what the eye and the mouse both hit-test as
+ * "on top", but a modal Radix Dialog also sets pointer-events: none
+ * directly on <body> for as long as it's open — its actual modality
+ * mechanism, entirely separate from the backdrop's box, and normal for
+ * any other dialog in this product (it is exactly how a modal keeps the
+ * rest of the page inert). The docked panel is a plain child of <body>,
+ * not of the dialog's portal, so it inherited that lock and went dead to
+ * clicks even once nothing was drawn on top of it — confirmed with a real
+ * Playwright .click() timing out with "<html> intercepts pointer events"
+ * after the inset above already measured no visual overlap. Handing the
+ * panel back its own pointer-events, rather than touching body's, keeps
+ * the wizard modal over the product content it should be modal over —
+ * only the panel, which was never part of that content, opts back out.
+ */
+body[data-demo-tour="active"] [data-demo-id="tour-panel"] {
+  pointer-events: auto;
 }
 
 /* Subtle, token-driven scrollbars for shell/app surfaces (navigation.md §2).
