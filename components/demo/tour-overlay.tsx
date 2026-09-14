@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 
+import { ChatQuestionIntoView } from "./chat-question-into-view";
 import { TourBubble } from "./tour-bubble";
 import { TourProvider } from "./tour-provider";
 import { TourShepherd } from "./tour-shepherd";
@@ -31,6 +32,7 @@ export function TourOverlay() {
         <TourShepherd />
         <TourStage />
         <TourBubble />
+        <ChatQuestionIntoView />
       </TourProvider>
     </Suspense>
   );
