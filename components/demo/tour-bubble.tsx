@@ -67,6 +67,14 @@ export function TourBubble() {
             n instanceof Element &&
             !el.contains(n) &&
             !n.closest(".shepherd-element") &&
+            // Nothing inside an open modal counts. The agent editor's wizard
+            // is a Radix dialog: it fills the right side with controls, so
+            // every corner reads as a hit and the bubble walked itself to the
+            // 240px cap (measured: translateY(-160px) on ?wizard=sources)
+            // WITHOUT escaping anything — it just moved further up the same
+            // panel. A modal is also transient and closes on the next tour
+            // navigation, so there is nothing here worth dodging.
+            !n.closest("[role='dialog']") &&
             (n.matches(INTERACTIVE) ||
               (n.closest?.(INTERACTIVE) !== null &&
                 !el.contains(n.closest(INTERACTIVE)!))),
@@ -95,7 +103,16 @@ export function TourBubble() {
     // Above Shepherd's own layers, which are fixed in its stylesheet: the
     // popover sits at 9999 and the modal overlay at 9997. The menu has to
     // clear both or it is buried by the overlay it is meant to escape.
-    <div ref={rootRef} style={{ transform: lift ? `translateY(-${lift}px)` : undefined }} className="fixed bottom-6 right-6 z-[10000] w-72">
+    //
+    // pointer-events-auto is NOT redundant with the z-index. While a Radix
+    // modal is open — the agent editor's wizard, chapter 7 — Radix sets
+    // `pointer-events: none` on <body>, which this inherits. The bubble then
+    // renders on top of everything and silently swallows every click: a real
+    // click on it timed out on ?wizard=sources while the identical click
+    // worked on the same page with the wizard closed. z-index cannot fix
+    // that, because the element was never the problem — the inherited
+    // property was.
+    <div ref={rootRef} style={{ transform: lift ? `translateY(-${lift}px)` : undefined }} className="pointer-events-auto fixed bottom-6 right-6 z-[10000] w-72">
       {open && (
         <ul className="mb-2 overflow-hidden rounded-lg border bg-popover shadow-lg">
           {chapters.map((chapter, index) => {
