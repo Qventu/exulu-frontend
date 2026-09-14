@@ -501,17 +501,17 @@ body[data-demo-tour="active"] {
   }
 }
 
-/* Radix portals dialogs (agent-editor wizard) and popper content (menus,
- * popovers, tooltips) to <body>, so they escape the tour panel's flex row
- * (components/demo/tour-panel.tsx) and would otherwise cover it edge to
- * edge — chapter 7's wizard steps are the concrete case this was written
- * for. Scoped to body[data-demo-tour="active"], set only in demo mode
- * (app/(application)/layout.tsx): no other deployment of this product runs
- * a tour, and none should inherit a rule written for one. --tour-panel-w is
- * defined above, in this same file, for the same reason — a portalled node
- * is a sibling of the tour's flex row, not a descendant, so a custom
- * property set on the row (or computed only server-side) would never track
- * the panel's actual, responsive, sometimes-expanded width.
+/* Radix portals the agent-editor wizard's dialog to <body>, so it escapes
+ * the tour panel's flex row (components/demo/tour-panel.tsx) and would
+ * otherwise cover it edge to edge — chapter 7's wizard steps are the
+ * concrete case this was written for. Scoped to body[data-demo-tour="active"],
+ * set only in demo mode (app/(application)/layout.tsx): no other deployment
+ * of this product runs a tour, and none should inherit a rule written for
+ * one. --tour-panel-w is defined above, in this same file, for the same
+ * reason — a portalled node is a sibling of the tour's flex row, not a
+ * descendant, so a custom property set on the row (or computed only
+ * server-side) would never track the panel's actual, responsive,
+ * sometimes-expanded width.
  *
  * [data-slot="sheet-overlay"] covers the wizard's own modal backdrop
  * (components/ui/sheet.tsx) — a second node Radix portals to <body>
@@ -524,8 +524,22 @@ body[data-demo-tour="active"] {
  * the dialog is modal over, so it should not read as dimmed either.
  * [role="dialog"] has no equivalent "add a data attribute" problem —
  * Radix already puts role="dialog" on the content for us.
+ *
+ * [data-radix-popper-content-wrapper] (menus, popovers, Select) is
+ * deliberately NOT in this rule, checked twice rather than assumed once
+ * both properties were confirmed no-ops for it: Floating-UI positions it
+ * via `left: 0` plus a `transform: translate(x, y)` it computes itself
+ * from the anchor and its own viewport-collision logic, so margin-right
+ * never moved it (measured: computed margin-right 380px, rendered rect
+ * unchanged). max-width doesn't bite either — Radix sets `min-width:
+ * max-content` (or width tied to --radix-popper-anchor-width) inline on
+ * the same element, and per the CSS spec min-width always wins a conflict
+ * with max-width, so in exactly the cases where our cap would matter
+ * (content wider than the cap) min-width overrides it (measured at an
+ * 800px viewport: max-width computed 420px, actual rendered width
+ * 770px — the cap did nothing). A rule that reads as if it insets
+ * Selects/menus but doesn't was worse than no rule.
  */
-body[data-demo-tour="active"] [data-radix-popper-content-wrapper],
 body[data-demo-tour="active"] [role="dialog"],
 body[data-demo-tour="active"] [data-slot="sheet-overlay"] {
   max-width: calc(100vw - var(--tour-panel-w, 0px));
