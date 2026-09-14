@@ -45,6 +45,12 @@ export const DEMO_SUPPORTED_ROUTES = [
   // /analytics for spend attribution, two on /budgets for the controls.
   "/analytics",
   "/budgets",
+  // The four former stage steps (daten-pile, daten-problem, aufnahme-page,
+  // zugriff-consequence) now live under /demo/szene/[id] — see
+  // lib/demo/scenes.ts. The boundary-based matcher below already admits the
+  // dynamic [id] segment as a descendant of this prefix, the same way
+  // "/data" admits "/data/[ctx]/items/[itemId]" above.
+  "/demo/szene",
 ] as const;
 
 /**
