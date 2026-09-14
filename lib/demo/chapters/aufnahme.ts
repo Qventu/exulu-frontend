@@ -1,5 +1,6 @@
 import type { DemoChapter } from "../tour";
 import { SOFTWARE_DOC_CONTEXT_ID } from "../fixtures/software-docs";
+import { sceneRoute } from "../scenes";
 
 const CTX = `/data/${SOFTWARE_DOC_CONTEXT_ID}`;
 
@@ -56,32 +57,14 @@ export const aufnahmeChapter: DemoChapter = {
       ],
     },
     {
+      // Routes to a scene (lib/demo/scenes.ts) rather than CTX: its copy is
+      // the conclusion the previous two steps build toward, with nothing on
+      // screen to point at.
       id: "aufnahme-page",
-      route: CTX,
+      route: sceneRoute("aufnahme-page"),
       anchor: null,
-      kind: "stage",
-      size: "wide",
       title: "Was mit einer Seite geschieht",
-      content: [
-        {
-          kind: "figure",
-          src: "/demo/aufnahme-page.webp",
-          alt: "Eine PDF-Seite wird analysiert",
-        },
-        {
-          kind: "sequence",
-          steps: [
-            "Seite als Bild analysieren — Tabellen, Zeichnungen, Beschriftungen",
-            "In strukturierten Text übersetzen, Layout erhalten",
-            "In Passagen zerlegen, die für sich verständlich bleiben",
-            "Fachbegriffe, Typen und Fehlercodes herauslösen",
-          ],
-        },
-        {
-          kind: "paragraph",
-          text: "Ein Schaltplan ist kein Fließtext. Wird er wie einer behandelt, findet die Suche ihn nie — deshalb wird jede Seite angesehen, nicht nur ausgelesen.",
-        },
-      ],
+      content: [],
     },
     {
       id: "aufnahme-items",

@@ -10,7 +10,6 @@ export const configChapter: DemoChapter = {
       id: "config-overview",
       route: "/agents/edit/demo-agent-newton",
       anchor: "agent-agentic-retrieval",
-      size: "wide",
       title: "Der ganze Assistent ist Konfiguration",
       content: [
         { kind: "figure", src: "/demo/ch3-config.webp", alt: "Der Assistent als Konfiguration" },
@@ -26,7 +25,6 @@ export const configChapter: DemoChapter = {
       id: "config-sources",
       route: "/agents/edit/demo-agent-newton?wizard=sources",
       anchor: "agent-wizard-sources",
-      placement: "left",
       title: "Sieben Wissensbasen, drei Lesarten",
       content: [
         {
@@ -39,7 +37,6 @@ export const configChapter: DemoChapter = {
       id: "config-routing",
       route: "/agents/edit/demo-agent-newton?wizard=routing",
       anchor: "agent-wizard-routing",
-      placement: "left",
       title: "Routing, in ganzen Sätzen",
       content: [
         {
@@ -52,7 +49,6 @@ export const configChapter: DemoChapter = {
       id: "config-vocabulary",
       route: "/agents/edit/demo-agent-newton?wizard=vocabulary",
       anchor: "agent-wizard-vocabulary",
-      placement: "left",
       title: "Er lernt Ihre Sprache",
       content: [
         {
@@ -65,7 +61,6 @@ export const configChapter: DemoChapter = {
       id: "config-behavior",
       route: "/agents/edit/demo-agent-newton?wizard=behavior",
       anchor: "agent-wizard-behavior",
-      placement: "left",
       title: "Und wie gründlich er sucht",
       content: [
         {

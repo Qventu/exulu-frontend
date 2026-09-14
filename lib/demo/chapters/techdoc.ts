@@ -12,7 +12,6 @@ export const techdocChapter: DemoChapter = {
       id: "techdoc-ask",
       route: TECHDOC_CHAT,
       anchor: "chat-composer",
-      noDim: true,
       title: "Eine Frage mit einer präzisen Antwort",
       content: [
         {

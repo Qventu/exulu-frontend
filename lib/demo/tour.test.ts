@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { contentText } from "./content";
 import { getWorld } from "./fixtures";
+import { DEMO_SCENES } from "./scenes";
 import {
   CHAPTERS,
   DEMO_BOOKING_URL,
@@ -12,6 +13,15 @@ import {
   startOfChapter,
   startPosition,
 } from "./tour";
+
+// A scene step's own copy (including its figure) lives in lib/demo/scenes.ts,
+// not on the step — see chapters/index.test.ts's "gives every step copy" for
+// why. This reads from wherever the content actually is, so checks below
+// still see a scene's words and figure.
+const contentOf = (step: DemoStep) =>
+  step.route.startsWith("/demo/szene/")
+    ? (DEMO_SCENES[step.route.split("/").pop()!]?.content ?? [])
+    : step.content;
 
 const FIXTURE: DemoChapter[] = [
   {
@@ -136,7 +146,7 @@ describe("CHAPTERS", () => {
     ]);
   });
 
-  const hasFigure = (step: DemoStep) => step.content.some((b) => b.kind === "figure");
+  const hasFigure = (step: DemoStep) => contentOf(step).some((b) => b.kind === "figure");
 
   it("illustrates chapter openings and nothing else", () => {
     // At most one schematic per chapter — unconditional, regardless of what
@@ -144,21 +154,21 @@ describe("CHAPTERS", () => {
     // product screen the tour is pointing at, which is the thing the visitor
     // is meant to be looking at.
     //
-    // WHERE that one figure may sit depends on the step's kind, because a
-    // popover and a stage have different geometry:
+    // WHERE that one figure may sit depends on the step's geometry, because a
+    // popover and a scene page have different geometry:
     //
-    // - POPOVER (kind unset or "popover") sits OVER a product screen. A
+    // - POPOVER (route is a product route) sits OVER a product screen. A
     //   figure on anything but the chapter's first step competes with the
     //   screen the tour is pointing at — the same "images compete" argument
     //   above, applied to a single step — so it must be on chapter.steps[0].
     //
-    // - STAGE (kind "stage") REPLACES the product screen full-bleed. There is
-    //   no product screen behind it to compete with, so the popover's
-    //   opening-step constraint does not apply — a stage's figure may sit
-    //   anywhere in the chapter. (daten.ts's stage figure happens to sit at
-    //   step 0 too, but that is incidental, not required by this rule: it is
-    //   the only stage this rule ever met before chapter 3 put one at
-    //   index 2.)
+    // - SCENE (route under /demo/szene/) REPLACES the product screen
+    //   full-bleed. There is no product screen behind it to compete with, so
+    //   the popover's opening-step constraint does not apply — a scene's
+    //   figure may sit anywhere in the chapter. (daten.ts's scene figure
+    //   happens to sit at step 0 too, but that is incidental, not required by
+    //   this rule: it is the only scene this rule ever met before chapter 3
+    //   put one at index 2.)
     for (const chapter of CHAPTERS) {
       const illustrated = chapter.steps.filter(hasFigure);
       expect(
@@ -167,10 +177,11 @@ describe("CHAPTERS", () => {
       ).toBeLessThanOrEqual(1);
       if (illustrated.length === 1) {
         const [step] = illustrated;
-        if (step.kind !== "stage") {
+        const isScene = step.route.startsWith("/demo/szene/");
+        if (!isScene) {
           expect(
             hasFigure(chapter.steps[0]),
-            `${chapter.id}'s schematic is on a popover (kind "${step.kind ?? "popover"}"), so the popover rule applies: it belongs on the chapter's opening step`,
+            `${chapter.id}'s schematic is on a popover step, so the popover rule applies: it belongs on the chapter's opening step`,
           ).toBe(true);
         }
       }
@@ -198,8 +209,10 @@ describe("the reading load", () => {
   // screen readers, not a sighted visitor's eyes, and folding it into this
   // budget would make the cap track the schematic's accessibility label
   // rather than the copy the visitor actually reads.
+  // Reads from lib/demo/scenes.ts for a scene step, same reasoning as
+  // contentOf above: the words moved there, the cap should still see them.
   const proseOf = (step: DemoStep) =>
-    contentText(step.content.filter((b) => b.kind !== "figure"));
+    contentText(contentOf(step).filter((b) => b.kind !== "figure"));
 
   it("keeps every step under a paragraph", () => {
     // The tour was reported as overwhelming, and the measurement agreed: 29
@@ -214,22 +227,23 @@ describe("the reading load", () => {
     //
     // The cap depends on the step's geometry, not a single magic number:
     //
-    // - POPOVER (default, kind unset or "popover"): 45 words, roughly three
-    //   lines at a 480px popover width (.shepherd-element's max-width — see
+    // - POPOVER (route is a product route): 45 words, roughly three lines at
+    //   a 480px popover width (.shepherd-element's max-width — see
     //   shepherd-theme.css). This is the geometry the original 45 came from.
     //
-    // - STAGE (kind "stage"): 90 words. A stage bypasses Shepherd entirely —
-    //   full-bleed inside a max-w-3xl (768px) wrapper with its own scroll
-    //   affordance, and nothing else on screen competing for attention. That
-    //   is roughly double the popover's width and reading room, so roughly
-    //   double the budget. It is still a real ceiling, for the same reason
-    //   the popover one is: copy grows back if nothing stops it.
+    // - SCENE (route under /demo/szene/): 90 words. A scene page replaces the
+    //   product screen full-bleed — inside a max-w-3xl (768px) wrapper with
+    //   its own scroll affordance, and nothing else on screen competing for
+    //   attention. That is roughly double the popover's width and reading
+    //   room, so roughly double the budget. It is still a real ceiling, for
+    //   the same reason the popover one is: copy grows back if nothing stops
+    //   it.
     for (const chapter of CHAPTERS) {
       for (const step of chapter.steps) {
         const w = words(proseOf(step));
-        const isStage = step.kind === "stage";
-        const cap = isStage ? 90 : 45;
-        const capName = isStage ? "stage" : "popover";
+        const isScene = step.route.startsWith("/demo/szene/");
+        const cap = isScene ? 90 : 45;
+        const capName = isScene ? "scene" : "popover";
         expect(
           w,
           `${step.id} is ${w} words — over the ${capName} cap of ${cap}; trim it or split the step`,

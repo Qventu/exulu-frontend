@@ -12,7 +12,6 @@ export const meetingsChapter: DemoChapter = {
       id: "meetings-list",
       route: "/transcriptions",
       anchor: "transcriptions",
-      size: "wide",
       title: "Siebzehn Stunden, die niemand nachhören wird",
       content: [
         { kind: "figure", src: "/demo/ch7-meetings.webp", alt: "Von der Aufzeichnung zur Arbeitsanweisung" },

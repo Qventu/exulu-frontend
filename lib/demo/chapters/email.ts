@@ -12,7 +12,6 @@ export const emailChapter: DemoChapter = {
       id: "email-routine",
       route: "/workflows",
       anchor: "routine-runs",
-      size: "wide",
       title: "Ein zweiter Einsatz, dasselbe Produkt",
       content: [
         { kind: "figure", src: "/demo/ch6-email.webp", alt: "Die E-Mail-Routine" },

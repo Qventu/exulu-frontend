@@ -9,7 +9,6 @@ export const memoryChapter: DemoChapter = {
       id: "memory-miss",
       route: MEMORY_CHAT,
       anchor: "chat-messages",
-      size: "wide",
       title: "Wenn er etwas nicht weiß, sagt er das",
       content: [
         { kind: "figure", src: "/demo/ch4-memory.webp", alt: "Aus einer Korrektur wird ein Wissenseintrag" },
@@ -23,7 +22,6 @@ export const memoryChapter: DemoChapter = {
       id: "memory-correct",
       route: MEMORY_CHAT,
       anchor: "chat-composer",
-      noDim: true,
       title: "Der Techniker korrigiert",
       content: [
         {

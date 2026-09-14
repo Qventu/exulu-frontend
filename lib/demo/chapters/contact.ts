@@ -12,7 +12,6 @@ export const contactChapter: DemoChapter = {
       id: "contact-references",
       route: TECHDOC_CHAT,
       anchor: null,
-      size: "wide",
       title: "Wer damit arbeitet",
       content: [
         { kind: "figure", src: "/demo/structure.webp", alt: "Anlagen unserer Referenzkunden" },

@@ -10,7 +10,6 @@ export const evalsChapter: DemoChapter = {
       id: "evals-suites",
       route: "/evals",
       anchor: "evals-suites",
-      size: "wide",
       title: "Der Teil, den niemand vorführt",
       content: [
         { kind: "figure", src: "/demo/ch5-evals.webp", alt: "Testreihen für die Antwortqualität" },

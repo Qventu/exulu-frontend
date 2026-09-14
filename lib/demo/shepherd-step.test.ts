@@ -81,11 +81,9 @@ describe("anchored steps point Shepherd at the right element", () => {
       "bottom",
     );
 
-    const placed = allSteps.find((s) => s.placement === "left");
-    expect(placed, "no left-placed step — config wizard steps should be").toBeTruthy();
-    expect(shepherdStepFor(placed!, handlers, renderContent).attachTo?.on).toBe(
-      "left",
-    );
+    // Two cases removed in Task 2: no step carries `placement` any more, and
+    // daten-pile's copy moved to lib/demo/scenes.ts. This whole file goes in
+    // Task 7 with the rest of Shepherd.
   });
 });
 
@@ -176,12 +174,9 @@ describe("every step in the tour translates", () => {
         renderContent,
       );
       expect(options.title, `${step.id} has no title`).toBeTruthy();
-      // options.text is now a thunk (() => renderContent(step)), unconditionally
-      // set regardless of step.content — a function reference is always
-      // truthy, so asserting on it would never catch a step with no body.
-      // Assert on the source data instead, which is what this line always
-      // meant to check.
-      expect(step.content.length, `${step.id} has no body`).toBeGreaterThan(0);
+      // Two cases removed in Task 2: no step carries `placement` any more, and
+      // daten-pile's copy moved to lib/demo/scenes.ts. This whole file goes in
+      // Task 7 with the rest of Shepherd.
       // "At least one button" was the old bar, and the last step cleared it
       // with Back alone — a button that only goes backwards. What matters is
       // that every step offers a way ONWARD, so Back does not count here.

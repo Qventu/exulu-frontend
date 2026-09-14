@@ -24,7 +24,6 @@ export const strukturChapter: DemoChapter = {
       // it. Putting it on struktur-full would compete with the very thing
       // the chapter spends the next two steps building up to: the filled
       // list itself. Do not "helpfully" move it there.
-      size: "wide",
       title: "Wissen braucht einen Ort",
       content: [
         {

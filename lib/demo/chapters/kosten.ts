@@ -79,7 +79,6 @@ export const kostenChapter: DemoChapter = {
       id: "kosten-verbrauch",
       route: "/analytics?dimension=teams",
       anchor: null,
-      size: "wide",
       title: "Jede Anfrage hat einen Preis — und einen Absender",
       content: [
         {

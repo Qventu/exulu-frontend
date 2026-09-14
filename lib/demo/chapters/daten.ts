@@ -1,13 +1,13 @@
 import type { DemoChapter } from "../tour";
-import { TECHDOC_CHAT } from "../routes";
+import { sceneRoute } from "../scenes";
 
 /**
  * Chapter 1 — the problem, before any product.
  *
- * A stage rather than a popover: there is nothing on screen to point at yet,
- * and a cinematic opening is not a tooltip over a dimmed application. The
- * route is the chat only so that the app behind the overlay is a coherent
- * screen if the stage animates out before the next navigation lands.
+ * Both steps route to a scene (lib/demo/scenes.ts) rather than a product
+ * screen: there is nothing on screen to point at yet, and a cinematic opening
+ * is not a tooltip over a dimmed application. Their copy lives in
+ * lib/demo/scenes.ts now — see that file's docblock for why.
  *
  * This chapter replaces the old `intro`, which opened on a chat window and
  * asked the visitor to be impressed by a citation before they had any reason
@@ -19,61 +19,17 @@ export const datenChapter: DemoChapter = {
   steps: [
     {
       id: "daten-pile",
-      route: TECHDOC_CHAT,
+      route: sceneRoute("daten-pile"),
       anchor: null,
-      kind: "stage",
-      // Inert here: shepherd-step.ts is what reads `size` to pick
-      // .demo-step-wide's max-width, and a stage step never reaches
-      // shepherd-step.ts (tour-shepherd.tsx filters stage steps out before
-      // building Shepherd steps at all — TourStage renders them directly,
-      // with its own fixed max-w-3xl). Kept anyway for consistency with the
-      // popover steps that DO read it, so a step's width intent is visible
-      // at a glance regardless of its kind.
-      size: "wide",
       title: "Das Wissen ist längst da",
-      content: [
-        {
-          kind: "figure",
-          src: "/demo/daten-pile.webp",
-          alt: "Unstrukturierte Dokumente, E-Mails und Zeichnungen",
-        },
-        {
-          kind: "paragraph",
-          text: "Handbücher, Datenblätter, Schaltpläne, E-Mails, Support-Tickets, Besprechungsaufzeichnungen. In jedem Unternehmen liegt das Wissen bereits vor — verteilt über Laufwerke, Postfächer und Köpfe.",
-        },
-        {
-          kind: "stat",
-          value: "10.000+",
-          label: "Dokumente in einem typischen Aufzugsunternehmen",
-        },
-      ],
+      content: [],
     },
     {
       id: "daten-problem",
-      route: TECHDOC_CHAT,
+      route: sceneRoute("daten-problem"),
       anchor: null,
-      kind: "stage",
-      size: "wide",
       title: "Nur nicht in einer Form, mit der eine KI arbeiten kann",
-      content: [
-        {
-          kind: "bullets",
-          items: [
-            "Niemand weiß, welche Fassung die gültige ist",
-            "Dieselbe Frage wird jedes Jahr neu beantwortet",
-            "Wer die Antwort kennt, ist gerade im Urlaub",
-          ],
-        },
-        {
-          kind: "paragraph",
-          text: "Ein Sprachmodell ohne Zugriff auf diese Unterlagen erfindet plausible Antworten. Ein Sprachmodell mit ungeordnetem Zugriff findet die falsche Fassung. Beides ist schlimmer als keine Antwort.",
-        },
-        {
-          kind: "callout",
-          tone: "fact",
-          text: "Die nächsten Kapitel zeigen, was dazwischen liegt — und dass es Konfiguration ist, kein Versprechen.",
-        },
-      ],
+      content: [],
     },
   ],
 };

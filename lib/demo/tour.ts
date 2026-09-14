@@ -33,13 +33,13 @@ export interface DemoStep {
    */
   content: ContentBlock[];
   /**
-   * "stage" renders full-bleed and bypasses Shepherd entirely — for beats
-   * whose subject is the whole screen, where a popover over a dimmed app would
-   * be fighting the tool. Default "popover".
+   * The one sentence always visible in the panel; `content` sits behind "Mehr".
+   *
+   * Optional ONLY because this German is written by Daniel and OPEN's
+   * marketing lead, never here. A step without one renders its title alone.
+   * chapters/index.test.ts reports which are still missing.
    */
-  kind?: "popover" | "stage";
-  /** Panel width. "wide" for steps carrying a sequence or a figure. */
-  size?: "default" | "wide";
+  lead?: string;
   /**
    * Advance to the next step automatically after this many milliseconds.
    *
@@ -63,6 +63,29 @@ export interface DemoStep {
    */
   cta?: { label: string; href: string };
   /**
+   * How the anchor is scrolled into view. Default "nearest" (move the minimum,
+   * never re-centre something already visible — centring the composer once
+   * scrolled the whole page down). "start" for anchors that HEAD a long list:
+   * nearest leaves the header at the bottom edge with the list below the fold,
+   * and the step is about the list.
+   */
+  scrollBlock?: "start" | "nearest";
+  // DEPRECATED — removed from every step's data in Task 2, and removed from
+  // this type in Task 7, which is when shepherd-step.ts, tour-shepherd.tsx and
+  // tour-stage.tsx (the only remaining readers) are deleted. Deleting the
+  // members before their readers would not compile; deleting the readers
+  // before the panel exists would leave the demo with no tour at all. So the
+  // data goes first and the type follows. Do not set these on a new step —
+  // chapters/index.test.ts fails if you do.
+  /**
+   * "stage" renders full-bleed and bypasses Shepherd entirely — for beats
+   * whose subject is the whole screen, where a popover over a dimmed app would
+   * be fighting the tool. Default "popover".
+   */
+  kind?: "popover" | "stage";
+  /** Panel width. "wide" for steps carrying a sequence or a figure. */
+  size?: "default" | "wide";
+  /**
    * Turns off the dimming overlay for this step.
    *
    * The overlay exists to point at one element, which is wrong for a step whose
@@ -72,14 +95,6 @@ export interface DemoStep {
    * step said "watch it search and answer" over a dimmed transcript.
    */
   noDim?: boolean;
-  /**
-   * How the anchor is scrolled into view. Default "nearest" (move the minimum,
-   * never re-centre something already visible — centring the composer once
-   * scrolled the whole page down). "start" for anchors that HEAD a long list:
-   * nearest leaves the header at the bottom edge with the list below the fold,
-   * and the step is about the list.
-   */
-  scrollBlock?: "start" | "nearest";
   /**
    * Which side of the anchor the popover prefers. floating-ui flips it when
    * that side does not fit, so this is a preference, not a promise. Default

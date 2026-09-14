@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contentText, isEmptyContent } from "../content";
+import { DEMO_SCENES } from "../scenes";
 import { isDemoSupported } from "../supported-routes";
 import { CHAPTERS } from "./index";
 
@@ -10,7 +11,18 @@ const everyStep = CHAPTERS.flatMap((chapter) =>
 describe("chapter integrity", () => {
   it("gives every step copy", () => {
     for (const { chapter, step } of everyStep) {
-      expect(isEmptyContent(step.content), `${chapter.id}/${step.id} has no copy`).toBe(false);
+      // A scene step's copy lives in lib/demo/scenes.ts and renders full-width
+      // in the content area, so the STEP is legitimately empty. Leaving the
+      // blocks on the step instead would make the panel offer "Mehr" showing
+      // the very content already on screen at full size.
+      const scene = step.route.startsWith("/demo/szene/")
+        ? DEMO_SCENES[step.route.split("/").pop()!]
+        : null;
+      if (scene) {
+        expect(isEmptyContent(scene.content), `${chapter.id}/${step.id} scene has no copy`).toBe(false);
+      } else {
+        expect(isEmptyContent(step.content), `${chapter.id}/${step.id} has no copy`).toBe(false);
+      }
     }
   });
 
@@ -48,12 +60,13 @@ describe("chapter integrity", () => {
     expect(order.indexOf("memory")).toBeGreaterThan(order.indexOf("techdoc"));
   });
 
-  // A stage covers the viewport, so an anchor it might point at is invisible.
-  // Carrying one means the step was authored as a popover and later converted.
-  it("never gives a stage step an anchor", () => {
+  // A scene page has no product screen behind it, so an anchor it might point
+  // at is invisible. Carrying one means the step was authored to spotlight
+  // something that no longer exists on screen.
+  it("never gives a scene step an anchor", () => {
     for (const { chapter, step } of everyStep) {
-      if (step.kind === "stage") {
-        expect(step.anchor, `${chapter.id}/${step.id} is a stage with an anchor`).toBeNull();
+      if (step.route.startsWith("/demo/szene/")) {
+        expect(step.anchor, `${chapter.id}/${step.id} is a scene with an anchor`).toBeNull();
       }
     }
   });
@@ -80,6 +93,38 @@ describe("chapter integrity", () => {
         .not.toMatch(/new ?lift|algi/i);
     }
   });
+
+  // The presentation is one panel now. A step that still carries a Shepherd-era
+  // field is a step that was migrated halfway.
+  it("carries no presentation fields from the popover era", () => {
+    for (const chapter of CHAPTERS) {
+      for (const step of chapter.steps) {
+        const legacy = step as unknown as Record<string, unknown>;
+        for (const field of ["kind", "size", "noDim", "placement", "advanceAfterMs"]) {
+          expect(legacy[field], `${step.id}.${field}`).toBeUndefined();
+        }
+      }
+    }
+  });
+
+  // lead is optional ONLY because its German belongs to the copy owners. This
+  // reports what is still missing rather than failing, so the branch stays
+  // shippable while the sheet comes back.
+  it("reports which steps are still waiting for a Kurzfassung", () => {
+    const missing = CHAPTERS.flatMap((c) => c.steps.filter((s) => !s.lead).map((s) => s.id));
+    if (missing.length) console.log(`steps without a lead (${missing.length}): ${missing.join(", ")}`);
+    expect(Array.isArray(missing)).toBe(true);
+  });
+
+  it("caps any lead that HAS been written at 20 words", () => {
+    for (const chapter of CHAPTERS) {
+      for (const step of chapter.steps) {
+        if (!step.lead) continue;
+        const words = step.lead.trim().split(/\s+/).length;
+        expect(words, `${step.id} lead is ${words} words`).toBeLessThanOrEqual(20);
+      }
+    }
+  });
 });
 
 describe("the narrative arc", () => {
@@ -102,7 +147,7 @@ describe("the narrative arc", () => {
 
   it("opens on the problem, not on the product", () => {
     expect(CHAPTERS[0].id).toBe("daten");
-    expect(CHAPTERS[0].steps[0].kind).toBe("stage");
+    expect(CHAPTERS[0].steps[0].route).toMatch(/^\/demo\/szene\//);
   });
 
   // The old chapter said "Neun Kapitel" over a drawing of seven doors, a
