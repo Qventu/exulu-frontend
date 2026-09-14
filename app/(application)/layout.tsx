@@ -164,13 +164,22 @@ export default async function RootLayout({
                 )}
                 // The agent wizard is a Radix dialog portalled to <body>, so it
                 // escapes the flex row below and would cover the docked tour
-                // panel. --tour-panel-w has to live here (not on the row div)
-                // because the portal is appended as a sibling of the row, not
-                // a descendant of it — a custom property set on the row would
-                // never cascade to it. data-demo-tour scopes app/globals.css's
-                // inset rule to demo mode only; no other deployment has a tour.
+                // panel. data-demo-tour scopes app/globals.css's inset rule to
+                // demo mode only; no other deployment has a tour.
+                //
+                // --tour-panel-w (how much of the right edge the docked panel
+                // actually occupies) is deliberately NOT set here as an inline
+                // style. It depends on the panel's responsive width (0 below
+                // md, since the panel docks at the bottom there instead of the
+                // right — see tour-panel.tsx) and its client-only `expanded`
+                // state (380 vs 560), neither of which this server component
+                // can see. Both live in app/globals.css instead, right next to
+                // the media query and the data-demo-panel-expanded attribute
+                // (set on this same <body> from tour-panel.tsx) that resolve
+                // them, so the two things that determine the value sit next to
+                // each other rather than split across a server render and a
+                // stylesheet.
                 data-demo-tour={demoMode ? "active" : undefined}
-                style={{ ["--tour-panel-w" as string]: demoMode ? "380px" : "0px" } as React.CSSProperties}
             >
                 <ConfigContextProvider config={config}>
                     <LanguageProvider initialLocale={locale} initialMessages={messages}>

@@ -466,6 +466,41 @@
    distorting it to fill a height the aspect ratio does not agree with. */
 .demo-block-figure { display: block; width: 100%; height: auto; max-height: 12rem; object-fit: contain; border-radius: 0.5rem; }
 
+/* --tour-panel-w: how much of the right edge is currently occupied by the
+ * docked tour panel (components/demo/tour-panel.tsx), so portalled dialogs
+ * below can stay clear of it. Defined here with a media query — not as an
+ * inline style from app/(application)/layout.tsx — because the value isn't
+ * a function of demoMode alone: the panel is a flex sibling of <main> only
+ * at md and above (below md the row becomes a column and the panel docks
+ * at the bottom, full width, occupying none of the right edge), and even
+ * at md+ it can be 380px or 560px depending on tour-panel.tsx's client-only
+ * `expanded` state, which a server component can't see. Keeping the
+ * breakpoint and both widths here, next to each other, is what makes this
+ * derivable in one place instead of split across a server render and a
+ * stylesheet.
+ *
+ * KEEP IN SYNC: 380 and 560 below must match tour-panel.tsx's
+ * md:w-[380px]/md:w-[560px] classes, and 768px must match Tailwind's `md`
+ * breakpoint (tailwind.config.js only overrides `2xl`, so `md` is still
+ * the default 768px) — Tailwind's arbitrary values can't read a shared
+ * constant at build time, so this triplication is deliberate, not an
+ * oversight. If you change one of the three, change all three, or a
+ * portalled dialog will overlap the panel again. data-demo-panel-expanded
+ * is set on this same <body> by the effect in tour-panel.tsx.
+ */
+body[data-demo-tour="active"] {
+  /* Below md: the panel docks at the bottom, not the right edge. */
+  --tour-panel-w: 0px;
+}
+@media (min-width: 768px) {
+  body[data-demo-tour="active"] {
+    --tour-panel-w: 380px; /* must match tour-panel.tsx's collapsed md:w-[380px] */
+  }
+  body[data-demo-tour="active"][data-demo-panel-expanded="true"] {
+    --tour-panel-w: 560px; /* must match tour-panel.tsx's expanded md:w-[560px] */
+  }
+}
+
 /* Radix portals dialogs (agent-editor wizard) and popper content (menus,
  * popovers, tooltips) to <body>, so they escape the tour panel's flex row
  * (components/demo/tour-panel.tsx) and would otherwise cover it edge to
@@ -473,10 +508,10 @@
  * for. Scoped to body[data-demo-tour="active"], set only in demo mode
  * (app/(application)/layout.tsx): no other deployment of this product runs
  * a tour, and none should inherit a rule written for one. --tour-panel-w is
- * published on <body> in that same layout, for the same reason the
- * attribute is there — a portalled node is a sibling of the tour's flex
- * row, not a descendant, so a custom property set on the row would never
- * cascade to it.
+ * defined above, in this same file, for the same reason — a portalled node
+ * is a sibling of the tour's flex row, not a descendant, so a custom
+ * property set on the row (or computed only server-side) would never track
+ * the panel's actual, responsive, sometimes-expanded width.
  *
  * [data-slot="sheet-overlay"] covers the wizard's own modal backdrop
  * (components/ui/sheet.tsx) — a second node Radix portals to <body>

@@ -29,6 +29,23 @@ export function TourPanel() {
     setMenuOpen(false);
   }, [position.chapter, position.step]);
 
+  // Mirrors `expanded` onto <body> as a data attribute. app/globals.css's
+  // --tour-panel-w (how much of the right edge portalled dialogs, e.g. the
+  // chapter-7 wizard, must stay clear of) needs to grow from 380px to
+  // 560px whenever this panel is expanded, and this client-only useState
+  // has no way to reach that server-rendered <body> or its stylesheet
+  // without being reflected onto the DOM explicitly like this.
+  //
+  // KEEP IN SYNC: 380/560 appear three times — here (conceptually, via
+  // this attribute), in the md:w-[380px]/md:w-[560px] classes on the
+  // <aside> below, and in app/globals.css's --tour-panel-w rule. Tailwind
+  // arbitrary values can't read a shared constant at build/runtime, so
+  // this duplication is unavoidable — if you change one of the three,
+  // change all three, or a portalled dialog will overlap the panel again.
+  useEffect(() => {
+    document.body.setAttribute("data-demo-panel-expanded", String(expanded));
+  }, [expanded]);
+
   if (!step) return null;
 
   const index = chapters.findIndex((c) => c.id === position.chapter);
@@ -38,6 +55,8 @@ export function TourPanel() {
   return (
     <aside
       data-demo-id="tour-panel"
+      // KEEP IN SYNC with app/globals.css's --tour-panel-w rule (380/560)
+      // and the data-demo-panel-expanded effect above — see its comment.
       className={`flex shrink-0 flex-col border-t bg-card md:border-l md:border-t-0 ${
         expanded ? "md:w-[560px]" : "md:w-[380px]"
       } max-h-[45vh] w-full overflow-y-auto md:max-h-none`}
