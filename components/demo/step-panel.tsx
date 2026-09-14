@@ -80,12 +80,21 @@ function Block({ block }: { block: ContentBlock }) {
 }
 
 /**
- * Dual-mounted: components/demo/tour-stage.tsx renders this inside the normal
- * React tree, but components/demo/step-content-host.tsx also renders it into
- * a `createRoot` on a detached div, outside every provider — no theme
- * context, no next-intl, no Apollo, no `useTour`. Keep this component (and
- * `Block` above) free of anything that reaches for one of those; it has no
- * way to fail loudly if it does, only to render wrong in one of its two homes.
+ * Two mounts, neither sharing the other's full context: the docked panel
+ * (components/demo/tour-panel.tsx) and a scene page
+ * (app/(application)/demo/szene/[id]/page.tsx). Both are normal React-tree
+ * renders now — the third mount, a detached `createRoot` with no providers
+ * at all (components/demo/step-content-host.tsx), existed only to hand
+ * Shepherd's `text` option an HTMLElement, and was deleted with the rest of
+ * Shepherd.
+ *
+ * The two survivors still diverge: TourOverlay (and this panel with it) sits
+ * as a sibling of <main> in app/(application)/layout.tsx, inside
+ * ThemeProvider/LanguageProvider but OUTSIDE Authenticated's ApolloProvider —
+ * while the scene page is the other way around, inside ApolloProvider but
+ * outside TourProvider. Keep this component (and `Block` above) free of
+ * Apollo hooks and `useTour()`: each throws in the mount that lacks it.
+ * Theme and next-intl are safe — both providers wrap both mounts.
  */
 export function StepPanel({ step }: { step: DemoStep }) {
   return (
