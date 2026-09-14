@@ -40,7 +40,7 @@ export function TourPanel() {
       data-demo-id="tour-panel"
       className={`flex shrink-0 flex-col border-t bg-card md:border-l md:border-t-0 ${
         expanded ? "md:w-[560px]" : "md:w-[380px]"
-      } max-h-[45vh] w-full overflow-y-auto md:max-h-none md:w-auto`}
+      } max-h-[45vh] w-full overflow-y-auto md:max-h-none`}
     >
       <div className="flex items-center justify-between border-b px-4 py-3">
         <button type="button" onClick={() => setMenuOpen((v) => !v)} className="text-xs font-medium text-muted-foreground">

@@ -179,37 +179,39 @@ export default async function RootLayout({
                             enableSystem={!demoMode}
                             forcedTheme={demoMode ? "dark" : undefined}
                             disableTransitionOnChange>
-                            {/* The ONE <main> landmark (a11y fix M11) — every
-                                inner content wrapper below this is a div. */}
-                            <main className="grow flex min-w-0 w-full">
-                                <div className="grow flex flex-col min-w-0 w-full">
-                                    <Authenticated sidebarDefaultOpen={defaultOpen} user={user}>
-                                        {/* The demo user is a super-admin, so
-                                            the sidebar offers every route —
-                                            including the ones with no fixtures
-                                            behind them, which rendered as empty
-                                            shells. Swapped INSIDE Authenticated
-                                            so the shell, sidebar and tour
-                                            overlay survive and the visitor can
-                                            navigate back out.
+                            <div className="flex min-h-0 grow w-full flex-col md:flex-row">
+                                {/* The ONE <main> landmark (a11y fix M11) — every
+                                    inner content wrapper below this is a div. */}
+                                <main className="grow flex min-w-0 w-full">
+                                    <div className="grow flex flex-col min-w-0 w-full">
+                                        <Authenticated sidebarDefaultOpen={defaultOpen} user={user}>
+                                            {/* The demo user is a super-admin, so
+                                                the sidebar offers every route —
+                                                including the ones with no fixtures
+                                                behind them, which rendered as empty
+                                                shells. Swapped INSIDE Authenticated
+                                                so the shell, sidebar and tour
+                                                overlay survive and the visitor can
+                                                navigate back out.
 
-                                            "/" is on the allowlist and must
-                                            stay there: replacing children means
-                                            the page never runs, and "/" is the
-                                            page that redirects into the tour. */}
-                                        {demoMode && !isDemoSupported(pathname) ? (
-                                            <DemoUnavailable />
-                                        ) : (
-                                            children
-                                        )}
-                                    </Authenticated>
-                                </div>
-                            </main>
-                            {/* Chapters 3 and 4 end on product routes, which
-                                live in this group rather than under /demo.
-                                Without the overlay here the tour sends the
-                                visitor here and strands them with no way on. */}
-                            {demoMode && <TourOverlay />}
+                                                "/" is on the allowlist and must
+                                                stay there: replacing children means
+                                                the page never runs, and "/" is the
+                                                page that redirects into the tour. */}
+                                            {demoMode && !isDemoSupported(pathname) ? (
+                                                <DemoUnavailable />
+                                            ) : (
+                                                children
+                                            )}
+                                        </Authenticated>
+                                    </div>
+                                </main>
+                                {/* Chapters 3 and 4 end on product routes, which
+                                    live in this group rather than under /demo.
+                                    Without the panel here the tour sends the
+                                    visitor here and strands them with no way on. */}
+                                {demoMode && <TourOverlay />}
+                            </div>
                             <SonnerToaster />
                         </ThemeProvider>
                     </LanguageProvider>
