@@ -379,6 +379,42 @@
   text-decoration: none;
 }
 
+/* The docked tour panel's Back/Next controls (components/demo/tour-panel.tsx).
+ *
+ * Named demo-button / demo-button-secondary rather than reusing
+ * shepherd-button: the panel is not Shepherd, and Task 7 deletes Shepherd
+ * (and shepherd-theme.css's .shepherd-button rules with it) once the panel is
+ * the only presentation left. A class named after a library the code no
+ * longer uses would be a comment that lies, so this is its own rule, styled
+ * to match .shepherd-button's treatment for the same dark, OPEN-branded demo.
+ */
+.demo-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(var(--primary));
+  border-radius: var(--radius);
+  color: hsl(var(--primary-foreground));
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.4rem 0.9rem;
+  transition: background-color 0.15s ease;
+}
+
+.demo-button:hover {
+  background: hsl(var(--primary) / 0.9);
+}
+
+.demo-button-secondary {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.demo-button-secondary:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
 /* Subtle, token-driven scrollbars for shell/app surfaces (navigation.md §2).
    Thin, transparent track, rounded thumb off the border token — quiet until
    hovered. Apply via the `scrollbar-subtle` class; pages adopt it as they
