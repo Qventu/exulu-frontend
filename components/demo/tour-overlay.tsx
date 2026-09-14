@@ -16,6 +16,10 @@ import { TourRing } from "./tour-ring";
  */
 export function TourOverlay() {
   return (
+    // TourProvider reads the tour position with useSearchParams, which opts
+    // the whole subtree into dynamic rendering unless a Suspense boundary
+    // sits above it — without one, every route that mounts this component
+    // (i.e. every route in the layout) loses static rendering wholesale.
     <Suspense fallback={null}>
       <TourProvider>
         <ContentInert />

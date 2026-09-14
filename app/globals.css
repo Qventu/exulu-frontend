@@ -382,11 +382,12 @@
 /* The docked tour panel's Back/Next controls (components/demo/tour-panel.tsx).
  *
  * Named demo-button / demo-button-secondary rather than reusing
- * shepherd-button: the panel is not Shepherd, and Task 7 deletes Shepherd
- * (and shepherd-theme.css's .shepherd-button rules with it) once the panel is
- * the only presentation left. A class named after a library the code no
- * longer uses would be a comment that lies, so this is its own rule, styled
- * to match .shepherd-button's treatment for the same dark, OPEN-branded demo.
+ * shepherd-button: the panel was never Shepherd, and Task 7 deleted Shepherd
+ * (and shepherd-theme.css's .shepherd-button rules with it) once the panel
+ * became the only presentation left. A class named after a library the code
+ * no longer uses would be a comment that lies, so this is its own rule,
+ * styled to match .shepherd-button's old treatment for the same dark,
+ * OPEN-branded demo.
  */
 .demo-button {
   display: inline-flex;
@@ -416,12 +417,12 @@
 }
 
 /* The docked panel's content blocks (components/demo/step-panel.tsx), moved
- * here verbatim from shepherd-theme.css. That stylesheet is imported by only
- * tour-shepherd.tsx, and the docked panel stops rendering TourShepherd — so
- * these rules would otherwise stop loading the moment Shepherd does, even
- * though StepPanel keeps rendering with these class names on every scene page
- * and inside the docked panel. Task 7 deletes shepherd-theme.css along with
- * TourShepherd, tour-stage.tsx and tour-bubble.tsx.
+ * here verbatim from shepherd-theme.css. That stylesheet was imported by only
+ * tour-shepherd.tsx, and the docked panel stopped rendering TourShepherd — so
+ * these rules would otherwise have stopped loading the moment Shepherd did,
+ * even though StepPanel keeps rendering with these class names on every scene
+ * page and inside the docked panel. Task 7 deleted shepherd-theme.css along
+ * with TourShepherd, tour-stage.tsx and tour-bubble.tsx.
  */
 .demo-step-panel { display: flex; flex-direction: column; gap: 0.85rem; }
 .demo-block-paragraph { margin: 0; line-height: 1.55; }

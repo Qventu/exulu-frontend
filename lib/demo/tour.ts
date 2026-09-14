@@ -70,38 +70,6 @@ export interface DemoStep {
    * and the step is about the list.
    */
   scrollBlock?: "start" | "nearest";
-  // DEPRECATED — removed from every step's data in Task 2, and removed from
-  // this type in Task 7, which is when shepherd-step.ts, tour-shepherd.tsx and
-  // tour-stage.tsx (the only remaining readers) are deleted. Deleting the
-  // members before their readers would not compile; deleting the readers
-  // before the panel exists would leave the demo with no tour at all. So the
-  // data goes first and the type follows. Do not set these on a new step —
-  // chapters/index.test.ts fails if you do.
-  /**
-   * "stage" renders full-bleed and bypasses Shepherd entirely — for beats
-   * whose subject is the whole screen, where a popover over a dimmed app would
-   * be fighting the tool. Default "popover".
-   */
-  kind?: "popover" | "stage";
-  /** Panel width. "wide" for steps carrying a sequence or a figure. */
-  size?: "default" | "wide";
-  /**
-   * Turns off the dimming overlay for this step.
-   *
-   * The overlay exists to point at one element, which is wrong for a step whose
-   * subject is the whole screen changing. techdoc.0 anchors to the composer —
-   * correct, that is where the question is typed — but the answer then streams
-   * ABOVE it, and everything outside the composer's cutout was greyed out. The
-   * step said "watch it search and answer" over a dimmed transcript.
-   */
-  noDim?: boolean;
-  /**
-   * Which side of the anchor the popover prefers. floating-ui flips it when
-   * that side does not fit, so this is a preference, not a promise. Default
-   * "bottom". "left" for the wizard steps: bottom placement sat the popover
-   * across the drawer's own heading.
-   */
-  placement?: "top" | "bottom" | "left" | "right";
 }
 
 export interface DemoChapter {
