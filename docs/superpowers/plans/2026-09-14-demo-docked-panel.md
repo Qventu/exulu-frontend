@@ -76,7 +76,7 @@ import { DEMO_SCENES, sceneRoute } from "./scenes";
 describe("demo scenes", () => {
   // The four steps that used to render full-bleed. Their ids are the step ids
   // they replace, so a reader can trace a scene back to the beat it serves.
-  it.each(["daten-pile", "daten-question", "aufnahme-page", "zugriff-barrier"])(
+  it.each(["daten-pile", "daten-problem", "aufnahme-page", "zugriff-consequence"])(
     "has a scene for %s",
     (id) => {
       expect(DEMO_SCENES[id], id).toBeDefined();
@@ -105,7 +105,7 @@ Expected: FAIL — `Cannot find module './scenes'`.
 
 - [ ] **Step 3: Create the scenes module**
 
-Move the existing `content` arrays off the four stage steps verbatim. **Copy them exactly — do not reword.** Read the current values from `lib/demo/chapters/daten.ts` (steps `daten-pile`, `daten-question`), `lib/demo/chapters/aufnahme.ts` (step `aufnahme-page`) and `lib/demo/chapters/zugriff.ts` (step `zugriff-barrier`).
+Move the existing `content` arrays off the four stage steps verbatim. **Copy them exactly — do not reword.** Read the current values from `lib/demo/chapters/daten.ts` (steps `daten-pile`, `daten-problem`), `lib/demo/chapters/aufnahme.ts` (step `aufnahme-page`) and `lib/demo/chapters/zugriff.ts` (step `zugriff-consequence`).
 
 ```ts
 // lib/demo/scenes.ts
@@ -253,7 +253,28 @@ In `lib/demo/tour.ts`, delete the `kind`, `size`, `noDim` and `placement` member
 
 - [ ] **Step 4: Point the four stage steps at their scenes**
 
-In `daten.ts`, `aufnahme.ts` and `zugriff.ts`: for each of `daten-pile`, `daten-question`, `aufnahme-page`, `zugriff-barrier`, delete `kind: "stage"`, replace `route` with `sceneRoute("<step id>")`, and **delete the `content` array** — it now lives in `lib/demo/scenes.ts`. Leave `title` in place; the panel still shows it. Add `content: []`.
+In `daten.ts`, `aufnahme.ts` and `zugriff.ts`: for each of `daten-pile`, `daten-problem`, `aufnahme-page`, `zugriff-consequence`, delete `kind: "stage"`, replace `route` with `sceneRoute("<step id>")`, and **delete the `content` array** — it now lives in `lib/demo/scenes.ts`. Leave `title` in place; the panel still shows it. Add `content: []`.
+
+- [ ] **Step 4b: Amend the every-step-has-copy assertion**
+
+`lib/demo/chapters/index.test.ts:13` asserts `isEmptyContent(step.content)` is
+false for EVERY step. Emptying the four scene steps breaks it. The guarantee is
+still worth having, so move where it is asserted rather than dropping it:
+
+```ts
+      // A scene step's copy lives in lib/demo/scenes.ts and renders full-width
+      // in the content area, so the STEP is legitimately empty. Leaving the
+      // blocks on the step instead would make the panel offer "Mehr" showing
+      // the very content already on screen at full size.
+      const scene = step.route.startsWith("/demo/szene/")
+        ? DEMO_SCENES[step.route.split("/").pop()!]
+        : null;
+      if (scene) {
+        expect(isEmptyContent(scene.content), `${chapter.id}/${step.id} scene has no copy`).toBe(false);
+      } else {
+        expect(isEmptyContent(step.content), `${chapter.id}/${step.id} has no copy`).toBe(false);
+      }
+```
 
 - [ ] **Step 5: Strip the remaining presentation fields**
 
@@ -374,11 +395,11 @@ export function TourPanel() {
       </div>
 
       <div className="flex items-center justify-end gap-2 border-t p-4">
-        <button type="button" onClick={prev} className="shepherd-button shepherd-button-secondary">Zurück</button>
+        <button type="button" onClick={prev} className="demo-button demo-button-secondary">Zurück</button>
         {step.cta ? (
-          <a href={step.cta.href} className="shepherd-button">{step.cta.label}</a>
+          <a href={step.cta.href} className="demo-button">{step.cta.label}</a>
         ) : (
-          <button type="button" onClick={next} className="shepherd-button">Weiter</button>
+          <button type="button" onClick={next} className="demo-button">Weiter</button>
         )}
       </div>
     </aside>
@@ -420,7 +441,7 @@ Replace the `<main>` block and the `{demoMode && <TourOverlay />}` line with:
       wrapper below this is a div. */}
   <main className="grow flex min-w-0 w-full">
     <div className="grow flex flex-col min-w-0 w-full">
-      <Authenticated sidebarDefaultOpen={defaultOpen} user={user} demoMode={demoMode}>
+      <Authenticated sidebarDefaultOpen={defaultOpen} user={user}>
         {demoMode && !isDemoSupported(pathname) ? <DemoUnavailable /> : children}
       </Authenticated>
     </div>
@@ -429,7 +450,11 @@ Replace the `<main>` block and the `{demoMode && <TourOverlay />}` line with:
 </div>
 ```
 
-Note `demoMode={demoMode}` — if `fix/demo-flag-client-server-split` has already merged, this prop exists; if it has not, leave the prop off and tell the controller rather than adding it here.
+**Leave `<Authenticated>`'s props exactly as they are** — `sidebarDefaultOpen`
+and `user`, nothing else. `demoMode` is a prop from
+`fix/demo-flag-client-server-split`, which has NOT landed on this branch
+(checked: local `main` is this branch's merge-base). Adding it here would not
+compile.
 
 - [ ] **Step 2: Rewrite the overlay as a composition**
 
@@ -661,7 +686,7 @@ npm uninstall shepherd.js
 
 - [ ] **Step 2: Remove the stylesheet import and dead rules**
 
-`grep -rn "shepherd" app components lib --include='*.ts' --include='*.tsx' --include='*.css'`. The panel in Task 3 reuses `.shepherd-button` for its buttons; either keep those rules and say so in a comment, or rename to `demo-button` and update the panel. **Pick one and be consistent** — a class named after a deleted library is a comment that lies.
+`grep -rn "shepherd" app components lib --include='*.ts' --include='*.tsx' --include='*.css'`. The panel already uses `demo-button` / `demo-button-secondary` (Task 3), so no renaming is needed here — delete the `.shepherd-*` rules outright. A class named after a deleted library is a comment that lies, which is why Task 3 never introduced one.
 
 - [ ] **Step 3: Verify**
 
