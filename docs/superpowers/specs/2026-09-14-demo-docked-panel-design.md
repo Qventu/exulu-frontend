@@ -110,7 +110,7 @@ the step still reads, it just does not point.
 
 ## Step model
 
-Four fields are removed and one is added:
+Five fields are removed and one is added:
 
 ```ts
 export type DemoStep = {
@@ -130,8 +130,13 @@ export type DemoStep = {
 - `size: "wide"` — gone. Panel width is constant; expansion is the "Mehr"
   state and nothing else.
 - `noDim` — gone. Nothing dims.
+- `placement` — gone. It named which side of the anchor the popover preferred;
+  a docked panel has no side to prefer.
 - `advanceAfterMs` — already removed on 2026-09-14.
 - `cta` — unchanged. One step uses it (`contact.ts:37`).
+- `scrollBlock` — **kept**, and still load-bearing. The ring scrolls its anchor
+  into view, so "nearest" vs "start" still decides whether a list header lands
+  at the bottom edge with the list below the fold.
 
 `ContentBlock` itself is untouched: `paragraph`, `bullets`, `callout`, `stat`,
 `figure`, `sequence`. Current usage across the tour is 38 paragraphs, 11
