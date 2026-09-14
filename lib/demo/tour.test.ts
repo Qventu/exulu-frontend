@@ -262,25 +262,29 @@ describe("the reading load", () => {
     // first as a stall.
     //
     // The anchor was a PROXY for "nothing changed", and that proxy was sound
-    // as long as every world was static and every transition was a click.
-    // advanceAfterMs (shipped after this rule) created a case the proxy
-    // can't see: struktur spotlights the same list across two steps on
-    // purpose, because the underlying world genuinely changes (3 contexts →
-    // 7 — the chapter's whole device) and the earlier step auto-advances, so
-    // no click is ever paid. Both harms named above are absent there.
+    // as long as every world was static. This rule carried a second clause
+    // for a while — the earlier step had to AUTO-ADVANCE, so no click was
+    // paid — because struktur spotlights the same list across two steps on
+    // purpose while the world underneath changes (3 contexts → 7, the
+    // chapter's whole device).
     //
-    // So a shared anchor+route is allowed ONLY when BOTH hold: the earlier
-    // step auto-advances (no click), AND the two worlds actually differ (the
-    // screen isn't just marking time). A manually-advanced stall, or an
-    // auto-advancing pair whose world never changes, still fails below.
+    // Every advanceAfterMs was removed on 2026-09-14 after a walkthrough
+    // with OPEN's marketing lead: "so schnell ist halt keiner zum Lesen".
+    // The timers moved the tour on before anyone finished reading, so the
+    // tour now advances only on a click. That retires the clause rather
+    // than breaking the pairs it protected: the harm this rule exists to
+    // catch is a click that BUYS NOTHING, and a click that visibly takes
+    // the list from 3 entries to 7 buys something. What still fails is a
+    // shared anchor+route whose world does not move at all — which is
+    // exactly what the evals-grid and routine-runs stalls were.
     //
     // Known limit: worldSignature diffs the WHOLE world, not the slice the
-    // anchor actually renders. An auto-advancing pair that shares an anchor
-    // but changes only some anchor-irrelevant part of the world — leaving
-    // the anchored UI itself static — would still pass here, which is the
-    // same same-screen-different-metadata shape the "routine runs" stall
-    // had. Necessary but not sufficient: a reviewer must separately confirm
-    // the anchored content is what changed, not merely that something did.
+    // anchor actually renders. A pair that shares an anchor but changes only
+    // some anchor-irrelevant part of the world — leaving the anchored UI
+    // itself static — would still pass here, which is the same
+    // same-screen-different-metadata shape the "routine runs" stall had.
+    // Necessary but not sufficient: a reviewer must separately confirm the
+    // anchored content is what changed, not merely that something did.
     // There's no automated check for that because there's no anchor→field
     // map, and building one for a case that has never occurred in the tour
     // would be speculative infrastructure.
@@ -291,12 +295,11 @@ describe("the reading load", () => {
         if (!current.anchor) continue;
         const sameScreen = current.anchor === previous.anchor && current.route === previous.route;
         if (!sameScreen) continue;
-        const noClickPaid = previous.advanceAfterMs !== undefined;
         const worldGenuinelyChanged =
           worldSignature(chapter.id, i - 1) !== worldSignature(chapter.id, i);
         expect(
-          noClickPaid && worldGenuinelyChanged,
-          `${current.id} repeats ${previous.id}'s screen and anchor`,
+          worldGenuinelyChanged,
+          `${current.id} repeats ${previous.id}'s screen and anchor without changing the world`,
         ).toBe(true);
       }
     }

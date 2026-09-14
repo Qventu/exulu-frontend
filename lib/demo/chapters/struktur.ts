@@ -37,9 +37,6 @@ export const strukturChapter: DemoChapter = {
           text: "Damit ein Assistent etwas nachschlagen kann, muss es irgendwo liegen — getrennt nach Art des Wissens, nicht in einem einzigen Topf.",
         },
       ],
-      // Raised from 2200: a figure that flashes past in 2.2s is worse than
-      // no figure.
-      advanceAfterMs: 3600,
     },
     {
       id: "struktur-filling",
@@ -53,7 +50,6 @@ export const strukturChapter: DemoChapter = {
           text: "Technische Dokumentation wird anders gelesen als ein Support-Ticket. Normen anders als eine Servicedatenbank. Jede Basis bekommt eigene Regeln.",
         },
       ],
-      advanceAfterMs: 2200,
     },
     {
       id: "struktur-full",

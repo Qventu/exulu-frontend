@@ -47,7 +47,6 @@ export const datenChapter: DemoChapter = {
           label: "Dokumente in einem typischen Aufzugsunternehmen",
         },
       ],
-      advanceAfterMs: 4200,
     },
     {
       id: "daten-problem",

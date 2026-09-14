@@ -41,10 +41,6 @@ export const aufnahmeChapter: DemoChapter = {
       // gives that anchor up to ANCHOR_WAIT_MS (4000ms) to resolve, so the
       // budget here has to exceed navigation + Apollo + anchor resolution or
       // this step — "Die Basis beginnt leer", the beat the whole 0 → 4 → 9
-      // fill depends on — gets skipped before a visitor ever reads it. Raised
-      // from 2000 to 3600, matching the same-class fix in struktur.ts
-      // (2200 -> 3600).
-      advanceAfterMs: 3600,
     },
     {
       id: "aufnahme-running",
@@ -58,7 +54,6 @@ export const aufnahmeChapter: DemoChapter = {
           text: "Jede Datei durchläuft dieselbe Strecke. Bei tausend Dokumenten dauert das Stunden und niemand sieht dabei zu — hier ist es beschleunigt.",
         },
       ],
-      advanceAfterMs: 2000,
     },
     {
       id: "aufnahme-page",
@@ -87,7 +82,6 @@ export const aufnahmeChapter: DemoChapter = {
           text: "Ein Schaltplan ist kein Fließtext. Wird er wie einer behandelt, findet die Suche ihn nie — deshalb wird jede Seite angesehen, nicht nur ausgelesen.",
         },
       ],
-      advanceAfterMs: 5200,
     },
     {
       id: "aufnahme-items",
