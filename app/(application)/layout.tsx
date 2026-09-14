@@ -162,6 +162,15 @@ export default async function RootLayout({
                     `flex flex-col bg-background font-sans antialiased`,
                     fontVariables,
                 )}
+                // The agent wizard is a Radix dialog portalled to <body>, so it
+                // escapes the flex row below and would cover the docked tour
+                // panel. --tour-panel-w has to live here (not on the row div)
+                // because the portal is appended as a sibling of the row, not
+                // a descendant of it — a custom property set on the row would
+                // never cascade to it. data-demo-tour scopes app/globals.css's
+                // inset rule to demo mode only; no other deployment has a tour.
+                data-demo-tour={demoMode ? "active" : undefined}
+                style={{ ["--tour-panel-w" as string]: demoMode ? "380px" : "0px" } as React.CSSProperties}
             >
                 <ConfigContextProvider config={config}>
                     <LanguageProvider initialLocale={locale} initialMessages={messages}>

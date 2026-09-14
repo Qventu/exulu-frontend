@@ -466,6 +466,24 @@
    distorting it to fill a height the aspect ratio does not agree with. */
 .demo-block-figure { display: block; width: 100%; height: auto; max-height: 12rem; object-fit: contain; border-radius: 0.5rem; }
 
+/* Radix portals dialogs (agent-editor wizard) and popper content (menus,
+ * popovers, tooltips) to <body>, so they escape the tour panel's flex row
+ * (components/demo/tour-panel.tsx) and would otherwise cover it edge to
+ * edge — chapter 7's wizard steps are the concrete case this was written
+ * for. Scoped to body[data-demo-tour="active"], set only in demo mode
+ * (app/(application)/layout.tsx): no other deployment of this product runs
+ * a tour, and none should inherit a rule written for one. --tour-panel-w is
+ * published on <body> in that same layout, for the same reason the
+ * attribute is there — a portalled node is a sibling of the tour's flex
+ * row, not a descendant, so a custom property set on the row would never
+ * cascade to it.
+ */
+body[data-demo-tour="active"] [data-radix-popper-content-wrapper],
+body[data-demo-tour="active"] [role="dialog"] {
+  max-width: calc(100vw - var(--tour-panel-w, 0px));
+  margin-right: var(--tour-panel-w, 0px);
+}
+
 /* Subtle, token-driven scrollbars for shell/app surfaces (navigation.md §2).
    Thin, transparent track, rounded thumb off the border token — quiet until
    hovered. Apply via the `scrollbar-subtle` class; pages adopt it as they
