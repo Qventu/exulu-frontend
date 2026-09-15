@@ -14,7 +14,6 @@ import * as React from "react";
 import { createDemoLink } from "@/lib/demo/apollo-link";
 import { getCurrentPosition } from "@/lib/demo/current-position";
 import { getWorld } from "@/lib/demo/fixtures";
-import { isDemoMode } from "@/lib/demo/flag";
 
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import {
@@ -37,6 +36,26 @@ interface AuthenticatedProps {
   children: React.ReactNode;
   user: UserWithRole;
   sidebarDefaultOpen: boolean;
+  /**
+   * Whether this is the guided demo — decided by the SERVER and handed down,
+   * never re-derived here.
+   *
+   * isDemoMode() reads process.env.NEXT_PUBLIC_DEMO_MODE, and Next inlines
+   * NEXT_PUBLIC_* into the browser bundle at BUILD time while the server
+   * reads it at RUNTIME. A deployment that sets the variable at runtime only
+   * therefore splits in half: app/(application)/layout.tsx sees demo mode and
+   * renders the demo user, the OPEN theme and the tour, while this client
+   * component sees `false` baked into the bundle and points Apollo at the
+   * real backend. That shipped: the tour narrated perfectly over a knowledge
+   * page 500ing with `Authorization: Bearer undefined`.
+   *
+   * Taking the server's answer as a prop makes the two halves agree by
+   * construction. NOTE this fixes THIS component only — the other
+   * client-side isDemoMode() callers (lib/api/client.ts, chat/hooks.ts,
+   * logo.tsx, brand.tsx, use-autotype.ts, language-provider.tsx …) still read
+   * the inlined value, so the build argument remains required.
+   */
+  demoMode: boolean;
 }
 
 export const UserContext = React.createContext<any>(null);
@@ -67,7 +86,7 @@ const AppShell = ({
   children,
   user,
   sidebarDefaultOpen,
-}: Omit<AuthenticatedProps, "user"> & { user: UserWithRole }) => {
+}: Omit<AuthenticatedProps, "user" | "demoMode"> & { user: UserWithRole }) => {
   const config = React.useContext(ConfigContext);
   const [feedbackOpen, setFeedbackOpen] = React.useState(false);
   const openFeedback = React.useCallback(() => setFeedbackOpen(true), []);
@@ -123,6 +142,7 @@ const Authenticated = ({
   children,
   user,
   sidebarDefaultOpen,
+  demoMode,
 }: AuthenticatedProps) => {
   const configContext = React.useContext(ConfigContext);
 
@@ -149,7 +169,9 @@ const Authenticated = ({
       };
     });
 
-    const terminating = isDemoMode()
+    // `demoMode`, not isDemoMode(): see the prop's doc comment. Re-deriving
+    // it here is what sent demo traffic to the real backend in production.
+    const terminating = demoMode
       ? createDemoLink(() => getWorld(getCurrentPosition()))
       : new HttpLink({ uri: uri });
     const link = ApolloLink.from([basic, authLink, terminating]);

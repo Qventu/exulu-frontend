@@ -202,7 +202,7 @@ export default async function RootLayout({
                                     inner content wrapper below this is a div. */}
                                 <main className="grow flex min-w-0 w-full">
                                     <div className="grow flex flex-col min-w-0 w-full">
-                                        <Authenticated sidebarDefaultOpen={defaultOpen} user={user}>
+                                        <Authenticated sidebarDefaultOpen={defaultOpen} user={user} demoMode={demoMode}>
                                             {/* The demo user is a super-admin, so
                                                 the sidebar offers every route —
                                                 including the ones with no fixtures
