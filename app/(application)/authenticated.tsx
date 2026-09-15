@@ -153,6 +153,12 @@ const Authenticated = ({
   // Memoized so the client (and its cache) is built once per backend uri
   // instead of on every render. errorPolicy "all" surfaces GraphQL errors to
   // callers via the `error` result field alongside any partial data.
+  //
+  // `demoMode` belongs in the deps even though it is a server-rendered prop
+  // that never changes within a session: without it React Compiler refuses to
+  // optimize this component at all ("inferred dependency was demoMode, but
+  // the source dependencies were [uri]"), which is a lint error and a real
+  // loss of memoization across the whole subtree.
   const client = React.useMemo(() => {
     const basic = setContext(() => ({
       headers: {
@@ -193,7 +199,7 @@ const Authenticated = ({
         },
       },
     });
-  }, [uri]);
+  }, [uri, demoMode]);
 
   return (
     <ApolloProvider client={client}>
