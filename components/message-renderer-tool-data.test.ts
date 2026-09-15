@@ -230,6 +230,9 @@ describe("messageItemPropsEqual", () => {
     UntypedToolPartComponent: function Tool() {
       return null;
     },
+    GroupedToolPartComponent: function ToolGroup() {
+      return null;
+    },
   };
 
   it("ignores handler identity but compares data props", () => {
@@ -252,6 +255,16 @@ describe("messageItemPropsEqual", () => {
       messageItemPropsEqual(base, {
         ...base,
         UntypedToolPartComponent: function Other() {
+          return null;
+        },
+      }),
+    ).toBe(false);
+    // Swapping the group renderer must remount too, or a surface that gains
+    // grouping mid-session keeps rendering the ungrouped subtree.
+    expect(
+      messageItemPropsEqual(base, {
+        ...base,
+        GroupedToolPartComponent: function OtherGroup() {
           return null;
         },
       }),

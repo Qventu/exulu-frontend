@@ -1121,6 +1121,14 @@
       "denied": "Denied: {tool}",
       "deny": "Deny",
       "description": "The agent wants to run this tool. Review the request and choose how to proceed.",
+      "groupAllowAll": "Allow all {count}",
+      "groupApproved": "Approved: {tool} ({count})",
+      "groupDenied": "Denied: {tool} ({count})",
+      "groupDenyAll": "Deny all",
+      "groupDescription": "The agent wants to run the same tool on {count} items. Review the list and choose how to proceed.",
+      "groupMixed": "Answered: {tool} ({count})",
+      "groupMore": "and {count} more",
+      "groupTitle": "Run {tool} {count} times?",
       "title": "Run {tool}?"
     },
     "attach": {
@@ -1491,6 +1499,11 @@
       "userQuery": "User query:",
       "importantKeyword": "Important keyword:",
       "relevantKeywords": "Relevant keywords:"
+    },
+    "toolGroup": {
+      "callCount": "{count} calls",
+      "callIndex": "Call {index} of {count}",
+      "errors": "{count} failed"
     }
   },
   "common": {

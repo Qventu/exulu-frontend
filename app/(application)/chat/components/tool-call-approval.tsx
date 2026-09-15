@@ -30,41 +30,14 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+import { getInputSummary } from "./tool-call-group-data";
+
 export interface ToolCallApprovalProps {
   part: DynamicToolUIPart;
   addToolApprovalResponse: ChatAddToolApproveResponseFunction;
   /** Persist pre-approval via the controller (stable localStorage key). */
   onApproveForChat: (toolId: string) => void;
 }
-
-/**
- * Short, human-readable preview of the tool input (same heuristics as the
- * renderer's tool chips): well-known string fields first, then the first
- * short string value.
- */
-const getInputSummary = (input: unknown): string | null => {
-  if (!input || typeof input !== "object") return null;
-  const record = input as Record<string, unknown>;
-  const preferredKeys = [
-    "path",
-    "file_path",
-    "filename",
-    "command",
-    "query",
-    "url",
-    "question",
-    "prompt",
-    "text",
-  ];
-  for (const key of preferredKeys) {
-    const value = record[key];
-    if (typeof value === "string" && value.length > 0) return value;
-  }
-  const firstString = Object.values(record).find(
-    (value) => typeof value === "string" && value.length > 0 && value.length < 300,
-  );
-  return typeof firstString === "string" ? firstString : null;
-};
 
 export const ToolCallApproval = ({
   part,

@@ -1121,6 +1121,14 @@
       "denied": "Abgelehnt: {tool}",
       "deny": "Ablehnen",
       "description": "Der Agent möchte dieses Tool ausführen. Prüfen Sie die Anfrage und wählen Sie, wie es weitergeht.",
+      "groupAllowAll": "Alle {count} erlauben",
+      "groupApproved": "Erlaubt: {tool} ({count})",
+      "groupDenied": "Abgelehnt: {tool} ({count})",
+      "groupDenyAll": "Alle ablehnen",
+      "groupDescription": "Der Agent möchte dasselbe Tool auf {count} Einträge anwenden. Prüfen Sie die Liste und wählen Sie, wie es weitergeht.",
+      "groupMixed": "Beantwortet: {tool} ({count})",
+      "groupMore": "und {count} weitere",
+      "groupTitle": "{tool} {count}-mal ausführen?",
       "title": "{tool} ausführen?"
     },
     "attach": {
@@ -1491,6 +1499,11 @@
       "userQuery": "Anfrage:",
       "importantKeyword": "Wichtigstes Stichwort:",
       "relevantKeywords": "Relevante Stichwörter:"
+    },
+    "toolGroup": {
+      "callCount": "{count} Aufrufe",
+      "callIndex": "Aufruf {index} von {count}",
+      "errors": "{count} fehlgeschlagen"
     }
   },
   "common": {
