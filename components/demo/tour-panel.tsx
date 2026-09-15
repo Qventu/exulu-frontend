@@ -57,7 +57,31 @@ export function TourPanel() {
       data-demo-id="tour-panel"
       // KEEP IN SYNC with app/globals.css's --tour-panel-w rule (380/560)
       // and the data-demo-panel-expanded effect above — see its comment.
-      className={`flex shrink-0 flex-col border-t bg-card md:border-l md:border-t-0 ${
+      //
+      // Sticky, in both directions, because the panel is a flex sibling of
+      // <main> in normal flow: nothing pins it. The row's height is
+      // content-driven (SidebarProvider is min-h-svh, not h-svh), so a tall
+      // page scrolls the DOCUMENT and takes the panel with it — "Weiter"
+      // ends up above the viewport on 13 of the 37 steps.
+      //
+      // md and up: `top-12` clears the fixed h-12 TopBar
+      // (components/shell/top-bar.tsx, md:flex only), and the explicit
+      // height plus self-start is what makes sticky bite at all — under the
+      // row's default `align-items: stretch` the panel is exactly as tall as
+      // its containing block, and an element that fills its container has
+      // nowhere to stick.
+      //
+      // Below md the row is a column and the panel comes AFTER the content,
+      // so on a tall page it starts off-screen entirely; `bottom-0` docks it
+      // to the bottom edge, which is what the spec asks for there.
+      //
+      // z-40 puts the panel above the spotlight ring (z-30, tour-ring.tsx),
+      // which is `position: fixed` and sized from a product anchor: a tall
+      // anchor's outline crossed the bottom-docked panel on mobile, and a
+      // full-width one put its right edge 4px inside the panel's border on
+      // desktop. Still below Radix's z-50 portal layer, which is inset clear
+      // of the panel by app/globals.css instead.
+      className={`sticky bottom-0 z-40 flex shrink-0 flex-col border-t bg-card md:bottom-auto md:top-12 md:h-[calc(100svh-3rem)] md:self-start md:border-l md:border-t-0 ${
         expanded ? "md:w-[560px]" : "md:w-[380px]"
       } max-h-[45vh] w-full overflow-y-auto md:max-h-none`}
     >
@@ -89,7 +113,7 @@ export function TourPanel() {
       <div className="flex grow flex-col gap-4 p-4">
         <h2 className="text-lg font-semibold">{step.title}</h2>
         {step.lead && <p className="text-sm text-muted-foreground">{step.lead}</p>}
-        {expanded && hasDetail && <StepPanel step={step} />}
+        {expanded && hasDetail && <StepPanel content={step.content} />}
         {hasDetail && (
           <button type="button" onClick={() => setExpanded((v) => !v)} className="self-start text-sm underline">
             {expanded ? "Weniger" : "Mehr"}

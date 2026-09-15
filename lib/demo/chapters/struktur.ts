@@ -6,10 +6,15 @@ import type { DemoChapter } from "../tour";
  * The list fills across three steps because motion here IS the argument: a
  * prospect watching seven knowledge bases appear understands "we organise your
  * data" faster than any sentence saying so. Each step is a complete world
- * (fixtures/chapter-structure.ts), so the Tour bubble can land on any of them.
+ * (fixtures/chapter-structure.ts), so the chapter menu can land on any of them.
  *
- * The first two steps auto-advance; the third waits. A chapter never
- * auto-advances off its own end — chapters/index.test.ts enforces that.
+ * All three wait for a click. The timers that used to chain them were removed
+ * on 2026-09-14 — "so schnell ist halt keiner zum Lesen" — so the motion now
+ * costs the visitor two clicks. What keeps those clicks honest is
+ * lib/demo/tour.test.ts's "never puts two consecutive steps on the same
+ * anchor": struktur-filling and struktur-full share a route and an anchor on
+ * purpose, and that test passes only because the world underneath visibly
+ * moves (3 knowledge bases to 7).
  */
 export const strukturChapter: DemoChapter = {
   id: "struktur",

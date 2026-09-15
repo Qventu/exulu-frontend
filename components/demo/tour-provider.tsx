@@ -1,8 +1,7 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
+import { createContext, useCallback, useContext, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { autoAdvanceDelay } from "@/lib/demo/auto-advance";
 import { getWorld } from "@/lib/demo/fixtures";
 import {
   CHAPTERS,
@@ -46,11 +45,11 @@ function useTourState() {
   // Memoised on the raw param string, not recomputed per render.
   //
   // parsePosition returns a fresh object literal every call, so an
-  // unmemoised `position` changes identity on every render. That was
-  // harmless while it only fed two useMemos that returned equal values —
-  // but it also meant those memos never actually memoised, and the moment a
-  // live side effect depends on `position` (the auto-advance timer below)
-  // an unrelated re-render silently restarts it.
+  // unmemoised `position` changes identity on every render — which means the
+  // two useMemos below, and every consumer that depends on `position`
+  // identity, never actually memoise. Cheap to hold stable, and the moment
+  // anything here grows a side effect keyed on `position` an unrelated
+  // re-render would otherwise restart it.
   const rawPosition = searchParams.get(TOUR_PARAM);
   const position = useMemo(
     () => parsePosition(rawPosition, CHAPTERS) ?? START,
@@ -85,23 +84,6 @@ function useTourState() {
 
   const step = useMemo(() => resolveStep(CHAPTERS, position), [position]);
   const world = useMemo(() => getWorld(position), [position]);
-
-  // Auto-advance. The timer lives here rather than in the Shepherd component
-  // because stage steps never reach Shepherd, and both kinds must animate.
-  //
-  // Cleanup covers every way out: clicking Next or Back changes `position`,
-  // which re-runs the effect and clears the pending timer, so a manual
-  // navigation can never race a scheduled one.
-  useEffect(() => {
-    const delay = autoAdvanceDelay(step);
-    if (delay === null) return;
-    const forward = nextPosition(CHAPTERS, position);
-    // Belt and braces with the chapter-integrity test: never carry a visitor
-    // out of a chapter they may still be reading.
-    if (!forward || forward.chapter !== position.chapter) return;
-    const timer = setTimeout(() => go(forward), delay);
-    return () => clearTimeout(timer);
-  }, [step, position, go]);
 
   return { position, step, chapters: CHAPTERS, next, prev, jumpTo, world };
 }

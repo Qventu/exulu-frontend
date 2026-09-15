@@ -62,14 +62,17 @@ import type { DemoChapter } from "../tour";
  * KPIStrip's hrefFor) rebuild the URL from lensToSearchParams() alone
  * (analytics-view.tsx's updateLens, kpi-strip.tsx's hrefFor), which drops
  * any unknown query param including `?tour=` — and tour-provider.tsx falls
- * back to the START position (chapter 1) once `?tour=` is gone. This does
- * NOT bite in this chapter today: all three of its steps are `anchor: null`
- * modal steps, so Shepherd's overlay sits above the range picker and the KPI
- * tiles and swallows the click before it reaches them. It WOULD start biting
- * the moment any /analytics step here (or elsewhere) is given a non-null
- * `anchor` — that cuts a hole in the overlay onto the underlying controls.
- * The tour engine serves all twelve chapters and is not being changed for a
- * path this chapter cannot currently reach.
+ * back to the START position (chapter 1) once `?tour=` is gone.
+ *
+ * It cannot be reached while the tour is running. components/demo/
+ * content-inert.tsx cancels every click whose target is outside the docked
+ * panel, in the capture phase on `document`, so neither the range picker nor
+ * a KPI tile ever runs its handler. That protection is NOT conditional on a
+ * step's `anchor` — an earlier version of this note claimed the safety came
+ * from a Shepherd overlay covering the controls, and therefore that giving
+ * any /analytics step an anchor would reopen the hole. Both halves were
+ * wrong: Shepherd is gone, and ContentInert blocks anchored and anchor-less
+ * steps alike. What WOULD reopen it is handing the product its clicks back.
  */
 export const kostenChapter: DemoChapter = {
   id: "kosten",

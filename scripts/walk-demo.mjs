@@ -12,12 +12,12 @@
  *                        for — see `assertGeometry` below, which compares real
  *                        `getBoundingClientRect()` output and throws (not
  *                        `console.warn`s) on failure.
- *   3. coveringPanel  — FALSE. No `position: fixed` element (a portalled
- *                        Radix dialog/backdrop, most likely) draws on top of
- *                        the panel.
- *   4. ringPresent === (step.anchor !== null) — the spotlight ring shows up
- *                        exactly when the step declares an anchor, no more,
- *                        no less.
+ *   3. coveringPanel  — FALSE. No hit-testable `position: fixed` element (a
+ *                        portalled Radix dialog/backdrop, most likely) draws
+ *                        on top of the panel.
+ *   4. ringOk         — the spotlight ring shows up exactly when the step
+ *                        declares an anchor, no more and no less, AND sits on
+ *                        that anchor rather than somewhere else on screen.
  *   5. Non-operability + scrollability — see `runClickProbe` and
  *                        `runScrollProbe`. Both are deliberately NOT "click
  *                        the first thing and hope": see their docblocks for
@@ -116,21 +116,53 @@ function loadSteps() {
  * what we want: a missing panel on a demo route is a real failure, not
  * something to swallow into a false "pass".
  */
-function assertGeometry() {
+function assertGeometry(anchor) {
   const panel = document.querySelector('[data-demo-id="tour-panel"]');
   const main = document.querySelector("main");
   if (!panel) throw new Error("tour-panel not found in DOM");
   if (!main) throw new Error("main not found in DOM");
   const p = panel.getBoundingClientRect();
   const m = main.getBoundingClientRect();
+  const ring = document.querySelector('[data-demo-id="tour-ring"]');
+  const anchorEl = anchor ? document.querySelector(`[data-demo-id="${anchor}"]`) : null;
+  // The ring is drawn 4px outside its anchor on every side (tour-ring.tsx).
+  // "On the anchor" therefore means exactly that offset, with a px of slack
+  // for subpixel layout — NOT "roughly near it": the bug this catches put it
+  // a whole sheet-width away.
+  //
+  // Read from the ring's INLINE STYLE, which is where tour-ring.tsx writes the
+  // position it computed, not from its rect: the ring also carries a
+  // `transition-all duration-200`, so for a fifth of a second after any move
+  // its rect is wherever the animation has got to. Asserting on the rect made
+  // this report a correctly-aimed ring as misplaced whenever the read landed
+  // inside that window (a smooth scrollIntoView keeps it moving for longer
+  // than the transition itself).
+  const ringOnAnchor = (() => {
+    if (!ring || !anchorEl) return null;
+    const a = anchorEl.getBoundingClientRect();
+    const left = parseFloat(ring.style.left);
+    const top = parseFloat(ring.style.top);
+    if (Number.isNaN(left) || Number.isNaN(top)) return false;
+    return Math.abs(left + 4 - a.left) <= 1 && Math.abs(top + 4 - a.top) <= 1;
+  })();
   return {
     panelVisible: p.width > 0 && p.height > 0,
     overlapsContent: p.left < m.right && p.right > m.left && p.top < m.bottom && p.bottom > m.top,
-    ringPresent: !!document.querySelector('[data-demo-id="tour-ring"]'),
+    ringPresent: !!ring,
+    ringOnAnchor,
+    // Scoped to elements that could actually TAKE the panel over: a portalled
+    // Radix dialog or backdrop. The tour's own ring is excluded — it is
+    // pointer-events: none, so it cannot intercept anything, and it is sized
+    // from a product anchor, so an anchor flush with the content area's right
+    // edge (the /transcriptions list) puts its 4px outline 4px into the
+    // panel's border. That is not this assertion's hazard; a ring in the
+    // wrong PLACE is, and ringOnAnchor above measures that directly.
     coveringPanel: [...document.querySelectorAll("body *")].some((e) => {
       if (e === panel || panel.contains(e) || e.contains(panel)) return false;
+      if (e === ring) return false;
       const cs = getComputedStyle(e);
       if (cs.position !== "fixed" || cs.visibility === "hidden" || cs.display === "none") return false;
+      if (cs.pointerEvents === "none") return false;
       const r = e.getBoundingClientRect();
       return r.width > 100 && r.left < p.right && r.right > p.left && r.top < p.bottom && r.bottom > p.top;
     }),
@@ -364,7 +396,14 @@ async function runClickProbe(page, pos) {
     if (!located?.ok) await page.waitForTimeout(500);
   }
   if (!located?.ok) {
-    return { ran: false, describe: "no candidate element found for this step", pass: null };
+    // A FAILURE, not an n/a. Unlike the scroll probe — where "this step has
+    // no scrollable element" is a legitimate state of the page — every
+    // product step has some operable control, so "no candidate found" means
+    // the selector rotted (a renamed data-demo-id, a restructured table) and
+    // this step's non-operability went UNTESTED. Folding that into PASS made
+    // the branch's only executable guard on its headline property report a
+    // rot as a proof.
+    return { ran: false, describe: "no candidate element found for this step", pass: false };
   }
 
   // Hover and settle BEFORE capturing the baseline signature. Playwright's
@@ -473,6 +512,69 @@ async function runScrollProbe(page) {
   };
 }
 
+/**
+ * Waits for every finite animation on the page to finish, up to `timeoutMs`.
+ *
+ * The geometry assertions describe a step's STEADY STATE. A right-side Radix
+ * sheet (chapter 10's `?review=` drawer, chapter 7's wizard) starts its
+ * `slide-in-from-right` at translateX(100%) — entirely off the right edge,
+ * which is the column the docked panel occupies — so for ~500ms it genuinely
+ * is "a fixed element overlapping the panel". No layout can avoid that: a
+ * drawer that enters from the right crosses the right edge. Reading geometry
+ * mid-slide measured the animation, not the layout, and reported
+ * `coveringPanel` on exactly the steps that open a drawer.
+ *
+ * Infinite animations (spinners, shimmers) are skipped — waiting on one would
+ * never return — and the whole wait is bounded, so a page that never settles
+ * costs a second rather than the run.
+ */
+async function settleAnimations(page, timeoutMs = 2000) {
+  await page
+    .evaluate(async (limit) => {
+      const running = document
+        .getAnimations()
+        .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => null));
+      if (!running.length) return;
+      await Promise.race([
+        Promise.all(running),
+        new Promise((resolve) => setTimeout(resolve, limit)),
+      ]);
+    }, timeoutMs)
+    .catch(() => {});
+}
+
+/**
+ * Reads the geometry once the page has stopped moving.
+ *
+ * `settleAnimations` alone is a snapshot: an animation that has not STARTED
+ * yet is not one to wait for, and several steps load their real content a
+ * beat after the panel and ring are already up (the `?review=` drawer mounts
+ * after its query resolves; the agent editor's accordion reflows as sections
+ * fill). A single read taken in that window measured the page mid-move and
+ * reported a drawer over the panel, or a ring still transitioning toward an
+ * anchor that had just shifted.
+ *
+ * So: read, wait, read again, and only accept a value that came back
+ * IDENTICAL twice in a row. Bounded — after `tries` attempts it returns the
+ * last read rather than looping, so a page that genuinely never settles fails
+ * on its real geometry instead of hanging.
+ */
+async function readSettledGeometry(page, anchor, tries = 6) {
+  const key = (g) =>
+    JSON.stringify([g.panelVisible, g.overlapsContent, g.coveringPanel, g.ringPresent, g.ringOnAnchor, g.panelRect]);
+  await settleAnimations(page);
+  let previous = await page.evaluate(assertGeometry, anchor);
+  for (let i = 0; i < tries; i++) {
+    await page.waitForTimeout(350);
+    await settleAnimations(page);
+    const current = await page.evaluate(assertGeometry, anchor);
+    if (key(current) === key(previous)) return current;
+    previous = current;
+  }
+  return previous;
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -516,17 +618,20 @@ async function main() {
     let geometry = null;
     while (Date.now() - start < budgetMs) {
       try {
-        geometry = await page.evaluate(assertGeometry);
+        geometry = await page.evaluate(assertGeometry, step.anchor);
       } catch {
         geometry = null;
       }
-      const ringOk = step.anchor ? geometry?.ringPresent : true;
+      const ringOk = step.anchor ? geometry?.ringPresent && geometry?.ringOnAnchor : true;
       if (geometry?.panelVisible && ringOk) break;
       await page.waitForTimeout(400);
     }
-    // Final read, in case the loop exited on the timeout with a stale value.
+    // Final read, in case the loop exited on the timeout with a stale value —
+    // taken once the page has stopped moving, so it measures the layout
+    // rather than a drawer halfway through sliding in. See
+    // readSettledGeometry and settleAnimations.
     try {
-      geometry = await page.evaluate(assertGeometry);
+      geometry = await readSettledGeometry(page, step.anchor);
     } catch (err) {
       row.error = `geometry assertion threw: ${String(err).split("\n")[0]}`;
       results.push(row);
@@ -539,7 +644,15 @@ async function main() {
     row.coveringPanel = geometry.coveringPanel;
     row.ringPresent = geometry.ringPresent;
     row.ringExpected = step.anchor !== null;
-    row.ringOk = geometry.ringPresent === row.ringExpected;
+    row.ringOnAnchor = geometry.ringOnAnchor;
+    // Present exactly when a step declares an anchor, AND drawn on that
+    // anchor. The second half exists because the ring used to be measured
+    // once, at the frame the anchor was inserted — inside a sheet still
+    // sliding in, that is a whole sheet-width from where it ends up, and
+    // "ringPresent" happily reported true the whole time.
+    row.ringOk =
+      geometry.ringPresent === row.ringExpected &&
+      (!row.ringExpected || geometry.ringOnAnchor === true);
     row.panelRect = geometry.panelRect;
     row.mainRect = geometry.mainRect;
     // Not one of the brief's 5 assertions (and not part of row.allPass below)
@@ -578,7 +691,9 @@ async function main() {
       row.overlapsContent === false &&
       row.coveringPanel === false &&
       row.ringOk === true &&
-      (clickResult.pass === true || clickResult.pass === null) &&
+      clickResult.pass === true &&
+      // scroll is the one probe where null ("no scroller on this step") is a
+      // real n/a rather than a rotted selector — see runScrollProbe.
       (scrollResult.pass === true || scrollResult.pass === null);
 
     // One-off bonus check (not part of the per-step 5, see task-8-report.md):
@@ -598,7 +713,8 @@ async function main() {
         });
         if (clicked) {
           await page.waitForTimeout(400);
-          const expandedGeometry = await page.evaluate(assertGeometry);
+          await settleAnimations(page);
+          const expandedGeometry = await page.evaluate(assertGeometry, step.anchor);
           expandedCheckResult = { pos: step.pos, ...expandedGeometry };
           expandedCheckDone = true;
           const shotPath2 = path.join(OUT_DIR, `${step.pos.replace(/\./g, "-")}-expanded.png`);
@@ -610,7 +726,7 @@ async function main() {
     results.push(row);
     const flag = row.allPass ? "PASS" : "FAIL";
     console.log(
-      `${step.pos.padEnd(18)} ${flag} panel=${row.panelVisible} overlap=${row.overlapsContent} covering=${row.coveringPanel} ring=${row.ringPresent}/${row.ringExpected} click=${clickResult.pass} scroll=${scrollResult.applicable ? scrollResult.pass : "n/a"}${row.panelScrolledAway ? " [panel-scrolled-away]" : ""}`,
+      `${step.pos.padEnd(18)} ${flag} panel=${row.panelVisible} overlap=${row.overlapsContent} covering=${row.coveringPanel} ring=${row.ringPresent}/${row.ringExpected}${row.ringExpected ? `@anchor=${row.ringOnAnchor}` : ""} click=${clickResult.pass} scroll=${scrollResult.applicable ? scrollResult.pass : "n/a"}${row.panelScrolledAway ? " [panel-scrolled-away]" : ""}`,
     );
   }
 

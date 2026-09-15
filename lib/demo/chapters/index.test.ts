@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { contentText, isEmptyContent } from "../content";
-import { DEMO_SCENES } from "../scenes";
+// A scene step's blocks live in lib/demo/scenes.ts, not on the step — every
+// check below that reads copy must go through this or it silently skips the
+// four scene steps. See its docblock.
+import { contentOf } from "../step-content";
 import { isDemoSupported } from "../supported-routes";
 import { CHAPTERS } from "./index";
 
@@ -11,18 +14,14 @@ const everyStep = CHAPTERS.flatMap((chapter) =>
 describe("chapter integrity", () => {
   it("gives every step copy", () => {
     for (const { chapter, step } of everyStep) {
-      // A scene step's copy lives in lib/demo/scenes.ts and renders full-width
-      // in the content area, so the STEP is legitimately empty. Leaving the
-      // blocks on the step instead would make the panel offer "Mehr" showing
-      // the very content already on screen at full size.
-      const scene = step.route.startsWith("/demo/szene/")
-        ? DEMO_SCENES[step.route.split("/").pop()!]
-        : null;
-      if (scene) {
-        expect(isEmptyContent(scene.content), `${chapter.id}/${step.id} scene has no copy`).toBe(false);
-      } else {
-        expect(isEmptyContent(step.content), `${chapter.id}/${step.id} has no copy`).toBe(false);
-      }
+      // A scene step's own `content` is legitimately empty — its blocks
+      // render full-width in the content area from lib/demo/scenes.ts, and
+      // leaving them on the step as well would make the panel offer "Mehr"
+      // showing the very content already on screen beside it.
+      expect(
+        isEmptyContent(contentOf(step)),
+        `${chapter.id}/${step.id} has no copy`,
+      ).toBe(false);
     }
   });
 
@@ -35,22 +34,6 @@ describe("chapter integrity", () => {
     for (const { chapter, step } of everyStep) {
       const pathname = step.route.split("?")[0];
       expect(isDemoSupported(pathname), `${chapter.id}/${step.id} → ${pathname}`).toBe(true);
-    }
-  });
-
-  // Auto-advance across a chapter boundary would carry a visitor out of a
-  // chapter they were still reading, and there is no Back that feels like undo.
-  it("never auto-advances off the end of a chapter", () => {
-    for (const chapter of CHAPTERS) {
-      const last = chapter.steps[chapter.steps.length - 1];
-      expect(last.advanceAfterMs, `${chapter.id} ends on an auto-advancing step`).toBeUndefined();
-    }
-  });
-
-  // A cta is a decision. Moving the page out from under one is hostile.
-  it("never auto-advances a step that asks for a decision", () => {
-    for (const { step } of everyStep) {
-      if (step.cta) expect(step.advanceAfterMs).toBeUndefined();
     }
   });
 
@@ -75,7 +58,9 @@ describe("chapter integrity", () => {
     const { existsSync } = await import("node:fs");
     const { join } = await import("node:path");
     for (const { step } of everyStep) {
-      for (const block of step.content) {
+      // contentOf, not step.content: three of the eleven figures belong to
+      // scene steps, and reading the step directly skipped all three.
+      for (const block of contentOf(step)) {
         if (block.kind !== "figure") continue;
         expect(existsSync(join(process.cwd(), "public", block.src)), `missing ${block.src}`).toBe(true);
       }
@@ -86,10 +71,14 @@ describe("chapter integrity", () => {
   // two reference customers are named ONCE, next to the closing ask. Stated in
   // prose until now — in contact.ts, the one file allowed to break the rule,
   // which is exactly where an author stands when tempted.
+  //
+  // Through contentOf, because this is the ENFORCEMENT POINT for that rule and
+  // reading step.content directly stopped it scanning lib/demo/scenes.ts —
+  // which is precisely the file a copy rewrite lands in.
   it("names the reference customers only next to the ask", () => {
     for (const { chapter, step } of everyStep) {
       if (chapter.id === "contact") continue;
-      expect(contentText(step.content), `${chapter.id}/${step.id}`)
+      expect(contentText(contentOf(step)), `${chapter.id}/${step.id}`)
         .not.toMatch(/new ?lift|algi/i);
     }
   });
@@ -100,7 +89,7 @@ describe("chapter integrity", () => {
     for (const chapter of CHAPTERS) {
       for (const step of chapter.steps) {
         const legacy = step as unknown as Record<string, unknown>;
-        for (const field of ["kind", "size", "noDim", "placement", "advanceAfterMs"]) {
+        for (const field of ["kind", "size", "noDim", "placement"]) {
           expect(legacy[field], `${step.id}.${field}`).toBeUndefined();
         }
       }
@@ -112,7 +101,7 @@ describe("chapter integrity", () => {
   // shippable while the sheet comes back.
   it("reports which steps are still waiting for a Kurzfassung", () => {
     const missing = CHAPTERS.flatMap((c) => c.steps.filter((s) => !s.lead).map((s) => s.id));
-    if (missing.length) console.log(`steps without a lead (${missing.length}): ${missing.join(", ")}`);
+    if (missing.length) console.warn(`steps without a lead (${missing.length}): ${missing.join(", ")}`);
     expect(Array.isArray(missing)).toBe(true);
   });
 

@@ -41,19 +41,6 @@ export interface DemoStep {
    */
   lead?: string;
   /**
-   * Advance to the next step automatically after this many milliseconds.
-   *
-   * This is how the demo animates. types.ts requires every step to be a
-   * COMPLETE world so the Tour menu can jump anywhere, so a knowledge base at
-   * 0, 240 and 1.000 items is three worlds and three steps rather than one
-   * world and a clock — which also keeps every intermediate state
-   * deep-linkable and needs no Apollo refetch plumbing.
-   *
-   * Never on a chapter's last step, and never on a step with a cta; the
-   * integrity test in chapters/index.test.ts enforces both.
-   */
-  advanceAfterMs?: number;
-  /**
    * Terminal call to action, rendered as the step's primary button.
    *
    * A button rather than a link in the body: the last step has no Next, so

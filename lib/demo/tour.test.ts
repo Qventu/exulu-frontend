@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { contentText } from "./content";
 import { getWorld } from "./fixtures";
-import { DEMO_SCENES } from "./scenes";
+// A scene step's own copy (including its figure) lives in lib/demo/scenes.ts,
+// not on the step. contentOf reads from wherever the content actually is, so
+// the checks below still see a scene's words and figure — see its docblock.
+import { contentOf } from "./step-content";
 import {
   CHAPTERS,
   DEMO_BOOKING_URL,
@@ -13,15 +16,6 @@ import {
   startOfChapter,
   startPosition,
 } from "./tour";
-
-// A scene step's own copy (including its figure) lives in lib/demo/scenes.ts,
-// not on the step — see chapters/index.test.ts's "gives every step copy" for
-// why. This reads from wherever the content actually is, so checks below
-// still see a scene's words and figure.
-const contentOf = (step: DemoStep) =>
-  step.route.startsWith("/demo/szene/")
-    ? (DEMO_SCENES[step.route.split("/").pop()!]?.content ?? [])
-    : step.content;
 
 const FIXTURE: DemoChapter[] = [
   {
@@ -154,21 +148,22 @@ describe("CHAPTERS", () => {
     // product screen the tour is pointing at, which is the thing the visitor
     // is meant to be looking at.
     //
-    // WHERE that one figure may sit depends on the step's geometry, because a
-    // popover and a scene page have different geometry:
+    // WHERE that one figure may sit depends on what is on screen beside it:
     //
-    // - POPOVER (route is a product route) sits OVER a product screen. A
-    //   figure on anything but the chapter's first step competes with the
-    //   screen the tour is pointing at — the same "images compete" argument
-    //   above, applied to a single step — so it must be on chapter.steps[0].
+    // - PRODUCT ROUTE: the content area shows a real screen the step is
+    //   pointing at, and the figure sits in the panel next to it. On
+    //   anything but the chapter's opening step that competes with the very
+    //   screen the visitor is being asked to look at — the same "images
+    //   compete" argument above, applied to a single step — so it must be on
+    //   chapter.steps[0].
     //
-    // - SCENE (route under /demo/szene/) REPLACES the product screen
-    //   full-bleed. There is no product screen behind it to compete with, so
-    //   the popover's opening-step constraint does not apply — a scene's
-    //   figure may sit anywhere in the chapter. (daten.ts's scene figure
-    //   happens to sit at step 0 too, but that is incidental, not required by
-    //   this rule: it is the only scene this rule ever met before chapter 3
-    //   put one at index 2.)
+    // - SCENE (route under /demo/szene/): the figure IS the content area.
+    //   There is no product screen behind it to compete with, so the
+    //   opening-step constraint does not apply — a scene's figure may sit
+    //   anywhere in the chapter. (daten.ts's scene figure happens to sit at
+    //   step 0 too, but that is incidental, not required by this rule: it is
+    //   the only scene this rule ever met before chapter 3 put one at
+    //   index 2.)
     for (const chapter of CHAPTERS) {
       const illustrated = chapter.steps.filter(hasFigure);
       expect(
@@ -181,7 +176,7 @@ describe("CHAPTERS", () => {
         if (!isScene) {
           expect(
             hasFigure(chapter.steps[0]),
-            `${chapter.id}'s schematic is on a popover step, so the popover rule applies: it belongs on the chapter's opening step`,
+            `${chapter.id}'s schematic is on a product-route step, where it sits beside a real screen: it belongs on the chapter's opening step`,
           ).toBe(true);
         }
       }
@@ -189,8 +184,10 @@ describe("CHAPTERS", () => {
   });
 
   // Figure-path existence is owned by lib/demo/chapters/index.test.ts
-  // ("points every figure at a file that exists"), which already scans
-  // every step of every chapter, not just chapter.steps[0].
+  // ("points every figure at a file that exists"). It reads through
+  // contentOf, so it scans every step of every chapter INCLUDING the scene
+  // steps whose blocks live in lib/demo/scenes.ts — for a while it read
+  // step.content directly and silently skipped three of the eleven figures.
 
   it("gives every chapter at least one step", () => {
     for (const chapter of CHAPTERS) {
@@ -225,29 +222,27 @@ describe("the reading load", () => {
     // ones reviewers singled out as best, and the heaviest clustered in the
     // late chapters where attention is thinnest.
     //
-    // The cap depends on the step's geometry, not a single magic number:
+    // ONE cap of 90, for every step, because there is one presentation now.
+    // The old two-tier cap (45 for a step on a product route, 90 for a scene)
+    // measured a geometry that no longer exists: 45 was three lines at a
+    // 480px Shepherd popover, and the 90 was "a scene replaces the screen
+    // full-bleed, so it gets double". Both are gone — every step renders the
+    // same way, into a 380/560px panel or a 768px scene column, with the
+    // panel's own `overflow-y: auto` handling length.
     //
-    // - POPOVER (route is a product route): 45 words, roughly three lines at
-    //   a 480px popover width (.shepherd-element's max-width — see
-    //   shepherd-theme.css). This is the geometry the original 45 came from.
-    //
-    // - SCENE (route under /demo/szene/): 90 words. A scene page replaces the
-    //   product screen full-bleed — inside a max-w-3xl (768px) wrapper with
-    //   its own scroll affordance, and nothing else on screen competing for
-    //   attention. That is roughly double the popover's width and reading
-    //   room, so roughly double the budget. It is still a real ceiling, for
-    //   the same reason the popover one is: copy grows back if nothing stops
-    //   it.
+    // 90 is still a real ceiling, for the reason the 45 was: copy grows back
+    // if nothing stops it, and this suite is the only thing that reads the
+    // whole tour at once. The TIGHT constraint moved to `lead` — the one
+    // sentence always visible before a visitor presses "Mehr" — which
+    // lib/demo/chapters/index.test.ts caps at 20 words.
+    const CAP = 90;
     for (const chapter of CHAPTERS) {
       for (const step of chapter.steps) {
         const w = words(proseOf(step));
-        const isScene = step.route.startsWith("/demo/szene/");
-        const cap = isScene ? 90 : 45;
-        const capName = isScene ? "scene" : "popover";
         expect(
           w,
-          `${step.id} is ${w} words — over the ${capName} cap of ${cap}; trim it or split the step`,
-        ).toBeLessThanOrEqual(cap);
+          `${step.id} is ${w} words — over the cap of ${CAP}; trim it, split the step, or move the detail behind its Kurzfassung`,
+        ).toBeLessThanOrEqual(CAP);
       }
     }
   });

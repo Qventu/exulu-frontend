@@ -7,11 +7,16 @@ const CTX = `/data/${SOFTWARE_DOC_CONTEXT_ID}`;
 /**
  * Chapter 3 — what actually happens to a document.
  *
- * The list fills across three auto-advancing steps, then a STAGE interrupts to
- * show the part no product screen can: a PDF page being read. That beat is a
- * stage rather than a popover because its subject is not on the page behind
- * it — there is nothing to anchor to, and dimming a screen to point at nothing
- * is worse than covering it deliberately.
+ * The knowledge base fills on the real /data/[ctx] screen, and between the
+ * second and third of those steps a SCENE page interrupts to show the part no
+ * product screen can: a PDF page being read. That beat routes to
+ * /demo/szene/aufnahme-page (lib/demo/scenes.ts) rather than carrying an
+ * anchor, because its subject is not on the product screen at all — there is
+ * nothing to point at. It is a page like every other step now, not a
+ * full-bleed takeover: the panel stays docked beside it.
+ *
+ * Every step waits for a click. The timers that used to chain the three
+ * ingestion worlds were removed on 2026-09-14.
  *
  * The nine documents are real (fixtures/software-docs.ts) and chapter 5 cites
  * one of them, so a visitor meets that citation having watched the file
@@ -35,13 +40,6 @@ export const aufnahmeChapter: DemoChapter = {
           text: "Dokumente kommen aus dem Laufwerk, aus SharePoint, über die API — oder per Upload, wenn es einmal schnell gehen muss. Die Basis beginnt leer.",
         },
       ],
-      // This step is reached by a CROSS-ROUTE navigation (struktur's /data ->
-      // this chapter's /data/[ctx]) landing on an ANCHORED step
-      // ("knowledge-items"), and the auto-advance timer starts on the URL
-      // change, not once the anchor is actually on screen. shepherd-step.ts
-      // gives that anchor up to ANCHOR_WAIT_MS (4000ms) to resolve, so the
-      // budget here has to exceed navigation + Apollo + anchor resolution or
-      // this step — "Die Basis beginnt leer", the beat the whole 0 → 4 → 9
     },
     {
       id: "aufnahme-running",

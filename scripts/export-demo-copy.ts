@@ -9,11 +9,12 @@
  * that impossible to do without re-inventing CSV escaping by hand in a
  * spreadsheet editor.
  *
- * A scene step (route under /demo/szene/) carries no content of its own after
- * lib/demo/tour.ts's `DemoStep.content` was emptied for it — the copy lives in
- * lib/demo/scenes.ts and renders full-width instead of in the panel. This
- * script reads from wherever the text actually is, same reasoning as
- * chapters/index.test.ts's "gives every step copy".
+ * A scene step (route under /demo/szene/) carries no content of its own — the
+ * copy lives in lib/demo/scenes.ts and renders full-width instead of in the
+ * panel. This script reads through lib/demo/step-content.ts's `contentOf`,
+ * the one shared lookup the tests use too, so a scene's words are in the
+ * sheet like everything else. A scene's TITLE is not a special case: it is
+ * the step's title, the same single field every other step has.
  *
  * `Kurzfassung` is `lead` — the one sentence always visible in the panel,
  * `content` behind "Mehr" (see lib/demo/tour.ts's DemoStep.lead). No step has
@@ -25,7 +26,7 @@
  */
 import { CHAPTERS } from "../lib/demo/chapters";
 import type { ContentBlock } from "../lib/demo/content";
-import { DEMO_SCENES } from "../lib/demo/scenes";
+import { contentOf } from "../lib/demo/step-content";
 import type { DemoStep } from "../lib/demo/tour";
 
 const COLUMNS = [
@@ -63,18 +64,6 @@ function csvCell(value: string): string {
 
 function csvLine(cells: string[]): string {
   return cells.map(csvCell).join(",");
-}
-
-/**
- * A scene step's real content lives in lib/demo/scenes.ts, keyed by the id in
- * its route's last path segment. Mirrors the lookup in
- * lib/demo/chapters/index.test.ts and lib/demo/tour.test.ts.
- */
-function contentOf(step: DemoStep): ContentBlock[] {
-  if (step.route.startsWith("/demo/szene/")) {
-    return DEMO_SCENES[step.route.split("/").pop()!]?.content ?? [];
-  }
-  return step.content;
 }
 
 /** Every editable German string a single content block carries, labelled. */

@@ -10,10 +10,16 @@ import type { ContentBlock } from "./content";
  * reintroduce exactly the mode-switch this change exists to remove.
  *
  * Keyed by the step id they serve, so a scene traces back to its beat.
+ *
+ * CONTENT ONLY — no title. Each of these four carried a `title` identical to
+ * its step's, rendered as an <h1> on the page while the panel rendered the
+ * same words as an <h2> beside it: the same sentence twice on one screen,
+ * with nothing keeping the two in step. scripts/export-demo-copy.ts emits
+ * only the step's, so a reviewer editing "Titel" in the sheet would have
+ * changed one of the two. The step's title is now the only one.
  */
-export const DEMO_SCENES: Record<string, { title: string; content: ContentBlock[] }> = {
+export const DEMO_SCENES: Record<string, { content: ContentBlock[] }> = {
   "daten-pile": {
-    title: "Das Wissen ist längst da",
     content: [
       {
         kind: "figure",
@@ -32,7 +38,6 @@ export const DEMO_SCENES: Record<string, { title: string; content: ContentBlock[
     ],
   },
   "daten-problem": {
-    title: "Nur nicht in einer Form, mit der eine KI arbeiten kann",
     content: [
       {
         kind: "bullets",
@@ -54,7 +59,6 @@ export const DEMO_SCENES: Record<string, { title: string; content: ContentBlock[
     ],
   },
   "aufnahme-page": {
-    title: "Was mit einer Seite geschieht",
     content: [
       {
         kind: "figure",
@@ -77,7 +81,6 @@ export const DEMO_SCENES: Record<string, { title: string; content: ContentBlock[
     ],
   },
   "zugriff-consequence": {
-    title: "Die Antwort richtet sich nach dem Fragenden",
     content: [
       {
         kind: "figure",

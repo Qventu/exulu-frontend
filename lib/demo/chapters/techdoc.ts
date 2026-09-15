@@ -6,9 +6,13 @@ export const techdocChapter: DemoChapter = {
   title: "Eine schwierige Frage",
   steps: [
     {
-      // No illustration: the popover flips up over the transcript here, and
-      // an image made it tall enough to cover the answer the step says to
-      // watch. The answer streams above the composer, so nothing is dimmed.
+      // No illustration, and the reason is no longer geometric: the panel is
+      // docked beside the transcript now, so nothing this step renders can
+      // cover the answer. The judgement survives the popover that produced
+      // it — this step's whole instruction is "watch it search and answer",
+      // and the chapter's one permitted figure (lib/demo/tour.test.ts caps a
+      // chapter at one, on its opening step, which is this one) would point
+      // the visitor at a drawing instead of at the live answer.
       id: "techdoc-ask",
       route: TECHDOC_CHAT,
       anchor: "chat-composer",

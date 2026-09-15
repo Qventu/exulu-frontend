@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 
 import type { ContentBlock } from "@/lib/demo/content";
-import type { DemoStep } from "@/lib/demo/tour";
 
 /**
  * A step's content, rendered.
@@ -42,10 +41,15 @@ function Block({ block }: { block: ContentBlock }) {
       // transparency — see scripts/generate-demo-image.py for the house style
       // and why the request deliberately drops "background": "transparent".
       //
-      // Plain <img>, not next/image: this renders inside step-content-host's
-      // detached createRoot, outside the Next tree that next/image depends on
-      // (no router, no image-optimisation context). Do not "fix" the eslint
-      // warning by switching it.
+      // Plain <img>, not next/image — and the original reason (this rendered
+      // inside step-content-host's detached createRoot, outside the Next
+      // tree) died with that file. Kept deliberately all the same: every
+      // figure is a build-time asset under /public at a fixed 800x534,
+      // rendered into a 380/560px panel or a 768px scene column and capped
+      // by .demo-block-figure's max-height, so there is no layout shift to
+      // reserve against and nothing for the optimiser to save. Switching it
+      // would buy a demo-only route an image-optimisation round trip on a
+      // server whose only job is this walkthrough.
       return <img className="demo-block-figure" src={block.src} alt={block.alt ?? ""} />;
     case "sequence":
       return (
@@ -95,8 +99,12 @@ function Block({ block }: { block: ContentBlock }) {
  * outside TourProvider. Keep this component (and `Block` above) free of
  * Apollo hooks and `useTour()`: each throws in the mount that lacks it.
  * Theme and next-intl are safe — both providers wrap both mounts.
+ *
+ * Takes BLOCKS, not a step: one mount's blocks come from `step.content`, the
+ * other's from lib/demo/scenes.ts, and the scene page used to assemble a
+ * whole fake DemoStep (with a duplicate title on it) just to get them in.
  */
-export function StepPanel({ step }: { step: DemoStep }) {
+export function StepPanel({ content }: { content: ContentBlock[] }) {
   return (
     <motion.div
       className="demo-step-panel"
@@ -104,7 +112,7 @@ export function StepPanel({ step }: { step: DemoStep }) {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.2 }}
     >
-      {step.content.map((block, index) => (
+      {content.map((block, index) => (
         <Block key={index} block={block} />
       ))}
     </motion.div>

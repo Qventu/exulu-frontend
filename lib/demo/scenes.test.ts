@@ -10,7 +10,6 @@ describe("demo scenes", () => {
     "has a scene for %s",
     (id) => {
       expect(DEMO_SCENES[id], id).toBeDefined();
-      expect(DEMO_SCENES[id].title.length).toBeGreaterThan(0);
       expect(DEMO_SCENES[id].content.length).toBeGreaterThan(0);
     },
   );
