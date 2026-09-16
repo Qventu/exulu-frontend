@@ -497,7 +497,7 @@
             },
             "vocabulary": {
               "label": "Vocabulary",
-              "description": "Give the assistant your domain language: abbreviations, product names, and how your documents are written."
+              "description": "Give the assistant your domain language: abbreviations, product names, and how your documents are written. Always available to the assistant, not just while searching."
             },
             "memory": {
               "label": "Memory",
@@ -544,9 +544,9 @@
             "removeRule": "Remove rule"
           },
           "vocabulary": {
-            "intro": "Optional, but powerful: your domain language helps the assistant find documents even when users phrase things differently.",
+            "intro": "Optional, but powerful: the assistant always knows this vocabulary, in every answer — not only while searching. It also helps find documents even when users phrase things differently.",
             "glossaryTitle": "Glossary",
-            "glossaryHint": "Abbreviations and terms your documents use. e.g. FST → field bus controller.",
+            "glossaryHint": "Abbreviations and terms your documents use, e.g. FST → field bus controller. The assistant always has these definitions available, even when it isn't searching.",
             "termPlaceholder": "Term",
             "meaningPlaceholder": "Meaning",
             "addTerm": "Add term",
@@ -1090,7 +1090,7 @@
       "connectTitle": "Connect {provider}",
       "connected": "Connected to {provider}",
       "expired": "This form expired. Ask the agent to try again — it will show a fresh form.",
-      "guestNotice": "This tool needs credentials. Sign in to the main Exulu app to connect it.",
+      "guestNotice": "This tool needs credentials. Sign in to the main IMP app to connect it.",
       "noSession": "No active session — sign in again to submit credentials.",
       "oauthConnect": "Connect",
       "oauthDescription": "This tool needs authorization. Connect your account in the new tab, then come back here.",
@@ -4165,7 +4165,7 @@
     "clearSearch": "Clear search",
     "connect": {
       "copy": "Copy command",
-      "description": "Run this command in your terminal to connect your coding agent to this Exulu instance.",
+      "description": "Run this command in your terminal to connect your coding agent to this IMP instance.",
       "details": "Your agent will ask which clients to install into (Claude Code, OpenCode, and others) and whether to share one copy across them via symlinks. You'll need an API key — create one in Settings.",
       "instruction": "Run this in your terminal:",
       "title": "Connect your agent"
