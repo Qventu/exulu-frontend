@@ -64,17 +64,21 @@ jobs:
             exit "$STATUS"
           fi
 
-          # Extract version from the output (look for "Created tag" or similar)
-          VERSION=$(echo "$OUTPUT" | grep -o 'Created tag v[0-9]*\.[0-9]*\.[0-9]*' | grep -o '[0-9]*\.[0-9]*\.[0-9]*' || echo "0.0.0")
+          # Extract version from the output (look for "Created tag" or similar).
+          # No match means semantic-release legitimately found nothing worth releasing
+          # (e.g. a docs-only commit) — leave VERSION empty rather than falling back to
+          # a fake "0.0.0", which used to get published as a real Docker tag.
+          VERSION=$(echo "$OUTPUT" | grep -o 'Created tag v[0-9]*\.[0-9]*\.[0-9]*' | grep -o '[0-9]*\.[0-9]*\.[0-9]*' || true)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Extracted version: $VERSION"
+          echo "Extracted version: ${VERSION:-<none — no release created this run>}"
 
       # Verify version was captured
       - name: Verify version
         run: |
-          echo "Release version: ${{ steps.release.outputs.version }}"
-          if [ "${{ steps.release.outputs.version }}" = "0.0.0" ]; then
-            echo "Warning: Could not extract version from semantic-release output"
+          if [ -z "${{ steps.release.outputs.version }}" ]; then
+            echo "No new semantic-release version this run — the semver Docker tag will be skipped (latest/main tags still publish)."
+          else
+            echo "Release version: ${{ steps.release.outputs.version }}"
           fi
 
       # Install the cosign tool except on PR
@@ -115,7 +119,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ steps.release.outputs.version }}
+            type=raw,value=${{ steps.release.outputs.version }},enable=${{ steps.release.outputs.version != '' }}
 
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
