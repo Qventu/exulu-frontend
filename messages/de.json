@@ -497,7 +497,7 @@
             },
             "vocabulary": {
               "label": "Fachvokabular",
-              "description": "Geben Sie dem Assistenten Ihre Fachsprache: Abkürzungen, Produktnamen und den Schreibstil Ihrer Dokumente."
+              "description": "Geben Sie dem Assistenten Ihre Fachsprache: Abkürzungen, Produktnamen und den Schreibstil Ihrer Dokumente. Immer verfügbar, nicht nur während der Suche."
             },
             "memory": {
               "label": "Gedächtnis",
@@ -544,9 +544,9 @@
             "removeRule": "Regel entfernen"
           },
           "vocabulary": {
-            "intro": "Optional, aber wirkungsvoll: Ihre Fachsprache hilft dem Assistenten, Dokumente zu finden, auch wenn Nutzer anders formulieren.",
+            "intro": "Optional, aber wirkungsvoll: Der Assistent kennt dieses Vokabular immer, in jeder Antwort — nicht nur während der Suche. Es hilft außerdem, Dokumente zu finden, auch wenn Nutzer anders formulieren.",
             "glossaryTitle": "Glossar",
-            "glossaryHint": "Abkürzungen und Begriffe, die Ihre Dokumente verwenden. z. B. FST → Feldbuscontroller.",
+            "glossaryHint": "Abkürzungen und Begriffe, die Ihre Dokumente verwenden, z. B. FST → Feldbuscontroller. Der Assistent kennt diese Definitionen immer, auch wenn er nicht sucht.",
             "termPlaceholder": "Begriff",
             "meaningPlaceholder": "Bedeutung",
             "addTerm": "Begriff hinzufügen",
@@ -1090,7 +1090,7 @@
       "connectTitle": "{provider} verbinden",
       "connected": "Mit {provider} verbunden",
       "expired": "Dieses Formular ist abgelaufen. Bitte den Agenten erneut fragen — es erscheint ein neues Formular.",
-      "guestNotice": "Dieses Tool benötigt Zugangsdaten. Melde dich in der Exulu-Hauptanwendung an, um es zu verbinden.",
+      "guestNotice": "Dieses Tool benötigt Zugangsdaten. Melde dich in der IMP-Hauptanwendung an, um es zu verbinden.",
       "noSession": "Keine aktive Sitzung — bitte erneut anmelden, um Zugangsdaten zu übermitteln.",
       "oauthConnect": "Verbinden",
       "oauthDescription": "Dieses Tool benötigt eine Autorisierung. Verbinde dein Konto im neuen Tab und komm dann hierher zurück.",
@@ -4165,7 +4165,7 @@
     "clearSearch": "Suche löschen",
     "connect": {
       "copy": "Befehl kopieren",
-      "description": "Führen Sie diesen Befehl in Ihrem Terminal aus, um Ihren Coding-Agenten mit dieser Exulu-Instanz zu verbinden.",
+      "description": "Führen Sie diesen Befehl in Ihrem Terminal aus, um Ihren Coding-Agenten mit dieser IMP-Instanz zu verbinden.",
       "details": "Ihr Agent fragt, in welche Clients installiert werden soll (Claude Code, OpenCode und andere) und ob eine gemeinsame Kopie via Symlinks genutzt werden soll. Sie benötigen einen API-Schlüssel — erstellen Sie einen in den Einstellungen.",
       "instruction": "Führen Sie dies in Ihrem Terminal aus:",
       "title": "Agenten verbinden"
