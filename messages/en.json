@@ -4561,6 +4561,8 @@
       "failed": "Failed",
       "openInLibrary": "Open in library",
       "queued": "Queued…",
+      "recovered": "A later attempt succeeded — already saved as \"{title}\"",
+      "recoveredOpen": "Open saved version",
       "remaining": "~{remaining} remaining",
       "review": "Review",
       "saved": "Saved",

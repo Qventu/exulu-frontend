@@ -70,7 +70,10 @@ export function MeetingComposer({ onCancel, onStarted }: MeetingComposerProps) {
   const [joinAt, setJoinAt] = React.useState("");
   const [language, setLanguage] = React.useState("auto");
   const [botName, setBotName] = React.useState("");
-  const [notifyChat, setNotifyChat] = React.useState(false);
+  // Defaults ON (2026-09-22): a bot sitting unannounced in a Teams waiting
+  // room is the leading cause of "bot finished without a recording" — nobody
+  // in the meeting knows to admit it. The chat message is the only cue.
+  const [notifyChat, setNotifyChat] = React.useState(true);
   const [projectId, setProjectId] = React.useState("");
   const [rightsMode, setRightsMode] = React.useState<Mode>("private");
   const [rbacUsers, setRbacUsers] = React.useState<RbacUser[]>([]);

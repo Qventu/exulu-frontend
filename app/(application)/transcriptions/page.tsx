@@ -45,10 +45,9 @@ import { Progress } from "@/components/ui/progress";
 import { Composer } from "./components/composer";
 import { MeetingComposer } from "./components/meeting-composer";
 import { JobRow } from "./components/job-row";
-import { formatDuration } from "./types";
 import { ReviewSheet } from "./components/review-sheet";
 import { useRecordingUsage, useTranscriptionJobs } from "./hooks";
-import { displayTitle, type Job } from "./types";
+import { displayTitle, findRecoveredJob, formatDuration, type Job } from "./types";
 
 export default function TranscriptionsPage() {
   // useSearchParams needs a Suspense boundary for prerendering.
@@ -128,6 +127,19 @@ function TranscriptionsPageInner() {
   );
   const hasFailed = processing.some((job) => job.status === "failed");
   const saved = savedJobs.filter(matches);
+
+  // Failed meeting-bot job -> the later save that recovered it, if any (only
+  // checks the currently-loaded saved page — a save recovered past the "load
+  // more" boundary won't be linked until it's loaded).
+  const recoveredByFailedJobId = React.useMemo(() => {
+    const map = new Map<string, Job>();
+    for (const job of processing) {
+      if (job.status !== "failed") continue;
+      const recovered = findRecoveredJob(job, savedJobs);
+      if (recovered) map.set(job.id, recovered);
+    }
+    return map;
+  }, [processing, savedJobs]);
 
   const totalJobs = activeJobs.length + savedJobs.length;
   const searching = query.trim().length > 0;
@@ -334,6 +346,7 @@ function TranscriptionsPageInner() {
                       job={job}
                       onReview={openReview}
                       onChanged={refetchAll}
+                      recoveredBy={recoveredByFailedJobId.get(job.id)}
                     />
                   ))}
                 </ul>
