@@ -142,6 +142,10 @@ const transcriptionJob = (meeting: MeetingRecording) => ({
   source: meeting.source,
   meeting_url: null,
   recall_bot_id: null,
+  // Dropped at export like meeting_url/recall_bot_id (build-algi-meetings-fixture.py)
+  // — it's a Recall-side id, not transcript content, and every recording here
+  // is long finished, so there's nothing an on-demand video fetch would resolve.
+  recall_recording_id: null,
   bot_status: meeting.bot_status,
   // Scheduled join time for a bot that has not dialled in yet. Null for every
   // recording here because all 28 have already run — and omitting it cost one
@@ -154,6 +158,11 @@ const transcriptionJob = (meeting: MeetingRecording) => ({
   // would claim they had.
   post_processing_outputs:
     meeting.id === ALGI_MEETING_ID ? [GENERATED_GUIDE_OUTPUT] : null,
+  // ALGI does not run with RECALL_STORE_VIDEO_LOCALLY on — every recording
+  // here would show the on-demand "Load video" path in a real deployment,
+  // and recall_recording_id above already being null (see comment) means
+  // even that fetch would return nothing, so no video UI renders at all.
+  video_s3key: null,
 });
 
 /** The routine as the list and detail screens select it. */

@@ -30,10 +30,12 @@ const TRANSCRIPTION_JOB_FIELDS = `
   source
   meeting_url
   recall_bot_id
+  recall_recording_id
   bot_status
   join_at
   post_processing_prompts
   post_processing_outputs
+  video_s3key
 `;
 
 export const GET_TRANSCRIPTION_JOBS = gql`
@@ -123,6 +125,17 @@ export const RUN_TRANSCRIPT_POST_PROCESSING = gql`
     runTranscriptPostProcessing(id: $id, prompt_id: $prompt_id, agent_id: $agent_id) {
       ${TRANSCRIPTION_JOB_FIELDS}
     }
+  }
+`;
+
+/**
+ * On-demand fallback for a meeting job with no permanent local video copy —
+ * resolves a fresh signed URL straight from Recall. Expires in ~6h; never
+ * cache/store the result, re-fetch each time the video is opened.
+ */
+export const GET_RECORDING_VIDEO_URL = gql`
+  query GetRecordingVideoUrl($job_id: ID!) {
+    recordingVideoUrl(job_id: $job_id)
   }
 `;
 
