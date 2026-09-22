@@ -39,9 +39,11 @@ export interface JobRowProps {
   job: Job;
   onReview: (jobId: string) => void;
   onChanged: () => void;
+  /** Set when a later retry for the same meeting_url already succeeded — see findRecoveredJob. */
+  recoveredBy?: Job | null;
 }
 
-export function JobRow({ job, onReview, onChanged }: JobRowProps) {
+export function JobRow({ job, onReview, onChanged, recoveredBy }: JobRowProps) {
   const t = useTranslations("transcriptions");
   const tCommon = useTranslations("common");
 
@@ -204,6 +206,11 @@ export function JobRow({ job, onReview, onChanged }: JobRowProps) {
               <span className="ml-2 text-destructive">— {job.error}</span>
             )}
           </div>
+          {recoveredBy && (
+            <div className="text-xs text-emerald-600 dark:text-emerald-500">
+              {t("row.recovered", { title: displayTitle(recoveredBy) })}
+            </div>
+          )}
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -275,6 +282,19 @@ export function JobRow({ job, onReview, onChanged }: JobRowProps) {
                 <Trash2 aria-hidden="true" className="size-4" />
               </Button>
             </>
+          )}
+          {job.status === "failed" && recoveredBy?.saved_item_id && (
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="max-md:h-11"
+            >
+              <Link href={`/data/transcriptions/${recoveredBy.saved_item_id}`}>
+                {t("row.recoveredOpen")}
+                <ExternalLink aria-hidden="true" className="ml-1 size-3.5" />
+              </Link>
+            </Button>
           )}
           {job.status === "failed" && (
             <Button

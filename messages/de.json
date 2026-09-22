@@ -4561,6 +4561,8 @@
       "failed": "Fehlgeschlagen",
       "openInLibrary": "In Bibliothek öffnen",
       "queued": "In Warteschlange…",
+      "recovered": "Ein späterer Versuch war erfolgreich — bereits gespeichert als „{title}“",
+      "recoveredOpen": "Gespeicherte Version öffnen",
       "remaining": "~{remaining} verbleibend",
       "review": "Überprüfen",
       "saved": "Gespeichert",

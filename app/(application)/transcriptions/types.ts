@@ -181,6 +181,30 @@ export function parsePostProcessingOutputs(
 }
 
 /**
+ * For a failed meeting-bot job, find the later "saved" job for the same
+ * meeting_url — i.e. a retry that succeeded. The failed row otherwise lingers
+ * forever with nothing in the UI showing its content already exists elsewhere
+ * (2026-09-22 incident: a customer reported 4 "failed" recordings as lost; 3
+ * had actually succeeded on retry and were already in "Saved"). Picks the
+ * earliest save after the failure, not a later, unrelated reuse of the same
+ * link by a recurring meeting.
+ */
+export function findRecoveredJob(failedJob: Job, savedJobs: Job[]): Job | null {
+  if (!failedJob.meeting_url) return null;
+  const failedTime = new Date(failedJob.createdAt).getTime();
+  const candidates = savedJobs
+    .filter(
+      (saved) =>
+        saved.meeting_url === failedJob.meeting_url &&
+        new Date(saved.createdAt).getTime() > failedTime,
+    )
+    .sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+  return candidates[0] ?? null;
+}
+
+/**
  * Humanize a Recall bot lifecycle code (e.g. "in_call_recording") into a short
  * status line. Falls back to a title-cased version of the code.
  */
