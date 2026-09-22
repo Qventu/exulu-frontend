@@ -4549,7 +4549,10 @@
       "resultPending": "Noch nicht ausgeführt.",
       "deletedPrompt": "Prompt nicht mehr verfügbar",
       "resultRunning": "Wird ausgeführt…",
-      "meetingNoAudio": "Für Meeting-Aufnahmen ist keine Audiovorschau verfügbar."
+      "meetingNoAudio": "Für Meeting-Aufnahmen ist keine Audiovorschau verfügbar.",
+      "loadVideo": "Video laden",
+      "loadingVideo": "Video wird geladen…",
+      "videoUnavailable": "Für diese Aufnahme ist kein Video verfügbar."
     },
     "row": {
       "awaitingReview": "Wartet auf Überprüfung",

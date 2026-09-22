@@ -74,6 +74,7 @@ import {
   type Segment,
 } from "../types";
 import { AudioTimeline, type AudioTimelineHandle } from "./audio-timeline";
+import { MeetingVideoPlayer } from "./meeting-video-player";
 
 /** Teams excluded until the backend carries them (see composer.tsx). */
 const ALLOWED_MODES: Mode[] = ["private", "users", "roles", "public"];
@@ -629,12 +630,9 @@ function ReviewForm({
 
       {/* Sticky audio footer: player + ribbon + actions (inventory 48–54). */}
       <div className="shrink-0 space-y-3 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        {/* Meeting recordings live in Recall, not S3 — no local audio to play. */}
-        {meeting || !job.audio_s3key ? (
-          <p className="px-1 text-xs text-muted-foreground">
-            {t("review.meetingNoAudio")}
-          </p>
-        ) : (
+        {meeting ? (
+          <MeetingVideoPlayer job={job} />
+        ) : job.audio_s3key ? (
           <AudioTimeline
             ref={timelineRef}
             audioS3Key={job.audio_s3key}
@@ -643,6 +641,10 @@ function ReviewForm({
             onTime={setCurrentSecond}
             onSeek={scrollToTime}
           />
+        ) : (
+          <p className="px-1 text-xs text-muted-foreground">
+            {t("review.meetingNoAudio")}
+          </p>
         )}
         <div className="flex justify-end gap-2">
           <Button

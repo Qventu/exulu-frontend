@@ -56,10 +56,14 @@ export type Job = {
   source?: JobSource | null;
   meeting_url?: string | null;
   recall_bot_id?: string | null;
+  recall_recording_id?: string | null;
   bot_status?: string | null;
   join_at?: string | null;
   post_processing_prompts?: PostProcessingPrompt[] | string | null;
   post_processing_outputs?: PostProcessingOutput[] | string | null;
+  // Permanent local copy of the meeting video (only when the deployment has
+  // RECALL_STORE_VIDEO_LOCALLY on). Null falls back to an on-demand Recall URL.
+  video_s3key?: string | null;
 };
 
 export type Segment = {
