@@ -36,7 +36,7 @@ function feedbackOrigin(): string {
     }
 }
 
-function buildCsp(): string {
+export function buildCsp(): string {
     const backend = backendOrigin();
     const s3 = s3Origin();
     const redis = redisOrigin();
@@ -88,6 +88,25 @@ function buildCsp(): string {
     ].filter(Boolean).join(' ');
     const fontSrc = "'self' data: https://fonts.gstatic.com";
 
+    // <audio>/<video> sources:
+    // - blob: — chat TTS plays generated MP3s via URL.createObjectURL();
+    //   without it Chrome rejects the load with "Media load rejected by URL
+    //   safety check".
+    // - s3 — presigned URLs for uploaded audio (transcriptions AudioTimeline)
+    //   and locally stored meeting video (video_s3key) live on the
+    //   COMPANION_S3_ENDPOINT origin, same as img-src/frame-src above.
+    // - *.amazonaws.com — Recall's on-demand meeting video (recordingVideoUrl)
+    //   is a signed URL on a regional bucket such as
+    //   eu-central-1-recallai-production-bot-data.s3.amazonaws.com; the
+    //   wildcard covers every Recall region. A blocked source renders as an
+    //   empty 0:00 player with no network request (ALGI, 2026-09-23).
+    const mediaSrc = [
+        "'self'",
+        'blob:',
+        s3,
+        'https://*.amazonaws.com',
+    ].filter(Boolean).join(' ');
+
     return [
         "default-src 'self'",
         `script-src ${scriptSrc}`,
@@ -96,10 +115,7 @@ function buildCsp(): string {
         `font-src ${fontSrc}`,
         `connect-src ${connectSrc}`,
         `frame-src ${frameSrc}`,
-        // Allow blob: URLs for <audio>/<video> so the TTS feature can play
-        // generated MP3s via URL.createObjectURL(). Without this Chrome rejects
-        // the load with "Media load rejected by URL safety check".
-        "media-src 'self' blob:",
+        `media-src ${mediaSrc}`,
         "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",

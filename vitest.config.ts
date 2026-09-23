@@ -16,6 +16,8 @@ export default defineConfig({
       "lib/**/*.test.ts",
       "components/**/*.test.ts",
       "app/**/*.test.ts",
+      // Root-level modules (proxy.ts CSP builder).
+      "*.test.ts",
     ],
   },
 });

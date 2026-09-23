@@ -40,10 +40,7 @@ export function MeetingVideoPlayer({ job }: { job: Job }) {
 
   const [fetchOnDemandUrl, { data, loading, called }] = useLazyQuery<{
     recordingVideoUrl: string | null;
-  }>(GET_RECORDING_VIDEO_URL, {
-    variables: { job_id: job.id },
-    fetchPolicy: "network-only",
-  });
+  }>(GET_RECORDING_VIDEO_URL, { fetchPolicy: "network-only" });
 
   if (job.video_s3key) {
     if (localFailed) {
@@ -84,7 +81,7 @@ export function MeetingVideoPlayer({ job }: { job: Job }) {
       variant="outline"
       size="sm"
       className="max-md:h-11"
-      onClick={() => void fetchOnDemandUrl()}
+      onClick={() => void fetchOnDemandUrl({ variables: { job_id: job.id } })}
     >
       {t("review.loadVideo")}
     </Button>
