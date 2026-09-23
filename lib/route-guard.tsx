@@ -54,6 +54,7 @@ const getSessionUser = async () =>
  */
 async function serverNavConfig(): Promise<NavConfig> {
   let recallEnabled = false;
+  let whisperEnabled = false;
   if (isDemoMode()) {
     // The demo describes a deployment, and lib/demo/config.ts is where that
     // description lives — the client ConfigContext already reads it. Without
@@ -66,11 +67,13 @@ async function serverNavConfig(): Promise<NavConfig> {
     // It also skips an HTTP call that could only ever fail, on every guarded
     // route in the tour.
     recallEnabled = demoConfig().recall?.enabled === true;
+    whisperEnabled = demoConfig().whisper?.enabled === true;
   } else {
     try {
       const res = await configApi.backend();
       const json: BackendConfigType = await res.json();
       recallEnabled = json.recall?.enabled === true;
+      whisperEnabled = json.whisper?.enabled === true;
     } catch {
       recallEnabled = false;
     }
@@ -83,6 +86,7 @@ async function serverNavConfig(): Promise<NavConfig> {
         process.env.EXULU_USE_LITELLM === "true",
     },
     recall: { enabled: recallEnabled },
+    whisper: { enabled: whisperEnabled },
     n8n: {
       enabled:
         typeof process.env.N8N_URL === "string" && process.env.N8N_URL !== "",

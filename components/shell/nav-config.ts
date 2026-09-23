@@ -61,6 +61,7 @@ export type NavConfigFlag = "transcriptions" | "n8n" | "feedback";
 export interface NavConfig {
   transcription?: { enabled?: boolean };
   recall?: { enabled?: boolean };
+  whisper?: { enabled?: boolean };
   n8n?: { enabled?: boolean };
   feedback?: { enabled?: boolean };
 }
@@ -381,11 +382,13 @@ export function flagEnabled(config: NavConfig, flag?: NavConfigFlag): boolean {
   if (!flag) return true;
   switch (flag) {
     case "transcriptions":
-      // Shown when either the Whisper upload flow OR Recall meeting bots are
-      // configured — both live on the /transcriptions page.
+      // Shown when ANY of the three flows on /transcriptions is configured:
+      // "Record on this device" (composer-mic STT flag), Recall meeting bots,
+      // or the Whisper upload server.
       return (
         config.transcription?.enabled === true ||
-        config.recall?.enabled === true
+        config.recall?.enabled === true ||
+        config.whisper?.enabled === true
       );
     case "n8n":
       return config.n8n?.enabled === true;
