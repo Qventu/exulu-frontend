@@ -4427,8 +4427,9 @@
       "titleLabel": "Titel",
       "titlePlaceholder": "Titel des Transkripts",
       "uploading": "Wird hochgeladen…",
-      "modeAudio": "Audio hochladen",
-      "modeMeeting": "Meeting aufnehmen",
+      "modeAudio": "Datei hochladen",
+      "modeMeeting": "Meeting-Bot einladen",
+      "modeRecord": "Auf diesem Gerät aufnehmen",
       "meetingUrl": "Meeting-URL",
       "meetingUrlPlaceholder": "https://… (Zoom, Meet, Teams)",
       "joinTiming": "Beitrittszeitpunkt",
@@ -4445,7 +4446,23 @@
       "selectAgent": "Agent auswählen",
       "removePrompt": "Entfernen",
       "startMeeting": "Aufnahme starten",
-      "meetingSummary": "Tritt jetzt bei · Privat · Kein Projekt"
+      "meetingSummary": "Tritt jetzt bei · Privat · Kein Projekt",
+      "recordIntro": "Legen Sie das Telefon auf den Tisch, drücken Sie Start und lassen Sie den Bildschirm an.",
+      "recordDefaultTitle": "Aufnahme {date}",
+      "startRecording": "Aufnahme starten",
+      "stopRecording": "Stopp",
+      "recording": "Aufnahme läuft",
+      "keepScreenOn": "Lassen Sie diesen Bildschirm an. Die Aufnahme pausiert, wenn das Telefon gesperrt wird.",
+      "partsSent": "{count, plural, one {# Teil gesendet} other {# Teile gesendet}}",
+      "partsPending": "{count, plural, one {# ausstehend} other {# ausstehend}}",
+      "partsRetrying": "Verbindungsproblem – neuer Versuch",
+      "transcribingPart": "wird transkribiert…",
+      "liveTranscriptEmpty": "Das Transkript erscheint hier etwa eine Minute nach Gesprächsbeginn.",
+      "sendingLastParts": "Letzte Teile werden gesendet ({sent}/{total})…",
+      "uploadingAudio": "Audio wird hochgeladen…",
+      "finishing": "Wird abgeschlossen…",
+      "alreadyRecording": "In diesem Tab läuft bereits eine Aufnahme.",
+      "recordingInterrupted": "Das Mikrofon wurde unterbrochen. Stoppen Sie, um das Erfasste zu behalten."
     },
     "confirmCancel": {
       "confirm": "Transkription stoppen",
@@ -4467,6 +4484,16 @@
       "description": "Dadurch wird der Eintrag von dieser Seite entfernt. Das gespeicherte Transkript bleibt in der Wissensdatenbank erhalten, sofern Sie es unten nicht ebenfalls auswählen.",
       "confirm": "Löschen",
       "alsoDeleteItem": "Auch das gespeicherte Transkript aus der Wissensdatenbank löschen"
+    },
+    "confirmStop": {
+      "title": "Aufnahme beenden?",
+      "description": "Das bisherige Transkript wird zur Überprüfung gespeichert; die Audiodatei wird hochgeladen.",
+      "confirm": "Aufnahme beenden"
+    },
+    "confirmDiscardRecording": {
+      "title": "Diese Aufnahme verwerfen?",
+      "description": "Aufnahme und Transkript werden gelöscht.",
+      "confirm": "Verwerfen"
     },
     "description": "Verwandeln Sie Audio in Transkripte mit benannten Sprechern, die Sie in Chats und Projekten nutzen können.",
     "empty": {
@@ -4598,7 +4625,17 @@
       "meetingStarted": "Bot tritt dem Meeting bei",
       "meetingStartFailed": "Meeting-Bot konnte nicht gestartet werden",
       "postProcessingRan": "Prompt erneut ausgeführt",
-      "postProcessingFailed": "Prompt konnte nicht ausgeführt werden"
+      "postProcessingFailed": "Prompt konnte nicht ausgeführt werden",
+      "recordingStarted": "Aufnahme gestartet",
+      "recordingStartFailed": "Aufnahme konnte nicht gestartet werden",
+      "recordingFinished": "Aufnahme beendet – unten überprüfen",
+      "recordingStopFailed": "Aufnahme konnte nicht abgeschlossen werden",
+      "recordingDiscarded": "Aufnahme verworfen",
+      "recordingInterrupted": "Aufnahme wurde unterbrochen",
+      "recordingAutoStopped": "Aufnahme nach 4 Stunden automatisch beendet",
+      "recordingEndedElsewhere": "Diese Aufnahme wurde auf einem anderen Gerät beendet",
+      "audioUploadFailedKeptTranscript": "Das Transkript wurde gespeichert, die Audiodatei konnte aber nicht hochgeladen werden",
+      "partSkipped": "Teil {seq} konnte nicht transkribiert werden"
     },
     "usage": {
       "label": "Aufnahmezeit diesen Monat",

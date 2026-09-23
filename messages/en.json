@@ -4427,8 +4427,9 @@
       "titleLabel": "Title",
       "titlePlaceholder": "Transcript title",
       "uploading": "Uploading…",
-      "modeAudio": "Upload audio",
-      "modeMeeting": "Record a meeting",
+      "modeAudio": "Upload a file",
+      "modeMeeting": "Invite a meeting bot",
+      "modeRecord": "Record on this device",
       "meetingUrl": "Meeting URL",
       "meetingUrlPlaceholder": "https://… (Zoom, Meet, Teams)",
       "joinTiming": "When to join",
@@ -4445,7 +4446,23 @@
       "selectAgent": "Select an agent",
       "removePrompt": "Remove",
       "startMeeting": "Start recording",
-      "meetingSummary": "Joining now · Private · No project"
+      "meetingSummary": "Joining now · Private · No project",
+      "recordIntro": "Put the phone on the table, press Start, and keep the screen on.",
+      "recordDefaultTitle": "Recording {date}",
+      "startRecording": "Start recording",
+      "stopRecording": "Stop",
+      "recording": "Recording",
+      "keepScreenOn": "Keep this screen on. Recording pauses if the phone locks.",
+      "partsSent": "{count, plural, one {# part sent} other {# parts sent}}",
+      "partsPending": "{count, plural, one {# pending} other {# pending}}",
+      "partsRetrying": "Connection problem — retrying",
+      "transcribingPart": "transcribing…",
+      "liveTranscriptEmpty": "The transcript appears here about a minute after you start talking.",
+      "sendingLastParts": "Sending last parts ({sent}/{total})…",
+      "uploadingAudio": "Uploading audio…",
+      "finishing": "Finishing…",
+      "alreadyRecording": "A recording is already running in this tab.",
+      "recordingInterrupted": "The microphone was interrupted. Stop to keep what was captured."
     },
     "confirmCancel": {
       "confirm": "Stop transcription",
@@ -4467,6 +4484,16 @@
       "description": "This removes the entry from this page. The saved transcript stays in the knowledge base unless you also select it below.",
       "confirm": "Delete",
       "alsoDeleteItem": "Also delete the saved transcript from the knowledge base"
+    },
+    "confirmStop": {
+      "title": "Stop recording?",
+      "description": "The transcript so far will be kept for review; the audio will be uploaded.",
+      "confirm": "Stop recording"
+    },
+    "confirmDiscardRecording": {
+      "title": "Discard this recording?",
+      "description": "The recording and its transcript will be deleted.",
+      "confirm": "Discard"
     },
     "description": "Turn audio into speaker-labeled transcripts you can use in chats and projects.",
     "empty": {
@@ -4598,7 +4625,17 @@
       "meetingStarted": "Bot is joining the meeting",
       "meetingStartFailed": "Couldn't start the meeting bot",
       "postProcessingRan": "Prompt re-run",
-      "postProcessingFailed": "Couldn't run the prompt"
+      "postProcessingFailed": "Couldn't run the prompt",
+      "recordingStarted": "Recording started",
+      "recordingStartFailed": "Couldn't start the recording",
+      "recordingFinished": "Recording finished — review it below",
+      "recordingStopFailed": "Couldn't finish the recording",
+      "recordingDiscarded": "Recording discarded",
+      "recordingInterrupted": "Recording was interrupted",
+      "recordingAutoStopped": "Recording stopped automatically after 4 hours",
+      "recordingEndedElsewhere": "This recording was finished from another device",
+      "audioUploadFailedKeptTranscript": "The transcript was kept, but the audio could not be uploaded",
+      "partSkipped": "Part {seq} could not be transcribed"
     },
     "usage": {
       "label": "Recording time this month",

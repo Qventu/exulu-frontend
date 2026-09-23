@@ -14,6 +14,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
+import { useLiveRecordingOptional } from "@/components/live-recording/live-recording-provider";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { PageHeader } from "@/components/primitives/page-header";
 import { PageShell } from "@/components/primitives/page-shell";
@@ -41,13 +42,18 @@ import {
 } from "@/components/ui/toggle-group";
 
 import { Progress } from "@/components/ui/progress";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { Composer } from "./components/composer";
 import { MeetingComposer } from "./components/meeting-composer";
 import { JobRow } from "./components/job-row";
+import { RecordComposer } from "./components/record-composer";
 import { ReviewSheet } from "./components/review-sheet";
 import { useRecordingUsage, useTranscriptionJobs } from "./hooks";
 import { displayTitle, findRecoveredJob, formatDuration, type Job } from "./types";
+
+/** The three new-transcription flows, each behind its own backend flag. */
+type ComposerMode = "audio" | "meeting" | "record";
 
 export default function TranscriptionsPage() {
   // useSearchParams needs a Suspense boundary for prerendering.
@@ -79,21 +85,37 @@ function TranscriptionsPageInner() {
 
   const [query, setQuery] = React.useState("");
 
-  // Composer mode: audio upload (Whisper) vs Recall meeting bot. Each is gated
-  // by its own backend feature flag; the toggle only appears when BOTH are on.
+  // Three independent flows, each gated by its own backend flag (spec §4.1):
+  // upload (Whisper server), meeting bot (Recall), record here (composer STT).
   const config = React.useContext(ConfigContext);
+  const isMobile = useIsMobile();
+  const live = useLiveRecordingOptional();
   const recallEnabled = !!config?.recall?.enabled;
-  const audioEnabled = !!config?.transcription?.enabled;
-  const showModeToggle = recallEnabled && audioEnabled;
-  const [composerMode, setComposerMode] = React.useState<"audio" | "meeting">(
-    "audio",
+  const uploadEnabled = !!config?.whisper?.enabled;
+  const recordEnabled = !!config?.transcription?.enabled;
+  const enabledModes = React.useMemo(
+    () =>
+      [
+        recordEnabled && isMobile ? "record" : null, // one tap on a phone
+        uploadEnabled ? "audio" : null,
+        recallEnabled ? "meeting" : null,
+        recordEnabled && !isMobile ? "record" : null,
+      ].filter((m): m is ComposerMode => m !== null),
+    [recallEnabled, uploadEnabled, recordEnabled, isMobile],
   );
-  // Force the only available mode when just one flow is enabled.
-  const effectiveMode: "audio" | "meeting" = !audioEnabled
-    ? "meeting"
-    : !recallEnabled
-      ? "audio"
-      : composerMode;
+  const showModeToggle = enabledModes.length >= 2;
+  const [composerMode, setComposerMode] = React.useState<ComposerMode | null>(
+    null,
+  );
+  // An active recording always wins: reopen its surface wherever the user
+  // navigated from, whether or not ?new=1 is on the URL.
+  const recordingActive = !!live?.jobId;
+  const effectiveMode: ComposerMode | null = recordingActive
+    ? "record"
+    : composerMode && enabledModes.includes(composerMode)
+      ? composerMode
+      : (enabledModes[0] ?? null);
+  const composerVisible = composerOpen || recordingActive;
 
   // Monthly recording usage (only queried when Recall is enabled).
   const { usage, refetch: refetchUsage } = useRecordingUsage(!recallEnabled);
@@ -122,6 +144,7 @@ function TranscriptionsPageInner() {
     (job) =>
       (job.status === "queued" ||
         job.status === "transcribing" ||
+        job.status === "recording" ||
         job.status === "failed") &&
       matches(job),
   );
@@ -150,7 +173,7 @@ function TranscriptionsPageInner() {
     processing.length === 0 &&
     saved.length === 0;
 
-  const newButtonDisabled = composerOpen;
+  const newButtonDisabled = composerVisible;
 
   return (
     <PageShell
@@ -222,28 +245,42 @@ function TranscriptionsPageInner() {
         </div>
       )}
 
-      {composerOpen && (
+      {composerVisible && effectiveMode && (
         <div className="space-y-3">
-          {/* Mode switch only when BOTH flows are configured; otherwise the
-              single enabled composer stands alone. */}
-          {showModeToggle && (
+          {/* Mode switch only when at least two flows are configured; a running
+              recording pins the surface and hides the switch entirely. */}
+          {showModeToggle && !recordingActive && (
             <ToggleGroup
               type="single"
               value={effectiveMode}
               onValueChange={(value) =>
-                value && setComposerMode(value as "audio" | "meeting")
+                value && setComposerMode(value as ComposerMode)
               }
               className="justify-start"
             >
-              <ToggleGroupItem value="audio" className="max-md:h-11">
-                {t("composer.modeAudio")}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="meeting" className="max-md:h-11">
-                {t("composer.modeMeeting")}
-              </ToggleGroupItem>
+              {enabledModes.map((mode) => (
+                <ToggleGroupItem key={mode} value={mode} className="max-md:h-11">
+                  {t(
+                    mode === "audio"
+                      ? "composer.modeAudio"
+                      : mode === "meeting"
+                        ? "composer.modeMeeting"
+                        : "composer.modeRecord",
+                  )}
+                </ToggleGroupItem>
+              ))}
             </ToggleGroup>
           )}
-          {effectiveMode === "meeting" ? (
+          {effectiveMode === "record" ? (
+            // RecordComposer closes itself when a recording finishes, so
+            // onStarted only has to refresh the queue.
+            <RecordComposer
+              onCancel={closeComposer}
+              onStarted={() => {
+                refetchAll();
+              }}
+            />
+          ) : effectiveMode === "meeting" ? (
             <MeetingComposer
               onCancel={closeComposer}
               onStarted={() => {
