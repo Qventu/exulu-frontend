@@ -92,7 +92,14 @@ export class ChunkQueue<TPayload extends { seq: number }> {
   }
 
   private notify(): void {
-    for (const listener of this.listeners) listener();
+    for (const listener of this.listeners) {
+      try {
+        listener();
+      } catch {
+        // Subscribers are a UI concern; a throwing listener must never
+        // affect the transport (it must not abort enqueue()/pump()).
+      }
+    }
   }
 
   private settleWaiters(): void {
@@ -116,21 +123,46 @@ export class ChunkQueue<TPayload extends { seq: number }> {
       }
     } finally {
       this.running = false;
-      this.settleWaiters();
+      // Only report completion when the queue is genuinely idle (drained or
+      // aborted). If sendUntilSettled ever exits some other way, resolving
+      // waiters here would report success while a chunk is still unsent; the
+      // next enqueue() restarts the pump from the same cursor instead.
+      if (this.aborted || this.cursor >= this.items.length) {
+        this.settleWaiters();
+      }
+    }
+  }
+
+  /**
+   * Wraps the injected transport so a thrown/rejected `send` (e.g. a network
+   * exception) can never escape as an unhandled rejection — it is
+   * indistinguishable from `status: null`, which classifyChunkFailure
+   * already treats as a transient, retry-forever failure.
+   */
+  private async safeSend(payload: TPayload, opts: { skipped: boolean }): Promise<SendResult> {
+    try {
+      return await this.send(payload, opts);
+    } catch {
+      return { ok: false, status: null };
     }
   }
 
   private async sendUntilSettled(item: { payload: TPayload; state: ChunkState }): Promise<void> {
     let attempt = 0;
+    // Once a deterministic rejection (400/413/415) hits, every further
+    // attempt for this seq sends the skip marker instead of the original
+    // payload — resending the rejected payload would just draw the same
+    // rejection forever.
+    let skipMode = false;
     while (!this.aborted) {
       item.state.status = attempt === 0 ? "sending" : "retrying";
       item.state.attempts += 1;
       this.notify();
-      const result = await this.send(item.payload, { skipped: false });
+      const result = await this.safeSend(item.payload, { skipped: skipMode });
       if (this.aborted) return;
       if (result.ok) {
-        item.state.status = "sent";
-        item.state.text = result.text;
+        item.state.status = skipMode ? "skipped" : "sent";
+        item.state.text = skipMode ? "" : result.text;
         this.notify();
         return;
       }
@@ -141,22 +173,20 @@ export class ChunkQueue<TPayload extends { seq: number }> {
         return;
       }
       if (failure.kind === "skip") {
-        // Same seq, no audio: the server stores an empty placeholder so the
-        // sequence stays contiguous. Transient failures of the skip itself retry.
-        const skip = await this.send(item.payload, { skipped: true });
-        if (this.aborted) return;
-        if (skip.ok) {
-          item.state.status = "skipped";
-          item.state.text = "";
-          this.notify();
-          return;
-        }
-        const skipFailure = classifyChunkFailure(skip.status, skip.body);
-        if (skipFailure.kind === "abort") {
+        if (skipMode) {
+          // The skip marker itself was deterministically rejected (e.g. the
+          // server refuses even an empty placeholder). Retrying forever
+          // would livelock the recording, so this chunk cannot continue.
           item.state.status = "failed";
-          this.abort(skipFailure.reason);
+          this.abort("skip_rejected");
           return;
         }
+        // Same seq, no audio: the server stores an empty placeholder so the
+        // sequence stays contiguous. Try the skip marker immediately; if it
+        // fails transiently, the backoff loop below retries it (still with
+        // skipped: true, via skipMode).
+        skipMode = true;
+        continue;
       }
       await this.sleep(backoffMs(attempt));
       attempt += 1;

@@ -115,3 +115,66 @@ describe("ChunkQueue", () => {
     expect(q.pendingCount()).toBe(0);
   });
 });
+
+describe("ChunkQueue — fix round 1 regression coverage", () => {
+  it("treats a thrown/rejected send as a transient failure and drain waits for the eventual success (no unhandled rejection)", async () => {
+    const sent: number[] = [];
+    let calls = 0;
+    const send = vi.fn(async (chunk: P, _opts: { skipped: boolean }): Promise<SendResult> => {
+      sent.push(chunk.seq);
+      calls += 1;
+      if (calls === 1) throw new Error("network exploded");
+      return { ok: true, text: `t${chunk.seq}` };
+    });
+    const q = new ChunkQueue<P>({ send, sleep });
+    q.enqueue({ seq: 0, label: "a" });
+    await q.drain();
+    expect(sent).toEqual([0, 0]);
+    expect(q.snapshot()[0]).toMatchObject({ status: "sent", text: "t0" });
+  });
+
+  it("isolates a throwing subscriber: enqueue does not throw, the chunk still sends, and other subscribers still run", async () => {
+    const { send } = transport({});
+    const q = new ChunkQueue<P>({ send, sleep });
+    const calls: string[] = [];
+    q.subscribe(() => {
+      calls.push("first");
+      throw new Error("listener boom");
+    });
+    q.subscribe(() => {
+      calls.push("second");
+    });
+    expect(() => q.enqueue({ seq: 0, label: "a" })).not.toThrow();
+    await q.drain();
+    expect(q.snapshot()[0]).toMatchObject({ status: "sent", text: "t0" });
+    expect(calls).toContain("second");
+  });
+
+  it("retries the skip marker itself (not the original payload) after a transient failure, then succeeds", async () => {
+    sleeps.length = 0;
+    const { send, sent } = transport({
+      0: [{ ok: false, status: 413 }, { ok: false, status: 500 }, { ok: true, text: "t0" }],
+    });
+    const q = new ChunkQueue<P>({ send, sleep });
+    q.enqueue({ seq: 0, label: "a" });
+    await q.drain();
+    expect(sent.map((s) => [s.seq, s.skipped])).toEqual([
+      [0, false],
+      [0, true],
+      [0, true],
+    ]);
+    expect(q.snapshot()[0]).toMatchObject({ status: "skipped", text: "" });
+  });
+
+  it("aborts with skip_rejected (not a livelock) when the skip marker itself is deterministically rejected", async () => {
+    const { send, sent } = transport({
+      0: [{ ok: false, status: 413 }, { ok: false, status: 400 }],
+    });
+    const q = new ChunkQueue<P>({ send, sleep });
+    q.enqueue({ seq: 0, label: "a" });
+    q.enqueue({ seq: 1, label: "b" });
+    await expect(q.drain()).rejects.toMatchObject({ reason: "skip_rejected" });
+    expect(sent.map((s) => s.seq)).toEqual([0, 0]);
+    expect(q.snapshot().map((c) => c.status)).toEqual(["failed", "pending"]);
+  });
+});
