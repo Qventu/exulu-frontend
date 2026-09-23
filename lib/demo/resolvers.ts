@@ -163,6 +163,10 @@ const transcriptionJob = (meeting: MeetingRecording) => ({
   // and recall_recording_id above already being null (see comment) means
   // even that fetch would return nothing, so no video UI renders at all.
   video_s3key: null,
+  // Live recording fields — ALGI meetings are all finished (status: "saved" or
+  // earlier terminal states), so these chunk-tracking fields are always null.
+  chunk_count: null,
+  last_chunk_at: null,
 });
 
 /** The routine as the list and detail screens select it. */
