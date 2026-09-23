@@ -11,8 +11,8 @@
  *
  * Design doc: docs/superpowers/specs/2026-06-19-recall-meeting-recording-design.md
  */
-import { useMutation, useQuery } from "@apollo/client";
-import { ChevronRight, Loader2, Plus, X } from "lucide-react";
+import { useMutation } from "@apollo/client";
+import { ChevronRight, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
@@ -36,24 +36,18 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
-import { useProjectOptions } from "../hooks";
-import {
-  GET_PICKER_AGENTS,
-  GET_PROMPT_LIBRARY,
-  MEETING_BOT_START,
-} from "../queries";
+import { usePostProcessingOptions, useProjectOptions } from "../hooks";
+import { MEETING_BOT_START } from "../queries";
 import {
   type Mode,
   type PostProcessingPrompt,
   type RbacRole,
   type RbacUser,
 } from "../types";
+import { PostProcessingPicker, postProcessingRowsComplete } from "./post-processing-picker";
 
 const ALLOWED_MODES: Mode[] = ["private", "users", "roles", "public"];
 const LANGUAGES = ["en", "de", "fr", "es", "it", "nl", "pt"] as const;
-
-type PromptOption = { id: string; name: string; description?: string | null };
-type AgentOption = { id: string; name: string };
 
 export interface MeetingComposerProps {
   onCancel: () => void;
@@ -84,14 +78,7 @@ export function MeetingComposer({ onCancel, onStarted }: MeetingComposerProps) {
   const [busy, setBusy] = React.useState(false);
 
   const projects = useProjectOptions();
-  const { data: promptsData } = useQuery<{
-    prompt_libraryPagination: { items: PromptOption[] };
-  }>(GET_PROMPT_LIBRARY);
-  const { data: agentsData } = useQuery<{
-    agentsPagination: { items: AgentOption[] };
-  }>(GET_PICKER_AGENTS);
-  const prompts = promptsData?.prompt_libraryPagination?.items ?? [];
-  const agents = agentsData?.agentsPagination?.items ?? [];
+  const { prompts, agents } = usePostProcessingOptions();
 
   const [startBot] = useMutation(MEETING_BOT_START);
 
@@ -100,16 +87,7 @@ export function MeetingComposer({ onCancel, onStarted }: MeetingComposerProps) {
     !busy &&
     (joinMode === "now" || joinAt.length > 0) &&
     // Every post-processing row must be fully specified before we send it.
-    ppRows.every((r) => r.prompt_id && r.agent_id);
-
-  const addPpRow = () =>
-    setPpRows((rows) => [...rows, { prompt_id: "", agent_id: "" }]);
-  const removePpRow = (index: number) =>
-    setPpRows((rows) => rows.filter((_, i) => i !== index));
-  const updatePpRow = (index: number, patch: Partial<PostProcessingPrompt>) =>
-    setPpRows((rows) =>
-      rows.map((r, i) => (i === index ? { ...r, ...patch } : r)),
-    );
+    postProcessingRowsComplete(ppRows);
 
   const onStart = async () => {
     if (!meetingUrl.trim()) return;
@@ -315,74 +293,12 @@ export function MeetingComposer({ onCancel, onStarted }: MeetingComposerProps) {
             </div>
 
             {/* Post-processing prompts */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>{t("composer.postProcessing")}</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={addPpRow}
-                  className="max-md:h-11"
-                >
-                  <Plus aria-hidden="true" className="mr-1 size-4" />
-                  {t("composer.addPrompt")}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {t("composer.postProcessingHint")}
-              </p>
-              <div className="space-y-2">
-                {ppRows.map((row, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Select
-                      value={row.prompt_id}
-                      onValueChange={(value) =>
-                        updatePpRow(index, { prompt_id: value })
-                      }
-                    >
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder={t("composer.selectPrompt")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {prompts.map((prompt) => (
-                          <SelectItem key={prompt.id} value={prompt.id}>
-                            {prompt.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={row.agent_id}
-                      onValueChange={(value) =>
-                        updatePpRow(index, { agent_id: value })
-                      }
-                    >
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder={t("composer.selectAgent")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {agents.map((agent) => (
-                          <SelectItem key={agent.id} value={agent.id}>
-                            {agent.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-9 shrink-0"
-                      aria-label={t("composer.removePrompt")}
-                      onClick={() => removePpRow(index)}
-                    >
-                      <X aria-hidden="true" className="size-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <PostProcessingPicker
+              rows={ppRows}
+              onChange={setPpRows}
+              prompts={prompts}
+              agents={agents}
+            />
           </div>
         </CollapsibleContent>
       </Collapsible>

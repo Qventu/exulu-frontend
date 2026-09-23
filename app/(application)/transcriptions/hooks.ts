@@ -9,7 +9,9 @@ import * as React from "react";
 
 import {
   GET_MEETING_RECORDING_USAGE,
+  GET_PICKER_AGENTS,
   GET_PROJECTS,
+  GET_PROMPT_LIBRARY,
   GET_TRANSCRIPTION_JOBS,
 } from "./queries";
 import { ACTIVE_STATUSES, type Job, type ProjectOption } from "./types";
@@ -161,4 +163,19 @@ export function useTicker(enabled: boolean): number {
     return () => clearInterval(id);
   }, [enabled]);
   return now;
+}
+
+export type PromptOption = { id: string; name: string; description?: string | null };
+export type AgentOption = { id: string; name: string };
+
+/** Prompt-library + agent options for the post-processing picker (meeting and record composers). */
+export function usePostProcessingOptions(): { prompts: PromptOption[]; agents: AgentOption[] } {
+  const { data: promptsData } = useQuery<{ prompt_libraryPagination: { items: PromptOption[] } }>(
+    GET_PROMPT_LIBRARY,
+  );
+  const { data: agentsData } = useQuery<{ agentsPagination: { items: AgentOption[] } }>(GET_PICKER_AGENTS);
+  return {
+    prompts: promptsData?.prompt_libraryPagination?.items ?? [],
+    agents: agentsData?.agentsPagination?.items ?? [],
+  };
 }
