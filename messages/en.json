@@ -4549,7 +4549,10 @@
       "resultPending": "Not run yet.",
       "deletedPrompt": "Prompt no longer available",
       "resultRunning": "Running…",
-      "meetingNoAudio": "Audio preview isn't available for meeting recordings."
+      "meetingNoAudio": "Audio preview isn't available for meeting recordings.",
+      "loadVideo": "Load video",
+      "loadingVideo": "Loading video…",
+      "videoUnavailable": "No video is available for this recording."
     },
     "row": {
       "awaitingReview": "Awaiting review",
@@ -4561,6 +4564,8 @@
       "failed": "Failed",
       "openInLibrary": "Open in library",
       "queued": "Queued…",
+      "recovered": "A later attempt succeeded — already saved as \"{title}\"",
+      "recoveredOpen": "Open saved version",
       "remaining": "~{remaining} remaining",
       "review": "Review",
       "saved": "Saved",
