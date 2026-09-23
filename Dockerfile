@@ -56,6 +56,12 @@ WORKDIR /app
 
 # Uncomment the following line in case you want to disable telemetry during runtime.
 ENV NEXT_TELEMETRY_DISABLED 1
+# The standalone server binds to $HOSTNAME (server.js: process.env.HOSTNAME ||
+# '0.0.0.0'). Docker sets HOSTNAME to the container ID, so without this the
+# server listens on a single container IP — unreachable from a reverse proxy on
+# another Docker network (Dokploy/Traefik 502, ALGI 2026-09-23). Same as the
+# official Next.js Docker example.
+ENV HOSTNAME="0.0.0.0"
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
