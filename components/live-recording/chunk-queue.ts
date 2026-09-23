@@ -87,6 +87,17 @@ export class ChunkQueue<TPayload extends { seq: number }> {
     return this.items.map((item) => ({ ...item.state }));
   }
 
+  /**
+   * The reason the queue aborted, or null while it is still live.
+   *
+   * drain() only rejects for a caller that was already waiting on it, and a
+   * recording queue is empty and idle for most of its life, so the abort has
+   * to be readable from the subscriber notification abort() already fires.
+   */
+  get abortedReason(): string | null {
+    return this.aborted?.reason ?? null;
+  }
+
   pendingCount(): number {
     return this.items.filter((item) => item.state.status !== "sent" && item.state.status !== "skipped").length;
   }

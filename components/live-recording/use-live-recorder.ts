@@ -14,7 +14,7 @@
  */
 import * as React from "react";
 
-import { ChunkQueue, QueueAbortError, type ChunkState } from "./chunk-queue";
+import { ChunkQueue, type ChunkState } from "./chunk-queue";
 import type { ChunkPayload, LiveRecorderTransport } from "./chunk-transport";
 import { MAX_RECORDING_MS, rmsToDbfs, shouldCut, SILENCE_DBFS } from "./cut-policy";
 import { pickMimeType } from "./mime";
@@ -174,6 +174,30 @@ export function useLiveRecorder(transport: LiveRecorderTransport): LiveRecorder 
     analyserRef.current = null;
   }, [clearTick]);
 
+  /** Microphone hardware off: wake lock, audio graph, tracks. Idempotent. */
+  const releaseMicrophone = React.useCallback(() => {
+    releaseWakeLock();
+    teardownAudioGraph();
+    stopTracks();
+  }, [releaseWakeLock, stopTracks, teardownAudioGraph]);
+
+  /**
+   * Everything that must be true once a recording is over, whatever the
+   * outcome -- a clean stop, a queue abort, or a discard. abortReason is
+   * deliberately left alone: the queue subscriber owns it and the composer
+   * still has to read it after stop() rejects.
+   */
+  const endSession = React.useCallback(() => {
+    releaseMicrophone();
+    masterPartsRef.current = [];
+    segmentRef.current = null;
+    masterRef.current = null;
+    queueRef.current = null;
+    jobIdRef.current = null;
+    setJobId(null);
+    setStateBoth("idle");
+  }, [releaseMicrophone, setStateBoth]);
+
   const buildAudioGraph = React.useCallback(() => {
     const stream = streamRef.current;
     if (!stream) return;
@@ -209,8 +233,13 @@ export function useLiveRecorder(transport: LiveRecorderTransport): LiveRecorder 
     };
     recorder.onstop = () => {
       const stoppedAt = performance.now();
+      // Enqueued even when nothing was captured (an interruption right after
+      // the cut). The seq was spent at segment START, so dropping it here
+      // would leave a hole and the backend would report every later chunk
+      // out_of_order. An empty body is either stored as an empty transcript
+      // or deterministically rejected, which the queue turns into a skip
+      // marker for the same seq -- contiguous either way.
       const blob = new Blob(segment.parts, { type: mimeRef.current || "audio/webm" });
-      if (blob.size === 0) return; // nothing captured (e.g. immediate interruption)
       queueRef.current?.enqueue({
         seq: segment.seq,
         blob,
@@ -268,7 +297,15 @@ export function useLiveRecorder(transport: LiveRecorderTransport): LiveRecorder 
       safeStop(masterRef.current);
       teardownAudioGraph();
       stopTracks();
-      adoptStream(await navigator.mediaDevices.getUserMedia({ audio: true }));
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // stop() or discard() can have run to completion while getUserMedia was
+      // pending. Adopting the stream now would hand the user a live microphone,
+      // two recorders and a 100ms interval that nothing ever ends.
+      if (stateRef.current !== "recording") {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      adoptStream(stream);
       buildAudioGraph();
       startMaster();
       startSegment();
@@ -320,7 +357,12 @@ export function useLiveRecorder(transport: LiveRecorderTransport): LiveRecorder 
       const queue = new ChunkQueue<ChunkPayload>({
         send: (chunk, opts) => transport.sendChunk(nextJobId, chunk, opts),
       });
-      queue.subscribe(() => setChunks(queue.snapshot()));
+      // The subscriber is the ONLY mid-recording abort signal: abort() notifies,
+      // and drain() here would resolve instantly against the still-empty queue.
+      queue.subscribe(() => {
+        setChunks(queue.snapshot());
+        setAbortReason(queue.abortedReason);
+      });
       queueRef.current = queue;
 
       buildAudioGraph();
@@ -329,10 +371,6 @@ export function useLiveRecorder(transport: LiveRecorderTransport): LiveRecorder 
       tickRef.current = window.setInterval(tick, TICK_MS);
       setStateBoth("recording");
       void requestWakeLock();
-      // Surface queue aborts (409 from the server) to the composer.
-      queue.drain().catch((err: unknown) => {
-        if (err instanceof QueueAbortError) setAbortReason(err.reason);
-      });
     },
     [buildAudioGraph, requestWakeLock, setStateBoth, startMaster, startSegment, tick, transport],
   );
@@ -346,45 +384,34 @@ export function useLiveRecorder(transport: LiveRecorderTransport): LiveRecorder 
     await stopRecorder(segmentRef.current?.recorder); // enqueues the final chunk
     await stopRecorder(masterRef.current);
     const durationMs = performance.now() - originRef.current;
-    releaseWakeLock();
-    teardownAudioGraph();
-    stopTracks();
+    const mimeType = mimeRef.current || "audio/webm";
+    const blob = masterPartsRef.current.length > 0 ? new Blob(masterPartsRef.current, { type: mimeType }) : null;
+    // The microphone goes quiet now; the drain that follows can take a while on
+    // a bad connection, and the recording itself is already over.
+    releaseMicrophone();
     try {
       await queueRef.current?.drain();
     } finally {
-      // Whether or not the queue aborted, the microphone is done.
+      // A QueueAbortError rethrows to the composer, but the machine still has to
+      // land in idle -- otherwise the pill stays up and stop() can never retry.
+      endSession();
     }
-    const mimeType = mimeRef.current || "audio/webm";
-    const blob = masterPartsRef.current.length > 0 ? new Blob(masterPartsRef.current, { type: mimeType }) : null;
-    masterPartsRef.current = [];
-    segmentRef.current = null;
-    masterRef.current = null;
-    queueRef.current = null;
-    jobIdRef.current = null;
-    setJobId(null);
-    setStateBoth("idle");
     return { blob, mimeType, durationMs };
-  }, [clearTick, releaseWakeLock, setStateBoth, stopTracks, teardownAudioGraph]);
+  }, [clearTick, endSession, releaseMicrophone, setStateBoth]);
 
   const discard = React.useCallback(() => {
     queueRef.current?.abort("discard");
     clearTick();
     safeStop(segmentRef.current?.recorder);
     safeStop(masterRef.current);
-    releaseWakeLock();
-    teardownAudioGraph();
-    stopTracks();
-    masterPartsRef.current = [];
-    segmentRef.current = null;
-    masterRef.current = null;
-    queueRef.current = null;
-    jobIdRef.current = null;
-    setJobId(null);
+    endSession();
     setChunks([]);
     setElapsedMs(0);
     setLevel(0);
-    setStateBoth("idle");
-  }, [clearTick, releaseWakeLock, setStateBoth, stopTracks, teardownAudioGraph]);
+    // abort("discard") notified the subscriber, which set abortReason from it.
+    // Throwing the recording away is a deliberate choice, not a failure to report.
+    setAbortReason(null);
+  }, [clearTick, endSession]);
 
   // Re-acquire the wake lock when the tab becomes visible again (browsers drop it on hide).
   React.useEffect(() => {

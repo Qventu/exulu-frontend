@@ -178,3 +178,27 @@ describe("ChunkQueue — fix round 1 regression coverage", () => {
     expect(q.snapshot().map((c) => c.status)).toEqual(["failed", "pending"]);
   });
 });
+
+describe("ChunkQueue.abortedReason", () => {
+  it("is null while the queue is live and holds the reason afterwards", async () => {
+    const { send } = transport({});
+    const q = new ChunkQueue<P>({ send, sleep });
+    expect(q.abortedReason).toBeNull();
+    q.enqueue({ seq: 0, label: "a" });
+    await q.drain();
+    expect(q.abortedReason).toBeNull();
+    q.abort("discard");
+    expect(q.abortedReason).toBe("discard");
+  });
+
+  it("surfaces a 409 not_recording abort to a subscriber (the recorder's only mid-recording signal)", async () => {
+    const { send } = transport({ 0: [{ ok: false, status: 409, body: { kind: "not_recording" } }] });
+    const q = new ChunkQueue<P>({ send, sleep });
+    const seen: Array<string | null> = [];
+    q.subscribe(() => seen.push(q.abortedReason));
+    q.enqueue({ seq: 0, label: "a" });
+    await expect(q.drain()).rejects.toBeInstanceOf(QueueAbortError);
+    expect(seen.filter((r) => r !== null)).toContain("not_recording");
+    expect(q.abortedReason).toBe("not_recording");
+  });
+});
