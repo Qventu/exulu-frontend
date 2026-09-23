@@ -70,17 +70,20 @@ const METER_BARS = 12;
  */
 const STOP_FAILED_TOAST = "live-recording-stop-failed";
 /**
- * Ceiling on the master-audio upload. uploadMaster() settles only from Uppy's
+ * Silence budget for the master-audio upload — a dead-socket guard, NOT a cap
+ * on how long the upload may take. uploadMaster() settles only from Uppy's
  * upload-success / upload-error, and neither is guaranteed: hooks/use-uppy.tsx
  * returns without calling its success callback when the response carries no
  * uploadURL, and an XHR stalled by a screen lock or a dropped connection can
- * emit nothing at all. Without a ceiling the composer sits on "Uploading
- * audio…" with Stop and Discard both disabled and liveRecordingStop never
- * called, which leaves the row 'recording' server-side forever. Giving up here
- * costs the audio and keeps the transcript — the same trade the existing
- * upload-failure path already makes.
+ * emit nothing at all. The watchdog is re-armed by every upload-progress
+ * event, so a slow but live upload of a multi-hour recording runs as long as
+ * it needs; only a minute with no bytes at all gives up. Without it the
+ * composer sits on "Uploading audio…" with Stop and Discard both disabled and
+ * liveRecordingStop never called, which leaves the row 'recording'
+ * server-side forever. Giving up costs the audio and keeps the transcript —
+ * the same trade the existing upload-failure path already makes.
  */
-const UPLOAD_TIMEOUT_MS = 2 * 60 * 1000;
+const UPLOAD_STALL_TIMEOUT_MS = 60 * 1000;
 
 export interface RecordComposerProps {
   onCancel: () => void;
@@ -175,15 +178,24 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
     resolve: (key: string) => void;
     reject: (err: Error) => void;
   } | null>(null);
+  const stallTimerRef = React.useRef<number | null>(null);
+  const clearStallWatchdog = React.useCallback(() => {
+    if (stallTimerRef.current != null) {
+      window.clearTimeout(stallTimerRef.current);
+    }
+    stallTimerRef.current = null;
+  }, []);
+  /** The single settle point: disarms the watchdog, then resolves or rejects once. */
   const settleUpload = React.useCallback(
     (outcome: { key: string } | { error: Error }) => {
+      clearStallWatchdog();
       const pending = uploadResolverRef.current;
       uploadResolverRef.current = null;
       if (!pending) return;
       if ("key" in outcome) pending.resolve(outcome.key);
       else pending.reject(outcome.error);
     },
-    [],
+    [clearStallWatchdog],
   );
   const uppy = useUppy(
     {
@@ -199,14 +211,35 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
     },
     [],
   );
+  const armStallWatchdog = React.useCallback(() => {
+    if (!uppy) return;
+    clearStallWatchdog();
+    stallTimerRef.current = window.setTimeout(() => {
+      // settleUpload() nulls the resolver before settling, so the upload-error
+      // that cancelAll() raises — and any late upload-success — is a no-op
+      // against a null ref and cannot settle this upload twice.
+      settleUpload({ error: new Error("upload stalled") });
+      uppy.cancelAll();
+    }, UPLOAD_STALL_TIMEOUT_MS);
+  }, [uppy, clearStallWatchdog, settleUpload]);
+
   React.useEffect(() => {
     if (!uppy) return;
     const onError = () => settleUpload({ error: new Error("upload failed") });
+    // Bytes still moving means the socket is alive: push the deadline out.
+    // Guarded on a pending upload so a stray event can never arm a timer that
+    // would cancelAll() an upload this composer is not waiting on.
+    const onProgress = () => {
+      if (uploadResolverRef.current) armStallWatchdog();
+    };
     uppy.on("upload-error", onError);
+    uppy.on("upload-progress", onProgress);
     return () => {
       uppy.off("upload-error", onError);
+      uppy.off("upload-progress", onProgress);
+      clearStallWatchdog();
     };
-  }, [uppy, settleUpload]);
+  }, [uppy, settleUpload, armStallWatchdog, clearStallWatchdog]);
 
   const uploadMaster = React.useCallback(
     (blob: Blob, mimeType: string): Promise<string> =>
@@ -215,26 +248,10 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
           reject(new Error("uploader not ready"));
           return;
         }
-        // settleUpload() clears the resolver before settling, so whichever of
-        // the upload and the timer gets there first wins and the other — a
-        // late upload-success, or the upload-error that cancelAll() raises —
-        // is a no-op against a null ref.
-        const timer = window.setTimeout(() => {
-          settleUpload({ error: new Error("upload timed out") });
-          uppy.cancelAll();
-        }, UPLOAD_TIMEOUT_MS);
         // Set before anything that can throw: the catch below settles through
         // this resolver, so the promise is guaranteed to end up settled.
-        uploadResolverRef.current = {
-          resolve: (key) => {
-            window.clearTimeout(timer);
-            resolve(key);
-          },
-          reject: (err) => {
-            window.clearTimeout(timer);
-            reject(err);
-          },
-        };
+        uploadResolverRef.current = { resolve, reject };
+        armStallWatchdog();
         try {
           uppy.cancelAll();
           uppy.addFile({
@@ -248,7 +265,7 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
           });
         }
       }),
-    [uppy, settleUpload],
+    [uppy, settleUpload, armStallWatchdog],
   );
 
   const canStart =
