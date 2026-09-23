@@ -25,6 +25,7 @@ import { PanelLeft, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
+import { LiveRecordingPill } from "@/components/live-recording/live-recording-pill";
 import { Brand } from "@/components/shell/brand";
 import { openCommandPalette } from "@/components/shell/command-palette";
 import { ConfigContext } from "@/components/shell/config-context";
@@ -90,6 +91,7 @@ export function TopBar({ user, budget, onSendFeedback, className }: TopBarProps)
         </TooltipContent>
       </Tooltip>
       <Brand className="shrink-0" />
+      <LiveRecordingPill className="ml-2" />
 
       <div className="flex-1" />
 

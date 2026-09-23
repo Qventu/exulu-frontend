@@ -16,6 +16,7 @@ import { getCurrentPosition } from "@/lib/demo/current-position";
 import { getWorld } from "@/lib/demo/fixtures";
 
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
+import { LiveRecordingProvider } from "@/components/live-recording/live-recording-provider";
 import {
   AppSidebar,
   type AppSidebarUser,
@@ -106,32 +107,37 @@ const AppShell = ({
     <UserContext.Provider value={{ user }}>
       <NavigationErrorBoundary>
         <MobileTopbarProvider>
-          <SidebarProvider
-            defaultOpen={sidebarDefaultOpen}
-            className="bg-sidebar overflow-clip"
+          <LiveRecordingProvider
+            backend={config?.backend ?? ""}
+            userId={user.id}
           >
-            <TopBar
-              user={shellUser}
-              budget={user.budget ?? null}
-              onSendFeedback={openFeedback}
-            />
-            <AppSidebar user={shellUser} onSendFeedback={openFeedback} />
-            <div className="flex min-w-0 flex-1 flex-col md:pt-12">
-              <MobileTopbar user={shellUser} />
-              <div className="min-w-0 flex-1 overflow-auto bg-background md:rounded-tl-2xl md:border-l md:border-t md:border-sidebar-border">
-                {children}
+            <SidebarProvider
+              defaultOpen={sidebarDefaultOpen}
+              className="bg-sidebar overflow-clip"
+            >
+              <TopBar
+                user={shellUser}
+                budget={user.budget ?? null}
+                onSendFeedback={openFeedback}
+              />
+              <AppSidebar user={shellUser} onSendFeedback={openFeedback} />
+              <div className="flex min-w-0 flex-1 flex-col md:pt-12">
+                <MobileTopbar user={shellUser} />
+                <div className="min-w-0 flex-1 overflow-auto bg-background md:rounded-tl-2xl md:border-l md:border-t md:border-sidebar-border">
+                  {children}
+                </div>
               </div>
-            </div>
-            <CommandPalette
-              user={shellUser}
-              config={config ?? {}}
-              onSendFeedback={openFeedback}
-            />
-            <FeedbackDialog
-              open={feedbackOpen}
-              onOpenChange={setFeedbackOpen}
-            />
-          </SidebarProvider>
+              <CommandPalette
+                user={shellUser}
+                config={config ?? {}}
+                onSendFeedback={openFeedback}
+              />
+              <FeedbackDialog
+                open={feedbackOpen}
+                onOpenChange={setFeedbackOpen}
+              />
+            </SidebarProvider>
+          </LiveRecordingProvider>
         </MobileTopbarProvider>
       </NavigationErrorBoundary>
     </UserContext.Provider>

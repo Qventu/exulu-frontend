@@ -4604,6 +4604,10 @@
       "label": "Recording time this month",
       "summary": "{used} of {limit} used ({percent}%)",
       "exceeded": "Monthly recording limit reached — new meeting recordings are blocked until next month."
+    },
+    "pill": {
+      "recording": "Recording {time}",
+      "back": "Back to the recording"
     }
   },
   "variables": {

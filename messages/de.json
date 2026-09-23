@@ -4604,6 +4604,10 @@
       "label": "Aufnahmezeit diesen Monat",
       "summary": "{used} von {limit} genutzt ({percent}%)",
       "exceeded": "Monatliches Aufnahmelimit erreicht — neue Meeting-Aufnahmen sind bis nächsten Monat blockiert."
+    },
+    "pill": {
+      "recording": "Aufnahme {time}",
+      "back": "Zur Aufnahme"
     }
   },
   "variables": {

@@ -39,6 +39,7 @@ import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
+import { LiveRecordingPill } from "@/components/live-recording/live-recording-pill";
 import { AppNavTrigger } from "@/components/shell/app-nav-trigger";
 import { activeEntryFor } from "@/components/shell/nav-config";
 import { UserMenu, type UserMenuUser } from "@/components/shell/user-menu";
@@ -166,6 +167,7 @@ const MobileTopbar = React.forwardRef<HTMLElement, MobileTopbarProps>(
           <span className="min-w-0 flex-1 truncate text-sm font-medium">
             {entry ? t(entry.i18nKey) : null}
           </span>
+          <LiveRecordingPill />
           {action ? (
             <div className="flex shrink-0 items-center gap-1">{action}</div>
           ) : null}
