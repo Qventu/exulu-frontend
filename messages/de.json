@@ -4495,6 +4495,11 @@
       "description": "Aufnahme und Transkript werden gelöscht.",
       "confirm": "Verwerfen"
     },
+    "confirmFinishRecording": {
+      "title": "Diese Aufnahme abschließen?",
+      "description": "Das bisher erfasste Transkript wird zum Entwurf zur Überprüfung. Es wird keine Audiodatei angehängt.",
+      "confirm": "Abschließen"
+    },
     "description": "Verwandeln Sie Audio in Transkripte mit benannten Sprechern, die Sie in Chats und Projekten nutzen können.",
     "empty": {
       "description": "Laden Sie ein Meeting oder Sprachmemo hoch und erhalten Sie ein Transkript mit benannten Sprechern.",
@@ -4579,7 +4584,8 @@
       "meetingNoAudio": "Für Meeting-Aufnahmen ist keine Audiovorschau verfügbar.",
       "loadVideo": "Video laden",
       "loadingVideo": "Video wird geladen…",
-      "videoUnavailable": "Für diese Aufnahme ist kein Video verfügbar."
+      "videoUnavailable": "Für diese Aufnahme ist kein Video verfügbar.",
+      "noAudio": "Diesem Transkript ist keine Audiodatei angehängt."
     },
     "row": {
       "awaitingReview": "Wartet auf Überprüfung",
@@ -4601,7 +4607,14 @@
       "updated": "Aktualisiert",
       "wrappingUp": "wird abgeschlossen…",
       "meetingSource": "Meeting-Aufnahme",
-      "inMeeting": "Im Meeting…"
+      "inMeeting": "Im Meeting…",
+      "recording": "Aufnahme · {length} · {parts, plural, one {# Teil} other {# Teile}}",
+      "recordingNoLength": "Aufnahme läuft…",
+      "lastAudio": "letztes Audio {time}",
+      "recordingHere": "Aufnahme auf diesem Gerät",
+      "finish": "Abschließen",
+      "discard": "Verwerfen",
+      "liveSource": "Live-Aufnahme"
     },
     "searchPlaceholder": "Transkripte durchsuchen…",
     "sharing": {
@@ -4631,6 +4644,7 @@
       "recordingFinished": "Aufnahme beendet – unten überprüfen",
       "recordingStopFailed": "Aufnahme konnte nicht abgeschlossen werden",
       "recordingDiscarded": "Aufnahme verworfen",
+      "recordingFinishedRow": "Aufnahme abgeschlossen",
       "recordingInterrupted": "Aufnahme wurde unterbrochen",
       "recordingAutoStopped": "Aufnahme nach 4 Stunden automatisch beendet",
       "recordingEndedElsewhere": "Diese Aufnahme wurde auf einem anderen Gerät beendet",

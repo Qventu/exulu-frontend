@@ -4495,6 +4495,11 @@
       "description": "The recording and its transcript will be deleted.",
       "confirm": "Discard"
     },
+    "confirmFinishRecording": {
+      "title": "Finish this recording?",
+      "description": "The transcript captured so far becomes a draft for review. No audio file will be attached.",
+      "confirm": "Finish"
+    },
     "description": "Turn audio into speaker-labeled transcripts you can use in chats and projects.",
     "empty": {
       "description": "Upload a meeting or voice memo and get back a speaker-labeled transcript.",
@@ -4579,7 +4584,8 @@
       "meetingNoAudio": "Audio preview isn't available for meeting recordings.",
       "loadVideo": "Load video",
       "loadingVideo": "Loading video…",
-      "videoUnavailable": "No video is available for this recording."
+      "videoUnavailable": "No video is available for this recording.",
+      "noAudio": "No audio file is attached to this transcript."
     },
     "row": {
       "awaitingReview": "Awaiting review",
@@ -4601,7 +4607,14 @@
       "updated": "Updated",
       "wrappingUp": "wrapping up…",
       "meetingSource": "Meeting recording",
-      "inMeeting": "In the meeting…"
+      "inMeeting": "In the meeting…",
+      "recording": "Recording · {length} · {parts, plural, one {# part} other {# parts}}",
+      "recordingNoLength": "Recording…",
+      "lastAudio": "last audio {time}",
+      "recordingHere": "recording on this device",
+      "finish": "Finish",
+      "discard": "Discard",
+      "liveSource": "Live recording"
     },
     "searchPlaceholder": "Search transcripts…",
     "sharing": {
@@ -4631,6 +4644,7 @@
       "recordingFinished": "Recording finished — review it below",
       "recordingStopFailed": "Couldn't finish the recording",
       "recordingDiscarded": "Recording discarded",
+      "recordingFinishedRow": "Recording finished",
       "recordingInterrupted": "Recording was interrupted",
       "recordingAutoStopped": "Recording stopped automatically after 4 hours",
       "recordingEndedElsewhere": "This recording was finished from another device",

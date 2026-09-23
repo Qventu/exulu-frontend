@@ -61,6 +61,7 @@ import {
 import {
   formatClock,
   formatDuration,
+  hasPostProcessing,
   isMeetingJob,
   parsePostProcessingOutputs,
   parsePostProcessingPrompts,
@@ -566,9 +567,11 @@ function ReviewForm({
           )}
         </div>
 
-        {/* Post-processing results (Recall meeting jobs). Auto-run on transcript
-            ready; each card can be re-run manually after speaker edits. */}
-        {meeting && (
+        {/* Post-processing results: shown for any job with prompts configured
+            or outputs stored — Recall meetings and live recordings. Auto-run
+            on transcript ready; each card can be re-run manually after
+            speaker edits. */}
+        {hasPostProcessing(job) && (
           <PostProcessingResults job={job} onRefreshJob={onRefreshJob} />
         )}
 
@@ -643,7 +646,7 @@ function ReviewForm({
           />
         ) : (
           <p className="px-1 text-xs text-muted-foreground">
-            {t("review.meetingNoAudio")}
+            {t(isMeetingJob(job) ? "review.meetingNoAudio" : "review.noAudio")}
           </p>
         )}
         <div className="flex justify-end gap-2">

@@ -7,12 +7,13 @@
  * confirm via the shared ConfirmDialog — no more unconfirmed mutations.
  */
 import { useMutation } from "@apollo/client";
-import { ExternalLink, FileAudio, Trash2, Video } from "lucide-react";
+import { ExternalLink, FileAudio, Mic, Trash2, Video } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
 
+import { useLiveRecordingOptional } from "@/components/live-recording/live-recording-provider";
 import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { RelativeTime } from "@/components/primitives/relative-time";
 import { StatusDot } from "@/components/primitives/status-dot";
@@ -21,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { useTicker } from "../hooks";
 import {
   CANCEL_TRANSCRIPTION_JOB,
+  LIVE_RECORDING_STOP,
   REMOVE_SAVED_TRANSCRIPT_ITEM,
   REMOVE_TRANSCRIPTION_JOB,
 } from "../queries";
@@ -28,6 +30,7 @@ import {
   displayTitle,
   formatDuration,
   humanizeBotStatus,
+  isLiveJob,
   isMeetingJob,
   PROCESSING_FACTOR,
   type Job,
@@ -50,6 +53,14 @@ export function JobRow({ job, onReview, onChanged, recoveredBy }: JobRowProps) {
   const [cancelJob] = useMutation(CANCEL_TRANSCRIPTION_JOB);
   const [removeJob] = useMutation(REMOVE_TRANSCRIPTION_JOB);
   const [removeSavedItem] = useMutation(REMOVE_SAVED_TRANSCRIPT_ITEM);
+  const [finishLive] = useMutation(LIVE_RECORDING_STOP);
+  const [confirmFinishOpen, setConfirmFinishOpen] = React.useState(false);
+  const [confirmDiscardOpen, setConfirmDiscardOpen] = React.useState(false);
+  const live = isLiveJob(job);
+  const liveRecorder = useLiveRecordingOptional();
+  // The row for the job THIS tab is recording hides Finish/Discard — the
+  // recording surface owns those controls (spec §4.5).
+  const recordingHere = live && job.status === "recording" && liveRecorder?.jobId === job.id;
   const [confirmCancelOpen, setConfirmCancelOpen] = React.useState(false);
   const [confirmDismissOpen, setConfirmDismissOpen] = React.useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
@@ -60,7 +71,7 @@ export function JobRow({ job, onReview, onChanged, recoveredBy }: JobRowProps) {
 
   // Row-scoped 1s ticker — only transcribing rows re-render every second
   // (replaces the old whole-page tick, inventory 5 / page-doc risk 1).
-  const now = useTicker(job.status === "transcribing");
+  const now = useTicker(job.status === "transcribing" || job.status === "recording");
 
   const audioLengthLabel = job.duration_seconds
     ? formatDuration(job.duration_seconds)
@@ -74,6 +85,10 @@ export function JobRow({ job, onReview, onChanged, recoveredBy }: JobRowProps) {
       return humanizeBotStatus(job.bot_status) ?? t("row.queued");
     }
     switch (job.status) {
+      case "recording":
+        return audioLengthLabel
+          ? t("row.recording", { length: audioLengthLabel, parts: job.chunk_count ?? 0 })
+          : t("row.recordingNoLength");
       case "queued":
         return t("row.queued");
       case "transcribing": {
@@ -142,6 +157,32 @@ export function JobRow({ job, onReview, onChanged, recoveredBy }: JobRowProps) {
     }
   };
 
+  const onConfirmFinish = async () => {
+    try {
+      await finishLive({ variables: { id: job.id, input: { audio_s3key: null, duration_seconds: null } } });
+      toast.success(t("toasts.recordingFinishedRow"));
+      onChanged();
+    } catch (err: unknown) {
+      toast.error(t("toasts.recordingStopFailed"), {
+        description: err instanceof Error ? err.message : undefined,
+      });
+      throw err; // keep the ConfirmDialog open
+    }
+  };
+
+  const onConfirmDiscardRecording = async () => {
+    try {
+      await cancelJob({ variables: { id: job.id } });
+      toast.success(t("toasts.recordingDiscarded"));
+      onChanged();
+    } catch (err: unknown) {
+      toast.error(t("toasts.discardFailed"), {
+        description: err instanceof Error ? err.message : undefined,
+      });
+      throw err;
+    }
+  };
+
   // Cascade order: knowledge item first, then the job row — if the item
   // delete fails the entry survives, so nothing dangles and the user can
   // retry (or uncheck the box and delete just the entry).
@@ -169,6 +210,11 @@ export function JobRow({ job, onReview, onChanged, recoveredBy }: JobRowProps) {
             aria-hidden="true"
             className="size-4 shrink-0 text-muted-foreground"
           />
+        ) : live ? (
+          <Mic
+            aria-hidden="true"
+            className="size-4 shrink-0 text-muted-foreground"
+          />
         ) : (
           <FileAudio
             aria-hidden="true"
@@ -184,6 +230,9 @@ export function JobRow({ job, onReview, onChanged, recoveredBy }: JobRowProps) {
                 pulse={job.status === "transcribing"}
                 className="shrink-0"
               />
+            )}
+            {job.status === "recording" && (
+              <StatusDot status="error" pulse className="shrink-0" />
             )}
             {job.status === "failed" && (
               <StatusDot status="error" className="shrink-0" />
@@ -202,6 +251,13 @@ export function JobRow({ job, onReview, onChanged, recoveredBy }: JobRowProps) {
             ) : (
               statusLine
             )}
+            {job.status === "recording" && job.last_chunk_at ? (
+              <>
+                {" · "}
+                {t("row.lastAudio", { time: "" })}
+                <RelativeTime date={job.last_chunk_at} live />
+              </>
+            ) : null}
             {job.error && (
               <span className="ml-2 text-destructive">— {job.error}</span>
             )}
@@ -224,6 +280,19 @@ export function JobRow({ job, onReview, onChanged, recoveredBy }: JobRowProps) {
             >
               {tCommon("cancel")}
             </Button>
+          )}
+          {job.status === "recording" && recordingHere && (
+            <span className="text-xs text-muted-foreground">{t("row.recordingHere")}</span>
+          )}
+          {job.status === "recording" && !recordingHere && (
+            <>
+              <Button type="button" variant="ghost" size="sm" className="max-md:h-11" onClick={() => setConfirmDiscardOpen(true)}>
+                {t("row.discard")}
+              </Button>
+              <Button type="button" variant="outline" size="sm" className="max-md:h-11" onClick={() => setConfirmFinishOpen(true)}>
+                {t("row.finish")}
+              </Button>
+            </>
           )}
           {job.status === "awaiting_review" && (
             <Button
@@ -310,7 +379,7 @@ export function JobRow({ job, onReview, onChanged, recoveredBy }: JobRowProps) {
         </div>
       </div>
 
-      {job.status === "transcribing" && (
+      {(job.status === "transcribing" || job.status === "recording") && (
         <div
           aria-hidden="true"
           className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary/10 via-primary/60 to-primary/10 motion-safe:animate-pulse"
@@ -332,6 +401,22 @@ export function JobRow({ job, onReview, onChanged, recoveredBy }: JobRowProps) {
         description={t("confirmDismiss.description")}
         confirmLabel={t("confirmDismiss.confirm")}
         onConfirm={onConfirmDismiss}
+      />
+      <ConfirmDialog
+        open={confirmFinishOpen}
+        onOpenChange={setConfirmFinishOpen}
+        title={t("confirmFinishRecording.title")}
+        description={t("confirmFinishRecording.description")}
+        confirmLabel={t("confirmFinishRecording.confirm")}
+        onConfirm={onConfirmFinish}
+      />
+      <ConfirmDialog
+        open={confirmDiscardOpen}
+        onOpenChange={setConfirmDiscardOpen}
+        title={t("confirmDiscardRecording.title")}
+        description={t("confirmDiscardRecording.description")}
+        confirmLabel={t("confirmDiscardRecording.confirm")}
+        onConfirm={onConfirmDiscardRecording}
       />
       <ConfirmDialog
         open={confirmDeleteOpen}
