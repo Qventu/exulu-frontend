@@ -36,6 +36,8 @@ const TRANSCRIPTION_JOB_FIELDS = `
   post_processing_prompts
   post_processing_outputs
   video_s3key
+  chunk_count
+  last_chunk_at
 `;
 
 export const GET_TRANSCRIPTION_JOBS = gql`
@@ -123,6 +125,26 @@ export const MEETING_BOT_START = gql`
 export const RUN_TRANSCRIPT_POST_PROCESSING = gql`
   mutation RunTranscriptPostProcessing($id: ID!, $prompt_id: ID!, $agent_id: ID!) {
     runTranscriptPostProcessing(id: $id, prompt_id: $prompt_id, agent_id: $agent_id) {
+      ${TRANSCRIPTION_JOB_FIELDS}
+    }
+  }
+`;
+
+/* ----------------------- Live (browser) recording operations ----------------------- */
+
+/** Open a live recording row (source 'live', status 'recording'); chunks then go to POST /transcription-jobs/:id/chunks. */
+export const LIVE_RECORDING_START = gql`
+  mutation LiveRecordingStart($input: LiveRecordingStartInput!) {
+    liveRecordingStart(input: $input) {
+      ${TRANSCRIPTION_JOB_FIELDS}
+    }
+  }
+`;
+
+/** Close a live recording: 'recording' → 'awaiting_review' (+ optional audio key / total duration). */
+export const LIVE_RECORDING_STOP = gql`
+  mutation LiveRecordingStop($id: ID!, $input: LiveRecordingStopInput) {
+    liveRecordingStop(id: $id, input: $input) {
       ${TRANSCRIPTION_JOB_FIELDS}
     }
   }

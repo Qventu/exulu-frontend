@@ -25,7 +25,7 @@ type JobsResult = {
 };
 
 export interface TranscriptionJobs {
-  /** queued | transcribing | awaiting_review | failed */
+  /** queued | transcribing | recording | awaiting_review | failed */
   activeJobs: Job[];
   savedJobs: Job[];
   savedTotal: number;
@@ -39,8 +39,8 @@ export interface TranscriptionJobs {
 
 /**
  * Both list queries. The 5s poll runs ONLY while a job is actually being
- * worked on (queued/transcribing) — page-doc ladder row 3 — instead of
- * polling forever.
+ * worked on (queued/transcribing) or a live recording is in progress
+ * (recording) — page-doc ladder row 3 — instead of polling forever.
  */
 export function useTranscriptionJobs(): TranscriptionJobs {
   const active = useQuery<JobsResult>(GET_TRANSCRIPTION_JOBS, {
@@ -71,8 +71,13 @@ export function useTranscriptionJobs(): TranscriptionJobs {
     saved.data?.transcription_jobsPagination?.pageInfo?.itemCount ??
     savedJobs.length;
 
+  // Poll while anything is in motion: whisper/recall work (queued, transcribing)
+  // or a live recording on another device/tab (recording).
   const hasRunning = activeJobs.some(
-    (job) => job.status === "queued" || job.status === "transcribing",
+    (job) =>
+      job.status === "queued" ||
+      job.status === "transcribing" ||
+      job.status === "recording",
   );
 
   const { startPolling, stopPolling } = active;
