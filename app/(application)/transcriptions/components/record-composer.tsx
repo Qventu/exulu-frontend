@@ -69,6 +69,18 @@ const METER_BARS = 12;
  * toasts stacked on top of each other read as two separate failures.
  */
 const STOP_FAILED_TOAST = "live-recording-stop-failed";
+/**
+ * Ceiling on the master-audio upload. uploadMaster() settles only from Uppy's
+ * upload-success / upload-error, and neither is guaranteed: hooks/use-uppy.tsx
+ * returns without calling its success callback when the response carries no
+ * uploadURL, and an XHR stalled by a screen lock or a dropped connection can
+ * emit nothing at all. Without a ceiling the composer sits on "Uploading
+ * audio…" with Stop and Discard both disabled and liveRecordingStop never
+ * called, which leaves the row 'recording' server-side forever. Giving up here
+ * costs the audio and keeps the transcript — the same trade the existing
+ * upload-failure path already makes.
+ */
+const UPLOAD_TIMEOUT_MS = 2 * 60 * 1000;
 
 export interface RecordComposerProps {
   onCancel: () => void;
@@ -147,6 +159,16 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
     }
   }, [recorder.jobId]);
 
+  /**
+   * One finish at a time. A watcher-driven finish (the 4h auto-stop, a queue
+   * abort) sets neither the Stop dialog's pending state nor its open state, so
+   * a confirm landing on top of one would run a second finish concurrently:
+   * both read the same closeout, both reach liveRecordingStop for the same
+   * job, and the loser reports a failure over an already-successful finish and
+   * parks the surface back on "recording" with a torn-down recorder.
+   */
+  const finishInFlightRef = React.useRef(false);
+
   // Dedicated Uppy instance for the master recording (webm/mp4 are not in
   // AUDIO_FILE_TYPES — that constant documents the whisper pipeline's inputs).
   const uploadResolverRef = React.useRef<{
@@ -193,7 +215,26 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
           reject(new Error("uploader not ready"));
           return;
         }
-        uploadResolverRef.current = { resolve, reject };
+        // settleUpload() clears the resolver before settling, so whichever of
+        // the upload and the timer gets there first wins and the other — a
+        // late upload-success, or the upload-error that cancelAll() raises —
+        // is a no-op against a null ref.
+        const timer = window.setTimeout(() => {
+          settleUpload({ error: new Error("upload timed out") });
+          uppy.cancelAll();
+        }, UPLOAD_TIMEOUT_MS);
+        // Set before anything that can throw: the catch below settles through
+        // this resolver, so the promise is guaranteed to end up settled.
+        uploadResolverRef.current = {
+          resolve: (key) => {
+            window.clearTimeout(timer);
+            resolve(key);
+          },
+          reject: (err) => {
+            window.clearTimeout(timer);
+            reject(err);
+          },
+        };
         try {
           uppy.cancelAll();
           uppy.addFile({
@@ -308,6 +349,7 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
   /* --------------------------------- finish -------------------------------- */
 
   const finish = React.useCallback(async () => {
+    if (finishInFlightRef.current) return;
     const closeout: Closeout | null = recorder.jobId
       ? {
           jobId: recorder.jobId,
@@ -317,70 +359,76 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
       : closeoutRef.current;
     if (!closeout) return;
     closeoutRef.current = closeout;
-    setPhase("finishing");
-    setFinishStep("draining");
+    finishInFlightRef.current = true;
     try {
-      const { blob, mimeType, durationMs } = await recorder.stop();
-      if (durationMs > 0) closeout.durationSeconds = durationMs / 1000;
-      if (blob) {
-        setFinishStep("uploading");
-        try {
-          closeout.audioKey = await uploadMaster(blob, mimeType);
-        } catch {
-          toast.warning(t("toasts.audioUploadFailedKeptTranscript"));
+      setPhase("finishing");
+      setFinishStep("draining");
+      try {
+        const { blob, mimeType, durationMs } = await recorder.stop();
+        if (durationMs > 0) closeout.durationSeconds = durationMs / 1000;
+        if (blob) {
+          setFinishStep("uploading");
+          try {
+            closeout.audioKey = await uploadMaster(blob, mimeType);
+          } catch {
+            toast.warning(t("toasts.audioUploadFailedKeptTranscript"));
+          }
         }
-      }
-    } catch (err) {
-      const reason = err instanceof QueueAbortError ? err.reason : null;
-      if (reason === "not_recording") {
-        // Finished or discarded from another device: the server closed the row
-        // already, so there is nothing left for this tab to send.
-        toast.info(t("toasts.recordingEndedElsewhere"));
+      } catch (err) {
+        const reason = err instanceof QueueAbortError ? err.reason : null;
+        if (reason === "not_recording") {
+          // Finished or discarded from another device: the server closed the row
+          // already, so there is nothing left for this tab to send.
+          toast.info(t("toasts.recordingEndedElsewhere"));
+          discardRecording();
+          closeoutRef.current = null;
+          setPhase("setup");
+          setFinishStep(null);
+          onStarted();
+          onCancel();
+          return;
+        }
+        // out_of_order / skip_rejected / an unexpected throw: the audio is lost
+        // (stop() tore the recorder down), but the chunks already transcribed are
+        // worth keeping — close the job anyway so it lands in Needs review.
+        toast.error(t("toasts.recordingStopFailed"), {
+          id: STOP_FAILED_TOAST,
+          description:
+            reason ?? (err instanceof Error ? err.message : undefined),
+        });
         discardRecording();
+        closeout.audioKey = null;
+        closeout.durationSeconds = null;
+      }
+      setFinishStep("closing");
+      try {
+        await stopLive({
+          variables: {
+            id: closeout.jobId,
+            input: {
+              audio_s3key: closeout.audioKey,
+              duration_seconds: closeout.durationSeconds,
+            },
+          },
+        });
+        toast.success(t("toasts.recordingFinished"));
         closeoutRef.current = null;
         setPhase("setup");
         setFinishStep(null);
         onStarted();
         onCancel();
-        return;
+      } catch (err: unknown) {
+        // The row is still 'recording' server-side. Keep the surface (and its
+        // Stop button) up so the close-out can be retried with the same audio.
+        setFinishStep(null);
+        setPhase("recording");
+        toast.error(t("toasts.recordingStopFailed"), {
+          id: STOP_FAILED_TOAST,
+          description: err instanceof Error ? err.message : undefined,
+        });
       }
-      // out_of_order / skip_rejected / an unexpected throw: the audio is lost
-      // (stop() tore the recorder down), but the chunks already transcribed are
-      // worth keeping — close the job anyway so it lands in Needs review.
-      toast.error(t("toasts.recordingStopFailed"), {
-        id: STOP_FAILED_TOAST,
-        description: reason ?? (err instanceof Error ? err.message : undefined),
-      });
-      discardRecording();
-      closeout.audioKey = null;
-      closeout.durationSeconds = null;
-    }
-    setFinishStep("closing");
-    try {
-      await stopLive({
-        variables: {
-          id: closeout.jobId,
-          input: {
-            audio_s3key: closeout.audioKey,
-            duration_seconds: closeout.durationSeconds,
-          },
-        },
-      });
-      toast.success(t("toasts.recordingFinished"));
-      closeoutRef.current = null;
-      setPhase("setup");
-      setFinishStep(null);
-      onStarted();
-      onCancel();
-    } catch (err: unknown) {
-      // The row is still 'recording' server-side. Keep the surface (and its
-      // Stop button) up so the close-out can be retried with the same audio.
-      setFinishStep(null);
-      setPhase("recording");
-      toast.error(t("toasts.recordingStopFailed"), {
-        id: STOP_FAILED_TOAST,
-        description: err instanceof Error ? err.message : undefined,
-      });
+    } finally {
+      finishInFlightRef.current = false;
     }
   }, [
     recorder,
@@ -398,6 +446,16 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
   React.useEffect(() => {
     finishRef.current = finish;
   }, [finish]);
+
+  // A watcher-driven finish leaves the confirm dialogs open and confirmable —
+  // their pending state only tracks their own onConfirm. Retiring them as soon
+  // as the recording stops is what keeps the latch above unreachable in
+  // practice instead of merely survivable.
+  React.useEffect(() => {
+    if (phase === "recording") return;
+    setConfirmStopOpen(false);
+    setConfirmDiscardOpen(false);
+  }, [phase]);
 
   const onDiscard = async () => {
     const jobId = recorder.jobId ?? closeoutRef.current?.jobId ?? null;
