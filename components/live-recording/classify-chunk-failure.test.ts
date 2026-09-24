@@ -17,6 +17,9 @@ describe("classifyChunkFailure", () => {
     expect(classifyChunkFailure(413)).toEqual({ kind: "skip" });
     expect(classifyChunkFailure(415)).toEqual({ kind: "skip" });
   });
+  it("aborts on 404 (the row was deleted elsewhere)", () => {
+    expect(classifyChunkFailure(404)).toEqual({ kind: "abort", reason: "not_found" });
+  });
   it("aborts on 409 with the server's kind", () => {
     expect(classifyChunkFailure(409, { kind: "not_recording" })).toEqual({ kind: "abort", reason: "not_recording" });
     expect(classifyChunkFailure(409, { kind: "out_of_order" })).toEqual({ kind: "abort", reason: "out_of_order" });
