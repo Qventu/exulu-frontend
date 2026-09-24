@@ -53,6 +53,10 @@ const DEMO_BACKEND_CONFIG: BackendConfigType = {
   // sidebar hid the entry AND the URL rendered "You don't have access to this
   // page", which is how chapter 7 first appeared in the browser.
   recall: { enabled: true },
+
+  // FALSE: the demo has no Whisper server; the Transcripts page keeps its
+  // meeting-bot mode (recall) and hides the upload mode.
+  whisper: { enabled: false },
 };
 
 export function demoConfig(): ConfigContextType {

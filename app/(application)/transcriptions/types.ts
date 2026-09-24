@@ -8,6 +8,7 @@ export type Mode = "private" | "users" | "roles" | "teams" | "public";
 export type JobStatus =
   | "queued"
   | "transcribing"
+  | "recording" // live browser recording in progress
   | "awaiting_review"
   | "saved"
   | "failed"
@@ -16,8 +17,8 @@ export type JobStatus =
 export type RbacUser = { id: number; rights: "read" | "write" };
 export type RbacRole = { id: string; rights: "read" | "write" };
 
-/** Where a job came from: on-server Whisper upload, or a Recall meeting bot. */
-export type JobSource = "whisper" | "recall";
+/** Where a job came from: on-server Whisper upload, a Recall meeting bot, or a live browser recording. */
+export type JobSource = "whisper" | "recall" | "live";
 
 /** A selected post-processing pair (prompt from the library + chosen agent). */
 export type PostProcessingPrompt = { prompt_id: string; agent_id: string };
@@ -64,6 +65,9 @@ export type Job = {
   // Permanent local copy of the meeting video (only when the deployment has
   // RECALL_STORE_VIDEO_LOCALLY on). Null falls back to an on-demand Recall URL.
   video_s3key?: string | null;
+  // Live recordings: next expected chunk seq + heartbeat of the last accepted chunk.
+  chunk_count?: number | null;
+  last_chunk_at?: string | null;
 };
 
 export type Segment = {
@@ -79,6 +83,7 @@ export type ProjectOption = { id: string; name: string };
 export const ACTIVE_STATUSES = [
   "queued",
   "transcribing",
+  "recording",
   "awaiting_review",
   "failed",
 ] as const;
@@ -145,6 +150,7 @@ export function displayTitle(
 ): string {
   if (job.title) return job.title;
   if (job.audio_s3key) return decodeFilename(job.audio_s3key);
+  if (job.source === "live") return "Live recording";
   if (job.meeting_url) return job.meeting_url;
   return "Meeting recording";
 }
@@ -152,6 +158,21 @@ export function displayTitle(
 /** True when the job is a Recall meeting-bot recording (vs a Whisper upload). */
 export function isMeetingJob(job: Pick<Job, "source">): boolean {
   return job.source === "recall";
+}
+
+/** True when the job is a live browser recording ("Record on this device"). */
+export function isLiveJob(job: Pick<Job, "source">): boolean {
+  return job.source === "live";
+}
+
+/** Post-processing cards are shown for any job that has prompts configured or outputs stored. */
+export function hasPostProcessing(
+  job: Pick<Job, "post_processing_prompts" | "post_processing_outputs">,
+): boolean {
+  return (
+    parsePostProcessingPrompts(job.post_processing_prompts).length > 0 ||
+    parsePostProcessingOutputs(job.post_processing_outputs).length > 0
+  );
 }
 
 /** Parse post_processing_prompts (JSON string or array) tolerantly. */

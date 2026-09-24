@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   activeEntryFor,
+  flagEnabled,
   GROUP_I18N_KEYS,
   groupsFor,
   NAV_ENTRIES,
@@ -392,5 +393,23 @@ describe("activeEntryFor (§1.3 rule 4: first-segment equality + aliases)", () =
   it("returns null for routes outside the table", () => {
     expect(activeEntryFor("/login")).toBeNull();
     expect(activeEntryFor("/nonexistent")).toBeNull();
+  });
+});
+
+describe("flagEnabled('transcriptions') — three independent backends", () => {
+  it("is on when only the whisper upload server is configured", () => {
+    expect(flagEnabled({ whisper: { enabled: true } }, "transcriptions")).toBe(true);
+  });
+  it("is on for the composer-mic flag or recall alone (unchanged)", () => {
+    expect(flagEnabled({ transcription: { enabled: true } }, "transcriptions")).toBe(true);
+    expect(flagEnabled({ recall: { enabled: true } }, "transcriptions")).toBe(true);
+  });
+  it("is off when all three are off", () => {
+    expect(
+      flagEnabled(
+        { transcription: { enabled: false }, recall: { enabled: false }, whisper: { enabled: false } },
+        "transcriptions",
+      ),
+    ).toBe(false);
   });
 });

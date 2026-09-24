@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { findRecoveredJob, type Job } from "./types";
+import { findRecoveredJob, hasPostProcessing, isLiveJob, displayTitle, type Job } from "./types";
 
 /**
  * findRecoveredJob — real incident, 2026-09-22: a customer reported 4 "failed"
@@ -104,5 +104,29 @@ describe("findRecoveredJob — links a failed meeting-bot job to a later success
 
     expect(findRecoveredJob(failed, [nextWeeksOccurrence, immediateRetry]))
       .toEqual(immediateRetry);
+  });
+});
+
+describe("live recording helpers", () => {
+  it("isLiveJob is true only for source 'live'", () => {
+    expect(isLiveJob(job({ source: "live" }))).toBe(true);
+    expect(isLiveJob(job({ source: "recall" }))).toBe(false);
+    expect(isLiveJob(job({ source: null }))).toBe(false);
+  });
+
+  it("hasPostProcessing is true when prompts or outputs exist (array or JSON string)", () => {
+    expect(hasPostProcessing(job({}))).toBe(false);
+    expect(hasPostProcessing(job({ post_processing_prompts: [] }))).toBe(false);
+    expect(hasPostProcessing(job({ post_processing_prompts: [{ prompt_id: "p", agent_id: "a" }] }))).toBe(true);
+    expect(hasPostProcessing(job({ post_processing_prompts: JSON.stringify([{ prompt_id: "p", agent_id: "a" }]) }))).toBe(true);
+    expect(
+      hasPostProcessing(
+        job({ post_processing_outputs: [{ prompt_id: "p", agent_id: "a", prompt_name: null, status: "done", output: "x", error: null, ran_at: "t" }] }),
+      ),
+    ).toBe(true);
+  });
+
+  it("displayTitle falls back to 'Live recording' for untitled live jobs", () => {
+    expect(displayTitle({ title: null, audio_s3key: "", source: "live" })).toBe("Live recording");
   });
 });

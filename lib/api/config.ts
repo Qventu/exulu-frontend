@@ -15,6 +15,10 @@ export type BackendConfigType = {
     recall?: {
         enabled: boolean;
     }
+    /** Whisper upload transcription server (TRANSCRIPTION_SERVER) — gates the "Upload a file" mode. */
+    whisper?: {
+        enabled: boolean;
+    }
 }
 
 export type FeedbackConfig = {
