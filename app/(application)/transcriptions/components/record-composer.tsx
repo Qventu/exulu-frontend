@@ -166,14 +166,13 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
   const [cancelJob] = useMutation(CANCEL_TRANSCRIPTION_JOB);
 
   /**
-   * One close-out at a time. An effect-driven close-out (the 4 h auto-stop, a
-   * queue abort) sets neither the Stop dialog's pending state nor its open
-   * state, so a confirm landing on top of one would run a second close-out
-   * concurrently: both upload the same blob, both reach liveRecordingStop for
-   * the same job, and the loser reports a failure over an already-successful
-   * finish and parks the surface back on "recording".
+   * One close-out per job, across mounts. The latch is the recorder's
+   * (beginCloseout / endCloseout), not a ref here: a close-out keeps running
+   * after this component unmounts — the upload XHR and the liveRecordingStop
+   * promise outlive it — so a mount that comes up mid-close-out (back via the
+   * pill) must find the job already claimed, not a fresh latch, or it would
+   * start a second upload and a second mutation for the same recording.
    */
-  const finishInFlightRef = React.useRef(false);
   /**
    * Survives a failed liveRecordingStop so the retry re-sends the mutation
    * without re-uploading a master blob S3 already has.
@@ -398,95 +397,102 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
    * liveRecordingStop fails the close-out is kept — audio and job id live in
    * the recorder — so Retry, or a fresh mount, picks it up again.
    */
+  // Stable callbacks (the hook memoises them with [] deps); destructured so
+  // the close-out can depend on them rather than on the whole recorder value.
+  const { beginCloseout, endCloseout } = recorder;
   const runCloseout = React.useCallback(async () => {
     const closeout = recorder.pendingCloseout;
-    if (!closeout || finishInFlightRef.current) return;
-    finishInFlightRef.current = true;
+    if (!closeout) return;
+    // Another mount (possibly one that has since unmounted) owns this job's
+    // close-out; its upload and mutation are still running. Nothing to do.
+    if (!beginCloseout(closeout.jobId)) return;
     setCloseoutFailed(false);
     try {
-      // 409 not_recording / 404 not_found: the row is already closed (or
-      // gone), so there is nothing to attach and nothing to tell the server.
-      const serverOwed =
-        closeout.reason !== "not_recording" && closeout.reason !== "not_found";
-      if (serverOwed) {
-        let audioKey =
-          uploadedKeyRef.current?.jobId === closeout.jobId
-            ? uploadedKeyRef.current.key
-            : null;
-        if (closeout.blob && !audioKey) {
-          setCloseoutStep("uploading");
-          try {
-            audioKey = await uploadMaster(closeout.blob, closeout.mimeType);
-            uploadedKeyRef.current = { jobId: closeout.jobId, key: audioKey };
-          } catch {
+      // Every published close-out owes the server a liveRecordingStop (a row
+      // closed elsewhere never becomes one — see the recorder's endedElsewhere).
+      // The upload and the mutation run to completion even if this component
+      // unmounts meanwhile; only the toasts and the page callbacks need it
+      // mounted, so the job is closed exactly once either way.
+      let audioKey =
+        uploadedKeyRef.current?.jobId === closeout.jobId
+          ? uploadedKeyRef.current.key
+          : null;
+      if (closeout.blob && !audioKey) {
+        setCloseoutStep("uploading");
+        try {
+          audioKey = await uploadMaster(closeout.blob, closeout.mimeType);
+          uploadedKeyRef.current = { jobId: closeout.jobId, key: audioKey };
+        } catch {
+          if (mountedRef.current) {
             toast.warning(t("toasts.audioUploadFailedKeptTranscript"));
           }
         }
-        setCloseoutStep("closing");
-        try {
-          await stopLive({
-            variables: {
-              id: closeout.jobId,
-              input: {
-                audio_s3key: audioKey,
-                // 0 == the recorder never measured it (a mid-recording abort);
-                // null lets the server keep what the chunks reported.
-                duration_seconds:
-                  closeout.durationMs > 0 ? closeout.durationMs / 1000 : null,
-              },
+      }
+      setCloseoutStep("closing");
+      try {
+        await stopLive({
+          variables: {
+            id: closeout.jobId,
+            input: {
+              audio_s3key: audioKey,
+              // 0 == the recorder never measured it (a mid-recording abort);
+              // null lets the server keep what the chunks reported.
+              duration_seconds:
+                closeout.durationMs > 0 ? closeout.durationMs / 1000 : null,
             },
-          });
-        } catch (err: unknown) {
-          // The row is still 'recording' server-side. No release(): the
-          // recorder keeps the close-out and the surface offers Retry.
-          setCloseoutStep(null);
-          setCloseoutFailed(true);
+          },
+        });
+      } catch (err: unknown) {
+        // The row is still 'recording' server-side. No release(): the
+        // recorder keeps the close-out and the surface offers Retry.
+        setCloseoutStep(null);
+        setCloseoutFailed(true);
+        if (mountedRef.current) {
           toast.error(t("toasts.recordingStopFailed"), {
             id: STOP_FAILED_TOAST,
             description: err instanceof Error ? err.message : undefined,
           });
-          return;
         }
+        return;
       }
-      // What the user hears once the job is closed (or found already closed).
-      switch (closeout.reason) {
-        case "not_recording":
-        case "not_found":
-          // Finished, discarded or deleted from another device: the server
-          // closed the row already, so there was nothing for this tab to send.
-          toast.info(t("toasts.recordingEndedElsewhere"));
-          break;
-        case "queue_aborted":
-          // out_of_order / skip_rejected: the row is closed with the transcript
-          // so far (it lands in Needs review), but the recording did not end
-          // the way it should have — say why.
-          toast.error(t("toasts.recordingStopFailed"), {
-            id: STOP_FAILED_TOAST,
-            description: closeout.abortReason,
-          });
-          break;
-        case "auto_stop":
-          toast.info(t("toasts.recordingAutoStopped"));
-          toast.success(t("toasts.recordingFinished"));
-          break;
-        default:
-          toast.success(t("toasts.recordingFinished"));
+      // What the user hears once the job is closed — if they are still here.
+      if (mountedRef.current) {
+        switch (closeout.reason) {
+          case "queue_aborted":
+            // out_of_order / skip_rejected: the row is closed with the
+            // transcript so far (it lands in Needs review), but the recording
+            // did not end the way it should have — say why.
+            toast.error(t("toasts.recordingStopFailed"), {
+              id: STOP_FAILED_TOAST,
+              description: closeout.abortReason,
+            });
+            break;
+          case "auto_stop":
+            toast.info(t("toasts.recordingAutoStopped"));
+            toast.success(t("toasts.recordingFinished"));
+            break;
+          default:
+            toast.success(t("toasts.recordingFinished"));
+        }
       }
       uploadedKeyRef.current = null;
       setCloseoutStep(null);
       setOwnPhase("setup");
       releaseRecorder();
+      if (!mountedRef.current) return;
       onStarted();
-      // onCancel() rewrites the URL to drop ?new=1; off this page, or from a
-      // component that already unmounted, that would be a navigation back here.
-      if (mountedRef.current && pathnameRef.current === TRANSCRIPTIONS_PATH) {
+      // onCancel() rewrites the URL to drop ?new=1; off this page that would
+      // be a navigation back here.
+      if (pathnameRef.current === TRANSCRIPTIONS_PATH) {
         onCancel();
       }
     } finally {
-      finishInFlightRef.current = false;
+      endCloseout(closeout.jobId);
     }
   }, [
     recorder.pendingCloseout,
+    beginCloseout,
+    endCloseout,
     uploadMaster,
     stopLive,
     releaseRecorder,
@@ -503,10 +509,11 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
   }, [runCloseout]);
 
   // ONE close-out path: keyed on the job the recorder wants closed, re-armed
-  // by Retry. finishInFlightRef keeps a re-run (StrictMode, a parent render)
-  // from starting a second upload for the same job. It waits for the
-  // uploader: a mount that opens mid-close-out (back via the pill) runs this
-  // on its first commit, before useUppy's async init has an instance.
+  // by Retry. The recorder's per-job latch (beginCloseout) keeps a re-run
+  // (StrictMode, a parent render, a fresh mount mid-close-out) from starting
+  // a second upload for the same job. It waits for the uploader: a mount that
+  // opens mid-close-out (back via the pill) runs this on its first commit,
+  // before useUppy's async init has an instance.
   const closeoutJobId = recorder.pendingCloseout?.jobId ?? null;
   React.useEffect(() => {
     if (!closeoutJobId) {
@@ -518,6 +525,25 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
     if (!uppy) return;
     void runCloseoutRef.current();
   }, [closeoutJobId, retryNonce, uppy]);
+
+  // A recording that ended somewhere else (409 not_recording / 404 not_found
+  // on a chunk): the recorder released it on the spot — nothing to upload,
+  // nothing to tell the server — and only bumps a counter. Say so once per
+  // bump and put the surface back to setup.
+  const seenEndedElsewhereRef = React.useRef(recorder.endedElsewhere);
+  React.useEffect(() => {
+    if (recorder.endedElsewhere === seenEndedElsewhereRef.current) return;
+    seenEndedElsewhereRef.current = recorder.endedElsewhere;
+    toast.info(t("toasts.recordingEndedElsewhere"));
+    uploadedKeyRef.current = null;
+    setCloseoutStep(null);
+    setCloseoutFailed(false);
+    setOwnPhase("setup");
+    onStarted();
+    if (pathnameRef.current === TRANSCRIPTIONS_PATH) {
+      onCancel();
+    }
+  }, [recorder.endedElsewhere, onStarted, onCancel, t]);
 
   /**
    * Stop: the recorder stops the microphone, drains the queue and publishes

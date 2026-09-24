@@ -12,7 +12,10 @@
  * It also owns the END of a recording: every way one can end (Stop, the 4 h
  * auto-stop, a queue abort) lands in a `pendingCloseout` that outlives the
  * composer, so the upload + liveRecordingStop cannot be orphaned by an
- * unmount. The composer performs that close-out and calls release().
+ * unmount. The composer performs that close-out and calls release() -- under
+ * beginCloseout()/endCloseout(), the exactly-once latch that lives here for
+ * the same reason: a close-out keeps running after the composer that started
+ * it is gone, and the next mount must not start a second one.
  *
  * Nothing here is unit-tested (DOM media APIs); the decisions are in the pure
  * modules cut-policy.ts / chunk-queue.ts, which are.
@@ -21,6 +24,7 @@ import * as React from "react";
 
 import { ChunkQueue, QueueAbortError, type ChunkState } from "./chunk-queue";
 import type { ChunkPayload, LiveRecorderTransport } from "./chunk-transport";
+import { CloseoutLatch } from "./closeout-latch";
 import {
   MAX_CHUNK_MS,
   MAX_RECORDING_MS,
@@ -45,14 +49,13 @@ export type LiveRecordingCut = { seq: number; reason: "silence" | "max"; chunkMs
 
 export type LiveRecorderStopResult = { blob: Blob | null; mimeType: string; durationMs: number };
 
-/** Why the recording ended. Drives the composer's toast and whether liveRecordingStop runs. */
-export type CloseoutReason =
-  | "user"
-  | "auto_stop"
-  | "interrupted"
-  | "not_recording"
-  | "not_found"
-  | "queue_aborted";
+/**
+ * Why the recording ended; drives the composer's toast. 409 not_recording and
+ * 404 not_found are deliberately NOT in here: a row closed from elsewhere owes
+ * the server nothing, so it never becomes a close-out at all (see
+ * endedElsewhere below).
+ */
+export type CloseoutReason = "user" | "auto_stop" | "interrupted" | "queue_aborted";
 
 /**
  * What the server is still owed once the microphone is off: upload the master
@@ -72,9 +75,9 @@ export type PendingCloseout = {
   abortReason?: string;
 };
 
-/** 409 not_recording / 404 not_found need no mutation; everything else does. */
-const closeoutReasonFor = (abort: string): CloseoutReason =>
-  abort === "not_recording" ? "not_recording" : abort === "not_found" ? "not_found" : "queue_aborted";
+/** 409 not_recording / 404 not_found: the row was already closed on the server. */
+const endedElsewhereAbort = (abort: string): boolean =>
+  abort === "not_recording" || abort === "not_found";
 
 export type LiveRecorder = {
   state: LiveRecorderState;
@@ -93,6 +96,14 @@ export type LiveRecorder = {
   autoStopped: boolean;
   /** The close-out the composer has to perform, or null. Survives the composer unmounting. */
   pendingCloseout: PendingCloseout | null;
+  /**
+   * Bumped whenever a recording ended somewhere else (409 / 404). Nothing is
+   * owed for those -- no audio to attach, no mutation to send -- so no
+   * close-out is published and the recorder releases on the spot; a mounted
+   * composer reads the bump as "say so and go back to setup", and when none is
+   * mounted there is simply nobody to tell.
+   */
+  endedElsewhere: number;
   /** Ask for the microphone. Throws the DOMException from getUserMedia on denial. */
   prepare(): Promise<void>;
   /** Begin recording into the given job. Requires prepare() first. */
@@ -107,6 +118,15 @@ export type LiveRecorder = {
   discard(): void;
   /** Close-out done: forget the job, the blob and the end-of-recording flags. */
   release(): void;
+  /**
+   * Claim the close-out for a job: true when the caller now owns it, false
+   * when one is already in flight -- possibly from a composer that has since
+   * unmounted, whose upload XHR and liveRecordingStop keep running anyway.
+   * It lives here, not in the composer, precisely because it must outlive one.
+   */
+  beginCloseout(jobId: string): boolean;
+  /** This attempt is over (done, failed-retryable, released). Pairs with beginCloseout. */
+  endCloseout(jobId: string): void;
 };
 
 type Segment = { recorder: MediaRecorder; seq: number; startedAt: number; parts: Blob[] };
@@ -153,6 +173,7 @@ export function useLiveRecorder(transport: LiveRecorderTransport): LiveRecorder 
   const [chunks, setChunks] = React.useState<ChunkState[]>([]);
   const [abortReason, setAbortReason] = React.useState<string | null>(null);
   const [autoStopped, setAutoStopped] = React.useState(false);
+  const [endedElsewhere, setEndedElsewhere] = React.useState(0);
 
   const streamRef = React.useRef<MediaStream | null>(null);
   const audioCtxRef = React.useRef<AudioContext | null>(null);
@@ -171,6 +192,13 @@ export function useLiveRecorder(transport: LiveRecorderTransport): LiveRecorder 
   const jobIdRef = React.useRef<string | null>(null);
   /** Mirrors closingJobId for the beforeunload guard (a listener with [] deps). */
   const closingJobIdRef = React.useRef<string | null>(null);
+  /**
+   * Which jobs have a close-out in flight. A ref for the same reason as the
+   * one above: the answer has to be right the instant a composer asks -- and
+   * the asker may be a mount that came up while the previous one's close-out
+   * was still running, which no amount of re-rendering would have told it.
+   */
+  const closeoutLatchRef = React.useRef(new CloseoutLatch());
   const noiseFloorRef = React.useRef<NoiseFloorTracker | null>(null);
   /**
    * startSegment() has to reach handleInterruption() (recorder.onerror) and
@@ -201,11 +229,17 @@ export function useLiveRecorder(transport: LiveRecorderTransport): LiveRecorder 
    * the master blob and the end-of-recording flags. Public as release().
    */
   const releaseCloseout = React.useCallback(() => {
+    // The job is finished with, so nothing can still be in flight for it. This
+    // is also how discard() clears the latch -- it releases through here.
+    closeoutLatchRef.current.clear();
     setClosingBoth(null);
     setPendingCloseout(null);
     setAbortReason(null);
     setAutoStopped(false);
   }, [setClosingBoth]);
+
+  const beginCloseout = React.useCallback((id: string) => closeoutLatchRef.current.begin(id), []);
+  const endCloseout = React.useCallback((id: string) => closeoutLatchRef.current.end(id), []);
 
   const requestWakeLock = React.useCallback(async () => {
     try {
@@ -394,6 +428,16 @@ export function useLiveRecorder(transport: LiveRecorderTransport): LiveRecorder 
         if (abort === "discard" || !stillOwned()) {
           // The user threw the recording away mid-drain. Nothing to close out.
           releaseCloseout();
+        } else if (abort && endedElsewhereAbort(abort)) {
+          // The row was finished, discarded or deleted from another device
+          // while this tab was draining: there is nothing to attach it to and
+          // nothing to tell the server. Publishing a close-out for it would
+          // hold the pill on "Finishing...", arm the tab-close guard and block
+          // the next recording until someone opened /transcriptions to call
+          // release() -- so release here and let the composer, if there is
+          // one, do nothing but say so.
+          releaseCloseout();
+          setEndedElsewhere((n) => n + 1);
         } else if (closingId) {
           // The audio survived (it was joined before the drain), so the
           // close-out still carries it: the transcript is partial, the
@@ -403,7 +447,7 @@ export function useLiveRecorder(transport: LiveRecorderTransport): LiveRecorder 
             blob,
             mimeType,
             durationMs,
-            reason: abort ? closeoutReasonFor(abort) : "queue_aborted",
+            reason: "queue_aborted",
             abortReason: abort ?? undefined,
           });
         }
@@ -434,7 +478,14 @@ export function useLiveRecorder(transport: LiveRecorderTransport): LiveRecorder 
       const mimeType = mimeRef.current || "audio/webm";
       endSession();
       if (!closingId) return;
-      const reason = closeoutReasonFor(abort);
+      if (endedElsewhereAbort(abort)) {
+        // Already closed server-side (the same reasoning as in stopInternal):
+        // no blob, no mutation, so no close-out -- just let the job go, or the
+        // pill sits on "Finishing..." until a composer nobody opened releases.
+        releaseCloseout();
+        setEndedElsewhere((n) => n + 1);
+        return;
+      }
       setPendingCloseout({
         jobId: closingId,
         blob: null,
@@ -442,11 +493,11 @@ export function useLiveRecorder(transport: LiveRecorderTransport): LiveRecorder 
         // what the acknowledged chunks already reported.
         durationMs: 0,
         mimeType,
-        reason,
-        abortReason: reason === "queue_aborted" ? abort : undefined,
+        reason: "queue_aborted",
+        abortReason: abort,
       });
     },
-    [clearTick, endSession, setClosingBoth, setStateBoth],
+    [clearTick, endSession, releaseCloseout, setClosingBoth, setStateBoth],
   );
 
   const tick = React.useCallback(() => {
@@ -665,10 +716,13 @@ export function useLiveRecorder(transport: LiveRecorderTransport): LiveRecorder 
     abortReason,
     autoStopped,
     pendingCloseout,
+    endedElsewhere,
     prepare,
     start,
     stop,
     discard,
     release: releaseCloseout,
+    beginCloseout,
+    endCloseout,
   };
 }
