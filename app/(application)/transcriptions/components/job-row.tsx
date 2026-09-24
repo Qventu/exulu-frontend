@@ -59,8 +59,9 @@ export function JobRow({ job, onReview, onChanged, recoveredBy }: JobRowProps) {
   const live = isLiveJob(job);
   const liveRecorder = useLiveRecordingOptional();
   // The row for the job THIS tab is recording hides Finish/Discard — the
-  // recording surface owns those controls (spec §4.5).
-  const recordingHere = live && job.status === "recording" && liveRecorder?.jobId === job.id;
+  // recording surface owns those controls (spec §4.5). activeJobId keeps them
+  // hidden through the close-out too: Finish mid-upload would race the audio.
+  const recordingHere = live && job.status === "recording" && liveRecorder?.activeJobId === job.id;
   const [confirmCancelOpen, setConfirmCancelOpen] = React.useState(false);
   const [confirmDismissOpen, setConfirmDismissOpen] = React.useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);

@@ -1,6 +1,10 @@
 "use client";
 
-/** "● Recording 12:34" in the shell chrome while a recording is active; links back to /transcriptions. */
+/**
+ * "● Recording 12:34" in the shell chrome while a recording is active; links
+ * back to /transcriptions. It stays up through the close-out ("Finishing…"),
+ * which is the only route back to the tab that still holds the audio.
+ */
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 
@@ -13,9 +17,13 @@ import { useLiveRecordingOptional } from "./live-recording-provider";
 export function LiveRecordingPill({ className }: { className?: string }) {
   const recorder = useLiveRecordingOptional();
   const t = useTranslations("transcriptions");
+  const finishing = !!recorder?.closingJobId;
   if (
     !recorder ||
-    (recorder.state !== "recording" && recorder.state !== "stopping" && recorder.state !== "interrupted")
+    (!finishing &&
+      recorder.state !== "recording" &&
+      recorder.state !== "stopping" &&
+      recorder.state !== "interrupted")
   ) {
     return null;
   }
@@ -28,8 +36,10 @@ export function LiveRecordingPill({ className }: { className?: string }) {
         className,
       )}
     >
-      <StatusDot status="error" pulse />
-      {t("pill.recording", { time: formatElapsed(recorder.elapsedMs) })}
+      <StatusDot status="error" pulse={!finishing} />
+      {/* A frozen timer would read as a still-running recording; the close-out
+          has no clock of its own, so it gets a label instead. */}
+      {finishing ? t("pill.finishing") : t("pill.recording", { time: formatElapsed(recorder.elapsedMs) })}
     </Link>
   );
 }

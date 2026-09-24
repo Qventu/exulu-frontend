@@ -8,15 +8,19 @@
  * liveRecordingStop so the row lands in Needs review.
  *
  * The recorder itself lives in LiveRecordingProvider (shell-level) so leaving
- * the page keeps recording; this component only renders its state.
+ * the page keeps recording; this component only renders its state. The END of
+ * a recording belongs to the recorder too: however one ends (Stop, the 4 h
+ * auto-stop, a queue abort) it publishes a `pendingCloseout`, and THIS
+ * component performs it — upload, liveRecordingStop, toast, release. One
+ * close-out path, and one a remount can pick up where the last mount left off.
  */
 import { useMutation } from "@apollo/client";
 import { ChevronRight, Loader2, Mic, Square } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { usePathname } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
-import { QueueAbortError } from "@/components/live-recording/chunk-queue";
 import { formatElapsed } from "@/components/live-recording/format";
 import { useLiveRecording } from "@/components/live-recording/live-recording-provider";
 import { extensionFor } from "@/components/live-recording/mime";
@@ -64,9 +68,9 @@ const ALLOWED_MODES: Mode[] = ["private", "users", "roles", "public"];
 const LANGUAGES = ["en", "de", "fr", "es", "it", "nl", "pt"] as const;
 const METER_BARS = 12;
 /**
- * One sonner slot for "couldn't finish": a queue abort surfaces first from the
- * watcher effect and again from finish()'s own catch, and two identical error
- * toasts stacked on top of each other read as two separate failures.
+ * One sonner slot for "couldn't finish": a retried liveRecordingStop that
+ * fails again would otherwise stack identical error toasts, which read as
+ * separate failures.
  */
 const STOP_FAILED_TOAST = "live-recording-stop-failed";
 /**
@@ -84,6 +88,8 @@ const STOP_FAILED_TOAST = "live-recording-stop-failed";
  * the same trade the existing upload-failure path already makes.
  */
 const UPLOAD_STALL_TIMEOUT_MS = 60 * 1000;
+/** onCancel() rewrites this page's URL; off it, that would be a navigation. */
+const TRANSCRIPTIONS_PATH = "/transcriptions";
 
 export interface RecordComposerProps {
   onCancel: () => void;
@@ -92,21 +98,15 @@ export interface RecordComposerProps {
 
 type Phase = "setup" | "starting" | "recording" | "finishing";
 
-/** What liveRecordingStop still has to be told once the microphone is off. */
-type Closeout = {
-  jobId: string;
-  audioKey: string | null;
-  durationSeconds: number | null;
-};
-
 export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
   const t = useTranslations("transcriptions");
   const tChat = useTranslations("chat");
   const tCommon = useTranslations("common");
+  const pathname = usePathname();
   const recorder = useLiveRecording();
   // Stable across renders (unlike `recorder` itself, which is a fresh object
-  // every render) so the watcher effect below can depend on it directly.
-  const { discard: discardRecording } = recorder;
+  // every render) so the effects below can depend on them directly.
+  const { discard: discardRecording, release: releaseRecorder } = recorder;
 
   const [title, setTitle] = React.useState("");
   const [language, setLanguage] = React.useState("auto");
@@ -116,13 +116,32 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
   const [rbacRoles, setRbacRoles] = React.useState<RbacRole[]>([]);
   const [ppRows, setPpRows] = React.useState<PostProcessingPrompt[]>([]);
   const [optionsOpen, setOptionsOpen] = React.useState(false);
-  // Mounting mid-recording (navigated away and back) reopens the surface.
-  const [phase, setPhase] = React.useState<Phase>(
-    recorder.jobId ? "recording" : "setup",
+  // Mounting mid-recording (navigated away and back) reopens the surface —
+  // and mounting mid-close-out reopens it on the step it left off at.
+  const [ownPhase, setOwnPhase] = React.useState<Phase>(
+    recorder.pendingCloseout ? "finishing" : recorder.jobId ? "recording" : "setup",
   );
-  const [finishStep, setFinishStep] = React.useState<
-    "draining" | "uploading" | "closing" | null
+  /**
+   * The recorder ends recordings on its own (the 4 h guard, a queue abort) and
+   * owns the drain after Stop, so "finishing" is read off it rather than set
+   * here: closingJobId is claimed the moment any end path begins and let go
+   * only by release(), which is exactly the span the surface must stay up.
+   */
+  const phase: Phase = recorder.closingJobId ? "finishing" : ownPhase;
+  /** The close-out steps this component runs itself; the drain is the recorder's. */
+  const [closeoutStep, setCloseoutStep] = React.useState<
+    "uploading" | "closing" | null
   >(null);
+  const finishStep: "draining" | "uploading" | "closing" | null =
+    recorder.state === "stopping" ? "draining" : closeoutStep;
+  /**
+   * liveRecordingStop failed: the row is still 'recording' server-side and the
+   * recorder still holds the close-out. Distinct from "no step yet" (the frame
+   * between the recorder publishing a close-out and the effect picking it up)
+   * so the Retry button never flashes on a close-out that is about to run.
+   */
+  const [closeoutFailed, setCloseoutFailed] = React.useState(false);
+  const [retryNonce, setRetryNonce] = React.useState(0);
   const [confirmStopOpen, setConfirmStopOpen] = React.useState(false);
   const [confirmDiscardOpen, setConfirmDiscardOpen] = React.useState(false);
   /**
@@ -147,30 +166,38 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
   const [cancelJob] = useMutation(CANCEL_TRANSCRIPTION_JOB);
 
   /**
-   * stop() clears recorder.jobId before liveRecordingStop runs, and a failed
-   * mutation must stay retryable without re-uploading the audio — so the three
-   * facts the close-out needs live here, outside the recorder.
-   */
-  const closeoutRef = React.useRef<Closeout | null>(null);
-  React.useEffect(() => {
-    if (recorder.jobId) {
-      closeoutRef.current = {
-        jobId: recorder.jobId,
-        audioKey: null,
-        durationSeconds: null,
-      };
-    }
-  }, [recorder.jobId]);
-
-  /**
-   * One finish at a time. A watcher-driven finish (the 4h auto-stop, a queue
-   * abort) sets neither the Stop dialog's pending state nor its open state, so
-   * a confirm landing on top of one would run a second finish concurrently:
-   * both read the same closeout, both reach liveRecordingStop for the same
-   * job, and the loser reports a failure over an already-successful finish and
-   * parks the surface back on "recording" with a torn-down recorder.
+   * One close-out at a time. An effect-driven close-out (the 4 h auto-stop, a
+   * queue abort) sets neither the Stop dialog's pending state nor its open
+   * state, so a confirm landing on top of one would run a second close-out
+   * concurrently: both upload the same blob, both reach liveRecordingStop for
+   * the same job, and the loser reports a failure over an already-successful
+   * finish and parks the surface back on "recording".
    */
   const finishInFlightRef = React.useRef(false);
+  /**
+   * Survives a failed liveRecordingStop so the retry re-sends the mutation
+   * without re-uploading a master blob S3 already has.
+   */
+  const uploadedKeyRef = React.useRef<{ jobId: string; key: string } | null>(
+    null,
+  );
+  /**
+   * A close-out can outlive the user's visit to this page. onCancel() rewrites
+   * the URL, which off /transcriptions would yank them back here — and
+   * usePathname() freezes at the last render, so the mount latch is what makes
+   * that check honest for a component that already went away.
+   */
+  const pathnameRef = React.useRef(pathname);
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Dedicated Uppy instance for the master recording (webm/mp4 are not in
   // AUDIO_FILE_TYPES — that constant documents the whisper pipeline's inputs).
@@ -287,13 +314,13 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
   // One-shot latches: the watcher effects below re-run on every parent render
   // (their callback props are inline arrows), and seq numbering restarts at 0
   // for every recording — so each of these is reset in onStart().
-  const handledAbortRef = React.useRef<string | null>(null);
-  const autoStopHandledRef = React.useRef(false);
   const interruptionAnnouncedRef = React.useRef(false);
   const announcedSkipsRef = React.useRef(new Set<number>());
 
   const onStart = async () => {
-    if (recorder.state === "recording" || recorder.jobId) {
+    // activeJobId, not jobId: a close-out still running for the last recording
+    // owns the uploader and the surface until it has released.
+    if (recorder.state === "recording" || recorder.activeJobId) {
       toast.error(t("composer.alreadyRecording"));
       return;
     }
@@ -311,12 +338,12 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
       });
       return;
     }
-    setPhase("starting");
+    setOwnPhase("starting");
     try {
       // Microphone first: a denied permission must never create a row.
       await recorder.prepare();
     } catch (err) {
-      setPhase("setup");
+      setOwnPhase("setup");
       toast.error(tChat("composer.micUnavailableTitle"), {
         description: micErrorDescription(err),
       });
@@ -346,128 +373,167 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
         result.data as { liveRecordingStart?: { id?: string } } | null
       )?.liveRecordingStart?.id;
       if (!jobId) throw new Error("no job id returned");
-      handledAbortRef.current = null;
-      autoStopHandledRef.current = false;
       interruptionAnnouncedRef.current = false;
       announcedSkipsRef.current.clear();
       recorder.start(jobId);
-      setPhase("recording");
+      setOwnPhase("recording");
       toast.success(t("toasts.recordingStarted"));
       onStarted(); // refetch the queue so the row shows under Processing (composer stays open)
     } catch (err: unknown) {
       discardRecording();
-      setPhase("setup");
+      setOwnPhase("setup");
       toast.error(t("toasts.recordingStartFailed"), {
         description: err instanceof Error ? err.message : undefined,
       });
     }
   };
 
-  /* --------------------------------- finish -------------------------------- */
+  /* -------------------------------- close-out ------------------------------- */
 
-  const finish = React.useCallback(async () => {
-    if (finishInFlightRef.current) return;
-    const closeout: Closeout | null = recorder.jobId
-      ? {
-          jobId: recorder.jobId,
-          audioKey: closeoutRef.current?.audioKey ?? null,
-          durationSeconds: closeoutRef.current?.durationSeconds ?? null,
-        }
-      : closeoutRef.current;
-    if (!closeout) return;
-    closeoutRef.current = closeout;
+  /**
+   * THE close-out, whoever ended the recording. The recorder publishes a
+   * pendingCloseout once the microphone is off and the queue has drained
+   * (Stop, the 4 h auto-stop) or was torn down (a queue abort); this uploads
+   * the audio, tells the server, toasts, and releases the recorder. When
+   * liveRecordingStop fails the close-out is kept — audio and job id live in
+   * the recorder — so Retry, or a fresh mount, picks it up again.
+   */
+  const runCloseout = React.useCallback(async () => {
+    const closeout = recorder.pendingCloseout;
+    if (!closeout || finishInFlightRef.current) return;
     finishInFlightRef.current = true;
+    setCloseoutFailed(false);
     try {
-      setPhase("finishing");
-      setFinishStep("draining");
-      try {
-        const { blob, mimeType, durationMs } = await recorder.stop();
-        if (durationMs > 0) closeout.durationSeconds = durationMs / 1000;
-        if (blob) {
-          setFinishStep("uploading");
+      // 409 not_recording / 404 not_found: the row is already closed (or
+      // gone), so there is nothing to attach and nothing to tell the server.
+      const serverOwed =
+        closeout.reason !== "not_recording" && closeout.reason !== "not_found";
+      if (serverOwed) {
+        let audioKey =
+          uploadedKeyRef.current?.jobId === closeout.jobId
+            ? uploadedKeyRef.current.key
+            : null;
+        if (closeout.blob && !audioKey) {
+          setCloseoutStep("uploading");
           try {
-            closeout.audioKey = await uploadMaster(blob, mimeType);
+            audioKey = await uploadMaster(closeout.blob, closeout.mimeType);
+            uploadedKeyRef.current = { jobId: closeout.jobId, key: audioKey };
           } catch {
             toast.warning(t("toasts.audioUploadFailedKeptTranscript"));
           }
         }
-      } catch (err) {
-        const reason = err instanceof QueueAbortError ? err.reason : null;
-        if (reason === "not_recording") {
-          // Finished or discarded from another device: the server closed the row
-          // already, so there is nothing left for this tab to send.
-          toast.info(t("toasts.recordingEndedElsewhere"));
-          discardRecording();
-          closeoutRef.current = null;
-          setPhase("setup");
-          setFinishStep(null);
-          onStarted();
-          onCancel();
+        setCloseoutStep("closing");
+        try {
+          await stopLive({
+            variables: {
+              id: closeout.jobId,
+              input: {
+                audio_s3key: audioKey,
+                // 0 == the recorder never measured it (a mid-recording abort);
+                // null lets the server keep what the chunks reported.
+                duration_seconds:
+                  closeout.durationMs > 0 ? closeout.durationMs / 1000 : null,
+              },
+            },
+          });
+        } catch (err: unknown) {
+          // The row is still 'recording' server-side. No release(): the
+          // recorder keeps the close-out and the surface offers Retry.
+          setCloseoutStep(null);
+          setCloseoutFailed(true);
+          toast.error(t("toasts.recordingStopFailed"), {
+            id: STOP_FAILED_TOAST,
+            description: err instanceof Error ? err.message : undefined,
+          });
           return;
         }
-        // out_of_order / skip_rejected / an unexpected throw: the audio is lost
-        // (stop() tore the recorder down), but the chunks already transcribed are
-        // worth keeping — close the job anyway so it lands in Needs review.
-        toast.error(t("toasts.recordingStopFailed"), {
-          id: STOP_FAILED_TOAST,
-          description:
-            reason ?? (err instanceof Error ? err.message : undefined),
-        });
-        discardRecording();
-        closeout.audioKey = null;
-        closeout.durationSeconds = null;
       }
-      setFinishStep("closing");
-      try {
-        await stopLive({
-          variables: {
-            id: closeout.jobId,
-            input: {
-              audio_s3key: closeout.audioKey,
-              duration_seconds: closeout.durationSeconds,
-            },
-          },
-        });
-        toast.success(t("toasts.recordingFinished"));
-        closeoutRef.current = null;
-        setPhase("setup");
-        setFinishStep(null);
-        onStarted();
+      // What the user hears once the job is closed (or found already closed).
+      switch (closeout.reason) {
+        case "not_recording":
+        case "not_found":
+          // Finished, discarded or deleted from another device: the server
+          // closed the row already, so there was nothing for this tab to send.
+          toast.info(t("toasts.recordingEndedElsewhere"));
+          break;
+        case "queue_aborted":
+          // out_of_order / skip_rejected: the row is closed with the transcript
+          // so far (it lands in Needs review), but the recording did not end
+          // the way it should have — say why.
+          toast.error(t("toasts.recordingStopFailed"), {
+            id: STOP_FAILED_TOAST,
+            description: closeout.abortReason,
+          });
+          break;
+        case "auto_stop":
+          toast.info(t("toasts.recordingAutoStopped"));
+          toast.success(t("toasts.recordingFinished"));
+          break;
+        default:
+          toast.success(t("toasts.recordingFinished"));
+      }
+      uploadedKeyRef.current = null;
+      setCloseoutStep(null);
+      setOwnPhase("setup");
+      releaseRecorder();
+      onStarted();
+      // onCancel() rewrites the URL to drop ?new=1; off this page, or from a
+      // component that already unmounted, that would be a navigation back here.
+      if (mountedRef.current && pathnameRef.current === TRANSCRIPTIONS_PATH) {
         onCancel();
-      } catch (err: unknown) {
-        // The row is still 'recording' server-side. Keep the surface (and its
-        // Stop button) up so the close-out can be retried with the same audio.
-        setFinishStep(null);
-        setPhase("recording");
-        toast.error(t("toasts.recordingStopFailed"), {
-          id: STOP_FAILED_TOAST,
-          description: err instanceof Error ? err.message : undefined,
-        });
       }
     } finally {
       finishInFlightRef.current = false;
     }
   }, [
-    recorder,
-    discardRecording,
-    stopLive,
+    recorder.pendingCloseout,
     uploadMaster,
+    stopLive,
+    releaseRecorder,
     onStarted,
     onCancel,
     t,
   ]);
 
-  // The watcher effects below must not re-run when `finish` changes identity
-  // (it closes over inline parent callbacks), so they reach it through a ref.
-  const finishRef = React.useRef(finish);
+  // The close-out effect must not re-run when runCloseout changes identity (it
+  // closes over inline parent callbacks), so it reaches it through a ref.
+  const runCloseoutRef = React.useRef(runCloseout);
   React.useEffect(() => {
-    finishRef.current = finish;
-  }, [finish]);
+    runCloseoutRef.current = runCloseout;
+  }, [runCloseout]);
 
-  // A watcher-driven finish leaves the confirm dialogs open and confirmable —
-  // their pending state only tracks their own onConfirm. Retiring them as soon
-  // as the recording stops is what keeps the latch above unreachable in
-  // practice instead of merely survivable.
+  // ONE close-out path: keyed on the job the recorder wants closed, re-armed
+  // by Retry. finishInFlightRef keeps a re-run (StrictMode, a parent render)
+  // from starting a second upload for the same job. It waits for the
+  // uploader: a mount that opens mid-close-out (back via the pill) runs this
+  // on its first commit, before useUppy's async init has an instance.
+  const closeoutJobId = recorder.pendingCloseout?.jobId ?? null;
+  React.useEffect(() => {
+    if (!closeoutJobId) {
+      // Nothing left to close out (an earlier mount finished it): a surface
+      // stuck on "finishing" would have nothing to show for it.
+      setOwnPhase((current) => (current === "finishing" ? "setup" : current));
+      return;
+    }
+    if (!uppy) return;
+    void runCloseoutRef.current();
+  }, [closeoutJobId, retryNonce, uppy]);
+
+  /**
+   * Stop: the recorder stops the microphone, drains the queue and publishes
+   * the close-out; the effect above does the rest. stop() rejects when the
+   * queue dies mid-drain, but the recorder has already turned that into a
+   * pendingCloseout, so there is nothing left to hear here.
+   */
+  const onStop = async () => {
+    setConfirmStopOpen(false);
+    void recorder.stop().catch(() => undefined);
+  };
+
+  // A recorder-driven end (auto-stop, queue abort) leaves the confirm dialogs
+  // open and confirmable — their pending state only tracks their own
+  // onConfirm. Retiring them as soon as the recording stops is what keeps a
+  // second Stop from landing on top of a running close-out.
   React.useEffect(() => {
     if (phase === "recording") return;
     setConfirmStopOpen(false);
@@ -475,7 +541,10 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
   }, [phase]);
 
   const onDiscard = async () => {
-    const jobId = recorder.jobId ?? closeoutRef.current?.jobId ?? null;
+    // Read before discard(): it lets go of the job id with everything else.
+    // Mid-drain this aborts the queue with "discard", which the recorder
+    // never turns into a close-out; the server side is handled right here.
+    const jobId = recorder.activeJobId;
     discardRecording();
     if (jobId) {
       try {
@@ -487,52 +556,16 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
         throw err; // keeps the ConfirmDialog open for a retry
       }
     }
-    closeoutRef.current = null;
+    uploadedKeyRef.current = null;
+    setCloseoutStep(null);
+    setCloseoutFailed(false);
     toast.success(t("toasts.recordingDiscarded"));
-    setPhase("setup");
+    setOwnPhase("setup");
     onStarted();
     onCancel();
   };
 
   /* -------------------------------- watchers ------------------------------- */
-
-  // Server-side end (409 from a chunk) or the 4h auto-stop ends the recording.
-  React.useEffect(() => {
-    if (phase !== "recording") return;
-    const reason = recorder.abortReason;
-    if (reason && handledAbortRef.current !== reason) {
-      handledAbortRef.current = reason;
-      if (reason === "not_recording") {
-        toast.info(t("toasts.recordingEndedElsewhere"));
-        discardRecording();
-        closeoutRef.current = null;
-        setPhase("setup");
-        onStarted();
-        onCancel();
-      } else {
-        // finish() still closes the job so the transcript so far is reviewable.
-        toast.error(t("toasts.recordingStopFailed"), {
-          id: STOP_FAILED_TOAST,
-          description: reason,
-        });
-        void finishRef.current();
-      }
-      return;
-    }
-    if (recorder.autoStopped && !autoStopHandledRef.current) {
-      autoStopHandledRef.current = true;
-      toast.info(t("toasts.recordingAutoStopped"));
-      void finishRef.current();
-    }
-  }, [
-    phase,
-    recorder.abortReason,
-    recorder.autoStopped,
-    discardRecording,
-    onStarted,
-    onCancel,
-    t,
-  ]);
 
   // A lost microphone is a warning, not an end: the user decides when to stop.
   React.useEffect(() => {
@@ -560,6 +593,15 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
 
   /* --------------------------- recording surface --------------------------- */
 
+  // Nothing in flight and the last liveRecordingStop failed: offer Retry.
+  const retryable =
+    phase === "finishing" && finishStep === null && closeoutFailed;
+  // Discard stays available while the last parts are still being sent (spec
+  // §5, offline at Stop) and once the close-out has failed; off while the
+  // audio is uploading or the row is being closed.
+  const discardAllowed =
+    phase === "recording" || finishStep === "draining" || retryable;
+
   if (phase === "recording" || phase === "finishing") {
     const sent = recorder.chunks.filter(
       (c) => c.status === "sent" || c.status === "skipped",
@@ -575,15 +617,22 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
             {formatElapsed(recorder.elapsedMs)}
           </span>
           <div className="flex-1" />
+          {/* Stop while recording; a spinner while the close-out runs; Retry
+              when liveRecordingStop failed (the recorder still holds the audio,
+              so the retry costs nothing that is already uploaded). */}
           <Button
             type="button"
             variant="destructive"
             size="lg"
-            disabled={phase === "finishing"}
-            onClick={() => setConfirmStopOpen(true)}
+            disabled={phase === "finishing" && !retryable}
+            onClick={() =>
+              retryable
+                ? setRetryNonce((n) => n + 1)
+                : setConfirmStopOpen(true)
+            }
             className="max-md:h-12"
           >
-            {phase === "finishing" ? (
+            {phase === "finishing" && !retryable ? (
               <Loader2
                 aria-hidden="true"
                 className="mr-2 size-4 animate-spin"
@@ -591,9 +640,11 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
             ) : (
               <Square aria-hidden="true" className="mr-2 size-4" />
             )}
-            {phase === "finishing"
-              ? t("composer.finishing")
-              : t("composer.stopRecording")}
+            {retryable
+              ? tCommon("retry")
+              : phase === "finishing"
+                ? t("composer.finishing")
+                : t("composer.stopRecording")}
           </Button>
         </div>
 
@@ -654,11 +705,14 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
                 : `${t("composer.partsSent", { count: sent })}${pending ? ` · ${t("composer.partsPending", { count: pending })}` : ""}${retrying ? ` · ${t("composer.partsRetrying")}` : ""}`}
         </div>
 
+        {/* Discard stays available while the last parts are still being sent
+            (spec §5, offline at Stop) and once the close-out has failed; it is
+            off only while the audio is uploading or the row is being closed. */}
         <div className="flex justify-end">
           <Button
             type="button"
             variant="ghost"
-            disabled={phase === "finishing"}
+            disabled={!discardAllowed}
             className="max-md:h-11"
             onClick={() => setConfirmDiscardOpen(true)}
           >
@@ -673,7 +727,7 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
           title={t("confirmStop.title")}
           description={t("confirmStop.description")}
           confirmLabel={t("confirmStop.confirm")}
-          onConfirm={finish}
+          onConfirm={onStop}
         />
         <ConfirmDialog
           open={confirmDiscardOpen}

@@ -108,8 +108,10 @@ function TranscriptionsPageInner() {
     null,
   );
   // An active recording always wins: reopen its surface wherever the user
-  // navigated from, whether or not ?new=1 is on the URL.
-  const recordingActive = !!live?.jobId;
+  // navigated from, whether or not ?new=1 is on the URL. activeJobId, not
+  // jobId: the close-out (upload + liveRecordingStop) runs after the recorder
+  // has let the job go, and unmounting the composer mid-upload loses the audio.
+  const recordingActive = !!live?.activeJobId;
   const effectiveMode: ComposerMode | null = recordingActive
     ? "record"
     : composerMode && enabledModes.includes(composerMode)

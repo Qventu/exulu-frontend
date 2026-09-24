@@ -4658,6 +4658,7 @@
     },
     "pill": {
       "recording": "Aufnahme {time}",
+      "finishing": "Wird abgeschlossen…",
       "back": "Zur Aufnahme"
     }
   },

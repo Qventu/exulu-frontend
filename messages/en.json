@@ -4658,6 +4658,7 @@
     },
     "pill": {
       "recording": "Recording {time}",
+      "finishing": "Finishing…",
       "back": "Back to the recording"
     }
   },
