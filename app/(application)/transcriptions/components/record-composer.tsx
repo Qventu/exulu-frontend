@@ -261,6 +261,15 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
     uppy.on("upload-error", onError);
     uppy.on("upload-progress", onProgress);
     return () => {
+      // An upload still in flight outlives this mount: the close-out awaiting
+      // it keeps running after unmount, so its settle paths — the error
+      // listener and the progress-driven stall watchdog — must stay attached.
+      // Detaching them here would leave a failed or stalled upload pending
+      // forever, and the recorder's per-job latch would then hold the job
+      // (pill, tab-close guard, next recording) until a reload. settleUpload()
+      // disarms the watchdog itself; the listeners die with the instance,
+      // which useUppy never destroys anyway.
+      if (uploadResolverRef.current) return;
       uppy.off("upload-error", onError);
       uppy.off("upload-progress", onProgress);
       clearStallWatchdog();
