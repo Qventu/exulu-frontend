@@ -203,6 +203,14 @@ export function SkillEditorView({ skillId }: SkillEditorViewProps) {
     if (!skill) return;
     setSavingVersion(true);
     try {
+      // saveVersion only snapshots whatever is already in S3 for the
+      // current version — it never sees the editor's in-memory content.
+      // A user who edits a file and clicks Save Version without a prior,
+      // separate per-file Save would otherwise get a new version that
+      // silently doesn't contain their edit. Flush the dirty file first.
+      if (editorDirty && editorSaveRef.current) {
+        await editorSaveRef.current();
+      }
       await skillsApi.saveVersion(skillId, label || undefined);
       toast.success(t("editor.toasts.versionSaved"));
       // Refresh both skill (for current_version + history) and files.

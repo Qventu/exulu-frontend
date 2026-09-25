@@ -50,17 +50,30 @@ export function VersionHistoryPanel({
   );
   const currentVersion = skill.current_version ?? 1;
 
+  // `history` already carries its own entry for `currentVersion` (every
+  // version-bumping route appends one) — reuse its created_at/label as the
+  // source of truth for the pinned "current" row instead of skill.updatedAt
+  // (which isn't touched by every skill mutation, so it can lag behind the
+  // real current version) and drop that entry from the rest of the list so
+  // the same version doesn't render twice.
+  const currentHistoryEntry = React.useMemo(
+    () => history.find((entry) => entry.version === currentVersion),
+    [history, currentVersion],
+  );
+
   const rows = React.useMemo<VersionRow[]>(
     () => [
       {
         version: currentVersion,
-        created_at: skill.updatedAt,
+        created_at: currentHistoryEntry?.created_at ?? skill.updatedAt,
         label: t("editor.history.currentLabel"),
         isCurrent: true,
       },
-      ...history.slice().sort((a, b) => b.version - a.version),
+      ...history
+        .filter((entry) => entry.version !== currentVersion)
+        .sort((a, b) => b.version - a.version),
     ],
-    [currentVersion, history, skill.updatedAt, t],
+    [currentVersion, currentHistoryEntry, history, skill.updatedAt, t],
   );
 
   return (
