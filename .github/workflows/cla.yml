@@ -73,9 +73,15 @@ jobs:
       # to the private signatures repo, so it cannot comment here; GITHUB_TOKEN
       # can comment but cannot read that repo.
       - name: Require the pull request author to have agreed
+        # always(): the action above CRASHES on pull requests whose commits have
+        # no resolvable GitHub login ("Cannot read properties of undefined") —
+        # exactly the pull requests this check exists to catch. Without always()
+        # that failure skips this step and nothing is posted.
         if: >
-          github.event_name == 'pull_request_target'
-          || (github.event_name == 'issue_comment' && github.event.issue.pull_request)
+          always() && (
+            github.event_name == 'pull_request_target'
+            || (github.event_name == 'issue_comment' && github.event.issue.pull_request)
+          )
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SIG_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
