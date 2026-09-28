@@ -1,0 +1,61 @@
+# Contributor License Agreement check.
+#
+# Comments on any pull request whose author has not yet agreed to CLA.md, and
+# blocks the merge until they reply with the sentence below. Agreements are
+# recorded in a separate private repository, one row per contributor with the
+# commit SHA and timestamp, which is the evidence trail an audit needs.
+#
+# SETUP REQUIRED BEFORE THIS DOES ANYTHING:
+#   1. Create a private repo to hold signatures, e.g. Qventu/cla-signatures,
+#      with an empty `signatures/version1/cla.json` containing `{}`.
+#   2. Create a Personal Access Token with `repo` scope on an account that can
+#      write to it, and add it to this repository as the secret
+#      PERSONAL_ACCESS_TOKEN.
+#   3. Update `remote-repository-name` below if you chose a different name.
+#
+# Until those exist the workflow will fail on external pull requests. Remove the
+# file, or leave it disabled, if you would rather track agreement by hand.
+
+name: CLA
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: write
+  statuses: write
+
+jobs:
+  cla:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check or record CLA agreement
+        if: >
+          (github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA')
+          || github.event_name == 'pull_request_target'
+        uses: contributor-assistant/github-action@v2.6.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        with:
+          path-to-signatures: 'signatures/version1/cla.json'
+          path-to-document: 'https://github.com/Qventu/exulu-frontend/blob/main/CLA.md'
+          branch: 'main'
+          allowlist: dclaessen-exulu,bot*,dependabot[bot],semantic-release-bot
+
+          # Signatures live outside this public repository so contributor
+          # email addresses are not published.
+          remote-organization-name: Qventu
+          remote-repository-name: cla-signatures
+
+          custom-notsigned-prcomment: >
+            Thanks for the pull request. Before we can merge it, please read the
+            [Contributor License Agreement](https://github.com/Qventu/exulu-frontend/blob/main/CLA.md)
+            and agree to it by posting exactly this comment:
+          custom-pr-sign-comment: 'I have read the CLA Document and I hereby sign the CLA'
+          custom-allsigned-prcomment: 'All contributors have agreed to the CLA.'
