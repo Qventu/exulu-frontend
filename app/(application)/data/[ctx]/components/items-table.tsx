@@ -41,6 +41,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { BulkAccessDialog } from "@/components/widgets/bulk-access-dialog";
+import { ItemsActionBar } from "@/components/widgets/items-action-bar";
 import { cn } from "@/lib/utils";
 import type { Item } from "@EXULU_SHARED/models/item";
 import type { Context } from "@/types/models/context";
@@ -51,10 +53,8 @@ import {
   useContextItemFavourites,
 } from "../../hooks";
 
-import { BulkAccessDialog } from "./bulk-access-dialog";
-import { ItemsActionBar } from "./items-action-bar";
 import { ItemsEmpty } from "./items-empty";
-import { DELETE_ITEM, UPDATE_ITEM } from "../../queries";
+import { BULK_UPDATE_ITEM_RBAC, DELETE_ITEM, UPDATE_ITEM } from "../../queries";
 
 export interface ItemsTableProps {
   context: Context;
@@ -271,7 +271,7 @@ export function ItemsTable({
       <BulkAccessDialog
         open={accessDialogOpen}
         onOpenChange={setAccessDialogOpen}
-        context={context}
+        mutation={BULK_UPDATE_ITEM_RBAC(context.id)}
         ids={Array.from(selection)}
         onApplied={() => {
           setSelection(new Set());

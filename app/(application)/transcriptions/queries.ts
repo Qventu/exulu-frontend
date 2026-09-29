@@ -327,57 +327,22 @@ export const UPDATE_TRANSCRIPT_ITEM = gql`
 `;
 
 /**
- * The context row for "transcriptions" — needed only to satisfy
- * `BulkAccessDialog`'s `context: Context` prop (it reads `context.id` for the
- * `itemsBulkUpdateRBAC` mutation it owns internally). Verbatim copy of
- * `app/(application)/data/queries.ts`'s `GET_CONTEXT_BY_ID` selection set,
- * for the same cross-feature-boundary reason as `UPDATE_TRANSCRIPT_ITEM`.
+ * Bulk share for the home page's selection bar — the mutation document
+ * `BulkAccessDialog` (now `components/widgets/bulk-access-dialog.tsx`) needs
+ * passed in via its `mutation` prop, since the widgets tier may not import
+ * `@/app/*` to build `BULK_UPDATE_ITEM_RBAC("transcriptions")` itself. Same
+ * shape that factory produces for this context, colocated here for the same
+ * reason as `UPDATE_TRANSCRIPT_ITEM` above.
  */
-const TRANSCRIPTS_CONTEXT_FIELDS = `
-  id
-  name
-  description
-  embedder {
-    model
-    queue
-  }
-  slug
-  active
-  fields
-  configuration
-  processor {
-    name
-    description
-    queue
-    trigger
-    timeoutInSeconds
-    generateEmbeddings
-  }
-  sources {
-    id
-    name
-    description
-    config {
-      params {
-        name
-        description
-        default
-      }
-      schedule
-      queue
-      retries
-      backoff {
-        type
-        delay
-      }
-    }
-  }
-`;
-
-export const GET_TRANSCRIPTS_CONTEXT = gql`
-  query GetTranscriptsContext($id: ID!) {
-    contextById(id: $id) {
-      ${TRANSCRIPTS_CONTEXT_FIELDS}
+export const BULK_UPDATE_TRANSCRIPT_ITEMS_RBAC = gql`
+  mutation BulkUpdateRBACtranscriptions(
+    $ids: [ID!]!
+    $rights_mode: String!
+    $rbac: RBACInput
+  ) {
+    transcriptions_itemsBulkUpdateRBAC(ids: $ids, rights_mode: $rights_mode, RBAC: $rbac) {
+      message
+      itemCount
     }
   }
 `;

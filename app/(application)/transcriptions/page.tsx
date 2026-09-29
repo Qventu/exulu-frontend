@@ -9,7 +9,7 @@
  * over item rows. The composer stays an inline card (?new=1 deep-link
  * convention) until Task 9 replaces it with a dialog.
  */
-import { useMutation, useQuery } from "@apollo/client";
+import { useMutation } from "@apollo/client";
 import { FileAudio, MoreHorizontal, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -17,13 +17,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import { UserContext } from "@/app/(application)/authenticated";
-// Unavoidable cross-feature imports (codebase-structure §1.2 normally forbids
-// this): the design spec explicitly reuses `/data`'s selection bar and bulk
-// RBAC dialog rather than building a second one (task-8 brief step 5). There
-// is no feature-local or shared-tier copy of either component to import
-// instead — see the report for the measured eslint impact.
-import { BulkAccessDialog } from "@/app/(application)/data/[ctx]/components/bulk-access-dialog";
-import { ItemsActionBar } from "@/app/(application)/data/[ctx]/components/items-action-bar";
+import { BulkAccessDialog } from "@/components/widgets/bulk-access-dialog";
+import { ItemsActionBar } from "@/components/widgets/items-action-bar";
 import { useLiveRecordingOptional } from "@/components/live-recording/live-recording-provider";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { PageHeader } from "@/components/primitives/page-header";
@@ -55,7 +50,6 @@ import {
   ToggleGroupItem,
 } from "@/components/ui/toggle-group";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { Context } from "@/types/models/context";
 
 import { Composer } from "./components/composer";
 import { InProgressStrip } from "./components/in-progress-strip";
@@ -68,7 +62,7 @@ import {
   useProjectOptions,
 } from "./hooks";
 import {
-  GET_TRANSCRIPTS_CONTEXT,
+  BULK_UPDATE_TRANSCRIPT_ITEMS_RBAC,
   REMOVE_SAVED_TRANSCRIPT_ITEM,
   UPDATE_TRANSCRIPT_ITEM,
 } from "./queries";
@@ -204,14 +198,6 @@ function TranscriptionsPageInner() {
   } = useTranscripts(query);
 
   const projects = useProjectOptions();
-
-  // Just enough of the Transcriptions context row to satisfy
-  // BulkAccessDialog's `context: Context` prop (it only reads `context.id`).
-  const { data: contextData } = useQuery<{ contextById: Context | null }>(
-    GET_TRANSCRIPTS_CONTEXT,
-    { variables: { id: "transcriptions" } },
-  );
-  const transcriptsContext = contextData?.contextById ?? null;
 
   const [updateItem, updateItemResult] = useMutation(UPDATE_TRANSCRIPT_ITEM);
   const [deleteItem, deleteItemResult] = useMutation(
@@ -642,18 +628,16 @@ function TranscriptionsPageInner() {
         </div>
       )}
 
-      {transcriptsContext && (
-        <BulkAccessDialog
-          open={accessDialogOpen}
-          onOpenChange={setAccessDialogOpen}
-          context={transcriptsContext}
-          ids={selectedIds}
-          onApplied={() => {
-            setSelection(new Set());
-            refetchAll();
-          }}
-        />
-      )}
+      <BulkAccessDialog
+        open={accessDialogOpen}
+        onOpenChange={setAccessDialogOpen}
+        mutation={BULK_UPDATE_TRANSCRIPT_ITEMS_RBAC}
+        ids={selectedIds}
+        onApplied={() => {
+          setSelection(new Set());
+          refetchAll();
+        }}
+      />
     </PageShell>
   );
 }
