@@ -25,11 +25,13 @@
  * 82 (single creation/edit form shared via shim).
  */
 
-import { Expand, XCircle } from "lucide-react";
+import { Download, Expand, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
+import { toast } from "sonner";
 
 import FilePicker, { FileDataCard } from "@/components/primitives/file-picker";
+import { ConfigContext } from "@/components/shell/config-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,11 +44,58 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { getToken } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import type { Context } from "@/types/models/context";
 import type { Item } from "@/types/models/item";
 
 import { ExpandEditorDialog } from "./expand-editor-dialog";
+
+/**
+ * Downloads a markdown field as .docx/.pdf via the generic backend export
+ * route (any ExuluContext field with type "markdown" — not specific to one
+ * context). Auth'd fetch + blob download, same pattern as the projects
+ * page's Claude Code / Cowork config downloads.
+ */
+async function downloadMarkdownExport({
+  backend,
+  contextId,
+  itemId,
+  fieldName,
+  format,
+  itemName,
+  errorMessage,
+}: {
+  backend: string;
+  contextId: string;
+  itemId: string;
+  fieldName: string;
+  format: "docx" | "pdf";
+  itemName: string;
+  errorMessage: string;
+}): Promise<void> {
+  const token = await getToken();
+  if (!token) {
+    toast.error(errorMessage);
+    return;
+  }
+  try {
+    const url = `${backend}/contexts/${encodeURIComponent(contextId)}/items/${encodeURIComponent(itemId)}/export?field=${encodeURIComponent(fieldName)}&format=${format}`;
+    const res = await fetch(url, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`export failed (${res.status})`);
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = `${itemName || "export"}.${format}`;
+    a.click();
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    toast.error(errorMessage);
+  }
+}
 
 export interface ItemFormFieldsProps {
   context: Context;
@@ -77,6 +126,7 @@ export function ItemFormFields({
   hiddenFields,
 }: ItemFormFieldsProps) {
   const t = useTranslations("knowledge");
+  const config = React.useContext(ConfigContext);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = React.useState<{
     name: string;
@@ -250,6 +300,14 @@ export function ItemFormFields({
         const onActivate =
           field.type === "file" ? undefined : activate(field.name);
 
+        // Export only makes sense once the field actually has content on a
+        // saved item — not mid-creation, and not for an empty draft.
+        const canExport =
+          field.type === "markdown" &&
+          !!data.id &&
+          typeof value === "string" &&
+          value.length > 0;
+
         return (
           <Row
             key={index}
@@ -276,6 +334,50 @@ export function ItemFormFields({
               expandLabel={t("workspace.fields.expand")}
               selectPlaceholder={t("workspace.fields.selectPlaceholder")}
             />
+            {canExport && config?.backend ? (
+              <div className="mt-1.5 flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() =>
+                    void downloadMarkdownExport({
+                      backend: config.backend,
+                      contextId: context.id,
+                      itemId: data.id as string,
+                      fieldName: field.name,
+                      format: "docx",
+                      itemName: data.name ?? field.label,
+                      errorMessage: t("workspace.fields.exportFailed"),
+                    })
+                  }
+                >
+                  <Download className="size-3.5" aria-hidden="true" />
+                  {t("workspace.fields.downloadWord")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() =>
+                    void downloadMarkdownExport({
+                      backend: config.backend,
+                      contextId: context.id,
+                      itemId: data.id as string,
+                      fieldName: field.name,
+                      format: "pdf",
+                      itemName: data.name ?? field.label,
+                      errorMessage: t("workspace.fields.exportFailed"),
+                    })
+                  }
+                >
+                  <Download className="size-3.5" aria-hidden="true" />
+                  {t("workspace.fields.downloadPdf")}
+                </Button>
+              </div>
+            ) : null}
           </Row>
         );
       })}
