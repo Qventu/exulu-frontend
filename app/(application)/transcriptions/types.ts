@@ -287,3 +287,162 @@ export function speakerColor(rawLabel: string): string {
   const index = (Math.abs(hash) % SPEAKER_TOKEN_COUNT) + 1;
   return `hsl(var(--chart-${index}))`;
 }
+
+/** A saved transcript as it comes back from transcriptions_itemsPagination. */
+export type TranscriptItem = {
+  id: string;
+  name: string | null;
+  recording_source: JobSource | null;
+  job_id: string | null;
+  recorded_at: string | null;
+  duration_seconds: number | null;
+  speaker_count: number | null;
+  project_id: string | null;
+  rights_mode: Mode | null;
+  created_by: number | null;
+  post_processing: PostProcessingOutput[] | string | null;
+};
+
+export type TranscriptRowKind = "job" | "item";
+
+export type TranscriptState =
+  | "recording"
+  | "queued"
+  | "transcribing"
+  | "needs_review"
+  | "failed"
+  | "ready";
+
+export type TranscriptRow = {
+  kind: TranscriptRowKind;
+  id: string;
+  href: string;
+  title: string;
+  state: TranscriptState;
+  summaryLine: string | null;
+  recordedAt: string;
+  source: JobSource | null;
+  durationSeconds: number | null;
+  speakerCount: number | null;
+  projectId: string | null;
+  rightsMode: Mode | null;
+  createdBy: number | null;
+  /** Only for kind "job" — the row renderer needs bot status, error, chunk heartbeat. */
+  job?: Job;
+};
+
+export type TranscriptTab = "all" | "needs_review" | "mine" | "shared";
+
+const JOB_STATE: Partial<Record<JobStatus, TranscriptState>> = {
+  recording: "recording",
+  queued: "queued",
+  transcribing: "transcribing",
+  awaiting_review: "needs_review",
+  failed: "failed",
+};
+
+/** First non-empty post-processing output, trimmed to one line for the row. */
+function itemSummaryLine(item: TranscriptItem): string | null {
+  const outputs = parsePostProcessingOutputs(item.post_processing);
+  const first = outputs.find((o) => o.status === "done" && o.output?.trim());
+  if (!first?.output) return null;
+  return first.output.trim().split("\n")[0] ?? null;
+}
+
+/**
+ * One list across the two stores (spec §1.1). In-progress work comes from
+ * transcription_jobs (creator-only); everything ready comes from the RBAC'd
+ * knowledge items. A saved job contributes nothing — its content IS the item —
+ * which is what keeps the union duplicate-free.
+ */
+export function mergeTranscriptRows(
+  jobs: Job[],
+  items: TranscriptItem[],
+): TranscriptRow[] {
+  const itemRows: TranscriptRow[] = items.map((item) => ({
+    kind: "item",
+    id: item.id,
+    href: `/transcriptions/${item.id}`,
+    title: item.name?.trim() || "Untitled transcript",
+    state: "ready",
+    summaryLine: itemSummaryLine(item),
+    recordedAt: item.recorded_at ?? new Date(0).toISOString(),
+    source: item.recording_source ?? null,
+    durationSeconds: item.duration_seconds,
+    speakerCount: item.speaker_count,
+    projectId: item.project_id,
+    rightsMode: item.rights_mode,
+    createdBy: item.created_by,
+  }));
+
+  const claimedJobIds = new Set(
+    items.map((item) => item.job_id).filter((id): id is string => !!id),
+  );
+
+  const jobRows: TranscriptRow[] = jobs
+    .filter((job) => {
+      // A job that already produced an item is represented by that item.
+      if (job.status === "saved" || job.status === "cancelled") return false;
+      if (job.saved_item_id) return false;
+      return !claimedJobIds.has(job.id);
+    })
+    .map((job) => ({
+      kind: "job",
+      id: job.id,
+      href: `/transcriptions/review/${job.id}`,
+      title: displayTitle(job),
+      state: JOB_STATE[job.status] ?? "queued",
+      summaryLine: null,
+      recordedAt: job.join_at ?? job.createdAt,
+      source: job.source ?? null,
+      durationSeconds: job.duration_seconds,
+      speakerCount: null,
+      projectId: job.project_id,
+      rightsMode: job.target_rights_mode,
+      createdBy: job.created_by,
+      job,
+    }));
+
+  return [...itemRows, ...jobRows].sort(
+    (a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime(),
+  );
+}
+
+export function filterTranscriptRows(
+  rows: TranscriptRow[],
+  tab: TranscriptTab,
+  currentUserId: number,
+): TranscriptRow[] {
+  switch (tab) {
+    case "needs_review":
+      return rows.filter((row) => row.state === "needs_review");
+    case "mine":
+      return rows.filter(
+        (row) => row.kind === "item" && row.createdBy === currentUserId,
+      );
+    case "shared":
+      return rows.filter(
+        (row) => row.kind === "item" && row.createdBy !== currentUserId,
+      );
+    default:
+      return rows;
+  }
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function groupTranscriptRows(
+  rows: TranscriptRow[],
+  now: Date,
+): { thisWeek: TranscriptRow[]; earlier: TranscriptRow[] } {
+  const cutoff = now.getTime() - WEEK_MS;
+  const thisWeek: TranscriptRow[] = [];
+  const earlier: TranscriptRow[] = [];
+  for (const row of rows) {
+    // A scheduled meeting bot's join_at is in the future; it belongs at the
+    // top of the list, not silently in Earlier.
+    if (new Date(row.recordedAt).getTime() >= cutoff) thisWeek.push(row);
+    else earlier.push(row);
+  }
+  return { thisWeek, earlier };
+}

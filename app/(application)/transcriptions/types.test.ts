@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { findRecoveredJob, hasPostProcessing, isLiveJob, displayTitle, type Job } from "./types";
+import {
+  findRecoveredJob,
+  hasPostProcessing,
+  isLiveJob,
+  displayTitle,
+  mergeTranscriptRows,
+  filterTranscriptRows,
+  groupTranscriptRows,
+  type Job,
+  type TranscriptItem,
+} from "./types";
 
 /**
  * findRecoveredJob — real incident, 2026-09-22: a customer reported 4 "failed"
@@ -128,5 +138,127 @@ describe("live recording helpers", () => {
 
   it("displayTitle falls back to 'Live recording' for untitled live jobs", () => {
     expect(displayTitle({ title: null, audio_s3key: "", source: "live" })).toBe("Live recording");
+  });
+});
+
+function item(overrides: Partial<TranscriptItem>): TranscriptItem {
+  return {
+    id: "item-1",
+    name: "Kick-off Comfort-Line",
+    recording_source: "recall",
+    job_id: "job-1",
+    recorded_at: "2026-09-10T09:00:00.000Z",
+    duration_seconds: 3494,
+    speaker_count: 6,
+    project_id: "proj-1",
+    rights_mode: "private",
+    created_by: 1,
+    post_processing: null,
+    ...overrides,
+  };
+}
+
+describe("mergeTranscriptRows", () => {
+  it("keeps in-progress jobs and ready items in one list", () => {
+    const rows = mergeTranscriptRows(
+      [job({ id: "job-9", status: "awaiting_review", title: "Fertigungsplanung" })],
+      [item({ id: "item-1" })],
+    );
+    expect(rows.map((r) => r.id).sort()).toEqual(["item-1", "job-9"]);
+  });
+
+  it("never lists a saved job twice — its content is the item", () => {
+    // The jobs query only asks for ACTIVE_STATUSES, but a job can be saved
+    // between the two queries resolving. It must not appear beside its item.
+    const rows = mergeTranscriptRows(
+      [job({ id: "job-1", status: "saved", saved_item_id: "item-1" })],
+      [item({ id: "item-1", job_id: "job-1" })],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].kind).toBe("item");
+  });
+
+  it("points a needs-review job at the review route and an item at the reading view", () => {
+    const rows = mergeTranscriptRows(
+      [job({ id: "job-9", status: "awaiting_review" })],
+      [item({ id: "item-1" })],
+    );
+    expect(rows.find((r) => r.id === "job-9")!.href).toBe("/transcriptions/review/job-9");
+    expect(rows.find((r) => r.id === "item-1")!.href).toBe("/transcriptions/item-1");
+  });
+
+  it("sorts newest first by recorded_at across both sources", () => {
+    const rows = mergeTranscriptRows(
+      [job({ id: "older-job", status: "awaiting_review", createdAt: "2026-09-01T00:00:00Z" })],
+      [item({ id: "newer-item", recorded_at: "2026-09-20T00:00:00.000Z" })],
+    );
+    expect(rows.map((r) => r.id)).toEqual(["newer-item", "older-job"]);
+  });
+
+  it("maps job statuses onto display states", () => {
+    const rows = mergeTranscriptRows(
+      [
+        job({ id: "a", status: "recording" }),
+        job({ id: "b", status: "transcribing" }),
+        job({ id: "c", status: "awaiting_review" }),
+        job({ id: "d", status: "failed" }),
+      ],
+      [],
+    );
+    expect(rows.map((r) => r.state).sort()).toEqual(
+      ["failed", "needs_review", "recording", "transcribing"],
+    );
+  });
+
+  it("leaves speakerCount null for an item saved before the column existed", () => {
+    const rows = mergeTranscriptRows([], [item({ speaker_count: null })]);
+    expect(rows[0].speakerCount).toBeNull();
+  });
+});
+
+describe("filterTranscriptRows", () => {
+  const rows = mergeTranscriptRows(
+    [job({ id: "job-9", status: "awaiting_review" })],
+    [item({ id: "mine", created_by: 1 }), item({ id: "theirs", created_by: 2 })],
+  );
+
+  it("'all' keeps everything", () => {
+    expect(filterTranscriptRows(rows, "all", 1)).toHaveLength(3);
+  });
+
+  it("'needs_review' keeps only jobs awaiting review", () => {
+    expect(filterTranscriptRows(rows, "needs_review", 1).map((r) => r.id)).toEqual(["job-9"]);
+  });
+
+  it("'mine' keeps items I created", () => {
+    expect(filterTranscriptRows(rows, "mine", 1).map((r) => r.id)).toEqual(["mine"]);
+  });
+
+  it("'shared' keeps readable items I did NOT create", () => {
+    expect(filterTranscriptRows(rows, "shared", 1).map((r) => r.id)).toEqual(["theirs"]);
+  });
+});
+
+describe("groupTranscriptRows", () => {
+  const now = new Date("2026-09-29T12:00:00.000Z");
+
+  it("puts the last seven days in This week and the rest in Earlier", () => {
+    const rows = mergeTranscriptRows(
+      [],
+      [
+        item({ id: "recent", recorded_at: "2026-09-26T09:00:00.000Z" }),
+        item({ id: "old", recorded_at: "2026-09-10T09:00:00.000Z" }),
+      ],
+    );
+    const { thisWeek, earlier } = groupTranscriptRows(rows, now);
+    expect(thisWeek.map((r) => r.id)).toEqual(["recent"]);
+    expect(earlier.map((r) => r.id)).toEqual(["old"]);
+  });
+
+  it("treats a future recorded_at as this week rather than hiding it", () => {
+    // A scheduled meeting bot has a join_at in the future; the row must not
+    // fall off the bottom of the list.
+    const rows = mergeTranscriptRows([], [item({ id: "scheduled", recorded_at: "2026-10-02T09:00:00.000Z" })]);
+    expect(groupTranscriptRows(rows, now).thisWeek.map((r) => r.id)).toEqual(["scheduled"]);
   });
 });

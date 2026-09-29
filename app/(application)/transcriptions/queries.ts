@@ -270,3 +270,37 @@ export const GET_PROJECTS = gql`
     }
   }
 `;
+
+/**
+ * Saved transcripts, through the generic per-context pagination. Items carry
+ * the RBAC the home's Shared-with-me tab, search and filters all rely on, so
+ * this needs no bespoke resolver (spec §1.1).
+ */
+export const GET_TRANSCRIPT_ITEMS = gql`
+  query TranscriptItems(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterTranscriptions_items]
+    $sort: SortBy = { field: "recorded_at", direction: DESC }
+  ) {
+    transcriptions_itemsPagination(page: $page, limit: $limit, filters: $filters, sort: $sort) {
+      pageInfo {
+        itemCount
+        hasNextPage
+      }
+      items {
+        id
+        name
+        recording_source
+        job_id
+        recorded_at
+        duration_seconds
+        speaker_count
+        project_id
+        rights_mode
+        created_by
+        post_processing
+      }
+    }
+  }
+`;
