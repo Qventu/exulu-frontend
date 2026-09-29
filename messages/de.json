@@ -4505,6 +4505,23 @@
       "description": "Laden Sie ein Meeting oder Sprachmemo hoch und erhalten Sie ein Transkript mit benannten Sprechern.",
       "title": "Noch keine Transkripte"
     },
+    "errors": {
+      "inProgressFailed": "Die Liste der laufenden Aufnahmen konnte nicht geladen werden.",
+      "transcriptsFailed": "Gespeicherte Transkripte konnten nicht geladen werden."
+    },
+    "filter": {
+      "label": "Filter",
+      "source": "Quelle",
+      "project": "Projekt",
+      "date": "Datum",
+      "clear": "Filter zurücksetzen",
+      "allSources": "Alle Quellen",
+      "allProjects": "Alle Projekte",
+      "anyTime": "Jederzeit",
+      "today": "Heute",
+      "thisWeek": "Diese Woche",
+      "thisMonth": "Diesen Monat"
+    },
     "gallery": {
       "allowedTypes": "Erlaubte Dateitypen: {types}",
       "browseTitle": "Zuvor hochgeladene Dateien",
@@ -4528,6 +4545,12 @@
       "view": "Ansehen / Herunterladen",
       "viewFailed": "Datei konnte nicht geöffnet werden"
     },
+    "groups": { "thisWeek": "Diese Woche", "earlier": "Früher" },
+    "inProgress": {
+      "label": "{count, plural, one {# in Bearbeitung} other {# in Bearbeitung}}",
+      "expand": "Laufende Aufträge anzeigen",
+      "collapse": "Ausblenden"
+    },
     "lang": {
       "de": "Deutsch",
       "en": "Englisch",
@@ -4541,15 +4564,18 @@
       "private": "Privat",
       "public": "Öffentlich",
       "roles": "Mit Rollen geteilt",
+      "teams": "Mit Teams geteilt",
       "users": "Mit Benutzern geteilt"
     },
     "new": "Neue Transkription",
     "newShort": "Neu",
+    "overflow": { "label": "Weitere Optionen" },
     "queue": {
       "library": "Transkript-Bibliothek",
       "loadMore": "Mehr laden",
       "needsReview": "Zu überprüfen",
       "noResults": "Keine Transkripte entsprechen Ihrer Suche.",
+      "nothingHere": "Hier gibt es noch nichts.",
       "noSaved": "Noch keine gespeicherten Transkripte.",
       "nothingProcessing": "Derzeit wird nichts verarbeitet.",
       "processing": "In Bearbeitung",
@@ -4614,11 +4640,33 @@
       "recordingHere": "Aufnahme auf diesem Gerät",
       "finish": "Abschließen",
       "discard": "Verwerfen",
-      "liveSource": "Live-Aufnahme"
+      "liveSource": "Live-Aufnahme",
+      "open": "Öffnen",
+      "onlyYou": "Nur Sie",
+      "everyone": "Alle",
+      "sharedWithYou": "Mit Ihnen geteilt",
+      "people": "{count, plural, one {# Person} other {# Personen}}",
+      "speakers": "{count, plural, one {# Sprecher} other {# Sprecher}}",
+      "summaryPending": "Die Zusammenfassung läuft, sobald Sie die Überprüfung speichern",
+      "bulkDisabled": "Sammelaktionen gelten nur für gespeicherte Transkripte, nicht für laufende Aufnahmen"
     },
     "searchPlaceholder": "Transkripte durchsuchen…",
     "sharing": {
       "subject": "Transkript"
+    },
+    "state": {
+      "recording": "Aufnahme läuft",
+      "queued": "In Warteschlange",
+      "transcribing": "Wird transkribiert",
+      "needsReview": "Prüfung nötig",
+      "ready": "Bereit",
+      "failed": "Fehlgeschlagen"
+    },
+    "tabs": {
+      "all": "Alle",
+      "needsReview": "Prüfung nötig",
+      "mine": "Meine",
+      "shared": "Mit mir geteilt"
     },
     "title": "Transkripte",
     "toasts": {

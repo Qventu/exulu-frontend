@@ -214,6 +214,19 @@ describe("mergeTranscriptRows", () => {
     const rows = mergeTranscriptRows([], [item({ speaker_count: null })]);
     expect(rows[0].speakerCount).toBeNull();
   });
+
+  it("excludes a job already claimed by an item even when the job's own status is stale", () => {
+    // The real cross-query race: the jobs query resolved before the save
+    // landed, so the job still says awaiting_review, but an item already
+    // references it. Without the claimedJobIds check the user sees the same
+    // recording twice — once to review, once to read.
+    const rows = mergeTranscriptRows(
+      [job({ id: "job-1", status: "awaiting_review", saved_item_id: null })],
+      [item({ id: "item-1", job_id: "job-1" })],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].kind).toBe("item");
+  });
 });
 
 describe("filterTranscriptRows", () => {

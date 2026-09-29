@@ -4505,6 +4505,23 @@
       "description": "Upload a meeting or voice memo and get back a speaker-labeled transcript.",
       "title": "No transcripts yet"
     },
+    "errors": {
+      "inProgressFailed": "The list of recordings in progress could not be loaded.",
+      "transcriptsFailed": "Saved transcripts could not be loaded."
+    },
+    "filter": {
+      "label": "Filter",
+      "source": "Source",
+      "project": "Project",
+      "date": "Date",
+      "clear": "Clear filters",
+      "allSources": "All sources",
+      "allProjects": "All projects",
+      "anyTime": "Any time",
+      "today": "Today",
+      "thisWeek": "This week",
+      "thisMonth": "This month"
+    },
     "gallery": {
       "allowedTypes": "Allowed file types: {types}",
       "browseTitle": "Previously uploaded files",
@@ -4528,6 +4545,12 @@
       "view": "View / download",
       "viewFailed": "Couldn't open the file"
     },
+    "groups": { "thisWeek": "This week", "earlier": "Earlier" },
+    "inProgress": {
+      "label": "{count, plural, one {# in progress} other {# in progress}}",
+      "expand": "Show what is running",
+      "collapse": "Hide"
+    },
     "lang": {
       "de": "German",
       "en": "English",
@@ -4541,15 +4564,18 @@
       "private": "Private",
       "public": "Public",
       "roles": "Shared with roles",
+      "teams": "Shared with teams",
       "users": "Shared with users"
     },
     "new": "New transcription",
     "newShort": "New",
+    "overflow": { "label": "More options" },
     "queue": {
       "library": "Transcript library",
       "loadMore": "Load more",
       "needsReview": "Needs review",
       "noResults": "No transcripts match your search.",
+      "nothingHere": "Nothing here yet.",
       "noSaved": "No saved transcripts yet.",
       "nothingProcessing": "Nothing processing right now.",
       "processing": "Processing",
@@ -4614,11 +4640,33 @@
       "recordingHere": "recording on this device",
       "finish": "Finish",
       "discard": "Discard",
-      "liveSource": "Live recording"
+      "liveSource": "Live recording",
+      "open": "Open",
+      "onlyYou": "Only you",
+      "everyone": "Everyone",
+      "sharedWithYou": "Shared with you",
+      "people": "{count, plural, one {# person} other {# people}}",
+      "speakers": "{count, plural, one {# speaker} other {# speakers}}",
+      "summaryPending": "Summary runs when you save the review",
+      "bulkDisabled": "Bulk actions apply to saved transcripts, not recordings in progress"
     },
     "searchPlaceholder": "Search transcripts…",
     "sharing": {
       "subject": "transcript"
+    },
+    "state": {
+      "recording": "Recording",
+      "queued": "Queued",
+      "transcribing": "Transcribing",
+      "needsReview": "Needs review",
+      "ready": "Ready",
+      "failed": "Failed"
+    },
+    "tabs": {
+      "all": "All",
+      "needsReview": "Needs review",
+      "mine": "Mine",
+      "shared": "Shared with me"
     },
     "title": "Transcripts",
     "toasts": {

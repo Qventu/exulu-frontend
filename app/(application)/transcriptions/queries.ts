@@ -304,3 +304,80 @@ export const GET_TRANSCRIPT_ITEMS = gql`
     }
   }
 `;
+
+/**
+ * Bulk archive for the home page's selection bar. Same shape
+ * `app/(application)/data/queries.ts`'s generic `UPDATE_ITEM("transcriptions")`
+ * would produce — colocated here instead of importing that factory, which
+ * would cross the `transcriptions` → `data` feature boundary the tier-boundary
+ * eslint rule forbids (codebase-structure §1.2: "Promote shared code to
+ * components/widgets or lib/", not reach across features for a data op this
+ * feature can hold itself). Bulk delete reuses the existing
+ * REMOVE_SAVED_TRANSCRIPT_ITEM above; there is no bulk-archive equivalent yet.
+ */
+export const UPDATE_TRANSCRIPT_ITEM = gql`
+  mutation UpdateOneByIdTranscriptions($id: ID!, $input: transcriptions_itemsInput!) {
+    transcriptions_itemsUpdateOneById(id: $id, input: $input) {
+      item {
+        id
+      }
+      job
+    }
+  }
+`;
+
+/**
+ * The context row for "transcriptions" — needed only to satisfy
+ * `BulkAccessDialog`'s `context: Context` prop (it reads `context.id` for the
+ * `itemsBulkUpdateRBAC` mutation it owns internally). Verbatim copy of
+ * `app/(application)/data/queries.ts`'s `GET_CONTEXT_BY_ID` selection set,
+ * for the same cross-feature-boundary reason as `UPDATE_TRANSCRIPT_ITEM`.
+ */
+const TRANSCRIPTS_CONTEXT_FIELDS = `
+  id
+  name
+  description
+  embedder {
+    model
+    queue
+  }
+  slug
+  active
+  fields
+  configuration
+  processor {
+    name
+    description
+    queue
+    trigger
+    timeoutInSeconds
+    generateEmbeddings
+  }
+  sources {
+    id
+    name
+    description
+    config {
+      params {
+        name
+        description
+        default
+      }
+      schedule
+      queue
+      retries
+      backoff {
+        type
+        delay
+      }
+    }
+  }
+`;
+
+export const GET_TRANSCRIPTS_CONTEXT = gql`
+  query GetTranscriptsContext($id: ID!) {
+    contextById(id: $id) {
+      ${TRANSCRIPTS_CONTEXT_FIELDS}
+    }
+  }
+`;
