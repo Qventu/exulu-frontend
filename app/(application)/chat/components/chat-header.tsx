@@ -24,6 +24,7 @@
  */
 
 import {
+  Bookmark,
   Cpu,
   FolderOpen,
   Gauge,
@@ -380,6 +381,22 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
             >
               <FolderOpen className="size-3" aria-hidden="true" />
               {t("header.filesChip", { count: filesCount ?? 0 })}
+            </button>
+          ) : null}
+
+          {/* Memory chip (Task 13, spec §4.3) — hidden for guests: the guest
+              controller (usePublicChatSession) stubs myMemoriesCount to null,
+              so this condition alone keeps the chip off the public/guest
+              chat screen (which doesn't mount ChatHeader in the first place). */}
+          {controller.myMemoriesCount !== null ? (
+            <button
+              type="button"
+              onClick={() => controller.setMemoryPanelOpen(true)}
+              aria-label={t("header.memoryAria")}
+              className={cn(CHIP, "hidden sm:inline-flex")}
+            >
+              <Bookmark className="size-3" aria-hidden="true" />
+              {t("header.memoryChip", { count: controller.myMemoriesCount })}
             </button>
           ) : null}
 

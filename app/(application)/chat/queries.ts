@@ -650,6 +650,17 @@ export const GET_ITEMS = (context: string, fields: string[]) => {
   `;
 };
 
+/**
+ * "What <agent> remembers" panel (Task 13, spec §4.3): the current user's own
+ * memory items, reusing GET_ITEMS above rather than a new query shape. The
+ * MEMORY_ITEM_FIELDS fragment already selects id/name/rights_mode/createdAt —
+ * passing them again in `fields` (mirroring memory-card.tsx's MemoryRef) is a
+ * harmless duplicate GraphQL selection, not an error.
+ */
+export const MY_MEMORY_FIELDS = ["id", "name", "information", "type", "rights_mode", "created_by", "createdAt"];
+export const GET_MY_MEMORIES = (contextId: string) => GET_ITEMS(contextId, MY_MEMORY_FIELDS);
+export const myMemoriesKey = (contextId: string) => `${contextId}${PAGINATION_POSTFIX}`;
+
 export const GET_CONTEXT_BY_ID = gql`
   query ChatMemoryContext($id: ID!) {
     contextById(id: $id) {

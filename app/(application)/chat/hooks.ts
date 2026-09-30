@@ -51,10 +51,12 @@ import {
   CREATE_AGENT_SESSION,
   GET_AGENT_SESSIONS,
   GET_LITELLM_CATALOG,
+  GET_MY_MEMORIES,
   GET_USER_BY_ID,
   REMOVE_AGENT_SESSION_BY_ID,
   UPDATE_AGENT_SESSION_ITEMS,
   UPDATE_AGENT_SESSION_TITLE,
+  myMemoriesKey,
 } from "./queries";
 import {
   COMPACTION_INSUFFICIENT,
@@ -64,6 +66,7 @@ import {
   deriveContextState,
   type ContextState,
 } from "./lib/context-budget";
+import { savedIdsFromMessages } from "./components/memory-panel-data";
 
 // ---------------------------------------------------------------------------
 // Shared types (binding contracts)
@@ -143,6 +146,10 @@ export interface ChatSessionController {
   filesPanelOpen: boolean;
   setFilesPanelOpen: (open: boolean) => Promise<void>;
   sessionFilesCount: number | null;
+  // memory panel (memory redesign spec §4.3)
+  memoryPanelOpen: boolean;
+  setMemoryPanelOpen: (open: boolean) => void;
+  myMemoriesCount: number | null;
   // budget (item 73)
   budgetExceeded: boolean;
   // managed context (item 72)
@@ -930,6 +937,34 @@ export function useChatSession({
     }
   }, [status, refreshFilesCount]);
 
+  // --- memory panel (memory redesign spec §4.3) -------------------------------------
+  const [memoryPanelOpen, setMemoryPanelOpen] = React.useState(false);
+  const memoryContextId = agent.memory ?? null;
+  const myMemoriesQuery = useQuery(GET_MY_MEMORIES(memoryContextId ?? "x"), {
+    variables: { filters: [{ created_by: { eq: user?.id } }], page: 1, limit: 1 },
+    skip: !memoryContextId || !user?.id,
+    fetchPolicy: "cache-and-network",
+  });
+  const myMemoriesCount: number | null =
+    memoryContextId && user?.id
+      ? (myMemoriesQuery.data?.[myMemoriesKey(memoryContextId)]?.pageInfo?.itemCount ?? null)
+      : null;
+
+  // Refetch the count after a remember/update/forget card resolves in this
+  // session. Derived via useMemo into a primitive (the Set's SIZE, not the
+  // Set itself, and not an inline call in the deps array) so the effect's
+  // dependency is a stable number — a new Set instance every render would
+  // otherwise re-fire the effect on every render (render-loop guard).
+  const savedIdsCount = React.useMemo(
+    () => savedIdsFromMessages(messages).size,
+    [messages],
+  );
+  React.useEffect(() => {
+    if (!memoryContextId || !user?.id) return;
+    void myMemoriesQuery.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedIdsCount]);
+
   return {
     agent,
     session: currentSession,
@@ -973,6 +1008,9 @@ export function useChatSession({
     filesPanelOpen,
     setFilesPanelOpen,
     sessionFilesCount,
+    memoryPanelOpen,
+    setMemoryPanelOpen,
+    myMemoriesCount,
     budgetExceeded,
     managedContextEnabled,
     contextWindow,

@@ -1149,7 +1149,19 @@
       "forgetConfirmDescription": "“{title}” will be deleted from the memory base.",
       "forgotToast": "Memory forgotten",
       "forgetFailed": "Couldn't forget the memory",
-      "mode": { "private": "Private", "users": "Shared with users", "roles": "Shared with roles", "teams": "Shared with teams", "public": "Public" }
+      "mode": { "private": "Private", "users": "Shared with users", "roles": "Shared with roles", "teams": "Shared with teams", "public": "Public" },
+      "panelTitle": "What {agent} remembers",
+      "panelSubtitle": "{count, plural, one {# memory} other {# memories}} · {privateCount} private, {publicCount} public",
+      "tabAll": "All",
+      "tabPrivate": "Private",
+      "tabPublic": "Public",
+      "new": "New",
+      "edit": "Edit",
+      "changeAccess": "Change access",
+      "panelTip": "Tip: say \"forget that\" in the chat.",
+      "allMine": "All my memories",
+      "panelEmptyTitle": "{agent} doesn't remember anything about you yet",
+      "panelEmptyDescription": "Say \"remember that …\" in the chat. You'll check the wording and choose who can see it before anything is saved."
     },
     "approval": {
       "allowForChat": "Allow for this chat",
@@ -1339,6 +1351,8 @@
       "deleteTitle": "Delete this conversation?",
       "filesAria": "Open session files",
       "filesChip": "{count, plural, one {# file} other {# files}}",
+      "memoryAria": "Open what the agent remembers",
+      "memoryChip": "Remembers {count, plural, =0 {nothing about you yet} one {# thing about you} other {# things about you}}",
       "menuDelete": "Delete conversation",
       "menuLabel": "Conversation actions",
       "menuModel": "Model…",
@@ -2799,6 +2813,7 @@
         "footer": {
           "summary": "{selected} of {shown} selected · {total} total"
         },
+        "mine": "Created by me",
         "never": "Never",
         "nextPage": "Next page",
         "noItemsDescription": "Add your first item to start ingesting content for retrieval.",

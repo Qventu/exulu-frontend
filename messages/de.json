@@ -1149,7 +1149,19 @@
       "forgetConfirmDescription": "„{title}“ wird aus der Gedächtnis-Basis gelöscht.",
       "forgotToast": "Erinnerung vergessen",
       "forgetFailed": "Erinnerung konnte nicht vergessen werden",
-      "mode": { "private": "Privat", "users": "Geteilt mit Nutzern", "roles": "Geteilt mit Rollen", "teams": "Geteilt mit Teams", "public": "Öffentlich" }
+      "mode": { "private": "Privat", "users": "Geteilt mit Nutzern", "roles": "Geteilt mit Rollen", "teams": "Geteilt mit Teams", "public": "Öffentlich" },
+      "panelTitle": "Woran sich {agent} erinnert",
+      "panelSubtitle": "{count, plural, one {# Erinnerung} other {# Erinnerungen}} · {privateCount} privat, {publicCount} öffentlich",
+      "tabAll": "Alle",
+      "tabPrivate": "Privat",
+      "tabPublic": "Öffentlich",
+      "new": "Neu",
+      "edit": "Bearbeiten",
+      "changeAccess": "Zugriff ändern",
+      "panelTip": "Tipp: Sag im Chat „vergiss das“.",
+      "allMine": "Alle meine Erinnerungen",
+      "panelEmptyTitle": "{agent} erinnert sich noch an nichts über dich",
+      "panelEmptyDescription": "Sag im Chat „merk dir …“. Du prüfst den Wortlaut und wählst, wer es sehen darf, bevor etwas gespeichert wird."
     },
     "approval": {
       "allowForChat": "Für diesen Chat erlauben",
@@ -1339,6 +1351,8 @@
       "deleteTitle": "Diese Unterhaltung löschen?",
       "filesAria": "Sitzungsdateien öffnen",
       "filesChip": "{count, plural, one {# Datei} other {# Dateien}}",
+      "memoryAria": "Öffnen, woran sich der Agent erinnert",
+      "memoryChip": "Merkt sich {count, plural, =0 {noch nichts über dich} one {# Sache über dich} other {# Dinge über dich}}",
       "menuDelete": "Unterhaltung löschen",
       "menuLabel": "Aktionen für die Unterhaltung",
       "menuModel": "Modell…",
@@ -2799,6 +2813,7 @@
         "footer": {
           "summary": "{selected} von {shown} ausgewählt · {total} insgesamt"
         },
+        "mine": "Von mir erstellt",
         "never": "Nie",
         "nextPage": "Nächste Seite",
         "noItemsDescription": "Fügen Sie Ihr erstes Element hinzu, um Inhalte für den Abruf bereitzustellen.",
