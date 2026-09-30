@@ -34,12 +34,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { StageCard } from "@/components/widgets/stage-card";
 import { Boxes } from "lucide-react";
 import type { Context } from "@/types/models/context";
 
 import { EXECUTE_SOURCE } from "../../queries";
-
-import { StageCard } from "./stage-card";
 
 type SourceParam = { name: string; description: string; default: string };
 type Source = Context["sources"][number];
