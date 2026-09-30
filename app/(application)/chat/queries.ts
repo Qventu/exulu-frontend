@@ -32,6 +32,7 @@ feedback
 suggestions_enabled
 sandbox_enabled
 memory
+memory_config
 instructions
 welcomemessage
 defaultagent
@@ -561,6 +562,87 @@ export const GET_CHAT_SKILL_CATALOG = gql`
         id
         name
         description
+      }
+    }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// Memory (spec 2026-09-29 agent-memory-redesign, Task 11): the in-chat
+// remember/update/forget cards read the memory context's `fields` +
+// `configuration` (visibility default, type enum) and, for update/forget,
+// the referenced item's current wording.
+//
+// Both queries below are colocated copies rather than imports from
+// app/(application)/data/queries.ts: eslint's feature-isolation guardrail
+// (eslint.config.mjs "no cross-feature imports") bans chat/** from reaching
+// into data/**, so GET_ITEMS + PAGINATION_POSTFIX are duplicated here
+// byte-identical to the data feature's copy (itself a verbatim copy of
+// queries/queries.ts) rather than introducing a one-off shape. GET_CONTEXT_BY_ID
+// below is deliberately NOT a copy of the data feature's version (which
+// selects the much larger CONTEXT_FIELDS fragment) — it is a new, narrower
+// operation name (ChatMemoryContext) per the "NEW operation names for
+// read-only, never-refetched reads" convention above.
+// ---------------------------------------------------------------------------
+
+export const PAGINATION_POSTFIX = "_itemsPagination";
+
+const MEMORY_ITEM_FIELDS = (fields: string[]) => `
+id
+name
+description
+tags
+external_id
+createdAt
+embeddings_updated_at
+last_processed_at
+chunks_count
+updatedAt
+rights_mode
+RBAC {
+  type
+  users {
+    id
+    rights
+  }
+  roles {
+    id
+    rights
+  }
+}
+${fields.join("\n")}
+`;
+
+export const GET_ITEMS = (context: string, fields: string[]) => {
+  const upperCaseContext = context.charAt(0).toUpperCase() + context.slice(1);
+  return gql`
+    query ${context}Pagination($page: Int!, $limit: Int!, $filters: [Filter${upperCaseContext}_items], $sort: SortBy = { field: "updatedAt", direction: DESC }) {
+      ${context}${PAGINATION_POSTFIX}(page: $page, limit: $limit, filters: $filters, sort: $sort) {
+        pageInfo {
+          pageCount
+          itemCount
+          currentPage
+          hasPreviousPage
+          hasNextPage
+        }
+        items {
+          ${MEMORY_ITEM_FIELDS(fields)}
+        }
+      }
+    }
+  `;
+};
+
+export const GET_CONTEXT_BY_ID = gql`
+  query ChatMemoryContext($id: ID!) {
+    contextById(id: $id) {
+      id
+      name
+      fields
+      configuration
+      memoryBase {
+        ok
+        missing
       }
     }
   }

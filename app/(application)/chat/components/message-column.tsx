@@ -66,6 +66,9 @@ import {
   FeedbackDialog,
   type FeedbackTarget,
 } from "./feedback-dialog";
+import { MemoryCard } from "./memory-card";
+import { isMemoryToolPart } from "./memory-card-data";
+import { MemoryStack } from "./memory-stack";
 import { ToolCallApproval } from "./tool-call-approval";
 import { findTrajectoryRefForFeedback } from "./trajectory-ref";
 
@@ -118,6 +121,16 @@ function makeUntypedToolPart(
     styleToolName = styleToolName?.replace(/_/g, " ");
     styleToolName =
       styleToolName?.charAt(0).toUpperCase() + styleToolName?.slice(1);
+
+    // Memory cards (spec §4.1) replace the generic approval card for
+    // tool-memory_* parts. No "Allow for this chat" — the card is the
+    // consent. Guests never see memory cards.
+    if (isMemoryToolPart(untypedToolPart)) {
+      if (guestMode) return null;
+      return (
+        <MemoryCard key={callId} part={untypedToolPart} agent={_agent} addToolApprovalResponse={addToolApprovalResponse} />
+      );
+    }
 
     if (
       untypedToolPart?.state === "approval-requested" ||
@@ -338,6 +351,12 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
                 controller.sendQuestionAnswer(answerText)
               }
               UntypedToolPartComponent={UntypedToolPartComponent}
+              // Consecutive pending "remember" approvals render under one
+              // "Save all" bar (spec §4.1). Guests never see memory cards —
+              // omitting the prop makes MessageRenderer fall back to
+              // per-part rendering, where MemoryCard's own guestMode check
+              // (above) returns null for each part.
+              MemoryStackComponent={guestMode ? undefined : MemoryStack}
               AgentVisualComponent={AgentVisual}
             />
           ) : null}
