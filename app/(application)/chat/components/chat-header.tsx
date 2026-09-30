@@ -231,6 +231,17 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
     icon: Gauge,
     onSelect: () => setUsageOpen(true),
   });
+  // Mobile opener for the memory panel (finding 7): the memory chip above is
+  // `hidden sm:inline-flex`, so below sm there is otherwise no way in. Same
+  // guard as the chip (myMemoriesCount stubs to null for guests, and
+  // ChatHeader itself never mounts on the guest/public chat screen).
+  if (controller.myMemoriesCount !== null) {
+    menuItems.push({
+      label: t("header.menuMemory"),
+      icon: Bookmark,
+      onSelect: () => controller.setMemoryPanelOpen(true),
+    });
+  }
   if (writeAccess && session) {
     menuItems.push({
       label: t("header.menuDelete"),

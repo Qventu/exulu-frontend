@@ -69,6 +69,12 @@ export function MemoryPanelContent({
   const [deleteItem] = useMutation(DELETE_MEMORY_ITEM(contextId));
 
   const items: MyMemory[] = data?.[myMemoriesKey(contextId)]?.items ?? [];
+  // Panel subtitle vs. tab-count chip disagreement above the 200-row fetch
+  // limit (final-review finding 6): the subtitle's total reads the
+  // pagination query's actual itemCount, while the All/Private/Public tab
+  // counts intentionally stay derived from the fetched `items` array (they
+  // describe what's in the list below, capped the same way it is).
+  const totalCount: number = data?.[myMemoriesKey(contextId)]?.pageInfo?.itemCount ?? items.length;
   const { privateItems, publicItems } = splitByVisibility(items);
   const shown = tab === "private" ? privateItems : tab === "public" ? publicItems : items;
   const newIds = savedIdsFromMessages(controller.messages);
@@ -100,7 +106,7 @@ export function MemoryPanelContent({
       <div className="space-y-3 p-4">
         <p className="text-xs text-muted-foreground">
           {t("memory.panelSubtitle", {
-            count: items.length,
+            count: totalCount,
             privateCount: privateItems.length,
             publicCount: publicItems.length,
           })}
@@ -119,60 +125,69 @@ export function MemoryPanelContent({
           </TabsList>
         </Tabs>
       </div>
-      <ul className="flex-1 divide-y overflow-y-auto">
-        {shown.map((m) => {
-          const Icon = m.rights_mode === "private" ? Lock : Globe;
-          return (
-            <li key={m.id}>
-              <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-start gap-2 px-4 py-3 text-left text-sm hover:bg-accent">
-                  <Icon
-                    className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <span className="min-w-0 flex-1">{m.information || m.name}</span>
-                  {newIds.has(m.id) && (
-                    <Badge variant="secondary" className="text-xs">
-                      {t("memory.new")}
-                    </Badge>
-                  )}
-                  <ChevronDown
-                    className="size-4 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-2 px-4 pb-3 pl-10 text-xs text-muted-foreground">
-                  <p>
-                    {m.type ? `${m.type} · ` : ""}
-                    {t(`memory.mode.${m.rights_mode}`)} ·{" "}
-                    <RelativeTime date={m.createdAt} />
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/data/${contextId}/items/${m.id}`}>
-                        {t("memory.edit")}
-                      </Link>
-                    </Button>
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/data/${contextId}/items/${m.id}#access`}>
-                        {t("memory.changeAccess")}
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => setPending(m)}
-                    >
-                      {t("memory.forget")}
-                    </Button>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </li>
-          );
-        })}
-      </ul>
+      {shown.length === 0 ? (
+        // The overall panel isn't empty (items.length > 0 above already
+        // short-circuited that case) — this is a tab with no rows in it,
+        // e.g. Public with no public memories yet (finding 9).
+        <p className="flex-1 px-4 py-6 text-center text-sm text-muted-foreground">
+          {t("memory.tabEmpty")}
+        </p>
+      ) : (
+        <ul className="flex-1 divide-y overflow-y-auto">
+          {shown.map((m) => {
+            const Icon = m.rights_mode === "private" ? Lock : Globe;
+            return (
+              <li key={m.id}>
+                <Collapsible>
+                  <CollapsibleTrigger className="flex w-full items-start gap-2 px-4 py-3 text-left text-sm hover:bg-accent">
+                    <Icon
+                      className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0 flex-1">{m.information || m.name}</span>
+                    {newIds.has(m.id) && (
+                      <Badge variant="secondary" className="text-xs">
+                        {t("memory.new")}
+                      </Badge>
+                    )}
+                    <ChevronDown
+                      className="size-4 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-2 px-4 pb-3 pl-10 text-xs text-muted-foreground">
+                    <p>
+                      {m.type ? `${m.type} · ` : ""}
+                      {t(`memory.mode.${m.rights_mode}`)} ·{" "}
+                      <RelativeTime date={m.createdAt} />
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/data/${contextId}/items/${m.id}`}>
+                          {t("memory.edit")}
+                        </Link>
+                      </Button>
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/data/${contextId}/items/${m.id}#access`}>
+                          {t("memory.changeAccess")}
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setPending(m)}
+                      >
+                        {t("memory.forget")}
+                      </Button>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       <div className="flex items-center justify-between gap-2 border-t p-3 text-xs text-muted-foreground">
         <span>{t("memory.panelTip")}</span>
         <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs">
