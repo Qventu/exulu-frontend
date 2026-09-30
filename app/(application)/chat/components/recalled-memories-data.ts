@@ -16,7 +16,17 @@ export function parseRecalledMemories(metadata: unknown): RecalledMemory[] {
   return metadata.recalledMemories.filter(isMemory);
 }
 
-/** Forget from chat is for the creator (or a super admin); others use Open. */
+/**
+ * Forget from chat is for the creator (or a super admin); others use Open.
+ *
+ * Fail-closed (final-review finding 11, no code change intended here): this
+ * is narrower than the backend's actual write rule. RecalledMemory carries
+ * no RBAC grant list — only `createdBy` — so an explicit write grant handed
+ * to this user (e.g. via RBAC users/roles/teams on the item) is invisible
+ * here and Forget stays hidden even though the backend would allow it.
+ * Surfacing that requires the metadata to carry the item's write grants,
+ * which is out of scope for this pass (tracked as sub-project 2).
+ */
 export function canForget(memory: RecalledMemory, userId: number | null | undefined, isSuperAdmin: boolean): boolean {
   if (isSuperAdmin) return true;
   return !!memory.createdBy && typeof userId === "number" && memory.createdBy.id === userId;
