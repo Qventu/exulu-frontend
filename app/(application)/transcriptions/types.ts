@@ -316,6 +316,30 @@ export type TranscriptItem = {
   post_processing: PostProcessingOutput[] | string | null;
 };
 
+/** Generic RBAC shape returned under `RBAC { type users { id rights } roles { id rights } }`. */
+export type ItemRBAC = { type?: Mode; users: RbacUser[]; roles: RbacRole[] };
+
+/**
+ * A saved transcript's full detail — `GET_TRANSCRIPT_ITEM`'s selection set
+ * exactly (task-10 brief, Interfaces block; Ruling 3). Extends `TranscriptItem`
+ * (the home list's slimmer shape) with the fields only the reading view needs.
+ *
+ * `corrected_segments` is deliberately NOT selected/typed here: the column
+ * doesn't exist yet (a later task adds it alongside the edit-mode save path),
+ * and selecting a column that doesn't exist would fail at runtime — the same
+ * reasoning the export route's `getItem` field list already applies.
+ */
+export type TranscriptItemDetail = TranscriptItem & {
+  transcript_text: string | null;
+  raw_segments: Segment[] | string | null;
+  speakers: Record<string, string> | string | null;
+  language: string | null;
+  audio_s3key: string | null;
+  video_s3key: string | null;
+  recall_recording_id: string | null;
+  RBAC: ItemRBAC | null;
+};
+
 export type TranscriptRowKind = "job" | "item";
 
 export type TranscriptState =

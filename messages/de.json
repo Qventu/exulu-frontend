@@ -4470,6 +4470,17 @@
       "alreadyRecording": "In diesem Tab läuft bereits eine Aufnahme.",
       "recordingInterrupted": "Das Mikrofon wurde unterbrochen. Stoppen Sie, um das Erfasste zu behalten."
     },
+    "askBox": {
+      "title": "Fragen zu diesem Transkript",
+      "explainer": "Öffnet einen Chat mit diesem Transkript als Anhang, damit Sie Rückfragen stellen können.",
+      "chooseAgent": "Agent auswählen",
+      "searchAgents": "Agenten suchen…",
+      "noAgents": "Keine Agenten gefunden.",
+      "canSearch": "Kann Transkripte durchsuchen",
+      "attachOnly": "Erhält dieses Transkript als Chat-Anhang",
+      "placeholder": "Stellen Sie eine Frage zu diesem Transkript…",
+      "send": "Frage senden"
+    },
     "confirmCancel": {
       "confirm": "Transkription stoppen",
       "description": "Der Fortschritt geht verloren. Die Audiodatei bleibt in Ihren Dateien erhalten.",
@@ -4505,6 +4516,32 @@
       "title": "Diese Aufnahme abschließen?",
       "description": "Das bisher erfasste Transkript wird zum Entwurf zur Überprüfung. Es wird keine Audiodatei angehängt.",
       "confirm": "Abschließen"
+    },
+    "document": {
+      "loadFailed": "Dieses Transkript konnte nicht geladen werden",
+      "share": "Teilen",
+      "export": "Exportieren",
+      "copyText": "Text kopieren",
+      "correctTextAndSpeakers": "Text und Sprecher korrigieren",
+      "moveToProject": "Zu Projekt verschieben",
+      "moveToProjectDescription": "Wählen Sie ein Projekt für dieses Transkript aus, oder entfernen Sie es aus einem.",
+      "moveSaved": "Projekt aktualisiert",
+      "moveFailed": "Projekt konnte nicht aktualisiert werden",
+      "openInLibrary": "In der Bibliothek öffnen",
+      "delete": "Löschen",
+      "deleteConfirmTitle": "Dieses Transkript löschen?",
+      "deleteConfirmDescription": "Dadurch wird das Transkript dauerhaft aus der Wissensdatenbank entfernt.",
+      "deleted": "Transkript gelöscht",
+      "deleteFailed": "Transkript konnte nicht gelöscht werden",
+      "accessTitle": "Zugriff",
+      "accessSaved": "Freigabe aktualisiert",
+      "accessSaveFailed": "Freigabe konnte nicht aktualisiert werden",
+      "chaptersTitle": "Kapitel",
+      "summaryHeading": "Zusammenfassung",
+      "emptyTranscript": "Dieses Transkript enthält keinen Text.",
+      "recallRetentionNotice": "Meeting-Aufnahmen werden vorübergehend gespeichert und können nach einer von Ihrem Workspace konfigurierten Frist automatisch gelöscht werden.",
+      "askSuggestion1": "Fassen Sie die wichtigsten Entscheidungen zusammen",
+      "askSuggestion2": "Was sind die Aktionspunkte?"
     },
     "description": "Verwandeln Sie Audio in Transkripte mit benannten Sprechern, die Sie in Chats und Projekten nutzen können.",
     "empty": {

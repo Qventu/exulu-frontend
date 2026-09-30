@@ -286,6 +286,35 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
     }
   }, [initialPromptData, initialPromptProcessed, handleSelectPrompt]);
 
+  // `?items=` / `?q=` deep link (task-10 brief, Step 8 — the transcripts
+  // reading view's "Ask about this transcript" box). Seeded ONCE, on mount,
+  // guarded by a ref rather than a "processed" state flag: a state flag still
+  // lets a re-render with a stale `q` closure win a race against the user's
+  // first keystroke, while a ref read-and-set in the same synchronous effect
+  // body cannot. A later render can therefore never re-seed and clobber
+  // whatever the user has since typed.
+  const initialItems = searchParams.get("items");
+  const initialQuestion = searchParams.get("q");
+  const deepLinkSeededRef = useRef(false);
+  useEffect(() => {
+    if (deepLinkSeededRef.current) return;
+    deepLinkSeededRef.current = true;
+    if (initialQuestion) {
+      // Fills the textarea only — must NOT send (the brief is explicit).
+      setInput(initialQuestion);
+    }
+    if (initialItems) {
+      // Same session-item path the ItemsSelectionModal's onConfirm uses below
+      // (`controller.addSessionItems`), so pinning behaves identically —
+      // dedupe + lazy session creation both live there.
+      const gids = initialItems
+        .split(",")
+        .map((gid) => gid.trim())
+        .filter(Boolean);
+      if (gids.length > 0) void controller.addSessionItems(gids);
+    }
+  }, [initialItems, initialQuestion, controller]);
+
   // ── Esc priority chain for composer overlays (item 77) ─────────────────
   // The context modal is deliberately NOT in this chain: it hosts a nested
   // "New item" Radix dialog, and Radix's own layer handling must close the

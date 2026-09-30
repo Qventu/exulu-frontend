@@ -12,6 +12,7 @@ import {
   GET_PICKER_AGENTS,
   GET_PROJECTS,
   GET_PROMPT_LIBRARY,
+  GET_TRANSCRIPT_ITEM,
   GET_TRANSCRIPT_ITEMS,
   GET_TRANSCRIPTION_JOBS,
 } from "./queries";
@@ -21,6 +22,7 @@ import {
   type Job,
   type ProjectOption,
   type TranscriptItem,
+  type TranscriptItemDetail,
   type TranscriptRow,
 } from "./types";
 
@@ -154,6 +156,32 @@ export function useTranscripts(search: string): TranscriptsResult {
       void refetchJobs();
       void refetchItems();
     },
+  };
+}
+
+/**
+ * A single saved transcript for the reading view (task-10 brief, Step 9 —
+ * page.tsx stays a thin fetch-and-render shell; hooks.ts owns fetch policy,
+ * per the module docstring above).
+ */
+export function useTranscriptItem(itemId: string): {
+  item: TranscriptItemDetail | null;
+  loading: boolean;
+  error?: Error;
+  refetch: () => void;
+} {
+  const { data, loading, error, refetch } = useQuery<{
+    transcriptions_itemsPagination: { items: TranscriptItemDetail[] };
+  }>(GET_TRANSCRIPT_ITEM, {
+    variables: { id: itemId },
+    fetchPolicy: "cache-and-network",
+    skip: !itemId,
+  });
+  return {
+    item: data?.transcriptions_itemsPagination?.items?.[0] ?? null,
+    loading: loading && !data,
+    error: error as Error | undefined,
+    refetch: () => void refetch(),
   };
 }
 

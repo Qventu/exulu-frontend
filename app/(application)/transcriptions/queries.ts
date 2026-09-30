@@ -215,6 +215,31 @@ export const GET_PICKER_AGENTS = gql`
   }
 `;
 
+/**
+ * Agents for the ask-box picker (task-10 brief, Step 7). `tools` is the bare
+ * JSON scalar (same field the agent editor's detail query selects — no
+ * subfields), parsed client-side to find the `agentic_context_search` tool's
+ * `knowledge_bases` entry and test whether it includes "transcriptions".
+ * Kept separate from `GET_PICKER_AGENTS` above (post-processing picker,
+ * `id name` only) so widening this selection can't affect that consumer.
+ */
+export const GET_TRANSCRIPT_ASK_AGENTS = gql`
+  query GetTranscriptAskAgents(
+    $page: Int = 1
+    $limit: Int = 200
+    $filters: [FilterAgent]
+    $sort: SortBy = { field: "name", direction: ASC }
+  ) {
+    agentsPagination(page: $page, limit: $limit, sort: $sort, filters: $filters) {
+      items {
+        id
+        name
+        tools
+      }
+    }
+  }
+`;
+
 const PROJECT_FIELDS = `
   id
   name
@@ -300,6 +325,51 @@ export const GET_TRANSCRIPT_ITEMS = gql`
         rights_mode
         created_by
         post_processing
+      }
+    }
+  }
+`;
+
+/**
+ * Single saved transcript for the reading view (task-10 brief, Step 5):
+ * `GET_TRANSCRIPT_ITEMS`' field list plus the content/media/RBAC fields the
+ * document needs. `corrected_segments` is deliberately omitted — see the
+ * `TranscriptItemDetail` doc comment in types.ts; a later task adds the
+ * column and this field alongside it.
+ */
+export const GET_TRANSCRIPT_ITEM = gql`
+  query GetTranscriptItem($id: ID!) {
+    transcriptions_itemsPagination(page: 1, limit: 1, filters: [{ id: { eq: $id } }]) {
+      items {
+        id
+        name
+        recording_source
+        job_id
+        recorded_at
+        duration_seconds
+        speaker_count
+        project_id
+        rights_mode
+        created_by
+        post_processing
+        transcript_text
+        raw_segments
+        speakers
+        language
+        audio_s3key
+        video_s3key
+        recall_recording_id
+        RBAC {
+          type
+          users {
+            id
+            rights
+          }
+          roles {
+            id
+            rights
+          }
+        }
       }
     }
   }

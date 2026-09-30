@@ -4470,6 +4470,17 @@
       "alreadyRecording": "A recording is already running in this tab.",
       "recordingInterrupted": "The microphone was interrupted. Stop to keep what was captured."
     },
+    "askBox": {
+      "title": "Ask about this transcript",
+      "explainer": "Opens a chat with this transcript attached, so you can ask follow-up questions.",
+      "chooseAgent": "Choose an agent",
+      "searchAgents": "Search agents…",
+      "noAgents": "No agents found.",
+      "canSearch": "Can search Transcriptions",
+      "attachOnly": "Gets this transcript attached to the chat",
+      "placeholder": "Ask a question about this transcript…",
+      "send": "Send question"
+    },
     "confirmCancel": {
       "confirm": "Stop transcription",
       "description": "Progress will be lost. The audio file stays in your files.",
@@ -4505,6 +4516,32 @@
       "title": "Finish this recording?",
       "description": "The transcript captured so far becomes a draft for review. No audio file will be attached.",
       "confirm": "Finish"
+    },
+    "document": {
+      "loadFailed": "Couldn't load this transcript",
+      "share": "Share",
+      "export": "Export",
+      "copyText": "Copy text",
+      "correctTextAndSpeakers": "Correct text and speakers",
+      "moveToProject": "Move to project",
+      "moveToProjectDescription": "Choose a project for this transcript, or remove it from one.",
+      "moveSaved": "Project updated",
+      "moveFailed": "Couldn't update the project",
+      "openInLibrary": "Open in library",
+      "delete": "Delete",
+      "deleteConfirmTitle": "Delete this transcript?",
+      "deleteConfirmDescription": "This permanently removes the transcript from the knowledge base.",
+      "deleted": "Transcript deleted",
+      "deleteFailed": "Couldn't delete the transcript",
+      "accessTitle": "Access",
+      "accessSaved": "Sharing updated",
+      "accessSaveFailed": "Couldn't update sharing",
+      "chaptersTitle": "Chapters",
+      "summaryHeading": "Summary",
+      "emptyTranscript": "This transcript has no text.",
+      "recallRetentionNotice": "Meeting recordings are stored temporarily and may be deleted automatically after a period configured by your workspace.",
+      "askSuggestion1": "Summarize the key decisions",
+      "askSuggestion2": "What are the action items?"
     },
     "description": "Turn audio into speaker-labeled transcripts you can use in chats and projects.",
     "empty": {
