@@ -52,6 +52,10 @@ describe("memoryResolvedState", () => {
     expect(memoryResolvedState(part("tool-memory_remember", { state: "output-available", output: { type: "memory_error", message: "boom" } }))).toEqual({ status: "error", message: "boom" });
     expect(memoryResolvedState(part("tool-memory_remember", { state: "output-error", errorText: "x" }))).toEqual({ status: "error", message: "x" });
   });
+  it("maps memory_no_access without a creator to createdBy null", () => {
+    expect(memoryResolvedState(part("tool-memory_update", { state: "output-available", output: { type: "memory_no_access", createdBy: null } }))).toEqual({ status: "no_access", createdBy: null });
+    expect(memoryResolvedState(part("tool-memory_forget", { state: "output-available", output: { type: "memory_no_access" } }))).toEqual({ status: "no_access", createdBy: null });
+  });
 });
 
 describe("groupRememberParts", () => {

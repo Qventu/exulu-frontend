@@ -20,7 +20,7 @@ export type MemoryDecision =
   | { v: 1; kind: "update"; information?: string; title?: string; type?: string }
   | { v: 1; kind: "forget" };
 
-export const DECLINED_REASON = "declined";
+export const DECLINED_REASON = "declined" as const;
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 
