@@ -651,14 +651,26 @@ export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: 
 
   // "Hear" (SpeakersPanel): seek to the speaker's first block and stop after
   // ~4s. Reuses `seekTo` for both the audio ribbon and the meeting video, so
-  // it degrades the same way seekTo already does before media is ready.
+  // it degrades the same way seekTo already does before media is ready. The
+  // pending timeout is tracked so a second "Hear" (or unmount) can clear a
+  // still-pending one — otherwise a stale timer fires later and pauses
+  // whatever the user is manually playing by then (fix-round-1, non-gating #1).
+  const hearTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  React.useEffect(
+    () => () => {
+      if (hearTimeoutRef.current != null) clearTimeout(hearTimeoutRef.current);
+    },
+    [],
+  );
   const handleHear = React.useCallback(
     (rawSpeaker: string) => {
       const firstBlock = blocks.find((block) => block.rawSpeaker === rawSpeaker);
       if (!firstBlock) return;
+      if (hearTimeoutRef.current != null) clearTimeout(hearTimeoutRef.current);
       seekTo(firstBlock.start);
-      window.setTimeout(() => {
+      hearTimeoutRef.current = setTimeout(() => {
         mediaContainerRef.current?.querySelector<HTMLMediaElement>("audio, video")?.pause();
+        hearTimeoutRef.current = null;
       }, 4000);
     },
     [blocks, seekTo],
@@ -804,7 +816,11 @@ export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: 
   };
 
   const handleTextareaBlur = (block: TranscriptBlock) => {
-    if (cancelledEditRef.current) {
+    // An emptied block would blank the text of every segment it spans, and
+    // buildTranscriptBlocks drops empty-text segments — so the block would
+    // vanish with no way back. Refuse the commit and revert instead
+    // (fix-round-1, non-gating #2), same as Escape.
+    if (cancelledEditRef.current || editingText.trim() === "") {
       cancelledEditRef.current = false;
     } else {
       commitBlockEdit(block, editingText);
