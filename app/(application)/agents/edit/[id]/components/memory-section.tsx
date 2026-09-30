@@ -251,7 +251,7 @@ export function MemorySection({ editor, refs }: EditorSectionProps) {
         <p className="text-xs text-muted-foreground">{t("editor.memory.howHint")}</p>
       </div>
       {/* Primary switch: the ONE place memory retrieval is turned on. */}
-      <SettingRow label={t("editor.memory.retrievalLabel")} description={t("editor.memory.retrievalHint", { agent: agentName })}>
+      <SettingRow htmlFor="memory-retrieval-enabled" label={t("editor.memory.retrievalLabel")} description={t("editor.memory.retrievalHint", { agent: agentName })}>
         <div className="flex items-center gap-3">
           <Input
             id="memory-limit"
@@ -272,7 +272,7 @@ export function MemorySection({ editor, refs }: EditorSectionProps) {
             }
           />
           <span className="text-xs text-muted-foreground">{t("editor.memory.limitUnit")}</span>
-          <Switch checked={cfg.retrieval.enabled} onCheckedChange={(v) => setCfg({ retrieval: { ...cfg.retrieval, enabled: v } })} />
+          <Switch id="memory-retrieval-enabled" checked={cfg.retrieval.enabled} onCheckedChange={(v) => setCfg({ retrieval: { ...cfg.retrieval, enabled: v } })} />
         </div>
       </SettingRow>
       {/* Nested: what knowledge search may additionally do with the recalled set. */}
@@ -291,13 +291,15 @@ export function MemorySection({ editor, refs }: EditorSectionProps) {
             : !searchOn
               ? t("editor.memory.searchOff")
               : t(`editor.memory.${hint}`, { agent: agentName });
+          const switchId = `memory-nested-${key}`;
           return (
-            <SettingRow key={key} label={t(`editor.memory.${label}`)} description={description}>
+            <SettingRow key={key} htmlFor={switchId} label={t(`editor.memory.${label}`)} description={description}>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="font-normal">
                   {t("editor.memory.usesSearch")}
                 </Badge>
                 <Switch
+                  id={switchId}
                   disabled={nestedDisabled}
                   checked={!nestedDisabled && wizardCfg.memory[key]}
                   onCheckedChange={(v) => setSearchMemory({ [key]: v })}
@@ -310,15 +312,20 @@ export function MemorySection({ editor, refs }: EditorSectionProps) {
 
       <p className="text-sm font-medium">{t("editor.memory.rulesTitle")}</p>
       <SettingRow label={t("editor.memory.visibilityLabel")} description={t("editor.memory.visibilityHint")}>
-        <ToggleGroup type="single" value={cfg.visibility} onValueChange={(v) => v && setCfg({ visibility: v as typeof cfg.visibility })}>
+        <ToggleGroup
+          type="single"
+          value={cfg.visibility}
+          onValueChange={(v) => v && setCfg({ visibility: v as typeof cfg.visibility })}
+          aria-label={t("editor.memory.visibilityLabel")}
+        >
           <ToggleGroupItem value="ask">{t("editor.memory.askEveryTime")}</ToggleGroupItem>
           <ToggleGroupItem value="preselect_private">{t("editor.memory.preselectPrivate")}</ToggleGroupItem>
         </ToggleGroup>
       </SettingRow>
-      <SettingRow label={t("editor.memory.guestsLabel")} description={t("editor.memory.guestsHint")}>
+      <SettingRow htmlFor="memory-guests-show-recalled" label={t("editor.memory.guestsLabel")} description={t("editor.memory.guestsHint")}>
         <div className="flex items-center gap-2 text-sm">
           <span>{t("editor.memory.guestsShow")}</span>
-          <Switch checked={cfg.guests.showRecalled} onCheckedChange={(v) => setCfg({ guests: { showRecalled: v } })} />
+          <Switch id="memory-guests-show-recalled" checked={cfg.guests.showRecalled} onCheckedChange={(v) => setCfg({ guests: { showRecalled: v } })} />
         </div>
       </SettingRow>
 
