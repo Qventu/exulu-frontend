@@ -66,7 +66,7 @@ export type ResolvedState =
   | { status: "pending" }
   | { status: "working" }
   | { status: "declined" }
-  | { status: "saved" | "updated"; contextId: string; itemId: string; title: string; rights_mode: RightsMode }
+  | { status: "saved" | "updated"; contextId: string; itemId: string; title: string; rights_mode: RightsMode; warning?: string }
   | { status: "forgotten"; contextId: string; itemId: string; title: string }
   | { status: "no_access"; createdBy: { id: number; name: string } | null }
   | { status: "error"; message: string };
@@ -82,7 +82,7 @@ export function memoryResolvedState(part: DynamicToolUIPart | Record<string, unk
     const str = (k: string) => (typeof out[k] === "string" ? (out[k] as string) : "");
     switch (out.type) {
       case "memory_saved":
-        return { status: "saved", contextId: str("contextId"), itemId: str("itemId"), title: str("title"), rights_mode: (str("rights_mode") || "private") as RightsMode };
+        return { status: "saved", contextId: str("contextId"), itemId: str("itemId"), title: str("title"), rights_mode: (str("rights_mode") || "private") as RightsMode, warning: str("warning") || undefined };
       case "memory_updated":
         return { status: "updated", contextId: str("contextId"), itemId: str("itemId"), title: str("title"), rights_mode: (str("rights_mode") || "private") as RightsMode };
       case "memory_forgotten":

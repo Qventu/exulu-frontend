@@ -94,6 +94,25 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
     [context],
   );
 
+  // A memory_update that changes only the type (or title) arrives with an
+  // empty `information` — the proposal never restated the unchanged wording.
+  // Prefill the textarea from the CURRENT item instead of leaving it blank,
+  // so the card isn't a dead end (finding 3). Only fetched when actually
+  // needed: a normal wording update already has proposal.information.
+  const isUpdate = proposal?.kind === "update";
+  const contextId = agent.memory ?? "";
+  const needsCurrentWording = isUpdate && !proposal?.information;
+  const { data: currentItemData, loading: currentItemLoading } = useQuery(
+    GET_ITEMS(contextId, ["id", "name", "information", "rights_mode", "created_by", "createdAt"]),
+    {
+      variables: { page: 1, limit: 1, filters: [{ id: { eq: proposal?.memoryId ?? "" } }] },
+      skip: !needsCurrentWording || !proposal?.memoryId || !contextId,
+    },
+  );
+  const currentInformation = currentItemData?.[`${contextId}${PAGINATION_POSTFIX}`]?.items?.[0]?.information as
+    | string
+    | undefined;
+
   // `state` starts null and is only populated once the context query settles
   // (or there is no memory context to query) — a lazy useState initializer
   // ran once at mount, before GET_CONTEXT_BY_ID resolved, so the context
@@ -106,28 +125,34 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
   React.useEffect(() => {
     if (state !== null) return;
     if (agent.memory && loading) return;
+    if (needsCurrentWording && currentItemLoading) return;
     setState({
       title: proposal?.title ?? "",
-      information: proposal?.information ?? "",
+      information: proposal?.information || (needsCurrentWording ? currentInformation ?? "" : ""),
       type: proposal?.type || typeValues[0] || "",
       rights_mode: preselect(agent, context?.configuration?.defaultRightsMode, proposal?.visibility ?? null),
       users: [], roles: [], teams: [],
     });
-  }, [state, agent, loading, proposal, context, typeValues]);
+  }, [state, agent, loading, proposal, context, typeValues, needsCurrentWording, currentItemLoading, currentInformation]);
 
   // Register current edits with the stack so "Save all" can read them.
   // No-ops while `state` is still null — nothing to register yet.
   React.useEffect(() => {
     if (!approvalId || state === null) return;
-    edits?.register(part.toolCallId, () => decisionFor(proposal?.kind ?? "remember", state, typeValues));
+    edits?.register(part.toolCallId, () => decisionFor(proposal?.kind ?? "remember", state, typeValues, currentInformation));
     return () => edits?.unregister(part.toolCallId);
-  }, [approvalId, part.toolCallId, state, proposal?.kind, edits, typeValues]);
+  }, [approvalId, part.toolCallId, state, proposal?.kind, edits, typeValues, currentInformation]);
 
   if (!proposal) return null;
 
   // ── Resolved line ─────────────────────────────────────────────────────────
   if (resolved.status !== "pending") {
-    const tone = resolved.status === "declined" || resolved.status === "error" || resolved.status === "no_access" ? "muted" : resolved.status === "working" ? "muted" : "success";
+    // A `memory_saved` result can carry a `warning` when the RBAC grants
+    // failed after the item was created (backend spec §2.3) — the save
+    // itself succeeded, but the sharing mode the user picked was never
+    // applied, so this renders muted rather than the success tone.
+    const savedWithWarning = resolved.status === "saved" && !!resolved.warning;
+    const tone = resolved.status === "declined" || resolved.status === "error" || resolved.status === "no_access" || savedWithWarning ? "muted" : resolved.status === "working" ? "muted" : "success";
     const Icon = resolved.status === "working" ? Loader2 : tone === "success" ? CheckCircle2 : XCircle;
     // Deviation from the brief's nested-ternary chain: with `status` as a
     // union discriminant that one member ("saved" | "updated") itself
@@ -137,7 +162,7 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
     let text: string;
     switch (resolved.status) {
       case "working": text = t("memory.working"); break;
-      case "saved": text = t("memory.saved", { mode: t(`memory.mode.${resolved.rights_mode}`) }); break;
+      case "saved": text = savedWithWarning ? t("memory.savedWithWarning", { warning: resolved.warning ?? "" }) : t("memory.saved", { mode: t(`memory.mode.${resolved.rights_mode}`) }); break;
       case "updated": text = t("memory.updated"); break;
       case "forgotten": text = t("memory.forgotten"); break;
       case "declined": text = t("memory.declined"); break;
@@ -180,7 +205,15 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
   }
 
   const decide = (approved: boolean) =>
-    addToolApprovalResponse({ id: approvalId, approved, reason: approved ? encodeMemoryDecision(decisionFor(proposal.kind, state, typeValues)) : DECLINED_REASON });
+    addToolApprovalResponse({ id: approvalId, approved, reason: approved ? encodeMemoryDecision(decisionFor(proposal.kind, state, typeValues, currentInformation)) : DECLINED_REASON });
+
+  // A subject mode picked with nobody actually chosen yet (finding 10) —
+  // remember-only, since update never shows the RBACControl at all.
+  const subjectsMissing =
+    !isUpdate &&
+    ((state.rights_mode === "users" && state.users.length === 0) ||
+      (state.rights_mode === "roles" && state.roles.length === 0) ||
+      (state.rights_mode === "teams" && state.teams.length === 0));
 
   // ── Forget: ConfirmDialog instead of a form ───────────────────────────────
   if (proposal.kind === "forget") {
@@ -204,7 +237,8 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
   }
 
   // ── Remember / update form ────────────────────────────────────────────────
-  const isUpdate = proposal.kind === "update";
+  // (isUpdate is computed above, before the `if (!proposal) return null`
+  // guard, so the current-wording prefetch can key off it too.)
   return (
     <Card className="mt-3 border-border bg-card" data-demo-id="chat-memory-card">
       <CardHeader className="pb-3">
@@ -233,12 +267,21 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
             <Label>{t("memory.whoCanSee")}</Label>
             <RBACControl subjectLabel="memory" initialRightsMode={state.rights_mode} initialUsers={[]} initialRoles={[]} initialTeams={[]}
               onChange={(rights_mode, users, roles, teams) => setState((s) => (s ? { ...s, rights_mode, users, roles, teams } : s))} />
+            {/* A subject mode (users/roles/teams) with nobody actually picked
+                yet would save to no one — block Save instead (finding 10). */}
+            {subjectsMissing && (
+              <p className="text-xs text-muted-foreground">{t("memory.pickSubjects")}</p>
+            )}
           </div>
         )}
         {!inStack && (
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button variant="outline" className="h-11 sm:h-9 sm:flex-1" onClick={() => decide(false)}>{isUpdate ? t("memory.keep") : t("memory.dontSave")}</Button>
-            <Button className="h-11 sm:h-9 sm:flex-1" disabled={!state.information.trim()} onClick={() => decide(true)}>{isUpdate ? t("memory.update") : t("memory.save")}</Button>
+            {/* An update is a dead end when it changes only the type (or title): the
+                textarea's prefilled current wording already satisfies `information`
+                in the common case, but `|| state.type` also allows confirming when
+                the prefill came back empty and only the type was actually changed. */}
+            <Button className="h-11 sm:h-9 sm:flex-1" disabled={isUpdate ? !(state.information.trim() || state.type) : !state.information.trim() || subjectsMissing} onClick={() => decide(true)}>{isUpdate ? t("memory.update") : t("memory.save")}</Button>
           </div>
         )}
         {!isUpdate && <p className="text-xs text-muted-foreground">{t("memory.rememberHint")}</p>}
@@ -247,9 +290,16 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
   );
 }
 
-function decisionFor(kind: "remember" | "update" | "forget", s: Edits, typeValues: string[]): MemoryDecision {
+function decisionFor(kind: "remember" | "update" | "forget", s: Edits, typeValues: string[], currentInformation?: string): MemoryDecision {
   if (kind === "forget") return { v: 1, kind: "forget" };
-  if (kind === "update") return { v: 1, kind: "update", information: s.information, ...(s.title ? { title: s.title } : {}), ...(s.type ? { type: s.type } : {}) };
+  if (kind === "update") {
+    // Only send `information` when it actually changed from the current
+    // wording — a type/title-only update (final-review finding 3) must not
+    // overwrite the memory's information with a prefilled copy of itself.
+    const info = s.information.trim();
+    const changed = info.length > 0 && info !== (currentInformation ?? "").trim();
+    return { v: 1, kind: "update", ...(changed ? { information: s.information } : {}), ...(s.title ? { title: s.title } : {}), ...(s.type ? { type: s.type } : {}) };
+  }
   const rbac = s.rights_mode === "users" ? { users: s.users } : s.rights_mode === "roles" ? { roles: s.roles } : s.rights_mode === "teams" ? { teams: s.teams } : undefined;
   // A "remember" always needs a type — fall back to the first available
   // value rather than let an empty select submit "" (finding 3).

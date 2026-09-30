@@ -56,6 +56,13 @@ describe("memoryResolvedState", () => {
     expect(memoryResolvedState(part("tool-memory_update", { state: "output-available", output: { type: "memory_no_access", createdBy: null } }))).toEqual({ status: "no_access", createdBy: null });
     expect(memoryResolvedState(part("tool-memory_forget", { state: "output-available", output: { type: "memory_no_access" } }))).toEqual({ status: "no_access", createdBy: null });
   });
+  it("surfaces memory_saved's optional warning when the RBAC grants failed post-create", () => {
+    expect(memoryResolvedState(part("tool-memory_remember", { state: "output-available", output: { type: "memory_saved", contextId: "mem", itemId: "m1", title: "T", rights_mode: "users", warning: "rbac fail" } })))
+      .toEqual({ status: "saved", contextId: "mem", itemId: "m1", title: "T", rights_mode: "users", warning: "rbac fail" });
+    // No warning in the output → the field stays absent, not an empty string.
+    expect(memoryResolvedState(part("tool-memory_remember", { state: "output-available", output: { type: "memory_saved", contextId: "mem", itemId: "m1", title: "T", rights_mode: "private" } })))
+      .toEqual({ status: "saved", contextId: "mem", itemId: "m1", title: "T", rights_mode: "private" });
+  });
 });
 
 describe("groupRememberParts", () => {
