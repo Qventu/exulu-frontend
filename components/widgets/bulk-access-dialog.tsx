@@ -6,9 +6,16 @@
  * embedded RBACControl opens at a neutral default (Private, no grants)
  * rather than reading any single item's config. modalMode keeps the
  * "view all users" popover inline (this is already inside a Dialog).
+ *
+ * Promoted from `app/(application)/data/[ctx]/components/` (codebase-structure
+ * §1.2 — a second feature consumer, `transcriptions`, triggered the promotion
+ * rule). `components/widgets` may not import `@/app/*` (eslint.config.mjs
+ * `exulu/tier-widgets`), so the context-scoped `BULK_UPDATE_ITEM_RBAC(context)`
+ * mutation document is no longer built in here — each feature builds its own
+ * (same-context) document and passes it in via `mutation`.
  */
 
-import { useMutation } from "@apollo/client";
+import { useMutation, type DocumentNode } from "@apollo/client";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
@@ -23,9 +30,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { Context } from "@/types/models/context";
-
-import { BULK_UPDATE_ITEM_RBAC } from "../../queries";
 
 type Mode = "private" | "users" | "roles" | "teams" | "public";
 type Grant<Id> = { id: Id; rights: "read" | "write" };
@@ -33,7 +37,10 @@ type Grant<Id> = { id: Id; rights: "read" | "write" };
 export interface BulkAccessDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  context: Context;
+  /** The context's `itemsBulkUpdateRBAC` mutation document — e.g.
+   *  `BULK_UPDATE_ITEM_RBAC(context.id)` from `app/(application)/data/queries.ts`,
+   *  or a feature-colocated equivalent for the same operation shape. */
+  mutation: DocumentNode;
   ids: string[];
   onApplied: () => void;
 }
@@ -41,7 +48,7 @@ export interface BulkAccessDialogProps {
 export function BulkAccessDialog({
   open,
   onOpenChange,
-  context,
+  mutation,
   ids,
   onApplied,
 }: BulkAccessDialogProps) {
@@ -63,7 +70,7 @@ export function BulkAccessDialog({
   }, [open]);
 
   const [bulkUpdateRbac, { loading }] = useMutation(
-    BULK_UPDATE_ITEM_RBAC(context.id),
+    mutation,
     {
       onCompleted: () => {
         toast.success(

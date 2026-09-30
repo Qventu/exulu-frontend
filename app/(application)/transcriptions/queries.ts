@@ -215,6 +215,31 @@ export const GET_PICKER_AGENTS = gql`
   }
 `;
 
+/**
+ * Agents for the ask-box picker (task-10 brief, Step 7). `tools` is the bare
+ * JSON scalar (same field the agent editor's detail query selects — no
+ * subfields), parsed client-side to find the `agentic_context_search` tool's
+ * `knowledge_bases` entry and test whether it includes "transcriptions".
+ * Kept separate from `GET_PICKER_AGENTS` above (post-processing picker,
+ * `id name` only) so widening this selection can't affect that consumer.
+ */
+export const GET_TRANSCRIPT_ASK_AGENTS = gql`
+  query GetTranscriptAskAgents(
+    $page: Int = 1
+    $limit: Int = 200
+    $filters: [FilterAgent]
+    $sort: SortBy = { field: "name", direction: ASC }
+  ) {
+    agentsPagination(page: $page, limit: $limit, sort: $sort, filters: $filters) {
+      items {
+        id
+        name
+        tools
+      }
+    }
+  }
+`;
+
 const PROJECT_FIELDS = `
   id
   name
@@ -267,6 +292,129 @@ export const GET_PROJECTS = gql`
       items {
         ${PROJECT_FIELDS}
       }
+    }
+  }
+`;
+
+/**
+ * Saved transcripts, through the generic per-context pagination. Items carry
+ * the RBAC the home's Shared-with-me tab, search and filters all rely on, so
+ * this needs no bespoke resolver (spec §1.1).
+ */
+export const GET_TRANSCRIPT_ITEMS = gql`
+  query TranscriptItems(
+    $page: Int!
+    $limit: Int!
+    $filters: [FilterTranscriptions_items]
+    $sort: SortBy = { field: "recorded_at", direction: DESC }
+  ) {
+    transcriptions_itemsPagination(page: $page, limit: $limit, filters: $filters, sort: $sort) {
+      pageInfo {
+        itemCount
+        hasNextPage
+      }
+      items {
+        id
+        name
+        recording_source
+        job_id
+        recorded_at
+        duration_seconds
+        speaker_count
+        project_id
+        rights_mode
+        created_by
+        post_processing
+      }
+    }
+  }
+`;
+
+/**
+ * Single saved transcript for the reading view (task-10 brief, Step 5):
+ * `GET_TRANSCRIPT_ITEMS`' field list plus the content/media/RBAC fields the
+ * document needs. `corrected_segments` and `updatedAt` were added by task-12
+ * (edit mode + its conflict guard) — see the `TranscriptItemDetail` doc
+ * comment in types.ts.
+ */
+export const GET_TRANSCRIPT_ITEM = gql`
+  query GetTranscriptItem($id: ID!) {
+    transcriptions_itemsPagination(page: 1, limit: 1, filters: [{ id: { eq: $id } }]) {
+      items {
+        id
+        name
+        recording_source
+        job_id
+        recorded_at
+        duration_seconds
+        speaker_count
+        project_id
+        rights_mode
+        created_by
+        post_processing
+        transcript_text
+        raw_segments
+        corrected_segments
+        speakers
+        language
+        audio_s3key
+        video_s3key
+        recall_recording_id
+        updatedAt
+        RBAC {
+          type
+          users {
+            id
+            rights
+          }
+          roles {
+            id
+            rights
+          }
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Bulk archive for the home page's selection bar. Same shape
+ * `app/(application)/data/queries.ts`'s generic `UPDATE_ITEM("transcriptions")`
+ * would produce — colocated here instead of importing that factory, which
+ * would cross the `transcriptions` → `data` feature boundary the tier-boundary
+ * eslint rule forbids (codebase-structure §1.2: "Promote shared code to
+ * components/widgets or lib/", not reach across features for a data op this
+ * feature can hold itself). Bulk delete reuses the existing
+ * REMOVE_SAVED_TRANSCRIPT_ITEM above; there is no bulk-archive equivalent yet.
+ */
+export const UPDATE_TRANSCRIPT_ITEM = gql`
+  mutation UpdateOneByIdTranscriptions($id: ID!, $input: transcriptions_itemsInput!) {
+    transcriptions_itemsUpdateOneById(id: $id, input: $input) {
+      item {
+        id
+      }
+      job
+    }
+  }
+`;
+
+/**
+ * Bulk share for the home page's selection bar — the mutation document
+ * `BulkAccessDialog` (now `components/widgets/bulk-access-dialog.tsx`) needs
+ * passed in via its `mutation` prop, since the widgets tier may not import
+ * `@/app/*` to build `BULK_UPDATE_ITEM_RBAC("transcriptions")` itself. Same
+ * shape that factory produces for this context, colocated here for the same
+ * reason as `UPDATE_TRANSCRIPT_ITEM` above.
+ */
+export const BULK_UPDATE_TRANSCRIPT_ITEMS_RBAC = gql`
+  mutation BulkUpdateRBACtranscriptions(
+    $ids: [ID!]!
+    $rights_mode: String!
+    $rbac: RBACInput
+  ) {
+    transcriptions_itemsBulkUpdateRBAC(ids: $ids, rights_mode: $rights_mode, RBAC: $rbac) {
+      message
+      itemCount
     }
   }
 `;

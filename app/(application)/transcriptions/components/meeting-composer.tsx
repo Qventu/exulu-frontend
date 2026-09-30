@@ -12,14 +12,12 @@
  * Design doc: docs/superpowers/specs/2026-06-19-recall-meeting-recording-design.md
  */
 import { useMutation } from "@apollo/client";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
 
 import { RBACControl } from "@/components/rbac";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
@@ -39,6 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { usePostProcessingOptions, useProjectOptions } from "../hooks";
 import { MEETING_BOT_START } from "../queries";
 import {
+  type ComposerPrimaryAction,
   type Mode,
   type PostProcessingPrompt,
   type RbacRole,
@@ -50,13 +49,17 @@ const ALLOWED_MODES: Mode[] = ["private", "users", "roles", "public"];
 const LANGUAGES = ["en", "de", "fr", "es", "it", "nl", "pt"] as const;
 
 export interface MeetingComposerProps {
-  onCancel: () => void;
   onStarted: () => void;
+  /** Reports the current Start action so NewTranscriptDialog's shared footer
+   *  can render it — the dialog owns Cancel/footer chrome now (Task 9). */
+  onPrimaryActionChange: (action: ComposerPrimaryAction) => void;
 }
 
-export function MeetingComposer({ onCancel, onStarted }: MeetingComposerProps) {
+export function MeetingComposer({
+  onStarted,
+  onPrimaryActionChange,
+}: MeetingComposerProps) {
   const t = useTranslations("transcriptions");
-  const tCommon = useTranslations("common");
 
   const [meetingUrl, setMeetingUrl] = React.useState("");
   const [title, setTitle] = React.useState("");
@@ -89,7 +92,7 @@ export function MeetingComposer({ onCancel, onStarted }: MeetingComposerProps) {
     // Every post-processing row must be fully specified before we send it.
     postProcessingRowsComplete(ppRows);
 
-  const onStart = async () => {
+  const onStart = React.useCallback(async () => {
     if (!meetingUrl.trim()) return;
     setBusy(true);
     try {
@@ -124,7 +127,34 @@ export function MeetingComposer({ onCancel, onStarted }: MeetingComposerProps) {
     } finally {
       setBusy(false);
     }
-  };
+  }, [
+    meetingUrl,
+    startBot,
+    joinMode,
+    joinAt,
+    language,
+    title,
+    botName,
+    notifyChat,
+    projectId,
+    rightsMode,
+    rbacUsers,
+    rbacRoles,
+    ppRows,
+    t,
+    onStarted,
+  ]);
+
+  // The dialog's shared footer owns the actual button; this just keeps it in
+  // sync with what Start would currently do.
+  React.useEffect(() => {
+    onPrimaryActionChange({
+      label: t("composer.startMeeting"),
+      disabled: !canStart,
+      busy,
+      run: onStart,
+    });
+  }, [canStart, busy, onStart, onPrimaryActionChange, t]);
 
   const projectName = projects.find((p) => p.id === projectId)?.name;
   const optionsSummary = [
@@ -138,7 +168,7 @@ export function MeetingComposer({ onCancel, onStarted }: MeetingComposerProps) {
   ].join(" · ");
 
   return (
-    <Card className="space-y-4 p-4 duration-200 animate-in fade-in slide-in-from-top-1 motion-reduce:animate-none">
+    <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="meeting-url">{t("composer.meetingUrl")}</Label>
         <Input
@@ -163,14 +193,19 @@ export function MeetingComposer({ onCancel, onStarted }: MeetingComposerProps) {
       </div>
 
       <Collapsible open={optionsOpen} onOpenChange={setOptionsOpen}>
-        <CollapsibleTrigger className="group flex min-h-9 w-full items-center gap-2 rounded-md text-left text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+        <CollapsibleTrigger
+          className="group flex min-h-9 w-full items-center gap-2 rounded-md text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-label={`${t("composer.optionsSummaryLabel")}: ${optionsSummary}`}
+        >
           <ChevronRight
             aria-hidden="true"
-            className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-90 motion-reduce:transition-none"
+            className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180 motion-reduce:transition-none"
           />
-          <span>{t("composer.options")}</span>
-          <span className="min-w-0 flex-1 truncate text-right text-xs font-normal text-muted-foreground">
+          <span className="min-w-0 flex-1 truncate font-normal text-muted-foreground">
             {optionsSummary}
+          </span>
+          <span className="shrink-0 font-medium text-foreground group-hover:underline">
+            {t("composer.optionsChange")}
           </span>
         </CollapsibleTrigger>
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down motion-reduce:animate-none">
@@ -302,29 +337,6 @@ export function MeetingComposer({ onCancel, onStarted }: MeetingComposerProps) {
           </div>
         </CollapsibleContent>
       </Collapsible>
-
-      <div className="flex justify-end gap-2 pt-1">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onCancel}
-          disabled={busy}
-          className="max-md:h-11"
-        >
-          {tCommon("cancel")}
-        </Button>
-        <Button
-          type="button"
-          onClick={onStart}
-          disabled={!canStart}
-          className="max-md:h-11"
-        >
-          {busy ? (
-            <Loader2 aria-hidden="true" className="mr-2 size-4 animate-spin" />
-          ) : null}
-          {t("composer.startMeeting")}
-        </Button>
-      </div>
-    </Card>
+    </div>
   );
 }

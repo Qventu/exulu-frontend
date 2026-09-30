@@ -1,6 +1,23 @@
 import { describe, expect, it } from "vitest";
 
-import { findRecoveredJob, hasPostProcessing, isLiveJob, displayTitle, type Job } from "./types";
+import {
+  applyFindReplace,
+  canWriteTranscriptItem,
+  effectiveSegments,
+  findRecoveredJob,
+  hasPostProcessing,
+  isLiveJob,
+  isSharingConfigured,
+  displayTitle,
+  mergeTranscriptRows,
+  filterTranscriptRows,
+  groupTranscriptRows,
+  shouldFinalizeItemSave,
+  type ItemRBAC,
+  type Job,
+  type Segment,
+  type TranscriptItem,
+} from "./types";
 
 /**
  * findRecoveredJob — real incident, 2026-09-22: a customer reported 4 "failed"
@@ -128,5 +145,325 @@ describe("live recording helpers", () => {
 
   it("displayTitle falls back to 'Live recording' for untitled live jobs", () => {
     expect(displayTitle({ title: null, audio_s3key: "", source: "live" })).toBe("Live recording");
+  });
+});
+
+function item(overrides: Partial<TranscriptItem>): TranscriptItem {
+  return {
+    id: "item-1",
+    name: "Kick-off Comfort-Line",
+    recording_source: "recall",
+    job_id: "job-1",
+    recorded_at: "2026-09-10T09:00:00.000Z",
+    duration_seconds: 3494,
+    speaker_count: 6,
+    project_id: "proj-1",
+    rights_mode: "private",
+    created_by: 1,
+    post_processing: null,
+    ...overrides,
+  };
+}
+
+describe("mergeTranscriptRows", () => {
+  it("keeps in-progress jobs and ready items in one list", () => {
+    const rows = mergeTranscriptRows(
+      [job({ id: "job-9", status: "awaiting_review", title: "Fertigungsplanung" })],
+      [item({ id: "item-1" })],
+    );
+    expect(rows.map((r) => r.id).sort()).toEqual(["item-1", "job-9"]);
+  });
+
+  it("never lists a saved job twice — its content is the item", () => {
+    // The jobs query only asks for ACTIVE_STATUSES, but a job can be saved
+    // between the two queries resolving. It must not appear beside its item.
+    const rows = mergeTranscriptRows(
+      [job({ id: "job-1", status: "saved", saved_item_id: "item-1" })],
+      [item({ id: "item-1", job_id: "job-1" })],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].kind).toBe("item");
+  });
+
+  it("points a needs-review job at the review route and an item at the reading view", () => {
+    const rows = mergeTranscriptRows(
+      [job({ id: "job-9", status: "awaiting_review" })],
+      [item({ id: "item-1" })],
+    );
+    expect(rows.find((r) => r.id === "job-9")!.href).toBe("/transcriptions/review/job-9");
+    expect(rows.find((r) => r.id === "item-1")!.href).toBe("/transcriptions/item-1");
+  });
+
+  it("sorts newest first by recorded_at across both sources", () => {
+    const rows = mergeTranscriptRows(
+      [job({ id: "older-job", status: "awaiting_review", createdAt: "2026-09-01T00:00:00Z" })],
+      [item({ id: "newer-item", recorded_at: "2026-09-20T00:00:00.000Z" })],
+    );
+    expect(rows.map((r) => r.id)).toEqual(["newer-item", "older-job"]);
+  });
+
+  it("maps job statuses onto display states", () => {
+    const rows = mergeTranscriptRows(
+      [
+        job({ id: "a", status: "recording" }),
+        job({ id: "b", status: "transcribing" }),
+        job({ id: "c", status: "awaiting_review" }),
+        job({ id: "d", status: "failed" }),
+      ],
+      [],
+    );
+    expect(rows.map((r) => r.state).sort()).toEqual(
+      ["failed", "needs_review", "recording", "transcribing"],
+    );
+  });
+
+  it("leaves speakerCount null for an item saved before the column existed", () => {
+    const rows = mergeTranscriptRows([], [item({ speaker_count: null })]);
+    expect(rows[0].speakerCount).toBeNull();
+  });
+
+  it("excludes a job already claimed by an item even when the job's own status is stale", () => {
+    // The real cross-query race: the jobs query resolved before the save
+    // landed, so the job still says awaiting_review, but an item already
+    // references it. Without the claimedJobIds check the user sees the same
+    // recording twice — once to review, once to read.
+    const rows = mergeTranscriptRows(
+      [job({ id: "job-1", status: "awaiting_review", saved_item_id: null })],
+      [item({ id: "item-1", job_id: "job-1" })],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].kind).toBe("item");
+  });
+});
+
+describe("filterTranscriptRows", () => {
+  const rows = mergeTranscriptRows(
+    [job({ id: "job-9", status: "awaiting_review" })],
+    [item({ id: "mine", created_by: 1 }), item({ id: "theirs", created_by: 2 })],
+  );
+
+  it("'all' keeps everything", () => {
+    expect(filterTranscriptRows(rows, "all", 1)).toHaveLength(3);
+  });
+
+  it("'needs_review' keeps only jobs awaiting review", () => {
+    expect(filterTranscriptRows(rows, "needs_review", 1).map((r) => r.id)).toEqual(["job-9"]);
+  });
+
+  it("'mine' keeps items I created", () => {
+    expect(filterTranscriptRows(rows, "mine", 1).map((r) => r.id)).toEqual(["mine"]);
+  });
+
+  it("'shared' keeps readable items I did NOT create", () => {
+    expect(filterTranscriptRows(rows, "shared", 1).map((r) => r.id)).toEqual(["theirs"]);
+  });
+});
+
+describe("groupTranscriptRows", () => {
+  const now = new Date("2026-09-29T12:00:00.000Z");
+
+  it("puts the last seven days in This week and the rest in Earlier", () => {
+    const rows = mergeTranscriptRows(
+      [],
+      [
+        item({ id: "recent", recorded_at: "2026-09-26T09:00:00.000Z" }),
+        item({ id: "old", recorded_at: "2026-09-10T09:00:00.000Z" }),
+      ],
+    );
+    const { thisWeek, earlier } = groupTranscriptRows(rows, now);
+    expect(thisWeek.map((r) => r.id)).toEqual(["recent"]);
+    expect(earlier.map((r) => r.id)).toEqual(["old"]);
+  });
+
+  it("treats a future recorded_at as this week rather than hiding it", () => {
+    // A scheduled meeting bot has a join_at in the future; the row must not
+    // fall off the bottom of the list.
+    const rows = mergeTranscriptRows([], [item({ id: "scheduled", recorded_at: "2026-10-02T09:00:00.000Z" })]);
+    expect(groupTranscriptRows(rows, now).thisWeek.map((r) => r.id)).toEqual(["scheduled"]);
+  });
+});
+
+const segs = (...texts: string[]): Segment[] =>
+  texts.map((text, i) => ({ start: i, end: i + 1, text, speaker: "SPEAKER_00" }));
+
+describe("applyFindReplace", () => {
+  it("replaces every occurrence and reports the count", () => {
+    const { segments, count } = applyFindReplace(
+      segs("Zet Cad is slow", "open Zet Cad"),
+      "Zet Cad",
+      "ZWCAD",
+      false,
+    );
+    expect(segments.map((s) => s.text)).toEqual(["ZWCAD is slow", "open ZWCAD"]);
+    expect(count).toBe(2);
+  });
+
+  it("counts multiple hits inside one segment", () => {
+    expect(applyFindReplace(segs("a a a"), "a", "b", false).count).toBe(3);
+  });
+
+  it("is case-insensitive by default and case-sensitive on request", () => {
+    expect(applyFindReplace(segs("Zet cad"), "zet cad", "ZWCAD", false).count).toBe(1);
+    expect(applyFindReplace(segs("Zet cad"), "zet cad", "ZWCAD", true).count).toBe(0);
+  });
+
+  it("treats the needle as literal text, not a regular expression", () => {
+    // A user typing "(1)" must not blow up or match nothing.
+    const { segments, count } = applyFindReplace(segs("item (1) here"), "(1)", "(2)", false);
+    expect(count).toBe(1);
+    expect(segments[0].text).toBe("item (2) here");
+  });
+
+  it("never changes timestamps or speakers", () => {
+    const before = segs("one", "two");
+    const { segments } = applyFindReplace(before, "one", "1", false);
+    expect(segments.map((s) => [s.start, s.end, s.speaker])).toEqual(
+      before.map((s) => [s.start, s.end, s.speaker]),
+    );
+  });
+
+  it("returns the input unchanged for an empty needle", () => {
+    const before = segs("one");
+    const { segments, count } = applyFindReplace(before, "", "x", false);
+    expect(segments).toEqual(before);
+    expect(count).toBe(0);
+  });
+});
+
+describe("effectiveSegments — a correction wholly replaces the raw transcript", () => {
+  it("falls back to raw_segments when nothing was corrected", () => {
+    const raw = segs("hello there");
+    expect(effectiveSegments(raw, null)).toEqual(raw);
+  });
+
+  it("prefers corrected_segments once a correction exists", () => {
+    const raw = segs("hello there");
+    const corrected = segs("hello there fixed");
+    expect(effectiveSegments(raw, corrected)).toEqual(corrected);
+  });
+
+  it("parses JSON-string fields the same as arrays", () => {
+    const raw = segs("hello there");
+    expect(effectiveSegments(JSON.stringify(raw), null)).toEqual(raw);
+  });
+});
+
+describe("isSharingConfigured", () => {
+  it("private and public need no further set-up", () => {
+    expect(isSharingConfigured("private", [], [])).toBe(true);
+    expect(isSharingConfigured("public", [], [])).toBe(true);
+  });
+
+  it("users/roles mode with nobody added yet is not configured", () => {
+    expect(isSharingConfigured("users", [], [])).toBe(false);
+    expect(isSharingConfigured("roles", [], [])).toBe(false);
+  });
+
+  it("users/roles mode with at least one grant is configured", () => {
+    expect(isSharingConfigured("users", [{ id: 2, rights: "read" }], [])).toBe(true);
+    expect(isSharingConfigured("roles", [], [{ id: "role-1", rights: "read" }])).toBe(true);
+  });
+});
+
+describe("canWriteTranscriptItem — mirrors the backend's validateWriteAccess", () => {
+  const rbac = (overrides: Partial<ItemRBAC> = {}): ItemRBAC => ({
+    users: [],
+    roles: [],
+    ...overrides,
+  });
+
+  it("denies an unauthenticated viewer", () => {
+    expect(
+      canWriteTranscriptItem({ rights_mode: "public", created_by: 1, RBAC: null }, null),
+    ).toBe(false);
+  });
+
+  it("a public item is writable by anyone", () => {
+    expect(
+      canWriteTranscriptItem(
+        { rights_mode: "public", created_by: 1, RBAC: null },
+        { id: 2, role: "role-1" },
+      ),
+    ).toBe(true);
+  });
+
+  it("a private item is writable only by its creator", () => {
+    const item = { rights_mode: "private" as const, created_by: 1, RBAC: null };
+    expect(canWriteTranscriptItem(item, { id: 1, role: "role-1" })).toBe(true);
+    expect(canWriteTranscriptItem(item, { id: 2, role: "role-1" })).toBe(false);
+  });
+
+  it("the creator can always write, whatever rights_mode it's shared under", () => {
+    const item = {
+      rights_mode: "users" as const,
+      created_by: 1,
+      RBAC: rbac({ users: [] }),
+    };
+    expect(canWriteTranscriptItem(item, { id: 1, role: "role-1" })).toBe(true);
+  });
+
+  it("a users-mode grant needs rights: write, not just being listed", () => {
+    const item = {
+      rights_mode: "users" as const,
+      created_by: 1,
+      RBAC: rbac({ users: [{ id: 2, rights: "read" }] }),
+    };
+    expect(canWriteTranscriptItem(item, { id: 2, role: "role-1" })).toBe(false);
+    expect(
+      canWriteTranscriptItem(
+        { ...item, RBAC: rbac({ users: [{ id: 2, rights: "write" }] }) },
+        { id: 2, role: "role-1" },
+      ),
+    ).toBe(true);
+  });
+
+  it("a roles-mode grant checks the viewer's role id, hydrated or not", () => {
+    const item = {
+      rights_mode: "roles" as const,
+      created_by: 1,
+      RBAC: rbac({ roles: [{ id: "editor", rights: "write" }] }),
+    };
+    expect(canWriteTranscriptItem(item, { id: 2, role: "editor" })).toBe(true);
+    expect(canWriteTranscriptItem(item, { id: 2, role: { id: "editor" } })).toBe(true);
+    expect(canWriteTranscriptItem(item, { id: 2, role: "viewer" })).toBe(false);
+  });
+
+  it("super_admin always writes, regardless of rights_mode", () => {
+    const item = { rights_mode: "private" as const, created_by: 1, RBAC: null };
+    expect(canWriteTranscriptItem(item, { id: 99, super_admin: true })).toBe(true);
+  });
+});
+
+/**
+ * shouldFinalizeItemSave — the routing decision behind the task-13 fix
+ * (`/transcriptions/[itemId]` save handler): a job-backed item's correction
+ * must go through FINALIZE_TRANSCRIPTION_JOB (re-renders transcript_text) when
+ * the saving user owns the job, since the server rejects finalize for anyone
+ * else. This tests only the pure predicate, not either mutation.
+ */
+describe("shouldFinalizeItemSave — routes an owner's save through finalize, not item-update", () => {
+  it("owner with a job_id routes to finalize", () => {
+    const item = { job_id: "job-1", created_by: 1 };
+    expect(shouldFinalizeItemSave(item, { id: 1 })).toBe(true);
+  });
+
+  it("a super_admin (not the creator) also routes to finalize", () => {
+    const item = { job_id: "job-1", created_by: 1 };
+    expect(shouldFinalizeItemSave(item, { id: 99, super_admin: true })).toBe(true);
+  });
+
+  it("a non-owner with write access (shared editor) uses item-update instead", () => {
+    const item = { job_id: "job-1", created_by: 1 };
+    expect(shouldFinalizeItemSave(item, { id: 2 })).toBe(false);
+  });
+
+  it("an item with no job_id always uses item-update, even for the creator", () => {
+    const item = { job_id: null, created_by: 1 };
+    expect(shouldFinalizeItemSave(item, { id: 1 })).toBe(false);
+  });
+
+  it("denies an unauthenticated viewer", () => {
+    const item = { job_id: "job-1", created_by: 1 };
+    expect(shouldFinalizeItemSave(item, null)).toBe(false);
   });
 });

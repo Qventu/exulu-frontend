@@ -12,12 +12,21 @@ import {
   GET_PICKER_AGENTS,
   GET_PROJECTS,
   GET_PROMPT_LIBRARY,
+  GET_TRANSCRIPT_ITEM,
+  GET_TRANSCRIPT_ITEMS,
   GET_TRANSCRIPTION_JOBS,
 } from "./queries";
-import { ACTIVE_STATUSES, type Job, type ProjectOption } from "./types";
+import {
+  ACTIVE_STATUSES,
+  mergeTranscriptRows,
+  type Job,
+  type ProjectOption,
+  type TranscriptItem,
+  type TranscriptItemDetail,
+  type TranscriptRow,
+} from "./types";
 
 const POLL_INTERVAL_MS = 5000;
-const SAVED_PAGE_SIZE = 50;
 
 type JobsResult = {
   transcription_jobsPagination: {
@@ -26,62 +35,78 @@ type JobsResult = {
   };
 };
 
-export interface TranscriptionJobs {
-  /** queued | transcribing | recording | awaiting_review | failed */
-  activeJobs: Job[];
-  savedJobs: Job[];
-  savedTotal: number;
-  /** True while either list is loading with no data yet. */
+export interface TranscriptsResult {
+  rows: TranscriptRow[];
+  /** Saved jobs that share a meeting_url with a currently-failed job — the
+   *  input to findRecoveredJob. Empty unless something actually failed. */
+  recoveredJobs: Job[];
+  needsReviewCount: number;
   initialLoading: boolean;
-  /** "Load more" for the saved list past the first 50 (page-doc ladder #4). */
-  canLoadMoreSaved: boolean;
-  loadMoreSaved: () => void;
+  /** Set when the in-progress half failed; the ready half may still be fine. */
+  jobsError?: Error;
+  /** Set when the ready half failed; the in-progress half may still be fine. */
+  itemsError?: Error;
+  canLoadMore: boolean;
+  loadMore: () => void;
   refetchAll: () => void;
 }
 
+const ITEMS_PAGE_SIZE = 50;
+
 /**
- * Both list queries. The 5s poll runs ONLY while a job is actually being
- * worked on (queued/transcribing) or a live recording is in progress
- * (recording) — page-doc ladder row 3 — instead of polling forever.
+ * The merged home data layer (codebase-structure §1.1): unions the
+ * creator-only in-progress jobs with the RBAC'd saved-transcript items, so
+ * Shared with me / search / filters come from the item's existing rights
+ * instead of a new resolver. The 5s poll runs ONLY while a job is actually
+ * being worked on (queued/transcribing) or a live recording is in progress
+ * (recording) — page-doc ladder row 3 — instead of polling forever. Saved
+ * transcripts don't change on their own, so the items query never polls.
  */
-export function useTranscriptionJobs(): TranscriptionJobs {
+export function useTranscripts(search: string): TranscriptsResult {
   const active = useQuery<JobsResult>(GET_TRANSCRIPTION_JOBS, {
+    variables: { filters: [{ status: { in: [...ACTIVE_STATUSES] } }] },
+    fetchPolicy: "cache-and-network",
+  });
+
+  const [limit, setLimit] = React.useState(ITEMS_PAGE_SIZE);
+  const items = useQuery<{
+    transcriptions_itemsPagination: {
+      pageInfo?: { itemCount?: number | null; hasNextPage?: boolean | null } | null;
+      items: TranscriptItem[];
+    };
+  }>(GET_TRANSCRIPT_ITEMS, {
     variables: {
-      filters: [{ status: { in: [...ACTIVE_STATUSES] } }],
+      page: 1,
+      limit,
+      filters: search
+        ? [{ archived: { eq: false }, name: { contains: search } }]
+        : [{ archived: { eq: false } }],
     },
     fetchPolicy: "cache-and-network",
   });
 
-  const [savedLimit, setSavedLimit] = React.useState(SAVED_PAGE_SIZE);
-  const saved = useQuery<JobsResult>(GET_TRANSCRIPTION_JOBS, {
-    variables: {
-      filters: [{ status: { eq: "saved" } }],
-      limit: savedLimit,
-    },
-    fetchPolicy: "cache-and-network",
-  });
-
-  const activeJobs = React.useMemo(
+  const jobs = React.useMemo(
     () => active.data?.transcription_jobsPagination?.items ?? [],
     [active.data],
   );
-  const savedJobs = React.useMemo(
-    () => saved.data?.transcription_jobsPagination?.items ?? [],
-    [saved.data],
+  const transcripts = React.useMemo(
+    () => items.data?.transcriptions_itemsPagination?.items ?? [],
+    [items.data],
   );
-  const savedTotal =
-    saved.data?.transcription_jobsPagination?.pageInfo?.itemCount ??
-    savedJobs.length;
 
-  // Poll while anything is in motion: whisper/recall work (queued, transcribing)
-  // or a live recording on another device/tab (recording).
-  const hasRunning = activeJobs.some(
+  const rows = React.useMemo(
+    () => mergeTranscriptRows(jobs, transcripts),
+    [jobs, transcripts],
+  );
+
+  // Poll only while something is genuinely in motion — unchanged from the
+  // previous hook (page-doc ladder row 3).
+  const hasRunning = jobs.some(
     (job) =>
       job.status === "queued" ||
       job.status === "transcribing" ||
       job.status === "recording",
   );
-
   const { startPolling, stopPolling } = active;
   React.useEffect(() => {
     if (!hasRunning) return;
@@ -89,22 +114,74 @@ export function useTranscriptionJobs(): TranscriptionJobs {
     return () => stopPolling();
   }, [hasRunning, startPolling, stopPolling]);
 
-  const { refetch: refetchActive } = active;
-  const { refetch: refetchSaved } = saved;
-  const refetchAll = React.useCallback(() => {
-    void refetchActive();
-    void refetchSaved();
-  }, [refetchActive, refetchSaved]);
+  // findRecoveredJob (the 2026-09-22 "4 recordings reported lost" incident)
+  // links a failed meeting job to the retry that succeeded. Both are
+  // creator-only job rows and only the creator sees the failed one, so the
+  // lookup stays on the jobs side — one targeted query, and only when there
+  // is actually a failed meeting job to explain.
+  const failedMeetingUrls = React.useMemo(
+    () =>
+      jobs
+        .filter((job) => job.status === "failed" && !!job.meeting_url)
+        .map((job) => job.meeting_url as string),
+    [jobs],
+  );
+  const recovered = useQuery<JobsResult>(GET_TRANSCRIPTION_JOBS, {
+    skip: failedMeetingUrls.length === 0,
+    variables: {
+      filters: [{ status: { eq: "saved" }, meeting_url: { in: failedMeetingUrls } }],
+    },
+    fetchPolicy: "cache-and-network",
+  });
+  const recoveredJobs = React.useMemo(
+    () => recovered.data?.transcription_jobsPagination?.items ?? [],
+    [recovered.data],
+  );
+
+  const { refetch: refetchJobs } = active;
+  const { refetch: refetchItems } = items;
 
   return {
-    activeJobs,
-    savedJobs,
-    savedTotal,
+    rows,
+    recoveredJobs,
+    needsReviewCount: rows.filter((row) => row.state === "needs_review").length,
     initialLoading:
-      (active.loading && !active.data) || (saved.loading && !saved.data),
-    canLoadMoreSaved: savedJobs.length < savedTotal,
-    loadMoreSaved: () => setSavedLimit((limit) => limit + SAVED_PAGE_SIZE),
-    refetchAll,
+      (active.loading && !active.data) || (items.loading && !items.data),
+    jobsError: active.error as Error | undefined,
+    itemsError: items.error as Error | undefined,
+    canLoadMore:
+      !!items.data?.transcriptions_itemsPagination?.pageInfo?.hasNextPage,
+    loadMore: () => setLimit((current) => current + ITEMS_PAGE_SIZE),
+    refetchAll: () => {
+      void refetchJobs();
+      void refetchItems();
+    },
+  };
+}
+
+/**
+ * A single saved transcript for the reading view (task-10 brief, Step 9 —
+ * page.tsx stays a thin fetch-and-render shell; hooks.ts owns fetch policy,
+ * per the module docstring above).
+ */
+export function useTranscriptItem(itemId: string): {
+  item: TranscriptItemDetail | null;
+  loading: boolean;
+  error?: Error;
+  refetch: () => void;
+} {
+  const { data, loading, error, refetch } = useQuery<{
+    transcriptions_itemsPagination: { items: TranscriptItemDetail[] };
+  }>(GET_TRANSCRIPT_ITEM, {
+    variables: { id: itemId },
+    fetchPolicy: "cache-and-network",
+    skip: !itemId,
+  });
+  return {
+    item: data?.transcriptions_itemsPagination?.items?.[0] ?? null,
+    loading: loading && !data,
+    error: error as Error | undefined,
+    refetch: () => void refetch(),
   };
 }
 

@@ -17,6 +17,19 @@ export type JobStatus =
 export type RbacUser = { id: number; rights: "read" | "write" };
 export type RbacRole = { id: string; rights: "read" | "write" };
 
+/**
+ * What a composer's primary action currently looks like, reported up to
+ * `NewTranscriptDialog` (Task 9) so its shared footer can render the right
+ * label/disabled/busy state and trigger the composer's own start logic
+ * without the dialog needing to know how each composer validates itself.
+ */
+export interface ComposerPrimaryAction {
+  label: string;
+  disabled: boolean;
+  busy: boolean;
+  run: () => void;
+}
+
 /** Where a job came from: on-server Whisper upload, a Recall meeting bot, or a live browser recording. */
 export type JobSource = "whisper" | "recall" | "live";
 
@@ -135,6 +148,51 @@ export function parseSegments(raw: unknown): Segment[] {
     }
   }
   return raw as Segment[];
+}
+
+/**
+ * The segments a reader/editor should actually see: a correction, once made,
+ * wholly replaces the raw engine output (mirrors the backend's
+ * `effectiveSegments` in transcript-text.ts — `corrected ?? raw ?? []`).
+ * `corrected` is `!= null` here (not truthy), same reason: an explicit but
+ * empty correction is still a correction, distinct from "never corrected."
+ */
+export function effectiveSegments(
+  rawSegments: Segment[] | string | null | undefined,
+  correctedSegments: Segment[] | string | null | undefined,
+): Segment[] {
+  return parseSegments(
+    correctedSegments != null ? correctedSegments : rawSegments,
+  );
+}
+
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Bulk correction across the transcript. Only `text` changes — start, end
+ * and speaker are preserved, which is what makes "Timestamps stay in place"
+ * true and lets the audio ribbon keep working after a replace.
+ *
+ * The needle is escaped: a user typing "(1)" means those three characters,
+ * not a capture group.
+ */
+export function applyFindReplace(
+  segments: Segment[],
+  find: string,
+  replace: string,
+  matchCase: boolean,
+): { segments: Segment[]; count: number } {
+  if (!find) return { segments, count: 0 };
+  const pattern = new RegExp(escapeRegExp(find), matchCase ? "g" : "gi");
+  let count = 0;
+  const next = segments.map((segment) => {
+    const hits = segment.text.match(pattern);
+    if (!hits) return segment;
+    count += hits.length;
+    return { ...segment, text: segment.text.replace(pattern, replace) };
+  });
+  return { segments: next, count };
 }
 
 /** Human filename from the `_EXULU_` S3-key convention. */
@@ -286,4 +344,308 @@ export function speakerColor(rawLabel: string): string {
   }
   const index = (Math.abs(hash) % SPEAKER_TOKEN_COUNT) + 1;
   return `hsl(var(--chart-${index}))`;
+}
+
+/** A saved transcript as it comes back from transcriptions_itemsPagination. */
+export type TranscriptItem = {
+  id: string;
+  name: string | null;
+  recording_source: JobSource | null;
+  job_id: string | null;
+  recorded_at: string | null;
+  duration_seconds: number | null;
+  speaker_count: number | null;
+  project_id: string | null;
+  rights_mode: Mode | null;
+  created_by: number | null;
+  post_processing: PostProcessingOutput[] | string | null;
+};
+
+/** Generic RBAC shape returned under `RBAC { type users { id rights } roles { id rights } }`. */
+export type ItemRBAC = { type?: Mode; users: RbacUser[]; roles: RbacRole[] };
+
+/**
+ * A saved transcript's full detail — `GET_TRANSCRIPT_ITEM`'s selection set
+ * exactly (task-10 brief, Interfaces block; Ruling 3). Extends `TranscriptItem`
+ * (the home list's slimmer shape) with the fields only the reading view needs.
+ *
+ * `corrected_segments` and `updatedAt` are added by task-12: the column
+ * exists now (the generic item-update mutation can write it, gated by
+ * `validateWriteAccess`), and `updatedAt` backs the conflict guard on the
+ * edit page (refetch on focus, warn before saving over someone else's change).
+ */
+export type TranscriptItemDetail = TranscriptItem & {
+  transcript_text: string | null;
+  raw_segments: Segment[] | string | null;
+  corrected_segments: Segment[] | string | null;
+  speakers: Record<string, string> | string | null;
+  language: string | null;
+  audio_s3key: string | null;
+  video_s3key: string | null;
+  recall_recording_id: string | null;
+  RBAC: ItemRBAC | null;
+  updatedAt: string;
+};
+
+/**
+ * The current viewer, as much of it as write-access derivation needs. Kept
+ * local to this feature (rather than importing `types/models/user`'s `User`)
+ * because `role`/`team` arrive in two shapes at runtime — an unhydrated id
+ * string, or the hydrated object `auth.ts` attaches when the role/team still
+ * exists — and callers here don't want to fight a narrower type over it.
+ */
+export type CurrentUser = {
+  id: number;
+  role?: string | { id: string } | null;
+  team?: string | { id: string } | null;
+  super_admin?: boolean;
+  type?: "api" | "user" | "external";
+  scope_mode?: string | null;
+};
+
+/**
+ * Whether `user` is this record's creator, or a super-admin who bypasses
+ * ownership checks entirely. Factored out of `canWriteTranscriptItem` below
+ * (its first two true-returning branches) so a caller that only needs "is
+ * this mine" — e.g. deciding whether a saved transcript's edit should route
+ * through `FINALIZE_TRANSCRIPTION_JOB`, which `assertOwnsTranscriptionJob`
+ * gates server-side to the job's owner, a strictly narrower question than
+ * "can I write this item" — reuses this instead of writing a third copy of
+ * the same `String(...) === String(...)` comparison.
+ */
+export function isTranscriptItemOwner(
+  item: Pick<TranscriptItemDetail, "created_by">,
+  user: CurrentUser | null | undefined,
+): boolean {
+  if (!user) return false;
+  if (user.super_admin === true) return true;
+  return item.created_by != null && String(item.created_by) === String(user.id);
+}
+
+/**
+ * Client-side mirror of the backend's `validateWriteAccess` (the same gate
+ * `transcriptions_itemsUpdateOneById` runs server-side) — see
+ * `src/graphql/mutations/index.ts` `createMutations.validateWriteAccess` and
+ * `src/utils/check-item-write-access.ts`. `use-item-editor.ts` (the pattern
+ * this was asked to reuse) does not itself derive write access — it renders
+ * Edit unconditionally and relies entirely on the server rejecting the
+ * mutation — which is too late for this task: a read-only viewer must never
+ * see a Save button that's guaranteed to fail. This walks the exact same
+ * rules using the RBAC data already on `TranscriptItemDetail` (super_admin /
+ * admin-mode API keys aren't reachable from a browser session and are kept
+ * only for parity with the server check). `teams` is deliberately not
+ * evaluated: this feature's own RBAC UI doesn't surface team grants yet
+ * (composer.tsx), so there is no team data here to check against — treated
+ * as not-writable rather than guessed true.
+ */
+export function canWriteTranscriptItem(
+  item: Pick<TranscriptItemDetail, "rights_mode" | "created_by" | "RBAC">,
+  user: CurrentUser | null | undefined,
+): boolean {
+  if (!user) return false;
+  // The creator can always edit their own record, whatever rights_mode it's
+  // shared under (matches the server: sharing your own record via RBAC must
+  // not lock you out of it) — and super_admin bypasses everything.
+  if (isTranscriptItemOwner(item, user)) return true;
+  if (user.type === "api" && (!user.scope_mode || user.scope_mode === "admin")) {
+    return true;
+  }
+
+  const mode = item.rights_mode ?? "private";
+  if (mode === "public") return true;
+  if (mode === "private") return false;
+
+  if (mode === "users") {
+    return (item.RBAC?.users ?? []).some(
+      (grant) => String(grant.id) === String(user.id) && grant.rights === "write",
+    );
+  }
+  if (mode === "roles") {
+    const roleId = typeof user.role === "string" ? user.role : user.role?.id;
+    if (!roleId) return false;
+    return (item.RBAC?.roles ?? []).some(
+      (grant) => String(grant.id) === String(roleId) && grant.rights === "write",
+    );
+  }
+  return false;
+}
+
+/**
+ * Routing decision for `/transcriptions/[itemId]`'s save handler (task-13
+ * fix): a saved transcript's `transcript_text` — what agent retrieval and
+ * `/data` actually read — is only re-rendered by `transcriptionJobFinalize`,
+ * not by the generic item-update mutation, which writes `corrected_segments`
+ * alone. So a correction should route through finalize whenever there's a
+ * job behind this item AND the saving user owns that job — finalize's server
+ * gate (`assertOwnsTranscriptionJob`) rejects anyone else, so a shared editor
+ * who can write the item but didn't create the job must keep using the
+ * item-update path (and accept its known gap: see design/pages/
+ * transcriptions.md's "Corrections by a shared editor" entry) rather than a
+ * finalize call that would only fail.
+ */
+export function shouldFinalizeItemSave(
+  item: Pick<TranscriptItemDetail, "job_id" | "created_by">,
+  user: CurrentUser | null | undefined,
+): boolean {
+  return item.job_id != null && isTranscriptItemOwner(item, user);
+}
+
+/**
+ * Whether the sharing draft is a deliberate choice rather than an unfinished
+ * one — "users"/"roles" picked with nobody actually added yet would silently
+ * share with no one, so that state reports as not-yet-chosen. Private and
+ * public need no further set-up, so they're always "chosen".
+ */
+export function isSharingConfigured(
+  mode: Mode,
+  rbacUsers: RbacUser[],
+  rbacRoles: RbacRole[],
+): boolean {
+  if (mode === "users") return rbacUsers.length > 0;
+  if (mode === "roles") return rbacRoles.length > 0;
+  return true;
+}
+
+export type TranscriptRowKind = "job" | "item";
+
+export type TranscriptState =
+  | "recording"
+  | "queued"
+  | "transcribing"
+  | "needs_review"
+  | "failed"
+  | "ready";
+
+export type TranscriptRow = {
+  kind: TranscriptRowKind;
+  id: string;
+  href: string;
+  title: string;
+  state: TranscriptState;
+  summaryLine: string | null;
+  recordedAt: string;
+  source: JobSource | null;
+  durationSeconds: number | null;
+  speakerCount: number | null;
+  projectId: string | null;
+  rightsMode: Mode | null;
+  createdBy: number | null;
+  /** Only for kind "job" — the row renderer needs bot status, error, chunk heartbeat. */
+  job?: Job;
+};
+
+export type TranscriptTab = "all" | "needs_review" | "mine" | "shared";
+
+const JOB_STATE: Partial<Record<JobStatus, TranscriptState>> = {
+  recording: "recording",
+  queued: "queued",
+  transcribing: "transcribing",
+  awaiting_review: "needs_review",
+  failed: "failed",
+};
+
+/** First non-empty post-processing output, trimmed to one line for the row. */
+function itemSummaryLine(item: TranscriptItem): string | null {
+  const outputs = parsePostProcessingOutputs(item.post_processing);
+  const first = outputs.find((o) => o.status === "done" && o.output?.trim());
+  if (!first?.output) return null;
+  return first.output.trim().split("\n")[0] ?? null;
+}
+
+/**
+ * One list across the two stores (spec §1.1). In-progress work comes from
+ * transcription_jobs (creator-only); everything ready comes from the RBAC'd
+ * knowledge items. A saved job contributes nothing — its content IS the item —
+ * which is what keeps the union duplicate-free.
+ */
+export function mergeTranscriptRows(
+  jobs: Job[],
+  items: TranscriptItem[],
+): TranscriptRow[] {
+  const itemRows: TranscriptRow[] = items.map((item) => ({
+    kind: "item",
+    id: item.id,
+    href: `/transcriptions/${item.id}`,
+    title: item.name?.trim() || "Untitled transcript",
+    state: "ready",
+    summaryLine: itemSummaryLine(item),
+    recordedAt: item.recorded_at ?? new Date(0).toISOString(),
+    source: item.recording_source ?? null,
+    durationSeconds: item.duration_seconds,
+    speakerCount: item.speaker_count,
+    projectId: item.project_id,
+    rightsMode: item.rights_mode,
+    createdBy: item.created_by,
+  }));
+
+  const claimedJobIds = new Set(
+    items.map((item) => item.job_id).filter((id): id is string => !!id),
+  );
+
+  const jobRows: TranscriptRow[] = jobs
+    .filter((job) => {
+      // A job that already produced an item is represented by that item.
+      if (job.status === "saved" || job.status === "cancelled") return false;
+      if (job.saved_item_id) return false;
+      return !claimedJobIds.has(job.id);
+    })
+    .map((job) => ({
+      kind: "job",
+      id: job.id,
+      href: `/transcriptions/review/${job.id}`,
+      title: displayTitle(job),
+      state: JOB_STATE[job.status] ?? "queued",
+      summaryLine: null,
+      recordedAt: job.join_at ?? job.createdAt,
+      source: job.source ?? null,
+      durationSeconds: job.duration_seconds,
+      speakerCount: null,
+      projectId: job.project_id,
+      rightsMode: job.target_rights_mode,
+      createdBy: job.created_by,
+      job,
+    }));
+
+  return [...itemRows, ...jobRows].sort(
+    (a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime(),
+  );
+}
+
+export function filterTranscriptRows(
+  rows: TranscriptRow[],
+  tab: TranscriptTab,
+  currentUserId: number,
+): TranscriptRow[] {
+  switch (tab) {
+    case "needs_review":
+      return rows.filter((row) => row.state === "needs_review");
+    case "mine":
+      return rows.filter(
+        (row) => row.kind === "item" && row.createdBy === currentUserId,
+      );
+    case "shared":
+      return rows.filter(
+        (row) => row.kind === "item" && row.createdBy !== currentUserId,
+      );
+    default:
+      return rows;
+  }
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function groupTranscriptRows(
+  rows: TranscriptRow[],
+  now: Date,
+): { thisWeek: TranscriptRow[]; earlier: TranscriptRow[] } {
+  const cutoff = now.getTime() - WEEK_MS;
+  const thisWeek: TranscriptRow[] = [];
+  const earlier: TranscriptRow[] = [];
+  for (const row of rows) {
+    // A scheduled meeting bot's join_at is in the future; it belongs at the
+    // top of the list, not silently in Earlier.
+    if (new Date(row.recordedAt).getTime() >= cutoff) thisWeek.push(row);
+    else earlier.push(row);
+  }
+  return { thisWeek, earlier };
 }
