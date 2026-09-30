@@ -4520,8 +4520,6 @@
     "document": {
       "loadFailed": "Dieses Transkript konnte nicht geladen werden",
       "share": "Teilen",
-      "export": "Exportieren",
-      "copyText": "Text kopieren",
       "correctTextAndSpeakers": "Text und Sprecher korrigieren",
       "moveToProject": "Zu Projekt verschieben",
       "moveToProjectDescription": "Wählen Sie ein Projekt für dieses Transkript aus, oder entfernen Sie es aus einem.",
@@ -4549,6 +4547,22 @@
       "staleConflictTitle": "Dieses Transkript hat sich geändert, seit Sie mit der Bearbeitung begonnen haben",
       "staleConflictDescription": "Möglicherweise wurden in der Zwischenzeit Änderungen gespeichert. Wenn Sie jetzt speichern, wird diese Version mit Ihrer überschrieben.",
       "staleConflictConfirm": "Trotzdem speichern"
+    },
+    "export": {
+      "label": "Exportieren",
+      "copyText": "Text kopieren",
+      "copied": "Transkript kopiert",
+      "copyFailed": "Transkript konnte nicht kopiert werden",
+      "downloadFailed": "Transkript konnte nicht heruntergeladen werden",
+      "markdown": "Markdown (.md)",
+      "word": "Word-Dokument (.docx)",
+      "pdf": "PDF (.pdf)",
+      "csv": "CSV (.csv)",
+      "srt": "Untertitel (.srt)",
+      "include": "Einschließen",
+      "includeSummary": "Zusammenfassung und Aktionspunkte",
+      "includeTimestamps": "Zeitstempel",
+      "includeSpeakers": "Sprechernamen"
     },
     "checklist": {
       "ready": "Bereit zum Speichern",

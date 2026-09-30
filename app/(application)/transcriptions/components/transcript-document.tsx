@@ -8,10 +8,10 @@
  * header; edit mode adds a pinned (non-scrolling) footer.
  *
  * Read mode (task-10 brief, Step 6 / design §4.3):
- * - Header: title, Share (access popover), Export ▾ (Copy text only — Task 13
- *   fills the rest of the menu), "…" overflow (Correct text and speakers →
- *   `?edit=1`, Move to project, Open in library, Delete). Meta line + an
- *   access pill whose popover edits sharing directly.
+ * - Header: title, Share (access popover), Export ▾ (`<ExportMenu />` — Copy
+ *   text plus five downloads, task-13 brief), "…" overflow (Correct text and
+ *   speakers → `?edit=1`, Move to project, Open in library, Delete). Meta
+ *   line + an access pill whose popover edits sharing directly.
  * - Left: chapters parsed from a post-processing output with a `## Chapters`
  *   heading — renders nothing when no output supplies one.
  * - Centre: the remaining post-processing outputs (citations linkified via
@@ -57,7 +57,6 @@
  */
 import { useMutation, useQuery } from "@apollo/client";
 import {
-  ChevronDown,
   ChevronRight,
   ExternalLink,
   Folder,
@@ -95,12 +94,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -139,6 +132,7 @@ import {
 } from "../types";
 import { AskBox } from "./ask-box";
 import { AudioTimeline, type AudioTimelineHandle } from "./audio-timeline";
+import { ExportMenu } from "./export-menu";
 import { MeetingVideoPlayer } from "./meeting-video-player";
 import { SpeakersPanel } from "./speakers-panel";
 import { FindReplace } from "./find-replace";
@@ -728,15 +722,6 @@ export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: 
   }
   if (projectName) metaSegments.push(<span key="project">{projectName}</span>);
 
-  const handleCopyText = async () => {
-    try {
-      await navigator.clipboard.writeText(item.transcript_text ?? "");
-      toast.success(tCommon("copied"));
-    } catch {
-      toast.error(tCommon("copyFailed"));
-    }
-  };
-
   const handleDelete = async () => {
     try {
       await deleteItem({ variables: { id: item.id } });
@@ -921,19 +906,7 @@ export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: 
                   <Share2 aria-hidden="true" className="mr-2 size-4" />
                   {t("document.share")}
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="ghost" size="sm" className="max-md:h-11">
-                      {t("document.export")}
-                      <ChevronDown aria-hidden="true" className="ml-1 size-3.5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => void handleCopyText()}>
-                      {t("document.copyText")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <ExportMenu itemId={item.id} />
                 <OverflowMenu items={overflowItems} label={t("overflow.label")} />
               </div>
             )

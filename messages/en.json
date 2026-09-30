@@ -4520,8 +4520,6 @@
     "document": {
       "loadFailed": "Couldn't load this transcript",
       "share": "Share",
-      "export": "Export",
-      "copyText": "Copy text",
       "correctTextAndSpeakers": "Correct text and speakers",
       "moveToProject": "Move to project",
       "moveToProjectDescription": "Choose a project for this transcript, or remove it from one.",
@@ -4549,6 +4547,22 @@
       "staleConflictTitle": "This transcript changed since you started editing",
       "staleConflictDescription": "Someone may have saved changes to it in the meantime. Saving now will overwrite them with your version.",
       "staleConflictConfirm": "Save anyway"
+    },
+    "export": {
+      "label": "Export",
+      "copyText": "Copy text",
+      "copied": "Transcript copied",
+      "copyFailed": "Could not copy the transcript",
+      "downloadFailed": "Couldn't download the transcript",
+      "markdown": "Markdown (.md)",
+      "word": "Word document (.docx)",
+      "pdf": "PDF (.pdf)",
+      "csv": "CSV (.csv)",
+      "srt": "Subtitles (.srt)",
+      "include": "Include",
+      "includeSummary": "Summary and action items",
+      "includeTimestamps": "Timestamps",
+      "includeSpeakers": "Speaker names"
     },
     "checklist": {
       "ready": "Ready to save",
