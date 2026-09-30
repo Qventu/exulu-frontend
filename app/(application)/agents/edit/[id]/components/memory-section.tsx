@@ -335,7 +335,14 @@ export function MemorySection({ editor, refs }: EditorSectionProps) {
       />
       <ConfirmDialog
         open={confirmChange}
-        onOpenChange={setConfirmChange}
+        variant="default"
+        onOpenChange={(open) => {
+          setConfirmChange(open);
+          // Cancel/Escape closes without confirming — clear the abandoned
+          // pick so the trigger falls back to `selected?.name` again and a
+          // reopen doesn't show (or Confirm doesn't apply) a stale choice.
+          if (!open) setPendingPick(null);
+        }}
         title={t("editor.memory.changeStoreTitle")}
         description={
           <div className="space-y-3">

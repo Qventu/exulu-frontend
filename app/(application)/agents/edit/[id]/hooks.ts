@@ -362,6 +362,11 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       category: values.category,
       active: values.active,
       memory: memory || null,
+      // Stringified, mirroring tools/skills below: the generated update
+      // mutation stringifies object inputs for json columns itself, and
+      // Postgres parses either form into the same jsonb object, so sending
+      // it pre-stringified is equivalent and keeps this json-column field
+      // consistent with its siblings in the same mutation.
       memory_config: memory ? JSON.stringify(memoryConfig) : null,
       feedback: values.feedback,
       suggestions_enabled: values.suggestions_enabled ?? false,

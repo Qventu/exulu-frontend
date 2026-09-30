@@ -54,7 +54,22 @@ type Edits = { title: string; information: string; type: string; rights_mode: Ri
 // context default — an explicit statement always wins over a standing default.
 const preselect = (agent: Agent, contextDefault: RightsMode | undefined, hint: "private" | "public" | null): RightsMode => {
   if (hint) return hint;
-  const cfg = (agent as { memory_config?: { visibility?: string } }).memory_config;
+  const raw = (agent as { memory_config?: unknown }).memory_config;
+  // memory_config is a json column; the hooks.ts save path sends it
+  // JSON.stringify'd (mirrors tools/skills — see hooks.ts's save callback),
+  // and a demo/mock resolver can hand back the same raw string too. Parse
+  // before reading `.visibility` so a stringified source doesn't silently
+  // fall through to the context default instead of preselecting private.
+  let cfg: { visibility?: string } | undefined;
+  if (typeof raw === "string") {
+    try {
+      cfg = JSON.parse(raw);
+    } catch {
+      cfg = undefined;
+    }
+  } else if (raw && typeof raw === "object") {
+    cfg = raw as { visibility?: string };
+  }
   if (cfg?.visibility === "preselect_private") return "private";
   return contextDefault ?? "private";
 };
