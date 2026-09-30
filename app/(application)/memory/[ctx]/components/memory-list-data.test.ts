@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  activeFilterCount, buildMemoryFilters, creatorIds, creatorName, hasSourceSession, memoryTypeOptions, visibilityKey,
+  activeFilterCount, buildMemoryFilters, creatorName, hasSourceSession, memoryTypeOptions, visibilityKey,
 } from "./memory-list-data";
 
 const ctx = { fields: [{ name: "information", type: "text" }, { name: "type", type: "enum", enumValues: ["FACT", "PREFERENCE"] }] };
@@ -11,9 +11,12 @@ describe("buildMemoryFilters", () => {
       { archived: { eq: false }, information: { contains: "gearbox" } },
     ]);
   });
-  it("omits the search for whitespace and passes special characters verbatim", () => {
+  it("omits the search for whitespace and escapes the LIKE wildcards", () => {
     expect(buildMemoryFilters({ search: "   ", mine: false, userId: 4, filters: {} })).toEqual([{ archived: { eq: false } }]);
-    expect(buildMemoryFilters({ search: "100%_{x}", mine: false, userId: 4, filters: {} })[0]).toMatchObject({ information: { contains: "100%_{x}" } });
+    // The server hands `contains` straight to LIKE, so %, _ and \ are escaped
+    // here; {} and other characters are not LIKE syntax and stay verbatim.
+    expect(buildMemoryFilters({ search: "100%_{x}", mine: false, userId: 4, filters: {} })[0]).toMatchObject({ information: { contains: "100\\%\\_{x}" } });
+    expect(buildMemoryFilters({ search: "a\\b", mine: false, userId: 4, filters: {} })[0]).toMatchObject({ information: { contains: "a\\\\b" } });
   });
   it("maps visibility, type and creator; Mine overrides creator", () => {
     expect(buildMemoryFilters({ search: "", mine: false, userId: 4, filters: { visibility: "private", type: "FACT", creator: "9" } })).toEqual([
@@ -34,12 +37,13 @@ describe("helpers", () => {
     expect(hasSourceSession(ctx)).toBe(false);
     expect(hasSourceSession({ fields: [...ctx.fields, { name: "source_session", type: "text" }] })).toBe(true);
   });
-  it("collects distinct creator ids and formats names", () => {
-    expect(creatorIds([{ id: "1", created_by: 9 }, { id: "2", created_by: 9 }, { id: "3", created_by: null }])).toEqual([9]);
-    const users = [{ id: 9, firstname: "Sara", lastname: "Kraus", email: "s@x.de" }, { id: 3, firstname: null, lastname: null, email: "t@x.de" }];
-    expect(creatorName(users, 9)).toBe("Sara Kraus");
-    expect(creatorName(users, 3)).toBe("t@x.de");
-    expect(creatorName(users, 7)).toBeNull();
+  it("looks a creator up among the base's contributors", () => {
+    const contributors = [{ id: 9, name: "Sara Kraus" }, { id: 3, name: "t@x.de" }];
+    expect(creatorName(contributors, 9)).toBe("Sara Kraus");
+    expect(creatorName(contributors, 3)).toBe("t@x.de");
+    expect(creatorName(contributors, 7)).toBeNull();
+    expect(creatorName(contributors, null)).toBeNull();
+    expect(creatorName([], 9)).toBeNull();
   });
   it("maps rights modes to visibility keys", () => {
     expect(visibilityKey("public")).toBe("public");

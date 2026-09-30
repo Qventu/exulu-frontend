@@ -20,7 +20,7 @@ export function NotFoundBase({ contextId }: { contextId: string }) {
   const t = useTranslations("memory");
   return (
     <PageShell>
-      <EmptyState title={t("base.missingFromCode")} description={contextId} action={{ label: t("empty.back"), href: "/memory" }} />
+      <EmptyState title={t("base.missingFromCode")} description={contextId} action={{ label: t("empty.backToOverview"), href: "/memory" }} />
     </PageShell>
   );
 }
@@ -34,8 +34,11 @@ export function BaseShell({ context, initialMine, initialPage }: { context: Memo
   const agents = base?.agents ?? [];
   const valid = context.memoryBase?.ok ?? false;
 
+  // Until memoryBases has answered, `agents` is empty for every base — showing
+  // "Not used by any agent" then would claim something the page does not know.
   const usedBy =
-    agents.length === 0 ? t("base.notUsed")
+    bases.loading && !bases.data ? undefined
+    : agents.length === 0 ? t("base.notUsed")
     : agents.length === 1 ? t("base.usedByOne", { agent: agents[0].name })
     : t("base.usedByMore", { agent: agents[0].name, count: agents.length - 1 });
 

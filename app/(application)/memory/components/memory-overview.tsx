@@ -19,7 +19,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-import { GET_AGENT_COUNT, GET_MEMORY_BASES } from "../queries";
+import { GET_MEMORY_AGENT_COUNT, GET_MEMORY_BASES } from "../queries";
 import {
   type BaseFilterMode,
   type MemoryBase,
@@ -103,11 +103,12 @@ export function MemoryOverview() {
   const [mode, setMode] = React.useState<BaseFilterMode>("all");
 
   const bases = useQuery<{ memoryBases: MemoryBase[] }>(GET_MEMORY_BASES, { fetchPolicy: "cache-and-network" });
-  const agents = useQuery<{ agentsPagination: { pageInfo: { itemCount: number } } }>(GET_AGENT_COUNT);
+  // Unscoped, like memoryBases — see GET_MEMORY_AGENT_COUNT.
+  const agents = useQuery<{ memoryAgentCount: number }>(GET_MEMORY_AGENT_COUNT);
 
-  const all = bases.data?.memoryBases ?? [];
+  const all = React.useMemo(() => bases.data?.memoryBases ?? [], [bases.data]);
   const rows = React.useMemo(() => filterBases(all, search, mode), [all, search, mode]);
-  const totals = overviewTotals(all, agents.data?.agentsPagination.pageInfo.itemCount ?? 0);
+  const totals = overviewTotals(all, agents.data?.memoryAgentCount ?? 0);
 
   const columns = React.useMemo<ColumnDef<MemoryBase>[]>(
     () => [

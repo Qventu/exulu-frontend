@@ -9,6 +9,11 @@ import {
   GET_CONTEXT_ICONS,
   GET_USER_CONTEXT_ITEM_FAVOURITES,
 } from "@/app/(application)/data/queries";
+import {
+  GET_MEMORY_AGENT_COUNT,
+  GET_MEMORY_BASES,
+  GET_MEMORY_BASE_CONTRIBUTORS,
+} from "@/app/(application)/memory/queries";
 import { ROUTINE_RUNS_ATTENTION_COUNT } from "@/lib/routine-runs/queries";
 import { ALGI_RUNS_NEEDING_ATTENTION } from "./fixtures/chapter-email";
 import { runDemoOperation as run } from "./test-support";
@@ -142,5 +147,26 @@ describe("/agents/edit/[id] operations", () => {
     for (const id of Object.keys(get("knowledge_bases"))) {
       expect(known.has(id), `knowledge_bases references unknown context: ${id}`).toBe(true);
     }
+  });
+});
+
+describe("/memory page operations", () => {
+  it("answers MemoryBases with a list (the overview renders its empty state)", async () => {
+    const data = await run(GET_MEMORY_BASES);
+    expect(Array.isArray(data.memoryBases)).toBe(true);
+  });
+
+  it("answers MemoryAgentCount as a bare number, not a pagination wrapper", async () => {
+    // It used to be agentsPagination(limit: 1) { pageInfo { itemCount } } — an
+    // RBAC-scoped count paired with the unscoped memoryBases. Asserting the
+    // scalar here is what catches a silent revert to the wrapper shape.
+    const data = await run(GET_MEMORY_AGENT_COUNT);
+    expect(typeof data.memoryAgentCount).toBe("number");
+    expect(data.memoryAgentCount as number).toBeGreaterThan(0);
+  });
+
+  it("answers MemoryBaseContributors with a list", async () => {
+    const data = await run(GET_MEMORY_BASE_CONTRIBUTORS, { contextId: "newton_memory_context" });
+    expect(Array.isArray(data.memoryBaseContributors)).toBe(true);
   });
 });

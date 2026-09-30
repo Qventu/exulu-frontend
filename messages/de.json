@@ -3264,8 +3264,6 @@
       "type": "Typ",
       "creator": "Erstellt von",
       "creatorPlaceholder": "Beliebig",
-      "creatorSearch": "Nach E-Mail suchen",
-      "creatorEmpty": "Keine Nutzer gefunden",
       "any": "Beliebig",
       "apply": "Anwenden"
     },
@@ -3300,7 +3298,8 @@
       "memoriesDescription": "Agenten speichern sie, wenn jemand sagt „merk dir …“.",
       "notAvailableTitle": "Diese Erinnerung ist für dich nicht verfügbar",
       "notAvailableDescription": "Sie ist privat für die Person, die sie gespeichert hat, oder wurde gelöscht.",
-      "back": "Zurück zur Gedächtnis-Basis"
+      "back": "Zurück zur Gedächtnis-Basis",
+      "backToOverview": "Zurück zum Gedächtnis"
     },
     "visibility": {
       "public": "Öffentlich",
@@ -3310,7 +3309,6 @@
       "teams": "Teams"
     },
     "detail": {
-      "breadcrumb": "Gedächtnis",
       "whySaved": "Warum gespeichert",
       "notRecorded": "Nicht erfasst",
       "source": "Ursprungsgespräch",
@@ -3340,10 +3338,10 @@
     "bulk": {
       "setAccess": "Zugriff festlegen",
       "delete": "Löschen",
-      "deleteTitle": "{count} Erinnerungen löschen?",
+      "deleteTitle": "{count, plural, one {# Erinnerung löschen?} other {# Erinnerungen löschen?}}",
       "deleteDescription": "Agenten rufen sie nicht mehr ab. Das lässt sich nicht rückgängig machen.",
-      "deleted": "{count} Erinnerungen gelöscht",
-      "deleteFailed": "{count} konnten nicht gelöscht werden"
+      "deleted": "{count, plural, one {# Erinnerung gelöscht} other {# Erinnerungen gelöscht}}",
+      "deleteFailed": "{count, plural, one {# konnte nicht gelöscht werden} other {# konnten nicht gelöscht werden}}"
     }
   },
   "models": {

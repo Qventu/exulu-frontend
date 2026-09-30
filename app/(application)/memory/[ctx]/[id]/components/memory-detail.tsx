@@ -21,9 +21,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import {
-  BULK_UPDATE_MEMORY_RBAC, DELETE_MEMORY_ITEM, GET_MEMORY_ITEM_BY_ID, GET_SOURCE_MESSAGES, GET_SOURCE_SESSION, GET_USERS_BY_IDS, MEMORY_ITEM_KEY,
+  BULK_UPDATE_MEMORY_RBAC, DELETE_MEMORY_ITEM, GET_MEMORY_BASE_CONTRIBUTORS, GET_MEMORY_ITEM_BY_ID, GET_SOURCE_MESSAGES, GET_SOURCE_SESSION, MEMORY_ITEM_KEY,
 } from "../../../queries";
-import { type MemoryContext, type MemoryItem, type UserName, creatorName, hasSourceSession, visibilityKey } from "../../components/memory-list-data";
+import { type MemoryContext, type MemoryContributor, type MemoryItem, creatorName, hasSourceSession, visibilityKey } from "../../components/memory-list-data";
 import { VisibilityLabel } from "../../components/memory-table";
 import { detailActions, sourceQuote } from "./memory-detail-data";
 
@@ -31,12 +31,18 @@ type Rbac = { rights_mode: "private" | "users" | "roles" | "teams" | "public"; u
 
 function SourceConversation({ sessionId }: { sessionId: string }) {
   const t = useTranslations("memory");
-  const session = useQuery<{ agent_sessionById: { id: string; title?: string | null; agent: string } | null }>(GET_SOURCE_SESSION, { variables: { id: sessionId } });
-  const messages = useQuery<{ agent_messagesPagination: { items: { id: string; content: string; createdAt: string }[] } }>(GET_SOURCE_MESSAGES, { variables: { session: sessionId } });
-  const quote = sourceQuote(messages.data?.agent_messagesPagination.items ?? []);
+  const session = useQuery<{ agent_sessionById: { id: string; agent: string } | null }>(GET_SOURCE_SESSION, { variables: { id: sessionId } });
   const s = session.data?.agent_sessionById;
-  if (session.loading || messages.loading) return <Skeleton className="h-16 w-full" />;
-  if (!s || !quote) return <p className="text-sm text-muted-foreground">{t("detail.noSource")}</p>;
+  // agent_messagesPagination is NOT RBAC-scoped (see the security follow-up in
+  // docs/superpowers/plans/2026-09-30-memory-recall-followups.md), so the
+  // messages are only ever requested once agent_sessionById — which is scoped —
+  // has proved this viewer may read the session. Never in parallel with it.
+  const messages = useQuery<{ agent_messagesPagination: { items: { id: string; content: string; createdAt: string }[] } }>(GET_SOURCE_MESSAGES, { skip: !s, variables: { session: sessionId } });
+  const quote = sourceQuote(messages.data?.agent_messagesPagination.items ?? []);
+  if (session.loading && !session.data) return <Skeleton className="h-16 w-full" />;
+  if (!s) return <p className="text-sm text-muted-foreground">{t("detail.noSource")}</p>;
+  if (messages.loading && !messages.data) return <Skeleton className="h-16 w-full" />;
+  if (!quote) return <p className="text-sm text-muted-foreground">{t("detail.noSource")}</p>;
   return (
     <div className="flex flex-col gap-2">
       <blockquote className="border-l-2 pl-3 text-sm text-muted-foreground">“{quote}”</blockquote>
@@ -54,7 +60,7 @@ export function MemoryDetail({ context, itemId }: { context: MemoryContext; item
 
   const item = useQuery<{ [key: string]: MemoryItem | null }>(GET_MEMORY_ITEM_BY_ID(context.id, withSource), { variables: { id: itemId }, fetchPolicy: "cache-and-network" });
   const memory = item.data?.[MEMORY_ITEM_KEY(context.id)] ?? null;
-  const users = useQuery<{ usersPagination: { items: UserName[] } }>(GET_USERS_BY_IDS, { skip: typeof memory?.created_by !== "number", variables: { ids: [memory?.created_by] } });
+  const contributors = useQuery<{ memoryBaseContributors: MemoryContributor[] }>(GET_MEMORY_BASE_CONTRIBUTORS, { fetchPolicy: "cache-first", variables: { contextId: context.id } });
   const [updateRbac, updateState] = useMutation(BULK_UPDATE_MEMORY_RBAC(context.id));
   const [deleteItem] = useMutation(DELETE_MEMORY_ITEM(context.id));
 
@@ -75,7 +81,7 @@ export function MemoryDetail({ context, itemId }: { context: MemoryContext; item
   }
 
   const actions = detailActions(memory, user);
-  const creator = creatorName(users.data?.usersPagination.items ?? [], memory.created_by) ?? t("detail.unknownUser");
+  const creator = creatorName(contributors.data?.memoryBaseContributors ?? [], memory.created_by) ?? t("detail.unknownUser");
 
   // ConfirmDialog's contract: resolve → it closes itself; reject → it stays
   // open (components/primitives/confirm-dialog.tsx). Toast + rethrow on

@@ -11,6 +11,10 @@ describe("memory item queries", () => {
     expect(body(GET_MEMORY_ITEMS("newton_memory_context", false))).not.toContain("source_session");
     expect(body(GET_MEMORY_ITEM_BY_ID("newton_memory_context", true))).toContain("source_session");
   });
+  it("request RBAC grants on the detail query only — the list never renders them", () => {
+    expect(body(GET_MEMORY_ITEMS("mem", false))).not.toContain("RBAC");
+    expect(body(GET_MEMORY_ITEM_BY_ID("mem", false))).toContain("RBAC");
+  });
   it("use the generated per-context operations", () => {
     expect(body(GET_MEMORY_ITEMS("mem", false))).toContain("mem_itemsPagination(");
     expect(body(GET_MEMORY_ITEMS("mem", false))).toContain("[FilterMem_items]");

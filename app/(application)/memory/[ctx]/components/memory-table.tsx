@@ -17,9 +17,9 @@ import { Toolbar } from "@/components/primitives/toolbar";
 import { BulkAccessDialog } from "@/components/widgets/bulk-access-dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { BULK_UPDATE_MEMORY_RBAC, DELETE_MEMORY_ITEM, SEARCH_USERS, GET_USERS_BY_IDS } from "../../queries";
+import { BULK_UPDATE_MEMORY_RBAC, DELETE_MEMORY_ITEM } from "../../queries";
 import {
-  type MemoryContext, type MemoryItem, type MemoryListFilters, type UserName,
+  type MemoryContext, type MemoryContributor, type MemoryItem, type MemoryListFilters,
   activeFilterCount, creatorName, hasSourceSession, memoryTypeOptions, visibilityKey,
 } from "./memory-list-data";
 import { useMemoryItems } from "./use-memory-items";
@@ -38,9 +38,9 @@ export function VisibilityLabel({ mode }: { mode: string | null | undefined }) {
   );
 }
 
-function MemoryCell({ item, users }: { item: MemoryItem; users: UserName[] }) {
+function MemoryCell({ item, contributors }: { item: MemoryItem; contributors: MemoryContributor[] }) {
   const t = useTranslations("memory");
-  const creator = creatorName(users, item.created_by) ?? t("detail.unknownUser");
+  const creator = creatorName(contributors, item.created_by) ?? t("detail.unknownUser");
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-sm line-clamp-2">{item.information ?? item.name}</span>
@@ -71,10 +71,14 @@ export function MemoryTable({
   const [deleteItem] = useMutation(DELETE_MEMORY_ITEM(context.id));
 
   // Back to page 1 whenever the query changes — but not on mount, where the
-  // page comes from the URL.
-  const mounted = React.useRef(false);
+  // page comes from the URL. Compared against the previous values rather than a
+  // mounted flag: React strict mode runs effects twice, which a flag reads as a
+  // change and which would throw away the URL's page on the second pass.
+  const prev = React.useRef({ search, mine, filters });
   React.useEffect(() => {
-    if (!mounted.current) { mounted.current = true; return; }
+    const p = prev.current;
+    if (p.search === search && p.mine === mine && p.filters === filters) return;
+    prev.current = { search, mine, filters };
     setPage(1);
     setSelected([]);
   }, [search, mine, filters]);
@@ -89,25 +93,16 @@ export function MemoryTable({
       options: memoryTypeOptions(context).map((v) => ({ value: v, label: v })),
     },
     {
-      id: "creator", label: t("filter.creator"), type: "entity",
-      placeholder: t("filter.creatorPlaceholder"), searchPlaceholder: t("filter.creatorSearch"), emptyMessage: t("filter.creatorEmpty"),
-      fetchOptions: async (q) => {
-        if (!q.trim()) return [];
-        const res = await client.query<{ usersPagination: { items: UserName[] } }>({ query: SEARCH_USERS, variables: { search: q.trim() } });
-        return res.data.usersPagination.items.map((u) => ({ value: String(u.id), label: creatorName([u], Number(u.id)) ?? String(u.id) }));
-      },
-      resolveLabel: async (id) => {
-        const res = await client.query<{ usersPagination: { items: UserName[] } }>({ query: GET_USERS_BY_IDS, variables: { ids: [Number(id)] } });
-        return creatorName(res.data.usersPagination.items, Number(id));
-      },
+      id: "creator", label: t("filter.creator"), type: "select", placeholder: t("filter.creatorPlaceholder"),
+      options: list.contributors.map((c) => ({ value: String(c.id), label: c.name })),
     },
-  ], [t, context, client]);
+  ], [t, context, list.contributors]);
 
   const columns = React.useMemo<ColumnDef<MemoryItem>[]>(() => [
-    { id: "memory", header: t("columns.memory"), cell: ({ row }) => <MemoryCell item={row.original} users={list.users} /> },
+    { id: "memory", header: t("columns.memory"), cell: ({ row }) => <MemoryCell item={row.original} contributors={list.contributors} /> },
     { id: "visibility", header: t("columns.visibility"), cell: ({ row }) => <VisibilityLabel mode={row.original.rights_mode} /> },
     { id: "saved", header: t("columns.saved"), cell: ({ row }) => (row.original.createdAt ? <RelativeTime date={row.original.createdAt} /> : "—") },
-  ], [t, list.users]);
+  ], [t, list.contributors]);
 
   const handleBulkDelete = async () => {
     const targets = selected;
@@ -199,7 +194,7 @@ export function MemoryTable({
         empty={{ icon: Bookmark, title: t("empty.memoriesTitle"), description: t("empty.memoriesDescription") }}
         mobileCard={(row) => (
           <div className="flex flex-col gap-1">
-            <MemoryCell item={row} users={list.users} />
+            <MemoryCell item={row} contributors={list.contributors} />
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <VisibilityLabel mode={row.rights_mode} />
               {row.createdAt && <RelativeTime date={row.createdAt} />}

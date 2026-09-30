@@ -641,9 +641,8 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // No fabricated memories: the overview renders its empty state and the
   // per-base pages are never reached from it.
   MemoryBases: () => ({ memoryBases: [] }),
-  MemoryAgentCount: (world) => ({
-    agentsPagination: { pageInfo: { itemCount: world.agents.length } },
-  }),
+  MemoryAgentCount: (world) => ({ memoryAgentCount: world.agents.length }),
+  MemoryBaseContributors: () => ({ memoryBaseContributors: [] }),
 
   // --- /agents/edit/[id] (chapter 3: agent configuration) -----------------
   AgentEditorById: (world, variables) => ({

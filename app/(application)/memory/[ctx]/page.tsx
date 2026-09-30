@@ -26,5 +26,7 @@ export default async function MemoryBasePage({
     | undefined;
   const context = data?.contextById ?? null;
   if (!context) return <NotFoundBase contextId={ctx} />;
-  return <BaseShell context={context} initialMine={sp.mine === "1"} initialPage={Number(sp.page) || 1} />;
+  // ?page=0 / -3 / 2.7 / "abc" must not reach the list as a page number.
+  const initialPage = Math.max(1, Math.floor(Number(sp.page)) || 1);
+  return <BaseShell context={context} initialMine={sp.mine === "1"} initialPage={initialPage} />;
 }

@@ -5,9 +5,9 @@ import * as React from "react";
 
 import { UserContext } from "@/app/(application)/authenticated";
 
-import { GET_MEMORY_ITEMS, GET_USERS_BY_IDS, MEMORY_ITEMS_KEY } from "../../queries";
+import { GET_MEMORY_BASE_CONTRIBUTORS, GET_MEMORY_ITEMS, MEMORY_ITEMS_KEY } from "../../queries";
 import {
-  type MemoryItem, type MemoryListFilters, type UserName, buildMemoryFilters, creatorIds,
+  type MemoryContributor, type MemoryItem, type MemoryListFilters, buildMemoryFilters,
 } from "./memory-list-data";
 
 export const PAGE_SIZE = 20;
@@ -39,15 +39,17 @@ export function useMemoryItems(args: {
   );
   const live = query.data?.[MEMORY_ITEMS_KEY(args.contextId)] ?? query.previousData?.[MEMORY_ITEMS_KEY(args.contextId)];
   const items = live?.items ?? [];
-  const ids = creatorIds(items);
-  const users = useQuery<{ usersPagination: { items: UserName[] } }>(GET_USERS_BY_IDS, {
-    skip: ids.length === 0,
-    variables: { ids },
+  // One per-base query for every creator name, independent of the page: it is
+  // cheap, cacheable and needs no `users` right (see GET_MEMORY_BASE_CONTRIBUTORS).
+  const contributors = useQuery<{ memoryBaseContributors: MemoryContributor[] }>(GET_MEMORY_BASE_CONTRIBUTORS, {
+    skip: args.skip,
+    fetchPolicy: "cache-first",
+    variables: { contextId: args.contextId },
   });
   return {
     items,
     pageInfo: live?.pageInfo ?? { pageCount: 0, itemCount: 0, currentPage: args.page, hasPreviousPage: false, hasNextPage: false },
-    users: users.data?.usersPagination.items ?? [],
+    contributors: contributors.data?.memoryBaseContributors ?? [],
     loading: query.loading && !query.data,
     error: query.error,
     refetch: () => { void query.refetch(); },

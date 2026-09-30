@@ -39,7 +39,10 @@ export function buildMemoryFilters(args: {
 }): Record<string, unknown>[] {
   const f: Record<string, unknown> = { archived: { eq: false } };
   const q = args.search.trim();
-  if (q) f.information = { contains: q };
+  // The server passes `contains` straight into a LIKE pattern, so the LIKE
+  // wildcards (and the escape character itself) have to be escaped here or a
+  // search for "100%" matches everything.
+  if (q) f.information = { contains: q.replace(/[\\%_]/g, (m) => "\\" + m) };
   if (args.filters.visibility) f.rights_mode = { eq: args.filters.visibility };
   if (args.filters.type) f.type = { eq: args.filters.type };
   if (args.mine) {
@@ -65,18 +68,12 @@ export function hasSourceSession(context: Pick<MemoryContext, "fields">): boolea
   return !!f && (f.type === "text" || f.type === "longText");
 }
 
-export function creatorIds(items: Pick<MemoryItem, "id" | "created_by">[]): number[] {
-  return [...new Set(items.map((i) => i.created_by).filter((x): x is number => typeof x === "number"))];
-}
+/** A row of `memoryBaseContributors`: the server already resolved the display name. */
+export interface MemoryContributor { id: number; name: string }
 
-export interface UserName { id: number; firstname?: string | null; lastname?: string | null; email?: string | null }
-
-export function creatorName(users: UserName[], id: number | null | undefined): string | null {
+export function creatorName(contributors: MemoryContributor[], id: number | null | undefined): string | null {
   if (typeof id !== "number") return null;
-  const u = users.find((x) => Number(x.id) === id);
-  if (!u) return null;
-  const full = [u.firstname, u.lastname].filter(Boolean).join(" ").trim();
-  return full || u.email || null;
+  return contributors.find((c) => Number(c.id) === id)?.name ?? null;
 }
 
 export type VisibilityKey = "public" | "private" | "users" | "roles" | "teams";

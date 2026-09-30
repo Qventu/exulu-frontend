@@ -31,11 +31,25 @@ export const GET_MEMORY_BASES = gql`
   }
 `;
 
-export const GET_AGENT_COUNT = gql`
+/**
+ * The agent total behind "N of M agents use a memory base". Server-side and
+ * unscoped, like `memoryBases` itself — agentsPagination is RBAC-scoped, which
+ * made the two halves of that sentence count different populations.
+ */
+export const GET_MEMORY_AGENT_COUNT = gql`
   query MemoryAgentCount {
-    agentsPagination(page: 1, limit: 1) {
-      pageInfo { itemCount }
-    }
+    memoryAgentCount
+  }
+`;
+
+/**
+ * Who saved into this base. Replaces usersPagination, which requires the
+ * `users` right the Memory area does not ask for (agents:read) and throws
+ * without it. Ids + display names only, gated on agents-read server-side.
+ */
+export const GET_MEMORY_BASE_CONTRIBUTORS = gql`
+  query MemoryBaseContributors($contextId: ID!) {
+    memoryBaseContributors(contextId: $contextId) { id name }
   }
 `;
 
@@ -53,19 +67,24 @@ export const GET_MEMORY_BASE = gql`
   }
 `;
 
-const ITEM_FIELDS = (fields: string[]) => `
+const LIST_ITEM_FIELDS = (fields: string[]) => `
   id
   name
   description
   createdAt
   updatedAt
   rights_mode
+  ${fields.join("\n")}
+`;
+
+/** The list only shows the rights_mode label; grants are read on the detail page. */
+const DETAIL_ITEM_FIELDS = (fields: string[]) => `
+  ${LIST_ITEM_FIELDS(fields)}
   RBAC {
     type
     users { id rights }
     roles { id rights }
   }
-  ${fields.join("\n")}
 `;
 
 export const memoryItemFields = (withSourceSession: boolean) => [
@@ -84,14 +103,14 @@ export const GET_MEMORY_ITEMS = (context: string, withSourceSession: boolean) =>
   query ${context}MemoriesPagination($page: Int!, $limit: Int!, $filters: [Filter${upperFirst(context)}_items], $sort: SortBy = { field: "createdAt", direction: DESC }) {
     ${context}_itemsPagination(page: $page, limit: $limit, filters: $filters, sort: $sort) {
       pageInfo { pageCount itemCount currentPage hasPreviousPage hasNextPage }
-      items { ${ITEM_FIELDS(memoryItemFields(withSourceSession))} }
+      items { ${LIST_ITEM_FIELDS(memoryItemFields(withSourceSession))} }
     }
   }
 `;
 
 export const GET_MEMORY_ITEM_BY_ID = (context: string, withSourceSession: boolean) => gql`
   query ${context}MemoryById($id: ID!) {
-    ${context}_itemsById(id: $id) { ${ITEM_FIELDS(memoryItemFields(withSourceSession))} }
+    ${context}_itemsById(id: $id) { ${DETAIL_ITEM_FIELDS(memoryItemFields(withSourceSession))} }
   }
 `;
 
@@ -111,26 +130,9 @@ export const BULK_UPDATE_MEMORY_RBAC = (context: string) => gql`
   }
 `;
 
-export const GET_USERS_BY_IDS = gql`
-  query MemoryUsersByIds($ids: [Float]) {
-    usersPagination(page: 1, limit: 100, filters: [{ id: { in: $ids } }]) {
-      items { id firstname lastname email }
-    }
-  }
-`;
-
-/** Same filter shape as the RBAC control's user search (email contains, no api users). */
-export const SEARCH_USERS = gql`
-  query MemoryUserSearch($search: String!) {
-    usersPagination(page: 1, limit: 8, filters: [{ type: { ne: "api" } }, { email: { contains: $search } }]) {
-      items { id firstname lastname email }
-    }
-  }
-`;
-
 export const GET_SOURCE_SESSION = gql`
   query MemorySourceSession($id: ID!) {
-    agent_sessionById(id: $id) { id title agent }
+    agent_sessionById(id: $id) { id agent }
   }
 `;
 

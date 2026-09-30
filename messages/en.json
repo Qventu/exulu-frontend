@@ -3264,8 +3264,6 @@
       "type": "Type",
       "creator": "Creator",
       "creatorPlaceholder": "Any creator",
-      "creatorSearch": "Search by email",
-      "creatorEmpty": "No users found",
       "any": "Any",
       "apply": "Apply"
     },
@@ -3300,7 +3298,8 @@
       "memoriesDescription": "Agents save them when people say “remember that …”.",
       "notAvailableTitle": "This memory isn't available to you",
       "notAvailableDescription": "It is private to the person who saved it, or it was deleted.",
-      "back": "Back to the memory base"
+      "back": "Back to the memory base",
+      "backToOverview": "Back to Memory"
     },
     "visibility": {
       "public": "Public",
@@ -3310,7 +3309,6 @@
       "teams": "Teams"
     },
     "detail": {
-      "breadcrumb": "Memory",
       "whySaved": "Why it was saved",
       "notRecorded": "Not recorded",
       "source": "Source conversation",
@@ -3340,10 +3338,10 @@
     "bulk": {
       "setAccess": "Set access",
       "delete": "Delete",
-      "deleteTitle": "Delete {count} memories?",
+      "deleteTitle": "{count, plural, one {Delete # memory?} other {Delete # memories?}}",
       "deleteDescription": "Agents will no longer recall them. This cannot be undone.",
-      "deleted": "{count} memories deleted",
-      "deleteFailed": "{count} could not be deleted"
+      "deleted": "{count, plural, one {# memory deleted} other {# memories deleted}}",
+      "deleteFailed": "{count, plural, one {# could not be deleted} other {# could not be deleted}}"
     }
   },
   "models": {
