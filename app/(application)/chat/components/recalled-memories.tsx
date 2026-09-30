@@ -2,7 +2,7 @@
 
 import { useMutation } from "@apollo/client";
 import type { UIMessage } from "ai";
-import { Brain, Globe, Lock, Trash2 } from "lucide-react";
+import { Brain, ChevronDownIcon, Globe, Lock, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import * as React from "react";
@@ -32,14 +32,15 @@ export function RecalledMemories({ message }: { message: UIMessage; agent: Agent
   const [forgotten, setForgotten] = React.useState<Set<string>>(new Set());
   const [deleteItem] = useMutation(DELETE_MEMORY_ITEM(pending?.contextId ?? memories[0]?.contextId ?? ""));
 
-  if (memories.length === 0) return null;
   const visible = memories.filter((m) => !forgotten.has(m.id));
+  if (visible.length === 0) return null;
 
   return (
     <Sources data-demo-id="chat-recalled-memories">
       <SourcesTrigger count={visible.length}>
         <Brain className="size-4" aria-hidden="true" />
         <p className="font-medium">{t("memory.recalledTrigger", { count: visible.length })}</p>
+        <ChevronDownIcon className="h-4 w-4" />
       </SourcesTrigger>
       <SourcesContent className="w-full gap-3">
         <p className="text-xs text-muted-foreground">{t("memory.recalledHint")}</p>
@@ -78,8 +79,14 @@ export function RecalledMemories({ message }: { message: UIMessage; agent: Agent
             await deleteItem({ variables: { id: pending.id } });
             setForgotten((s) => new Set(s).add(pending.id));
             toast.success(t("memory.forgotToast"));
-          } catch { toast.error(t("memory.forgetFailed")); throw new Error("forget failed"); }
-          finally { setPending(null); }
+            // Only clear on success — ConfirmDialog's own contract is
+            // "reject = stay open"; closing (open={!!pending}) here too
+            // would undo that on a failed delete.
+            setPending(null);
+          } catch {
+            toast.error(t("memory.forgetFailed"));
+            throw new Error("forget failed");
+          }
         }} />
     </Sources>
   );
