@@ -31,12 +31,26 @@ import {
 
 const DOCS_URL = "https://docs.exulu.com/building/memory/overview";
 
-export function AgentChips({ agents, max = 2 }: { agents: { id: string; name: string }[]; max?: number }) {
+/** Invalid and missing-from-code bases render muted across the whole row (not just BaseCell). */
+function isBaseMuted(base: MemoryBase): boolean {
+  const state = baseState(base);
+  return state === "invalid" || state === "missingFromCode";
+}
+
+export function AgentChips({
+  agents,
+  max = 2,
+  muted = false,
+}: {
+  agents: { id: string; name: string }[];
+  max?: number;
+  muted?: boolean;
+}) {
   const t = useTranslations("memory");
   const shown = agents.slice(0, max);
   const rest = agents.slice(max);
   return (
-    <span className="flex flex-wrap items-center gap-1">
+    <span className={cn("flex flex-wrap items-center gap-1", muted && "opacity-70")}>
       {shown.map((a) => (
         <Badge key={a.id} variant="secondary" className="font-normal">{a.name}</Badge>
       ))}
@@ -56,7 +70,7 @@ function BaseCell({ base }: { base: MemoryBase }) {
   const t = useTranslations("memory");
   const state = baseState(base);
   const sub = baseSubtitle(base);
-  const muted = state === "invalid" || state === "missingFromCode";
+  const muted = isBaseMuted(base);
   return (
     <div className={cn("flex flex-col gap-0.5", muted && "text-muted-foreground")}>
       <span className="font-medium">{base.name}</span>
@@ -98,14 +112,41 @@ export function MemoryOverview() {
   const columns = React.useMemo<ColumnDef<MemoryBase>[]>(
     () => [
       { id: "base", header: t("columns.base"), cell: ({ row }) => <BaseCell base={row.original} /> },
-      { id: "usedBy", header: t("columns.usedBy"), cell: ({ row }) => <AgentChips agents={row.original.agents} /> },
-      { id: "memories", header: t("columns.memories"), cell: ({ row }) => row.original.stats?.total ?? "—" },
-      { id: "contributors", header: t("columns.contributors"), cell: ({ row }) => row.original.stats?.contributors ?? "—" },
+      {
+        id: "usedBy",
+        header: t("columns.usedBy"),
+        cell: ({ row }) => <AgentChips agents={row.original.agents} muted={isBaseMuted(row.original)} />,
+      },
+      {
+        id: "memories",
+        header: t("columns.memories"),
+        cell: ({ row }) => (
+          <span className={cn(isBaseMuted(row.original) && "text-muted-foreground")}>
+            {row.original.stats?.total ?? "—"}
+          </span>
+        ),
+      },
+      {
+        id: "contributors",
+        header: t("columns.contributors"),
+        cell: ({ row }) => (
+          <span className={cn(isBaseMuted(row.original) && "text-muted-foreground")}>
+            {row.original.stats?.contributors ?? "—"}
+          </span>
+        ),
+      },
       {
         id: "lastSaved",
         header: t("columns.lastSaved"),
-        cell: ({ row }) =>
-          row.original.stats?.lastSavedAt ? <RelativeTime date={row.original.stats.lastSavedAt} /> : t("stats.never"),
+        cell: ({ row }) => (
+          <span className={cn(isBaseMuted(row.original) && "text-muted-foreground")}>
+            {row.original.stats?.lastSavedAt ? (
+              <RelativeTime date={row.original.stats.lastSavedAt} />
+            ) : (
+              t("stats.never")
+            )}
+          </span>
+        ),
       },
     ],
     [t],
@@ -152,15 +193,18 @@ export function MemoryOverview() {
           description: t("empty.basesDescription"),
           action: { label: t("empty.basesAction"), href: DOCS_URL },
         }}
-        mobileCard={(row) => (
-          <div className="flex flex-col gap-2">
-            <BaseCell base={row} />
-            <AgentChips agents={row.agents} />
-            <span className="text-xs text-muted-foreground">
-              {t("columns.memories")}: {row.stats?.total ?? "—"} · {t("columns.contributors")}: {row.stats?.contributors ?? "—"}
-            </span>
-          </div>
-        )}
+        mobileCard={(row) => {
+          const muted = isBaseMuted(row);
+          return (
+            <div className="flex flex-col gap-2">
+              <BaseCell base={row} />
+              <AgentChips agents={row.agents} muted={muted} />
+              <span className={cn("text-xs text-muted-foreground", muted && "opacity-70")}>
+                {t("columns.memories")}: {row.stats?.total ?? "—"} · {t("columns.contributors")}: {row.stats?.contributors ?? "—"}
+              </span>
+            </div>
+          );
+        }}
       />
       <p className="text-xs text-muted-foreground">{t("countsNote")}</p>
     </PageShell>
