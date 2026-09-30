@@ -111,7 +111,7 @@ describe("the table itself (§1.2)", () => {
 });
 
 describe("single-right matrix (Phase 1 exit criterion)", () => {
-  it("agents:read → Build's read surfaces (agents, knowledge interim, prompts), no skills/models", () => {
+  it("agents:read → Build's read surfaces (agents, knowledge interim, prompts) plus Models (relaxed to agents:read), no skills", () => {
     expect(ids(userWith({ agents: "read" }))).toEqual([
       "home",
       ...ALL_USER_BODY,
@@ -119,6 +119,7 @@ describe("single-right matrix (Phase 1 exit criterion)", () => {
       "knowledge",
       "memory",
       "prompts",
+      "models",
       ...FOOTER,
     ]);
   });
