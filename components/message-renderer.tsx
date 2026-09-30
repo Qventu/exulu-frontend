@@ -133,6 +133,13 @@ interface MessageRendererProps {
     agent: Agent
     addToolApprovalResponse: ChatAddToolApproveResponseFunction
   }>
+  // "Recalled N memories" block under an assistant answer (spec §2.5, §4.2).
+  // Optional — when absent, nothing renders (no behavior change for other
+  // consumers). Reads message.metadata.recalledMemories itself.
+  RecalledMemoriesComponent?: React.ComponentType<{
+    message: UIMessage
+    agent: Agent
+  }>
   addToContext?: (item: any) => void
   writeAccess?: boolean
   AgentVisualComponent?: React.ComponentType<any>
@@ -163,6 +170,7 @@ export function MessageRenderer({
   onUpdate,
   UntypedToolPartComponent,
   MemoryStackComponent,
+  RecalledMemoriesComponent,
   addToContext,
   writeAccess = true,
   AgentVisualComponent,
@@ -588,6 +596,7 @@ export function MessageRenderer({
             setMessages={setMessages}
             UntypedToolPartComponent={UntypedToolPartComponent}
             MemoryStackComponent={MemoryStackComponent}
+            RecalledMemoriesComponent={RecalledMemoriesComponent}
             AgentVisualComponent={AgentVisualComponent}
           />
         );
@@ -637,6 +646,7 @@ interface MessageItemProps {
   setMessages?: MessageRendererProps["setMessages"]
   UntypedToolPartComponent?: MessageRendererProps["UntypedToolPartComponent"]
   MemoryStackComponent?: MessageRendererProps["MemoryStackComponent"]
+  RecalledMemoriesComponent?: MessageRendererProps["RecalledMemoriesComponent"]
   AgentVisualComponent?: React.ComponentType<any>
 }
 
@@ -685,6 +695,7 @@ const MessageItem = memo(function MessageItem({
   setMessages,
   UntypedToolPartComponent,
   MemoryStackComponent,
+  RecalledMemoriesComponent,
   AgentVisualComponent,
 }: MessageItemProps) {
   // Parsed tool-part data keyed by toolCallId + state: the SDK deep-clones
@@ -1242,6 +1253,10 @@ const MessageItem = memo(function MessageItem({
                     </Shimmer>
                   )}
                 </div>
+              )}
+
+              {message.role === 'assistant' && RecalledMemoriesComponent && agent && (
+                <RecalledMemoriesComponent message={message} agent={agent} />
               )}
 
               {(

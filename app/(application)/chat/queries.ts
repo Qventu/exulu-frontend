@@ -451,6 +451,23 @@ export const UPDATE_ITEM = (context: string) => {
   `;
 };
 
+/**
+ * Route-local delete mutation builder — byte-identical selection to
+ * `DELETE_ITEM` in app/(application)/data/queries.ts (used by
+ * items-table.tsx / use-item-editor.ts), duplicated here because the
+ * eslint feature-isolation rule (codebase-structure §1.2) bans chat/
+ * importing from the data/ feature. Used by RecalledMemories' "Forget".
+ */
+export const DELETE_MEMORY_ITEM = (context: string) => {
+  return gql`
+    mutation DeleteOneById${context}($id: ID!) {
+      ${context}_itemsRemoveOneById(id: $id) {
+        id
+      }
+    }
+  `;
+};
+
 // ---------------------------------------------------------------------------
 // Context presets (composer "Save context preset")
 // ---------------------------------------------------------------------------

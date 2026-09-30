@@ -1141,6 +1141,14 @@
       "noAccessUnknown": "This memory isn't available to you.",
       "error": "Couldn't save the memory: {message}",
       "open": "Open",
+      "recalledTrigger": "Recalled {count, plural, one {# memory} other {# memories}}",
+      "recalledHint": "These shaped this answer.",
+      "savedBy": "{mode} · {name}",
+      "savedByYou": "{mode} · you",
+      "forgetConfirmTitle": "Forget this memory?",
+      "forgetConfirmDescription": "“{title}” will be deleted from the memory base.",
+      "forgotToast": "Memory forgotten",
+      "forgetFailed": "Couldn't forget the memory",
       "mode": { "private": "Private", "users": "Shared with users", "roles": "Shared with roles", "teams": "Shared with teams", "public": "Public" }
     },
     "approval": {

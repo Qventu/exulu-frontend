@@ -1141,6 +1141,14 @@
       "noAccessUnknown": "Diese Erinnerung ist für dich nicht verfügbar.",
       "error": "Erinnerung konnte nicht gespeichert werden: {message}",
       "open": "Öffnen",
+      "recalledTrigger": "{count, plural, one {# Erinnerung} other {# Erinnerungen}} genutzt",
+      "recalledHint": "Sie haben diese Antwort beeinflusst.",
+      "savedBy": "{mode} · {name}",
+      "savedByYou": "{mode} · von dir",
+      "forgetConfirmTitle": "Diese Erinnerung vergessen?",
+      "forgetConfirmDescription": "„{title}“ wird aus der Gedächtnis-Basis gelöscht.",
+      "forgotToast": "Erinnerung vergessen",
+      "forgetFailed": "Erinnerung konnte nicht vergessen werden",
       "mode": { "private": "Privat", "users": "Geteilt mit Nutzern", "roles": "Geteilt mit Rollen", "teams": "Geteilt mit Teams", "public": "Öffentlich" }
     },
     "approval": {

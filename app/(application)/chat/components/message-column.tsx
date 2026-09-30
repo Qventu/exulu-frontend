@@ -69,6 +69,7 @@ import {
 import { MemoryCard } from "./memory-card";
 import { isMemoryToolPart } from "./memory-card-data";
 import { MemoryStack } from "./memory-stack";
+import { RecalledMemories } from "./recalled-memories";
 import { ToolCallApproval } from "./tool-call-approval";
 import { findTrajectoryRefForFeedback } from "./trajectory-ref";
 
@@ -357,6 +358,11 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
               // per-part rendering, where MemoryCard's own guestMode check
               // (above) returns null for each part.
               MemoryStackComponent={guestMode ? undefined : MemoryStack}
+              // "Recalled N memories" block (spec §2.5, §4.2). Always
+              // passed — the backend already omits recalledMemories
+              // metadata for guests unless the agent allows it, so the
+              // component itself renders nothing in that case.
+              RecalledMemoriesComponent={RecalledMemories}
               AgentVisualComponent={AgentVisual}
             />
           ) : null}
