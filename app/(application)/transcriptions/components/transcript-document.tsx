@@ -747,22 +747,33 @@ export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: 
           },
         ]
       : []),
-    {
-      label: t("document.moveToProject"),
-      icon: Folder,
-      onSelect: () => setMoveOpen(true),
-    },
+    // Same gate as above: both are rejected server-side for a read-only
+    // viewer, so offering them (Delete especially) is wrong even though
+    // it's not a security hole.
+    ...(canWrite !== false
+      ? [
+          {
+            label: t("document.moveToProject"),
+            icon: Folder,
+            onSelect: () => setMoveOpen(true),
+          },
+        ]
+      : []),
     {
       label: t("document.openInLibrary"),
       icon: ExternalLink,
       onSelect: () => router.push(`/data/transcriptions/${item.id}`),
     },
-    {
-      label: t("document.delete"),
-      icon: Trash2,
-      destructive: true,
-      onSelect: () => setDeleteOpen(true),
-    },
+    ...(canWrite !== false
+      ? [
+          {
+            label: t("document.delete"),
+            icon: Trash2,
+            destructive: true,
+            onSelect: () => setDeleteOpen(true),
+          },
+        ]
+      : []),
   ];
 
   // ---- edit handlers ------------------------------------------------------

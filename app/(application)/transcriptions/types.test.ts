@@ -12,6 +12,7 @@ import {
   mergeTranscriptRows,
   filterTranscriptRows,
   groupTranscriptRows,
+  shouldFinalizeItemSave,
   type ItemRBAC,
   type Job,
   type Segment,
@@ -430,5 +431,39 @@ describe("canWriteTranscriptItem — mirrors the backend's validateWriteAccess",
   it("super_admin always writes, regardless of rights_mode", () => {
     const item = { rights_mode: "private" as const, created_by: 1, RBAC: null };
     expect(canWriteTranscriptItem(item, { id: 99, super_admin: true })).toBe(true);
+  });
+});
+
+/**
+ * shouldFinalizeItemSave — the routing decision behind the task-13 fix
+ * (`/transcriptions/[itemId]` save handler): a job-backed item's correction
+ * must go through FINALIZE_TRANSCRIPTION_JOB (re-renders transcript_text) when
+ * the saving user owns the job, since the server rejects finalize for anyone
+ * else. This tests only the pure predicate, not either mutation.
+ */
+describe("shouldFinalizeItemSave — routes an owner's save through finalize, not item-update", () => {
+  it("owner with a job_id routes to finalize", () => {
+    const item = { job_id: "job-1", created_by: 1 };
+    expect(shouldFinalizeItemSave(item, { id: 1 })).toBe(true);
+  });
+
+  it("a super_admin (not the creator) also routes to finalize", () => {
+    const item = { job_id: "job-1", created_by: 1 };
+    expect(shouldFinalizeItemSave(item, { id: 99, super_admin: true })).toBe(true);
+  });
+
+  it("a non-owner with write access (shared editor) uses item-update instead", () => {
+    const item = { job_id: "job-1", created_by: 1 };
+    expect(shouldFinalizeItemSave(item, { id: 2 })).toBe(false);
+  });
+
+  it("an item with no job_id always uses item-update, even for the creator", () => {
+    const item = { job_id: null, created_by: 1 };
+    expect(shouldFinalizeItemSave(item, { id: 1 })).toBe(false);
+  });
+
+  it("denies an unauthenticated viewer", () => {
+    const item = { job_id: "job-1", created_by: 1 };
+    expect(shouldFinalizeItemSave(item, null)).toBe(false);
   });
 });

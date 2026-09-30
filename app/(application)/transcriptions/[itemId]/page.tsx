@@ -18,6 +18,16 @@
  * catches a server rejection and shows a plain message, never the raw
  * GraphQL error.
  *
+ * Save routing: the generic item-update mutation persists `corrected_segments`
+ * but never re-renders `transcript_text` — the field agent retrieval and
+ * `/data` actually read. So when the saving user owns the job behind this
+ * item (`shouldFinalizeItemSave`, types.ts), the save goes through
+ * `FINALIZE_TRANSCRIPTION_JOB` instead, exactly as the review page does,
+ * which re-renders and re-embeds server-side. Everyone else — a shared
+ * editor who didn't create the job, or an item with no job at all — keeps
+ * using the item-update path (a finalize call would only be rejected
+ * server-side by `assertOwnsTranscriptionJob` anyway).
+ *
  * Conflict guard: refetches on window focus, and if the item's `updatedAt`
  * moved since the edit session's baseline, confirms before overwriting it.
  */
@@ -35,8 +45,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { TranscriptDocument, type TranscriptDraft } from "../components/transcript-document";
 import { useTranscriptItem } from "../hooks";
-import { UPDATE_TRANSCRIPT_ITEM } from "../queries";
-import { canWriteTranscriptItem } from "../types";
+import { FINALIZE_TRANSCRIPTION_JOB, UPDATE_TRANSCRIPT_ITEM } from "../queries";
+import { canWriteTranscriptItem, shouldFinalizeItemSave } from "../types";
 
 /** A server rejection from `validateWriteAccess` (src/graphql/mutations/index.ts)
  *  always mentions "permission", except the private-record branch, which
@@ -66,6 +76,7 @@ function TranscriptItemPageInner() {
   const mode = searchParams.get("edit") === "1" ? "edit" : "read";
 
   const [updateItem] = useMutation(UPDATE_TRANSCRIPT_ITEM);
+  const [finalizeJob] = useMutation(FINALIZE_TRANSCRIPTION_JOB);
   const [discardOpen, setDiscardOpen] = React.useState(false);
   const [staleConfirmOpen, setStaleConfirmOpen] = React.useState(false);
   const pendingDraftRef = React.useRef<TranscriptDraft | null>(null);
@@ -130,21 +141,53 @@ function TranscriptItemPageInner() {
 
   const canWrite = canWriteTranscriptItem(item, user);
 
+  // Generic item-update path: writes corrected_segments (and the other
+  // editable fields) but does NOT re-render transcript_text — see
+  // `shouldFinalizeItemSave`'s doc comment in types.ts for why the owner
+  // path below must go through finalize instead.
+  const saveViaItemUpdate = async (draft: TranscriptDraft) => {
+    const input: Record<string, unknown> = {
+      name: draft.title,
+      speakers: draft.speakers,
+      project_id: draft.projectId,
+      rights_mode: draft.rightsMode,
+      RBAC: { users: draft.rbacUsers, roles: draft.rbacRoles },
+    };
+    // null = untouched (TranscriptDraft's contract) — omit the key so an
+    // unedited transcript's corrected_segments is left exactly as it was.
+    if (draft.correctedSegments !== null) {
+      input.corrected_segments = draft.correctedSegments;
+    }
+    await updateItem({ variables: { id: item.id, input } });
+  };
+
   const performSave = async (draft: TranscriptDraft) => {
     try {
-      const input: Record<string, unknown> = {
-        name: draft.title,
-        speakers: draft.speakers,
-        project_id: draft.projectId,
-        rights_mode: draft.rightsMode,
-        RBAC: { users: draft.rbacUsers, roles: draft.rbacRoles },
-      };
-      // null = untouched (TranscriptDraft's contract) — omit the key so an
-      // unedited transcript's corrected_segments is left exactly as it was.
-      if (draft.correctedSegments !== null) {
-        input.corrected_segments = draft.correctedSegments;
+      if (shouldFinalizeItemSave(item, user) && item.job_id) {
+        const finalizeInput: Record<string, unknown> = {
+          title: draft.title,
+          speakers: draft.speakers,
+          project_id: draft.projectId,
+          target_rights_mode: draft.rightsMode,
+          target_rbac_users: draft.rbacUsers,
+          target_rbac_roles: draft.rbacRoles,
+        };
+        if (draft.correctedSegments !== null) {
+          finalizeInput.corrected_segments = draft.correctedSegments;
+        }
+        try {
+          await finalizeJob({ variables: { id: item.job_id, input: finalizeInput } });
+        } catch {
+          // Finalize failed for some reason (unexpected job status, a
+          // permission edge case, a transient error) — fall back to the
+          // item-update path rather than leaving the owner unable to save at
+          // all. Only the outer catch below reports a failure to the user,
+          // so this never produces a second error toast.
+          await saveViaItemUpdate(draft);
+        }
+      } else {
+        await saveViaItemUpdate(draft);
       }
-      await updateItem({ variables: { id: item.id, input } });
       toast.success(t("toasts.updated"));
       await refetch();
       router.replace(`/transcriptions/${item.id}`);

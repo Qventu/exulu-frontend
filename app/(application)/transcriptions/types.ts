@@ -404,6 +404,25 @@ export type CurrentUser = {
 };
 
 /**
+ * Whether `user` is this record's creator, or a super-admin who bypasses
+ * ownership checks entirely. Factored out of `canWriteTranscriptItem` below
+ * (its first two true-returning branches) so a caller that only needs "is
+ * this mine" — e.g. deciding whether a saved transcript's edit should route
+ * through `FINALIZE_TRANSCRIPTION_JOB`, which `assertOwnsTranscriptionJob`
+ * gates server-side to the job's owner, a strictly narrower question than
+ * "can I write this item" — reuses this instead of writing a third copy of
+ * the same `String(...) === String(...)` comparison.
+ */
+export function isTranscriptItemOwner(
+  item: Pick<TranscriptItemDetail, "created_by">,
+  user: CurrentUser | null | undefined,
+): boolean {
+  if (!user) return false;
+  if (user.super_admin === true) return true;
+  return item.created_by != null && String(item.created_by) === String(user.id);
+}
+
+/**
  * Client-side mirror of the backend's `validateWriteAccess` (the same gate
  * `transcriptions_itemsUpdateOneById` runs server-side) — see
  * `src/graphql/mutations/index.ts` `createMutations.validateWriteAccess` and
@@ -424,21 +443,17 @@ export function canWriteTranscriptItem(
   user: CurrentUser | null | undefined,
 ): boolean {
   if (!user) return false;
-  if (user.super_admin === true) return true;
+  // The creator can always edit their own record, whatever rights_mode it's
+  // shared under (matches the server: sharing your own record via RBAC must
+  // not lock you out of it) — and super_admin bypasses everything.
+  if (isTranscriptItemOwner(item, user)) return true;
   if (user.type === "api" && (!user.scope_mode || user.scope_mode === "admin")) {
     return true;
   }
 
   const mode = item.rights_mode ?? "private";
   if (mode === "public") return true;
-
-  const isCreator =
-    item.created_by != null && String(item.created_by) === String(user.id);
-  if (mode === "private") return isCreator;
-  // The creator can always edit their own record, whatever rights_mode it's
-  // shared under (matches the server: sharing your own record via RBAC must
-  // not lock you out of it).
-  if (isCreator) return true;
+  if (mode === "private") return false;
 
   if (mode === "users") {
     return (item.RBAC?.users ?? []).some(
@@ -453,6 +468,26 @@ export function canWriteTranscriptItem(
     );
   }
   return false;
+}
+
+/**
+ * Routing decision for `/transcriptions/[itemId]`'s save handler (task-13
+ * fix): a saved transcript's `transcript_text` — what agent retrieval and
+ * `/data` actually read — is only re-rendered by `transcriptionJobFinalize`,
+ * not by the generic item-update mutation, which writes `corrected_segments`
+ * alone. So a correction should route through finalize whenever there's a
+ * job behind this item AND the saving user owns that job — finalize's server
+ * gate (`assertOwnsTranscriptionJob`) rejects anyone else, so a shared editor
+ * who can write the item but didn't create the job must keep using the
+ * item-update path (and accept its known gap: see design/pages/
+ * transcriptions.md's "Corrections by a shared editor" entry) rather than a
+ * finalize call that would only fail.
+ */
+export function shouldFinalizeItemSave(
+  item: Pick<TranscriptItemDetail, "job_id" | "created_by">,
+  user: CurrentUser | null | undefined,
+): boolean {
+  return item.job_id != null && isTranscriptItemOwner(item, user);
 }
 
 /**
