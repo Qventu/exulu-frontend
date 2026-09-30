@@ -2490,6 +2490,9 @@
     "tokenCrossLinkAction": "Personal token"
   },
   "knowledge": {
+    "common": {
+      "loading": "Loading..."
+    },
     "pins": {
       "favourite": "Add to favourites",
       "favourites": {
