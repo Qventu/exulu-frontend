@@ -36,6 +36,8 @@ import type { ExuluTool } from "@/types/models/tool";
 import type { Variable } from "@/types/models/variable";
 import { GET_VARIABLES_LITE } from "@/queries/queries";
 
+import { normalizeMemoryConfig, type MemoryConfig } from "./components/memory-section-data";
+
 import {
   AGENT_FIREWALL_SUPPORTED,
   AGENT_IMAGE_UPDATE_SUPPORTED,
@@ -201,6 +203,10 @@ export interface UseAgentEditor {
   setRbac: (r: RbacState) => void;
   memory: string;
   setMemory: (id: string) => void;
+  memoryConfig: MemoryConfig;
+  setMemoryConfig: (c: MemoryConfig) => void;
+  /** The agent's own id — excludes it from the memory-base "used by" map. */
+  agentId: string;
   model: string;
   setModel: (id: string) => void;
   animationIdle: string;
@@ -255,6 +261,9 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
   const [memory, setMemory] = React.useState<string>(
     (agent as any).memory ?? "",
   );
+  const [memoryConfig, setMemoryConfig] = React.useState<MemoryConfig>(() =>
+    normalizeMemoryConfig((agent as any).memory_config),
+  );
   const [model, setModel] = React.useState<string>(agent.model ?? "");
   const [animationIdle, setAnimationIdle] = React.useState<string>(
     (agent as any).animation_idle ?? "",
@@ -281,6 +290,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       teams: (agent as any).RBAC?.teams ?? [],
     }),
     memory: (agent as any).memory ?? "",
+    memoryConfig: JSON.stringify(normalizeMemoryConfig((agent as any).memory_config)),
     model: agent.model ?? "",
     animationIdle: (agent as any).animation_idle ?? "",
     animationResponding: (agent as any).animation_responding ?? "",
@@ -300,6 +310,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
     JSON.stringify(skills) !== snapshot.skills ||
     JSON.stringify(rbac) !== snapshot.rbac ||
     memory !== snapshot.memory ||
+    JSON.stringify(memoryConfig) !== snapshot.memoryConfig ||
     model !== snapshot.model ||
     animationIdle !== snapshot.animationIdle ||
     animationResponding !== snapshot.animationResponding ||
@@ -351,6 +362,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       category: values.category,
       active: values.active,
       memory: memory || null,
+      memory_config: memory ? JSON.stringify(memoryConfig) : null,
       feedback: values.feedback,
       suggestions_enabled: values.suggestions_enabled ?? false,
       sandbox_enabled: values.sandbox_enabled ?? false,
@@ -397,6 +409,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
         skills: JSON.stringify(skills),
         rbac: JSON.stringify(rbac),
         memory,
+        memoryConfig: JSON.stringify(memoryConfig),
         model,
         animationIdle,
         animationResponding,
@@ -418,6 +431,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
     guest,
     image,
     memory,
+    memoryConfig,
     model,
     rbac,
     skills,
@@ -451,6 +465,7 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       teams: (agent as any).RBAC?.teams ?? [],
     });
     setMemory((agent as any).memory ?? "");
+    setMemoryConfig(normalizeMemoryConfig((agent as any).memory_config));
     setModel(agent.model ?? "");
     setAnimationIdle((agent as any).animation_idle ?? "");
     setAnimationResponding((agent as any).animation_responding ?? "");
@@ -492,6 +507,9 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
     setRbac,
     memory,
     setMemory,
+    memoryConfig,
+    setMemoryConfig,
+    agentId: agent?.id ?? "",
     model,
     setModel,
     animationIdle,
@@ -524,7 +542,12 @@ export interface UseEditorReferenceData {
   // Slim shape — combobox renders { id, name, encrypted } only (migrated off
   // GET_VARIABLES_EDITOR which over-fetched `value`). Phase 4.5.
   variables: Pick<Variable, "id" | "name" | "encrypted">[];
-  contexts: { id: string; name: string; description?: string }[];
+  contexts: {
+    id: string;
+    name: string;
+    description?: string;
+    memoryBase?: { ok: boolean; missing: string[] } | null;
+  }[];
   agenticRetrievalTool: ExuluTool | null;
 }
 
@@ -573,7 +596,14 @@ export function useEditorReferenceData(agentId: string): UseEditorReferenceData 
   }>(GET_VARIABLES_LITE, { variables: { page: 1, limit: 100 } });
 
   const contextsQuery = useQuery<{
-    contexts: { items: { id: string; name: string; description?: string }[] };
+    contexts: {
+      items: {
+        id: string;
+        name: string;
+        description?: string;
+        memoryBase?: { ok: boolean; missing: string[] } | null;
+      }[];
+    };
   }>(GET_CONTEXTS_EDITOR);
 
   const allTools = toolsQuery.data?.tools?.items ?? [];

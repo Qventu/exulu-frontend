@@ -72,6 +72,7 @@ export const AGENT_EDITOR_FIELDS = `
   sandbox_enabled
   max_tool_steps
   memory
+  memory_config
   instructions
   welcomemessage
   defaultagent
@@ -256,6 +257,45 @@ export const GET_CONTEXTS_EDITOR = gql`
         id
         name
         description
+        fields
+        memoryBase {
+          ok
+          missing
+        }
+      }
+    }
+  }
+`;
+
+/** Memory-base stats card (Task 8 memoryBaseStats). */
+export const GET_MEMORY_BASE_STATS = gql`
+  query MemoryBaseStats($contextId: ID!) {
+    memoryBaseStats(contextId: $contextId) {
+      total
+      public
+      private
+      contributors
+      lastSavedAt
+      lastSavedBy {
+        id
+        name
+      }
+    }
+  }
+`;
+
+/**
+ * "used by" map for the memory-base picker (memory-section.tsx). Verbatim
+ * agentsPagination args from agents/queries.ts' GET_AGENTS_INDEX — there is
+ * no bare `agents(...)` query on the schema.
+ */
+export const GET_AGENTS_USING_MEMORY = gql`
+  query AgentsUsingMemory($page: Int!, $limit: Int!) {
+    agentsPagination(page: $page, limit: $limit) {
+      items {
+        id
+        name
+        memory
       }
     }
   }
@@ -288,6 +328,7 @@ export const UPDATE_AGENT_EDITOR = gql`
     $welcomemessage: String
     $defaultagent: Boolean
     $memory: String
+    $memory_config: JSON
     $instructions: String
     $rights_mode: String
     $animation_idle: String
@@ -316,6 +357,7 @@ export const UPDATE_AGENT_EDITOR = gql`
         welcomemessage: $welcomemessage
         defaultagent: $defaultagent
         memory: $memory
+        memory_config: $memory_config
         category: $category
         instructions: $instructions
         animation_idle: $animation_idle
@@ -346,6 +388,7 @@ export const UPDATE_AGENT_EDITOR = gql`
         defaultagent
         instructions
         memory
+        memory_config
         category
         animation_idle
         animation_responding
