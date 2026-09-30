@@ -123,15 +123,15 @@ export function MemoryDetail({ context, itemId }: { context: MemoryContext; item
       </div>
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="flex flex-col gap-6">
-          <DetailSection title={t("detail.whySaved")}>
+          <DetailSection title={t("detail.whySaved")} defaultOpen>
             <p className="text-sm">{memory.description?.trim() || <span className="text-muted-foreground">{t("detail.notRecorded")}</span>}</p>
           </DetailSection>
-          <DetailSection title={t("detail.source")}>
+          <DetailSection title={t("detail.source")} defaultOpen>
             {memory.source_session ? <SourceConversation sessionId={memory.source_session} /> : <p className="text-sm text-muted-foreground">{t("detail.noSource")}</p>}
           </DetailSection>
         </div>
         <div className="flex flex-col gap-4">
-          <DetailSection title={t("detail.details")}>
+          <DetailSection title={t("detail.details")} defaultOpen>
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
               <dt className="text-muted-foreground">{t("detail.whoCanSee")}</dt>
               <dd className="flex items-center gap-2">
