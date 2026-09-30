@@ -22,9 +22,15 @@ import { canForget, parseRecalledMemories, type RecalledMemory } from "./recalle
  * "Recalled N memories" block under an assistant answer (spec §2.5, §4.2).
  * Reuses the Sources collapsible so it visually sits alongside the existing
  * inline-citation badge. Renders nothing when the message carries no
- * recalledMemories metadata (guests, or an answer that recalled nothing).
+ * recalledMemories metadata (guests, unless the agent's `guests.showRecalled`
+ * config opts in — memory-section.tsx — or an answer that recalled nothing).
+ *
+ * `guestMode` (final-review finding 4): when `guests.showRecalled` is on, a
+ * guest still gets this block, but "Open" points at the authenticated
+ * `/data/...` item page they cannot reach, and "Forget" mutates memory they
+ * have no write access to — both are suppressed for guests.
  */
-export function RecalledMemories({ message }: { message: UIMessage; agent: Agent }) {
+export function RecalledMemories({ message, guestMode = false }: { message: UIMessage; agent: Agent; guestMode?: boolean }) {
   const t = useTranslations("chat");
   const { user } = React.useContext(UserContext);
   const memories = parseRecalledMemories(message.metadata);
@@ -60,8 +66,10 @@ export function RecalledMemories({ message }: { message: UIMessage; agent: Agent
                     {m.createdAt && <>· <RelativeTime date={m.createdAt} /></>}
                   </p>
                 </div>
-                <Button asChild variant="ghost" size="sm" className="h-8 text-xs"><Link href={`/data/${m.contextId}/items/${m.id}`}>{t("memory.open")}</Link></Button>
-                {canForget(m, user?.id, !!user?.super_admin) && (
+                {!guestMode && (
+                  <Button asChild variant="ghost" size="sm" className="h-8 text-xs"><Link href={`/data/${m.contextId}/items/${m.id}`}>{t("memory.open")}</Link></Button>
+                )}
+                {!guestMode && canForget(m, user?.id, !!user?.super_admin) && (
                   <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive hover:text-destructive" aria-label={t("memory.forget")} onClick={() => setPending(m)}>
                     <Trash2 className="size-3.5" aria-hidden="true" />
                   </Button>

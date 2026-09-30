@@ -300,8 +300,8 @@ export function computeUntypedToolData(
  *   stable/ref-backed state or is re-captured whenever this item's data props
  *   change (see message-renderer.tsx).
  * - Component-type props (UntypedToolPartComponent, AgentVisualComponent,
- *   MemoryStackComponent) ARE compared — swapping a component type must
- *   remount the subtree.
+ *   MemoryStackComponent, RecalledMemoriesComponent) ARE compared — swapping
+ *   a component type must remount the subtree.
  * - `config` is compared by its two known fields since call sites pass it as
  *   an inline object literal.
  * - Everything else compares by Object.is; finished messages keep their
@@ -312,6 +312,7 @@ const COMPARED_FUNCTION_PROPS = new Set([
   "UntypedToolPartComponent",
   "AgentVisualComponent",
   "MemoryStackComponent",
+  "RecalledMemoriesComponent",
 ]);
 
 export function messageItemPropsEqual(

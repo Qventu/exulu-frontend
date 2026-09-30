@@ -22,6 +22,7 @@
 import type {
   ChatAddToolApproveResponseFunction,
   DynamicToolUIPart,
+  UIMessage,
 } from "ai";
 import { useTranslations } from "next-intl";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -209,6 +210,20 @@ function makeUntypedToolPart(
   return UntypedToolPart;
 }
 
+/**
+ * Threads guestMode into RecalledMemories (final-review finding 4) the same
+ * way makeUntypedToolPart closes over it for MemoryCard above —
+ * RecalledMemoriesComponent's frozen shape (message-renderer.tsx) has no
+ * guestMode prop, so the factory closure carries it instead.
+ */
+function makeRecalledMemories(guestMode: boolean) {
+  const RecalledMemoriesForColumn = ({ message, agent }: { message: UIMessage; agent: Agent }) => (
+    <RecalledMemories message={message} agent={agent} guestMode={guestMode} />
+  );
+  RecalledMemoriesForColumn.displayName = "RecalledMemoriesForColumn";
+  return RecalledMemoriesForColumn;
+}
+
 export function MessageColumn({ controller, guestMode = false }: MessageColumnProps) {
   const t = useTranslations("chat");
   const { user } = useContext(UserContext);
@@ -266,6 +281,11 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
     [controller.approveToolForChat, handleCredentialResume, guestMode],
   );
   /* eslint-enable react-hooks/refs */
+
+  const RecalledMemoriesComponent = useMemo(
+    () => makeRecalledMemories(guestMode),
+    [guestMode],
+  );
 
   // Single focal point (item 31, fixes U9): the agent's own visual when one
   // is configured, otherwise the platform logo — never both.
@@ -360,9 +380,14 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
               MemoryStackComponent={guestMode ? undefined : MemoryStack}
               // "Recalled N memories" block (spec §2.5, §4.2). Always
               // passed — the backend already omits recalledMemories
-              // metadata for guests unless the agent allows it, so the
-              // component itself renders nothing in that case.
-              RecalledMemoriesComponent={RecalledMemories}
+              // metadata for guests unless the agent allows it (memory-
+              // section.tsx guests.showRecalled), so the component itself
+              // renders nothing in the common case. When that config IS on,
+              // the factory-wrapped component still carries guestMode
+              // through so RecalledMemories can suppress Open/Forget
+              // (final-review finding 4) rather than link/mutate against
+              // routes a guest has no access to.
+              RecalledMemoriesComponent={RecalledMemoriesComponent}
               AgentVisualComponent={AgentVisual}
             />
           ) : null}
