@@ -6,8 +6,9 @@
  * Redesign (2026-09-29 spec §4.1): the three status groups (Needs review /
  * Processing / Saved) become one list across in-progress jobs and saved
  * transcripts, with tabs, a collapsed in-progress strip, and bulk actions
- * over item rows. The composer stays an inline card (?new=1 deep-link
- * convention) until Task 9 replaces it with a dialog.
+ * over item rows. The composer is `NewTranscriptDialog` (spec §4.2, Task 9),
+ * opened via the `?new=1` deep-link convention and pinned open by an active
+ * recording regardless of the URL.
  */
 import { useMutation } from "@apollo/client";
 import { FileAudio, MoreHorizontal, Plus } from "lucide-react";
@@ -45,16 +46,9 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/components/ui/toggle-group";
-import { useIsMobile } from "@/hooks/use-mobile";
 
-import { Composer } from "./components/composer";
 import { InProgressStrip } from "./components/in-progress-strip";
-import { MeetingComposer } from "./components/meeting-composer";
-import { RecordComposer } from "./components/record-composer";
+import { NewTranscriptDialog } from "./components/new-transcript-dialog";
 import { TranscriptListRow } from "./components/transcript-row";
 import {
   useRecordingUsage,
@@ -74,9 +68,6 @@ import {
   type TranscriptRow,
   type TranscriptTab,
 } from "./types";
-
-/** The three new-transcription flows, each behind its own backend flag. */
-type ComposerMode = "audio" | "meeting" | "record";
 
 type SourceFilter = "all" | JobSource;
 type DateFilter = "all" | "today" | "week" | "month";
@@ -149,36 +140,16 @@ function TranscriptionsPageInner() {
 
   // Three independent flows, each gated by its own backend flag (spec §4.1):
   // upload (Whisper server), meeting bot (Recall), record here (composer STT).
+  // NewTranscriptDialog reads the flags itself; recallEnabled stays here only
+  // for the usage query below, and live only for the recording pin.
   const config = React.useContext(ConfigContext);
-  const isMobile = useIsMobile();
   const live = useLiveRecordingOptional();
   const recallEnabled = !!config?.recall?.enabled;
-  const uploadEnabled = !!config?.whisper?.enabled;
-  const recordEnabled = !!config?.transcription?.enabled;
-  const enabledModes = React.useMemo(
-    () =>
-      [
-        recordEnabled && isMobile ? "record" : null, // one tap on a phone
-        uploadEnabled ? "audio" : null,
-        recallEnabled ? "meeting" : null,
-        recordEnabled && !isMobile ? "record" : null,
-      ].filter((m): m is ComposerMode => m !== null),
-    [recallEnabled, uploadEnabled, recordEnabled, isMobile],
-  );
-  const showModeToggle = enabledModes.length >= 2;
-  const [composerMode, setComposerMode] = React.useState<ComposerMode | null>(
-    null,
-  );
   // An active recording always wins: reopen its surface wherever the user
   // navigated from, whether or not ?new=1 is on the URL. activeJobId, not
   // jobId: the close-out (upload + liveRecordingStop) runs after the recorder
   // has let the job go, and unmounting the composer mid-upload loses the audio.
   const recordingActive = !!live?.activeJobId;
-  const effectiveMode: ComposerMode | null = recordingActive
-    ? "record"
-    : composerMode && enabledModes.includes(composerMode)
-      ? composerMode
-      : (enabledModes[0] ?? null);
   const composerVisible = composerOpen || recordingActive;
   const newButtonDisabled = composerVisible;
 
@@ -401,61 +372,14 @@ function TranscriptionsPageInner() {
         </div>
       )}
 
-      {composerVisible && effectiveMode && (
-        <div className="space-y-3">
-          {/* Mode switch only when at least two flows are configured; a running
-              recording pins the surface and hides the switch entirely. */}
-          {showModeToggle && !recordingActive && (
-            <ToggleGroup
-              type="single"
-              value={effectiveMode}
-              onValueChange={(value) =>
-                value && setComposerMode(value as ComposerMode)
-              }
-              className="justify-start"
-            >
-              {enabledModes.map((mode) => (
-                <ToggleGroupItem key={mode} value={mode} className="max-md:h-11">
-                  {t(
-                    mode === "audio"
-                      ? "composer.modeAudio"
-                      : mode === "meeting"
-                        ? "composer.modeMeeting"
-                        : "composer.modeRecord",
-                  )}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          )}
-          {effectiveMode === "record" ? (
-            // RecordComposer closes itself when a recording finishes, so
-            // onStarted only has to refresh the queue.
-            <RecordComposer
-              onCancel={closeComposer}
-              onStarted={() => {
-                refetchAll();
-              }}
-            />
-          ) : effectiveMode === "meeting" ? (
-            <MeetingComposer
-              onCancel={closeComposer}
-              onStarted={() => {
-                closeComposer();
-                refetchAll();
-                refetchUsage();
-              }}
-            />
-          ) : (
-            <Composer
-              onCancel={closeComposer}
-              onStarted={() => {
-                closeComposer();
-                refetchAll();
-              }}
-            />
-          )}
-        </div>
-      )}
+      <NewTranscriptDialog
+        open={composerVisible}
+        onOpenChange={(open) => !open && closeComposer()}
+        onStarted={() => {
+          refetchAll();
+          refetchUsage();
+        }}
+      />
 
       {/* Union list partial failure (spec §6): one failed half never blanks
           the page — the other half still renders below. */}

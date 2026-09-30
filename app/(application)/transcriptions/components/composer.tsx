@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import { Dropzone } from "@/components/primitives/dropzone";
 import { RBACControl } from "@/components/rbac";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
@@ -38,6 +37,7 @@ import {
   AUDIO_FILE_TYPES,
   decodeFilename,
   stripExtension,
+  type ComposerPrimaryAction,
   type Mode,
   type RbacRole,
   type RbacUser,
@@ -54,13 +54,14 @@ const SPEAKER_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 const ALLOWED_MODES: Mode[] = ["private", "users", "roles", "public"];
 
 export interface ComposerProps {
-  onCancel: () => void;
   onStarted: () => void;
+  /** Reports the current Start action so NewTranscriptDialog's shared footer
+   *  can render it — the dialog owns Cancel/footer chrome now (Task 9). */
+  onPrimaryActionChange: (action: ComposerPrimaryAction) => void;
 }
 
-export function Composer({ onCancel, onStarted }: ComposerProps) {
+export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
   const t = useTranslations("transcriptions");
-  const tCommon = useTranslations("common");
 
   const [s3Key, setS3Key] = React.useState<string | null>(null);
   const [uploading, setUploading] = React.useState(false);
@@ -145,7 +146,7 @@ export function Composer({ onCancel, onStarted }: ComposerProps) {
 
   const canStart = Boolean(s3Key) && !busy && !uploading;
 
-  const onStart = async () => {
+  const onStart = React.useCallback(async () => {
     if (!s3Key) return;
     setBusy(true);
     try {
@@ -173,7 +174,31 @@ export function Composer({ onCancel, onStarted }: ComposerProps) {
     } finally {
       setBusy(false);
     }
-  };
+  }, [
+    s3Key,
+    startJob,
+    filename,
+    title,
+    language,
+    numSpeakers,
+    projectId,
+    rightsMode,
+    rbacUsers,
+    rbacRoles,
+    t,
+    onStarted,
+  ]);
+
+  // The dialog's shared footer owns the actual button; this just keeps it in
+  // sync with what Start would currently do.
+  React.useEffect(() => {
+    onPrimaryActionChange({
+      label: t("composer.start"),
+      disabled: !canStart,
+      busy,
+      run: onStart,
+    });
+  }, [canStart, busy, onStart, onPrimaryActionChange, t]);
 
   // Inline summary of the L3 defaults so nobody *needs* to open Options
   // ("Auto-detect language and speakers · Private · No project").
@@ -190,7 +215,7 @@ export function Composer({ onCancel, onStarted }: ComposerProps) {
   ].join(" · ");
 
   return (
-    <Card className="space-y-4 p-4 duration-200 animate-in fade-in slide-in-from-top-1 motion-reduce:animate-none">
+    <div className="space-y-4">
       <div className="space-y-2">
         <Label>{t("composer.audioFile")}</Label>
         {s3Key || uploading ? (
@@ -244,14 +269,19 @@ export function Composer({ onCancel, onStarted }: ComposerProps) {
       </div>
 
       <Collapsible open={optionsOpen} onOpenChange={setOptionsOpen}>
-        <CollapsibleTrigger className="group flex min-h-9 w-full items-center gap-2 rounded-md text-left text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+        <CollapsibleTrigger
+          className="group flex min-h-9 w-full items-center gap-2 rounded-md text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-label={`${t("composer.optionsSummaryLabel")}: ${optionsSummary}`}
+        >
           <ChevronRight
             aria-hidden="true"
-            className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-90 motion-reduce:transition-none"
+            className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180 motion-reduce:transition-none"
           />
-          <span>{t("composer.options")}</span>
-          <span className="min-w-0 flex-1 truncate text-right text-xs font-normal text-muted-foreground">
+          <span className="min-w-0 flex-1 truncate font-normal text-muted-foreground">
             {optionsSummary}
+          </span>
+          <span className="shrink-0 font-medium text-foreground group-hover:underline">
+            {t("composer.optionsChange")}
           </span>
         </CollapsibleTrigger>
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down motion-reduce:animate-none">
@@ -339,37 +369,11 @@ export function Composer({ onCancel, onStarted }: ComposerProps) {
         </CollapsibleContent>
       </Collapsible>
 
-      <div className="flex justify-end gap-2 pt-1">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onCancel}
-          disabled={busy}
-          className="max-md:h-11"
-        >
-          {tCommon("cancel")}
-        </Button>
-        <Button
-          type="button"
-          onClick={onStart}
-          disabled={!canStart}
-          className="max-md:h-11"
-        >
-          {busy ? (
-            <Loader2
-              aria-hidden="true"
-              className="mr-2 size-4 animate-spin"
-            />
-          ) : null}
-          {t("composer.start")}
-        </Button>
-      </div>
-
       <FileGalleryDialog
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
         onSelect={setS3Key}
       />
-    </Card>
+    </div>
   );
 }

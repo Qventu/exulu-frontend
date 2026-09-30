@@ -17,6 +17,19 @@ export type JobStatus =
 export type RbacUser = { id: number; rights: "read" | "write" };
 export type RbacRole = { id: string; rights: "read" | "write" };
 
+/**
+ * What a composer's primary action currently looks like, reported up to
+ * `NewTranscriptDialog` (Task 9) so its shared footer can render the right
+ * label/disabled/busy state and trigger the composer's own start logic
+ * without the dialog needing to know how each composer validates itself.
+ */
+export interface ComposerPrimaryAction {
+  label: string;
+  disabled: boolean;
+  busy: boolean;
+  run: () => void;
+}
+
 /** Where a job came from: on-server Whisper upload, a Recall meeting bot, or a live browser recording. */
 export type JobSource = "whisper" | "recall" | "live";
 

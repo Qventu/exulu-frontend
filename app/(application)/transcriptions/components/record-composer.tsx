@@ -29,7 +29,6 @@ import { StatusDot } from "@/components/primitives/status-dot";
 import { RBACControl } from "@/components/rbac";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
@@ -644,7 +643,7 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
     const pending = recorder.chunks.length - sent;
     const retrying = recorder.chunks.some((c) => c.status === "retrying");
     return (
-      <Card className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <div className="flex items-center gap-3">
           <StatusDot status="error" pulse={phase === "recording"} />
           <span className="font-medium">{t("composer.recording")}</span>
@@ -772,7 +771,7 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
           confirmLabel={t("confirmDiscardRecording.confirm")}
           onConfirm={onDiscard}
         />
-      </Card>
+      </div>
     );
   }
 
@@ -789,7 +788,7 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
   ].join(" · ");
 
   return (
-    <Card className="space-y-4 p-4 duration-200 animate-in fade-in slide-in-from-top-1 motion-reduce:animate-none sm:p-6">
+    <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         {t("composer.recordIntro")}
       </p>
@@ -806,14 +805,19 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
       </div>
 
       <Collapsible open={optionsOpen} onOpenChange={setOptionsOpen}>
-        <CollapsibleTrigger className="group flex min-h-9 w-full items-center gap-2 rounded-md text-left text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+        <CollapsibleTrigger
+          className="group flex min-h-9 w-full items-center gap-2 rounded-md text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-label={`${t("composer.optionsSummaryLabel")}: ${summary}`}
+        >
           <ChevronRight
             aria-hidden="true"
-            className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-90 motion-reduce:transition-none"
+            className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180 motion-reduce:transition-none"
           />
-          <span>{t("composer.options")}</span>
-          <span className="min-w-0 flex-1 truncate text-right text-xs font-normal text-muted-foreground">
+          <span className="min-w-0 flex-1 truncate font-normal text-muted-foreground">
             {summary}
+          </span>
+          <span className="shrink-0 font-medium text-foreground group-hover:underline">
+            {t("composer.optionsChange")}
           </span>
         </CollapsibleTrigger>
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down motion-reduce:animate-none">
@@ -887,16 +891,7 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
         </CollapsibleContent>
       </Collapsible>
 
-      <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onCancel}
-          disabled={phase === "starting"}
-          className="max-md:h-11"
-        >
-          {tCommon("cancel")}
-        </Button>
+      <div className="flex justify-end pt-1">
         <Button
           type="button"
           size="lg"
@@ -912,6 +907,6 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
           {t("composer.startRecording")}
         </Button>
       </div>
-    </Card>
+    </div>
   );
 }
