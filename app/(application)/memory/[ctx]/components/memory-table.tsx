@@ -9,7 +9,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import { BulkActionBar } from "@/components/primitives/bulk-action-bar";
-import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
+import { ConfirmDialog, type ConfirmDialogError } from "@/components/primitives/confirm-dialog";
 import { DataTable } from "@/components/primitives/data-table";
 import { FilterPanel, type FilterFieldDef } from "@/components/primitives/filter-panel";
 import { RelativeTime } from "@/components/primitives/relative-time";
@@ -64,6 +64,7 @@ export function MemoryTable({
   const [selected, setSelected] = React.useState<string[]>([]);
   const [accessOpen, setAccessOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [deleteErrors, setDeleteErrors] = React.useState<ConfirmDialogError[]>([]);
 
   const withSourceSession = hasSourceSession(context);
   const list = useMemoryItems({ contextId: context.id, withSourceSession, page, search, mine, filters });
@@ -109,15 +110,40 @@ export function MemoryTable({
   ], [t, list.users]);
 
   const handleBulkDelete = async () => {
-    const results = await Promise.allSettled(selected.map((id) => deleteItem({ variables: { id } })));
-    const failed = results.filter((r) => r.status === "rejected").length;
-    if (failed) toast.error(t("bulk.deleteFailed", { count: failed }));
-    if (failed < selected.length) toast.success(t("bulk.deleted", { count: selected.length - failed }));
-    setSelected([]);
-    setDeleteOpen(false);
+    const targets = selected;
+    const results = await Promise.allSettled(targets.map((id) => deleteItem({ variables: { id } })));
+    const failedIds: string[] = [];
+    const failures: ConfirmDialogError[] = [];
+    let succeededCount = 0;
+    results.forEach((result, index) => {
+      const id = targets[index];
+      if (result.status === "rejected") {
+        failedIds.push(id);
+        const message = result.reason instanceof Error ? result.reason.message : String(result.reason);
+        failures.push({ item: id, message });
+      } else {
+        succeededCount += 1;
+      }
+    });
+
+    // Refetch and notify the shell regardless of outcome — some items may
+    // already have been removed even if others failed.
     list.refetch();
     client.cache.gc();
     onChanged();
+
+    if (failures.length > 0) {
+      setDeleteErrors(failures);
+      setSelected(failedIds);
+      if (succeededCount > 0) toast.success(t("bulk.deleted", { count: succeededCount }));
+      toast.error(t("bulk.deleteFailed", { count: failures.length }));
+      // Reject so ConfirmDialog keeps the dialog open for a retry with the
+      // remaining (failed) selection — see components/primitives/confirm-dialog.tsx.
+      throw new Error("Bulk delete had failures");
+    }
+
+    setSelected([]);
+    toast.success(t("bulk.deleted", { count: succeededCount }));
   };
 
   return (
@@ -153,7 +179,11 @@ export function MemoryTable({
           onClear={() => setSelected([])}
           actions={[
             { label: t("bulk.setAccess"), onClick: () => setAccessOpen(true) },
-            { label: t("bulk.delete"), onClick: () => setDeleteOpen(true), destructive: true },
+            {
+              label: t("bulk.delete"),
+              onClick: () => { setDeleteErrors([]); setDeleteOpen(true); },
+              destructive: true,
+            },
           ]}
         />
       )}
@@ -191,6 +221,7 @@ export function MemoryTable({
         title={t("bulk.deleteTitle", { count: selected.length })}
         description={t("bulk.deleteDescription")}
         confirmLabel={t("bulk.delete")}
+        errors={deleteErrors}
         onConfirm={handleBulkDelete}
       />
     </div>
