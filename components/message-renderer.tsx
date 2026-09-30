@@ -748,11 +748,14 @@ const MessageItem = memo(function MessageItem({
         // memoryStackFirstIndex maps a stack's first part index to the full
         // list of part indices it covers; memoryStackSuppressedIndices holds
         // every OTHER index in that stack (rendered as null — the stack
-        // already rendered them). Only meaningful when MemoryStackComponent
-        // is wired; otherwise every part still renders singly below.
+        // already rendered them). Computed only when the stack will actually
+        // render (MemoryStackComponent + agent + addToolApprovalResponse all
+        // present, the exact guard the render below requires) — otherwise
+        // the set stays empty and every part falls through to the normal
+        // per-part path, so nothing silently vanishes.
         const memoryStackFirstIndex = new Map<number, number[]>()
         const memoryStackSuppressedIndices = new Set<number>()
-        if (MemoryStackComponent) {
+        if (MemoryStackComponent && agent && addToolApprovalResponse) {
           for (const group of groupRememberParts((message.parts ?? []) as Record<string, unknown>[])) {
             if (group.kind !== "stack") continue
             memoryStackFirstIndex.set(group.indices[0], group.indices)

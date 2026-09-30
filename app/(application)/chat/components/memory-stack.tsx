@@ -25,11 +25,22 @@ export function MemoryStack({ parts, agent, addToolApprovalResponse }: { parts: 
   }), []);
 
   const decideAll = (approved: boolean) => {
+    let warnedMissingReader = false;
     for (const part of parts) {
       const approvalId = (part as { approval?: { id?: string } }).approval?.id;
       if (!approvalId) continue;
       const read = readers.current.get(part.toolCallId);
-      addToolApprovalResponse({ id: approvalId, approved, reason: approved && read ? encodeMemoryDecision(read()) : DECLINED_REASON });
+      if (approved && !read) {
+        // Still initializing (its context query hasn't settled — see
+        // MemoryCard's state-gating) — never approve without its edits.
+        // Leave it pending instead of silently sending a decline.
+        if (!warnedMissingReader) {
+          console.warn("[MemoryStack] Save all: skipping a card with no registered edits yet (still loading)");
+          warnedMissingReader = true;
+        }
+        continue;
+      }
+      addToolApprovalResponse({ id: approvalId, approved, reason: approved ? encodeMemoryDecision(read!()) : DECLINED_REASON });
     }
   };
 

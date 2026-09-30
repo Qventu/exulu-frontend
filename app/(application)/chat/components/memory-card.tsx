@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { Agent } from "@/types/models/agent";
@@ -48,6 +49,9 @@ export interface MemoryCardProps {
 
 type Edits = { title: string; information: string; type: string; rights_mode: RightsMode; users: RbacGrant[]; roles: RbacGrant[]; teams: RbacGrant[] };
 
+// Priority: an explicit visibility hint (the user told the agent who may see
+// this) outranks the agent's preselect_private default, which outranks the
+// context default — an explicit statement always wins over a standing default.
 const preselect = (agent: Agent, contextDefault: RightsMode | undefined, hint: "private" | "public" | null): RightsMode => {
   if (hint) return hint;
   const cfg = (agent as { memory_config?: { visibility?: string } }).memory_config;
@@ -62,28 +66,47 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
   const approvalId = (part as { approval?: { id?: string } }).approval?.id;
   const edits = useMemoryEdits();
 
-  const { data } = useQuery(GET_CONTEXT_BY_ID, {
+  const { data, loading } = useQuery(GET_CONTEXT_BY_ID, {
     variables: { id: agent.memory ?? "" },
     skip: !agent.memory,
   });
   const context = data?.contextById as { fields?: { name: string; type: string; enumValues?: string[] }[]; configuration?: { defaultRightsMode?: RightsMode } } | undefined;
-  const typeValues = context?.fields?.find((f) => f.name === "type")?.enumValues ?? [];
+  // Memoized: a fresh [] every render would churn the effects below (both
+  // list `typeValues` as a dependency) on every render, not just when the
+  // context query result actually changes.
+  const typeValues = React.useMemo(
+    () => context?.fields?.find((f) => f.name === "type")?.enumValues ?? [],
+    [context],
+  );
 
-  const [state, setState] = React.useState<Edits>(() => ({
-    title: proposal?.title ?? "",
-    information: proposal?.information ?? "",
-    type: proposal?.type ?? "",
-    rights_mode: preselect(agent, context?.configuration?.defaultRightsMode, proposal?.visibility ?? null),
-    users: [], roles: [], teams: [],
-  }));
+  // `state` starts null and is only populated once the context query settles
+  // (or there is no memory context to query) — a lazy useState initializer
+  // ran once at mount, before GET_CONTEXT_BY_ID resolved, so the context
+  // default was always undefined and RBACControl (uncontrolled after mount)
+  // never saw the real default land. Gating the form on `state !== null`
+  // means RBACControl only ever mounts with its final initialRightsMode.
+  const [state, setState] = React.useState<Edits | null>(null);
   const [confirmForget, setConfirmForget] = React.useState(false);
 
-  // Register current edits with the stack so "Save all" can read them.
   React.useEffect(() => {
-    if (!approvalId) return;
-    edits?.register(part.toolCallId, () => decisionFor(proposal?.kind ?? "remember", state));
+    if (state !== null) return;
+    if (agent.memory && loading) return;
+    setState({
+      title: proposal?.title ?? "",
+      information: proposal?.information ?? "",
+      type: proposal?.type || typeValues[0] || "",
+      rights_mode: preselect(agent, context?.configuration?.defaultRightsMode, proposal?.visibility ?? null),
+      users: [], roles: [], teams: [],
+    });
+  }, [state, agent, loading, proposal, context, typeValues]);
+
+  // Register current edits with the stack so "Save all" can read them.
+  // No-ops while `state` is still null — nothing to register yet.
+  React.useEffect(() => {
+    if (!approvalId || state === null) return;
+    edits?.register(part.toolCallId, () => decisionFor(proposal?.kind ?? "remember", state, typeValues));
     return () => edits?.unregister(part.toolCallId);
-  }, [approvalId, part.toolCallId, state, proposal?.kind, edits]);
+  }, [approvalId, part.toolCallId, state, proposal?.kind, edits, typeValues]);
 
   if (!proposal) return null;
 
@@ -122,8 +145,27 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
 
   if (!approvalId) return null;
 
+  // Waiting on the context query (RBAC default + type enum): render the
+  // header only, never the form — RBACControl must mount with its final
+  // initialRightsMode, not a placeholder that a later prop change can't fix.
+  if (state === null) {
+    return (
+      <Card className="mt-3 border-border bg-card" data-demo-id="chat-memory-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base font-medium">
+            {proposal.kind === "forget" ? <Trash2 className="size-4 text-muted-foreground" aria-hidden="true" /> : <Bookmark className="size-4 text-muted-foreground" aria-hidden="true" />}
+            {proposal.kind === "update" ? t("memory.updateTitle") : proposal.kind === "forget" ? t("memory.forgetTitle") : t("memory.rememberTitle")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-20 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   const decide = (approved: boolean) =>
-    addToolApprovalResponse({ id: approvalId, approved, reason: approved ? encodeMemoryDecision(decisionFor(proposal.kind, state)) : DECLINED_REASON });
+    addToolApprovalResponse({ id: approvalId, approved, reason: approved ? encodeMemoryDecision(decisionFor(proposal.kind, state, typeValues)) : DECLINED_REASON });
 
   // ── Forget: ConfirmDialog instead of a form ───────────────────────────────
   if (proposal.kind === "forget") {
@@ -160,12 +202,12 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
         {isUpdate && <MemoryRef memoryId={proposal.memoryId} agent={agent} label={t("memory.current")} />}
         <div className="space-y-1">
           <Label htmlFor={`mem-${part.toolCallId}`}>{isUpdate ? t("memory.proposed") : t("memory.wording")}</Label>
-          <Textarea id={`mem-${part.toolCallId}`} value={state.information} rows={3} onChange={(e) => setState((s) => ({ ...s, information: e.target.value }))} />
+          <Textarea id={`mem-${part.toolCallId}`} value={state.information} rows={3} onChange={(e) => setState((s) => (s ? { ...s, information: e.target.value } : s))} />
         </div>
         {typeValues.length > 0 && (
           <div className="space-y-1">
             <Label>{t("memory.type")}</Label>
-            <Select value={state.type || typeValues[0]} onValueChange={(v) => setState((s) => ({ ...s, type: v }))}>
+            <Select value={state.type || typeValues[0]} onValueChange={(v) => setState((s) => (s ? { ...s, type: v } : s))}>
               <SelectTrigger className="w-full sm:w-56"><SelectValue /></SelectTrigger>
               <SelectContent>{typeValues.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
             </Select>
@@ -175,7 +217,7 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
           <div className="space-y-1">
             <Label>{t("memory.whoCanSee")}</Label>
             <RBACControl subjectLabel="memory" initialRightsMode={state.rights_mode} initialUsers={[]} initialRoles={[]} initialTeams={[]}
-              onChange={(rights_mode, users, roles, teams) => setState((s) => ({ ...s, rights_mode, users, roles, teams }))} />
+              onChange={(rights_mode, users, roles, teams) => setState((s) => (s ? { ...s, rights_mode, users, roles, teams } : s))} />
           </div>
         )}
         {!inStack && (
@@ -190,11 +232,14 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
   );
 }
 
-function decisionFor(kind: "remember" | "update" | "forget", s: Edits): MemoryDecision {
+function decisionFor(kind: "remember" | "update" | "forget", s: Edits, typeValues: string[]): MemoryDecision {
   if (kind === "forget") return { v: 1, kind: "forget" };
   if (kind === "update") return { v: 1, kind: "update", information: s.information, ...(s.title ? { title: s.title } : {}), ...(s.type ? { type: s.type } : {}) };
   const rbac = s.rights_mode === "users" ? { users: s.users } : s.rights_mode === "roles" ? { roles: s.roles } : s.rights_mode === "teams" ? { teams: s.teams } : undefined;
-  return { v: 1, kind: "remember", title: s.title || s.information.slice(0, 80), information: s.information, type: s.type, rights_mode: s.rights_mode, ...(rbac ? { rbac } : {}) };
+  // A "remember" always needs a type — fall back to the first available
+  // value rather than let an empty select submit "" (finding 3).
+  const type = s.type || typeValues[0] || "";
+  return { v: 1, kind: "remember", title: s.title || s.information.slice(0, 80), information: s.information, type, rights_mode: s.rights_mode, ...(rbac ? { rbac } : {}) };
 }
 
 /** Shows the current wording of an existing memory (update/forget cards). */
