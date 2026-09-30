@@ -1,141 +1,109 @@
 # Transcriptions — Review & Design Concept
-**Routes:** `/transcriptions`  **Primary persona:** P1 (End User)  **Secondary:** P2 (Power User) — *correction to the ownership matrix, see §2*  **Current state:** Feature-rich single page that works end-to-end, but the core job (reviewing a transcript) is squeezed into a cramped inline accordion with a `max-h-60` preview, destructive actions ship without proper confirmation, the teams-sharing option silently loses data, and the page has zero i18n.
+**Routes:** `/transcriptions` · `?new=1` · `/transcriptions/review/<jobId>` · `/transcriptions/<itemId>` · `/transcriptions/<itemId>?edit=1`  **Primary persona:** P1 (End User)  **Secondary:** P2 (Power User) — *correction to the ownership matrix, see §2*  **Current state:** Shipped (2026-09-29 redesign, stages 1–2 of `docs/superpowers/specs/2026-09-29-transcripts-redesign-design.md`, backend repo). One list unions in-progress jobs and saved transcripts; one composer dialog covers all three sources; one `TranscriptDocument` component serves the reading view, first review and post-save correction; a five-format export route rounds it out. Stage 3 (admin Transcript settings) and stage 4 (speaker suggestions/merge, the People filter, the project vocabulary list) are deliberately not built.
 
 ---
 
 ## 1. Current state
 
-Transcriptions is an upload → transcribe (WhisperX, diarized) → review → save pipeline. The
-saved output is a **knowledge context item** in the `transcriptions` context (`/data/transcriptions`),
-optionally attached to a project and shared via RBAC — i.e. the output of this P1 page is
-input to agent RAG.
+Transcriptions is a document library, not a job queue. Recording still goes through upload → transcribe (WhisperX, diarized) → review → save, but "saved" is no longer an exit from the page: the saved output is a **knowledge context item** in the `transcriptions` context, and this feature now reads, corrects, exports and links to it directly. `/data/transcriptions` still exists as the generic knowledge view and is still where "Open in library" points — it just isn't the only way to use a transcript anymore.
 
 **Code surface:**
-- `app/(application)/transcriptions/page.tsx` — the entire page (1,036 lines): queue, new-transcription panel, job rows, review panel, audio timeline. No layout file; rendered inside the `(application)` shell.
-- `components/uppy-dashboard.tsx` — file gallery + upload dialog (`UppyDashboard`, `FileGalleryAndUpload`, `FileItem`, `getPresignedUrl`).
-- `components/rbac.tsx` — `RBACControl` visibility/sharing widget (shared app-wide).
-- Queries: `queries/queries.ts:3063-3137` (`GET_TRANSCRIPTION_JOBS`, `GET_TRANSCRIPTION_JOB`, `START_TRANSCRIPTION_JOB`, `FINALIZE_TRANSCRIPTION_JOB`, `CANCEL_TRANSCRIPTION_JOB`, `REMOVE_TRANSCRIPTION_JOB`).
-- Nav: `components/custom/main-nav.tsx:169-174` — **ungated** entry (every authenticated user sees it), label `t('navigation.transcriptions')` = "Transcripts" (en) / "Transkription" (de).
+- `app/(application)/transcriptions/page.tsx` — the home list: tabs, toolbar, in-progress strip, grouped rows, bulk actions.
+- `app/(application)/transcriptions/[itemId]/page.tsx` — the reading view, and (with `?edit=1`) post-save correction.
+- `app/(application)/transcriptions/review/[jobId]/page.tsx` + `job-to-draft-item.ts` — first review of a job, before it becomes an item.
+- `app/(application)/transcriptions/components/transcript-document.tsx` — the one component behind both of the above (`mode="read" | "edit"`); the largest file in the feature.
+- `app/(application)/transcriptions/components/new-transcript-dialog.tsx` + `composer.tsx` / `meeting-composer.tsx` / `record-composer.tsx` — the composer and its three sources.
+- `app/(application)/transcriptions/components/export-menu.tsx` — Copy text + five downloads, calling the backend's `GET /transcription-items/:itemId/export`.
+- `app/(application)/transcriptions/components/{speakers-panel,find-replace,review-checklist,post-processing-results,ask-box,audio-timeline,meeting-video-player,in-progress-strip,transcript-row,job-row,file-gallery,file-gallery-dialog}.tsx` — the rest of the surface area; each is documented at its own top.
+- `hooks.ts` — every `useQuery`, polling policy and refetch (`useTranscripts`, `useTranscriptItem`, `useRecordingUsage`, `useProjectOptions`, `useTicker`, `usePostProcessingOptions`); pages never call `useQuery` inline (`design/codebase-structure.md` §3.2).
+- `types.ts` — the pure, unit-tested core: `mergeTranscriptRows`, `filterTranscriptRows`, `groupTranscriptRows`, `canWriteTranscriptItem`, `applyFindReplace`, `effectiveSegments`, and the `TranscriptRow`/`TranscriptItemDetail` shapes.
+- `queries.ts` — every GraphQL document; `linkify.ts` — `[mm:ss]` citation parsing shared by the reading view and post-processing output.
+- Nav: `components/shell/nav-config.ts` (`flagEnabled`, case `"transcriptions"`) — shown when **any** of `config.transcription.enabled` (Record on this device), `config.recall.enabled` (meeting bot) or `config.whisper.enabled` (upload) is on; `layout.tsx` guards the route with the identical flag via `guardRoute("transcripts")`, so a direct URL hit is denied too when nothing at all is configured, not just hidden from nav.
 
-**RBAC summary:** No role gate on nav or page; any authenticated user can transcribe. Job
-listing scoping (`created_by`, `rights_mode`) is server-side. The `RBACControl` inside the
-page governs the *resulting context item's* permissions (`target_rights_mode`,
-`target_rbac_users`, `target_rbac_roles`), not page access.
+**RBAC summary:** two stores, two rights models, unioned client-side (§1.1 of the spec). In-progress work lives in `transcription_jobs`, which is **creator-only** — only the recorder (or a super-admin) ever sees a running or failed job. Once a job is saved it becomes a `transcriptions_items` row, which is **RBAC'd** per user/role exactly like any other knowledge item (`created_by`/`rights_mode` via `addCoreFields`). This is why "Shared with me" and the Mine/Shared tabs need no new backend query — the rights already exist on the item — and why post-save correction (`[itemId]?edit=1`) is gated by the generic item write rule (`canWriteTranscriptItem`, a client-side mirror of the backend's `validateWriteAccess`) rather than by job ownership. Teams sharing stays hidden in every composer/edit surface here (the backend doesn't store `target_rbac_teams`); an item that already carries `rights_mode: "teams"` from outside this feature still renders correctly (read-only) but cannot be produced from here.
 
 ### Functionality inventory
 
 This list is the contract. Every numbered item must appear in the disclosure ladder (§3).
-All references are `app/(application)/transcriptions/page.tsx` unless stated.
 
-**Page shell & queue**
-1. **Page header** with title, one-line purpose, and an inline deep link "View previously saved transcripts" → `/data/transcriptions` (`:162-173`).
-2. **"New transcription" toggle button** in the header; label morphs to "Cancel" while the panel is open; opening it collapses any expanded job row (`:174-182`).
-3. **Active-jobs query**: statuses `queued | transcribing | awaiting_review | failed`, `cache-and-network`, **5-second polling** (`:123-137`).
-4. **Saved-jobs query**: status `saved`, limit 50, sorted `createdAt DESC` by query default (`:139-151`, `queries/queries.ts:3084-3095`).
-5. **Live timestamps**: a 1-second `tick` re-render keeps elapsed counters and "X ago" labels moving (`:116-121`); `formatRelative` renders "just now/Ns/Nm/Nh/Nd ago" then short dates (`:73-97`).
-6. **"In progress" section** with a dashed-border empty state ("No transcriptions in progress. Click \"New transcription\" to start one.") (`:194-218`).
-7. **"Completed" section**, rendered only when saved jobs exist, with explainer copy ("Re-open a saved transcript to rename speakers; saving will update the existing context item.") (`:220-244`).
-8. **Single-expansion accordion**: one `expandedJobId` shared across both sections — opening one row closes the other (`:115`, `:209-211`, `:235-238`).
+**Home list (`page.tsx`, `hooks.ts`, `types.ts`)**
+1. Union data spine: `useTranscripts` runs the creator-only jobs query and the RBAC'd `transcriptions_itemsPagination` query and `mergeTranscriptRows` unions them into one `TranscriptRow[]`; a job that already produced an item contributes nothing (matched by `job_id`, `saved_item_id`, or `status === "saved"/"cancelled"`), which is what keeps the union duplicate-free.
+2. Polling discipline: only the jobs query polls, every 5 s, and only while something is `queued`/`transcribing`/`recording`; the items query never polls.
+3. Tabs: All / Needs review (amber count badge) / Mine / Shared with me, via `filterTranscriptRows` over `createdBy`.
+4. Search: server-side `contains` filter on the items query's `name`; in-progress job rows aren't filtered by it and stay visible regardless.
+5. Filters: Source, Project, Date, applied client-side over the loaded page. **People is not built** — speaker names live in an unstructured `speakers` JSON map, so a filter over it would silently miss renames (stage 4).
+6. Grouping: This week / Earlier by `recordedAt`, 7-day cutoff (`groupTranscriptRows`); a scheduled meeting bot's future `join_at` still sorts into This week.
+7. Pagination: 50 items per page, "Load more" appends via the items query's `hasNextPage`.
+8. In-progress strip: `recording`/`queued`/`transcribing` rows collapse behind one "N in progress" disclosure row with a per-state summary; `failed` rows are never folded away and always render below it with their own recovery action.
+9. Recovered-job link: the 2026-09-22 "reported lost" fix — when a failed meeting job exists, one targeted query looks for a later `saved` job sharing its `meeting_url`, and the failed row links to "already saved as …" when found.
+10. Row anatomy: checkbox (disabled + tooltip for job rows — bulk actions apply to items only), title, amber "Needs review" badge, one summary line (first line of a post-processing output, when one exists), a meta line that degrades quietly on a null pre-backfill field, an access indicator (Only you / Everyone / Shared with you / N people / role label), one action button.
+11. Bulk actions: select item rows, then Archive / Delete / Set access from the dark `ItemsActionBar` + `BulkAccessDialog` (`components/widgets/`, promoted there so this feature-local page can use them without crossing the feature-isolation lint rule) via the generic `itemsBulkUpdateRBAC` mutation — no re-embed, atomic.
+12. Monthly recording usage bar: shown only when Recall is enabled **and** a cap is configured; hidden entirely otherwise, never a bogus "0 of 0 used".
+13. Overflow menu: "…" next to the header's New-transcript button links out to `/data/transcriptions`.
+14. Legacy link: an old `?review=<jobId>` query param redirects to `/transcriptions/review/<jobId>` on mount, so pre-redesign bookmarks and shared links still resolve.
 
-**New-transcription panel (`NewTranscriptionPanel`, `:252-456`)**
-9. **Audio file selection** via `UppyDashboard` dialog; `selectionLimit: 1`; allowed types `.mp3 .wav .m4a .mp4 .mpeg` (`:344-359`).
-10. **Selected-file chip**: FileAudio icon + human filename (decoded from the `_EXULU_` S3-key convention) + icon-only clear (X) button (`:281-285`, `:330-342`).
-11. **Title input**, auto-filled from the filename with extension stripped, only if still empty (`:287-289`, `:363-371`).
-12. **Language select**: Auto-detect (default) + en, de, fr, es, it, nl, pt; "auto" is sent as `null` (`:269`, `:303`, `:375-390`).
-13. **Speaker-count select**: Auto-detect (default) or 1–8; "auto" sent as `null` (`:270`, `:304`, `:392-407`).
-14. **Project assignment** (optional): Select over the first 100 projects (`GET_PROJECTS`, `:274-277`, `:410-428`).
-15. **Target permissions** for the resulting item via `RBACControl` (`modalMode`), capturing rights mode + per-user/per-role read/write (`:262-267`, `:430-443`).
-16. **Start action**: disabled until a file is chosen; busy spinner; "Transcription started" toast; destructive toast with server message on failure (`:291-324`, `:445-453`).
-17. **Cancel action** (panel footer) closes the panel without starting (`:446-448`); same effect as the header toggle (item 2).
+**Composer (`new-transcript-dialog.tsx`, `composer.tsx`, `meeting-composer.tsx`, `record-composer.tsx`)**
+15. One dialog, three sources: `?new=1` opens a 680 px `Dialog` with a source `ToggleGroup` (Upload a file / Invite a meeting bot / Record on this device); each source is gated by its own backend flag.
+16. Unconfigured sources stay visible: a disabled `ToggleGroupItem` carries a "not set up" tooltip instead of disappearing; if every source is off, the body shows a quiet not-set-up note. The "ask an admin" guidance is plain text, not a link — there is no admin settings page yet that exposes these flags (stage 3), so linking anywhere would be a dead end.
+17. Options collapsible per source: project, sharing, and (for uploads) language/speaker-count collapse behind one `<button aria-expanded>` summarizing the current values inline, so the common path is drop file → Start.
+18. Recording pin: while a "Record on this device" session is active, the dialog stays open regardless of the URL (Escape/overlay/✕ can't dismiss it) because the close-out (upload + `liveRecordingStop`) must finish before the surface can safely unmount. Predates this plan; unchanged by it.
+19. Post-processing: the meeting and record composers can attach prompt+agent pairs that auto-run once the transcript is ready.
 
-**File gallery / upload dialog (`components/uppy-dashboard.tsx`, opened by item 9)**
-18. **Browse previously uploaded S3 files** in a thumbnail/icon grid with type-specific icons and secure image previews (`uppy-dashboard.tsx:313-364`, `:431-535`, `:562-586`).
-19. **Filename search** within the gallery (`:319-324`, `:296-300`).
-20. **Pagination** via S3 continuation tokens: first / previous / next buttons (`:366-411`).
-21. **Upload new files** through the embedded Uppy Dashboard widget (max 10 files per batch, theme-aware light/dark) (`:250-290`, `:414-418`).
-22. **Auto-list + auto-select newly uploaded files**, respecting the selection limit (`:259-285`, `:302-305`).
-23. **Delete a stored file** from the gallery (hover-revealed X; tanstack mutation → `files.delete`) (`:227-233`, `:355-361`, `:518-531`).
-24. **View/download any file** via presigned URL in a new tab (`:499-516`).
-25. **Selection counter** ("n / limit files selected") + allowed-types hint; files of other types are rendered disabled/dimmed (`:325-328`, `:361`).
-26. **Gallery empty state** ("Nothing to see here... yet!") and a 9-tile skeleton loading grid (`:330-351`).
-27. **Confirm selection** button closes the dialog and hands the S3 key back to the page (`:420-427`, `:147-157`).
+**Reading view (`[itemId]/page.tsx`, `transcript-document.tsx`, read mode)**
+20. Header: title, Share (an access-pill popover backed directly by the shared `RBACControl` primitive), Export ▾, "…" overflow (Correct text and speakers → `?edit=1`, Move to project, Open in library, Delete).
+21. Chapters column: parsed from a post-processing output whose markdown has a `## Chapters` heading; the column simply doesn't render when no output supplies one.
+22. Summary / Action items: the remaining post-processing outputs, rendered as markdown; `[mm:ss]` citations are linkified into buttons that seek the player.
+23. Transcript: segments merged into consecutive-same-speaker blocks.
+24. Right column: the meeting video or audio player, then the ask box.
+25. Ask about this transcript: an agent picker (agents that already search the `transcriptions` context first, under "Can search Transcriptions"; everyone else under "attach only"), two suggested questions, Send navigates to `/chat/<agentId>?items=transcriptions/<itemId>&q=<question>`.
+26. Read-only notice: a viewer who can read but not correct never sees a Save button — `canWriteTranscriptItem` decides this ahead of render; a server rejection is still caught and shown as a plain message as a backstop.
 
-**RBAC control (`components/rbac.tsx`, used in items 15 and 45)**
-28. **Visibility mode picker**: private / users / roles / teams / public in a searchable Command popover; choosing a mode clears the other modes' selections (`rbac.tsx:39-48`, `:175-231`).
-29. **Users sharing**: server-side email search (excludes `type: api`), first-5 results checklist, per-user read/write rights select, per-user remove (`:234-357`).
-30. **">5 users" management modal**: hydrated full list with rights editing and removal (`:335-347`, `:541-616`).
-31. **Roles sharing**: checkbox list of roles (excludes `api` type, limit 30) with per-role read/write and removal (`:87-101`, `:359-448`).
-32. **Teams sharing**: checkbox list (limit 100) with per-team read/write and removal (`:103-110`, `:450-539`). ⚠️ **On this page the team selection is silently discarded** — the page's `onChange` only destructures `(mode, users, roles)` (`page.tsx:437-441` vs. the 4-arg signature `rbac.tsx:67`), and `START/FINALIZE` inputs carry no teams field (`queries/queries.ts:3106-3124`). See UX review.
+**Review & correction (same component, `mode="edit"`, at `review/[jobId]` and `[itemId]?edit=1`)**
+27. One component, two entry points: first review of a job (seeded by the pure `jobToDraftItem` adapter) and post-save correction render the identical edit UI; only the save mutation differs (`FINALIZE_TRANSCRIPTION_JOB` vs. the generic item update).
+28. Inline correction: click a block to turn it into a textarea; blur commits to local state, Escape reverts; only `text` ever changes — `start`/`end`/`speaker` are preserved so timestamps and the audio ribbon survive a correction.
+29. Find and replace: hidden behind a button; find/replace/match-case drive a live match count as you type, Replace all applies it. The "remembered for the project" vocabulary list is stage 4 and does not exist.
+30. Review checklist: a header status pill/popover deriving title-set / speakers-named / summary-present / sharing-chosen from local draft state; purely informational — nothing on it blocks Save.
+31. Speakers panel: one row per distinct raw speaker label, one open at a time — name input, "Hear" (seeks the player to the speaker's first block, plays ~4 s), talk share. Suggestions from earlier transcripts and a Merge control are stage 4 and do not exist.
+32. Details section: project + sharing as local draft state, applied only on Save (unlike the reading view's immediate-apply popovers).
+33. Pinned footer: the audio/video player plus Save / Discard; Discard confirms through the shared `ConfirmDialog`.
+34. Post-processing re-run: shown above the document on the job-review route only, since it needs the real `Job`, not the item-shaped props `TranscriptDocument` takes.
+35. Sharing round-trips: a job's chosen `target_rbac_users`/`target_rbac_roles`/`target_rights_mode` seed the edit draft, so an unchanged first review saves the same sharing the user picked in the composer, byte for byte.
+36. Stale-save guard: the correction page refetches on window focus; if the item's `updatedAt` moved since the edit session began, Save confirms before overwriting rather than silently clobbering someone else's change.
+37. Stale-job redirect: landing on `review/<jobId>` for a job that's already saved (a stale link) redirects to that item's own page instead of showing a stale review UI.
 
-**Job rows (`JobRow`, `:461-623`)**
-33. **Row identity**: FileAudio icon + title, falling back to the decoded filename from `audio_s3key` (`:478-482`, `:583-585`).
-34. **Status line per state** (`:559-568`): "Queued…"; live transcribing label combining audio length + elapsed + **estimated remaining time** computed from `NEXT_PUBLIC_TRANSCRIPTION_FACTOR` (default `2`; "wrapping up" when overdue) (`:33-39`, `:495-511`, `:539-543`); "Awaiting review (length)"; "Saved/Updated X ago · length" with a 2-second-jitter heuristic distinguishing first save from re-save (`:548-557`); "Failed"; "Cancelled".
-35. **Full timestamp tooltip** on saved rows via the native `title` attribute (`:572-578`, `:586-589`).
-36. **Inline error text** appended to the status line in destructive color (`:591-593`).
-37. **Cancel** for queued/transcribing jobs (`CANCEL_TRANSCRIPTION_JOB`) — no confirmation; destructive toast on failure (`:513-524`, `:596-600`).
-38. **"Review & save"** toggle (primary button) for `awaiting_review`, expanding the review panel; label flips to "Close" (`:601-605`).
-39. **"Edit speakers"** toggle (outline button) for `saved`, re-opening the review panel in re-save mode (`:606-610`).
-40. **"Dismiss"** (trash icon + label) for `failed` jobs → `REMOVE_TRANSCRIPTION_JOB` — no confirmation; destructive toast on failure (`:526-537`, `:611-615`).
-
-**Review panel (`ReviewPanel`, `:625-883`)**
-41. **Full job fetch** incl. `raw_segments` (tolerant of JSON-string or array payloads), `cache-and-network`, with an inline loading state (`:634-652`, `:771-778`).
-42. **Diarization-disabled notice** (amber alert) when every segment's speaker is `"unknown"`, with guidance to type a single name (`:780`, `:784-789`).
-43. **Editable title** (`:667`, `:791-798`).
-44. **Project re-assignment** select, pre-filled from the job (`:668`, `:800-818`).
-45. **Permissions re-editing** via `RBACControl`, pre-filled from `target_*` fields (`:669-677`, `:820-833`).
-46. **Speaker renaming**: one input per distinct speaker, ordered by first appearance in the audio; raw label (`SPEAKER_00`…) shown as `code`; placeholder "(keep raw label)"; **pre-populated from the persisted `job.speakers` map** so re-edits start from saved names (`:99-109`, `:654-664`, `:680-682`, `:835-854`).
-47. **Live text preview**: consecutive same-speaker segments merged into `Name: text` blocks, re-rendered as names are typed (`:694-706`, `:865-870`).
-48. **Save / finalize** (`FINALIZE_TRANSCRIPTION_JOB`): creates or updates the context item; success toast carries a deep link to `/data/transcriptions/[item_id]`; re-save mode shows "Save changes", toasts "Transcript updated", and auto-closes; busy spinner; destructive toast on failure (`:708-745`, `:872-880`).
-49. **Discard / Close**: for `awaiting_review`, native `confirm()` then job cancellation; for `saved`, the button is relabeled "Close" and never deletes the item (`:747-769`, `:872-875`).
-
-**Audio timeline (`AudioTimeline`, `:915-1035`)**
-50. **Audio playback** via presigned URL (1-minute client-side cache in `getPresignedUrl`, `uppy-dashboard.tsx:537-560`) in a native `<audio controls>` element, with a loading state (`:924-961`, `:963-973`).
-51. **Speaker-colored segment ribbon**: deterministic hash → 8-color palette per raw speaker id (stable across renames); minimum 0.15% segment width; total duration falls back to the last segment's end before audio metadata loads (`:888-913`, `:944-946`, `:974-1001`).
-52. **Click a segment to seek and play** from its start (`:948-952`, `:995`).
-53. **Hover popup per segment**: speaker name (live-renamed), time range (`m:ss`), and segment text, positioned over the ribbon (`:996-998`, `:1011-1031`).
-54. **Live playhead line** synced to `currentTime` (`:970-972`, `:1002-1009`).
+**Export (`export-menu.tsx`, backend `GET /transcription-items/:itemId/export`)**
+38. Five formats: Markdown, Word (.docx), PDF, CSV, SRT, all built server-side from the same markdown builder Copy text also calls, so the clipboard and the `.md` download can never diverge.
+39. Three Include toggles: Summary and action items, Timestamps, Speaker names — all default on, persisted per browser in `localStorage`.
+40. Authenticated download: each format is fetched with a bearer token and handed to the browser as a blob download, not a plain link/navigation — the export route authenticates only via headers, so a bare navigation would 401 and replace the app with a raw error page.
 
 ### UX review
 
-**High**
-- **Hierarchy inversion in review** — the transcript, the thing being reviewed, is the *last* element of the panel, rendered as a `text-xs` `<pre>` capped at `max-h-60` (`:865-870`), below four form sections. The page's #1 job gets the least space. The audio timeline (`:856-863`) is similarly buried mid-form.
-- **Teams sharing silently loses data** — `RBACControl` offers "Shared with Teams" (`rbac.tsx:43`, `:450-539`) but the page's `onChange` drops the 4th argument (`page.tsx:437-441`, `:826-832`) and neither `transcriptionJobStart` nor `transcriptionJobFinalize` sends a teams field (`queries/queries.ts:3106-3124`). A user can select teams, see them listed, save — and the selection evaporates. Mode `"teams"` may even persist with an empty member list.
-- **Destructive actions outside the design system** — Cancel on a running job (`:596-600`) and Dismiss on a failed job (`:611-615`) execute immediately with no confirmation; Discard uses native `confirm()` (`:754`). Violates philosophy §2 ("anything destructive lives at L3+ with confirmation") and anti-pattern 4 (one confirm pattern).
-- **Hover-only / keyboard-inaccessible review affordances** — segment popups exist only on `onMouseEnter` (`:996-998`); ribbon segments are plain `div`s with `onClick`, no `role`, no `tabIndex`, no focus state (`:986-999`); the saved-row full timestamp lives in a `title` attribute (`:586-589`). Unusable by keyboard and touch.
+The June-2026 findings below are closed. What follows is what's actually still open, as of this redesign.
 
-**Med**
-- **Zero i18n on a P1 page** — every string is hardcoded English (`page.tsx` throughout) in an en/de app; only the nav label is translated, and it disagrees with the page ("Transcripts" `messages/en.json:11` vs. h1 "Transcriptions" `page.tsx:165`).
-- **Whole-page 1 s re-render + 5 s polling** — the `tick` interval re-renders the entire page including all rows and any open review panel (`:116-121`); polling continues even when nothing is active (`:136`). Contradicts "Performance is a feature".
-- **"In progress" contains failed jobs** — the active query includes `failed` (`:129-131`), so dead jobs sit under a section titled "In progress" indefinitely until manually dismissed.
-- **Estimate constant contradicts its own comment** — comment says "We use 10 as a deliberately-conservative default" but the fallback is `"2"` (`:33-39`); on CPU-bound servers the "~remaining" label will routinely show "wrapping up" for hours.
-- **Cancelled jobs vanish without a trace** — neither query includes status `cancelled` (`:129-131`, `:146`), so `statusLabel.cancelled` (`:567`) is unreachable after refetch; a cancel looks like a delete.
-- **Saved list capped at 50** with no pagination, search, or count (`:147`); heavy users lose access to older jobs (the items survive in `/data/transcriptions`, but speaker re-editing via this page does not).
-- **Wrong copy in shared RBAC widget** — visibility descriptions say "agent" ("Only you can see this agent") regardless of context (`rbac.tsx:40`, `:44`).
-- **`saved_item_id` never surfaced** — the field is fetched (`queries/queries.ts:3076`) but the only link to the saved item is the transient success toast (`:727-733`); afterwards there is no path from a saved row to its item.
-- **Morphing header button** — "New transcription" relabels to "Cancel" (`:180`), making the page's primary action disappear while the panel is open and reading ambiguously next to job-row "Cancel" buttons.
-- **Icon-only clear-file button without aria-label** (`:334-341`); the trash "Dismiss" icon does have text, the X does not.
+**Resolved by this redesign (kept here for the record, not as open items)**
+- Zero i18n, teams-sharing data loss, unconfirmed destructive actions, and the review transcript being visually last and smallest are all gone: every string is translated, teams stays hidden rather than lying, every destructive action confirms via `ConfirmDialog`, and the transcript is the centre column at real reading size in both read and edit mode.
+- Cancelled jobs no longer vanish silently: `toasts.cancelled` fires and the row leaves both lists on refetch instead of lingering as an unreachable status.
+- `saved_item_id` is no longer toast-only: the reading view is now a real page at `/transcriptions/<itemId>`, and "Open in library" is a persistent link, not a five-second toast.
 
-**Low**
-- Hand-rolled header/empty state instead of shared primitives (expected pre-redesign) (`:163-182`, `:198-201`).
-- Multiple `default`-variant (purple) buttons visible at once when rows await review (header + per-row "Review & save" + panel "Start"/"Save") — purple-confetti risk (anti-pattern 5).
-- Hover popup can clip at viewport edges (`-translate-x-1/2` with no collision handling, `:1011-1014`).
-- Speaker palette uses raw HSL literals (`:888-897`) — fine as semantic speaker mapping, but contrast of `opacity-70` fills should be verified in light mode.
-- `console.log` noise in `uppy-dashboard.tsx` (`:61`, `:247`, `:506-508`, `:554`, `:564`).
-- `size="sm"`/icon buttons are ~32 px touch targets.
+**Known gaps (deliberate, per the spec's Out of scope §9 — not bugs)**
+- No People filter on home (speaker names aren't structured data yet).
+- No speaker-name suggestions or Merge control in the speakers panel.
+- No "remembered for the project" find-and-replace vocabulary list.
+- No admin Transcript settings page — the three source flags are backend env vars with no UI, which is exactly why addition (1) above demotes the composer's "ask an admin" copy to plain text instead of a link.
+- Video/audio retention, workspace-level sharing defaults, and per-deployment bot name/notice are still env-var only.
 
-### Mobile audit (390 px)
+**Open follow-ups (tracked, not blocking; see the plan's progress ledger for detail)**
+- No live backend click-through has verified all five export formats end-to-end, or a full phone pass of the composer, reading view and review page — deferred to manual QA after this task.
+- `rights_mode: "teams"` on a pre-existing item renders more restrictively here than the server enforces (a team member with a write grant is locked out in this UI); mitigated today because this feature never produces that mode itself.
+- An inline block edit writes the whole block's text onto its first segment, so an SRT/VTT export times a multi-segment correction only to that first segment's slice — fine for reading, worth a note before subtitle timing is relied on more heavily.
+- The backend's correction-resolution logic (`transcriptionService.finalize`) has no dedicated test harness, so it's the least-covered code in the change; flagged in the plan's ledger as the highest-value backend follow-up.
 
-Nothing hard-breaks (no fixed widths, no wide tables), but the review job degrades:
+### Mobile audit (per the spec's phone-verification requirement)
 
-- **Hover-only segment popups are dead on touch** (`:996-998`) — tapping a segment seeks and plays (`:995`) but there is no way to read a segment's text/speaker from the ribbon. The `title`-attribute timestamp (`:588`) is equally unreachable.
-- **Ribbon segments are sub-millimeter tap targets** for short utterances (min width 0.15% of ~350 px ≈ 0.5 px, `:982-985`).
-- **Upload dialog is a desktop composite**: `DialogContent sm:max-w-[900px]` (`uppy-dashboard.tsx:142`) stacks gallery above the Uppy widget at `grid-cols-1 md:grid-cols-2` (`:313`) with **no max-height/scroll handling on the dialog itself** — gallery + pagination + Uppy Dashboard easily exceed the viewport; the confirm button can land off-screen.
-- **Header row doesn't wrap**: `flex items-center justify-between` (`:163`) squeezes "New transcription" against the title block; no `sm:` variants anywhere on the page.
-- **Form grid `grid-cols-2`** for Language/Speakers (`:373`) renders ~160 px selects — functional but tight; no `sm:` fallback to one column.
-- Long transcribing status strings ("Transcribing 1h 2m 10s of audio… 12m 4s elapsed · ~1h 52m remaining") wrap to 3 lines and push row buttons — `items-center` keeps it usable, just noisy.
-- Review panel forms, preview `<pre>` (`whitespace-pre-wrap`), and native audio controls behave fine.
-
-**Verdict: minor** — the upload → wait → save happy path works on a phone; reading/verifying the transcript against audio (the actual review) does not.
+- Row actions and the composer's toggle/collapsible controls use `max-md:h-11`-style sizing throughout for ≥44 px touch targets, not just desktop `size="sm"`.
+- The header's "New transcript" action is duplicated into the mobile top bar (`MobileTopbarAction`) rather than relying on a header that might wrap off-screen.
+- The file gallery becomes a full-screen bottom `Sheet` (`h-[90dvh]`) below `md`, upload section first, instead of the two-column desktop dialog.
+- **Verdict: not yet independently verified.** The spec calls for "manual verification for every screen, on desktop and a phone" (§7); that pass is open, not part of this task.
 
 ---
 
@@ -146,14 +114,14 @@ Ranked jobs on this page:
 1. Upload a recording and get a transcript started (weekly-to-daily for meeting-heavy users).
 2. Review the finished transcript: name the speakers, skim/verify against the audio, save.
 3. Check progress of a running transcription ("is it done yet?") — often the *mobile* visit.
-4. Re-open a saved transcript to fix speaker names or sharing.
-5. Find the saved transcript to use it (in chat, in a project) — currently exits to `/data/transcriptions`.
+4. Re-open a saved transcript to fix speaker names, correct text, or sharing.
+5. Find the saved transcript to use it — read it, ask a question about it, export it, or attach it in chat — without leaving this feature; `/data/transcriptions` is still there for the generic knowledge-browsing case, and "Open in library" links out to it.
 
 **P2 — Power User (secondary).** The output is RAG content: P2 cares that transcripts land in
-the right **project**, with the right **sharing** (items 14-15, 44-45), so agents and teammates
-can use them (persona jobs 4 and 2). P2 also re-curates: re-opening saved jobs to fix speaker
-labels that pollute retrieval quality. These are exactly the fields the current UI promotes to
-top-level — for everyone.
+the right **project**, with the right **sharing**, so agents and teammates
+can use them (persona jobs 4 and 2). P2 also re-curates: re-opening saved transcripts to fix speaker
+labels that pollute retrieval quality. These fields live one deliberate step
+in (the composer's Options collapsible, the edit page's Details section) rather than cluttering the P1 happy path.
 
 **Primary persona and #1 job in one sentence:** *P1 turns a recording into a correctly
 speaker-labeled transcript with as little ceremony as possible.*
@@ -161,263 +129,198 @@ speaker-labeled transcript with as little ceremony as possible.*
 **Ownership matrix correction:** `personas.md:154` lists `/transcriptions` as P1 with secondary
 "—". That is wrong: **P2 is a real secondary owner** — project targeting, RBAC sharing, and
 speaker-label quality exist for the knowledge/RAG pipeline, which is P2's domain (persona job 4).
-Consequence for the design: project + sharing fields move to L3 (P2's deliberate depth) instead
-of cluttering P1's L1/L2 flow. The correction should flow back to `personas.md`.
+The correction should flow back to `personas.md`.
 
 ---
 
 ## 3. Design concept
 
-**Concept headline: "Drop audio, watch it cook, name the voices."** The page becomes a calm
-three-stage queue ordered by what needs the user (review first, processing second, saved last),
-and review graduates from a cramped accordion into a focused side panel where the **transcript
-itself is the hero** — readable, tappable, synced to the audio — with configuration folded
-behind it.
+**Concept headline: "One library, one document."** Every recording — mid-transcription, awaiting
+review, or long since saved — is one row in one list, and every saved recording is the same
+document component whether you're reading it, correcting it, or reviewing it for the first time.
+Configuration (source, project, sharing, language) folds behind one collapsible per surface so the
+common path stays a single action: drop a file, or press Start, or open a saved row.
 
 ### Default view (L1)
 
-Single centered content page (PageShell, `max-w-4xl`, `p-6` rhythm — the current width is right).
+Single list at `/transcriptions` (`PageShell variant="content"`) — no more three permanently-named
+status groups. Top to bottom: `PageHeader` (title, purpose line, overflow "…" → library link, "New
+transcript" primary action); the optional monthly-recording-usage bar; a `Tabs` + `Toolbar` row
+(All / Needs review / Mine / Shared with me, search, Source/Project/Date filters, and — once
+something is selected — the bulk action bar in the toolbar's own selection slot); the
+`InProgressStrip`; then the list itself, grouped This week / Earlier, each row a `TranscriptListRow`;
+a "Load more" footer past the first page. An `EmptyState` covers the zero-rows case, and a quieter
+inline one covers "no rows match this tab/filter/search" without losing the chrome around it.
 
-1. **PageHeader** (shared primitive): title "Transcriptions" (`text-2xl`), purpose line
-   "Turn audio into speaker-labeled transcripts you can use in chats and projects.", and the
-   page's **only purple button: "New transcription"** on the right. The header link to the
-   library moves into the Saved group header (below). The button no longer morphs to "Cancel"
-   — while the composer is open it becomes disabled (the composer has its own Cancel).
-2. **Toolbar** (shared primitive, directly under the header): a single search input filtering
-   jobs by title (client-side over loaded jobs; server `contains` filter when the saved list
-   paginates). Nothing else — no filters, no view switches.
-3. **The queue**, one vertical list in three status groups, each a `text-sm font-medium
-   text-muted-foreground` group header with a count, separated by `gap-8`:
-   - **Needs review** (`awaiting_review`) — pinned first; rows carry an outline "Review" button.
-     This is the actionable group, so it leads.
-   - **Processing** (`queued`, `transcribing`) — quiet rows with a muted animated status dot, the
-     live elapsed/remaining label, and a ghost "Cancel" action. A 2 px indeterminate progress
-     strip under the row border while transcribing. **Failed** jobs render here too but visually
-     distinct (red status dot, error message in destructive text, "Dismiss" ghost action) — the
-     group is honestly named "Processing & failed" only when failures exist; otherwise "Processing".
-   - **Saved** — replaces "Completed"; each row shows "Saved/Updated {relative} · {length}", an
-     "Edit" outline action (re-opens review), and a quiet "Open in library ↗" ghost link built
-     from `saved_item_id` (fixes the toast-only deep link). The group header carries the
-     "Transcript library" link to `/data/transcriptions` (inventory 1's link, relocated).
-   - Healthy states are muted; only failures earn color (philosophy §4).
-4. **EmptyState** (shared primitive) when there are no jobs at all: FileAudio icon, "Upload a
-   meeting or voice memo and get back a speaker-labeled transcript.", primary action
-   "New transcription".
-5. **Row anatomy** (identical across groups): FileAudio icon · title (`font-medium`, truncate) ·
-   status line (`text-xs text-muted-foreground`, RelativeTime with a real Tooltip for the full
-   timestamp) · right-aligned action. One action per row; no purple below the header.
+**The composer (L2):** "New transcript" opens `NewTranscriptDialog` — a modal `Dialog`, not an inline
+card, because it now has to host three genuinely different flows (file upload, meeting-bot invite,
+on-device recording) behind one switch. Each source keeps its own required field on top (file /
+meeting URL / big Start button) with an "Options" collapsible for project, sharing, language and
+speaker count, summarized inline so nobody needs to open it for the default path. An active
+on-device recording pins the dialog open across navigation and URL changes until its close-out
+finishes.
 
-**The composer (L2):** clicking "New transcription" expands an inline card at the top of the
-queue (no dialog — the file gallery is itself a dialog, and modal-on-modal is forbidden,
-anti-pattern 3). Contents, in order:
-- **File area**: a quiet dropzone ("Drop an audio file or **browse** — mp3, wav, m4a, mp4, mpeg");
-  browse opens the existing gallery dialog (inventory 18-27 unchanged). Once chosen: the file
-  chip with clear button (clear gets `aria-label="Remove file"`).
-- **Title input** (auto-filled from filename as today).
-- **Footer**: ghost "Cancel" + purple "Start".
-- **"Options" collapsible** (L3, collapsed by default, chevron + label): Language, Speakers,
-  Project, Sharing (RBACControl). Defaults — auto, auto, none, private — are stated inline so
-  nobody *needs* to open it ("Auto-detect language and speakers · Private · No project").
-This makes the P1 happy path exactly: drop file → Start. P2's targeting lives one deliberate
-step in.
+**Reading view (L2):** opening a saved row goes to `/transcriptions/<itemId>` — a full page, not a
+side panel. Header (title, Share, Export ▾, "…"), a left chapters column, a centre column that is
+the transcript itself at real reading size (preceded by any Summary/Action-items post-processing
+output), and a right column with the player and the "Ask about this transcript" box. "Open in
+library" in the overflow menu is the only remaining link to `/data/transcriptions/<itemId>`.
 
-**Review (L2, the heart):** "Review" / "Edit" opens a **right-side panel** (Sheet, `max-w-xl`
-on desktop) — not an inline accordion — addressable as `/transcriptions?review=<jobId>` so it
-is linkable and survives refresh. Structure top-to-bottom:
-- **Panel header**: editable title (single input styled as heading), status subline, close (X).
-- **Diarization-disabled Alert** when applicable (inventory 42), unchanged copy, amber/info style.
-- **Speakers strip**: the rename inputs (inventory 46) as a compact horizontal-wrapping list of
-  `color-dot + code raw-label + input` — visible without scrolling because naming speakers is
-  the #1 review action.
-- **Transcript (the hero)**: the merged speaker blocks (inventory 47) rendered as a scrollable,
-  full-height reading surface — each block is a real `<button>` row: colored speaker dot +
-  name (live-renamed) + `m:ss` start time + text (`text-sm`, readable, not `text-xs`).
-  **Clicking/tapping a block seeks the audio** — this replaces the hover-popup as the primary
-  segment↔audio affordance (keyboard- and touch-accessible by construction). The block at the
-  current playhead position is subtly highlighted while playing.
-- **Sticky audio footer**: native audio controls + the colored segment ribbon with playhead
-  (inventory 50-54). Ribbon stays as a navigational overview: click/tap to seek **and** scroll
-  the transcript to that block; hover popups remain as a desktop-only enhancement (now
-  redundant, not load-bearing).
-- **"Details" collapsible (L3)**: Project select + Sharing (RBACControl) — pre-filled, exactly
-  today's behavior (inventory 44-45).
-- **Panel footer**: ghost "Discard"/"Close" (per mode) + purple "Save"/"Save changes".
-  Discard routes through the shared **ConfirmDialog** ("Discard this transcript? The audio stays
-  in your files; the transcription job will be cancelled.").
+**Review & correction (L2, edit mode):** the exact same component, `mode="edit"`, reached two ways —
+first review of a job at `/transcriptions/review/<jobId>` (a full page; post-processing re-run sits
+above it), and correcting an already-saved transcript at `/transcriptions/<itemId>?edit=1`. The right
+column becomes the speakers panel; the centre column gains inline click-to-edit blocks and a
+find-and-replace trigger; a header checklist pill reports readiness without blocking Save; a pinned
+footer holds the player and Save/Discard. A viewer who can read but not write never sees this mode at
+all — the page silently stays in read mode with an explanatory notice instead.
+
+**Export (L2 trigger, L3 detail):** the reading view's Export ▾ opens `ExportMenu` — Copy text plus
+five format downloads, with three Include toggles tucked below them. One request-time builder on the
+backend serves every format and the clipboard, so they can't drift apart.
 
 ### Disclosure ladder
 
-Every inventory item (1-54) mapped. "Queue" = the L1 list; "Composer" = inline new-transcription
-card; "Panel" = the review side panel; "Gallery" = the file gallery dialog.
+Every inventory item (1–40) mapped. "List" = the home page; "Composer" = `NewTranscriptDialog`;
+"Document" = `TranscriptDocument` (read or edit mode, per item); "Export" = `ExportMenu`.
 
 | # | Capability | Level | Physical location |
 |---|------------|-------|-------------------|
-| 1 | Header + purpose + library link | L1 | PageHeader; library link relocated to Saved group header ("Transcript library ↗") |
-| 2 | New-transcription entry point | L1 | PageHeader primary button (also EmptyState action); no longer morphs to "Cancel" |
-| 3 | Active-jobs query + polling | L1 | Queue (Needs review + Processing groups); poll only while active jobs exist |
-| 4 | Saved-jobs query | L1 | Saved group; "Load more" affordance past 50 (fixes the silent cap) |
-| 5 | Live elapsed / relative timestamps | L1 | Row status lines via shared `RelativeTime` + a row-scoped ticker (no whole-page re-render) |
-| 6 | Empty state (no active jobs) | L1 | Group-level quiet line "Nothing processing"; page-level shared EmptyState when zero jobs total |
-| 7 | Completed section + re-open explainer | L1 / L2 | Saved group; explainer copy becomes a Tooltip on the group's info icon (it's guidance, not status) |
-| 8 | Single-expansion behavior | L2 | Replaced by the single review panel (`?review=` param) — inherently one-at-a-time |
-| 9 | Audio file selection (gallery, limit 1, audio types) | L2 trigger, L3 dialog | Composer dropzone "browse" → Gallery dialog |
-| 10 | Selected-file chip + clear | L2 | Composer file area (clear gets aria-label) |
-| 11 | Title input + autofill | L2 | Composer, always visible |
-| 12 | Language select | L3 | Composer → "Options" collapsible |
-| 13 | Speaker-count select | L3 | Composer → "Options" collapsible |
-| 14 | Project assignment (new job) | L3 | Composer → "Options" collapsible |
-| 15 | Target permissions (new job) | L3 | Composer → "Options" collapsible (RBACControl) |
-| 16 | Start action + busy + toasts | L2 | Composer footer (purple) |
-| 17 | Cancel composer | L2 | Composer footer (ghost) |
-| 18 | Gallery: browse uploaded files | L3 | Gallery dialog, left/stacked section |
-| 19 | Gallery: filename search | L3 | Gallery dialog search input |
-| 20 | Gallery: pagination | L3 | Gallery dialog footer of list |
-| 21 | Gallery: upload via Uppy | L3 | Gallery dialog, right/stacked section |
-| 22 | Gallery: auto-list/select new uploads | L3 | Gallery dialog (behavior preserved) |
-| 23 | Gallery: delete stored file | L3 (destructive) | Always-visible icon button on file card + shared ConfirmDialog (currently hover-only, unconfirmed) |
-| 24 | Gallery: view/download file | L3 | Icon button on file card (tooltip + aria-label) |
-| 25 | Gallery: selection counter + type gating | L3 | Gallery dialog header line; disabled cards keep tooltip "Not an audio file" |
-| 26 | Gallery: empty + skeleton states | L3 | Gallery dialog (shared EmptyState styling) |
-| 27 | Gallery: confirm selection | L3 | Gallery dialog footer |
-| 28 | RBAC visibility mode picker | L3 | Inside Sharing (Composer Options / Panel Details) |
-| 29 | RBAC users search + rights + remove | L3 | Inside Sharing, shown when mode = users |
-| 30 | RBAC ">5 users" modal | L4 | Dialog from Sharing section (deep management; acceptable as the one nested overlay only if Sharing is *not* itself in a dialog — it isn't: composer card / side panel) |
-| 31 | RBAC roles list + rights | L3 | Inside Sharing, mode = roles |
-| 32 | RBAC teams list + rights | L3 | Inside Sharing, mode = teams — **wired through** (page passes 4-arg onChange; mutations gain `target_rbac_teams`) or, if backend can't ship, `allowedModes` excludes teams so the UI stops lying. Either way: no silent data loss |
-| 33 | Row identity (icon + title/filename) | L1 | Queue rows |
-| 34 | Per-state status labels incl. estimate | L1 | Queue row status line; estimate factor fixed/documented |
-| 35 | Full timestamp on saved rows | L2 | shadcn Tooltip on the RelativeTime (works for keyboard/touch via focus/long-press) |
-| 36 | Inline error text | L1 | Failed rows, destructive text — never hidden (philosophy §8) |
-| 37 | Cancel running job | L2 action, L3 confirm | Row ghost "Cancel" → shared ConfirmDialog ("Stop transcribing? Progress is lost; the audio file stays") |
-| 38 | Review awaiting job | L1→L2 | Row outline "Review" → review panel |
-| 39 | Edit saved job (speakers etc.) | L1→L2 | Saved row outline "Edit" → review panel (re-save mode) |
-| 40 | Dismiss failed job | L2 action, L3 confirm | Failed row ghost "Dismiss" → shared ConfirmDialog (it permanently removes the job record) |
-| 41 | Full job fetch + loading | L2 | Panel skeleton mirroring header/speakers/transcript |
-| 42 | Diarization-disabled notice | L2 | Alert at top of panel |
-| 43 | Editable title | L2 | Panel header input |
-| 44 | Project re-assignment | L3 | Panel → "Details" collapsible |
-| 45 | Permissions re-editing | L3 | Panel → "Details" collapsible (RBACControl) |
-| 46 | Speaker renaming | L2 | Panel speakers strip (top, always visible) |
-| 47 | Merged transcript preview | L1-of-panel (L2) | Panel hero: scrollable transcript blocks |
-| 48 | Save / finalize + deep-link toast | L2 | Panel footer (purple); toast keeps the item link; saved row additionally gets a persistent "Open in library" link from `saved_item_id` |
-| 49 | Discard / Close | L3 (destructive) | Panel footer ghost → shared ConfirmDialog (replaces native `confirm()`); "Close" in re-save mode unchanged |
-| 50 | Audio playback (presigned, cached) | L2 | Panel sticky audio footer |
-| 51 | Speaker-colored ribbon | L2 | Panel sticky audio footer, above/with controls |
-| 52 | Click segment to seek | L2 | Ribbon click + transcript-block click (new primary path) |
-| 53 | Segment popup (speaker/time/text) | L4 (desktop enhancement) | Hover-only Tooltip on ribbon; the same information is permanently visible in transcript blocks, so nothing is hover-gated anymore |
-| 54 | Live playhead | L2 | Ribbon playhead line + highlighted current transcript block |
+| 1 | Union data spine (jobs ∪ items) | L1 | List, invisible to the user by design — it's what makes one list correct |
+| 2 | Polling only while something is in motion | L1 | List, invisible |
+| 3 | Tabs (All / Needs review / Mine / Shared) | L1 | List header row |
+| 4 | Search | L1 | List Toolbar |
+| 5 | Filters (Source, Project, Date) | L2 | List Toolbar, behind the Filter control |
+| 6 | This week / Earlier grouping | L1 | List, section headers |
+| 7 | Pagination / Load more | L1 | List footer, once a page is full |
+| 8 | In-progress strip (collapsed running, always-visible failed) | L1 | List, above the grouped rows |
+| 9 | Recovered-job link | L2 | In-progress strip, on the affected failed row only |
+| 10 | Row anatomy (identity, badge, summary, meta, access, action) | L1 | Every `TranscriptListRow` |
+| 11 | Bulk actions (archive/delete/set access) | L2 | Toolbar selection slot, once ≥1 item row is checked |
+| 12 | Monthly recording usage bar | L1 (conditional) | Below `PageHeader`, only when Recall + a cap are both configured |
+| 13 | Overflow → library link | L3 | `PageHeader`'s "…" menu |
+| 14 | Legacy `?review=` redirect | L1, invisible | Runs on mount, no UI of its own |
+| 15 | One dialog, three sources | L2 | Composer, `ToggleGroup` |
+| 16 | Unconfigured-source handling + plain-text admin note | L2/L3 | Composer, disabled toggle item / not-set-up body |
+| 17 | Options collapsible (project, sharing, language, speakers) | L3 | Composer, per source |
+| 18 | Recording pin | L2, invisible | Composer, controls its own `open` prop |
+| 19 | Post-processing prompts (meeting/record) | L3 | Composer Options, meeting/record only |
+| 20 | Reading-view header (Share, Export, overflow) | L1 | Document, read mode header |
+| 21 | Chapters column | L1 (conditional) | Document, read mode left column, only when present |
+| 22 | Summary / Action items | L1 | Document, read mode centre column, above the transcript |
+| 23 | Transcript (merged speaker blocks) | L1 | Document, read mode centre column, the hero |
+| 24 | Video/audio player | L1 | Document, read mode right column |
+| 25 | Ask about this transcript | L2 | Document, read mode right column, below the player |
+| 26 | Read-only notice | L1 (conditional) | Document, in place of edit-mode chrome when `canWrite` is false |
+| 27 | One component, two edit entry points | L1/L2, invisible | Routing only — `review/[jobId]` vs `[itemId]?edit=1` |
+| 28 | Inline correction | L2 | Document, edit mode, click any transcript block |
+| 29 | Find and replace | L3 | Document, edit mode, behind its trigger button |
+| 30 | Review checklist | L2 | Document, edit mode header pill/popover |
+| 31 | Speakers panel | L2 | Document, edit mode right column |
+| 32 | Details (project + sharing draft) | L3 | Document, edit mode, collapsible section |
+| 33 | Pinned footer (player + Save/Discard) | L1 | Document, edit mode, sticky footer |
+| 34 | Post-processing re-run | L2 (conditional) | Job-review route only, above the document |
+| 35 | Sharing round-trip from the composer | L1, invisible | Job-review route, `jobToDraftItem` |
+| 36 | Stale-save guard | L3 (destructive-adjacent) | Correction page, `ConfirmDialog` on a real conflict |
+| 37 | Stale-job redirect | L1, invisible | `review/[jobId]`, on mount |
+| 38 | Five export formats | L2 | Export menu, format list |
+| 39 | Include toggles | L3 | Export menu, below the format list |
+| 40 | Authenticated blob download | L1, invisible | Export menu, every download/copy action |
 
 ### Layout & components
 
-- **PageShell** (centered content variant, `max-w-4xl mx-auto p-6`) → **PageHeader** →
-  **Toolbar** (search only) → queue groups (`space-y-8` between groups, `space-y-2` between rows).
-- **Rows**: plain bordered list items (`border rounded-lg p-3`, `gap-3` internals) — *not* Cards
-  (no nested boxes; the page stays one level of containment). Status dot: 8 px circle,
-  `bg-muted-foreground/40` (queued), pulse animation (transcribing), `bg-destructive` (failed),
-  none for saved.
-- **Composer**: single `Card` (`p-4 space-y-4`); dropzone is a `border-dashed rounded-lg`
-  region with `FileAudio` icon (shared **Dropzone** primitive — NEW, see §4); "Options" uses
-  shadcn `Collapsible` with a `ChevronRight` rotating 90° on open.
-- **Review panel**: shadcn `Sheet` (side="right", `sm:max-w-xl`), internal layout
-  `flex flex-col` — header (`p-6 pb-4`), scrollable body (`flex-1 overflow-y-auto px-6 space-y-6`),
-  sticky footer (`border-t p-4`: audio + ribbon + actions, `space-y-3`). Transcript blocks:
-  `text-sm leading-relaxed`, speaker name `font-medium` with color dot, timestamp
-  `text-xs text-muted-foreground font-mono`. Raw speaker labels in `font-mono text-xs`.
-- **Form controls**: existing shadcn `Input`, `Select`, `Label`; `Alert` (custom amber via
-  existing warning tokens) for the diarization notice; `Tooltip` replaces all `title`
-  attributes; `Badge` (secondary) for group counts.
-- **ConfirmDialog** (shared primitive) for: cancel running job, dismiss failed job, discard
-  transcript, delete gallery file.
-- **EmptyState** (shared primitive) for the zero-jobs page and the gallery.
-- **Buttons**: header "New transcription" = `default` (purple); row actions = `outline`
-  (Review/Edit) and `ghost` (Cancel/Dismiss/Open in library); panel Save = `default`; everything
-  destructive confirms. At most two purple elements visible at once (header + open panel's Save).
-- **Type/spacing** per CLAUDE.md: `text-2xl` page title, `text-sm` body, `text-xs` meta,
-  `font-mono` for raw labels/timestamps; spacing steps 2/4/6/8 as listed above.
-- **i18n**: every string through `t('transcriptions.*')`; reconcile nav label with page title
-  ("Transcripts" everywhere, or rename the nav key — one word, both locales).
+- **List:** `PageShell variant="content"` → `PageHeader` → optional usage bar → `Tabs` + `Toolbar`
+  (search, filters, selection slot) → `InProgressStrip` → grouped `TranscriptListRow` lists.
+- **Composer:** shadcn `Dialog` (`sm:max-w-[680px]`), a `ToggleGroup` source switch, per-source
+  `Dropzone` (upload) or big Start button (record), a `Collapsible` Options section with
+  `motion-reduce`-gated open/close animation.
+- **Document:** three-column grid below a sticky header (read mode) or above a pinned footer (edit
+  mode); `Popover` for the access pill and the agent picker; `Collapsible` for chapters and the edit
+  Details section; `ConfirmDialog` for discard/delete/stale-save.
+- **Export:** `DropdownMenu` triggered from the header's Export ▾.
+- **Shared primitives used throughout:** `PageShell`, `PageHeader`, `Toolbar`, `EmptyState`
+  (default/quiet/error variants), `ConfirmDialog`, `Dropzone`, `StatusDot`, `RelativeTime`,
+  `Skeleton` loading states, `MobileTopbarAction`. All pre-existed or were promoted to
+  `components/widgets/` (`ItemsActionBar`, `BulkAccessDialog`) during this plan rather than
+  duplicated feature-locally.
+- **Buttons:** header "New transcript" and Save/Start are the page's `default` (purple) actions;
+  row/menu actions are `outline`/`ghost`; every destructive action routes through `ConfirmDialog`.
 
 ### Mobile behavior
 
-P1's mobile job here (from `personas.md:38-39` plus job 5): *upload a recording from the phone
-(voice memos are born on phones), check whether processing finished, and read the result.*
-
-- **< md (≤ 768 px):**
-  - PageHeader stacks: title block, then the primary button full-row below (`flex-col gap-4`).
-  - Composer: Options grid `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`; dropzone becomes a
-    tap target ("Tap to choose an audio file") — same gallery dialog behind it.
-  - **Gallery dialog → full-screen Sheet** (bottom, `h-[90dvh]`, internal `overflow-y-auto`):
-    upload section first (the phone job is "upload what I just recorded"), gallery below;
-    fixes the unscrollable-dialog overflow.
-  - **Review panel → full-screen Sheet**: header, speakers strip (horizontal scroll if >3),
-    transcript hero, sticky audio footer. Transcript blocks are the segment-reading mechanism —
-    no hover required (the ribbon's hover popup is desktop-only sugar, item 53).
-  - Ribbon height grows `h-10` → `h-12`; tapping it seeks and auto-scrolls the transcript to
-    the matching block (precision comes from the blocks, not the sub-pixel segments).
-  - Row action buttons keep ≥40 px hit areas (`size="sm"` with `min-h` bump); status lines clamp
-    to two lines (`line-clamp-2`).
-- **md–lg:** side-panel review at `sm:max-w-xl`; everything else as desktop.
-- No table↔card transforms needed — the queue is already a card-list at every width.
+- `PageHeader` stacks; the primary action is duplicated into `MobileTopbarAction` so it's reachable
+  without scrolling to the header.
+- Composer Options collapse to one column below `sm`; the file gallery becomes a full-screen bottom
+  `Sheet` (`h-[90dvh]`) with the upload section first.
+- The document's three columns stack to one on mobile (chapters → transcript/summary → player/ask or
+  speakers), with the pinned footer (edit mode) or player (read mode) staying reachable.
+- Row and composer controls use `max-md:h-11`-style sizing for ≥44 px touch targets below `md`.
+- Not yet independently phone-verified end to end — see the Mobile audit above.
 
 ### Motion
 
-Few and purposeful, per CLAUDE.md timings, all gated by `prefers-reduced-motion`:
+Few and purposeful, all gated by `prefers-reduced-motion` (`motion-reduce:` variants throughout):
 
-- **Review panel slide-in** from the right, 300 ms `ease-in-out` (explains origin: the row you clicked).
-- **Composer expand/collapse**: height + opacity, 200 ms (explains causality from the header button).
-- **Transcribing status dot**: slow 2 s opacity pulse; the 2 px progress strip uses the existing
-  gradient-shimmer pattern (streaming-state convention).
-- **Row state transitions** (e.g. transcribing → awaiting review on a poll tick): 150 ms
-  crossfade of the status line; newly saved rows flash `bg-muted` and fade over 300 ms.
-- **Transcript follow-along**: current block highlight swaps instantly (no animation — it tracks
-  audio time); programmatic scrolls use `behavior: "smooth"` only when reduced-motion is off.
-- Hover/focus on rows and transcript blocks: 150 ms background transition.
+- **Collapsible sections** (composer Options, edit-mode Details, chapters): height + rotation via the
+  shared `animate-collapsible-down`/`-up` utility classes.
+- **Dialog / Popover / DropdownMenu:** Radix's default fade/scale-in, unchanged from the design
+  system defaults — no custom transitions layered on top.
+- **In-progress strip:** a pulsing `StatusDot` on the collapsed disclosure row while anything is
+  actually running; no animation once everything shown is static (saved/failed).
+- **Inline block editing:** no transition — a block becomes a textarea instantly on click, since any
+  delay there would read as lag on the page's most-used interaction.
 
 ---
 
 ## 4. Implementation notes
 
-**Files to change/create**
-- `app/(application)/transcriptions/page.tsx` — slim down to the page shell (queries + groups + `?review=` param handling); extract into `components/transcriptions/`:
-  - `composer.tsx` (items 9-17, incl. Options collapsible),
-  - `job-row.tsx` (items 33-40, ConfirmDialogs),
-  - `review-sheet.tsx` (items 41-49; transcript hero; Details collapsible),
-  - `audio-timeline.tsx` (items 50-54; move out of the page file; add seek-syncs-transcript callback),
-  - `use-transcription-jobs.ts` (both queries; conditional `pollInterval` only while queued/transcribing jobs exist; expose `refetchAll`),
-  - `use-ticker.ts` or render counters via the shared `RelativeTime` so the 1 s tick is scoped to timestamp components, not the page (`page.tsx:116-121`).
-- **Bug/consistency fixes folded in:**
-  - Teams RBAC: pass the 4-arg `onChange` and add `target_rbac_teams` to `START/FINALIZE` inputs (`queries/queries.ts:3106-3124`) — **requires backend schema support**; if not available this release, pass `allowedModes={["private","users","roles","public"]}` to `RBACControl` so the broken option isn't offered (no capability is lost — it never worked).
-  - Replace native `confirm()` (`page.tsx:754`) and unconfirmed Cancel/Dismiss with shared ConfirmDialog.
-  - Reconcile `NEXT_PUBLIC_TRANSCRIPTION_FACTOR` default with its comment (`page.tsx:33-39`) and document the env var.
-  - Surface `saved_item_id` as a persistent "Open in library" link on saved rows.
-  - Decide `cancelled` handling: show cancelled jobs in the Processing group for one poll cycle with an undo-window toast, or keep them excluded but toast "Transcription cancelled" on the action — pick one so cancellation has visible feedback.
-  - `aria-label` on the clear-file button; real Tooltips instead of `title` attrs; transcript blocks as `<button>`s give the review keyboard access.
-- `components/uppy-dashboard.tsx` — responsive Sheet variant + `max-h-[90dvh] overflow-y-auto`, delete-file ConfirmDialog, remove `console.log`s. **Shared with agents/knowledge/chat uploads — coordinate.**
-- `components/rbac.tsx` — fix context-blind "agent" copy (`rbac.tsx:40-44`): accept a `subjectLabel` prop or neutral copy ("Only you can see this"). **Shared component — coordinate with agents/projects docs.**
-- i18n: add `transcriptions.*` to `messages/en.json` + `messages/de.json`; align `navigation.transcriptions` label with the page title.
+This redesign is implemented, not proposed. What follows is the as-built map and what's
+intentionally still missing, not a build plan.
 
-**Shared components needed**
-- From philosophy §5: **PageShell, PageHeader, Toolbar, EmptyState, ConfirmDialog** (this page consumes five; no ListDetail table — the queue-with-side-panel is the ListDetail pattern in its list+panel form).
-- Reuse **`RelativeTime`** (proposed in `design/pages/projects.md` §4) for all "X ago" labels with the live-tick behavior moved inside it.
-- **NEW shared primitive (flag for philosophy §5): `Dropzone`** — bordered-dashed drag-and-drop file target with click-to-browse fallback and type hint; chat attachments and knowledge item upload want the same surface.
-- Page-local (not shared): `AudioTimeline`/transcript-sync — specific enough to stay in `components/transcriptions/`.
+**Backend companion:** `docs/superpowers/specs/2026-09-29-transcripts-redesign-design.md` (this
+plan's spec, backend repo) — five denormalised columns + `corrected_segments` on
+`transcriptions_items`, `corrected_segments` on `transcription_jobs`, the
+`GET /transcription-items/:itemId/export` route, and `renderTranscript`'s `withTimestamps` option.
+No new tables, no new resolvers beyond the one export route. Deploy backend before frontend (the
+frontend degrades gracefully without it: no export route → the Export menu would fail its requests;
+no new columns → rows lose their meta line).
 
-**Scope: M.** One route, no new data model; all six mutations/queries exist. The work is one
-page decomposition + a Sheet, adoption of five shared primitives, the uppy/rbac shared-component
-touch-ups, and i18n. The only backend ask is optional (`target_rbac_teams`); everything else is
-frontend-only.
+**Files** — see §1's Code surface for the full list; nothing here still describes files that were
+deleted or never built. Notably gone: `review-sheet.tsx` (its block-merge logic, speaker state and
+`AudioTimeline` pinning moved into `transcript-document.tsx` and `speakers-panel.tsx`).
 
-**Dependencies**
-- Shell/nav redesign: Transcriptions sits in the **Workspace** group (P1) per `personas.md:187`; no RBAC gate today (`main-nav.tsx:169-174`) — keep it ungated.
-- Shared primitives must exist or be built here and promoted (this page is a good early adopter: it exercises PageHeader, Toolbar, EmptyState, ConfirmDialog, and the Sheet-detail pattern at small scale).
-- `components/uppy-dashboard.tsx` and `components/rbac.tsx` changes ripple to agents, knowledge, projects, chat — sequence with those page docs.
-- Knowledge page doc (`design/pages/knowledge.md`): `/data/transcriptions` is the saved-output destination; the "Open in library" deep links assume that route's item-detail URLs (`/data/transcriptions/[itemId]`) remain stable.
-- Backend: `transcriptionJobStart/Finalize` input extension for teams (optional); whisper-server diarization flag drives the item-42 notice.
+**Deliberately not built (spec §9 "Out of scope")**
+- Stage 3: admin Transcript settings (so the three source flags stay backend-only), post-processing
+  for uploads, workspace-level sharing/summary defaults, video retention configuration.
+- Stage 4: speaker-name suggestions and Merge, the People filter, per-user/per-project usage,
+  unreviewed-transcript reminders, highlight actions (Add note, Turn into task), calendar scheduling,
+  interactive action-item checkboxes, the "remembered for the project" find-and-replace vocabulary
+  list.
+- Unchanged by any of this: the transcription engines, diarization, the Recall integration, chat
+  dictation, the training-guide flow, live transcripts across devices, and teams sharing.
 
-**Risks**
-1. **Ticker/poll refactor regressions** — elapsed counters and "wrapping up" labels depend on the 1 s tick; scoping it to `RelativeTime`/row components must not freeze the transcribing label. Test with a long-running job.
-2. **Presigned-URL expiry during review** — the 1-minute cache (`uppy-dashboard.tsx:537-560`) vs. multi-minute review sessions: seeking after expiry can 404 on ranged requests (pre-existing; the sticky audio footer makes it more visible). Mitigate by re-fetching the URL on audio `error` events.
-3. **`?review=` param vs. poll refetches** — the panel holds form state (title, speakers) while the underlying job list polls; ensure the panel doesn't remount/reset on poll updates (key the Sheet by job id, fetch job once, don't poll inside the panel).
-4. **Shared-component blast radius** — `RBACControl` copy prop and uppy dialog responsiveness touch every consumer; gate mobile variants on viewport only, keep desktop DOM identical.
-5. **Teams decision is product-visible** — wiring teams through changes who can see transcripts retroactively edited; hiding the option may surprise users who previously "selected" teams (which never persisted). Either path needs a release note.
-6. **Estimate accuracy** — surfacing "~X remaining" more prominently (progress strip) raises expectations; if the deployment's real factor diverges, the label misleads. Keep the `~` and the "wrapping up" fallback, document tuning via `NEXT_PUBLIC_TRANSCRIPTION_FACTOR`.
+**Known follow-ups (not blocking, worth tracking)**
+1. Manual phone + live-backend verification (all five export formats, the full composer/reading/
+   review flow on a real device) is still open.
+2. `rights_mode: "teams"` renders more restrictively here than the server enforces for a pre-existing
+   item; revisit if teams sharing for transcripts is ever actually offered again.
+3. Inline block correction maps onto the block's first segment only — fine for reading, worth a note
+   before SRT/VTT timing on a multi-segment correction is relied on.
+4. The backend's `finalize` correction-resolution logic has no dedicated test harness; the two real
+   bugs found while building this plan both lived there (see the plan's progress ledger, Task 11).
+5. `job-row.tsx` still carries a `job.status === "saved"` rendering branch (Delete / Open in library /
+   Edit for a saved job row) that may now be unreachable in practice — `mergeTranscriptRows` filters
+   `status === "saved"` jobs out before `InProgressStrip` (the only caller of `JobRow`) ever sees them.
+   Not removed here: confirming it's truly dead requires tracing every caller, which is outside a
+   copy/vocabulary pass — flagged for whoever next touches `job-row.tsx`.
+
+**Risks (carried forward, largely mitigated already)**
+1. **Union correctness** — the list must never show a saved job twice (once as a job, once as an
+   item) or drop one. Covered by `mergeTranscriptRows`' unit tests (duplicate-free union, the
+   `claimedJobIds`-only race) rather than by inspection alone.
+2. **Write-access mirroring** — `canWriteTranscriptItem` duplicates backend logic on the client so a
+   read-only viewer never sees a Save button. A client mirror can drift from its server source; it's
+   documented as a mirror (naming both backend files) specifically so a future backend RBAC change
+   doesn't silently desync it.
+3. **Export authentication** — the export route accepts only header-based auth, so the menu must stay
+   on the authenticated-fetch-plus-blob pattern rather than a plain link; regressing to
+   `window.location.href` here would 401 and blank the app.

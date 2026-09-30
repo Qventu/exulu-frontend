@@ -4408,7 +4408,7 @@
   },
   "transcriptions": {
     "composer": {
-      "askAdmin": "Admin fragen",
+      "askAdmin": "Bitten Sie einen Admin, es zu verbinden.",
       "audioFile": "Audiodatei",
       "autoDetect": "Automatisch erkennen",
       "autoLanguage": "Sprache automatisch erkennen",
@@ -4421,7 +4421,6 @@
       "noProjectSummary": "Kein Projekt",
       "notSetUp": "In diesem Workspace noch nicht eingerichtet.",
       "notSetUpHint": "Ein Admin kann es in den Transkript-Einstellungen verbinden.",
-      "options": "Optionen",
       "optionsChange": "Ändern",
       "optionsSummaryLabel": "Projekt, Freigabe und Zusammenfassungen",
       "project": "Projekt",
@@ -4452,7 +4451,6 @@
       "selectAgent": "Agent auswählen",
       "removePrompt": "Entfernen",
       "startMeeting": "Aufnahme starten",
-      "meetingSummary": "Tritt jetzt bei · Privat · Kein Projekt",
       "recordIntro": "Legen Sie das Telefon auf den Tisch, drücken Sie Start und lassen Sie den Bildschirm an.",
       "recordDefaultTitle": "Aufnahme {date}",
       "startRecording": "Aufnahme starten",
@@ -4497,7 +4495,7 @@
       "title": "Fehlgeschlagenen Auftrag verwerfen?"
     },
     "confirmDelete": {
-      "title": "Gespeicherte Transkription löschen?",
+      "title": "Gespeichertes Transkript löschen?",
       "description": "Dadurch wird der Eintrag von dieser Seite entfernt. Das gespeicherte Transkript bleibt in der Wissensdatenbank erhalten, sofern Sie es unten nicht ebenfalls auswählen.",
       "confirm": "Löschen",
       "alsoDeleteItem": "Auch das gespeicherte Transkript aus der Wissensdatenbank löschen"
@@ -4655,37 +4653,22 @@
       "teams": "Mit Teams geteilt",
       "users": "Mit Benutzern geteilt"
     },
-    "new": "Neue Transkription",
+    "new": "Neues Transkript",
     "newShort": "Neu",
     "overflow": { "label": "Weitere Optionen" },
     "queue": {
       "library": "Transkript-Bibliothek",
       "loadMore": "Mehr laden",
-      "needsReview": "Zu überprüfen",
       "noResults": "Keine Transkripte entsprechen Ihrer Suche.",
-      "nothingHere": "Hier gibt es noch nichts.",
-      "noSaved": "Noch keine gespeicherten Transkripte.",
-      "nothingProcessing": "Derzeit wird nichts verarbeitet.",
-      "processing": "In Bearbeitung",
-      "processingAndFailed": "In Bearbeitung & fehlgeschlagen",
-      "saved": "Gespeichert",
-      "savedHint": "Öffnen Sie ein gespeichertes Transkript erneut, um Sprecher umzubenennen; beim Speichern wird der vorhandene Bibliothekseintrag aktualisiert.",
-      "savedHintLabel": "Über gespeicherte Transkripte"
+      "nothingHere": "Hier gibt es noch nichts."
     },
     "review": {
       "audioLoading": "Audio wird geladen…",
       "audioUnavailable": "Audiovorschau nicht verfügbar.",
-      "diarizationDisabled": "Die Sprechererkennung war für diese Aufnahme deaktiviert, daher teilen sich alle Segmente einen Sprecher. Geben Sie einen einzelnen Namen ein, um das gesamte Transkript zu beschriften.",
       "discard": "Verwerfen",
-      "emptyTranscript": "Keine Transkript-Segmente gefunden.",
       "fallbackTitle": "Unbenanntes Transkript",
-      "keepRawLabel": "(Rohbezeichnung behalten)",
       "loadFailed": "Transkript konnte nicht geladen werden",
       "notReady": "Dieser Auftrag ist noch nicht bereit zur Überprüfung.",
-      "saveChanges": "Änderungen speichern",
-      "speakers": "Sprecher",
-      "speakersHint": "Namen eingeben, um die Rohbezeichnungen zu ersetzen",
-      "title": "Transkript überprüfen",
       "transcript": "Transkript",
       "postProcessing": "Nachbearbeitung",
       "postProcessingEmpty": "Keine Nachbearbeitungsergebnisse.",
@@ -4721,7 +4704,6 @@
       "updated": "Aktualisiert",
       "wrappingUp": "wird abgeschlossen…",
       "meetingSource": "Meeting-Aufnahme",
-      "inMeeting": "Im Meeting…",
       "recording": "Aufnahme · {length} · {parts, plural, one {# Teil} other {# Teile}}",
       "recordingNoLength": "Aufnahme läuft…",
       "lastAudio": "letztes Audio {time}",
@@ -4767,7 +4749,7 @@
     "toasts": {
       "cancelFailed": "Auftrag konnte nicht abgebrochen werden",
       "cancelled": "Transkription abgebrochen",
-      "deleted": "Transkriptionseintrag gelöscht",
+      "deleted": "Transkripteintrag gelöscht",
       "deleteFailed": "Eintrag konnte nicht gelöscht werden",
       "discardFailed": "Transkript konnte nicht verworfen werden",
       "dismissFailed": "Auftrag konnte nicht verworfen werden",
@@ -4777,7 +4759,6 @@
       "started": "Transkription gestartet",
       "updated": "Transkript aktualisiert",
       "uploadFailed": "Upload fehlgeschlagen",
-      "viewInLibrary": "In der Bibliothek ansehen",
       "meetingStarted": "Bot tritt dem Meeting bei",
       "meetingStartFailed": "Meeting-Bot konnte nicht gestartet werden",
       "postProcessingRan": "Prompt erneut ausgeführt",

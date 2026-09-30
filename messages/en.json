@@ -4408,7 +4408,7 @@
   },
   "transcriptions": {
     "composer": {
-      "askAdmin": "Ask an admin",
+      "askAdmin": "Ask an admin to connect it.",
       "audioFile": "Audio file",
       "autoDetect": "Auto-detect",
       "autoLanguage": "Auto-detect language",
@@ -4421,7 +4421,6 @@
       "noProjectSummary": "No project",
       "notSetUp": "Not set up in this workspace yet.",
       "notSetUpHint": "An admin can connect it in Transcript settings.",
-      "options": "Options",
       "optionsChange": "Change",
       "optionsSummaryLabel": "Project, sharing and summaries",
       "project": "Project",
@@ -4452,7 +4451,6 @@
       "selectAgent": "Select an agent",
       "removePrompt": "Remove",
       "startMeeting": "Start recording",
-      "meetingSummary": "Joining now · Private · No project",
       "recordIntro": "Put the phone on the table, press Start, and keep the screen on.",
       "recordDefaultTitle": "Recording {date}",
       "startRecording": "Start recording",
@@ -4497,7 +4495,7 @@
       "title": "Dismiss failed job?"
     },
     "confirmDelete": {
-      "title": "Delete saved transcription?",
+      "title": "Delete saved transcript?",
       "description": "This removes the entry from this page. The saved transcript stays in the knowledge base unless you also select it below.",
       "confirm": "Delete",
       "alsoDeleteItem": "Also delete the saved transcript from the knowledge base"
@@ -4655,37 +4653,22 @@
       "teams": "Shared with teams",
       "users": "Shared with users"
     },
-    "new": "New transcription",
+    "new": "New transcript",
     "newShort": "New",
     "overflow": { "label": "More options" },
     "queue": {
       "library": "Transcript library",
       "loadMore": "Load more",
-      "needsReview": "Needs review",
       "noResults": "No transcripts match your search.",
-      "nothingHere": "Nothing here yet.",
-      "noSaved": "No saved transcripts yet.",
-      "nothingProcessing": "Nothing processing right now.",
-      "processing": "Processing",
-      "processingAndFailed": "Processing & failed",
-      "saved": "Saved",
-      "savedHint": "Re-open a saved transcript to rename speakers; saving will update the existing library item.",
-      "savedHintLabel": "About saved transcripts"
+      "nothingHere": "Nothing here yet."
     },
     "review": {
       "audioLoading": "Loading audio…",
       "audioUnavailable": "Audio preview unavailable.",
-      "diarizationDisabled": "Speaker detection was disabled for this recording, so all segments share one speaker. Type a single name to label the whole transcript.",
       "discard": "Discard",
-      "emptyTranscript": "No transcript segments found.",
       "fallbackTitle": "Untitled transcript",
-      "keepRawLabel": "(keep raw label)",
       "loadFailed": "Couldn't load the transcript",
       "notReady": "This job isn't ready for review.",
-      "saveChanges": "Save changes",
-      "speakers": "Speakers",
-      "speakersHint": "Type names to replace the raw labels",
-      "title": "Review transcript",
       "transcript": "Transcript",
       "postProcessing": "Post-processing",
       "postProcessingEmpty": "No post-processing results.",
@@ -4721,7 +4704,6 @@
       "updated": "Updated",
       "wrappingUp": "wrapping up…",
       "meetingSource": "Meeting recording",
-      "inMeeting": "In the meeting…",
       "recording": "Recording · {length} · {parts, plural, one {# part} other {# parts}}",
       "recordingNoLength": "Recording…",
       "lastAudio": "last audio {time}",
@@ -4767,7 +4749,7 @@
     "toasts": {
       "cancelFailed": "Couldn't cancel the job",
       "cancelled": "Transcription cancelled",
-      "deleted": "Transcription entry deleted",
+      "deleted": "Transcript entry deleted",
       "deleteFailed": "Couldn't delete the entry",
       "discardFailed": "Couldn't discard the transcript",
       "dismissFailed": "Couldn't dismiss the job",
@@ -4777,7 +4759,6 @@
       "started": "Transcription started",
       "updated": "Transcript updated",
       "uploadFailed": "Upload failed",
-      "viewInLibrary": "View in library",
       "meetingStarted": "Bot is joining the meeting",
       "meetingStartFailed": "Couldn't start the meeting bot",
       "postProcessingRan": "Prompt re-run",

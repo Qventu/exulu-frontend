@@ -205,12 +205,18 @@ export function NewTranscriptDialog({
               )}
             </>
           ) : (
-            <EmptyState
-              variant="quiet"
-              title={t("composer.notSetUp")}
-              description={t("composer.notSetUpHint")}
-              action={{ label: t("composer.askAdmin"), href: "/settings" }}
-            />
+            <>
+              <EmptyState
+                variant="quiet"
+                title={t("composer.notSetUp")}
+                description={t("composer.notSetUpHint")}
+              />
+              {/* No admin settings page exposes these flags yet (they are
+                  backend env vars) — plain text, not a link to nowhere. */}
+              <p className="mx-auto max-w-sm text-center text-sm text-muted-foreground">
+                {t("composer.askAdmin")}
+              </p>
+            </>
           )}
         </div>
 
