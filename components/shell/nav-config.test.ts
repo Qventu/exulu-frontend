@@ -65,6 +65,7 @@ describe("the table itself (§1.2)", () => {
       "transcripts",
       "agents",
       "knowledge",
+      "memory",
       "prompts",
       "skills",
       "routines",
@@ -116,6 +117,7 @@ describe("single-right matrix (Phase 1 exit criterion)", () => {
       ...ALL_USER_BODY,
       "agents",
       "knowledge",
+      "memory",
       "prompts",
       ...FOOTER,
     ]);
@@ -127,6 +129,7 @@ describe("single-right matrix (Phase 1 exit criterion)", () => {
       ...ALL_USER_BODY,
       "agents",
       "knowledge",
+      "memory",
       "prompts",
       "skills",
       "models",
@@ -276,6 +279,7 @@ describe("persona matrix (§1.3)", () => {
     ).toEqual([
       "agents",
       "knowledge",
+      "memory",
       "prompts",
       "skills",
       "routines",
@@ -337,6 +341,7 @@ describe("persona matrix (§1.3)", () => {
     ).toEqual([
       "agents",
       "knowledge",
+      "memory",
       "prompts",
       "skills",
       "routines",

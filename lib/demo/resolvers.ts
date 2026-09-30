@@ -637,6 +637,14 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
       world.contexts.find((c) => c.id === variables.id) ?? world.contexts[0],
   }),
 
+  // --- /memory (memory area, sub-project 2) ---------------------------------
+  // No fabricated memories: the overview renders its empty state and the
+  // per-base pages are never reached from it.
+  MemoryBases: () => ({ memoryBases: [] }),
+  MemoryAgentCount: (world) => ({
+    agentsPagination: { pageInfo: { itemCount: world.agents.length } },
+  }),
+
   // --- /agents/edit/[id] (chapter 3: agent configuration) -----------------
   AgentEditorById: (world, variables) => ({
     agentById: {

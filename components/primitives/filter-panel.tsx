@@ -29,13 +29,20 @@
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
+import { EntityCombobox } from "@/components/primitives/entity-combobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-export type FilterFieldType = "text" | "datetime" | "number-range";
+export type FilterFieldType = "text" | "datetime" | "number-range" | "select" | "entity";
+
+export interface FilterFieldOption {
+  value: string;
+  label: string;
+}
 
 export interface FilterFieldDef {
   /** Field identifier, e.g. "name", "createdAt". */
@@ -50,6 +57,14 @@ export interface FilterFieldDef {
    * objects without re-keying the UI state.
    */
   graphqlField?: string;
+  /** `select` only: the fixed choices. An empty selection clears the key. */
+  options?: FilterFieldOption[];
+  /** `entity` only: async search for an EntityCombobox (id → label). */
+  fetchOptions?: (query: string) => Promise<FilterFieldOption[]>;
+  resolveLabel?: (id: string) => Promise<string | null>;
+  /** `entity` only: copy for the combobox. */
+  emptyMessage?: string;
+  searchPlaceholder?: string;
 }
 
 export interface FilterPanelBatchLimit {
@@ -120,6 +135,53 @@ function FieldRow<T extends Record<string, unknown>>({
           value={current ?? ""}
           onChange={(e) => onChange(setKey(value, field.id, e.target.value))}
           placeholder={field.placeholder}
+        />
+      </div>
+    );
+  }
+
+  if (field.type === "select") {
+    const current = (value as Record<string, unknown>)[field.id] as string | undefined;
+    return (
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={field.id}>{field.label}</Label>
+        <Select
+          value={current ?? "__any"}
+          onValueChange={(v) => onChange(setKey(value, field.id, v === "__any" ? undefined : v))}
+        >
+          <SelectTrigger id={field.id}>
+            <SelectValue placeholder={field.placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__any">{field.placeholder ?? "—"}</SelectItem>
+            {(field.options ?? []).map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+
+  if (field.type === "entity") {
+    const current = (value as Record<string, unknown>)[field.id] as string | undefined;
+    return (
+      <div className="flex flex-col gap-2">
+        <Label>{field.label}</Label>
+        <EntityCombobox
+          value={current ?? null}
+          onChange={(id) => onChange(setKey(value, field.id, id ?? undefined))}
+          fetchOptions={async (q) =>
+            (field.fetchOptions ? await field.fetchOptions(q) : []).map((o) => ({ id: o.value, label: o.label }))
+          }
+          resolveLabel={
+            field.resolveLabel
+              ? async (id) => { const label = await field.resolveLabel!(id); return label ? { label } : null; }
+              : undefined
+          }
+          placeholder={field.placeholder ?? ""}
+          emptyMessage={field.emptyMessage ?? ""}
+          searchPlaceholder={field.searchPlaceholder}
         />
       </div>
     );

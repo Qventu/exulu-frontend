@@ -13,6 +13,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   BookCheck,
+  Bookmark,
   Bot,
   Brain,
   ClipboardType,
@@ -166,6 +167,15 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     requires: { area: "agents", level: "read" },
     // Long-term route rename /data → /knowledge rides Phase 1C (audit rec. 9).
     aliases: ["/data/*"],
+  },
+  {
+    id: "memory",
+    group: "build",
+    route: "/memory",
+    i18nKey: "navigation.memory",
+    icon: Bookmark,
+    requires: { area: "agents", level: "read" },
+    aliases: ["/memory/*"],
   },
   {
     id: "prompts",
