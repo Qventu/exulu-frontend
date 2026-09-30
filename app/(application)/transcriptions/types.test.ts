@@ -1,14 +1,20 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyFindReplace,
+  canWriteTranscriptItem,
+  effectiveSegments,
   findRecoveredJob,
   hasPostProcessing,
   isLiveJob,
+  isSharingConfigured,
   displayTitle,
   mergeTranscriptRows,
   filterTranscriptRows,
   groupTranscriptRows,
+  type ItemRBAC,
   type Job,
+  type Segment,
   type TranscriptItem,
 } from "./types";
 
@@ -273,5 +279,156 @@ describe("groupTranscriptRows", () => {
     // fall off the bottom of the list.
     const rows = mergeTranscriptRows([], [item({ id: "scheduled", recorded_at: "2026-10-02T09:00:00.000Z" })]);
     expect(groupTranscriptRows(rows, now).thisWeek.map((r) => r.id)).toEqual(["scheduled"]);
+  });
+});
+
+const segs = (...texts: string[]): Segment[] =>
+  texts.map((text, i) => ({ start: i, end: i + 1, text, speaker: "SPEAKER_00" }));
+
+describe("applyFindReplace", () => {
+  it("replaces every occurrence and reports the count", () => {
+    const { segments, count } = applyFindReplace(
+      segs("Zet Cad is slow", "open Zet Cad"),
+      "Zet Cad",
+      "ZWCAD",
+      false,
+    );
+    expect(segments.map((s) => s.text)).toEqual(["ZWCAD is slow", "open ZWCAD"]);
+    expect(count).toBe(2);
+  });
+
+  it("counts multiple hits inside one segment", () => {
+    expect(applyFindReplace(segs("a a a"), "a", "b", false).count).toBe(3);
+  });
+
+  it("is case-insensitive by default and case-sensitive on request", () => {
+    expect(applyFindReplace(segs("Zet cad"), "zet cad", "ZWCAD", false).count).toBe(1);
+    expect(applyFindReplace(segs("Zet cad"), "zet cad", "ZWCAD", true).count).toBe(0);
+  });
+
+  it("treats the needle as literal text, not a regular expression", () => {
+    // A user typing "(1)" must not blow up or match nothing.
+    const { segments, count } = applyFindReplace(segs("item (1) here"), "(1)", "(2)", false);
+    expect(count).toBe(1);
+    expect(segments[0].text).toBe("item (2) here");
+  });
+
+  it("never changes timestamps or speakers", () => {
+    const before = segs("one", "two");
+    const { segments } = applyFindReplace(before, "one", "1", false);
+    expect(segments.map((s) => [s.start, s.end, s.speaker])).toEqual(
+      before.map((s) => [s.start, s.end, s.speaker]),
+    );
+  });
+
+  it("returns the input unchanged for an empty needle", () => {
+    const before = segs("one");
+    const { segments, count } = applyFindReplace(before, "", "x", false);
+    expect(segments).toEqual(before);
+    expect(count).toBe(0);
+  });
+});
+
+describe("effectiveSegments — a correction wholly replaces the raw transcript", () => {
+  it("falls back to raw_segments when nothing was corrected", () => {
+    const raw = segs("hello there");
+    expect(effectiveSegments(raw, null)).toEqual(raw);
+  });
+
+  it("prefers corrected_segments once a correction exists", () => {
+    const raw = segs("hello there");
+    const corrected = segs("hello there fixed");
+    expect(effectiveSegments(raw, corrected)).toEqual(corrected);
+  });
+
+  it("parses JSON-string fields the same as arrays", () => {
+    const raw = segs("hello there");
+    expect(effectiveSegments(JSON.stringify(raw), null)).toEqual(raw);
+  });
+});
+
+describe("isSharingConfigured", () => {
+  it("private and public need no further set-up", () => {
+    expect(isSharingConfigured("private", [], [])).toBe(true);
+    expect(isSharingConfigured("public", [], [])).toBe(true);
+  });
+
+  it("users/roles mode with nobody added yet is not configured", () => {
+    expect(isSharingConfigured("users", [], [])).toBe(false);
+    expect(isSharingConfigured("roles", [], [])).toBe(false);
+  });
+
+  it("users/roles mode with at least one grant is configured", () => {
+    expect(isSharingConfigured("users", [{ id: 2, rights: "read" }], [])).toBe(true);
+    expect(isSharingConfigured("roles", [], [{ id: "role-1", rights: "read" }])).toBe(true);
+  });
+});
+
+describe("canWriteTranscriptItem — mirrors the backend's validateWriteAccess", () => {
+  const rbac = (overrides: Partial<ItemRBAC> = {}): ItemRBAC => ({
+    users: [],
+    roles: [],
+    ...overrides,
+  });
+
+  it("denies an unauthenticated viewer", () => {
+    expect(
+      canWriteTranscriptItem({ rights_mode: "public", created_by: 1, RBAC: null }, null),
+    ).toBe(false);
+  });
+
+  it("a public item is writable by anyone", () => {
+    expect(
+      canWriteTranscriptItem(
+        { rights_mode: "public", created_by: 1, RBAC: null },
+        { id: 2, role: "role-1" },
+      ),
+    ).toBe(true);
+  });
+
+  it("a private item is writable only by its creator", () => {
+    const item = { rights_mode: "private" as const, created_by: 1, RBAC: null };
+    expect(canWriteTranscriptItem(item, { id: 1, role: "role-1" })).toBe(true);
+    expect(canWriteTranscriptItem(item, { id: 2, role: "role-1" })).toBe(false);
+  });
+
+  it("the creator can always write, whatever rights_mode it's shared under", () => {
+    const item = {
+      rights_mode: "users" as const,
+      created_by: 1,
+      RBAC: rbac({ users: [] }),
+    };
+    expect(canWriteTranscriptItem(item, { id: 1, role: "role-1" })).toBe(true);
+  });
+
+  it("a users-mode grant needs rights: write, not just being listed", () => {
+    const item = {
+      rights_mode: "users" as const,
+      created_by: 1,
+      RBAC: rbac({ users: [{ id: 2, rights: "read" }] }),
+    };
+    expect(canWriteTranscriptItem(item, { id: 2, role: "role-1" })).toBe(false);
+    expect(
+      canWriteTranscriptItem(
+        { ...item, RBAC: rbac({ users: [{ id: 2, rights: "write" }] }) },
+        { id: 2, role: "role-1" },
+      ),
+    ).toBe(true);
+  });
+
+  it("a roles-mode grant checks the viewer's role id, hydrated or not", () => {
+    const item = {
+      rights_mode: "roles" as const,
+      created_by: 1,
+      RBAC: rbac({ roles: [{ id: "editor", rights: "write" }] }),
+    };
+    expect(canWriteTranscriptItem(item, { id: 2, role: "editor" })).toBe(true);
+    expect(canWriteTranscriptItem(item, { id: 2, role: { id: "editor" } })).toBe(true);
+    expect(canWriteTranscriptItem(item, { id: 2, role: "viewer" })).toBe(false);
+  });
+
+  it("super_admin always writes, regardless of rights_mode", () => {
+    const item = { rights_mode: "private" as const, created_by: 1, RBAC: null };
+    expect(canWriteTranscriptItem(item, { id: 99, super_admin: true })).toBe(true);
   });
 });

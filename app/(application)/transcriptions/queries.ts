@@ -333,9 +333,9 @@ export const GET_TRANSCRIPT_ITEMS = gql`
 /**
  * Single saved transcript for the reading view (task-10 brief, Step 5):
  * `GET_TRANSCRIPT_ITEMS`' field list plus the content/media/RBAC fields the
- * document needs. `corrected_segments` is deliberately omitted — see the
- * `TranscriptItemDetail` doc comment in types.ts; a later task adds the
- * column and this field alongside it.
+ * document needs. `corrected_segments` and `updatedAt` were added by task-12
+ * (edit mode + its conflict guard) — see the `TranscriptItemDetail` doc
+ * comment in types.ts.
  */
 export const GET_TRANSCRIPT_ITEM = gql`
   query GetTranscriptItem($id: ID!) {
@@ -354,11 +354,13 @@ export const GET_TRANSCRIPT_ITEM = gql`
         post_processing
         transcript_text
         raw_segments
+        corrected_segments
         speakers
         language
         audio_s3key
         video_s3key
         recall_recording_id
+        updatedAt
         RBAC {
           type
           users {

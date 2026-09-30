@@ -4541,7 +4541,25 @@
       "emptyTranscript": "Dieses Transkript enthält keinen Text.",
       "recallRetentionNotice": "Meeting-Aufnahmen werden vorübergehend gespeichert und können nach einer von Ihrem Workspace konfigurierten Frist automatisch gelöscht werden.",
       "askSuggestion1": "Fassen Sie die wichtigsten Entscheidungen zusammen",
-      "askSuggestion2": "Was sind die Aktionspunkte?"
+      "askSuggestion2": "Was sind die Aktionspunkte?",
+      "nameSpeaker": "Sprecher benennen",
+      "readOnlyNotice": "Sie können dieses Transkript lesen, aber nicht korrigieren. Fragen Sie {owner} oder eine Administratorin bzw. einen Administrator.",
+      "readOnlyNoticeNoOwner": "Sie können dieses Transkript lesen, aber nicht korrigieren. Fragen Sie eine Administratorin bzw. einen Administrator.",
+      "writeAccessDenied": "Sie haben keine Berechtigung, Änderungen an diesem Transkript zu speichern.",
+      "staleConflictTitle": "Dieses Transkript hat sich geändert, seit Sie mit der Bearbeitung begonnen haben",
+      "staleConflictDescription": "Möglicherweise wurden in der Zwischenzeit Änderungen gespeichert. Wenn Sie jetzt speichern, wird diese Version mit Ihrer überschrieben.",
+      "staleConflictConfirm": "Trotzdem speichern"
+    },
+    "checklist": {
+      "ready": "Bereit zum Speichern",
+      "unnamed": "{count, plural, one {# Sprecher unbenannt} other {# Sprecher unbenannt}}",
+      "title": "Vor dem Speichern",
+      "titleItem": "Titel",
+      "speakersNamed": "Sprecher benannt",
+      "speakersRemaining": "{count, plural, one {# Sprecher noch unbenannt} other {# Sprecher noch unbenannt}}",
+      "summaryItem": "Zusammenfassung und Aktionspunkte",
+      "sharingItem": "Wer es sehen kann",
+      "footnote": "Dies dient nur der Information — es blockiert das Speichern nie."
     },
     "description": "Verwandeln Sie Audio in Transkripte mit benannten Sprechern, die Sie in Chats und Projekten nutzen können.",
     "empty": {
@@ -4564,6 +4582,19 @@
       "today": "Heute",
       "thisWeek": "Diese Woche",
       "thisMonth": "Diesen Monat"
+    },
+    "findReplace": {
+      "trigger": "Suchen und ersetzen",
+      "title": "Suchen und ersetzen",
+      "findLabel": "Suchen",
+      "findPlaceholder": "Suchen…",
+      "replaceLabel": "Ersetzen",
+      "replacePlaceholder": "Ersetzen durch…",
+      "matchCase": "Groß-/Kleinschreibung beachten",
+      "matchCaseShort": "Aa",
+      "matchCount": "{count, plural, one {# Treffer} other {# Treffer}}",
+      "hint": "Geben Sie etwas zum Suchen ein",
+      "replaceAll": "Alle ersetzen"
     },
     "gallery": {
       "allowedTypes": "Erlaubte Dateitypen: {types}",
@@ -4696,6 +4727,13 @@
     "searchPlaceholder": "Transkripte durchsuchen…",
     "sharing": {
       "subject": "Transkript"
+    },
+    "speakersPanel": {
+      "title": "Sprecher",
+      "empty": "Keine Sprecher erkannt.",
+      "needsName": "Braucht einen Namen",
+      "nameLabel": "Name für {raw}",
+      "hear": "Anhören"
     },
     "state": {
       "recording": "Aufnahme läuft",

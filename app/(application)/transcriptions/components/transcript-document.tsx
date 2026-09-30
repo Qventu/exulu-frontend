@@ -1,10 +1,13 @@
 "use client";
 
 /**
- * TranscriptDocument — the reading view (task-10 brief, Step 6 / design §4.3):
- * a saved transcript as a PAGE, not a sheet. Three columns share one scroll
- * region below a sticky (non-scrolling) header.
+ * TranscriptDocument — the reading view, and (task-12 brief) the SAME page in
+ * edit mode: review graduated from a side sheet (`review-sheet.tsx`, deleted
+ * by task-12) to a full page that is this component with `mode="edit"`.
+ * Three columns share one scroll region below a sticky (non-scrolling)
+ * header; edit mode adds a pinned (non-scrolling) footer.
  *
+ * Read mode (task-10 brief, Step 6 / design §4.3):
  * - Header: title, Share (access popover), Export ▾ (Copy text only — Task 13
  *   fills the rest of the menu), "…" overflow (Correct text and speakers →
  *   `?edit=1`, Move to project, Open in library, Delete). Meta line + an
@@ -15,14 +18,27 @@
  *   `parseTimestampRefs` into seek buttons), then the transcript itself.
  * - Right: the video/audio player, then `<AskBox />`.
  *
- * `mode="edit"` is accepted and ignored until Task 12 wires `onSave` /
- * `onDiscard` / `canWrite` — the prop contract is declared now so it's
- * stable when that task lands.
- *
- * The transcript block-merge logic and `speakerColor` are COPIED from
- * `review-sheet.tsx` (controller ruling: review-sheet.tsx stays untouched
- * until a later task deletes it wholesale — duplication across the two
- * files is intentional, not an oversight).
+ * Edit mode (task-12 brief, Steps 5-8):
+ * - Header action area swaps Share/Export/Overflow for `<ReviewChecklist />`
+ *   (a pure report — nothing on it disables Save); the title becomes a live
+ *   preview of the draft title typed in the centre column.
+ * - Centre: find-and-replace (hidden behind a button) above the transcript;
+ *   each block becomes editable on click — a textarea sized to its content,
+ *   blur commits to local segment state, Escape reverts that block — and the
+ *   speaker label gains a "Name speaker" link when the label is still raw.
+ *   Only `text` ever changes on a segment; `start`/`end`/`speaker` are
+ *   preserved so timestamps and the audio ribbon survive a correction. Below
+ *   the transcript, a "Details" section holds project + sharing as local
+ *   draft state (applied only on Save, unlike read mode's immediate-apply
+ *   popovers).
+ * - Right: `<SpeakersPanel />` replaces the video/ask panel.
+ * - A pinned footer holds the audio/video player and Save / Discard.
+ * - `canWrite === false` while `mode === "edit"` renders the READ-mode UI
+ *   (unchanged) plus an inline `Alert` explaining why, and never a Save
+ *   button — a transcript can be shared read-only, and a viewer who can read
+ *   it but not correct it must never see a Save button guaranteed to fail
+ *   (write access is derived by the caller via `canWriteTranscriptItem` in
+ *   types.ts, the client-side mirror of the backend's `validateWriteAccess`).
  *
  * The access pill's popover does NOT import `ItemAccessSection` from
  * `data/[ctx]/components/` (the design doc says it should) — that would
@@ -30,15 +46,19 @@
  * eslint rule forbids, the same rule an earlier task hit for
  * `items-action-bar.tsx`/`bulk-access-dialog.tsx`. Rather than reach across
  * or promote a file outside this task's declared scope, this renders the
- * same underlying primitive (`RBACControl`, already imported by
- * `review-sheet.tsx` in this very feature) directly, seeded from and saved
- * through this feature's own `transcriptions_itemsBulkUpdateRBAC` mutation
- * (`BULK_UPDATE_TRANSCRIPT_ITEMS_RBAC`, called with a single id) — see the
- * task-10 report for the full reasoning.
+ * same underlying primitive (`RBACControl`) directly, seeded from and saved
+ * through this feature's own mutations — see the task-10 report for the full
+ * reasoning. Edit mode's own Details section uses the same primitive the
+ * same way, as local draft state instead of an immediate-apply popover.
+ *
+ * The transcript block-merge logic and `speakerColor` used to also live in
+ * `review-sheet.tsx` (deleted by task-12); this file is now the sole
+ * implementation in the feature.
  */
-import { useMutation } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import {
   ChevronDown,
+  ChevronRight,
   ExternalLink,
   Folder,
   Globe,
@@ -60,7 +80,13 @@ import { PageHeader } from "@/components/primitives/page-header";
 import { PageShell } from "@/components/primitives/page-shell";
 import { RelativeTime } from "@/components/primitives/relative-time";
 import { RBACControl } from "@/components/rbac";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -75,6 +101,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
@@ -83,6 +111,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { GET_USER_BY_ID } from "@/queries/queries";
 
 import { useProjectOptions } from "../hooks";
 import { parseTimestampRefs } from "../linkify";
@@ -92,10 +122,11 @@ import {
   UPDATE_TRANSCRIPT_ITEM,
 } from "../queries";
 import {
+  effectiveSegments,
   formatClock,
   formatDuration,
+  isSharingConfigured,
   parsePostProcessingOutputs,
-  parseSegments,
   parseSpeakers,
   speakerColor,
   type Job,
@@ -109,6 +140,9 @@ import {
 import { AskBox } from "./ask-box";
 import { AudioTimeline, type AudioTimelineHandle } from "./audio-timeline";
 import { MeetingVideoPlayer } from "./meeting-video-player";
+import { SpeakersPanel } from "./speakers-panel";
+import { FindReplace } from "./find-replace";
+import { ReviewChecklist } from "./review-checklist";
 
 export interface TranscriptDocumentProps {
   item: TranscriptItemDetail;
@@ -132,7 +166,6 @@ export type TranscriptDraft = {
 };
 
 /* --------------------------- transcript blocks ---------------------------- */
-/* Copied from review-sheet.tsx (controller ruling — see file JSDoc above). */
 
 interface TranscriptBlock {
   label: string;
@@ -140,6 +173,10 @@ interface TranscriptBlock {
   start: number;
   end: number;
   text: string;
+  /** Indices into the `segments` array this block spans, in order. Editing a
+   *  block writes the whole edited text onto the FIRST index and blanks the
+   *  rest — start/end/speaker on every segment stay untouched. */
+  segmentIndices: number[];
 }
 
 function buildTranscriptBlocks(
@@ -147,14 +184,15 @@ function buildTranscriptBlocks(
   speakers: Record<string, string>,
 ): TranscriptBlock[] {
   const result: TranscriptBlock[] = [];
-  for (const segment of segments) {
+  segments.forEach((segment, index) => {
     const text = (segment.text ?? "").trim();
-    if (!text) continue;
+    if (!text) return;
     const label = speakers[segment.speaker] || segment.speaker || "unknown";
     const last = result[result.length - 1];
     if (last && last.label === label) {
       last.text = `${last.text} ${text}`.trim();
       last.end = segment.end;
+      last.segmentIndices.push(index);
     } else {
       result.push({
         label,
@@ -162,9 +200,10 @@ function buildTranscriptBlocks(
         start: segment.start,
         end: segment.end,
         text,
+        segmentIndices: [index],
       });
     }
-  }
+  });
   return result;
 }
 
@@ -433,14 +472,66 @@ function MoveToProjectDialog({
   );
 }
 
+/* ------------------------------ read-only notice --------------------------- */
+
+/** Resolves the owner's display name for the read-only explanation (Step 8).
+ *  Best-effort: the alert still reads fine without a name if this fails. */
+function useOwnerLabel(createdBy: number | null, enabled: boolean): string | null {
+  const { data } = useQuery<{
+    userById: { name: string | null; email: string | null } | null;
+  }>(GET_USER_BY_ID, {
+    variables: { id: String(createdBy) },
+    skip: !enabled || createdBy == null,
+  });
+  return data?.userById?.name || data?.userById?.email || null;
+}
+
+/* ------------------------------- edit draft --------------------------------- */
+
+interface EditDraftState {
+  title: string;
+  speakers: Record<string, string>;
+  segments: Segment[];
+  /** True once a correction (inline edit or replace-all) has been made —
+   *  drives `TranscriptDraft.correctedSegments`'s null-means-untouched rule. */
+  segmentsDirty: boolean;
+  projectId: string;
+  rightsMode: Mode;
+  rbacUsers: RbacUser[];
+  rbacRoles: RbacRole[];
+  /** Segment indices touched by the most recent replace-all, cleared as each
+   *  is re-edited or once the draft is saved — "renders in the success token
+   *  until save" (brief, find-replace.tsx). */
+  justReplaced: Set<number>;
+}
+
+function buildEditDraftState(item: TranscriptItemDetail): EditDraftState {
+  return {
+    title: item.name ?? "",
+    speakers: parseSpeakers(item.speakers),
+    segments: effectiveSegments(item.raw_segments, item.corrected_segments),
+    segmentsDirty: false,
+    projectId: item.project_id ?? "",
+    rightsMode: item.rights_mode ?? "private",
+    rbacUsers: item.RBAC?.users ?? [],
+    rbacRoles: item.RBAC?.roles ?? [],
+    justReplaced: new Set(),
+  };
+}
+
 /* --------------------------------- main ------------------------------------ */
 
-export function TranscriptDocument({ item }: TranscriptDocumentProps) {
+export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: TranscriptDocumentProps) {
   const t = useTranslations("transcriptions");
   const tCommon = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
   const projects = useProjectOptions();
+
+  const requestedEdit = mode === "edit";
+  const isEditable = requestedEdit && canWrite !== false;
+  const readOnlyDenied = requestedEdit && !isEditable;
+  const ownerLabel = useOwnerLabel(item.created_by, readOnlyDenied);
 
   const [accessOpen, setAccessOpen] = React.useState(false);
   const [moveOpen, setMoveOpen] = React.useState(false);
@@ -451,12 +542,68 @@ export function TranscriptDocument({ item }: TranscriptDocumentProps) {
 
   const [deleteItem] = useMutation(REMOVE_SAVED_TRANSCRIPT_ITEM);
 
-  const segments = React.useMemo(() => parseSegments(item.raw_segments), [item.raw_segments]);
-  const speakers = React.useMemo(() => parseSpeakers(item.speakers), [item.speakers]);
+  // ---- edit draft --------------------------------------------------------
+
+  const [editState, setEditState] = React.useState<EditDraftState>(() =>
+    buildEditDraftState(item),
+  );
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [editingSegmentStart, setEditingSegmentStart] = React.useState<number | null>(null);
+  const [editingText, setEditingText] = React.useState("");
+  const cancelledEditRef = React.useRef(false);
+
+  // Re-seed the draft only on the read → edit transition, never while an edit
+  // session is already open — a background refetch (the conflict guard's
+  // focus refetch) must not silently overwrite in-progress corrections.
+  const prevModeRef = React.useRef(mode);
+  React.useEffect(() => {
+    if (mode === "edit" && prevModeRef.current !== "edit") {
+      setEditState(buildEditDraftState(item));
+      setEditingSegmentStart(null);
+    }
+    prevModeRef.current = mode;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
+
+  const baseSegments = React.useMemo(
+    () => effectiveSegments(item.raw_segments, item.corrected_segments),
+    [item.raw_segments, item.corrected_segments],
+  );
+  const segments = isEditable ? editState.segments : baseSegments;
+  const speakers = isEditable ? editState.speakers : parseSpeakers(item.speakers);
   const blocks = React.useMemo(
     () => buildTranscriptBlocks(segments, speakers),
     [segments, speakers],
   );
+
+  const rawSpeakers = React.useMemo(() => {
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+    for (const segment of segments) {
+      if (!seen.has(segment.speaker)) {
+        seen.add(segment.speaker);
+        ordered.push(segment.speaker);
+      }
+    }
+    return ordered;
+  }, [segments]);
+
+  const talkShare = React.useMemo(() => {
+    const totals: Record<string, number> = {};
+    let grandTotal = 0;
+    for (const segment of segments) {
+      const duration = Math.max(0, segment.end - segment.start);
+      totals[segment.speaker] = (totals[segment.speaker] ?? 0) + duration;
+      grandTotal += duration;
+    }
+    if (grandTotal <= 0) return {};
+    const shares: Record<string, number> = {};
+    for (const [speaker, duration] of Object.entries(totals)) {
+      shares[speaker] = duration / grandTotal;
+    }
+    return shares;
+  }, [segments]);
 
   const outputs = React.useMemo(
     () => parsePostProcessingOutputs(item.post_processing),
@@ -469,6 +616,9 @@ export function TranscriptDocument({ item }: TranscriptDocumentProps) {
   const contentOutputs = React.useMemo(
     () => outputs.filter((output) => output.status === "failed" || !!output.output?.trim()),
     [outputs],
+  );
+  const hasSummary = outputs.some(
+    (output) => output.status === "done" && !!output.output?.trim(),
   );
 
   const audioTimelineRef = React.useRef<AudioTimelineHandle>(null);
@@ -499,7 +649,44 @@ export function TranscriptDocument({ item }: TranscriptDocumentProps) {
     [hasVideo],
   );
 
+  // "Hear" (SpeakersPanel): seek to the speaker's first block and stop after
+  // ~4s. Reuses `seekTo` for both the audio ribbon and the meeting video, so
+  // it degrades the same way seekTo already does before media is ready.
+  const handleHear = React.useCallback(
+    (rawSpeaker: string) => {
+      const firstBlock = blocks.find((block) => block.rawSpeaker === rawSpeaker);
+      if (!firstBlock) return;
+      seekTo(firstBlock.start);
+      window.setTimeout(() => {
+        mediaContainerRef.current?.querySelector<HTMLMediaElement>("audio, video")?.pause();
+      }, 4000);
+    },
+    [blocks, seekTo],
+  );
+
+  // "Name speaker" (transcript block, still-raw label): scroll the speakers
+  // panel's row into view and open it. SpeakersPanel's "one row open at a
+  // time" state is internal (its prop contract is fixed — no imperative
+  // open control), so this drives it the same way a person would: find the
+  // row, open it only if it isn't already open, then focus its input.
+  const focusSpeaker = React.useCallback((rawSpeaker: string) => {
+    const row = document.getElementById(`speaker-panel-${rawSpeaker}`);
+    if (!row) return;
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    row.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+    const toggle = row.querySelector<HTMLButtonElement>("button[aria-expanded]");
+    if (toggle && toggle.getAttribute("aria-expanded") !== "true") {
+      toggle.click();
+    }
+    requestAnimationFrame(() => row.querySelector<HTMLInputElement>("input")?.focus());
+  }, []);
+
   const title = item.name?.trim() || t("review.fallbackTitle");
+  const headerTitle = isEditable
+    ? editState.title.trim() || t("review.fallbackTitle")
+    : title;
 
   const effectiveProjectId =
     projectIdOverride !== undefined ? projectIdOverride : item.project_id;
@@ -552,11 +739,17 @@ export function TranscriptDocument({ item }: TranscriptDocumentProps) {
   };
 
   const overflowItems: OverflowMenuItem[] = [
-    {
-      label: t("document.correctTextAndSpeakers"),
-      icon: Pencil,
-      onSelect: () => router.push(`${pathname}?edit=1`),
-    },
+    // Hidden for a read-only viewer: it would only land them back on the
+    // same "you can't correct this" banner they'd get from `?edit=1`.
+    ...(canWrite !== false
+      ? [
+          {
+            label: t("document.correctTextAndSpeakers"),
+            icon: Pencil,
+            onSelect: () => router.push(`${pathname}?edit=1`),
+          },
+        ]
+      : []),
     {
       label: t("document.moveToProject"),
       icon: Folder,
@@ -575,13 +768,109 @@ export function TranscriptDocument({ item }: TranscriptDocumentProps) {
     },
   ];
 
+  // ---- edit handlers ------------------------------------------------------
+
+  const commitBlockEdit = (block: TranscriptBlock, newText: string) => {
+    setEditState((prev) => {
+      const nextSegments = prev.segments.map((segment, index) => {
+        if (!block.segmentIndices.includes(index)) return segment;
+        return index === block.segmentIndices[0]
+          ? { ...segment, text: newText }
+          : { ...segment, text: "" };
+      });
+      const nextJustReplaced = new Set(prev.justReplaced);
+      block.segmentIndices.forEach((index) => nextJustReplaced.delete(index));
+      return {
+        ...prev,
+        segments: nextSegments,
+        segmentsDirty: true,
+        justReplaced: nextJustReplaced,
+      };
+    });
+  };
+
+  const startBlockEdit = (block: TranscriptBlock) => {
+    cancelledEditRef.current = false;
+    setEditingSegmentStart(block.segmentIndices[0]);
+    setEditingText(block.text);
+  };
+
+  const handleTextareaKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelledEditRef.current = true;
+      event.currentTarget.blur();
+    }
+  };
+
+  const handleTextareaBlur = (block: TranscriptBlock) => {
+    if (cancelledEditRef.current) {
+      cancelledEditRef.current = false;
+    } else {
+      commitBlockEdit(block, editingText);
+    }
+    setEditingSegmentStart(null);
+  };
+
+  const handleReplaceAll = (nextSegments: Segment[]) => {
+    setEditState((prev) => {
+      const changed = new Set<number>();
+      nextSegments.forEach((segment, index) => {
+        if (segment.text !== prev.segments[index]?.text) changed.add(index);
+      });
+      return {
+        ...prev,
+        segments: nextSegments,
+        segmentsDirty: true,
+        justReplaced: changed,
+      };
+    });
+  };
+
+  const handleSpeakerNameChange = (rawSpeaker: string, name: string) => {
+    setEditState((prev) => ({
+      ...prev,
+      speakers: { ...prev.speakers, [rawSpeaker]: name },
+    }));
+  };
+
+  const unnamedSpeakerCount = rawSpeakers.filter(
+    (raw) => !editState.speakers[raw]?.trim(),
+  ).length;
+  const sharingChosen = isSharingConfigured(
+    editState.rightsMode,
+    editState.rbacUsers,
+    editState.rbacRoles,
+  );
+
+  const handleSaveClick = async () => {
+    if (!onSave) return;
+    const draft: TranscriptDraft = {
+      title: editState.title.trim() || item.name || t("review.fallbackTitle"),
+      speakers: editState.speakers,
+      correctedSegments: editState.segmentsDirty ? editState.segments : null,
+      projectId: editState.projectId || null,
+      rightsMode: editState.rightsMode,
+      rbacUsers: editState.rbacUsers,
+      rbacRoles: editState.rbacRoles,
+    };
+    setSaving(true);
+    try {
+      await onSave(draft);
+    } catch {
+      // The caller already surfaced a toast; keep editing open so nothing is lost.
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <PageShell variant="full-bleed">
       <div className="shrink-0 border-b px-4 py-3 md:px-6">
         <PageHeader
           density="compact"
           breadcrumb={{ label: t("title"), href: "/transcriptions" }}
-          title={title}
+          title={headerTitle}
           meta={
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
               {metaSegments.map((segment, index) => (
@@ -591,39 +880,62 @@ export function TranscriptDocument({ item }: TranscriptDocumentProps) {
                 </React.Fragment>
               ))}
               {metaSegments.length > 0 && <span aria-hidden="true">·</span>}
-              <AccessControl item={item} open={accessOpen} onOpenChange={setAccessOpen} />
+              {!isEditable && (
+                <AccessControl item={item} open={accessOpen} onOpenChange={setAccessOpen} />
+              )}
             </span>
           }
           action={
-            <div className="flex shrink-0 items-center gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="max-md:h-11"
-                onClick={() => setAccessOpen(true)}
-              >
-                <Share2 aria-hidden="true" className="mr-2 size-4" />
-                {t("document.share")}
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="ghost" size="sm" className="max-md:h-11">
-                    {t("document.export")}
-                    <ChevronDown aria-hidden="true" className="ml-1 size-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => void handleCopyText()}>
-                    {t("document.copyText")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <OverflowMenu items={overflowItems} label={t("overflow.label")} />
-            </div>
+            isEditable ? (
+              <ReviewChecklist
+                titleSet={editState.title.trim().length > 0}
+                unnamedSpeakerCount={unnamedSpeakerCount}
+                hasSummary={hasSummary}
+                sharingChosen={sharingChosen}
+              />
+            ) : (
+              <div className="flex shrink-0 items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="max-md:h-11"
+                  onClick={() => setAccessOpen(true)}
+                >
+                  <Share2 aria-hidden="true" className="mr-2 size-4" />
+                  {t("document.share")}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="ghost" size="sm" className="max-md:h-11">
+                      {t("document.export")}
+                      <ChevronDown aria-hidden="true" className="ml-1 size-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => void handleCopyText()}>
+                      {t("document.copyText")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <OverflowMenu items={overflowItems} label={t("overflow.label")} />
+              </div>
+            )
           }
         />
       </div>
+
+      {readOnlyDenied && (
+        <div className="shrink-0 border-b px-4 py-3 md:px-6">
+          <Alert variant="warning">
+            <AlertDescription>
+              {ownerLabel
+                ? t("document.readOnlyNotice", { owner: ownerLabel })
+                : t("document.readOnlyNoticeNoOwner")}
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto grid w-full max-w-6xl gap-6 p-4 md:grid-cols-[200px_minmax(0,1fr)_300px] md:p-6">
@@ -652,6 +964,20 @@ export function TranscriptDocument({ item }: TranscriptDocumentProps) {
 
           {/* Centre: summary/action-item outputs, then the transcript. */}
           <div className="min-w-0 space-y-6">
+            {isEditable && (
+              <div className="space-y-1">
+                <Input
+                  value={editState.title}
+                  onChange={(event) =>
+                    setEditState((prev) => ({ ...prev, title: event.target.value }))
+                  }
+                  aria-label={t("composer.titleLabel")}
+                  placeholder={t("composer.titlePlaceholder")}
+                  className="h-11 border-transparent px-1 text-base font-semibold shadow-none hover:border-input focus-visible:border-input md:h-9"
+                />
+              </div>
+            )}
+
             {contentOutputs.length > 0 && (
               <section className="space-y-4">
                 <p className="text-sm font-medium">{t("document.summaryHeading")}</p>
@@ -685,76 +1011,274 @@ export function TranscriptDocument({ item }: TranscriptDocumentProps) {
             )}
 
             <section className="space-y-2">
-              <p className="text-sm font-medium">{t("review.transcript")}</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium">{t("review.transcript")}</p>
+                {isEditable && (
+                  <FindReplace segments={editState.segments} onReplaceAll={handleReplaceAll} />
+                )}
+              </div>
               {blocks.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t("document.emptyTranscript")}</p>
               ) : (
                 <div className="space-y-1">
-                  {blocks.map((block, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => seekTo(block.start)}
-                      className="w-full rounded-md px-2 py-1.5 text-left transition-colors duration-150 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <span className="flex items-center gap-2 text-xs">
-                        <span
-                          aria-hidden="true"
-                          className="inline-block size-2 shrink-0 rounded-full"
-                          style={{ backgroundColor: speakerColor(block.rawSpeaker) }}
-                        />
-                        <span className="truncate font-medium text-foreground">{block.label}</span>
-                        <span className="shrink-0 font-mono text-muted-foreground">
-                          {formatClock(block.start)}
+                  {blocks.map((block, index) =>
+                    isEditable ? (
+                      <div key={index} className="rounded-md px-2 py-1.5">
+                        <span className="flex flex-wrap items-center gap-2 text-xs">
+                          <span
+                            aria-hidden="true"
+                            className="inline-block size-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: speakerColor(block.rawSpeaker) }}
+                          />
+                          <span className="truncate font-medium text-foreground">
+                            {block.label}
+                          </span>
+                          {!speakers[block.rawSpeaker]?.trim() && (
+                            <button
+                              type="button"
+                              className="text-primary underline underline-offset-2 max-md:h-11"
+                              onClick={() => focusSpeaker(block.rawSpeaker)}
+                            >
+                              {t("document.nameSpeaker")}
+                            </button>
+                          )}
+                          <span className="shrink-0 font-mono text-muted-foreground">
+                            {formatClock(block.start)}
+                          </span>
                         </span>
-                      </span>
-                      <span className="mt-0.5 block text-sm leading-relaxed">{block.text}</span>
-                    </button>
-                  ))}
+                        {editingSegmentStart === block.segmentIndices[0] ? (
+                          <Textarea
+                            autoFocus
+                            value={editingText}
+                            ref={(el) => {
+                              // Size to content immediately on mount, not just
+                              // on the next keystroke — a multi-line block
+                              // must not open clipped (overflow is hidden).
+                              if (el) {
+                                el.style.height = "auto";
+                                el.style.height = `${el.scrollHeight}px`;
+                              }
+                            }}
+                            onChange={(event) => {
+                              setEditingText(event.target.value);
+                              const el = event.currentTarget;
+                              el.style.height = "auto";
+                              el.style.height = `${el.scrollHeight}px`;
+                            }}
+                            onKeyDown={handleTextareaKeyDown}
+                            onBlur={() => handleTextareaBlur(block)}
+                            className="mt-1 min-h-0 resize-none overflow-hidden text-sm leading-relaxed"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => startBlockEdit(block)}
+                            className="mt-0.5 block w-full rounded px-1 py-0.5 text-left text-sm leading-relaxed hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            {block.segmentIndices.map((segmentIndex, partIndex) => (
+                              <React.Fragment key={segmentIndex}>
+                                {partIndex > 0 && " "}
+                                <span
+                                  className={
+                                    editState.justReplaced.has(segmentIndex)
+                                      ? "rounded bg-success/15 px-0.5 text-success"
+                                      : undefined
+                                  }
+                                >
+                                  {segments[segmentIndex]?.text ?? ""}
+                                </span>
+                              </React.Fragment>
+                            ))}
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => seekTo(block.start)}
+                        className="w-full rounded-md px-2 py-1.5 text-left transition-colors duration-150 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <span className="flex items-center gap-2 text-xs">
+                          <span
+                            aria-hidden="true"
+                            className="inline-block size-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: speakerColor(block.rawSpeaker) }}
+                          />
+                          <span className="truncate font-medium text-foreground">{block.label}</span>
+                          <span className="shrink-0 font-mono text-muted-foreground">
+                            {formatClock(block.start)}
+                          </span>
+                        </span>
+                        <span className="mt-0.5 block text-sm leading-relaxed">{block.text}</span>
+                      </button>
+                    ),
+                  )}
                 </div>
               )}
             </section>
+
+            {isEditable && (
+              <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+                <CollapsibleTrigger className="group flex min-h-9 w-full items-center gap-2 rounded-md text-left text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-90 motion-reduce:transition-none"
+                  />
+                  <span>{tCommon("details")}</span>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down motion-reduce:animate-none">
+                  <div className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label>{t("composer.project")}</Label>
+                      <Select
+                        value={editState.projectId || "none"}
+                        onValueChange={(value) =>
+                          setEditState((prev) => ({
+                            ...prev,
+                            projectId: value === "none" ? "" : value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("composer.noProject")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">{t("composer.noProject")}</SelectItem>
+                          {projects.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("composer.sharing")}</Label>
+                      <RBACControl
+                        allowedModes={ALLOWED_MODES}
+                        subjectLabel={t("sharing.subject")}
+                        initialRightsMode={editState.rightsMode}
+                        initialUsers={editState.rbacUsers}
+                        initialRoles={editState.rbacRoles}
+                        modalMode
+                        onChange={(nextMode, nextUsers, nextRoles) => {
+                          setEditState((prev) => ({
+                            ...prev,
+                            rightsMode: nextMode,
+                            rbacUsers: nextUsers,
+                            rbacRoles: nextRoles,
+                          }));
+                        }}
+                      />
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </div>
 
-          {/* Right: media, then the ask box. */}
+          {/* Right: SpeakersPanel in edit mode; media + ask box in read mode. */}
           <div className="space-y-4">
-            <div ref={mediaContainerRef} className="space-y-2">
-              {hasVideo ? (
-                <>
-                  <MeetingVideoPlayer
-                    job={
-                      {
-                        id: item.job_id ?? item.id,
-                        video_s3key: item.video_s3key,
-                        recall_recording_id: item.recall_recording_id,
-                      } as unknown as Job
-                    }
-                  />
-                  {item.recording_source === "recall" ? (
-                    <p className="text-xs text-muted-foreground">
-                      {t("document.recallRetentionNotice")}
-                    </p>
-                  ) : null}
-                </>
-              ) : item.audio_s3key ? (
-                <AudioTimeline
-                  ref={audioTimelineRef}
-                  audioS3Key={item.audio_s3key}
-                  segments={segments}
-                  speakers={speakers}
-                />
-              ) : (
-                <p className="text-xs text-muted-foreground">{t("review.noAudio")}</p>
-              )}
-            </div>
+            {isEditable ? (
+              <SpeakersPanel
+                rawSpeakers={rawSpeakers}
+                names={editState.speakers}
+                onNameChange={handleSpeakerNameChange}
+                talkShare={talkShare}
+                onHear={handleHear}
+              />
+            ) : (
+              <>
+                <div ref={mediaContainerRef} className="space-y-2">
+                  {hasVideo ? (
+                    <>
+                      <MeetingVideoPlayer
+                        job={
+                          {
+                            id: item.job_id ?? item.id,
+                            video_s3key: item.video_s3key,
+                            recall_recording_id: item.recall_recording_id,
+                          } as unknown as Job
+                        }
+                      />
+                      {item.recording_source === "recall" ? (
+                        <p className="text-xs text-muted-foreground">
+                          {t("document.recallRetentionNotice")}
+                        </p>
+                      ) : null}
+                    </>
+                  ) : item.audio_s3key ? (
+                    <AudioTimeline
+                      ref={audioTimelineRef}
+                      audioS3Key={item.audio_s3key}
+                      segments={segments}
+                      speakers={speakers}
+                    />
+                  ) : (
+                    <p className="text-xs text-muted-foreground">{t("review.noAudio")}</p>
+                  )}
+                </div>
 
-            <AskBox
-              itemId={item.id}
-              suggestions={[t("document.askSuggestion1"), t("document.askSuggestion2")]}
-            />
+                <AskBox
+                  itemId={item.id}
+                  suggestions={[t("document.askSuggestion1"), t("document.askSuggestion2")]}
+                />
+              </>
+            )}
           </div>
         </div>
       </div>
+
+      {isEditable && (
+        <div className="shrink-0 space-y-3 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div ref={mediaContainerRef}>
+            {hasVideo ? (
+              <MeetingVideoPlayer
+                job={
+                  {
+                    id: item.job_id ?? item.id,
+                    video_s3key: item.video_s3key,
+                    recall_recording_id: item.recall_recording_id,
+                  } as unknown as Job
+                }
+              />
+            ) : item.audio_s3key ? (
+              <AudioTimeline
+                ref={audioTimelineRef}
+                audioS3Key={item.audio_s3key}
+                segments={segments}
+                speakers={speakers}
+              />
+            ) : (
+              <p className="px-1 text-xs text-muted-foreground">{t("review.noAudio")}</p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={saving}
+              className="max-md:h-11"
+              onClick={() => onDiscard?.()}
+            >
+              {t("review.discard")}
+            </Button>
+            <Button
+              type="button"
+              disabled={saving || !onSave}
+              aria-busy={saving}
+              className="max-md:h-11"
+              onClick={() => void handleSaveClick()}
+            >
+              {saving ? (
+                <Loader2 aria-hidden="true" className="mr-2 size-4 animate-spin" />
+              ) : null}
+              {tCommon("save")}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <MoveToProjectDialog
         item={item}

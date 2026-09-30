@@ -2,21 +2,47 @@
 
 /**
  * /transcriptions/[itemId] — the reading view (task-10 brief, Step 9 / design
- * §4.3). A thin client page: reads the id, fetches the item (hooks.ts owns
- * fetch policy — codebase-structure §3.2), and hands off to
- * `TranscriptDocument`. `?edit=1` requests edit mode; `TranscriptDocument`
- * currently accepts and ignores it (Task 12 wires the edit path).
+ * §4.3), and (task-12 brief, Step 8) the correction page: `?edit=1` requests
+ * edit mode, but `TranscriptDocument` only renders it editable when the
+ * viewer actually has write access.
+ *
+ * Write access is derived with `canWriteTranscriptItem` (types.ts) — a
+ * client-side mirror of the backend's `validateWriteAccess`, the same gate
+ * `transcriptions_itemsUpdateOneById` runs server-side. It was asked to reuse
+ * whatever check `data/[ctx]/components/use-item-editor.ts` uses for this;
+ * that file doesn't actually derive write access itself (it renders Edit
+ * unconditionally and just lets the server reject the mutation) — see
+ * `canWriteTranscriptItem`'s doc comment for why that's too late here: a
+ * viewer who can only read must never see a Save button that's guaranteed to
+ * fail. If the derivation is ever wrong anyway, the save handler below still
+ * catches a server rejection and shows a plain message, never the raw
+ * GraphQL error.
+ *
+ * Conflict guard: refetches on window focus, and if the item's `updatedAt`
+ * moved since the edit session's baseline, confirms before overwriting it.
  */
+import { useMutation } from "@apollo/client";
 import { useTranslations } from "next-intl";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
+import { toast } from "sonner";
 
+import { UserContext } from "@/app/(application)/authenticated";
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { PageShell } from "@/components/primitives/page-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { TranscriptDocument } from "../components/transcript-document";
+import { TranscriptDocument, type TranscriptDraft } from "../components/transcript-document";
 import { useTranscriptItem } from "../hooks";
+import { UPDATE_TRANSCRIPT_ITEM } from "../queries";
+import { canWriteTranscriptItem } from "../types";
+
+/** A server rejection from `validateWriteAccess` (src/graphql/mutations/index.ts)
+ *  always mentions "permission", except the private-record branch, which
+ *  says "Only the creator can edit ...". Matching either turns that raw
+ *  message into the same plain explanation the read-only banner already uses. */
+const WRITE_ACCESS_ERROR = /permission|creator can edit/i;
 
 export default function TranscriptItemPage() {
   // useSearchParams needs a Suspense boundary for prerendering.
@@ -32,10 +58,40 @@ function TranscriptItemPageInner() {
   const tCommon = useTranslations("common");
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const itemId = params?.itemId as string | undefined;
+  const { user } = React.useContext(UserContext);
 
   const { item, loading, error, refetch } = useTranscriptItem(itemId ?? "");
   const mode = searchParams.get("edit") === "1" ? "edit" : "read";
+
+  const [updateItem] = useMutation(UPDATE_TRANSCRIPT_ITEM);
+  const [discardOpen, setDiscardOpen] = React.useState(false);
+  const [staleConfirmOpen, setStaleConfirmOpen] = React.useState(false);
+  const pendingDraftRef = React.useRef<TranscriptDraft | null>(null);
+  // Captured on every read → edit transition (including landing straight on
+  // `?edit=1`), then left alone while editing continues — NOT re-armed by
+  // the conflict guard's own focus refetch, which is what makes it a
+  // baseline rather than a value that always matches the latest fetch. A
+  // successful save re-establishes it too, so a second edit in the same
+  // session doesn't warn about its own prior save.
+  const baselineUpdatedAtRef = React.useRef<string | null>(null);
+  const prevModeForBaselineRef = React.useRef<"read" | "edit" | null>(null);
+  React.useEffect(() => {
+    if (item && mode === "edit" && prevModeForBaselineRef.current !== "edit") {
+      baselineUpdatedAtRef.current = item.updatedAt;
+    }
+    prevModeForBaselineRef.current = mode;
+  }, [mode, item]);
+
+  // Conflict guard: refetch on focus so `item.updatedAt` is current by the
+  // time a Save actually checks it against the baseline above.
+  React.useEffect(() => {
+    if (mode !== "edit") return;
+    const onFocus = () => void refetch();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [mode, refetch]);
 
   if (!itemId) return null;
 
@@ -72,5 +128,85 @@ function TranscriptItemPageInner() {
 
   if (!item) return null;
 
-  return <TranscriptDocument item={item} mode={mode} />;
+  const canWrite = canWriteTranscriptItem(item, user);
+
+  const performSave = async (draft: TranscriptDraft) => {
+    try {
+      const input: Record<string, unknown> = {
+        name: draft.title,
+        speakers: draft.speakers,
+        project_id: draft.projectId,
+        rights_mode: draft.rightsMode,
+        RBAC: { users: draft.rbacUsers, roles: draft.rbacRoles },
+      };
+      // null = untouched (TranscriptDraft's contract) — omit the key so an
+      // unedited transcript's corrected_segments is left exactly as it was.
+      if (draft.correctedSegments !== null) {
+        input.corrected_segments = draft.correctedSegments;
+      }
+      await updateItem({ variables: { id: item.id, input } });
+      toast.success(t("toasts.updated"));
+      await refetch();
+      router.replace(`/transcriptions/${item.id}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "";
+      if (WRITE_ACCESS_ERROR.test(message)) {
+        toast.error(t("document.writeAccessDenied"));
+      } else {
+        toast.error(t("toasts.saveFailed"), {
+          description: message || undefined,
+        });
+      }
+      throw err; // TranscriptDocument keeps edit mode open
+    }
+  };
+
+  const handleSave = async (draft: TranscriptDraft) => {
+    if (
+      baselineUpdatedAtRef.current &&
+      item.updatedAt !== baselineUpdatedAtRef.current
+    ) {
+      pendingDraftRef.current = draft;
+      setStaleConfirmOpen(true);
+      return;
+    }
+    await performSave(draft);
+  };
+
+  const handleConfirmStaleSave = async () => {
+    if (!pendingDraftRef.current) return;
+    const draft = pendingDraftRef.current;
+    pendingDraftRef.current = null;
+    await performSave(draft);
+  };
+
+  return (
+    <>
+      <TranscriptDocument
+        item={item}
+        mode={mode}
+        canWrite={canWrite}
+        onSave={mode === "edit" ? handleSave : undefined}
+        onDiscard={mode === "edit" ? () => setDiscardOpen(true) : undefined}
+      />
+      <ConfirmDialog
+        open={discardOpen}
+        onOpenChange={setDiscardOpen}
+        title={tCommon("unsavedChangesTitle")}
+        description={tCommon("leaveWithoutSavingDescription")}
+        confirmLabel={tCommon("leaveWithoutSaving")}
+        onConfirm={async () => {
+          router.replace(`/transcriptions/${item.id}`);
+        }}
+      />
+      <ConfirmDialog
+        open={staleConfirmOpen}
+        onOpenChange={setStaleConfirmOpen}
+        title={t("document.staleConflictTitle")}
+        description={t("document.staleConflictDescription")}
+        confirmLabel={t("document.staleConflictConfirm")}
+        onConfirm={handleConfirmStaleSave}
+      />
+    </>
+  );
 }

@@ -4541,7 +4541,25 @@
       "emptyTranscript": "This transcript has no text.",
       "recallRetentionNotice": "Meeting recordings are stored temporarily and may be deleted automatically after a period configured by your workspace.",
       "askSuggestion1": "Summarize the key decisions",
-      "askSuggestion2": "What are the action items?"
+      "askSuggestion2": "What are the action items?",
+      "nameSpeaker": "Name speaker",
+      "readOnlyNotice": "You can read this transcript but not correct it. Ask {owner} or an admin.",
+      "readOnlyNoticeNoOwner": "You can read this transcript but not correct it. Ask an admin.",
+      "writeAccessDenied": "You don't have permission to save changes to this transcript.",
+      "staleConflictTitle": "This transcript changed since you started editing",
+      "staleConflictDescription": "Someone may have saved changes to it in the meantime. Saving now will overwrite them with your version.",
+      "staleConflictConfirm": "Save anyway"
+    },
+    "checklist": {
+      "ready": "Ready to save",
+      "unnamed": "{count, plural, one {# speaker unnamed} other {# speakers unnamed}}",
+      "title": "Before you save",
+      "titleItem": "Title",
+      "speakersNamed": "Speakers named",
+      "speakersRemaining": "{count, plural, one {# speaker still unnamed} other {# speakers still unnamed}}",
+      "summaryItem": "Summary and action items",
+      "sharingItem": "Who can see it",
+      "footnote": "This is informational — it never blocks Save."
     },
     "description": "Turn audio into speaker-labeled transcripts you can use in chats and projects.",
     "empty": {
@@ -4564,6 +4582,19 @@
       "today": "Today",
       "thisWeek": "This week",
       "thisMonth": "This month"
+    },
+    "findReplace": {
+      "trigger": "Find and replace",
+      "title": "Find and replace",
+      "findLabel": "Find",
+      "findPlaceholder": "Find…",
+      "replaceLabel": "Replace",
+      "replacePlaceholder": "Replace with…",
+      "matchCase": "Match case",
+      "matchCaseShort": "Aa",
+      "matchCount": "{count, plural, one {# match} other {# matches}}",
+      "hint": "Type something to find",
+      "replaceAll": "Replace all"
     },
     "gallery": {
       "allowedTypes": "Allowed file types: {types}",
@@ -4696,6 +4727,13 @@
     "searchPlaceholder": "Search transcripts…",
     "sharing": {
       "subject": "transcript"
+    },
+    "speakersPanel": {
+      "title": "Speakers",
+      "empty": "No speakers detected.",
+      "needsName": "Needs a name",
+      "nameLabel": "Name for {raw}",
+      "hear": "Hear"
     },
     "state": {
       "recording": "Recording",

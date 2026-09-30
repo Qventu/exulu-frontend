@@ -150,6 +150,51 @@ export function parseSegments(raw: unknown): Segment[] {
   return raw as Segment[];
 }
 
+/**
+ * The segments a reader/editor should actually see: a correction, once made,
+ * wholly replaces the raw engine output (mirrors the backend's
+ * `effectiveSegments` in transcript-text.ts — `corrected ?? raw ?? []`).
+ * `corrected` is `!= null` here (not truthy), same reason: an explicit but
+ * empty correction is still a correction, distinct from "never corrected."
+ */
+export function effectiveSegments(
+  rawSegments: Segment[] | string | null | undefined,
+  correctedSegments: Segment[] | string | null | undefined,
+): Segment[] {
+  return parseSegments(
+    correctedSegments != null ? correctedSegments : rawSegments,
+  );
+}
+
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Bulk correction across the transcript. Only `text` changes — start, end
+ * and speaker are preserved, which is what makes "Timestamps stay in place"
+ * true and lets the audio ribbon keep working after a replace.
+ *
+ * The needle is escaped: a user typing "(1)" means those three characters,
+ * not a capture group.
+ */
+export function applyFindReplace(
+  segments: Segment[],
+  find: string,
+  replace: string,
+  matchCase: boolean,
+): { segments: Segment[]; count: number } {
+  if (!find) return { segments, count: 0 };
+  const pattern = new RegExp(escapeRegExp(find), matchCase ? "g" : "gi");
+  let count = 0;
+  const next = segments.map((segment) => {
+    const hits = segment.text.match(pattern);
+    if (!hits) return segment;
+    count += hits.length;
+    return { ...segment, text: segment.text.replace(pattern, replace) };
+  });
+  return { segments: next, count };
+}
+
 /** Human filename from the `_EXULU_` S3-key convention. */
 export function decodeFilename(s3Key: string): string {
   const last = s3Key.split("/").pop() ?? s3Key;
@@ -324,21 +369,107 @@ export type ItemRBAC = { type?: Mode; users: RbacUser[]; roles: RbacRole[] };
  * exactly (task-10 brief, Interfaces block; Ruling 3). Extends `TranscriptItem`
  * (the home list's slimmer shape) with the fields only the reading view needs.
  *
- * `corrected_segments` is deliberately NOT selected/typed here: the column
- * doesn't exist yet (a later task adds it alongside the edit-mode save path),
- * and selecting a column that doesn't exist would fail at runtime — the same
- * reasoning the export route's `getItem` field list already applies.
+ * `corrected_segments` and `updatedAt` are added by task-12: the column
+ * exists now (the generic item-update mutation can write it, gated by
+ * `validateWriteAccess`), and `updatedAt` backs the conflict guard on the
+ * edit page (refetch on focus, warn before saving over someone else's change).
  */
 export type TranscriptItemDetail = TranscriptItem & {
   transcript_text: string | null;
   raw_segments: Segment[] | string | null;
+  corrected_segments: Segment[] | string | null;
   speakers: Record<string, string> | string | null;
   language: string | null;
   audio_s3key: string | null;
   video_s3key: string | null;
   recall_recording_id: string | null;
   RBAC: ItemRBAC | null;
+  updatedAt: string;
 };
+
+/**
+ * The current viewer, as much of it as write-access derivation needs. Kept
+ * local to this feature (rather than importing `types/models/user`'s `User`)
+ * because `role`/`team` arrive in two shapes at runtime — an unhydrated id
+ * string, or the hydrated object `auth.ts` attaches when the role/team still
+ * exists — and callers here don't want to fight a narrower type over it.
+ */
+export type CurrentUser = {
+  id: number;
+  role?: string | { id: string } | null;
+  team?: string | { id: string } | null;
+  super_admin?: boolean;
+  type?: "api" | "user" | "external";
+  scope_mode?: string | null;
+};
+
+/**
+ * Client-side mirror of the backend's `validateWriteAccess` (the same gate
+ * `transcriptions_itemsUpdateOneById` runs server-side) — see
+ * `src/graphql/mutations/index.ts` `createMutations.validateWriteAccess` and
+ * `src/utils/check-item-write-access.ts`. `use-item-editor.ts` (the pattern
+ * this was asked to reuse) does not itself derive write access — it renders
+ * Edit unconditionally and relies entirely on the server rejecting the
+ * mutation — which is too late for this task: a read-only viewer must never
+ * see a Save button that's guaranteed to fail. This walks the exact same
+ * rules using the RBAC data already on `TranscriptItemDetail` (super_admin /
+ * admin-mode API keys aren't reachable from a browser session and are kept
+ * only for parity with the server check). `teams` is deliberately not
+ * evaluated: this feature's own RBAC UI doesn't surface team grants yet
+ * (composer.tsx), so there is no team data here to check against — treated
+ * as not-writable rather than guessed true.
+ */
+export function canWriteTranscriptItem(
+  item: Pick<TranscriptItemDetail, "rights_mode" | "created_by" | "RBAC">,
+  user: CurrentUser | null | undefined,
+): boolean {
+  if (!user) return false;
+  if (user.super_admin === true) return true;
+  if (user.type === "api" && (!user.scope_mode || user.scope_mode === "admin")) {
+    return true;
+  }
+
+  const mode = item.rights_mode ?? "private";
+  if (mode === "public") return true;
+
+  const isCreator =
+    item.created_by != null && String(item.created_by) === String(user.id);
+  if (mode === "private") return isCreator;
+  // The creator can always edit their own record, whatever rights_mode it's
+  // shared under (matches the server: sharing your own record via RBAC must
+  // not lock you out of it).
+  if (isCreator) return true;
+
+  if (mode === "users") {
+    return (item.RBAC?.users ?? []).some(
+      (grant) => String(grant.id) === String(user.id) && grant.rights === "write",
+    );
+  }
+  if (mode === "roles") {
+    const roleId = typeof user.role === "string" ? user.role : user.role?.id;
+    if (!roleId) return false;
+    return (item.RBAC?.roles ?? []).some(
+      (grant) => String(grant.id) === String(roleId) && grant.rights === "write",
+    );
+  }
+  return false;
+}
+
+/**
+ * Whether the sharing draft is a deliberate choice rather than an unfinished
+ * one — "users"/"roles" picked with nobody actually added yet would silently
+ * share with no one, so that state reports as not-yet-chosen. Private and
+ * public need no further set-up, so they're always "chosen".
+ */
+export function isSharingConfigured(
+  mode: Mode,
+  rbacUsers: RbacUser[],
+  rbacRoles: RbacRole[],
+): boolean {
+  if (mode === "users") return rbacUsers.length > 0;
+  if (mode === "roles") return rbacRoles.length > 0;
+  return true;
+}
 
 export type TranscriptRowKind = "job" | "item";
 
