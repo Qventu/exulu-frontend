@@ -2852,6 +2852,7 @@
         "addFirst": "Erstes Element hinzufügen",
         "chunks": "{count, plural, one {# Chunk} other {# Chunks}}",
         "clearFilters": "Filter löschen",
+        "clearMine": "„Von mir erstellt“ entfernen",
         "columns": {
           "embeddings": "Embeddings",
           "name": "Name",

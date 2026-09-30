@@ -2852,6 +2852,7 @@
         "addFirst": "Add your first item",
         "chunks": "{count, plural, one {# chunk} other {# chunks}}",
         "clearFilters": "Clear filters",
+        "clearMine": "Remove 'Created by me'",
         "columns": {
           "embeddings": "Embeddings",
           "name": "Name",

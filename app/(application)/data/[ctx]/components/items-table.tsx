@@ -71,6 +71,10 @@ export interface ItemsTableProps {
   onPageChange: (page: number) => void;
   onOpenFilters: () => void;
   onClearFilters: () => void;
+  /** Dismiss the "Created by me" chip only — leaves advanced filters intact.
+   *  Falls back to onClearFilters when unset (defensive; callers should
+   *  always pass it when `mine` can be true). */
+  onClearMine?: () => void;
   onOpenCreate: () => void;
   onOpenImport: () => void;
   viewSwitch: React.ReactNode;
@@ -89,6 +93,7 @@ export function ItemsTable({
   onPageChange,
   onOpenFilters,
   onClearFilters,
+  onClearMine,
   onOpenCreate,
   onOpenImport,
   viewSwitch,
@@ -258,16 +263,16 @@ export function ItemsTable({
           </Button>
         )}
         {/* "?mine=1" (Task 13, memory redesign spec §4.3) — the "All my
-            memories" link lands here. Dismissing clears through the same
-            onClearFilters callback the Filters chip uses (items-tab.tsx
-            deletes both advancedFilters and the mine param there). */}
+            memories" link lands here. Dismissing only clears the `mine`
+            param via onClearMine — it must NOT also wipe the user's
+            advanced filters, so it's kept separate from onClearFilters. */}
         {mine && (
           <Badge variant="secondary" className="gap-1 py-1">
             {t("workspace.items.mine")}
             <button
               type="button"
-              onClick={onClearFilters}
-              aria-label={t("workspace.items.clearFilters")}
+              onClick={onClearMine ?? onClearFilters}
+              aria-label={t("workspace.items.clearMine")}
               className="ml-0.5 rounded-full hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               <X className="size-3" aria-hidden="true" />

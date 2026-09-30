@@ -110,6 +110,7 @@ export function ItemsTab({
           setAdvancedFilters([]);
           setParam((url) => url.delete("mine"));
         }}
+        onClearMine={() => setParam((url) => url.delete("mine"))}
         onOpenCreate={onOpenCreate}
         onOpenImport={onOpenImport}
         viewSwitch={
