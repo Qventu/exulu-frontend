@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { TrajectoryReuseIndicator } from "./trajectory-reuse-indicator"
 import { trajectoryReuseFromMessage } from "@/app/(application)/chat/components/trajectory-ref"
+import { groupRememberParts } from "@/app/(application)/chat/components/memory-card-data"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Fragment, memo, useState, useEffect, useContext, useRef } from "react"
@@ -123,6 +124,22 @@ interface MessageRendererProps {
     addToContext: (item: any) => void
     addToolApprovalResponse: ChatAddToolApproveResponseFunction
   }>
+  // Consecutive pending memory_remember approvals render under one "Save
+  // all" bar (spec §4.1, groupRememberParts). Optional — when absent, parts
+  // render singly via UntypedToolPartComponent as before (no behavior
+  // change for other consumers).
+  MemoryStackComponent?: React.ComponentType<{
+    parts: DynamicToolUIPart[]
+    agent: Agent
+    addToolApprovalResponse: ChatAddToolApproveResponseFunction
+  }>
+  // "Recalled N memories" block under an assistant answer (spec §2.5, §4.2).
+  // Optional — when absent, nothing renders (no behavior change for other
+  // consumers). Reads message.metadata.recalledMemories itself.
+  RecalledMemoriesComponent?: React.ComponentType<{
+    message: UIMessage
+    agent: Agent
+  }>
   addToContext?: (item: any) => void
   writeAccess?: boolean
   AgentVisualComponent?: React.ComponentType<any>
@@ -152,6 +169,8 @@ export function MessageRenderer({
   onRegenerate,
   onUpdate,
   UntypedToolPartComponent,
+  MemoryStackComponent,
+  RecalledMemoriesComponent,
   addToContext,
   writeAccess = true,
   AgentVisualComponent,
@@ -576,6 +595,8 @@ export function MessageRenderer({
             onQuestionAnswer={onQuestionAnswer}
             setMessages={setMessages}
             UntypedToolPartComponent={UntypedToolPartComponent}
+            MemoryStackComponent={MemoryStackComponent}
+            RecalledMemoriesComponent={RecalledMemoriesComponent}
             AgentVisualComponent={AgentVisualComponent}
           />
         );
@@ -624,6 +645,8 @@ interface MessageItemProps {
   onQuestionAnswer?: (questionId: string, answerId: string, answerText: string) => void
   setMessages?: MessageRendererProps["setMessages"]
   UntypedToolPartComponent?: MessageRendererProps["UntypedToolPartComponent"]
+  MemoryStackComponent?: MessageRendererProps["MemoryStackComponent"]
+  RecalledMemoriesComponent?: MessageRendererProps["RecalledMemoriesComponent"]
   AgentVisualComponent?: React.ComponentType<any>
 }
 
@@ -671,6 +694,8 @@ const MessageItem = memo(function MessageItem({
   onQuestionAnswer,
   setMessages,
   UntypedToolPartComponent,
+  MemoryStackComponent,
+  RecalledMemoriesComponent,
   AgentVisualComponent,
 }: MessageItemProps) {
   // Parsed tool-part data keyed by toolCallId + state: the SDK deep-clones
@@ -729,6 +754,26 @@ const MessageItem = memo(function MessageItem({
           }) ?? []
         }) ?? [];
 
+        // Stacking pre-pass (spec §4.1): consecutive pending memory_remember
+        // approvals render under one "Save all" bar via MemoryStackComponent.
+        // memoryStackFirstIndex maps a stack's first part index to the full
+        // list of part indices it covers; memoryStackSuppressedIndices holds
+        // every OTHER index in that stack (rendered as null — the stack
+        // already rendered them). Computed only when the stack will actually
+        // render (MemoryStackComponent + agent + addToolApprovalResponse all
+        // present, the exact guard the render below requires) — otherwise
+        // the set stays empty and every part falls through to the normal
+        // per-part path, so nothing silently vanishes.
+        const memoryStackFirstIndex = new Map<number, number[]>()
+        const memoryStackSuppressedIndices = new Set<number>()
+        if (MemoryStackComponent && agent && addToolApprovalResponse) {
+          for (const group of groupRememberParts((message.parts ?? []) as Record<string, unknown>[])) {
+            if (group.kind !== "stack") continue
+            memoryStackFirstIndex.set(group.indices[0], group.indices)
+            group.indices.slice(1).forEach((idx) => memoryStackSuppressedIndices.add(idx))
+          }
+        }
+
         const messageElement = (
           <Message
             className={cn(
@@ -744,6 +789,21 @@ const MessageItem = memo(function MessageItem({
           >
             <MessageContent id={"message_id_" + message.id}>
               {message.parts?.map((part, i) => {
+
+                if (MemoryStackComponent) {
+                  if (memoryStackSuppressedIndices.has(i)) return null
+                  const stackIndices = memoryStackFirstIndex.get(i)
+                  if (stackIndices && agent && addToolApprovalResponse) {
+                    return (
+                      <MemoryStackComponent
+                        key={`mem-stack-${message.id}-${i}`}
+                        parts={stackIndices.map((idx) => message.parts![idx] as DynamicToolUIPart)}
+                        agent={agent}
+                        addToolApprovalResponse={addToolApprovalResponse}
+                      />
+                    )
+                  }
+                }
 
                 if (part.type === 'step-start') {
                   return null
@@ -1193,6 +1253,10 @@ const MessageItem = memo(function MessageItem({
                     </Shimmer>
                   )}
                 </div>
+              )}
+
+              {message.role === 'assistant' && RecalledMemoriesComponent && agent && (
+                <RecalledMemoriesComponent message={message} agent={agent} />
               )}
 
               {(

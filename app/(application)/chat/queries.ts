@@ -32,6 +32,7 @@ feedback
 suggestions_enabled
 sandbox_enabled
 memory
+memory_config
 instructions
 welcomemessage
 defaultagent
@@ -450,6 +451,23 @@ export const UPDATE_ITEM = (context: string) => {
   `;
 };
 
+/**
+ * Route-local delete mutation builder — byte-identical selection to
+ * `DELETE_ITEM` in app/(application)/data/queries.ts (used by
+ * items-table.tsx / use-item-editor.ts), duplicated here because the
+ * eslint feature-isolation rule (codebase-structure §1.2) bans chat/
+ * importing from the data/ feature. Used by RecalledMemories' "Forget".
+ */
+export const DELETE_MEMORY_ITEM = (context: string) => {
+  return gql`
+    mutation DeleteOneById${context}($id: ID!) {
+      ${context}_itemsRemoveOneById(id: $id) {
+        id
+      }
+    }
+  `;
+};
+
 // ---------------------------------------------------------------------------
 // Context presets (composer "Save context preset")
 // ---------------------------------------------------------------------------
@@ -561,6 +579,98 @@ export const GET_CHAT_SKILL_CATALOG = gql`
         id
         name
         description
+      }
+    }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// Memory (spec 2026-09-29 agent-memory-redesign, Task 11): the in-chat
+// remember/update/forget cards read the memory context's `fields` +
+// `configuration` (visibility default, type enum) and, for update/forget,
+// the referenced item's current wording.
+//
+// Both queries below are colocated copies rather than imports from
+// app/(application)/data/queries.ts: eslint's feature-isolation guardrail
+// (eslint.config.mjs "no cross-feature imports") bans chat/** from reaching
+// into data/**, so GET_ITEMS + PAGINATION_POSTFIX are duplicated here
+// byte-identical to the data feature's copy (itself a verbatim copy of
+// queries/queries.ts) rather than introducing a one-off shape. GET_CONTEXT_BY_ID
+// below is deliberately NOT a copy of the data feature's version (which
+// selects the much larger CONTEXT_FIELDS fragment) — it is a new, narrower
+// operation name (ChatMemoryContext) per the "NEW operation names for
+// read-only, never-refetched reads" convention above.
+// ---------------------------------------------------------------------------
+
+export const PAGINATION_POSTFIX = "_itemsPagination";
+
+const MEMORY_ITEM_FIELDS = (fields: string[]) => `
+id
+name
+description
+tags
+external_id
+createdAt
+embeddings_updated_at
+last_processed_at
+chunks_count
+updatedAt
+rights_mode
+RBAC {
+  type
+  users {
+    id
+    rights
+  }
+  roles {
+    id
+    rights
+  }
+}
+${fields.join("\n")}
+`;
+
+export const GET_ITEMS = (context: string, fields: string[]) => {
+  const upperCaseContext = context.charAt(0).toUpperCase() + context.slice(1);
+  return gql`
+    query ${context}Pagination($page: Int!, $limit: Int!, $filters: [Filter${upperCaseContext}_items], $sort: SortBy = { field: "updatedAt", direction: DESC }) {
+      ${context}${PAGINATION_POSTFIX}(page: $page, limit: $limit, filters: $filters, sort: $sort) {
+        pageInfo {
+          pageCount
+          itemCount
+          currentPage
+          hasPreviousPage
+          hasNextPage
+        }
+        items {
+          ${MEMORY_ITEM_FIELDS(fields)}
+        }
+      }
+    }
+  `;
+};
+
+/**
+ * "What <agent> remembers" panel (Task 13, spec §4.3): the current user's own
+ * memory items, reusing GET_ITEMS above rather than a new query shape. The
+ * MEMORY_ITEM_FIELDS fragment already selects id/name/rights_mode/createdAt —
+ * passing them again in `fields` (mirroring memory-card.tsx's MemoryRef) is a
+ * harmless duplicate GraphQL selection, not an error.
+ */
+export const MY_MEMORY_FIELDS = ["id", "name", "information", "type", "rights_mode", "created_by", "createdAt"];
+export const GET_MY_MEMORIES = (contextId: string) => GET_ITEMS(contextId, MY_MEMORY_FIELDS);
+export const myMemoriesKey = (contextId: string) => `${contextId}${PAGINATION_POSTFIX}`;
+
+export const GET_CONTEXT_BY_ID = gql`
+  query ChatMemoryContext($id: ID!) {
+    contextById(id: $id) {
+      id
+      name
+      fields
+      configuration
+      memoryBase {
+        ok
+        missing
       }
     }
   }

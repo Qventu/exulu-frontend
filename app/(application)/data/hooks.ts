@@ -187,6 +187,10 @@ export interface UseContextItemsArgs {
   search?: string;
   archived: boolean;
   advancedFilters: unknown[];
+  /** `?mine=1` (Task 13, memory redesign spec §4.3 "All my memories" link):
+   *  narrow the list to items the current user created. A UX narrowing only
+   *  — server-side RBAC is still the access control. */
+  mine?: boolean;
 }
 
 export interface UseContextItemsResult {
@@ -209,15 +213,24 @@ export function useContextItems({
   search,
   archived,
   advancedFilters,
+  mine,
 }: UseContextItemsArgs): UseContextItemsResult {
+  const { user } = React.useContext(UserContext);
+  const userId = user?.id;
+
   const filters: Record<string, unknown>[] =
     advancedFilters.length > 0
-      ? [{ archived: { eq: archived } }, ...(advancedFilters as Record<string, unknown>[])]
+      ? [
+          { archived: { eq: archived } },
+          ...(advancedFilters as Record<string, unknown>[]),
+          ...(mine && userId ? [{ created_by: { eq: userId } }] : []),
+        ]
       : [
           {
             archived: { eq: archived },
             ...(search ? { name: { contains: search } } : {}),
           },
+          ...(mine && userId ? [{ created_by: { eq: userId } }] : []),
         ];
 
   const { data, previousData, loading, error, refetch } = useQuery<{

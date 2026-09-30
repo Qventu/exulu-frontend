@@ -53,6 +53,10 @@ export function ItemsTab({
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [advancedFilters, setAdvancedFilters] = React.useState<unknown[]>([]);
 
+  // "?mine=1" (Task 13, memory redesign spec §4.3): the memory panel's "All
+  // my memories" link lands here. URL-driven like search/page/view above.
+  const mine = params.get("mine") === "1";
+
   // Legacy deep link: `/data/[ctx]?item=<id>` opened the old Sheet. Redirect
   // it to the dedicated detail page so bookmarks/toasts keep resolving.
   React.useEffect(() => {
@@ -97,11 +101,16 @@ export function ItemsTab({
         search={search}
         advancedFilters={advancedFilters}
         selectedItemId={null}
-        activeFiltersCount={advancedFilters.length}
+        activeFiltersCount={advancedFilters.length + (mine ? 1 : 0)}
+        mine={mine}
         onSelect={openItem}
         onPageChange={setPage}
         onOpenFilters={() => setFiltersOpen(true)}
-        onClearFilters={() => setAdvancedFilters([])}
+        onClearFilters={() => {
+          setAdvancedFilters([]);
+          setParam((url) => url.delete("mine"));
+        }}
+        onClearMine={() => setParam((url) => url.delete("mine"))}
         onOpenCreate={onOpenCreate}
         onOpenImport={onOpenImport}
         viewSwitch={

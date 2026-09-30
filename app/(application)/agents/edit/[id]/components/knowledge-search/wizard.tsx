@@ -134,7 +134,12 @@ export function KnowledgeSearchWizard({
             <VocabularyStep draft={draft} setDraft={setDraft} contexts={contexts} />
           )}
           {step === "memory" && (
-            <MemoryStep draft={draft} setDraft={setDraft} memoryContextId={memoryContextId} />
+            <MemoryStep
+              onOpenSection={() => {
+                onOpenChange(false);
+                document.getElementById("knowledge")?.scrollIntoView({ behavior: "smooth" });
+              }}
+            />
           )}
           {step === "behavior" && <BehaviorStep draft={draft} setDraft={setDraft} />}
           {step === "review" && (

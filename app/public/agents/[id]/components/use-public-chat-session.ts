@@ -258,6 +258,11 @@ export function usePublicChatSession({
     filesPanelOpen: false,
     setFilesPanelOpen: async () => {},
     sessionFilesCount: null,
+    // memory panel — guests never see it (header chip is gated on a
+    // non-null myMemoriesCount, which stays null here)
+    memoryPanelOpen: false,
+    setMemoryPanelOpen: () => {},
+    myMemoriesCount: null,
     // budget — none
     budgetExceeded: false,
     // managed context — none

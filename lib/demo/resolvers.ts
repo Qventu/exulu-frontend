@@ -63,6 +63,26 @@ export type DemoResolver = (
 const KNOWN_CONTEXT_IDS = new Set(CONTEXTS.map((c) => c.id));
 
 /**
+ * Mirrors the backend's checkMemoryBase (src/exulu/memory/memory-base.ts): a
+ * context can serve as an agent's memory store when it has an `information`
+ * text field and a `type` enum with values. Computed from each context's own
+ * `fields` array — the same source Task 14's workbench picker reasons from —
+ * rather than stored as a separate fixture flag that could drift from it.
+ */
+const MEMORY_BASE_TEXT_TYPES = new Set(["text", "longText"]);
+function checkMemoryBase(context: {
+  fields?: { name: string; type: string; enumValues?: string[] | null }[];
+}): { ok: boolean; missing: string[] } {
+  const fields = context.fields ?? [];
+  const missing: string[] = [];
+  const information = fields.find((f) => f.name === "information");
+  if (!information || !MEMORY_BASE_TEXT_TYPES.has(information.type)) missing.push("information");
+  const type = fields.find((f) => f.name === "type");
+  if (!type || type.type !== "enum" || !type.enumValues?.length) missing.push("type");
+  return { ok: missing.length === 0, missing };
+}
+
+/**
  * Each team's slice of KOSTEN_MONTHLY_SPEND, allocated by `share` — the same
  * allocateSpend the REST fixture (rest-fixtures.ts) uses for /analytics'
  * byTag rows, but against a DIFFERENT total: /analytics allocates its
@@ -621,6 +641,10 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   AgentEditorById: (world, variables) => ({
     agentById: {
       ...agentFor(world, variables),
+      // null = defaults (agents.memory_config; memory-section-data.ts). Not on
+      // the fixture object itself — same "not authored, defaults apply" story
+      // as the wizard's own agentic-retrieval config below.
+      memory_config: null,
       tools: [CONTEXT_SEARCH_TOOL],
       skills: [],
       capabilities: {
@@ -636,13 +660,22 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
 
   EditorContexts: (world) => ({
     contexts: {
-      items: world.contexts.map(({ id, name, description }) => ({
+      items: world.contexts.map(({ id, name, description, fields }) => ({
         id,
         name,
         description,
+        fields,
+        memoryBase: checkMemoryBase({ fields }),
       })),
     },
   }),
+
+  // GET_MEMORY_BASE_STATS / GET_AGENTS_USING_MEMORY (Task 14, memory-section.tsx)
+  // are deliberately NOT mapped here: no chapter script drives the workbench's
+  // memory card yet, so there is no scripted stats/usage data to answer with
+  // that would not be invented. Unmapped resolves to `{data:{}}` (see the
+  // module doc comment above) — the card's stats grid and "used by" hints
+  // simply do not render, same as any other not-yet-scripted screen.
 
   // The Agentic retrieval card renders only when a tool with the id
   // `agentic_context_search` exists on the DEPLOYMENT, not merely on the agent
@@ -708,6 +741,7 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
           defaultagent: submitted("defaultagent", agent.defaultagent ?? true),
           instructions: submitted("instructions", agent.instructions),
           memory: submitted("memory", null),
+          memory_config: submitted("memory_config", null),
           category: submitted("category", null),
           animation_idle: submitted("animation_idle", null),
           animation_responding: submitted("animation_responding", null),

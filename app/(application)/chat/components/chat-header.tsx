@@ -24,6 +24,7 @@
  */
 
 import {
+  Bookmark,
   Cpu,
   FolderOpen,
   Gauge,
@@ -230,6 +231,17 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
     icon: Gauge,
     onSelect: () => setUsageOpen(true),
   });
+  // Mobile opener for the memory panel (finding 7): the memory chip above is
+  // `hidden sm:inline-flex`, so below sm there is otherwise no way in. Same
+  // guard as the chip (myMemoriesCount stubs to null for guests, and
+  // ChatHeader itself never mounts on the guest/public chat screen).
+  if (controller.myMemoriesCount !== null) {
+    menuItems.push({
+      label: t("header.menuMemory"),
+      icon: Bookmark,
+      onSelect: () => controller.setMemoryPanelOpen(true),
+    });
+  }
   if (writeAccess && session) {
     menuItems.push({
       label: t("header.menuDelete"),
@@ -380,6 +392,22 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
             >
               <FolderOpen className="size-3" aria-hidden="true" />
               {t("header.filesChip", { count: filesCount ?? 0 })}
+            </button>
+          ) : null}
+
+          {/* Memory chip (Task 13, spec §4.3) — hidden for guests: the guest
+              controller (usePublicChatSession) stubs myMemoriesCount to null,
+              so this condition alone keeps the chip off the public/guest
+              chat screen (which doesn't mount ChatHeader in the first place). */}
+          {controller.myMemoriesCount !== null ? (
+            <button
+              type="button"
+              onClick={() => controller.setMemoryPanelOpen(true)}
+              aria-label={t("header.memoryAria")}
+              className={cn(CHIP, "hidden sm:inline-flex")}
+            >
+              <Bookmark className="size-3" aria-hidden="true" />
+              {t("header.memoryChip", { count: controller.myMemoriesCount })}
             </button>
           ) : null}
 

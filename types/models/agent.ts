@@ -81,6 +81,8 @@ export interface Agent {
     animation_responding?: string;
     // Native memory context
     memory?: string;
+    /** agents.memory_config (json); null = defaults. See memory-section-data.ts. */
+    memory_config?: unknown;
     createdAt?: string;
     updatedAt?: string;
 }

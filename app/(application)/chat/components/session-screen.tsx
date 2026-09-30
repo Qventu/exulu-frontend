@@ -32,6 +32,7 @@ import { useChatSession } from "../hooks";
 import { CHAT_COLUMN, useChatShell } from "./chat-shell";
 import { ChatHeader } from "./chat-header";
 import { Composer } from "./composer";
+import { MemoryPanelContent } from "./memory-panel";
 import { MessageColumn } from "./message-column";
 import { SessionFilesContent } from "./session-files/panel-content";
 
@@ -146,6 +147,21 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
         {controller.session && (
           <SessionFilesContent sessionId={controller.session.id} />
         )}
+      </SidePanel>
+
+      {/* Task 13 — "What <agent> remembers" panel (memory redesign spec
+          §4.3). Open state lives in the controller; the header chip is the
+          only opener and is itself hidden until myMemoriesCount resolves
+          non-null (guests never see it — see chat-header.tsx). */}
+      <SidePanel
+        open={controller.memoryPanelOpen}
+        onOpenChange={controller.setMemoryPanelOpen}
+        title={t("memory.panelTitle", { agent: controller.agent.name })}
+        resizable
+        storageKey="chat-memory"
+        mobileSize="full"
+      >
+        <MemoryPanelContent controller={controller} />
       </SidePanel>
     </div>
   );

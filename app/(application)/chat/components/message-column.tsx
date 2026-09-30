@@ -22,6 +22,7 @@
 import type {
   ChatAddToolApproveResponseFunction,
   DynamicToolUIPart,
+  UIMessage,
 } from "ai";
 import { useTranslations } from "next-intl";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -66,6 +67,10 @@ import {
   FeedbackDialog,
   type FeedbackTarget,
 } from "./feedback-dialog";
+import { MemoryCard } from "./memory-card";
+import { isMemoryToolPart } from "./memory-card-data";
+import { MemoryStack } from "./memory-stack";
+import { RecalledMemories } from "./recalled-memories";
 import { ToolCallApproval } from "./tool-call-approval";
 import { findTrajectoryRefForFeedback } from "./trajectory-ref";
 
@@ -118,6 +123,16 @@ function makeUntypedToolPart(
     styleToolName = styleToolName?.replace(/_/g, " ");
     styleToolName =
       styleToolName?.charAt(0).toUpperCase() + styleToolName?.slice(1);
+
+    // Memory cards (spec §4.1) replace the generic approval card for
+    // tool-memory_* parts. No "Allow for this chat" — the card is the
+    // consent. Guests never see memory cards.
+    if (isMemoryToolPart(untypedToolPart)) {
+      if (guestMode) return null;
+      return (
+        <MemoryCard key={callId} part={untypedToolPart} agent={_agent} addToolApprovalResponse={addToolApprovalResponse} />
+      );
+    }
 
     if (
       untypedToolPart?.state === "approval-requested" ||
@@ -195,6 +210,20 @@ function makeUntypedToolPart(
   return UntypedToolPart;
 }
 
+/**
+ * Threads guestMode into RecalledMemories (final-review finding 4) the same
+ * way makeUntypedToolPart closes over it for MemoryCard above —
+ * RecalledMemoriesComponent's frozen shape (message-renderer.tsx) has no
+ * guestMode prop, so the factory closure carries it instead.
+ */
+function makeRecalledMemories(guestMode: boolean) {
+  const RecalledMemoriesForColumn = ({ message, agent }: { message: UIMessage; agent: Agent }) => (
+    <RecalledMemories message={message} agent={agent} guestMode={guestMode} />
+  );
+  RecalledMemoriesForColumn.displayName = "RecalledMemoriesForColumn";
+  return RecalledMemoriesForColumn;
+}
+
 export function MessageColumn({ controller, guestMode = false }: MessageColumnProps) {
   const t = useTranslations("chat");
   const { user } = useContext(UserContext);
@@ -252,6 +281,11 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
     [controller.approveToolForChat, handleCredentialResume, guestMode],
   );
   /* eslint-enable react-hooks/refs */
+
+  const RecalledMemoriesComponent = useMemo(
+    () => makeRecalledMemories(guestMode),
+    [guestMode],
+  );
 
   // Single focal point (item 31, fixes U9): the agent's own visual when one
   // is configured, otherwise the platform logo — never both.
@@ -338,6 +372,22 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
                 controller.sendQuestionAnswer(answerText)
               }
               UntypedToolPartComponent={UntypedToolPartComponent}
+              // Consecutive pending "remember" approvals render under one
+              // "Save all" bar (spec §4.1). Guests never see memory cards —
+              // omitting the prop makes MessageRenderer fall back to
+              // per-part rendering, where MemoryCard's own guestMode check
+              // (above) returns null for each part.
+              MemoryStackComponent={guestMode ? undefined : MemoryStack}
+              // "Recalled N memories" block (spec §2.5, §4.2). Always
+              // passed — the backend already omits recalledMemories
+              // metadata for guests unless the agent allows it (memory-
+              // section.tsx guests.showRecalled), so the component itself
+              // renders nothing in the common case. When that config IS on,
+              // the factory-wrapped component still carries guestMode
+              // through so RecalledMemories can suppress Open/Forget
+              // (final-review finding 4) rather than link/mutate against
+              // routes a guest has no access to.
+              RecalledMemoriesComponent={RecalledMemoriesComponent}
               AgentVisualComponent={AgentVisual}
             />
           ) : null}

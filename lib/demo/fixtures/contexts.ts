@@ -84,9 +84,21 @@ export const CONTEXTS: Context[] = [
   //
   // Unlike the six above, this description is written for the tour rather than
   // lifted from the production retrieval instructions.
-  context(
-    "newton_memory_context",
-    "Assistenten-Gedächtnis",
-    "Fakten, Präferenzen und Erkenntnisse, die Techniker dem Assistenten im Gespräch beigebracht haben.",
-  ),
+  //
+  // `fields` is overridden rather than the shared name/content pair above: a
+  // memory base needs an `information` text field and a `type` enum (Task 14,
+  // src/exulu/memory/memory-base.ts on the backend) to pass the workbench's
+  // picker check. FACT/PREFERENCE/INSIGHT are the production classifier's own
+  // values — chapter 4's memory items already carry them (chapter-memory.ts).
+  {
+    ...context(
+      "newton_memory_context",
+      "Assistenten-Gedächtnis",
+      "Fakten, Präferenzen und Erkenntnisse, die Techniker dem Assistenten im Gespräch beigebracht haben.",
+    ),
+    fields: [
+      { name: "information", label: "Information", type: "longText" },
+      { name: "type", label: "Type", type: "enum", enumValues: ["FACT", "PREFERENCE", "INSIGHT"] },
+    ],
+  },
 ];

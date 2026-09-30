@@ -20,7 +20,7 @@ import {
   ChevronRightIcon,
   DoubleArrowLeftIcon,
 } from "@radix-ui/react-icons";
-import { Database, FilterIcon, Search } from "lucide-react";
+import { Database, FilterIcon, Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -64,10 +64,17 @@ export interface ItemsTableProps {
   advancedFilters: unknown[];
   selectedItemId: string | null;
   activeFiltersCount: number;
+  /** `?mine=1` (Task 13): narrows the list to the current user's own items
+   *  and shows the dismissible "Created by me" chip. */
+  mine?: boolean;
   onSelect: (id: string | null) => void;
   onPageChange: (page: number) => void;
   onOpenFilters: () => void;
   onClearFilters: () => void;
+  /** Dismiss the "Created by me" chip only — leaves advanced filters intact.
+   *  Falls back to onClearFilters when unset (defensive; callers should
+   *  always pass it when `mine` can be true). */
+  onClearMine?: () => void;
   onOpenCreate: () => void;
   onOpenImport: () => void;
   viewSwitch: React.ReactNode;
@@ -81,10 +88,12 @@ export function ItemsTable({
   advancedFilters,
   selectedItemId,
   activeFiltersCount,
+  mine = false,
   onSelect,
   onPageChange,
   onOpenFilters,
   onClearFilters,
+  onClearMine,
   onOpenCreate,
   onOpenImport,
   viewSwitch,
@@ -122,6 +131,7 @@ export function ItemsTable({
     search,
     archived,
     advancedFilters,
+    mine,
   });
 
   // Favourite star per row — shared store, so the detail-header star and the
@@ -139,7 +149,7 @@ export function ItemsTable({
   // Wipe selection when the result set fundamentally changes (page/view).
   React.useEffect(() => {
     setSelection(new Set());
-  }, [archived, page, search, advancedFilters]);
+  }, [archived, page, search, advancedFilters, mine]);
 
   const toggleAll = (checked: boolean) => {
     if (checked)
@@ -251,6 +261,23 @@ export function ItemsTable({
           >
             {t("workspace.items.clearFilters")}
           </Button>
+        )}
+        {/* "?mine=1" (Task 13, memory redesign spec §4.3) — the "All my
+            memories" link lands here. Dismissing only clears the `mine`
+            param via onClearMine — it must NOT also wipe the user's
+            advanced filters, so it's kept separate from onClearFilters. */}
+        {mine && (
+          <Badge variant="secondary" className="gap-1 py-1">
+            {t("workspace.items.mine")}
+            <button
+              type="button"
+              onClick={onClearMine ?? onClearFilters}
+              aria-label={t("workspace.items.clearMine")}
+              className="ml-0.5 rounded-full hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <X className="size-3" aria-hidden="true" />
+            </button>
+          </Badge>
         )}
         <div className="md:ml-auto">{viewSwitch}</div>
       </div>
