@@ -47,11 +47,6 @@ export const tierBoundaryExemptions = {
     "app/(application)/agents/edit/[id]/sections/instructions.tsx",
     "app/(application)/agents/edit/[id]/form.tsx",
     "app/(application)/workflows/page.tsx",
-    // stage-embedder reuses agents/edit/form.tsx's VariableSelectionElement
-    // (the cross-feature pattern that already accumulated 3 exemptions
-    // above) — work item 2.11. Promotion of VariableSelectionElement to
-    // components/widgets is queued for the variables redesign work item.
-    "app/(application)/data/[ctx]/components/stage-embedder.tsx",
   ],
 };
 

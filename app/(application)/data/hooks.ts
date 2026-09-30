@@ -25,14 +25,18 @@ import {
 import {
   CONTEXT_ICONS_CONFIG_KEY,
   CREATE_CONTEXT_ICONS,
+  GET_AVAILABLE_EMBEDDING_MODELS,
+  GET_AVAILABLE_QUEUES,
   GET_CONTEXTS,
   GET_CONTEXT_ICONS,
+  GET_EMBEDDER_INFO,
   GET_ITEMS,
   GET_ITEMS_BY_IDS,
   GET_ITEM_BY_ID,
   GET_USER_CONTEXT_ITEM_FAVOURITES,
   KNOWLEDGE_CONTEXT_AGGREGATES_SUPPORTED,
   PAGINATION_POSTFIX,
+  SET_EMBEDDER,
   UPDATE_CONTEXT_ICONS,
   UPDATE_USER_CONTEXT_ITEM_FAVOURITES,
   UPDATE_USER_RECENTLY_VIEWED_ITEMS,
@@ -650,4 +654,78 @@ export function useResolvedPinnedItems(ids: string[]): {
   );
 
   return { items, loading };
+}
+
+// ---------------------------------------------------------------------------
+// Embedder settings — /data/[ctx] admin control for the per-context
+// embedding model (context-embedder-settings plan, Task 6).
+// ---------------------------------------------------------------------------
+
+export interface EmbedderInfo {
+  effectiveModel: string | null;
+  source: "database" | "code" | null;
+  databaseModel: string | null;
+  codeModel: string | null;
+  databaseQueue: string | null;
+  dimensionality: number | null;
+  chunkCount: number;
+}
+
+export interface EmbeddingModelOption {
+  model: string;
+  dimensionality: number;
+  maxChunkSize: number;
+  maxBatchSize: number;
+}
+
+export interface AvailableQueueOption {
+  name: string;
+}
+
+export interface UseEmbedderSettingsResult {
+  info?: EmbedderInfo;
+  models: EmbeddingModelOption[];
+  queues: AvailableQueueOption[];
+  loading: boolean;
+  error?: Error;
+  setEmbedder: (
+    model: string | null,
+    queue: string | null,
+  ) => Promise<{ rebuild: string; itemsQueued: number }>;
+}
+
+export function useEmbedderSettings(contextId: string): UseEmbedderSettingsResult {
+  const infoField = `${contextId}_itemsEmbedderInfo`;
+  const setEmbedderField = `${contextId}_itemsSetEmbedder`;
+
+  const infoQuery = useQuery<{ [key: string]: EmbedderInfo }>(
+    GET_EMBEDDER_INFO(contextId),
+    { fetchPolicy: "cache-and-network" },
+  );
+  const modelsQuery = useQuery<{ availableEmbeddingModels: EmbeddingModelOption[] }>(
+    GET_AVAILABLE_EMBEDDING_MODELS,
+  );
+  const queuesQuery = useQuery<{ queues: AvailableQueueOption[] }>(GET_AVAILABLE_QUEUES);
+  const [mutate] = useMutation<{
+    [key: string]: { info: EmbedderInfo; rebuild: string; itemsQueued: number };
+  }>(SET_EMBEDDER(contextId));
+
+  return {
+    info: infoQuery.data?.[infoField],
+    models: modelsQuery.data?.availableEmbeddingModels ?? [],
+    queues: queuesQuery.data?.queues ?? [],
+    loading: infoQuery.loading && !infoQuery.data,
+    error: infoQuery.error as Error | undefined,
+    setEmbedder: async (model, queue) => {
+      const result = await mutate({ variables: { model, queue } });
+      // The mutation's `info` omits dimensionality/chunkCount (only the query
+      // resolver computes those) — refetch so the dialog's numbers stay correct.
+      await infoQuery.refetch();
+      const payload = result.data?.[setEmbedderField];
+      if (!payload) {
+        throw new Error("Setting the embedding model did not return a result.");
+      }
+      return { rebuild: payload.rebuild, itemsQueued: payload.itemsQueued };
+    },
+  };
 }

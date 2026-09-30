@@ -543,3 +543,64 @@ export const DRAIN_QUEUE = gql`
     }
   }
 `;
+
+// ---------------------------------------------------------------------------
+// Embedder settings — the per-context embedding model admin control
+// (context-embedder-settings plan, Task 6). The mutation's `info` omits
+// dimensionality/chunkCount (only the query resolver computes those);
+// useEmbedderSettings refetches GET_EMBEDDER_INFO after a successful
+// SET_EMBEDDER to keep them current.
+// ---------------------------------------------------------------------------
+
+export const GET_EMBEDDER_INFO = (context: string) => gql`
+  query EmbedderInfo${context} {
+    ${context}_itemsEmbedderInfo {
+      effectiveModel
+      source
+      databaseModel
+      codeModel
+      databaseQueue
+      dimensionality
+      chunkCount
+    }
+  }
+`;
+
+export const SET_EMBEDDER = (context: string) => gql`
+  mutation SetEmbedder${context}($model: String, $queue: String) {
+    ${context}_itemsSetEmbedder(model: $model, queue: $queue) {
+      info {
+        effectiveModel
+        source
+        databaseModel
+        codeModel
+        databaseQueue
+        dimensionality
+        chunkCount
+      }
+      rebuild
+      itemsQueued
+    }
+  }
+`;
+
+export const GET_AVAILABLE_EMBEDDING_MODELS = gql`
+  query AvailableEmbeddingModels {
+    availableEmbeddingModels {
+      model
+      dimensionality
+      maxChunkSize
+      maxBatchSize
+    }
+  }
+`;
+
+/** Registered BullMQ queues (backend Query.queues), reused here for the
+ *  embedder queue picker — there is no separate availableEmbedderQueues field. */
+export const GET_AVAILABLE_QUEUES = gql`
+  query AvailableEmbedderQueues {
+    queues {
+      name
+    }
+  }
+`;

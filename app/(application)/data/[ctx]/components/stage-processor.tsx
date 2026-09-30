@@ -22,12 +22,12 @@ import { toast } from "sonner";
 import { QueuePanel } from "@/components/primitives/queue-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { StageCard } from "@/components/widgets/stage-card";
 import type { Context } from "@/types/models/context";
 
 import { PROCESS_ITEM } from "../../queries";
 
 import { BulkFilterDialog } from "./bulk-filter-dialog";
-import { StageCard } from "./stage-card";
 
 export interface StageProcessorProps {
   context: Context;
