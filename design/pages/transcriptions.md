@@ -312,6 +312,17 @@ deleted or never built. Notably gone: `review-sheet.tsx` (its block-merge logic,
    `status === "saved"` jobs out before `InProgressStrip` (the only caller of `JobRow`) ever sees them.
    Not removed here: confirming it's truly dead requires tracing every caller, which is outside a
    copy/vocabulary pass — flagged for whoever next touches `job-row.tsx`.
+6. Corrections by a shared editor (someone with write access who does not own the job) update
+   `corrected_segments` but not `transcript_text`, so agent retrieval and `/data` keep the
+   pre-correction text until the owner next saves. The reading view and all five exports are correct.
+7. "Move to project" updates only the denormalised `project_id`, not `projects.project_items`, which
+   spec §2.1 names the source of truth and which the agent project tool reads. Only the first save
+   (via finalize) attaches correctly.
+8. A meeting transcript's video is creator-only on deployments without `RECALL_STORE_VIDEO_LOCALLY`:
+   the fallback resolves through `recordingVideoUrl`, which is gated by job ownership, so a
+   non-recorder sees a video control that errors.
+9. Reset-to-original is supported by the backend but has no UI. The spec called for it; no task
+   built it.
 
 **Risks (carried forward, largely mitigated already)**
 1. **Union correctness** — the list must never show a saved job twice (once as a job, once as an
