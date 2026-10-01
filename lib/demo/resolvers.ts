@@ -688,6 +688,12 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // module doc comment above) — the card's stats grid and "used by" hints
   // simply do not render, same as any other not-yet-scripted screen.
 
+  // GET_MEMORY_BASE_USAGE (Task 8, Insights block) IS mapped, unlike its
+  // siblings above: an all-zero answer is not an invented number, it is the
+  // real empty state (the "no answers have used memories yet" copy), so it
+  // is safe to answer unconditionally rather than leave unmapped.
+  WorkbenchMemoryBaseUsage: () => ({ memoryBaseUsage: { used: 0, neverUsed: 0, stale: 0, mostUsed: [], newPerWeek: [] } }),
+
   // The Agentic retrieval card renders only when a tool with the id
   // `agentic_context_search` exists on the DEPLOYMENT, not merely on the agent
   // (sections/knowledge.tsx:44). Returning an empty catalogue here is what hid

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   GET_AGENT_EDITOR,
   GET_CONTEXTS_EDITOR,
+  GET_MEMORY_BASE_USAGE as GET_WORKBENCH_MEMORY_BASE_USAGE,
 } from "@/app/(application)/agents/edit/[id]/queries";
 import {
   GET_CONTEXTS,
@@ -151,6 +152,11 @@ describe("/agents/edit/[id] operations", () => {
     for (const id of Object.keys(get("knowledge_bases"))) {
       expect(known.has(id), `knowledge_bases references unknown context: ${id}`).toBe(true);
     }
+  });
+
+  it("answers WorkbenchMemoryBaseUsage with an object carrying used (Insights block)", async () => {
+    const data = await run(GET_WORKBENCH_MEMORY_BASE_USAGE, { contextId: "newton_memory_context" });
+    expect(typeof (data.memoryBaseUsage as { used: number }).used).toBe("number");
   });
 });
 

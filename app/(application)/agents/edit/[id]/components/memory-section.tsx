@@ -17,6 +17,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import * as React from "react";
 
+import { ChartCard } from "@/components/primitives/chart-card";
 import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { RelativeTime } from "@/components/primitives/relative-time";
 import { SettingRow } from "@/components/primitives/setting-row";
@@ -37,11 +38,11 @@ import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 
-import { GET_AGENTS_USING_MEMORY, GET_MEMORY_BASE_STATS } from "../queries";
+import { GET_AGENTS_USING_MEMORY, GET_MEMORY_BASE_STATS, GET_MEMORY_BASE_USAGE } from "../queries";
 import type { EditorSectionProps } from "../sections/types";
 import { MEMORY_DEFAULTS, parseWizardConfig, serializeWizardConfig } from "./knowledge-search/config-schema";
 import type { ToolConfigEntry } from "./tool-config-fields";
-import { MEMORY_LIMIT_MAX, MEMORY_LIMIT_MIN, sortContextsForPicker, type PickerEntry } from "./memory-section-data";
+import { MEMORY_LIMIT_MAX, MEMORY_LIMIT_MIN, sortContextsForPicker, weekBars, type PickerEntry } from "./memory-section-data";
 
 type MemoryBaseStats = {
   total: number;
@@ -50,6 +51,14 @@ type MemoryBaseStats = {
   contributors: number;
   lastSavedAt: string | null;
   lastSavedBy: { id: number; name: string } | null;
+};
+
+type BaseUsage = {
+  used: number;
+  neverUsed: number;
+  stale: number;
+  mostUsed: { id: string; information: string; count: number; lastUsedAt: string | null }[];
+  newPerWeek: { weekStart: string; count: number }[];
 };
 
 export function MemorySection({ editor, refs }: EditorSectionProps) {
@@ -79,6 +88,13 @@ export function MemorySection({ editor, refs }: EditorSectionProps) {
     skip: !memoryOn,
   });
   const stats = statsData?.memoryBaseStats;
+
+  const invalid = selected && selected.memoryBase && !selected.memoryBase.ok;
+  const { data: usageData, loading: usageLoading } = useQuery<{ memoryBaseUsage: BaseUsage | null }>(GET_MEMORY_BASE_USAGE, {
+    variables: { contextId, staleDays: 90 },
+    skip: !memoryOn || !!invalid,
+    fetchPolicy: "cache-and-network",
+  });
 
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const [pendingPick, setPendingPick] = React.useState<PickerEntry | null>(null);
@@ -188,7 +204,6 @@ export function MemorySection({ editor, refs }: EditorSectionProps) {
     );
   }
 
-  const invalid = selected && selected.memoryBase && !selected.memoryBase.ok;
   return (
     <div className="space-y-4 rounded-lg border p-4" data-demo-id="agent-memory-on">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -244,6 +259,45 @@ export function MemorySection({ editor, refs }: EditorSectionProps) {
             hint={stats.lastSavedBy ? t("editor.memory.statsBy", { name: stats.lastSavedBy.name }) : undefined}
           />
         </div>
+      )}
+
+      {!invalid && (
+        <ChartCard title={t("editor.memory.insightsTitle")} description={t("editor.memory.insightsHint", { agent: agentName })} loading={usageLoading && !usageData}>
+          {(() => {
+            const u = usageData?.memoryBaseUsage;
+            if (!u || (u.used === 0 && u.neverUsed === 0)) return <p className="text-sm text-muted-foreground">{t("editor.memory.noUsageYet")}</p>;
+            const bars = weekBars(u.newPerWeek);
+            return (
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">{t("editor.memory.mostUsed")}</p>
+                  {u.mostUsed.slice(0, 3).map((m) => (
+                    <Link key={m.id} href={`/memory/${contextId}/${m.id}`} className="block truncate text-sm underline-offset-2 hover:underline">
+                      {m.information} <span className="text-muted-foreground">{m.count}×</span>
+                    </Link>
+                  ))}
+                  {u.mostUsed.length === 0 && <p className="text-sm text-muted-foreground">—</p>}
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">{t("editor.memory.needsAttention")}</p>
+                  <Link href={`/memory/${contextId}?usage=never`} className="block text-sm hover:underline">{t("editor.memory.neverUsed")} <span className="text-muted-foreground">{u.neverUsed}</span></Link>
+                  <Link href={`/memory/${contextId}?usage=stale`} className="block text-sm hover:underline">{t("editor.memory.staleUsed")} <span className="text-muted-foreground">{u.stale}</span></Link>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">{t("editor.memory.newPerWeek")}</p>
+                  <div className="flex h-16 items-end gap-1" role="img" aria-label={t("editor.memory.newPerWeek")}>
+                    {bars.map((b) => (
+                      <div key={b.weekStart} className="flex flex-1 flex-col items-center gap-1">
+                        <div className="w-full rounded-sm bg-primary/70" style={{ height: `${Math.max(b.height, 4)}%` }} title={`${b.label} · ${b.count}`} />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t("editor.memory.lastWeeks")}</p>
+                </div>
+              </div>
+            );
+          })()}
+        </ChartCard>
       )}
 
       <div className="space-y-1">
