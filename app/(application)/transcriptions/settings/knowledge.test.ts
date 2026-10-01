@@ -108,4 +108,29 @@ describe("transcriptsAgentAccess", () => {
     ];
     expect(transcriptsAgentAccess(tools)).toEqual({ canRead: false, canWrite: true });
   });
+
+  // Final fix wave, Fix 5 — restore-all (ee/agentic-retrieval/pipeline/
+  // index.ts:259): `if (enabledContexts.length === 0) enabledContexts =
+  // contexts;`. An agent that disabled every context it knows about,
+  // transcriptions included, reads it anyway because the pipeline falls back
+  // to "search everything" rather than "search nothing".
+  it("reads when every known context is disabled (pipeline's restore-all)", () => {
+    const tools = [
+      searchTool({
+        transcriptions: { enabled: false },
+        other_context: { enabled: false },
+      }),
+    ];
+    expect(transcriptsAgentAccess(tools)).toEqual({ canRead: true, canWrite: false });
+  });
+
+  it("still excludes transcriptions when at least one other known context remains enabled", () => {
+    const tools = [
+      searchTool({
+        transcriptions: { enabled: false },
+        other_context: { enabled: true },
+      }),
+    ];
+    expect(transcriptsAgentAccess(tools)).toBeNull();
+  });
 });

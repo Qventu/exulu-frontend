@@ -112,6 +112,16 @@ export function NewTranscriptDialog({
   const { settings: transcriptsSettings } = useTranscriptsSettings();
   const defaultPostProcessingPrompts: PostProcessingPrompt[] | undefined =
     transcriptsSettings?.summaryPresets.value;
+  // Workspace defaults for sharing, bot identity, and notifyChat (final fix
+  // wave) — read here once per dialog open exactly like the presets above,
+  // and seeded into each composer with the same once-never-clobber
+  // discipline (use-seeded-value.ts). `undefined` while settings haven't
+  // resolved yet, same reasoning as defaultPostProcessingPrompts.
+  const defaultRightsMode: string | null | undefined =
+    transcriptsSettings?.defaultRightsMode.value;
+  const recordersMayOverrideBot =
+    transcriptsSettings?.recordersMayOverrideBot.value ?? true;
+  const workspaceBotName = transcriptsSettings?.botName.value;
 
   const flags: Record<ComposerMode, boolean> = {
     audio: !!config?.whisper?.enabled,
@@ -211,6 +221,7 @@ export function NewTranscriptDialog({
                   onStarted={onComposerStarted}
                   onPrimaryActionChange={handlePrimaryActionChange}
                   defaultPostProcessingPrompts={defaultPostProcessingPrompts}
+                  defaultRightsMode={defaultRightsMode}
                 />
               )}
               {effectiveMode === "meeting" && (
@@ -218,6 +229,10 @@ export function NewTranscriptDialog({
                   onStarted={onComposerStarted}
                   onPrimaryActionChange={handlePrimaryActionChange}
                   defaultPostProcessingPrompts={defaultPostProcessingPrompts}
+                  defaultRightsMode={defaultRightsMode}
+                  defaultNotifyChat={transcriptsSettings?.notifyChat}
+                  recordersMayOverrideBot={recordersMayOverrideBot}
+                  workspaceBotName={workspaceBotName}
                 />
               )}
               {effectiveMode === "record" && (
@@ -225,6 +240,7 @@ export function NewTranscriptDialog({
                   onCancel={handleCancel}
                   onStarted={onStarted}
                   defaultPostProcessingPrompts={defaultPostProcessingPrompts}
+                  defaultRightsMode={defaultRightsMode}
                 />
               )}
             </>

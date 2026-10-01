@@ -36,6 +36,7 @@ import { START_TRANSCRIPTION_JOB } from "../queries";
 import {
   AUDIO_FILE_TYPES,
   decodeFilename,
+  sanitizeRightsMode,
   stripExtension,
   type ComposerPrimaryAction,
   type Mode,
@@ -46,6 +47,7 @@ import {
 import { FileGalleryDialog } from "./file-gallery-dialog";
 import { PostProcessingPicker, postProcessingRowsComplete } from "./post-processing-picker";
 import { useSeededPostProcessingRows } from "./use-seeded-post-processing-rows";
+import { useSeededValue } from "./use-seeded-value";
 
 const LANGUAGES = ["en", "de", "fr", "es", "it", "nl", "pt"] as const;
 const SPEAKER_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
@@ -65,12 +67,19 @@ export interface ComposerProps {
    *  dialog opens — pre-checked here but still freely removable for this one
    *  upload. `undefined` while the settings round trip hasn't resolved yet. */
   defaultPostProcessingPrompts?: PostProcessingPrompt[];
+  /** Workspace default sharing mode (final fix wave, Fix 1 —
+   *  settings/defaults-section.tsx's "Default sharing" control was stored and
+   *  resolved but read by nothing). Seeded with the same once-never-clobber
+   *  discipline as defaultPostProcessingPrompts above; `undefined` while
+   *  settings haven't resolved yet. */
+  defaultRightsMode?: string | null;
 }
 
 export function Composer({
   onStarted,
   onPrimaryActionChange,
   defaultPostProcessingPrompts,
+  defaultRightsMode,
 }: ComposerProps) {
   const t = useTranslations("transcriptions");
 
@@ -81,7 +90,14 @@ export function Composer({
   const [language, setLanguage] = React.useState<string>("auto");
   const [numSpeakers, setNumSpeakers] = React.useState<string>("auto");
   const [projectId, setProjectId] = React.useState<string>("");
-  const [rightsMode, setRightsMode] = React.useState<Mode>("private");
+  // Seeded from the workspace default (final fix wave, Fix 1), re-synced at
+  // most once if it hadn't loaded yet at mount, never once the user picks a
+  // mode in the sharing dialog (use-seeded-value.ts) — a workspace value
+  // outside ALLOWED_MODES falls back to "private" (sanitizeRightsMode).
+  const [rightsMode, setRightsMode] = useSeededValue<Mode>(
+    sanitizeRightsMode(defaultRightsMode, ALLOWED_MODES),
+    "private",
+  );
   const [rbacUsers, setRbacUsers] = React.useState<RbacUser[]>([]);
   const [rbacRoles, setRbacRoles] = React.useState<RbacRole[]>([]);
   // Seeded from the workspace defaults, re-synced at most once if they

@@ -4708,6 +4708,10 @@
       "botName": "Bot-Name",
       "botNamePlaceholder": "IMP Notetaker",
       "notifyChat": "Teilnehmer im Chat informieren, dass das Meeting aufgezeichnet wird",
+      "botIdentityLockedHint": "Bot-Name und Aufnahmehinweis sind für dieses Workspace festgelegt — Aufnehmende können sie nicht ändern.",
+      "botIdentityLockedName": "Bot-Name: {botName}",
+      "botIdentityLockedNotifyOn": "Kündigt die Aufzeichnung im Chat an.",
+      "botIdentityLockedNotifyOff": "Kündigt die Aufzeichnung im Chat nicht an.",
       "postProcessing": "Nachbearbeitung",
       "postProcessingHint": "Prompts automatisch auf das Transkript anwenden, sobald es fertig ist",
       "addPrompt": "Prompt hinzufügen",
@@ -5045,10 +5049,13 @@
         "retentionLabel": "Aufbewahrung von Meeting-Videos",
         "retentionOption": "{hours} Stunden",
         "retentionForever": "Für immer behalten",
+        "hoursStoredLabel": "{hours} Stunden in diesem Monat gespeichert",
         "storeLocallyLabel": "Lokale Kopie des Meeting-Videos behalten",
         "storeLocallyHint": "Wenn deaktiviert, verwendet die Wiedergabe einen temporären Link des Meeting-Bot-Anbieters.",
         "costLabel": "Geschätzte Speicherkosten pro Stunde (USD)",
-        "costPlaceholder": "0.00"
+        "costPlaceholder": "0.00",
+        "costEstimate": "Geschätzte Kosten in diesem Monat: {amount}",
+        "costEstimateHint": "Legen Sie oben einen Satz fest, um die geschätzten monatlichen Kosten zu sehen."
       },
       "limits": {
         "capLabel": "Monatliches Aufnahmelimit",

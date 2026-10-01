@@ -43,6 +43,21 @@
  * either, both, or neither — `knowledge_base_editor` grants write without
  * `agentic_context_search` granting read, and vice versa. An agent is only
  * dropped from the list when it has neither.
+ *
+ * Final fix wave, Fix 5 — the restore-all edge: `pipeline/index.ts`'s own
+ * filter doesn't stop at excluding disabled contexts
+ * (`cfg.knowledgeBases[ctx.id]?.enabled !== false`); the very next line
+ * (index.ts:259) restores every context when that filter leaves none enabled
+ * at all: `if (enabledContexts.length === 0) enabledContexts = contexts;`. An
+ * agent that has disabled every context it knows about — including
+ * `transcriptions` — therefore reads it anyway, because the pipeline falls
+ * back to "search everything" rather than "search nothing". A map with only
+ * ONE entry does NOT qualify: `setKbSelection` (agents/edit/[id]/components/
+ * knowledge-search/config-schema.ts) always writes an entry for every context
+ * the wizard displayed at save time, so a single-entry map represents a
+ * workspace where other real contexts exist and stayed implicitly enabled
+ * (missing key => enabled) — the pipeline's filter is never empty in that
+ * case, and the explicit disable on that one entry stands.
  */
 import { gql, useQuery } from "@apollo/client";
 
@@ -143,7 +158,23 @@ export function transcriptsAgentAccess(
     const profile = knowledgeBases?.[TRANSCRIPTIONS_CONTEXT_ID];
     const explicitlyDisabled =
       !!profile && typeof profile === "object" && (profile as { enabled?: unknown }).enabled === false;
-    canRead = !explicitlyDisabled;
+
+    // Restore-all (see the file header, pipeline/index.ts:259): every
+    // context this agent's own map addresses is explicitly disabled, so the
+    // pipeline's enabledContexts filter empties out and falls back to every
+    // context — transcriptions included — regardless of its own entry above.
+    // Requires MORE THAN ONE entry: a lone disabled entry means other real
+    // contexts exist and stayed implicitly enabled (missing key => enabled),
+    // so the pipeline's filter is never actually empty in that case.
+    const entries = knowledgeBases ? Object.values(knowledgeBases) : [];
+    const allKnownContextsDisabled =
+      entries.length > 1 &&
+      entries.every(
+        (entry) =>
+          !!entry && typeof entry === "object" && (entry as { enabled?: unknown }).enabled === false,
+      );
+
+    canRead = allKnownContextsDisabled || !explicitlyDisabled;
   }
 
   const editorConfig = findToolConfig(list, KB_EDITOR_TOOL_ID);

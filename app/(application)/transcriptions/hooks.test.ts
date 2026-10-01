@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSettingsInput,
   parseNumericOrSentinel,
+  resolveNotifyChatSeed,
   serializeNumericOrSentinel,
   type TranscriptsSettingsPatch,
 } from "./hooks";
@@ -137,5 +138,39 @@ describe("buildSettingsInput", () => {
     expect(Object.keys(input)).toEqual(["notifyChat"]);
     expect("botName" in input).toBe(false);
     expect("videoRetentionHours" in input).toBe(false);
+  });
+});
+
+/**
+ * Final fix wave, Fix 3: the meeting composer's notifyChat seed must preserve
+ * the 2026-09-22 default-ON decision for a deployment that has configured
+ * nothing, rather than adopting resolveTranscriptsSettings's unrelated
+ * backward-compatibility fallback (`false`, for API callers that bypass this
+ * composer). Only an explicit admin save (`source: "database"`) may turn it
+ * off.
+ */
+describe("resolveNotifyChatSeed", () => {
+  it("is undefined while the settings round trip hasn't resolved yet", () => {
+    expect(resolveNotifyChatSeed(undefined)).toBeUndefined();
+  });
+
+  it("defaults ON when nothing is configured (source: code)", () => {
+    expect(resolveNotifyChatSeed({ value: false, source: "code" })).toBe(true);
+  });
+
+  it("defaults ON when resolved from env", () => {
+    expect(resolveNotifyChatSeed({ value: false, source: "env" })).toBe(true);
+  });
+
+  it("honors an admin's explicit true", () => {
+    expect(resolveNotifyChatSeed({ value: true, source: "database" })).toBe(true);
+  });
+
+  it("honors an admin's explicit false", () => {
+    expect(resolveNotifyChatSeed({ value: false, source: "database" })).toBe(false);
+  });
+
+  it("falls back to true for a stored null (defensive, should not occur)", () => {
+    expect(resolveNotifyChatSeed({ value: null, source: "database" })).toBe(true);
   });
 });

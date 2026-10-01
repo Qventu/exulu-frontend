@@ -5,6 +5,25 @@
 
 export type Mode = "private" | "users" | "roles" | "teams" | "public";
 
+/**
+ * The composer's seeded `defaultRightsMode` from the workspace setting (final
+ * fix wave, Fix 1 — the admin "Default sharing" control in
+ * settings/defaults-section.tsx was stored and resolved but read by nothing).
+ * `undefined` while the settings round trip hasn't resolved yet, so the
+ * caller (use-seeded-value.ts) knows to keep waiting rather than seeding a
+ * composer with it; once resolved, a value outside that composer's own
+ * `ALLOWED_MODES` (e.g. a workspace default a given composer doesn't offer)
+ * falls back to "private" rather than handing a Select a value it has no
+ * option for.
+ */
+export function sanitizeRightsMode(
+  value: string | null | undefined,
+  allowedModes: readonly Mode[],
+): Mode | undefined {
+  if (value === undefined) return undefined;
+  return allowedModes.includes(value as Mode) ? (value as Mode) : "private";
+}
+
 export type JobStatus =
   | "queued"
   | "transcribing"

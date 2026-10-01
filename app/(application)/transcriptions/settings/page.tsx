@@ -22,6 +22,12 @@
  * Every `summariseX` returns a translation key + values (fix round 1, minor
  * #3) rather than rendered text, so this is the one place that actually
  * calls `t(...)` on them — `translate` below centralizes that.
+ *
+ * Final fix wave, Fix 4a: a right column carries the existing monthly
+ * recording-time card (`RecordingUsageCard`, built on `useRecordingUsage` —
+ * hooks.ts:210) — the one other piece of spec §5 that was never built. The
+ * same `usage` is also handed to `StorageSection` for "hours stored" (Fix 4b)
+ * so this page fires one `meetingRecordingUsage` query, not two.
  */
 import { useTranslations } from "next-intl";
 import * as React from "react";
@@ -34,7 +40,8 @@ import { ConfigContext } from "@/components/shell/config-context";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { useTranscriptsSettings } from "../hooks";
+import { RecordingUsageCard } from "../components/recording-usage-card";
+import { useRecordingUsage, useTranscriptsSettings } from "../hooks";
 import { DefaultsSection } from "./defaults-section";
 import { useTranscriptsContext, useTranscriptsEmbedder } from "./embedder";
 import { useTranscriptsKnowledgeAgents } from "./knowledge";
@@ -88,6 +95,10 @@ export default function TranscriptsSettingsPage() {
   } = useTranscriptsContext(!isAdmin);
   const embedder = useTranscriptsEmbedder(!isAdmin);
   const knowledgeAgents = useTranscriptsKnowledgeAgents(!isAdmin);
+  // Shared with the Meeting video section (hours stored, Fix 4b/4c) and the
+  // right column's usage card (Fix 4a) — one query, not two, reusing the same
+  // hook useRecordingUsage already exposes (hooks.ts:210).
+  const { usage } = useRecordingUsage(!isAdmin || !config?.recall?.enabled);
 
   const [openSection, setOpenSection] = React.useState<SectionId | null>(null);
   const autoOpenedRef = React.useRef(false);
@@ -193,79 +204,88 @@ export default function TranscriptsSettingsPage() {
           description={error?.message}
         />
       ) : (
-        <div className="flex flex-col gap-3">
-          <SettingsSection
-            title={t("settings.sections.sources")}
-            summary={translate(sourcesSummary)}
-            needsAttention={sourcesSummary.needsAttention}
-            open={openSection === "sources"}
-            onOpenChange={(open) => setOpenSection(open ? "sources" : null)}
-          >
-            <SourcesSection
-              testSource={testSource}
-              context={context}
-              contextLoading={contextLoading}
-              contextError={contextError}
-              embedderInfo={embedder.info}
-              embedderModels={embedder.models}
-              embedderQueues={embedder.queues}
-              onSetEmbedder={embedder.setEmbedder}
-            />
-          </SettingsSection>
+        // Right column (settings design doc §5, final fix wave Fix 4a): the
+        // existing monthly recording-time card only — single column below
+        // `lg` so it never competes with the sections for a narrow viewport.
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="flex flex-col gap-3">
+            <SettingsSection
+              title={t("settings.sections.sources")}
+              summary={translate(sourcesSummary)}
+              needsAttention={sourcesSummary.needsAttention}
+              open={openSection === "sources"}
+              onOpenChange={(open) => setOpenSection(open ? "sources" : null)}
+            >
+              <SourcesSection
+                testSource={testSource}
+                context={context}
+                contextLoading={contextLoading}
+                contextError={contextError}
+                embedderInfo={embedder.info}
+                embedderModels={embedder.models}
+                embedderQueues={embedder.queues}
+                onSetEmbedder={embedder.setEmbedder}
+              />
+            </SettingsSection>
 
-          <SettingsSection
-            title={t("settings.sections.meetingBot")}
-            summary={translate(meetingBotSummary)}
-            needsAttention={meetingBotSummary?.needsAttention ?? false}
-            open={openSection === "meetingBot"}
-            onOpenChange={(open) => setOpenSection(open ? "meetingBot" : null)}
-          >
-            <MeetingBotSection settings={settings} onSave={save} />
-          </SettingsSection>
+            <SettingsSection
+              title={t("settings.sections.meetingBot")}
+              summary={translate(meetingBotSummary)}
+              needsAttention={meetingBotSummary?.needsAttention ?? false}
+              open={openSection === "meetingBot"}
+              onOpenChange={(open) => setOpenSection(open ? "meetingBot" : null)}
+            >
+              <MeetingBotSection settings={settings} onSave={save} />
+            </SettingsSection>
 
-          <SettingsSection
-            title={t("settings.sections.defaults")}
-            summary={translate(defaultsSummary)}
-            needsAttention={defaultsSummary?.needsAttention ?? false}
-            open={openSection === "defaults"}
-            onOpenChange={(open) => setOpenSection(open ? "defaults" : null)}
-          >
-            <DefaultsSection settings={settings} stalePresets={stalePresets} onSave={save} />
-          </SettingsSection>
+            <SettingsSection
+              title={t("settings.sections.defaults")}
+              summary={translate(defaultsSummary)}
+              needsAttention={defaultsSummary?.needsAttention ?? false}
+              open={openSection === "defaults"}
+              onOpenChange={(open) => setOpenSection(open ? "defaults" : null)}
+            >
+              <DefaultsSection settings={settings} stalePresets={stalePresets} onSave={save} />
+            </SettingsSection>
 
-          <SettingsSection
-            title={t("settings.sections.storage")}
-            summary={translate(storageSummary)}
-            needsAttention={storageSummary?.needsAttention ?? false}
-            open={openSection === "storage"}
-            onOpenChange={(open) => setOpenSection(open ? "storage" : null)}
-          >
-            <StorageSection settings={settings} onSave={save} />
-          </SettingsSection>
+            <SettingsSection
+              title={t("settings.sections.storage")}
+              summary={translate(storageSummary)}
+              needsAttention={storageSummary?.needsAttention ?? false}
+              open={openSection === "storage"}
+              onOpenChange={(open) => setOpenSection(open ? "storage" : null)}
+            >
+              <StorageSection settings={settings} onSave={save} usage={usage} />
+            </SettingsSection>
 
-          <SettingsSection
-            title={t("settings.sections.limits")}
-            summary={translate(limitsSummary)}
-            needsAttention={limitsSummary?.needsAttention ?? false}
-            open={openSection === "limits"}
-            onOpenChange={(open) => setOpenSection(open ? "limits" : null)}
-          >
-            <LimitsSection settings={settings} onSave={save} />
-          </SettingsSection>
+            <SettingsSection
+              title={t("settings.sections.limits")}
+              summary={translate(limitsSummary)}
+              needsAttention={limitsSummary?.needsAttention ?? false}
+              open={openSection === "limits"}
+              onOpenChange={(open) => setOpenSection(open ? "limits" : null)}
+            >
+              <LimitsSection settings={settings} onSave={save} />
+            </SettingsSection>
 
-          <SettingsSection
-            title={t("settings.sections.knowledge")}
-            summary={translate(knowledgeSummary)}
-            needsAttention={knowledgeSummary.needsAttention}
-            open={openSection === "knowledge"}
-            onOpenChange={(open) => setOpenSection(open ? "knowledge" : null)}
-          >
-            <KnowledgeSection
-              agents={knowledgeAgents.agents}
-              loading={knowledgeAgents.loading}
-              error={knowledgeAgents.error}
-            />
-          </SettingsSection>
+            <SettingsSection
+              title={t("settings.sections.knowledge")}
+              summary={translate(knowledgeSummary)}
+              needsAttention={knowledgeSummary.needsAttention}
+              open={openSection === "knowledge"}
+              onOpenChange={(open) => setOpenSection(open ? "knowledge" : null)}
+            >
+              <KnowledgeSection
+                agents={knowledgeAgents.agents}
+                loading={knowledgeAgents.loading}
+                error={knowledgeAgents.error}
+              />
+            </SettingsSection>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <RecordingUsageCard usage={usage} />
+          </div>
         </div>
       )}
     </PageShell>

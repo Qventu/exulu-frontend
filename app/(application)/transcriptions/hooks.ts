@@ -405,6 +405,33 @@ export function buildSettingsInput(patch: TranscriptsSettingsPatch): Record<stri
   return input;
 }
 
+/**
+ * The meeting composer's seed for `notifyChat` (final fix wave, Fix 3).
+ * `meeting-composer.tsx` hardcoded `React.useState(true)` and always sent an
+ * explicit boolean, so the workspace setting was unreachable through the
+ * product's own UI — but the resolved setting's own code-level fallback
+ * (`resolveTranscriptsSettings`'s `resolveSetting(stored.notifyChat, null,
+ * false)` in transcripts-settings.ts) is `false`, preserved there specifically
+ * for API callers that bypass this composer and never send `notify_chat` at
+ * all. Seeding straight off `setting.value` would silently flip the
+ * composer's own 2026-09-22 default-ON decision (a bot sitting unannounced in
+ * a waiting room is the leading cause of "bot finished without a recording")
+ * for every deployment that has configured nothing.
+ *
+ * So only an admin's own stored choice (`source: "database"`) overrides the
+ * ON default; `"env"` and `"code"` both mean "nothing configured here" and
+ * keep the composer's long-standing default instead of adopting the
+ * resolver's unrelated backward-compatibility fallback. `undefined` while the
+ * settings round trip hasn't resolved yet, so use-seeded-value.ts knows to
+ * keep waiting rather than seeding early.
+ */
+export function resolveNotifyChatSeed(
+  setting: ResolvedSetting<boolean | null> | undefined,
+): boolean | undefined {
+  if (!setting) return undefined;
+  return setting.source === "database" ? (setting.value ?? true) : true;
+}
+
 /** Best-effort `detail` extraction from a non-OK REST response body, for
  *  testSource's error message. */
 function errorDetail(body: unknown, status: number): string {

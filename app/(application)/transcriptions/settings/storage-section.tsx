@@ -1,12 +1,24 @@
 "use client";
 
 /**
- * Recordings & storage section — how long meeting video is kept, whether a
- * local copy is also stored, and the estimated storage cost used elsewhere
- * in reporting (settings design doc §1). `videoRetentionHours` carries the
- * "forever" sentinel rather than a plain number — never collapse it to a
- * large number or `null`, both of which would misreport an admin's explicit
- * "keep forever" choice.
+ * Meeting video section — how long meeting video is kept, whether a local
+ * copy is also stored, hours stored, and the estimated storage cost
+ * (settings design doc §5). `videoRetentionHours` carries the "forever"
+ * sentinel rather than a plain number — never collapse it to a large number
+ * or `null`, both of which would misreport an admin's explicit "keep forever"
+ * choice.
+ *
+ * Final fix wave, Fix 4b/4c: "hours stored" and the cost estimate were the
+ * two other pieces of spec §5 never built for this section. `usage` is the
+ * same `meetingRecordingUsage` data the page's right column card already
+ * fetches (Fix 4a) — reused here, not a second query or a new backend field.
+ * `used_seconds` is this calendar month's recorded duration; there is no
+ * retention-aware "currently stored" figure on the backend, so this is the
+ * best available proxy and is labelled accordingly ("this month").
+ * `videoStorageCostPerHour: 0` is this field's own "not set" sentinel
+ * (storage-section's cost input below) — a real $0.00 estimate would be
+ * indistinguishable from "no rate configured", so 0 shows a hint instead of
+ * a figure.
  */
 import { useTranslations } from "next-intl";
 import * as React from "react";
@@ -23,8 +35,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { formatUsd } from "@/lib/budget";
 
 import type {
+  RecordingUsage,
   RetentionHours,
   TranscriptsSettings,
   TranscriptsSettingsPatch,
@@ -34,15 +48,30 @@ import { FieldSourceNote, ResetToDefaultButton, useSettingsSave } from "./settin
 export interface StorageSectionProps {
   settings: TranscriptsSettings;
   onSave: (patch: TranscriptsSettingsPatch) => Promise<void>;
+  /** This month's recorded-video duration (Fix 4b/4c) — `null` while loading
+   *  or when the meeting bot source isn't enabled, in which case neither
+   *  "hours stored" nor the cost estimate renders (no data, no figure). */
+  usage: RecordingUsage | null;
 }
 
 const RETENTION_PRESETS = [24, 168, 720, 2160];
 const FOREVER = "forever";
 
-export function StorageSection({ settings, onSave }: StorageSectionProps) {
+export function StorageSection({ settings, onSave, usage }: StorageSectionProps) {
   const t = useTranslations("transcriptions");
   const tCommon = useTranslations("common");
   const { pendingKey, run } = useSettingsSave(onSave);
+
+  // Fix 4b/4c: hours stored this month and the cost estimate that follows
+  // from it. `usage` is `null` while loading or when the meeting bot source
+  // isn't enabled — neither row renders without real duration data.
+  const hoursStored = usage ? usage.used_seconds / 3600 : null;
+  const costPerHourValue = settings.videoStorageCostPerHour.value ?? 0;
+  // 0 is this field's own "not set" sentinel (see the file header) — a real
+  // $0.00 estimate would be indistinguishable from no rate configured, so a
+  // hint renders instead of a figure in that case.
+  const costEstimate =
+    hoursStored != null && costPerHourValue > 0 ? hoursStored * costPerHourValue : null;
 
   const retention = settings.videoRetentionHours.value;
   // The stored value is always offered as an option even when it isn't one
@@ -110,6 +139,15 @@ export function StorageSection({ settings, onSave }: StorageSectionProps) {
         <FieldSourceNote source={settings.videoRetentionHours.source} />
       </div>
 
+      {/* Hours stored this month (Fix 4b) — usage is null while loading or
+          when the meeting bot source isn't enabled, in which case this row
+          simply doesn't render rather than showing a misleading "0 hours". */}
+      {hoursStored != null && (
+        <p className="text-sm text-muted-foreground">
+          {t("settings.storage.hoursStoredLabel", { hours: hoursStored.toFixed(1) })}
+        </p>
+      )}
+
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 space-y-0.5">
           <Label htmlFor="settings-store-locally">{t("settings.storage.storeLocallyLabel")}</Label>
@@ -164,6 +202,21 @@ export function StorageSection({ settings, onSave }: StorageSectionProps) {
           />
         </div>
         <FieldSourceNote source={settings.videoStorageCostPerHour.source} />
+        {/* Cost estimate (Fix 4c) — videoStorageCostPerHour: 0 is this
+            field's own "not set" sentinel (file header), so a $0.00 estimate
+            would lie about a rate that was never configured; a hint renders
+            instead. Both need hoursStored, so neither renders without usage
+            data either. */}
+        {hoursStored != null &&
+          (costEstimate != null ? (
+            <p className="text-sm">
+              {t("settings.storage.costEstimate", { amount: formatUsd(costEstimate) })}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {t("settings.storage.costEstimateHint")}
+            </p>
+          ))}
       </div>
     </>
   );
