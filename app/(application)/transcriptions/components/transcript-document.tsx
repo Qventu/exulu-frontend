@@ -135,6 +135,7 @@ import { AudioTimeline, type AudioTimelineHandle } from "./audio-timeline";
 import { ExportMenu } from "./export-menu";
 import { MeetingVideoPlayer } from "./meeting-video-player";
 import { SpeakersPanel } from "./speakers-panel";
+import { SummaryMarkdown } from "./summary-markdown";
 import { FindReplace } from "./find-replace";
 import { ReviewChecklist } from "./review-checklist";
 
@@ -262,33 +263,6 @@ function findChapters(outputs: PostProcessingOutput[]): {
 }
 
 /** Renders `[mm:ss]` citations as seek buttons inline with the surrounding text. */
-function LinkedText({
-  text,
-  onSeek,
-}: {
-  text: string;
-  onSeek: (seconds: number) => void;
-}) {
-  const parts = parseTimestampRefs(text);
-  return (
-    <>
-      {parts.map((part, index) =>
-        part.seconds !== null ? (
-          <button
-            key={index}
-            type="button"
-            onClick={() => onSeek(part.seconds as number)}
-            className="mx-0.5 inline-flex rounded border px-1 align-baseline font-mono text-xs text-primary hover:bg-muted"
-          >
-            {part.text}
-          </button>
-        ) : (
-          <React.Fragment key={index}>{part.text}</React.Fragment>
-        ),
-      )}
-    </>
-  );
-}
 
 /* --------------------------------- access --------------------------------- */
 
@@ -941,7 +915,7 @@ export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: 
         <div className="mx-auto grid w-full max-w-6xl gap-6 p-4 md:grid-cols-[200px_minmax(0,1fr)_300px] md:p-6">
           {/* Left: chapters — renders nothing without a supplying output. */}
           {chapters.length > 0 && (
-            <nav aria-label={t("document.chaptersTitle")} className="space-y-1">
+            <nav aria-label={t("document.chaptersTitle")} className="space-y-1 md:col-start-1">
               <p className="text-sm font-medium">{t("document.chaptersTitle")}</p>
               <ul className="space-y-0.5">
                 {chapters.map((chapter, index) => (
@@ -963,7 +937,7 @@ export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: 
           )}
 
           {/* Centre: summary/action-item outputs, then the transcript. */}
-          <div className="min-w-0 space-y-6">
+          <div className="min-w-0 space-y-6 md:col-start-2">
             {isEditable && (
               <div className="space-y-1">
                 <Input
@@ -994,16 +968,14 @@ export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: 
                         {output.error ? ` — ${output.error}` : ""}
                       </p>
                     ) : (
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                        <LinkedText
-                          text={
-                            index === chaptersSourceIndex
-                              ? stripChapters(output.output ?? "")
-                              : (output.output ?? "")
-                          }
-                          onSeek={seekTo}
-                        />
-                      </p>
+                      <SummaryMarkdown
+                        text={
+                          index === chaptersSourceIndex
+                            ? stripChapters(output.output ?? "")
+                            : (output.output ?? "")
+                        }
+                        onSeek={seekTo}
+                      />
                     )}
                   </div>
                 ))}
@@ -1179,7 +1151,7 @@ export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: 
           </div>
 
           {/* Right: SpeakersPanel in edit mode; media + ask box in read mode. */}
-          <div className="space-y-4">
+          <div className="space-y-4 md:col-start-3">
             {isEditable ? (
               <SpeakersPanel
                 rawSpeakers={rawSpeakers}

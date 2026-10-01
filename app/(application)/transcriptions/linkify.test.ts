@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseTimestampRefs } from "./linkify";
+import { parseTimestampRefs, secondsFromSeekHref, timestampRefsToLinks } from "./linkify";
 
 describe("parseTimestampRefs", () => {
   it("splits a bracketed mm:ss reference out of the surrounding prose", () => {
@@ -35,5 +35,45 @@ describe("parseTimestampRefs", () => {
 
   it("returns nothing for empty input", () => {
     expect(parseTimestampRefs("")).toEqual([]);
+  });
+});
+
+describe("timestampRefsToLinks", () => {
+  it("rewrites a reference into a markdown link the renderer can intercept", () => {
+    expect(timestampRefsToLinks("We agreed the scope [21:40] and moved on.")).toBe(
+      "We agreed the scope [21:40](#t=1300) and moved on.",
+    );
+  });
+
+  it("leaves markdown without references untouched", () => {
+    const md = "### Summary\n\n* **Scope** agreed\n";
+    expect(timestampRefsToLinks(md)).toBe(md);
+  });
+
+  it("handles h:mm:ss and several references in one document", () => {
+    expect(timestampRefsToLinks("[1:02:03] then [00:30]")).toBe(
+      "[1:02:03](#t=3723) then [00:30](#t=30)",
+    );
+  });
+
+  it("returns an empty string for empty input", () => {
+    expect(timestampRefsToLinks("")).toBe("");
+  });
+});
+
+describe("secondsFromSeekHref", () => {
+  it("reads the seconds back out of a seek href", () => {
+    expect(secondsFromSeekHref("#t=1300")).toBe(1300);
+    expect(secondsFromSeekHref("#t=0")).toBe(0);
+  });
+
+  it("returns null for a real link, so it renders as an anchor", () => {
+    expect(secondsFromSeekHref("https://example.com")).toBeNull();
+    expect(secondsFromSeekHref("#section")).toBeNull();
+    expect(secondsFromSeekHref(undefined)).toBeNull();
+  });
+
+  it("returns null rather than NaN for a malformed seek href", () => {
+    expect(secondsFromSeekHref("#t=abc")).toBeNull();
   });
 });

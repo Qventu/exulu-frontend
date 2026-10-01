@@ -34,3 +34,33 @@ export function parseTimestampRefs(
   }
   return parts;
 }
+
+/**
+ * Rewrites `[mm:ss]` / `[h:mm:ss]` passage references into markdown links with
+ * a `#t=<seconds>` href, so the summary can be rendered as real markdown while
+ * the references stay clickable — `SummaryMarkdown` intercepts that href and
+ * seeks instead of navigating.
+ *
+ * Done as a pre-pass rather than a remark plugin because the reference syntax
+ * is already markdown link-text shaped: `[12:34]` would otherwise be parsed as
+ * a link with no destination and silently rendered as literal brackets.
+ */
+export const SEEK_HREF_PREFIX = "#t=";
+
+export function timestampRefsToLinks(markdown: string): string {
+  if (!markdown) return "";
+  return parseTimestampRefs(markdown)
+    .map((part) =>
+      part.seconds === null
+        ? part.text
+        : `[${part.text}](${SEEK_HREF_PREFIX}${part.seconds})`,
+    )
+    .join("");
+}
+
+/** The seconds encoded in a `#t=` href, or null for any other href. */
+export function secondsFromSeekHref(href: string | undefined): number | null {
+  if (!href?.startsWith(SEEK_HREF_PREFIX)) return null;
+  const seconds = Number(href.slice(SEEK_HREF_PREFIX.length));
+  return Number.isFinite(seconds) ? seconds : null;
+}
