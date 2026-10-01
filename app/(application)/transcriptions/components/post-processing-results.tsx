@@ -12,12 +12,18 @@
  * `runTranscriptPostProcessing` needs).
  */
 import { useMutation, useQuery } from "@apollo/client";
-import { Loader2 } from "lucide-react";
+import { Check, ChevronDown, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 import { GET_PROMPT_LIBRARY, RUN_TRANSCRIPT_POST_PROCESSING } from "../queries";
 import { SummaryMarkdown } from "./summary-markdown";
@@ -120,9 +126,45 @@ export function PostProcessingResults({
     }
   };
 
+  // Collapsed by default (design artboard 5): the results are long enough to
+  // bury the transcript, and the reading view already shows the same summary
+  // under its own heading — so the review page leads with a one-line status
+  // and lets the reviewer open it only when they want to check the output.
+  const [open, setOpen] = React.useState(false);
+  const readyCount = outputs.filter((o) => o.status !== "failed").length;
+
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">{t("review.postProcessing")}</p>
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className="rounded-lg border bg-background"
+    >
+      <div className="flex items-center justify-between gap-2 px-4 py-3">
+        <p className="flex min-w-0 items-center gap-2 text-sm">
+          {inFlight ? (
+            <Loader2 aria-hidden="true" className="size-4 shrink-0 animate-spin" />
+          ) : (
+            <Check aria-hidden="true" className="size-4 shrink-0 text-emerald-600" />
+          )}
+          <span className="truncate">
+            {inFlight
+              ? t("review.resultRunning")
+              : pending.length > 0 && readyCount === 0
+                ? t("review.resultsPendingCount", { count: pending.length })
+                : t("review.resultsReady", { count: readyCount })}
+          </span>
+        </p>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="shrink-0 max-md:h-11">
+            {open ? t("review.resultsHide") : t("review.resultsShow")}
+            <ChevronDown
+              aria-hidden="true"
+              className={cn("ml-1 size-4 transition-transform", open && "rotate-180")}
+            />
+          </Button>
+        </CollapsibleTrigger>
+      </div>
+      <CollapsibleContent className="space-y-2 border-t px-4 py-3">
       {inFlight ? (
         <p className="text-sm text-muted-foreground">
           {t("review.resultRunning")}
@@ -218,6 +260,7 @@ export function PostProcessingResults({
           })}
         </div>
       ) : null}
-    </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

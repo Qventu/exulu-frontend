@@ -149,6 +149,10 @@ export interface TranscriptDocumentProps {
   /** False when the viewer may read but not write — edit mode renders
    *  read-only with an explanation instead of a Save button. */
   canWrite?: boolean;
+  /** Rendered at the top of the centre column, above the title and summary.
+   *  The review page puts its post-processing banner here so it lines up with
+   *  the document rather than sitting in a full-width bar above the grid. */
+  banner?: React.ReactNode;
 }
 
 export type TranscriptDraft = {
@@ -490,7 +494,14 @@ function buildEditDraftState(item: TranscriptItemDetail): EditDraftState {
 
 /* --------------------------------- main ------------------------------------ */
 
-export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: TranscriptDocumentProps) {
+export function TranscriptDocument({
+  item,
+  mode,
+  onSave,
+  onDiscard,
+  canWrite,
+  banner,
+}: TranscriptDocumentProps) {
   const t = useTranslations("transcriptions");
   const tCommon = useTranslations("common");
   const router = useRouter();
@@ -948,6 +959,7 @@ export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: 
 
           {/* Centre: summary/action-item outputs, then the transcript. */}
           <div className={cn("min-w-0 space-y-6", chapters.length > 0 && "md:col-start-2")}>
+            {banner}
             {isEditable && (
               <div className="space-y-1">
                 <Input

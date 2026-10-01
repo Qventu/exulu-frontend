@@ -1209,7 +1209,13 @@
       "forgetConfirmDescription": "“{title}” will be deleted from the memory base.",
       "forgotToast": "Memory forgotten",
       "forgetFailed": "Couldn't forget the memory",
-      "mode": { "private": "Private", "users": "Shared with users", "roles": "Shared with roles", "teams": "Shared with teams", "public": "Public" },
+      "mode": {
+        "private": "Private",
+        "users": "Shared with users",
+        "roles": "Shared with roles",
+        "teams": "Shared with teams",
+        "public": "Public"
+      },
       "panelTitle": "What {agent} remembers",
       "panelSubtitle": "{count, plural, one {# memory} other {# memories}} · {privateCount} private, {publicCount} public",
       "tabAll": "All",
@@ -4898,7 +4904,10 @@
       "view": "View / download",
       "viewFailed": "Couldn't open the file"
     },
-    "groups": { "thisWeek": "This week", "earlier": "Earlier" },
+    "groups": {
+      "thisWeek": "This week",
+      "earlier": "Earlier"
+    },
     "inProgress": {
       "label": "{count, plural, one {# in progress} other {# in progress}}",
       "expand": "Show what is running",
@@ -4922,7 +4931,10 @@
     },
     "new": "New transcript",
     "newShort": "New",
-    "overflow": { "label": "More options", "settings": "Transcript settings" },
+    "overflow": {
+      "label": "More options",
+      "settings": "Transcript settings"
+    },
     "queue": {
       "library": "Transcript library",
       "loadMore": "Load more",
@@ -4949,7 +4961,11 @@
       "loadVideo": "Load video",
       "loadingVideo": "Loading video…",
       "videoUnavailable": "No video is available for this recording.",
-      "noAudio": "No audio file is attached to this transcript."
+      "noAudio": "No audio file is attached to this transcript.",
+      "resultsReady": "{count, plural, =0 {Post-processing ready} one {# result ready} other {# results ready}}",
+      "resultsShow": "Show",
+      "resultsHide": "Hide",
+      "resultsPendingCount": "{count, plural, one {# result not run yet} other {# results not run yet}}"
     },
     "row": {
       "awaitingReview": "Awaiting review",

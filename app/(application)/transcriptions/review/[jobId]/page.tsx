@@ -162,19 +162,19 @@ function ReviewJobPageInner({ jobId }: { jobId: string }) {
 
   return (
     <PageShell variant="full-bleed">
-      {hasPostProcessing(job) && (
-        <div className="shrink-0 border-b p-4 md:p-6">
-          <div className="mx-auto max-w-6xl">
-            <PostProcessingResults job={job} onRefreshJob={refetch} />
-          </div>
-        </div>
-      )}
       <div className="min-h-0 flex-1">
         <TranscriptDocument
           item={jobToDraftItem(job)}
           mode="edit"
           onSave={handleSave}
           onDiscard={() => setDiscardOpen(true)}
+          // Above the document rather than in a full-width bar over the whole
+          // grid, so it lines up with the transcript it belongs to.
+          banner={
+            hasPostProcessing(job) ? (
+              <PostProcessingResults job={job} onRefreshJob={refetch} />
+            ) : null
+          }
         />
       </div>
       <ConfirmDialog

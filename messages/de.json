@@ -1209,7 +1209,13 @@
       "forgetConfirmDescription": "„{title}“ wird aus der Gedächtnis-Basis gelöscht.",
       "forgotToast": "Erinnerung vergessen",
       "forgetFailed": "Erinnerung konnte nicht vergessen werden",
-      "mode": { "private": "Privat", "users": "Geteilt mit Nutzern", "roles": "Geteilt mit Rollen", "teams": "Geteilt mit Teams", "public": "Öffentlich" },
+      "mode": {
+        "private": "Privat",
+        "users": "Geteilt mit Nutzern",
+        "roles": "Geteilt mit Rollen",
+        "teams": "Geteilt mit Teams",
+        "public": "Öffentlich"
+      },
       "panelTitle": "Woran sich {agent} erinnert",
       "panelSubtitle": "{count, plural, one {# Erinnerung} other {# Erinnerungen}} · {privateCount} privat, {publicCount} öffentlich",
       "tabAll": "Alle",
@@ -4898,7 +4904,10 @@
       "view": "Ansehen / Herunterladen",
       "viewFailed": "Datei konnte nicht geöffnet werden"
     },
-    "groups": { "thisWeek": "Diese Woche", "earlier": "Früher" },
+    "groups": {
+      "thisWeek": "Diese Woche",
+      "earlier": "Früher"
+    },
     "inProgress": {
       "label": "{count, plural, one {# in Bearbeitung} other {# in Bearbeitung}}",
       "expand": "Laufende Aufträge anzeigen",
@@ -4922,7 +4931,10 @@
     },
     "new": "Neues Transkript",
     "newShort": "Neu",
-    "overflow": { "label": "Weitere Optionen", "settings": "Transkript-Einstellungen" },
+    "overflow": {
+      "label": "Weitere Optionen",
+      "settings": "Transkript-Einstellungen"
+    },
     "queue": {
       "library": "Transkript-Bibliothek",
       "loadMore": "Mehr laden",
@@ -4949,7 +4961,11 @@
       "loadVideo": "Video laden",
       "loadingVideo": "Video wird geladen…",
       "videoUnavailable": "Für diese Aufnahme ist kein Video verfügbar.",
-      "noAudio": "Diesem Transkript ist keine Audiodatei angehängt."
+      "noAudio": "Diesem Transkript ist keine Audiodatei angehängt.",
+      "resultsReady": "{count, plural, =0 {Nachbearbeitung fertig} one {# Ergebnis fertig} other {# Ergebnisse fertig}}",
+      "resultsShow": "Anzeigen",
+      "resultsHide": "Ausblenden",
+      "resultsPendingCount": "{count, plural, one {# Ergebnis noch nicht ausgeführt} other {# Ergebnisse noch nicht ausgeführt}}"
     },
     "row": {
       "awaitingReview": "Wartet auf Überprüfung",
