@@ -3,16 +3,18 @@ import { describe, expect, it } from "vitest";
 import {
   applyFindReplace,
   canWriteTranscriptItem,
+  displayTitle,
   effectiveSegments,
+  filterTranscriptRows,
   findRecoveredJob,
+  groupTranscriptRows,
   hasPostProcessing,
   isLiveJob,
+  isPlaceholderSpeaker,
   isSharingConfigured,
-  displayTitle,
   mergeTranscriptRows,
-  filterTranscriptRows,
-  groupTranscriptRows,
   shouldFinalizeItemSave,
+  speakerNeedsName,
   type ItemRBAC,
   type Job,
   type Segment,
@@ -467,3 +469,36 @@ describe("shouldFinalizeItemSave — routes an owner's save through finalize, no
     expect(shouldFinalizeItemSave(item, null)).toBe(false);
   });
 });
+
+describe("isPlaceholderSpeaker", () => {
+  it("recognises the diarization placeholders each source emits", () => {
+    for (const raw of ["SPEAKER_00", "SPEAKER_1", "speaker_0", "Speaker A", "Speaker B", "speaker 12", "unknown", "0", "3"]) {
+      expect(isPlaceholderSpeaker(raw)).toBe(true);
+    }
+  });
+
+  it("treats a meeting bot's real participant names as real", () => {
+    // Recall labels every segment with the participant's actual name.
+    for (const raw of ["Behrami, Leutrim", "Mario Gramsch", "Götz, Sebastian", "Ilias Seifert"]) {
+      expect(isPlaceholderSpeaker(raw)).toBe(false);
+    }
+  });
+
+  it("does not mistake a real name that merely contains the word", () => {
+    expect(isPlaceholderSpeaker("Speaker of the House")).toBe(false);
+    expect(isPlaceholderSpeaker("Anja Speaker")).toBe(false);
+  });
+});
+
+describe("speakerNeedsName", () => {
+  it("asks for a name only for an unmapped placeholder", () => {
+    expect(speakerNeedsName("SPEAKER_00", {})).toBe(true);
+    expect(speakerNeedsName("SPEAKER_00", { SPEAKER_00: "Lena Brandt" })).toBe(false);
+    expect(speakerNeedsName("SPEAKER_00", { SPEAKER_00: "   " })).toBe(true);
+  });
+
+  it("never asks for a name a meeting bot already supplied", () => {
+    expect(speakerNeedsName("Mario Gramsch", {})).toBe(false);
+  });
+});
+

@@ -668,3 +668,28 @@ export function groupTranscriptRows(
   }
   return { thisWeek, earlier };
 }
+
+/**
+ * Whether a raw diarization label is a synthetic placeholder rather than a
+ * real person.
+ *
+ * Providers differ: Whisper diarization emits `SPEAKER_00`, the designs show
+ * `Speaker B`, and an unattributed stretch comes through as `unknown`. A
+ * meeting bot, by contrast, labels every segment with the participant's
+ * actual name — so its "raw" labels need no naming at all.
+ */
+export function isPlaceholderSpeaker(raw: string): boolean {
+  return /^(speaker[\s_-]*[a-z0-9]+|unknown)$/i.test(raw.trim()) || /^\d+$/.test(raw.trim());
+}
+
+/**
+ * Whether this speaker still needs a name from the reviewer: only true for a
+ * placeholder label the reviewer has not yet mapped. A meeting bot's real
+ * participant names are already usable, so asking for them again would nag
+ * the reviewer to retype what is on screen — and would block the review
+ * checklist on work that does not exist.
+ */
+export function speakerNeedsName(raw: string, names: Record<string, string>): boolean {
+  if (names[raw]?.trim()) return false;
+  return isPlaceholderSpeaker(raw);
+}

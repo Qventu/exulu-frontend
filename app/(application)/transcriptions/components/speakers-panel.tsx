@@ -21,7 +21,7 @@ import { Progress } from "@/components/ui/progress";
 
 import { cn } from "@/lib/utils";
 
-import { speakerColor } from "../types";
+import { speakerColor, speakerNeedsName } from "../types";
 
 export interface SpeakersPanelProps {
   /** Distinct raw labels in document order. */
@@ -49,7 +49,8 @@ export function SpeakersPanel({
   const [openSpeaker, setOpenSpeaker] = React.useState<string | null>(
     rawSpeakers[0] ?? null,
   );
-  const namedCount = rawSpeakers.filter((raw) => (names[raw] ?? "").trim()).length;
+  // A meeting bot's labels are already real names — see speakerNeedsName.
+  const namedCount = rawSpeakers.filter((raw) => !speakerNeedsName(raw, names)).length;
 
   return (
     <div className="space-y-2">
@@ -88,7 +89,7 @@ export function SpeakersPanel({
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">
                     {name || raw}
                   </span>
-                  {!name && (
+                  {speakerNeedsName(raw, names) && (
                     <Badge variant="warning" className="shrink-0 text-[10px]">
                       {t("speakersPanel.needsName")}
                     </Badge>

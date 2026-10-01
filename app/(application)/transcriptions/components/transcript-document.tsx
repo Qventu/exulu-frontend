@@ -122,6 +122,7 @@ import {
   isSharingConfigured,
   parsePostProcessingOutputs,
   parseSpeakers,
+  speakerNeedsName,
   speakerColor,
   type Job,
   type Mode,
@@ -842,8 +843,11 @@ export function TranscriptDocument({
     return counts;
   }, [blocks]);
 
-  const unnamedSpeakerCount = rawSpeakers.filter(
-    (raw) => !editState.speakers[raw]?.trim(),
+  // Only placeholder labels count: a meeting bot already supplies real
+  // participant names, so counting those as "unnamed" would block the review
+  // checklist on work that does not exist. See speakerNeedsName in types.ts.
+  const unnamedSpeakerCount = rawSpeakers.filter((raw) =>
+    speakerNeedsName(raw, editState.speakers),
   ).length;
   const sharingChosen = isSharingConfigured(
     editState.rightsMode,
@@ -1089,7 +1093,7 @@ export function TranscriptDocument({
                           <span className="shrink-0 font-mono text-muted-foreground">
                             {formatClock(block.start)}
                           </span>
-                          {!speakers[block.rawSpeaker]?.trim() && (
+                          {speakerNeedsName(block.rawSpeaker, speakers) && (
                             <button
                               type="button"
                               className="text-left text-primary underline underline-offset-2 max-md:h-11"
