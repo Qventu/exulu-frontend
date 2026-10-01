@@ -5006,7 +5006,16 @@
         "meetingBot": "Meeting bot",
         "defaults": "Defaults",
         "storage": "Recordings & storage",
-        "limits": "Recording limits"
+        "limits": "Recording limits",
+        "knowledge": "Knowledge base and agents"
+      },
+      "summaries": {
+        "sources": "{configured} of {total} sources connected{embedderConfigured, select, false { — no embedding model set, transcripts won't be searchable} other {}}.",
+        "meetingBot": "\"{botName}\" joins meetings, {notifyChat, select, true {announces the recording in chat} other {does not announce the recording in chat}}; {mayOverride, select, true {recorders may change its name} other {recorders can't change its name}}.",
+        "defaults": "New transcripts default to {defaultRightsMode}; {presetCount, plural, =0 {no summary presets} one {# summary preset} other {# summary presets}}{stalePresetCount, plural, =0 {} other {, # no longer available}}.",
+        "storage": "Meeting video is {forever, select, true {kept forever} other {kept for {hours} hours}}; {storeVideoLocally, select, true {a local copy is also kept} other {no local copy is kept}}.",
+        "limits": "{none, select, true {No monthly recording cap is set.} other {Monthly recording cap: {minutes} minutes.}}",
+        "knowledge": "{readCount, plural, =0 {No agents use this knowledge base yet — transcripts are invisible to every agent} one {# agent can read this knowledge base} other {# agents can read this knowledge base}}{writeCount, plural, =0 {} other {, # can also write to it}}."
       },
       "sources": {
         "uploadLabel": "File upload (Whisper)",
@@ -5045,6 +5054,15 @@
         "capLabel": "Monthly recording cap",
         "capNone": "No cap",
         "capOption": "{minutes} minutes"
+      },
+      "knowledge": {
+        "description": "Agents whose retrieval config includes this knowledge base, and what they may do.",
+        "loadError": "Couldn't load agents",
+        "loading": "Loading agents…",
+        "empty": "No agents use this knowledge base yet.",
+        "canRead": "Can read",
+        "canWrite": "Can read and write",
+        "openInKnowledge": "Open in Knowledge"
       }
     },
     "sharing": {

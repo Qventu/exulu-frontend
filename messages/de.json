@@ -5006,7 +5006,16 @@
         "meetingBot": "Meeting-Bot",
         "defaults": "Standardwerte",
         "storage": "Aufnahmen & Speicherung",
-        "limits": "Aufnahmelimits"
+        "limits": "Aufnahmelimits",
+        "knowledge": "Wissensbasis und Agenten"
+      },
+      "summaries": {
+        "sources": "{configured} von {total} Quellen verbunden{embedderConfigured, select, false { — kein Embedding-Modell festgelegt, Transkripte sind nicht durchsuchbar} other {}}.",
+        "meetingBot": "\"{botName}\" nimmt an Meetings teil, {notifyChat, select, true {kündigt die Aufzeichnung im Chat an} other {kündigt die Aufzeichnung im Chat nicht an}}; {mayOverride, select, true {Aufnehmende dürfen den Namen ändern} other {Aufnehmende können den Namen nicht ändern}}.",
+        "defaults": "Neue Transkripte verwenden standardmäßig {defaultRightsMode}; {presetCount, plural, =0 {keine Zusammenfassungsvorlagen} one {# Zusammenfassungsvorlage} other {# Zusammenfassungsvorlagen}}{stalePresetCount, plural, =0 {} other {, # nicht mehr verfügbar}}.",
+        "storage": "Meeting-Video wird {forever, select, true {für immer behalten} other {für {hours} Stunden behalten}}; {storeVideoLocally, select, true {eine lokale Kopie wird ebenfalls gespeichert} other {es wird keine lokale Kopie gespeichert}}.",
+        "limits": "{none, select, true {Es ist kein monatliches Aufnahmelimit festgelegt.} other {Monatliches Aufnahmelimit: {minutes} Minuten.}}",
+        "knowledge": "{readCount, plural, =0 {Noch kein Agent verwendet diese Wissensbasis — Transkripte sind für keinen Agenten sichtbar} one {# Agent kann diese Wissensbasis lesen} other {# Agenten können diese Wissensbasis lesen}}{writeCount, plural, =0 {} other {, # kann auch schreiben}}."
       },
       "sources": {
         "uploadLabel": "Datei-Upload (Whisper)",
@@ -5045,6 +5054,15 @@
         "capLabel": "Monatliches Aufnahmelimit",
         "capNone": "Kein Limit",
         "capOption": "{minutes} Minuten"
+      },
+      "knowledge": {
+        "description": "Agenten, deren Retrieval-Konfiguration diese Wissensbasis einschließt, und was sie damit tun dürfen.",
+        "loadError": "Agenten konnten nicht geladen werden",
+        "loading": "Agenten werden geladen…",
+        "empty": "Noch kein Agent verwendet diese Wissensbasis.",
+        "canRead": "Kann lesen",
+        "canWrite": "Kann lesen und schreiben",
+        "openInKnowledge": "In Knowledge öffnen"
       }
     },
     "sharing": {

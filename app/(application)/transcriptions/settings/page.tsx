@@ -13,9 +13,15 @@
  * shared hard `AccessDenied` (that would contradict the menu being visible to
  * everyone in the first place).
  *
- * Five sections, one open at a time: the first whose summary needs attention
- * opens automatically, once, the first time settings finish loading — it
- * never re-opens a section the admin has since closed.
+ * Six sections (fix round 1, critical: the design doc's §5 names six —
+ * Knowledge base and agents was missing from the original five), one open at
+ * a time: the first whose summary needs attention opens automatically, once,
+ * the first time settings finish loading — it never re-opens a section the
+ * admin has since closed.
+ *
+ * Every `summariseX` returns a translation key + values (fix round 1, minor
+ * #3) rather than rendered text, so this is the one place that actually
+ * calls `t(...)` on them — `translate` below centralizes that.
  */
 import { useTranslations } from "next-intl";
 import * as React from "react";
@@ -31,23 +37,45 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTranscriptsSettings } from "../hooks";
 import { DefaultsSection } from "./defaults-section";
 import { useTranscriptsContext, useTranscriptsEmbedder } from "./embedder";
+import { useTranscriptsKnowledgeAgents } from "./knowledge";
+import { KnowledgeSection } from "./knowledge-section";
 import { LimitsSection } from "./limits-section";
 import { MeetingBotSection } from "./meeting-bot-section";
 import {
   summariseDefaults,
+  summariseKnowledge,
   summariseLimits,
   summariseMeetingBot,
   summariseSources,
   summariseStorage,
+  type SectionSummary,
 } from "./section-summary";
 import { SettingsSection } from "./settings-section";
 import { SourcesSection } from "./sources-section";
 import { StorageSection } from "./storage-section";
 
-type SectionId = "sources" | "meetingBot" | "defaults" | "storage" | "limits";
+type SectionId = "sources" | "meetingBot" | "defaults" | "storage" | "limits" | "knowledge";
 
 export default function TranscriptsSettingsPage() {
   const t = useTranslations("transcriptions");
+  // Turns a pure summariseX() result into the localized summary line — the
+  // only place these keys get rendered (section-summary.ts's docstring).
+  // next-intl's TranslationValues has no boolean case (string | number |
+  // Date only), so booleans are stringified here — the ICU `select` clauses
+  // in messages/*.json match on the resulting "true"/"false" literally.
+  const translate = (summary: SectionSummary | null): string => {
+    if (!summary) return "";
+    const values = summary.values
+      ? Object.fromEntries(
+          Object.entries(summary.values).map(([key, value]) => [
+            key,
+            typeof value === "boolean" ? String(value) : value,
+          ]),
+        )
+      : undefined;
+    return t(summary.key, values);
+  };
+
   const { user } = React.useContext(UserContext);
   const config = React.useContext(ConfigContext);
   const isAdmin = !!user?.super_admin;
@@ -59,6 +87,7 @@ export default function TranscriptsSettingsPage() {
     error: contextError,
   } = useTranscriptsContext(!isAdmin);
   const embedder = useTranscriptsEmbedder(!isAdmin);
+  const knowledgeAgents = useTranscriptsKnowledgeAgents(!isAdmin);
 
   const [openSection, setOpenSection] = React.useState<SectionId | null>(null);
   const autoOpenedRef = React.useRef(false);
@@ -81,7 +110,8 @@ export default function TranscriptsSettingsPage() {
 
   const defaultsSummary = settings
     ? summariseDefaults({
-        defaultRightsMode: settings.defaultRightsMode.value ?? "private",
+        // Already translated here — summariseDefaults never calls `t` itself.
+        defaultRightsMode: t(`mode.${settings.defaultRightsMode.value ?? "private"}`),
         presetCount: settings.summaryPresets.value.length,
         stalePresetCount: stalePresets.length,
       })
@@ -99,8 +129,14 @@ export default function TranscriptsSettingsPage() {
     ? summariseLimits({ limitMinutes: settings.monthlyRecordingLimitMinutes.value })
     : null;
 
-  // Auto-open the first section that needs attention, once settings have
-  // loaded — and only once, so closing it again doesn't get fought.
+  const knowledgeSummary = summariseKnowledge({
+    readCount: knowledgeAgents.readCount,
+    writeCount: knowledgeAgents.writeCount,
+  });
+
+  // Auto-open the first section that needs attention, in render order, once
+  // settings have loaded — and only once, so closing it again doesn't get
+  // fought.
   React.useEffect(() => {
     if (autoOpenedRef.current || !settings) return;
     autoOpenedRef.current = true;
@@ -108,8 +144,16 @@ export default function TranscriptsSettingsPage() {
       setOpenSection("sources");
     } else if (defaultsSummary?.needsAttention) {
       setOpenSection("defaults");
+    } else if (!knowledgeAgents.loading && knowledgeSummary.needsAttention) {
+      setOpenSection("knowledge");
     }
-  }, [settings, sourcesSummary.needsAttention, defaultsSummary?.needsAttention]);
+  }, [
+    settings,
+    sourcesSummary.needsAttention,
+    defaultsSummary?.needsAttention,
+    knowledgeAgents.loading,
+    knowledgeSummary.needsAttention,
+  ]);
 
   if (!isAdmin) {
     return (
@@ -138,7 +182,7 @@ export default function TranscriptsSettingsPage() {
 
       {loading && !settings ? (
         <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, index) => (
+          {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} className="h-14 w-full rounded-lg" />
           ))}
         </div>
@@ -152,7 +196,7 @@ export default function TranscriptsSettingsPage() {
         <div className="flex flex-col gap-3">
           <SettingsSection
             title={t("settings.sections.sources")}
-            summary={sourcesSummary.text}
+            summary={translate(sourcesSummary)}
             needsAttention={sourcesSummary.needsAttention}
             open={openSection === "sources"}
             onOpenChange={(open) => setOpenSection(open ? "sources" : null)}
@@ -171,7 +215,7 @@ export default function TranscriptsSettingsPage() {
 
           <SettingsSection
             title={t("settings.sections.meetingBot")}
-            summary={meetingBotSummary?.text ?? ""}
+            summary={translate(meetingBotSummary)}
             needsAttention={meetingBotSummary?.needsAttention ?? false}
             open={openSection === "meetingBot"}
             onOpenChange={(open) => setOpenSection(open ? "meetingBot" : null)}
@@ -181,7 +225,7 @@ export default function TranscriptsSettingsPage() {
 
           <SettingsSection
             title={t("settings.sections.defaults")}
-            summary={defaultsSummary?.text ?? ""}
+            summary={translate(defaultsSummary)}
             needsAttention={defaultsSummary?.needsAttention ?? false}
             open={openSection === "defaults"}
             onOpenChange={(open) => setOpenSection(open ? "defaults" : null)}
@@ -191,7 +235,7 @@ export default function TranscriptsSettingsPage() {
 
           <SettingsSection
             title={t("settings.sections.storage")}
-            summary={storageSummary?.text ?? ""}
+            summary={translate(storageSummary)}
             needsAttention={storageSummary?.needsAttention ?? false}
             open={openSection === "storage"}
             onOpenChange={(open) => setOpenSection(open ? "storage" : null)}
@@ -201,12 +245,26 @@ export default function TranscriptsSettingsPage() {
 
           <SettingsSection
             title={t("settings.sections.limits")}
-            summary={limitsSummary?.text ?? ""}
+            summary={translate(limitsSummary)}
             needsAttention={limitsSummary?.needsAttention ?? false}
             open={openSection === "limits"}
             onOpenChange={(open) => setOpenSection(open ? "limits" : null)}
           >
             <LimitsSection settings={settings} onSave={save} />
+          </SettingsSection>
+
+          <SettingsSection
+            title={t("settings.sections.knowledge")}
+            summary={translate(knowledgeSummary)}
+            needsAttention={knowledgeSummary.needsAttention}
+            open={openSection === "knowledge"}
+            onOpenChange={(open) => setOpenSection(open ? "knowledge" : null)}
+          >
+            <KnowledgeSection
+              agents={knowledgeAgents.agents}
+              loading={knowledgeAgents.loading}
+              error={knowledgeAgents.error}
+            />
           </SettingsSection>
         </div>
       )}

@@ -99,15 +99,19 @@ export function NewTranscriptDialog({
   // Workspace summary presets, read once per dialog open rather than at save
   // time (task-7 brief, Step 4): `settings` is fetched here unconditionally
   // (the hook has no `skip`), so by the time an admin actually opens the
-  // dialog it is almost always already in the Apollo cache. The composers
-  // only ever read this on their own mount (a lazy `useState` initializer),
-  // so a workspace default changed later never retroactively edits a
-  // transcript already being composed. `stalePresets` need no handling here
-  // — the backend already drops them from `summaryPresets.value`
-  // (filterLivePresets), so this is already live-only.
+  // dialog it is almost always already in the Apollo cache. `stalePresets`
+  // need no handling here — the backend already drops them from
+  // `summaryPresets.value` (filterLivePresets), so this is already
+  // live-only.
+  //
+  // Deliberately `undefined` (not `[]`) while `useTranscriptsSettings()`
+  // hasn't resolved yet — fix round 1, non-gating #2: a composer mounted
+  // before the round trip completes must be able to tell "not loaded yet"
+  // apart from "loaded, genuinely no presets," so it can re-seed once the
+  // real value arrives instead of locking in an empty seed forever.
   const { settings: transcriptsSettings } = useTranscriptsSettings();
-  const defaultPostProcessingPrompts: PostProcessingPrompt[] =
-    transcriptsSettings?.summaryPresets.value ?? [];
+  const defaultPostProcessingPrompts: PostProcessingPrompt[] | undefined =
+    transcriptsSettings?.summaryPresets.value;
 
   const flags: Record<ComposerMode, boolean> = {
     audio: !!config?.whisper?.enabled,

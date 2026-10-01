@@ -1,27 +1,30 @@
 /**
- * Pure one-line summaries for the five Transcripts settings sections
- * (task-7 brief, settings design doc). Each section renders collapsed with
- * its summary line as the thing an admin reads before deciding whether to
- * open it; `needsAttention` decides which section starts open and whether
+ * Pure one-line summaries for the six Transcripts settings sections
+ * (task-7 brief, settings design doc §5). Each section renders collapsed
+ * with its summary line as the thing an admin reads before deciding whether
+ * to open it; `needsAttention` decides which section starts open and whether
  * the line renders in the warning color.
  *
- * Deliberately plain English, not `t(...)`: these take a single plain-object
- * argument (no translator), so the five functions stay trivially pure and
- * testable without mocking next-intl. The settings page renders the result
- * verbatim as the section's summary line.
+ * Fix round 1, minor #3: these return a translation **key** plus the raw
+ * interpolation values, never rendered text — `t(...)` is deliberately not
+ * called here so the five/six functions stay trivially pure and testable
+ * without mocking next-intl, but the summary line is still the first thing
+ * an admin reads, so it must be localized like everything else. The caller
+ * (settings/page.tsx) calls `t(summary.key, summary.values)`. Every key
+ * below lives at `transcriptions.settings.summaries.*` in both locale files.
  */
 import type { RecordingLimitMinutes, RetentionHours } from "../hooks";
 
 export interface SectionSummary {
-  text: string;
+  key: string;
+  /** Raw values for `t(key, values)` — any enum/label value (e.g. a rights
+   *  mode) must already be translated by the caller before landing here;
+   *  these functions never call `t` themselves. */
+  values?: Record<string, string | number | boolean>;
   needsAttention: boolean;
 }
 
-const SOURCE_LABELS = {
-  upload: "Upload",
-  meeting: "Meeting bot",
-  record: "Record on this device",
-} as const;
+const SUMMARY_NS = "settings.summaries";
 
 export function summariseSources(input: {
   upload: boolean;
@@ -29,25 +32,13 @@ export function summariseSources(input: {
   record: boolean;
   embedderConfigured: boolean;
 }): SectionSummary {
-  const sources: Array<["upload" | "meeting" | "record", boolean]> = [
-    ["upload", input.upload],
-    ["meeting", input.meeting],
-    ["record", input.record],
-  ];
-  const configuredCount = sources.filter(([, ok]) => ok).length;
-  const missing = sources.filter(([, ok]) => !ok).map(([key]) => SOURCE_LABELS[key]);
-
-  const parts = [`${configuredCount} of ${sources.length} sources connected`];
-  if (missing.length > 0) {
-    parts.push(`not set up: ${missing.join(", ")}`);
-  }
-  if (!input.embedderConfigured) {
-    parts.push("no embedding model set — transcripts won't be searchable");
-  }
+  const configured = [input.upload, input.meeting, input.record].filter(Boolean).length;
+  const total = 3;
 
   return {
-    text: parts.join(" — "),
-    needsAttention: configuredCount < sources.length || !input.embedderConfigured,
+    key: `${SUMMARY_NS}.sources`,
+    values: { configured, total, embedderConfigured: input.embedderConfigured },
+    needsAttention: configured < total || !input.embedderConfigured,
   };
 }
 
@@ -56,35 +47,31 @@ export function summariseMeetingBot(input: {
   notifyChat: boolean;
   mayOverride: boolean;
 }): SectionSummary {
-  const announce = input.notifyChat
-    ? "announces the recording in chat"
-    : "does not announce the recording in chat";
-  const override = input.mayOverride
-    ? "recorders may change its name"
-    : "recorders can't change its name";
-
   return {
-    text: `"${input.botName}" joins meetings, ${announce}; ${override}.`,
+    key: `${SUMMARY_NS}.meetingBot`,
+    values: {
+      botName: input.botName,
+      notifyChat: input.notifyChat,
+      mayOverride: input.mayOverride,
+    },
     needsAttention: false,
   };
 }
 
 export function summariseDefaults(input: {
+  /** Already translated by the caller (e.g. `t("mode.private")`) — this
+   *  function never calls `t` itself. */
   defaultRightsMode: string;
   presetCount: number;
   stalePresetCount: number;
 }): SectionSummary {
-  const presetPart =
-    input.presetCount === 0
-      ? "no summary presets"
-      : `${input.presetCount} summary preset${input.presetCount === 1 ? "" : "s"}`;
-  const stalePart =
-    input.stalePresetCount > 0
-      ? `, ${input.stalePresetCount} no longer available`
-      : "";
-
   return {
-    text: `New transcripts default to ${input.defaultRightsMode}; ${presetPart}${stalePart}.`,
+    key: `${SUMMARY_NS}.defaults`,
+    values: {
+      defaultRightsMode: input.defaultRightsMode,
+      presetCount: input.presetCount,
+      stalePresetCount: input.stalePresetCount,
+    },
     needsAttention: input.stalePresetCount > 0,
   };
 }
@@ -94,27 +81,46 @@ export function summariseStorage(input: {
   storeVideoLocally: boolean;
   costPerHour: number;
 }): SectionSummary {
-  const retention =
-    input.retentionHours === "forever"
-      ? "kept forever"
-      : `kept for ${input.retentionHours} hours`;
-  const local = input.storeVideoLocally
-    ? "a local copy is also kept"
-    : "no local copy is kept";
+  const forever = input.retentionHours === "forever";
 
   return {
-    text: `Meeting video is ${retention}; ${local}.`,
+    key: `${SUMMARY_NS}.storage`,
+    values: {
+      forever,
+      hours: forever ? 0 : input.retentionHours,
+      storeVideoLocally: input.storeVideoLocally,
+    },
     needsAttention: false,
   };
 }
 
-export function summariseLimits(input: {
-  limitMinutes: RecordingLimitMinutes;
-}): SectionSummary {
-  const text =
-    input.limitMinutes === "none"
-      ? "No monthly recording cap is set."
-      : `Monthly recording cap: ${input.limitMinutes} minutes.`;
+export function summariseLimits(input: { limitMinutes: RecordingLimitMinutes }): SectionSummary {
+  const none = input.limitMinutes === "none";
 
-  return { text, needsAttention: false };
+  return {
+    key: `${SUMMARY_NS}.limits`,
+    values: { none, minutes: none ? 0 : input.limitMinutes },
+    needsAttention: false,
+  };
+}
+
+/**
+ * Knowledge base and agents (settings design doc §5, fix round 1 critical —
+ * the spec's sixth section, dropped from the original five). `readCount` is
+ * every agent whose `agentic_context_search` tool has `transcriptions` as a
+ * non-disabled knowledge base (see `./knowledge.ts` for how that's derived
+ * from `agent.tools`); `writeCount` is the subset that can also write to it
+ * via `knowledge_base_editor`. Zero agents able to read is flagged — it means
+ * transcripts are invisible to every agent, not a neutral "nothing configured
+ * yet" the way an unset bot name is.
+ */
+export function summariseKnowledge(input: {
+  readCount: number;
+  writeCount: number;
+}): SectionSummary {
+  return {
+    key: `${SUMMARY_NS}.knowledge`,
+    values: { readCount: input.readCount, writeCount: input.writeCount },
+    needsAttention: input.readCount === 0,
+  };
 }

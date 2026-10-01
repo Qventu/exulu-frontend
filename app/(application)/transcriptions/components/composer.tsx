@@ -45,6 +45,7 @@ import {
 } from "../types";
 import { FileGalleryDialog } from "./file-gallery-dialog";
 import { PostProcessingPicker, postProcessingRowsComplete } from "./post-processing-picker";
+import { useSeededPostProcessingRows } from "./use-seeded-post-processing-rows";
 
 const LANGUAGES = ["en", "de", "fr", "es", "it", "nl", "pt"] as const;
 const SPEAKER_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
@@ -62,7 +63,7 @@ export interface ComposerProps {
   onPrimaryActionChange: (action: ComposerPrimaryAction) => void;
   /** Workspace summary presets (task-7 brief, Step 4), read once when the
    *  dialog opens — pre-checked here but still freely removable for this one
-   *  upload. */
+   *  upload. `undefined` while the settings round trip hasn't resolved yet. */
   defaultPostProcessingPrompts?: PostProcessingPrompt[];
 }
 
@@ -83,12 +84,11 @@ export function Composer({
   const [rightsMode, setRightsMode] = React.useState<Mode>("private");
   const [rbacUsers, setRbacUsers] = React.useState<RbacUser[]>([]);
   const [rbacRoles, setRbacRoles] = React.useState<RbacRole[]>([]);
-  // Seeded once from the workspace defaults on mount (lazy initializer) —
-  // never re-synced later, so a workspace default changed mid-composition
-  // never retroactively edits this upload (task-7 brief, Step 4).
-  const [ppRows, setPpRows] = React.useState<PostProcessingPrompt[]>(
-    () => defaultPostProcessingPrompts ?? [],
-  );
+  // Seeded from the workspace defaults, re-synced at most once if they
+  // hadn't loaded yet at mount, never once the admin edits a row
+  // (use-seeded-post-processing-rows.ts) — never retroactively edits this
+  // upload once the admin has made a choice (task-7 brief, Step 4).
+  const [ppRows, setPpRows] = useSeededPostProcessingRows(defaultPostProcessingPrompts);
   const [optionsOpen, setOptionsOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
 

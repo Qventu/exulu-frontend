@@ -61,6 +61,7 @@ import {
   PostProcessingPicker,
   postProcessingRowsComplete,
 } from "./post-processing-picker";
+import { useSeededPostProcessingRows } from "./use-seeded-post-processing-rows";
 
 /** Teams is offered by RBACControl but no transcription input carries it (see composer.tsx). */
 const ALLOWED_MODES: Mode[] = ["private", "users", "roles", "public"];
@@ -121,13 +122,11 @@ export function RecordComposer({
   const [rightsMode, setRightsMode] = React.useState<Mode>("private");
   const [rbacUsers, setRbacUsers] = React.useState<RbacUser[]>([]);
   const [rbacRoles, setRbacRoles] = React.useState<RbacRole[]>([]);
-  // Seeded once from the workspace defaults on mount (lazy initializer) —
-  // never re-synced later, so a workspace default changed mid-composition
-  // never retroactively edits this recording (task-7 brief, Step 4). Still
-  // fully removable: the user can delete any or all rows before starting.
-  const [ppRows, setPpRows] = React.useState<PostProcessingPrompt[]>(
-    () => defaultPostProcessingPrompts ?? [],
-  );
+  // Seeded from the workspace defaults, re-synced at most once if they
+  // hadn't loaded yet at mount, never once the admin edits a row
+  // (use-seeded-post-processing-rows.ts) — task-7 brief, Step 4. Still fully
+  // removable: the user can delete any or all rows before starting.
+  const [ppRows, setPpRows] = useSeededPostProcessingRows(defaultPostProcessingPrompts);
   const [optionsOpen, setOptionsOpen] = React.useState(false);
   // Mounting mid-recording (navigated away and back) reopens the surface —
   // and mounting mid-close-out reopens it on the step it left off at.
