@@ -3264,8 +3264,7 @@
       "type": "Type",
       "creator": "Creator",
       "creatorPlaceholder": "Any creator",
-      "any": "Any",
-      "apply": "Apply"
+      "any": "Any"
     },
     "columns": {
       "base": "Memory base",
