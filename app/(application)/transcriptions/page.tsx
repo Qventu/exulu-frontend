@@ -331,6 +331,16 @@ function TranscriptionsPageInner() {
                 <DropdownMenuItem asChild>
                   <Link href="/data/transcriptions">{t("queue.library")}</Link>
                 </DropdownMenuItem>
+                {/* The "…" menu itself is visible to every user (settings
+                    design doc §6) — only this item is super-admin-only. The
+                    settings page still renders its own "ask an admin" state
+                    rather than a 404 for anyone who reaches it another way
+                    (a stale link, a lost admin right). */}
+                {user?.super_admin && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/transcriptions/settings">{t("overflow.settings")}</Link>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
             <Button

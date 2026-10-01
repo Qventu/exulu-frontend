@@ -58,7 +58,8 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-import type { ComposerPrimaryAction } from "../types";
+import { useTranscriptsSettings } from "../hooks";
+import type { ComposerPrimaryAction, PostProcessingPrompt } from "../types";
 import { Composer } from "./composer";
 import { MeetingComposer } from "./meeting-composer";
 import { RecordComposer } from "./record-composer";
@@ -94,6 +95,19 @@ export function NewTranscriptDialog({
   const config = React.useContext(ConfigContext);
   const isMobile = useIsMobile();
   const live = useLiveRecordingOptional();
+
+  // Workspace summary presets, read once per dialog open rather than at save
+  // time (task-7 brief, Step 4): `settings` is fetched here unconditionally
+  // (the hook has no `skip`), so by the time an admin actually opens the
+  // dialog it is almost always already in the Apollo cache. The composers
+  // only ever read this on their own mount (a lazy `useState` initializer),
+  // so a workspace default changed later never retroactively edits a
+  // transcript already being composed. `stalePresets` need no handling here
+  // — the backend already drops them from `summaryPresets.value`
+  // (filterLivePresets), so this is already live-only.
+  const { settings: transcriptsSettings } = useTranscriptsSettings();
+  const defaultPostProcessingPrompts: PostProcessingPrompt[] =
+    transcriptsSettings?.summaryPresets.value ?? [];
 
   const flags: Record<ComposerMode, boolean> = {
     audio: !!config?.whisper?.enabled,
@@ -192,16 +206,22 @@ export function NewTranscriptDialog({
                 <Composer
                   onStarted={onComposerStarted}
                   onPrimaryActionChange={handlePrimaryActionChange}
+                  defaultPostProcessingPrompts={defaultPostProcessingPrompts}
                 />
               )}
               {effectiveMode === "meeting" && (
                 <MeetingComposer
                   onStarted={onComposerStarted}
                   onPrimaryActionChange={handlePrimaryActionChange}
+                  defaultPostProcessingPrompts={defaultPostProcessingPrompts}
                 />
               )}
               {effectiveMode === "record" && (
-                <RecordComposer onCancel={handleCancel} onStarted={onStarted} />
+                <RecordComposer
+                  onCancel={handleCancel}
+                  onStarted={onStarted}
+                  defaultPostProcessingPrompts={defaultPostProcessingPrompts}
+                />
               )}
             </>
           ) : (

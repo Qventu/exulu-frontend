@@ -53,11 +53,16 @@ export interface MeetingComposerProps {
   /** Reports the current Start action so NewTranscriptDialog's shared footer
    *  can render it — the dialog owns Cancel/footer chrome now (Task 9). */
   onPrimaryActionChange: (action: ComposerPrimaryAction) => void;
+  /** Workspace summary presets (task-7 brief, Step 4), read once when the
+   *  dialog opens — pre-checked here but still freely removable for this one
+   *  meeting. */
+  defaultPostProcessingPrompts?: PostProcessingPrompt[];
 }
 
 export function MeetingComposer({
   onStarted,
   onPrimaryActionChange,
+  defaultPostProcessingPrompts,
 }: MeetingComposerProps) {
   const t = useTranslations("transcriptions");
 
@@ -75,8 +80,13 @@ export function MeetingComposer({
   const [rightsMode, setRightsMode] = React.useState<Mode>("private");
   const [rbacUsers, setRbacUsers] = React.useState<RbacUser[]>([]);
   const [rbacRoles, setRbacRoles] = React.useState<RbacRole[]>([]);
-  // Post-processing rows start empty (no defaults — user opts in per meeting).
-  const [ppRows, setPpRows] = React.useState<PostProcessingPrompt[]>([]);
+  // Seeded once from the workspace defaults on mount (lazy initializer) —
+  // never re-synced later, so a workspace default changed mid-composition
+  // never retroactively edits this meeting (task-7 brief, Step 4). Still
+  // fully removable: the user can delete any or all rows before starting.
+  const [ppRows, setPpRows] = React.useState<PostProcessingPrompt[]>(
+    () => defaultPostProcessingPrompts ?? [],
+  );
   const [optionsOpen, setOptionsOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
 

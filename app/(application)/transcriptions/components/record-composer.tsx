@@ -93,11 +93,19 @@ const TRANSCRIPTIONS_PATH = "/transcriptions";
 export interface RecordComposerProps {
   onCancel: () => void;
   onStarted: () => void;
+  /** Workspace summary presets (task-7 brief, Step 4), read once when the
+   *  dialog opens — pre-checked here but still freely removable for this one
+   *  recording. */
+  defaultPostProcessingPrompts?: PostProcessingPrompt[];
 }
 
 type Phase = "setup" | "starting" | "recording" | "finishing";
 
-export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
+export function RecordComposer({
+  onCancel,
+  onStarted,
+  defaultPostProcessingPrompts,
+}: RecordComposerProps) {
   const t = useTranslations("transcriptions");
   const tChat = useTranslations("chat");
   const tCommon = useTranslations("common");
@@ -113,7 +121,13 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
   const [rightsMode, setRightsMode] = React.useState<Mode>("private");
   const [rbacUsers, setRbacUsers] = React.useState<RbacUser[]>([]);
   const [rbacRoles, setRbacRoles] = React.useState<RbacRole[]>([]);
-  const [ppRows, setPpRows] = React.useState<PostProcessingPrompt[]>([]);
+  // Seeded once from the workspace defaults on mount (lazy initializer) —
+  // never re-synced later, so a workspace default changed mid-composition
+  // never retroactively edits this recording (task-7 brief, Step 4). Still
+  // fully removable: the user can delete any or all rows before starting.
+  const [ppRows, setPpRows] = React.useState<PostProcessingPrompt[]>(
+    () => defaultPostProcessingPrompts ?? [],
+  );
   const [optionsOpen, setOptionsOpen] = React.useState(false);
   // Mounting mid-recording (navigated away and back) reopens the surface —
   // and mounting mid-close-out reopens it on the step it left off at.

@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import useUppy from "@/hooks/use-uppy";
 
-import { useProjectOptions } from "../hooks";
+import { usePostProcessingOptions, useProjectOptions } from "../hooks";
 import { START_TRANSCRIPTION_JOB } from "../queries";
 import {
   AUDIO_FILE_TYPES,
@@ -39,10 +39,12 @@ import {
   stripExtension,
   type ComposerPrimaryAction,
   type Mode,
+  type PostProcessingPrompt,
   type RbacRole,
   type RbacUser,
 } from "../types";
 import { FileGalleryDialog } from "./file-gallery-dialog";
+import { PostProcessingPicker, postProcessingRowsComplete } from "./post-processing-picker";
 
 const LANGUAGES = ["en", "de", "fr", "es", "it", "nl", "pt"] as const;
 const SPEAKER_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
@@ -58,9 +60,17 @@ export interface ComposerProps {
   /** Reports the current Start action so NewTranscriptDialog's shared footer
    *  can render it — the dialog owns Cancel/footer chrome now (Task 9). */
   onPrimaryActionChange: (action: ComposerPrimaryAction) => void;
+  /** Workspace summary presets (task-7 brief, Step 4), read once when the
+   *  dialog opens — pre-checked here but still freely removable for this one
+   *  upload. */
+  defaultPostProcessingPrompts?: PostProcessingPrompt[];
 }
 
-export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
+export function Composer({
+  onStarted,
+  onPrimaryActionChange,
+  defaultPostProcessingPrompts,
+}: ComposerProps) {
   const t = useTranslations("transcriptions");
 
   const [s3Key, setS3Key] = React.useState<string | null>(null);
@@ -73,10 +83,17 @@ export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
   const [rightsMode, setRightsMode] = React.useState<Mode>("private");
   const [rbacUsers, setRbacUsers] = React.useState<RbacUser[]>([]);
   const [rbacRoles, setRbacRoles] = React.useState<RbacRole[]>([]);
+  // Seeded once from the workspace defaults on mount (lazy initializer) —
+  // never re-synced later, so a workspace default changed mid-composition
+  // never retroactively edits this upload (task-7 brief, Step 4).
+  const [ppRows, setPpRows] = React.useState<PostProcessingPrompt[]>(
+    () => defaultPostProcessingPrompts ?? [],
+  );
   const [optionsOpen, setOptionsOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
 
   const projects = useProjectOptions();
+  const { prompts, agents } = usePostProcessingOptions();
   const [startJob] = useMutation(START_TRANSCRIPTION_JOB);
 
   // Direct drag-and-drop upload path (the gallery's embedded Uppy Dashboard
@@ -144,7 +161,8 @@ export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
     );
   }, [s3Key]);
 
-  const canStart = Boolean(s3Key) && !busy && !uploading;
+  const canStart =
+    Boolean(s3Key) && !busy && !uploading && postProcessingRowsComplete(ppRows);
 
   const onStart = React.useCallback(async () => {
     if (!s3Key) return;
@@ -162,6 +180,7 @@ export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
             target_rights_mode: rightsMode,
             target_rbac_users: rbacUsers,
             target_rbac_roles: rbacRoles,
+            post_processing_prompts: ppRows.filter((r) => r.prompt_id && r.agent_id),
           },
         },
       });
@@ -185,6 +204,7 @@ export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
     rightsMode,
     rbacUsers,
     rbacRoles,
+    ppRows,
     t,
     onStarted,
   ]);
@@ -212,6 +232,9 @@ export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
       : t("composer.speakerCount", { count: Number(numSpeakers) }),
     projectName ?? t("composer.noProjectSummary"),
     t(`mode.${rightsMode === "teams" ? "private" : rightsMode}`),
+    ppRows.length > 0
+      ? `${t("composer.postProcessing")} (${ppRows.length})`
+      : t("composer.postProcessing"),
   ].join(" · ");
 
   return (
@@ -365,6 +388,13 @@ export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
                 }}
               />
             </div>
+
+            <PostProcessingPicker
+              rows={ppRows}
+              onChange={setPpRows}
+              prompts={prompts}
+              agents={agents}
+            />
           </div>
         </CollapsibleContent>
       </Collapsible>

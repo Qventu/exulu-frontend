@@ -4919,7 +4919,7 @@
     },
     "new": "New transcript",
     "newShort": "New",
-    "overflow": { "label": "More options" },
+    "overflow": { "label": "More options", "settings": "Transcript settings" },
     "queue": {
       "library": "Transcript library",
       "loadMore": "Load more",
@@ -4985,6 +4985,68 @@
       "bulkDisabled": "Bulk actions apply to saved transcripts, not recordings in progress"
     },
     "searchPlaceholder": "Search transcripts…",
+    "settings": {
+      "pageTitle": "Transcript settings",
+      "pageDescription": "Workspace defaults for transcription sources, the meeting bot, and recordings.",
+      "adminsOnlyBadge": "Admins only",
+      "notAdmin": {
+        "title": "Ask an admin",
+        "description": "Transcript settings can only be changed by a workspace admin."
+      },
+      "loadError": "Couldn't load the Transcripts settings",
+      "saved": "Setting saved",
+      "saveFailed": "Couldn't save this setting",
+      "resetToDefault": "Reset to default",
+      "sourceNote": {
+        "env": "Using the environment default",
+        "code": "Using the built-in default"
+      },
+      "sections": {
+        "sources": "Sources",
+        "meetingBot": "Meeting bot",
+        "defaults": "Defaults",
+        "storage": "Recordings & storage",
+        "limits": "Recording limits"
+      },
+      "sources": {
+        "uploadLabel": "File upload (Whisper)",
+        "meetingLabel": "Meeting bot (Recall)",
+        "recordLabel": "Record on this device",
+        "testButton": "Test",
+        "resultOk": "Connected",
+        "resultNotConfigured": "Not configured",
+        "resultUnreachable": "Unreachable: {message}",
+        "testFailed": "Couldn't reach the test endpoint",
+        "embedderHeading": "Make transcripts searchable",
+        "embedderDescription": "Transcripts need an embedding model to be searchable from Ask-about-this-transcript and knowledge search.",
+        "contextLoadFailed": "Couldn't load the embedder configuration.",
+        "loadingEmbedder": "Loading embedder configuration…"
+      },
+      "meetingBot": {
+        "mayOverrideLabel": "Recorders may set their own bot name and notice",
+        "mayOverrideHint": "When off, every meeting bot always uses the settings above, even if a recorder tries to change them."
+      },
+      "defaults": {
+        "rightsModeLabel": "Default sharing for new transcripts",
+        "presetsLabel": "Default summary presets",
+        "presetsHint": "Pre-selected in every composer; still removable for one recording.",
+        "stalePresetsNote": "{count, plural, one {# preset is} other {# presets are}} no longer available — the prompt or agent behind it was deleted."
+      },
+      "storage": {
+        "retentionLabel": "Meeting video retention",
+        "retentionOption": "{hours} hours",
+        "retentionForever": "Keep forever",
+        "storeLocallyLabel": "Keep a local copy of meeting video",
+        "storeLocallyHint": "When off, playback uses a temporary link from the meeting-bot provider.",
+        "costLabel": "Estimated storage cost per hour (USD)",
+        "costPlaceholder": "0.00"
+      },
+      "limits": {
+        "capLabel": "Monthly recording cap",
+        "capNone": "No cap",
+        "capOption": "{minutes} minutes"
+      }
+    },
     "sharing": {
       "subject": "transcript"
     },
