@@ -17,11 +17,12 @@ import { BulkAccessDialog } from "@/components/widgets/bulk-access-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { BULK_UPDATE_MEMORY_RBAC, DELETE_MEMORY_ITEM } from "../../queries";
+import { BULK_UPDATE_MEMORY_RBAC, DELETE_MEMORY_ITEM, UPDATE_MEMORY_ITEM } from "../../queries";
 import {
   type MemoryContext, type MemoryContributor, type MemoryItem, type MemoryListFilters,
   activeFilterCount, creatorName, hasSourceSession, memoryTypeOptions, visibilityKey,
 } from "./memory-list-data";
+import { type UsageSummary, usageLabel } from "./usage-data";
 import { useMemoryItems } from "./use-memory-items";
 
 /** Radix Select rejects "" as an item value; this reserved value means "no filter". */
@@ -41,35 +42,67 @@ export function VisibilityLabel({ mode }: { mode: string | null | undefined }) {
   );
 }
 
-function MemoryCell({ item, contributors }: { item: MemoryItem; contributors: MemoryContributor[] }) {
+function MemoryCell({ item, contributors, usage }: { item: MemoryItem; contributors: MemoryContributor[]; usage?: UsageSummary }) {
   const t = useTranslations("memory");
   const creator = creatorName(contributors, item.created_by) ?? t("detail.unknownUser");
+  const parts = [item.type, creator];
+  const used = usageLabel(usage);
+  if (used.kind === "used") parts.push(t("usage.usedTimes", { count: used.count }));
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-sm line-clamp-2">{item.information ?? item.name}</span>
-      <span className="text-xs text-muted-foreground">{[item.type, creator].filter(Boolean).join(" · ")}</span>
+      <span className="text-xs text-muted-foreground">{parts.filter(Boolean).join(" · ")}</span>
     </div>
   );
 }
 
+/** Shared Promise.allSettled loop for the bulk actions below — Delete and
+ * Archive both need per-item failure reporting (ConfirmDialogError[]) and the
+ * failed-ids-stay-selected contract, so only the mutation itself differs. */
+async function runBulk(
+  ids: string[],
+  fn: (id: string) => Promise<unknown>,
+): Promise<{ failedIds: string[]; failures: ConfirmDialogError[]; succeededCount: number }> {
+  const results = await Promise.allSettled(ids.map((id) => fn(id)));
+  const failedIds: string[] = [];
+  const failures: ConfirmDialogError[] = [];
+  let succeededCount = 0;
+  results.forEach((result, index) => {
+    const id = ids[index];
+    if (result.status === "rejected") {
+      failedIds.push(id);
+      const message = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      failures.push({ item: id, message });
+    } else {
+      succeededCount += 1;
+    }
+  });
+  return { failedIds, failures, succeededCount };
+}
+
 export function MemoryTable({
-  context, initialMine, initialPage, onChanged,
-}: { context: MemoryContext; initialMine: boolean; initialPage: number; onChanged: () => void }) {
+  context, initialMine, initialPage, initialUsage, onChanged,
+}: {
+  context: MemoryContext; initialMine: boolean; initialPage: number; initialUsage?: "never" | "stale"; onChanged: () => void;
+}) {
   const t = useTranslations("memory");
   const router = useRouter();
   const client = useApolloClient();
   const [search, setSearch] = React.useState("");
   const [mine, setMine] = React.useState(initialMine);
   const [page, setPage] = React.useState(initialPage);
-  const [filters, setFilters] = React.useState<MemoryListFilters>({});
+  const [filters, setFilters] = React.useState<MemoryListFilters>(initialUsage ? { usage: initialUsage } : {});
   const [selected, setSelected] = React.useState<string[]>([]);
   const [accessOpen, setAccessOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [deleteErrors, setDeleteErrors] = React.useState<ConfirmDialogError[]>([]);
+  const [archiveOpen, setArchiveOpen] = React.useState(false);
+  const [archiveErrors, setArchiveErrors] = React.useState<ConfirmDialogError[]>([]);
 
   const withSourceSession = hasSourceSession(context);
   const list = useMemoryItems({ contextId: context.id, withSourceSession, page, search, mine, filters });
   const [deleteItem] = useMutation(DELETE_MEMORY_ITEM(context.id));
+  const [updateItem] = useMutation(UPDATE_MEMORY_ITEM(context.id));
 
   // Back to page 1 whenever the query changes — but not on mount, where the
   // page comes from the URL. Compared against the previous values rather than a
@@ -100,30 +133,36 @@ export function MemoryTable({
       id: "creator", label: t("filter.creator"), placeholder: t("filter.creatorPlaceholder"),
       options: list.contributors.map((c) => ({ value: String(c.id), label: c.name })),
     },
+    {
+      id: "usage", label: t("usage.label"), placeholder: t("usage.any"),
+      options: [
+        { value: "never", label: t("usage.never") },
+        { value: "stale", label: t("usage.stale", { days: 90 }) },
+      ],
+    },
   ], [t, context, list.contributors]);
 
   const columns = React.useMemo<ColumnDef<MemoryItem>[]>(() => [
-    { id: "memory", header: t("columns.memory"), cell: ({ row }) => <MemoryCell item={row.original} contributors={list.contributors} /> },
+    {
+      id: "memory", header: t("columns.memory"),
+      cell: ({ row }) => <MemoryCell item={row.original} contributors={list.contributors} usage={list.usage.get(row.original.id)} />,
+    },
     { id: "visibility", header: t("columns.visibility"), cell: ({ row }) => <VisibilityLabel mode={row.original.rights_mode} /> },
     { id: "saved", header: t("columns.saved"), cell: ({ row }) => (row.original.createdAt ? <RelativeTime date={row.original.createdAt} /> : "—") },
-  ], [t, list.contributors]);
+    {
+      id: "lastUsed", header: t("usage.lastUsed"),
+      cell: ({ row }) => {
+        const u = usageLabel(list.usage.get(row.original.id));
+        return u.kind === "used" && u.lastUsedAt
+          ? <RelativeTime date={u.lastUsedAt} />
+          : <span className="text-muted-foreground">{list.usageError ? "—" : t("usage.neverShort")}</span>;
+      },
+    },
+  ], [t, list.contributors, list.usage, list.usageError]);
 
   const handleBulkDelete = async () => {
     const targets = selected;
-    const results = await Promise.allSettled(targets.map((id) => deleteItem({ variables: { id } })));
-    const failedIds: string[] = [];
-    const failures: ConfirmDialogError[] = [];
-    let succeededCount = 0;
-    results.forEach((result, index) => {
-      const id = targets[index];
-      if (result.status === "rejected") {
-        failedIds.push(id);
-        const message = result.reason instanceof Error ? result.reason.message : String(result.reason);
-        failures.push({ item: id, message });
-      } else {
-        succeededCount += 1;
-      }
-    });
+    const { failedIds, failures, succeededCount } = await runBulk(targets, (id) => deleteItem({ variables: { id } }));
 
     // Refetch and notify the shell regardless of outcome — some items may
     // already have been removed even if others failed.
@@ -143,6 +182,28 @@ export function MemoryTable({
 
     setSelected([]);
     toast.success(t("bulk.deleted", { count: succeededCount }));
+  };
+
+  const handleBulkArchive = async () => {
+    const targets = selected;
+    const { failedIds, failures, succeededCount } = await runBulk(targets, (id) => updateItem({ variables: { id, input: { archived: true } } }));
+
+    // Mirrors handleBulkDelete: refetch and notify the shell regardless of
+    // outcome, keep failed ids selected for a retry.
+    list.refetch();
+    client.cache.gc();
+    onChanged();
+
+    if (failures.length > 0) {
+      setArchiveErrors(failures);
+      setSelected(failedIds);
+      if (succeededCount > 0) toast.success(t("bulk.archived", { count: succeededCount }));
+      toast.error(t("bulk.archiveFailed", { count: failures.length }));
+      throw new Error("Bulk archive had failures");
+    }
+
+    setSelected([]);
+    toast.success(t("bulk.archived", { count: succeededCount }));
   };
 
   return (
@@ -194,6 +255,7 @@ export function MemoryTable({
           onClear={() => setSelected([])}
           actions={[
             { label: t("bulk.setAccess"), onClick: () => setAccessOpen(true) },
+            { label: t("bulk.archive"), onClick: () => { setArchiveErrors([]); setArchiveOpen(true); } },
             {
               label: t("bulk.delete"),
               onClick: () => { setDeleteErrors([]); setDeleteOpen(true); },
@@ -205,22 +267,31 @@ export function MemoryTable({
       <DataTable<MemoryItem>
         columns={columns}
         data={list.items}
-        loading={list.loading}
+        loading={list.loading || list.unusedLoading}
         error={list.error ? { message: list.error.message, onRetry: list.refetch } : null}
         pagination={{ pageInfo: list.pageInfo, onPageChange: setPage }}
         selection={{ selected, onChange: setSelected }}
         onRowClick={(row) => router.push(`/memory/${context.id}/${row.id}`)}
         getRowId={(row) => row.id}
         empty={{ icon: Bookmark, title: t("empty.memoriesTitle"), description: t("empty.memoriesDescription") }}
-        mobileCard={(row) => (
-          <div className="flex flex-col gap-1">
-            <MemoryCell item={row} contributors={list.contributors} />
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <VisibilityLabel mode={row.rights_mode} />
-              {row.createdAt && <RelativeTime date={row.createdAt} />}
+        mobileCard={(row) => {
+          const rowUsage = usageLabel(list.usage.get(row.id));
+          return (
+            <div className="flex flex-col gap-1">
+              <MemoryCell item={row} contributors={list.contributors} usage={list.usage.get(row.id)} />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <VisibilityLabel mode={row.rights_mode} />
+                {row.createdAt && <RelativeTime date={row.createdAt} />}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {t("usage.lastUsed")}:{" "}
+                {rowUsage.kind === "used" && rowUsage.lastUsedAt
+                  ? <RelativeTime date={rowUsage.lastUsedAt} />
+                  : (list.usageError ? "—" : t("usage.neverShort"))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        }}
       />
       <BulkAccessDialog
         open={accessOpen}
@@ -238,6 +309,16 @@ export function MemoryTable({
         confirmLabel={t("bulk.delete")}
         errors={deleteErrors}
         onConfirm={handleBulkDelete}
+      />
+      <ConfirmDialog
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        variant="default"
+        title={t("bulk.archiveTitle", { count: selected.length })}
+        description={t("bulk.archiveDescription")}
+        confirmLabel={t("bulk.archive")}
+        errors={archiveErrors}
+        onConfirm={handleBulkArchive}
       />
     </div>
   );

@@ -3259,8 +3259,7 @@
       "contributors": "Beitragende",
       "lastSaved": "Zuletzt gespeichert",
       "lastSavedBy": "von {name}",
-      "never": "Nie",
-      "usedBy": "Genutzt von"
+      "never": "Nie"
     },
     "filter": {
       "all": "Alle",

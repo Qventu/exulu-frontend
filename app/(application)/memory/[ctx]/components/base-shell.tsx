@@ -12,9 +12,10 @@ import { PageShell } from "@/components/primitives/page-shell";
 import { StatCard } from "@/components/primitives/stat-card";
 
 import { type MemoryBase } from "../../components/memory-bases-data";
-import { GET_MEMORY_BASES } from "../../queries";
+import { GET_MEMORY_BASE_USAGE, GET_MEMORY_BASES } from "../../queries";
 import type { MemoryContext } from "./memory-list-data";
 import { MemoryTable } from "./memory-table";
+import type { BaseUsage } from "./usage-data";
 
 export function NotFoundBase({ contextId }: { contextId: string }) {
   const t = useTranslations("memory");
@@ -25,7 +26,9 @@ export function NotFoundBase({ contextId }: { contextId: string }) {
   );
 }
 
-export function BaseShell({ context, initialMine, initialPage }: { context: MemoryContext; initialMine: boolean; initialPage: number }) {
+export function BaseShell({
+  context, initialMine, initialPage, initialUsage,
+}: { context: MemoryContext; initialMine: boolean; initialPage: number; initialUsage?: "never" | "stale" }) {
   const t = useTranslations("memory");
   const router = useRouter();
   const bases = useQuery<{ memoryBases: MemoryBase[] }>(GET_MEMORY_BASES, { fetchPolicy: "cache-and-network" });
@@ -33,6 +36,11 @@ export function BaseShell({ context, initialMine, initialPage }: { context: Memo
   const stats = base?.stats ?? null;
   const agents = base?.agents ?? [];
   const valid = context.memoryBase?.ok ?? false;
+  const usage = useQuery<{ memoryBaseUsage: BaseUsage | null }>(GET_MEMORY_BASE_USAGE, {
+    variables: { contextId: context.id, staleDays: 90 },
+    fetchPolicy: "cache-and-network",
+    skip: !valid,
+  });
 
   // Until memoryBases has answered, `agents` is empty for every base — showing
   // "Not used by any agent" then would claim something the page does not know.
@@ -65,15 +73,21 @@ export function BaseShell({ context, initialMine, initialPage }: { context: Memo
           loading={bases.loading && !bases.data}
         />
         <StatCard
-          label={t("stats.usedBy")}
-          value={agents.length}
-          caption={agents.length ? agents.slice(0, 3).map((a) => a.name).join(", ") + (agents.length > 3 ? ` ${t("base.moreAgents", { count: agents.length - 3 })}` : "") : t("base.notUsed")}
-          loading={bases.loading && !bases.data}
+          label={t("usage.neverUsedCard")}
+          value={usage.data?.memoryBaseUsage?.neverUsed ?? 0}
+          caption={t("usage.neverUsedCaption")}
+          loading={usage.loading && !usage.data}
         />
       </div>
       {valid ? (
         <>
-          <MemoryTable context={context} initialMine={initialMine} initialPage={initialPage} onChanged={() => { void bases.refetch(); }} />
+          <MemoryTable
+            context={context}
+            initialMine={initialMine}
+            initialPage={initialPage}
+            initialUsage={initialUsage}
+            onChanged={() => { void bases.refetch(); void usage.refetch(); }}
+          />
           {stats && <p className="text-xs text-muted-foreground">{t("base.visibleFooter", { visible: stats.visible, total: stats.total })}</p>}
         </>
       ) : (

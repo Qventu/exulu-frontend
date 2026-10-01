@@ -3259,8 +3259,7 @@
       "contributors": "Contributors",
       "lastSaved": "Last saved",
       "lastSavedBy": "by {name}",
-      "never": "Never",
-      "usedBy": "Used by"
+      "never": "Never"
     },
     "filter": {
       "all": "All",
