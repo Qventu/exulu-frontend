@@ -104,6 +104,14 @@ e. Your Contribution includes complete details of any third-party license or
    **This includes any code, model weights, datasets, fonts or other material
    that You did not write yourself.**
 
+f. AI-assisted contributions. You may use AI tools. Where You do, You remain
+   responsible for the Contribution as submitted: You must review it, and You
+   represent that to the best of Your knowledge it does not reproduce
+   third-party material You are not entitled to submit. You acknowledge that
+   portions generated without sufficient human authorship may not attract
+   copyright protection, and that this Agreement conveys only such rights as
+   exist.
+
 ## 4. You Are Not Expected To Provide Support
 
 You are not expected to provide support for Your Contributions, except to the
