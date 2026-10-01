@@ -134,6 +134,7 @@ import { AskBox } from "./ask-box";
 import { AudioTimeline, type AudioTimelineHandle } from "./audio-timeline";
 import { ExportMenu } from "./export-menu";
 import { MeetingVideoPlayer } from "./meeting-video-player";
+import { cn } from "@/lib/utils";
 import { SpeakersPanel } from "./speakers-panel";
 import { SummaryMarkdown } from "./summary-markdown";
 import { FindReplace } from "./find-replace";
@@ -912,7 +913,16 @@ export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: 
       )}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto grid w-full max-w-6xl gap-6 p-4 md:grid-cols-[200px_minmax(0,1fr)_300px] md:p-6">
+        <div
+          className={cn(
+            "mx-auto grid w-full max-w-6xl gap-6 p-4 md:p-6",
+            // Only reserve the chapters track when something fills it —
+            // otherwise the document is pushed right by 200px of nothing.
+            chapters.length > 0
+              ? "md:grid-cols-[200px_minmax(0,1fr)_300px]"
+              : "md:grid-cols-[minmax(0,1fr)_300px]",
+          )}
+        >
           {/* Left: chapters — renders nothing without a supplying output. */}
           {chapters.length > 0 && (
             <nav aria-label={t("document.chaptersTitle")} className="space-y-1 md:col-start-1">
@@ -937,7 +947,7 @@ export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: 
           )}
 
           {/* Centre: summary/action-item outputs, then the transcript. */}
-          <div className="min-w-0 space-y-6 md:col-start-2">
+          <div className={cn("min-w-0 space-y-6", chapters.length > 0 && "md:col-start-2")}>
             {isEditable && (
               <div className="space-y-1">
                 <Input
@@ -1151,7 +1161,7 @@ export function TranscriptDocument({ item, mode, onSave, onDiscard, canWrite }: 
           </div>
 
           {/* Right: SpeakersPanel in edit mode; media + ask box in read mode. */}
-          <div className="space-y-4 md:col-start-3">
+          <div className={cn("space-y-4", chapters.length > 0 ? "md:col-start-3" : "md:col-start-2")}>
             {isEditable ? (
               <SpeakersPanel
                 rawSpeakers={rawSpeakers}

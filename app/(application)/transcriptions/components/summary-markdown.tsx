@@ -19,13 +19,17 @@ import { secondsFromSeekHref, timestampRefsToLinks } from "../linkify";
  * before parsing and intercepted below, so they stay seek buttons rather than
  * becoming literal brackets (markdown would read `[12:34]` as a destination-less
  * link and print it verbatim).
+ *
+ * `onSeek` is optional: the review page's post-processing card renders the same
+ * markdown with no player attached, so a reference there is shown as plain text
+ * rather than a button that would do nothing.
  */
 export function SummaryMarkdown({
   text,
   onSeek,
 }: {
   text: string;
-  onSeek: (seconds: number) => void;
+  onSeek?: (seconds: number) => void;
 }) {
   const source = React.useMemo(() => timestampRefsToLinks(text), [text]);
 
@@ -67,7 +71,10 @@ export function SummaryMarkdown({
           td: ({ children }) => <td className="border-b px-2 py-1 align-top">{children}</td>,
           a: ({ href, children }) => {
             const seconds = secondsFromSeekHref(href);
-            if (seconds !== null) {
+            if (seconds !== null && !onSeek) {
+              return <span className="font-mono text-xs">{children}</span>;
+            }
+            if (seconds !== null && onSeek) {
               return (
                 <button
                   type="button"

@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 import { GET_PROMPT_LIBRARY, RUN_TRANSCRIPT_POST_PROCESSING } from "../queries";
+import { SummaryMarkdown } from "./summary-markdown";
 import {
   parsePostProcessingOutputs,
   parsePostProcessingPrompts,
@@ -208,9 +209,9 @@ export function PostProcessingResults({
                     {output.error ? ` — ${output.error}` : ""}
                   </p>
                 ) : (
-                  <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-                    {output.output}
-                  </p>
+                  <div className="mt-1 text-muted-foreground">
+                    <SummaryMarkdown text={output.output ?? ""} />
+                  </div>
                 )}
               </div>
             );
