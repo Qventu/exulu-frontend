@@ -699,7 +699,16 @@
         "warningMissing": "The configured memory base “{id}” no longer exists in this deployment. Memory is off until you choose another one.",
         "warningInvalid": "“{name}” is not configured correctly for memory (missing: {fields}). Memories are still recalled, but nothing new can be saved.",
         "wizardMoved": "Memory settings moved to the Knowledge & memory section.",
-        "wizardOpen": "Open memory settings"
+        "wizardOpen": "Open memory settings",
+        "insightsTitle": "Insights",
+        "insightsHint": "What the memories are worth to {agent}.",
+        "mostUsed": "Most used",
+        "needsAttention": "Needs attention",
+        "neverUsed": "Never used",
+        "staleUsed": "Not used in 90 days",
+        "newPerWeek": "New memories per week",
+        "lastWeeks": "Last 6 weeks",
+        "noUsageYet": "No answers have used memories yet."
       },
       "notFoundDescription": "This agent could not be loaded. It may have been deleted, or you may not have access.",
       "notFoundTitle": "Agent not found",
@@ -3334,13 +3343,37 @@
       "unknownUser": "Unknown user",
       "failed": "That didn't work. Please try again."
     },
+    "usage": {
+      "label": "Usage",
+      "any": "Any",
+      "never": "Never used",
+      "stale": "Not used in {days} days",
+      "neverUsedCard": "Never used",
+      "neverUsedCaption": "candidates to archive",
+      "lastUsed": "Last used",
+      "neverShort": "Never",
+      "usedTimes": "used {count}×",
+      "section": "Usage",
+      "usedInCount": "Used in {count, plural, one {# answer} other {# answers}}",
+      "lastPrefix": "last",
+      "neverUsedLong": "Never used",
+      "openConversation": "Open conversation",
+      "guest": "Guest",
+      "unknownAgent": "Unknown agent",
+      "loadFailed": "Usage could not be loaded."
+    },
     "bulk": {
       "setAccess": "Set access",
       "delete": "Delete",
       "deleteTitle": "{count, plural, one {Delete # memory?} other {Delete # memories?}}",
       "deleteDescription": "Agents will no longer recall them. This cannot be undone.",
       "deleted": "{count, plural, one {# memory deleted} other {# memories deleted}}",
-      "deleteFailed": "{count, plural, one {# could not be deleted} other {# could not be deleted}}"
+      "deleteFailed": "{count, plural, one {# could not be deleted} other {# could not be deleted}}",
+      "archive": "Archive",
+      "archiveTitle": "{count, plural, one {Archive # memory?} other {Archive # memories?}}",
+      "archiveDescription": "They leave recall and the counts; you can restore them in Knowledge.",
+      "archived": "{count, plural, one {# memory archived} other {# memories archived}}",
+      "archiveFailed": "{count, plural, one {# could not be archived} other {# could not be archived}}"
     }
   },
   "models": {

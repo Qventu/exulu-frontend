@@ -643,6 +643,10 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   MemoryBases: () => ({ memoryBases: [] }),
   MemoryAgentCount: (world) => ({ memoryAgentCount: world.agents.length }),
   MemoryBaseContributors: () => ({ memoryBaseContributors: [] }),
+  MemoryUsageByIds: () => ({ memoryUsageByIds: [] }),
+  MemoryUsage: () => ({ memoryUsage: { count: 0, lastUsedAt: null, recent: [] } }),
+  MemoryBaseUsage: () => ({ memoryBaseUsage: { used: 0, neverUsed: 0, stale: 0, mostUsed: [], newPerWeek: [] } }),
+  MemoryBaseUnusedIds: () => ({ memoryBaseUnusedIds: [] }),
 
   // --- /agents/edit/[id] (chapter 3: agent configuration) -----------------
   AgentEditorById: (world, variables) => ({

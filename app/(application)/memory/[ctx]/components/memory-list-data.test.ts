@@ -27,6 +27,12 @@ describe("buildMemoryFilters", () => {
     ]);
     expect(buildMemoryFilters({ search: "", mine: true, userId: undefined, filters: {} })).toEqual([{ archived: { eq: false } }]);
   });
+  it("passes an ids restriction for the Usage filter and keeps the other filters", () => {
+    expect(buildMemoryFilters({ search: "", mine: false, userId: 4, filters: { type: "FACT" }, ids: ["a", "b"] })).toEqual([
+      { archived: { eq: false }, type: { eq: "FACT" }, id: { in: ["a", "b"] } },
+    ]);
+    expect(buildMemoryFilters({ search: "", mine: false, userId: 4, filters: {}, ids: undefined })).toEqual([{ archived: { eq: false } }]);
+  });
 });
 
 describe("helpers", () => {

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { GET_MEMORY_ITEMS, GET_MEMORY_ITEM_BY_ID, MEMORY_ITEMS_KEY, MEMORY_ITEM_KEY, memoryItemFields } from "./queries";
+import {
+  GET_MEMORY_BASE_UNUSED_IDS, GET_MEMORY_BASE_USAGE, GET_MEMORY_ITEMS, GET_MEMORY_ITEM_BY_ID, GET_MEMORY_USAGE, GET_MEMORY_USAGE_BY_IDS,
+  MEMORY_ITEMS_KEY, MEMORY_ITEM_KEY, memoryItemFields, UPDATE_MEMORY_ITEM,
+} from "./queries";
 
 const body = (doc: { loc?: { source: { body: string } } }) => doc.loc?.source.body ?? "";
 
@@ -21,5 +24,15 @@ describe("memory item queries", () => {
     expect(body(GET_MEMORY_ITEM_BY_ID("mem", false))).toContain("mem_itemsById(");
     expect(MEMORY_ITEMS_KEY("mem")).toBe("mem_itemsPagination");
     expect(MEMORY_ITEM_KEY("mem")).toBe("mem_itemsById");
+  });
+});
+
+describe("usage documents", () => {
+  it("name the usage operations and the generated update mutation", () => {
+    expect(body(GET_MEMORY_USAGE_BY_IDS)).toContain("query MemoryUsageByIds");
+    expect(body(GET_MEMORY_USAGE)).toContain("query MemoryUsage(");
+    expect(body(GET_MEMORY_BASE_USAGE)).toContain("query MemoryBaseUsage");
+    expect(body(GET_MEMORY_BASE_UNUSED_IDS)).toContain("query MemoryBaseUnusedIds");
+    expect(body(UPDATE_MEMORY_ITEM("mem"))).toContain("mem_itemsUpdateOneById(");
   });
 });
