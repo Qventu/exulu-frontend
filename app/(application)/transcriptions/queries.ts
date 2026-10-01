@@ -418,3 +418,53 @@ export const BULK_UPDATE_TRANSCRIPT_ITEMS_RBAC = gql`
     }
   }
 `;
+
+/* ----------------------- Transcripts settings (admin) ----------------------- */
+
+/**
+ * One workspace-level settings object (settings design doc §1) — not
+ * per-context, so a plain `gql` constant rather than a context-id factory
+ * like GET_EMBEDDER_INFO elsewhere in this codebase. Each field resolves
+ * database -> env -> code; `source` tells the settings page which one won.
+ *
+ * `videoRetentionHours` and `monthlyRecordingLimitMinutes` are really
+ * `number | sentinel` ("forever" / "none"), but the SDL types both as String
+ * so the sentinel crosses the wire verbatim — the backend sends
+ * `String(value)` (src/graphql/mutations/index.ts's buildTranscriptsSettingsInfo)
+ * and hooks.ts parses the string back with the same rule, in reverse.
+ */
+const TRANSCRIPTS_SETTINGS_FIELDS = `
+  botName { value source }
+  notifyChat { value source }
+  recordersMayOverrideBot { value source }
+  defaultRightsMode { value source }
+  summaryPresets { value { prompt_id agent_id } source }
+  videoRetentionHours { value source }
+  storeVideoLocally { value source }
+  monthlyRecordingLimitMinutes { value source }
+  videoStorageCostPerHour { value source }
+  stalePresets { prompt_id agent_id }
+`;
+
+export const GET_TRANSCRIPTS_SETTINGS = gql`
+  query GetTranscriptsSettings {
+    transcriptsSettings {
+      ${TRANSCRIPTS_SETTINGS_FIELDS}
+    }
+  }
+`;
+
+/**
+ * Returns the same shape as GET_TRANSCRIPTS_SETTINGS so a save and the
+ * page's own refetch stay in sync. `input` must carry only the fields the
+ * saving section owns — an omitted key means "leave alone", an explicit
+ * `null` means "clear back to the env/code default" (hooks.ts's
+ * buildSettingsInput enforces this).
+ */
+export const SET_TRANSCRIPTS_SETTINGS = gql`
+  mutation SetTranscriptsSettings($input: TranscriptsSettingsInput!) {
+    setTranscriptsSettings(input: $input) {
+      ${TRANSCRIPTS_SETTINGS_FIELDS}
+    }
+  }
+`;

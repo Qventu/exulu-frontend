@@ -4,8 +4,11 @@
  * Data hooks for /transcriptions (codebase-structure §3.2: redesigned pages
  * never call useQuery inline; hooks own fetch policy and polling cadence).
  */
-import { useQuery } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import * as React from "react";
+
+import { ConfigContext } from "@/components/shell/config-context";
+import { getToken } from "@/lib/api/client";
 
 import {
   GET_MEETING_RECORDING_USAGE,
@@ -15,6 +18,8 @@ import {
   GET_TRANSCRIPT_ITEM,
   GET_TRANSCRIPT_ITEMS,
   GET_TRANSCRIPTION_JOBS,
+  GET_TRANSCRIPTS_SETTINGS,
+  SET_TRANSCRIPTS_SETTINGS,
 } from "./queries";
 import {
   ACTIVE_STATUSES,
@@ -254,5 +259,225 @@ export function usePostProcessingOptions(): { prompts: PromptOption[]; agents: A
   return {
     prompts: promptsData?.prompt_libraryPagination?.items ?? [],
     agents: agentsData?.agentsPagination?.items ?? [],
+  };
+}
+
+/* ----------------------- Transcripts settings (admin) ----------------------- */
+
+export type SettingSource = "database" | "env" | "code";
+
+export interface ResolvedSetting<T> {
+  value: T;
+  source: SettingSource;
+}
+
+export type SummaryPreset = { prompt_id: string; agent_id: string };
+
+/** The two sentinel fields, parsed back from the wire string into the shape
+ *  the settings page actually works with. */
+export type RetentionHours = number | "forever";
+export type RecordingLimitMinutes = number | "none";
+
+/** Straight off the wire: videoRetentionHours/monthlyRecordingLimitMinutes
+ *  are still raw strings here (see TRANSCRIPTS_SETTINGS_FIELDS in
+ *  queries.ts) — parseSettings below turns this into TranscriptsSettings. */
+interface TranscriptsSettingsWire {
+  botName: ResolvedSetting<string | null>;
+  notifyChat: ResolvedSetting<boolean | null>;
+  recordersMayOverrideBot: ResolvedSetting<boolean | null>;
+  defaultRightsMode: ResolvedSetting<string | null>;
+  summaryPresets: ResolvedSetting<SummaryPreset[]>;
+  videoRetentionHours: ResolvedSetting<string>;
+  storeVideoLocally: ResolvedSetting<boolean | null>;
+  monthlyRecordingLimitMinutes: ResolvedSetting<string>;
+  videoStorageCostPerHour: ResolvedSetting<number | null>;
+  stalePresets: SummaryPreset[];
+}
+
+export interface TranscriptsSettings {
+  botName: ResolvedSetting<string | null>;
+  notifyChat: ResolvedSetting<boolean | null>;
+  recordersMayOverrideBot: ResolvedSetting<boolean | null>;
+  defaultRightsMode: ResolvedSetting<string | null>;
+  summaryPresets: ResolvedSetting<SummaryPreset[]>;
+  videoRetentionHours: ResolvedSetting<RetentionHours>;
+  storeVideoLocally: ResolvedSetting<boolean | null>;
+  monthlyRecordingLimitMinutes: ResolvedSetting<RecordingLimitMinutes>;
+  videoStorageCostPerHour: ResolvedSetting<number | null>;
+}
+
+/**
+ * Only the fields a section actually edits belong in a patch. An omitted key
+ * means "leave alone"; an explicit `null` means "clear back to the env/code
+ * default" (settings design doc §1, §6). buildSettingsInput below is what
+ * keeps that distinction alive on the wire — never spread a full
+ * TranscriptsSettings object in here, or saving one section clears every
+ * other section's stored value.
+ */
+export interface TranscriptsSettingsPatch {
+  botName?: string | null;
+  notifyChat?: boolean | null;
+  recordersMayOverrideBot?: boolean | null;
+  defaultRightsMode?: string | null;
+  summaryPresets?: SummaryPreset[] | null;
+  videoRetentionHours?: RetentionHours | null;
+  storeVideoLocally?: boolean | null;
+  monthlyRecordingLimitMinutes?: RecordingLimitMinutes | null;
+  videoStorageCostPerHour?: number | null;
+}
+
+export type TranscriptionSource = "upload" | "meeting" | "record";
+
+export type SourceTestResult =
+  | { ok: true }
+  | { ok: false; reason: "not_configured" }
+  | { ok: false; reason: "unreachable"; message: string };
+
+/**
+ * `String(value)` in reverse (buildTranscriptsSettingsInfo on the backend):
+ * the sentinel string passes through verbatim, anything else becomes a
+ * number. Getting this backwards is exactly what shows NaN, or the wrong
+ * control state, for these two fields on the settings page.
+ */
+function parseNumericOrSentinel<S extends string>(raw: string, sentinel: S): number | S {
+  return raw === sentinel ? sentinel : Number(raw);
+}
+
+function parseSettings(wire: TranscriptsSettingsWire): TranscriptsSettings {
+  return {
+    botName: wire.botName,
+    notifyChat: wire.notifyChat,
+    recordersMayOverrideBot: wire.recordersMayOverrideBot,
+    defaultRightsMode: wire.defaultRightsMode,
+    summaryPresets: wire.summaryPresets,
+    videoRetentionHours: {
+      value: parseNumericOrSentinel(wire.videoRetentionHours.value, "forever"),
+      source: wire.videoRetentionHours.source,
+    },
+    storeVideoLocally: wire.storeVideoLocally,
+    monthlyRecordingLimitMinutes: {
+      value: parseNumericOrSentinel(wire.monthlyRecordingLimitMinutes.value, "none"),
+      source: wire.monthlyRecordingLimitMinutes.source,
+    },
+    videoStorageCostPerHour: wire.videoStorageCostPerHour,
+  };
+}
+
+/** The inverse of parseNumericOrSentinel for the save path: a number becomes
+ *  its decimal string, the sentinel passes through verbatim, and `null` /
+ *  `undefined` pass through untouched so buildSettingsInput's
+ *  omitted-vs-null distinction survives this step too. */
+function serializeNumericOrSentinel(
+  value: number | string | null | undefined,
+): string | null | undefined {
+  if (value === null || value === undefined) return value;
+  return String(value);
+}
+
+/**
+ * Only the keys present in `patch` reach the mutation variables — checked
+ * with `in`, never `?.` or a default, so an explicit `null` (clear to
+ * env/code) survives alongside a genuinely omitted key (leave alone).
+ * Mirrors parseSettingsInput on the backend
+ * (src/graphql/mutations/transcripts-settings-input.ts), in reverse.
+ */
+function buildSettingsInput(patch: TranscriptsSettingsPatch): Record<string, unknown> {
+  const input: Record<string, unknown> = {};
+  if ("botName" in patch) input.botName = patch.botName;
+  if ("notifyChat" in patch) input.notifyChat = patch.notifyChat;
+  if ("recordersMayOverrideBot" in patch) {
+    input.recordersMayOverrideBot = patch.recordersMayOverrideBot;
+  }
+  if ("defaultRightsMode" in patch) input.defaultRightsMode = patch.defaultRightsMode;
+  if ("summaryPresets" in patch) input.summaryPresets = patch.summaryPresets;
+  if ("videoRetentionHours" in patch) {
+    input.videoRetentionHours = serializeNumericOrSentinel(patch.videoRetentionHours);
+  }
+  if ("storeVideoLocally" in patch) input.storeVideoLocally = patch.storeVideoLocally;
+  if ("monthlyRecordingLimitMinutes" in patch) {
+    input.monthlyRecordingLimitMinutes = serializeNumericOrSentinel(
+      patch.monthlyRecordingLimitMinutes,
+    );
+  }
+  if ("videoStorageCostPerHour" in patch) {
+    input.videoStorageCostPerHour = patch.videoStorageCostPerHour;
+  }
+  return input;
+}
+
+/** Best-effort `detail` extraction from a non-OK REST response body, for
+ *  testSource's error message. */
+function errorDetail(body: unknown, status: number): string {
+  if (body && typeof body === "object" && "detail" in body) {
+    const detail = (body as { detail?: unknown }).detail;
+    if (typeof detail === "string" && detail) return detail;
+  }
+  return `Test failed with status ${status}.`;
+}
+
+export interface TranscriptsSettingsResult {
+  settings: TranscriptsSettings | null;
+  stalePresets: SummaryPreset[];
+  loading: boolean;
+  error?: Error;
+  /** Sends only the fields `patch` sets, and refetches on success so two
+   *  admins saving concurrently both end up looking at the winner's values
+   *  (design doc §6) — never a full object, or one section's save would
+   *  wipe every other section's stored value. */
+  save: (patch: TranscriptsSettingsPatch) => Promise<void>;
+  /** `GET {backend}/transcription-sources/{source}/test`, header-authenticated
+   *  exactly like the reading view's export route (export-menu.tsx's
+   *  fetchExport) — never a bare navigation, which would hit a 401 since
+   *  this route is super_admin-gated. */
+  testSource: (source: TranscriptionSource) => Promise<SourceTestResult>;
+}
+
+/**
+ * The admin settings page's one data source (task-6 brief): the single
+ * workspace settings object plus the per-source liveness check. Fetch
+ * policy and error surfacing follow useTranscripts above and
+ * useEmbedderSettings (app/(application)/data/hooks.ts) — the existing
+ * database -> env/code settings pattern this one generalises from.
+ */
+export function useTranscriptsSettings(): TranscriptsSettingsResult {
+  const config = React.useContext(ConfigContext);
+  const backend = config?.backend;
+
+  const { data, loading, error, refetch } = useQuery<{
+    transcriptsSettings: TranscriptsSettingsWire;
+  }>(GET_TRANSCRIPTS_SETTINGS, { fetchPolicy: "cache-and-network" });
+
+  const [mutate] = useMutation<{ setTranscriptsSettings: TranscriptsSettingsWire }>(
+    SET_TRANSCRIPTS_SETTINGS,
+  );
+
+  const settings = React.useMemo(
+    () => (data?.transcriptsSettings ? parseSettings(data.transcriptsSettings) : null),
+    [data],
+  );
+
+  return {
+    settings,
+    stalePresets: data?.transcriptsSettings?.stalePresets ?? [],
+    loading: loading && !data,
+    error: error as Error | undefined,
+    save: async (patch) => {
+      await mutate({ variables: { input: buildSettingsInput(patch) } });
+      await refetch();
+    },
+    testSource: async (source) => {
+      if (!backend) {
+        throw new Error("Backend is not configured.");
+      }
+      const token = await getToken();
+      const res = await fetch(`${backend}/transcription-sources/${source}/test`, {
+        headers: token ? { authorization: `Bearer ${token}` } : undefined,
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(errorDetail(body, res.status));
+      }
+      return body as SourceTestResult;
+    },
   };
 }
