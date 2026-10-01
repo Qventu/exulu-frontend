@@ -339,7 +339,7 @@ export type SourceTestResult =
  * number. Getting this backwards is exactly what shows NaN, or the wrong
  * control state, for these two fields on the settings page.
  */
-function parseNumericOrSentinel<S extends string>(raw: string, sentinel: S): number | S {
+export function parseNumericOrSentinel<S extends string>(raw: string, sentinel: S): number | S {
   return raw === sentinel ? sentinel : Number(raw);
 }
 
@@ -367,7 +367,7 @@ function parseSettings(wire: TranscriptsSettingsWire): TranscriptsSettings {
  *  its decimal string, the sentinel passes through verbatim, and `null` /
  *  `undefined` pass through untouched so buildSettingsInput's
  *  omitted-vs-null distinction survives this step too. */
-function serializeNumericOrSentinel(
+export function serializeNumericOrSentinel(
   value: number | string | null | undefined,
 ): string | null | undefined {
   if (value === null || value === undefined) return value;
@@ -381,7 +381,7 @@ function serializeNumericOrSentinel(
  * Mirrors parseSettingsInput on the backend
  * (src/graphql/mutations/transcripts-settings-input.ts), in reverse.
  */
-function buildSettingsInput(patch: TranscriptsSettingsPatch): Record<string, unknown> {
+export function buildSettingsInput(patch: TranscriptsSettingsPatch): Record<string, unknown> {
   const input: Record<string, unknown> = {};
   if ("botName" in patch) input.botName = patch.botName;
   if ("notifyChat" in patch) input.notifyChat = patch.notifyChat;
