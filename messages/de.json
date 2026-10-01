@@ -4708,6 +4708,10 @@
       "botName": "Bot-Name",
       "botNamePlaceholder": "IMP Notetaker",
       "notifyChat": "Teilnehmer im Chat informieren, dass das Meeting aufgezeichnet wird",
+      "botIdentityLockedHint": "Bot-Name und Aufnahmehinweis sind für dieses Workspace festgelegt — Aufnehmende können sie nicht ändern.",
+      "botIdentityLockedName": "Bot-Name: {botName}",
+      "botIdentityLockedNotifyOn": "Kündigt die Aufzeichnung im Chat an.",
+      "botIdentityLockedNotifyOff": "Kündigt die Aufzeichnung im Chat nicht an.",
       "postProcessing": "Nachbearbeitung",
       "postProcessingHint": "Prompts automatisch auf das Transkript anwenden, sobald es fertig ist",
       "addPrompt": "Prompt hinzufügen",
@@ -4919,7 +4923,7 @@
     },
     "new": "Neues Transkript",
     "newShort": "Neu",
-    "overflow": { "label": "Weitere Optionen" },
+    "overflow": { "label": "Weitere Optionen", "settings": "Transkript-Einstellungen" },
     "queue": {
       "library": "Transkript-Bibliothek",
       "loadMore": "Mehr laden",
@@ -4985,6 +4989,90 @@
       "bulkDisabled": "Sammelaktionen gelten nur für gespeicherte Transkripte, nicht für laufende Aufnahmen"
     },
     "searchPlaceholder": "Transkripte durchsuchen…",
+    "settings": {
+      "pageTitle": "Transkript-Einstellungen",
+      "pageDescription": "Arbeitsbereich-Standardwerte für Transkriptionsquellen, den Meeting-Bot und Aufnahmen.",
+      "adminsOnlyBadge": "Nur für Admins",
+      "notAdmin": {
+        "title": "Einen Admin fragen",
+        "description": "Transkript-Einstellungen können nur von einem Workspace-Admin geändert werden."
+      },
+      "loadError": "Die Transkript-Einstellungen konnten nicht geladen werden",
+      "saved": "Einstellung gespeichert",
+      "saveFailed": "Diese Einstellung konnte nicht gespeichert werden",
+      "resetToDefault": "Auf Standard zurücksetzen",
+      "sourceNote": {
+        "env": "Verwendet den Umgebungsvariablen-Standard",
+        "code": "Verwendet den integrierten Standard"
+      },
+      "sections": {
+        "sources": "Quellen",
+        "meetingBot": "Meeting-Bot",
+        "defaults": "Standardwerte",
+        "storage": "Aufnahmen & Speicherung",
+        "limits": "Aufnahmelimits",
+        "knowledge": "Wissensbasis und Agenten"
+      },
+      "summaries": {
+        "sources": "{configured} von {total} Quellen verbunden{embedderConfigured, select, false { — kein Embedding-Modell festgelegt, Transkripte sind nicht durchsuchbar} other {}}.",
+        "meetingBot": "\"{botName}\" nimmt an Meetings teil, {notifyChat, select, true {kündigt die Aufzeichnung im Chat an} other {kündigt die Aufzeichnung im Chat nicht an}}; {mayOverride, select, true {Aufnehmende dürfen den Namen ändern} other {Aufnehmende können den Namen nicht ändern}}.",
+        "defaults": "Neue Transkripte verwenden standardmäßig {defaultRightsMode}; {presetCount, plural, =0 {keine Zusammenfassungsvorlagen} one {# Zusammenfassungsvorlage} other {# Zusammenfassungsvorlagen}}{stalePresetCount, plural, =0 {} other {, # nicht mehr verfügbar}}.",
+        "storage": "Meeting-Video wird {forever, select, true {für immer behalten} other {für {hours} Stunden behalten}}; {storeVideoLocally, select, true {eine lokale Kopie wird ebenfalls gespeichert} other {es wird keine lokale Kopie gespeichert}}.",
+        "limits": "{none, select, true {Es ist kein monatliches Aufnahmelimit festgelegt.} other {Monatliches Aufnahmelimit: {minutes} Minuten.}}",
+        "knowledge": "{readCount, plural, =0 {Noch kein Agent verwendet diese Wissensbasis — Transkripte sind für keinen Agenten sichtbar} one {# Agent kann diese Wissensbasis lesen} other {# Agenten können diese Wissensbasis lesen}}{writeCount, plural, =0 {} other {, # kann auch schreiben}}."
+      },
+      "sources": {
+        "uploadLabel": "Datei-Upload (Whisper)",
+        "meetingLabel": "Meeting-Bot (Recall)",
+        "recordLabel": "Auf diesem Gerät aufnehmen",
+        "testButton": "Testen",
+        "resultOk": "Verbunden",
+        "resultNotConfigured": "Nicht konfiguriert",
+        "resultUnreachable": "Nicht erreichbar: {message}",
+        "testFailed": "Der Test-Endpunkt konnte nicht erreicht werden",
+        "embedderHeading": "Transkripte durchsuchbar machen",
+        "embedderDescription": "Transkripte benötigen ein Embedding-Modell, um über \"Frage zu diesem Transkript\" und die Wissenssuche durchsuchbar zu sein.",
+        "contextLoadFailed": "Die Embedder-Konfiguration konnte nicht geladen werden.",
+        "loadingEmbedder": "Embedder-Konfiguration wird geladen…"
+      },
+      "meetingBot": {
+        "mayOverrideLabel": "Aufnehmende dürfen einen eigenen Bot-Namen und Hinweis festlegen",
+        "mayOverrideHint": "Wenn deaktiviert, verwendet jeder Meeting-Bot immer die obigen Einstellungen, selbst wenn eine aufnehmende Person versucht, sie zu ändern."
+      },
+      "defaults": {
+        "rightsModeLabel": "Standard-Freigabe für neue Transkripte",
+        "presetsLabel": "Standard-Zusammenfassungsvorlagen",
+        "presetsHint": "In jedem Composer vorausgewählt; für eine einzelne Aufnahme weiterhin entfernbar.",
+        "stalePresetsNote": "{count, plural, one {# Vorlage ist} other {# Vorlagen sind}} nicht mehr verfügbar — der zugehörige Prompt oder Agent wurde gelöscht."
+      },
+      "storage": {
+        "retentionLabel": "Aufbewahrung von Meeting-Videos",
+        "retentionOption": "{hours} Stunden",
+        "retentionForever": "Für immer behalten",
+        "hoursStoredLabel": "{hours} Stunden in diesem Monat gespeichert",
+        "storeLocallyLabel": "Lokale Kopie des Meeting-Videos behalten",
+        "storeLocallyHint": "Wenn deaktiviert, verwendet die Wiedergabe einen temporären Link des Meeting-Bot-Anbieters.",
+        "costLabel": "Geschätzte Speicherkosten pro Stunde (USD)",
+        "costPlaceholder": "0.00",
+        "costEstimate": "Geschätzte Kosten in diesem Monat: {amount}",
+        "costEstimateHint": "Legen Sie oben einen Satz fest, um die geschätzten monatlichen Kosten zu sehen."
+      },
+      "limits": {
+        "capLabel": "Monatliches Aufnahmelimit",
+        "capNone": "Kein Limit",
+        "capOption": "{minutes} Minuten"
+      },
+      "knowledge": {
+        "description": "Agenten, deren Retrieval-Konfiguration diese Wissensbasis einschließt, und was sie damit tun dürfen.",
+        "loadError": "Agenten konnten nicht geladen werden",
+        "loading": "Agenten werden geladen…",
+        "empty": "Noch kein Agent verwendet diese Wissensbasis.",
+        "canRead": "Kann lesen",
+        "canReadAndWrite": "Kann lesen und schreiben",
+        "canWriteOnly": "Kann schreiben (kein Lesezugriff)",
+        "openInKnowledge": "In Knowledge öffnen"
+      }
+    },
     "sharing": {
       "subject": "Transkript"
     },

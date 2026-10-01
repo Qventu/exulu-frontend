@@ -34,9 +34,15 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
-import { usePostProcessingOptions, useProjectOptions } from "../hooks";
+import {
+  resolveNotifyChatSeed,
+  usePostProcessingOptions,
+  useProjectOptions,
+  type ResolvedSetting,
+} from "../hooks";
 import { MEETING_BOT_START } from "../queries";
 import {
+  sanitizeRightsMode,
   type ComposerPrimaryAction,
   type Mode,
   type PostProcessingPrompt,
@@ -44,6 +50,8 @@ import {
   type RbacUser,
 } from "../types";
 import { PostProcessingPicker, postProcessingRowsComplete } from "./post-processing-picker";
+import { useSeededPostProcessingRows } from "./use-seeded-post-processing-rows";
+import { useSeededValue } from "./use-seeded-value";
 
 const ALLOWED_MODES: Mode[] = ["private", "users", "roles", "public"];
 const LANGUAGES = ["en", "de", "fr", "es", "it", "nl", "pt"] as const;
@@ -53,11 +61,37 @@ export interface MeetingComposerProps {
   /** Reports the current Start action so NewTranscriptDialog's shared footer
    *  can render it — the dialog owns Cancel/footer chrome now (Task 9). */
   onPrimaryActionChange: (action: ComposerPrimaryAction) => void;
+  /** Workspace summary presets (task-7 brief, Step 4), read once when the
+   *  dialog opens — pre-checked here but still freely removable for this one
+   *  meeting. */
+  defaultPostProcessingPrompts?: PostProcessingPrompt[];
+  /** Workspace default sharing mode (final fix wave, Fix 1) — see
+   *  composer.tsx's identical prop for the full rationale. */
+  defaultRightsMode?: string | null;
+  /** The resolved `notifyChat` setting, source included (final fix wave,
+   *  Fix 3) — see `resolveNotifyChatSeed` in hooks.ts for why the source
+   *  matters, not just the value. */
+  defaultNotifyChat?: ResolvedSetting<boolean | null>;
+  /** Whether a recorder may override the workspace's bot name / recording
+   *  notice at all (final fix wave, Fix 2 — settings design doc §5's
+   *  "Meeting bot" section). When false, `bot-identity.ts` ignores whatever
+   *  this composer would send; defaults to true (the resolved setting's own
+   *  code-level default) while settings haven't loaded yet. */
+  recordersMayOverrideBot?: boolean;
+  /** The workspace's own bot name, shown in place of the input when
+   *  `recordersMayOverrideBot` is false (Fix 2) so the recorder can see what
+   *  name is actually going to be used instead of just losing the field. */
+  workspaceBotName?: string | null;
 }
 
 export function MeetingComposer({
   onStarted,
   onPrimaryActionChange,
+  defaultPostProcessingPrompts,
+  defaultRightsMode,
+  defaultNotifyChat,
+  recordersMayOverrideBot = true,
+  workspaceBotName,
 }: MeetingComposerProps) {
   const t = useTranslations("transcriptions");
 
@@ -70,13 +104,33 @@ export function MeetingComposer({
   // Defaults ON (2026-09-22): a bot sitting unannounced in a Teams waiting
   // room is the leading cause of "bot finished without a recording" — nobody
   // in the meeting knows to admit it. The chat message is the only cue.
-  const [notifyChat, setNotifyChat] = React.useState(true);
+  //
+  // Final fix wave, Fix 3: this used to be a hard `React.useState(true)` that
+  // always sent an explicit boolean, so the workspace `notifyChat` setting
+  // could never reach the product's own UI. It is now seeded from that
+  // setting (same once-never-clobber discipline as the other seeded fields),
+  // but through resolveNotifyChatSeed rather than the raw resolved value —
+  // that function is what actually preserves the default-ON intent above for
+  // a deployment that hasn't touched this setting; see its docstring in
+  // hooks.ts before changing either side of this seam.
+  const [notifyChat, setNotifyChat] = useSeededValue<boolean>(
+    resolveNotifyChatSeed(defaultNotifyChat),
+    true,
+  );
   const [projectId, setProjectId] = React.useState("");
-  const [rightsMode, setRightsMode] = React.useState<Mode>("private");
+  // Seeded from the workspace default (final fix wave, Fix 1) — see
+  // composer.tsx's identical seeding for the full rationale.
+  const [rightsMode, setRightsMode] = useSeededValue<Mode>(
+    sanitizeRightsMode(defaultRightsMode, ALLOWED_MODES),
+    "private",
+  );
   const [rbacUsers, setRbacUsers] = React.useState<RbacUser[]>([]);
   const [rbacRoles, setRbacRoles] = React.useState<RbacRole[]>([]);
-  // Post-processing rows start empty (no defaults — user opts in per meeting).
-  const [ppRows, setPpRows] = React.useState<PostProcessingPrompt[]>([]);
+  // Seeded from the workspace defaults, re-synced at most once if they
+  // hadn't loaded yet at mount, never once the admin edits a row
+  // (use-seeded-post-processing-rows.ts) — task-7 brief, Step 4. Still fully
+  // removable: the user can delete any or all rows before starting.
+  const [ppRows, setPpRows] = useSeededPostProcessingRows(defaultPostProcessingPrompts);
   const [optionsOpen, setOptionsOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
 
@@ -262,29 +316,54 @@ export function MeetingComposer({
               </Select>
             </div>
 
-            {/* Bot name */}
-            <div className="space-y-2">
-              <Label htmlFor="bot-name">{t("composer.botName")}</Label>
-              <Input
-                id="bot-name"
-                value={botName}
-                onChange={(event) => setBotName(event.target.value)}
-                placeholder={t("composer.botNamePlaceholder")}
-                className="text-base md:text-sm"
-              />
-            </div>
+            {/* Bot name + notify in chat — final fix wave, Fix 2. When the
+                workspace has turned off recordersMayOverrideBot,
+                bot-identity.ts ignores whatever this composer would send for
+                both fields; showing the inputs anyway let a recorder type a
+                bot name the backend silently discarded. Hide both and show
+                the workspace values that are actually going to be used,
+                straight off the resolved setting (not the ON-by-default
+                seed above) so this is the literal truth, not the UX
+                default. */}
+            {recordersMayOverrideBot ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="bot-name">{t("composer.botName")}</Label>
+                  <Input
+                    id="bot-name"
+                    value={botName}
+                    onChange={(event) => setBotName(event.target.value)}
+                    placeholder={t("composer.botNamePlaceholder")}
+                    className="text-base md:text-sm"
+                  />
+                </div>
 
-            {/* Notify in chat */}
-            <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="notify-chat" className="font-normal">
-                {t("composer.notifyChat")}
-              </Label>
-              <Switch
-                id="notify-chat"
-                checked={notifyChat}
-                onCheckedChange={setNotifyChat}
-              />
-            </div>
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="notify-chat" className="font-normal">
+                    {t("composer.notifyChat")}
+                  </Label>
+                  <Switch
+                    id="notify-chat"
+                    checked={notifyChat}
+                    onCheckedChange={setNotifyChat}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-1 rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
+                <p>{t("composer.botIdentityLockedHint")}</p>
+                <p>
+                  {t("composer.botIdentityLockedName", {
+                    botName: workspaceBotName || t("composer.botNamePlaceholder"),
+                  })}
+                </p>
+                <p>
+                  {defaultNotifyChat?.value
+                    ? t("composer.botIdentityLockedNotifyOn")
+                    : t("composer.botIdentityLockedNotifyOff")}
+                </p>
+              </div>
+            )}
 
             {/* Project */}
             <div className="space-y-2">

@@ -58,7 +58,8 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-import type { ComposerPrimaryAction } from "../types";
+import { useTranscriptsSettings } from "../hooks";
+import type { ComposerPrimaryAction, PostProcessingPrompt } from "../types";
 import { Composer } from "./composer";
 import { MeetingComposer } from "./meeting-composer";
 import { RecordComposer } from "./record-composer";
@@ -94,6 +95,33 @@ export function NewTranscriptDialog({
   const config = React.useContext(ConfigContext);
   const isMobile = useIsMobile();
   const live = useLiveRecordingOptional();
+
+  // Workspace summary presets, read once per dialog open rather than at save
+  // time (task-7 brief, Step 4): `settings` is fetched here unconditionally
+  // (the hook has no `skip`), so by the time an admin actually opens the
+  // dialog it is almost always already in the Apollo cache. `stalePresets`
+  // need no handling here — the backend already drops them from
+  // `summaryPresets.value` (filterLivePresets), so this is already
+  // live-only.
+  //
+  // Deliberately `undefined` (not `[]`) while `useTranscriptsSettings()`
+  // hasn't resolved yet — fix round 1, non-gating #2: a composer mounted
+  // before the round trip completes must be able to tell "not loaded yet"
+  // apart from "loaded, genuinely no presets," so it can re-seed once the
+  // real value arrives instead of locking in an empty seed forever.
+  const { settings: transcriptsSettings } = useTranscriptsSettings();
+  const defaultPostProcessingPrompts: PostProcessingPrompt[] | undefined =
+    transcriptsSettings?.summaryPresets.value;
+  // Workspace defaults for sharing, bot identity, and notifyChat (final fix
+  // wave) — read here once per dialog open exactly like the presets above,
+  // and seeded into each composer with the same once-never-clobber
+  // discipline (use-seeded-value.ts). `undefined` while settings haven't
+  // resolved yet, same reasoning as defaultPostProcessingPrompts.
+  const defaultRightsMode: string | null | undefined =
+    transcriptsSettings?.defaultRightsMode.value;
+  const recordersMayOverrideBot =
+    transcriptsSettings?.recordersMayOverrideBot.value ?? true;
+  const workspaceBotName = transcriptsSettings?.botName.value;
 
   const flags: Record<ComposerMode, boolean> = {
     audio: !!config?.whisper?.enabled,
@@ -192,16 +220,28 @@ export function NewTranscriptDialog({
                 <Composer
                   onStarted={onComposerStarted}
                   onPrimaryActionChange={handlePrimaryActionChange}
+                  defaultPostProcessingPrompts={defaultPostProcessingPrompts}
+                  defaultRightsMode={defaultRightsMode}
                 />
               )}
               {effectiveMode === "meeting" && (
                 <MeetingComposer
                   onStarted={onComposerStarted}
                   onPrimaryActionChange={handlePrimaryActionChange}
+                  defaultPostProcessingPrompts={defaultPostProcessingPrompts}
+                  defaultRightsMode={defaultRightsMode}
+                  defaultNotifyChat={transcriptsSettings?.notifyChat}
+                  recordersMayOverrideBot={recordersMayOverrideBot}
+                  workspaceBotName={workspaceBotName}
                 />
               )}
               {effectiveMode === "record" && (
-                <RecordComposer onCancel={handleCancel} onStarted={onStarted} />
+                <RecordComposer
+                  onCancel={handleCancel}
+                  onStarted={onStarted}
+                  defaultPostProcessingPrompts={defaultPostProcessingPrompts}
+                  defaultRightsMode={defaultRightsMode}
+                />
               )}
             </>
           ) : (

@@ -52,6 +52,7 @@ import {
   LIVE_RECORDING_STOP,
 } from "../queries";
 import {
+  sanitizeRightsMode,
   type Mode,
   type PostProcessingPrompt,
   type RbacRole,
@@ -61,6 +62,8 @@ import {
   PostProcessingPicker,
   postProcessingRowsComplete,
 } from "./post-processing-picker";
+import { useSeededPostProcessingRows } from "./use-seeded-post-processing-rows";
+import { useSeededValue } from "./use-seeded-value";
 
 /** Teams is offered by RBACControl but no transcription input carries it (see composer.tsx). */
 const ALLOWED_MODES: Mode[] = ["private", "users", "roles", "public"];
@@ -93,11 +96,23 @@ const TRANSCRIPTIONS_PATH = "/transcriptions";
 export interface RecordComposerProps {
   onCancel: () => void;
   onStarted: () => void;
+  /** Workspace summary presets (task-7 brief, Step 4), read once when the
+   *  dialog opens — pre-checked here but still freely removable for this one
+   *  recording. */
+  defaultPostProcessingPrompts?: PostProcessingPrompt[];
+  /** Workspace default sharing mode (final fix wave, Fix 1) — see
+   *  composer.tsx's identical prop for the full rationale. */
+  defaultRightsMode?: string | null;
 }
 
 type Phase = "setup" | "starting" | "recording" | "finishing";
 
-export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
+export function RecordComposer({
+  onCancel,
+  onStarted,
+  defaultPostProcessingPrompts,
+  defaultRightsMode,
+}: RecordComposerProps) {
   const t = useTranslations("transcriptions");
   const tChat = useTranslations("chat");
   const tCommon = useTranslations("common");
@@ -110,10 +125,19 @@ export function RecordComposer({ onCancel, onStarted }: RecordComposerProps) {
   const [title, setTitle] = React.useState("");
   const [language, setLanguage] = React.useState("auto");
   const [projectId, setProjectId] = React.useState("");
-  const [rightsMode, setRightsMode] = React.useState<Mode>("private");
+  // Seeded from the workspace default (final fix wave, Fix 1) — see
+  // composer.tsx's identical seeding for the full rationale.
+  const [rightsMode, setRightsMode] = useSeededValue<Mode>(
+    sanitizeRightsMode(defaultRightsMode, ALLOWED_MODES),
+    "private",
+  );
   const [rbacUsers, setRbacUsers] = React.useState<RbacUser[]>([]);
   const [rbacRoles, setRbacRoles] = React.useState<RbacRole[]>([]);
-  const [ppRows, setPpRows] = React.useState<PostProcessingPrompt[]>([]);
+  // Seeded from the workspace defaults, re-synced at most once if they
+  // hadn't loaded yet at mount, never once the admin edits a row
+  // (use-seeded-post-processing-rows.ts) — task-7 brief, Step 4. Still fully
+  // removable: the user can delete any or all rows before starting.
+  const [ppRows, setPpRows] = useSeededPostProcessingRows(defaultPostProcessingPrompts);
   const [optionsOpen, setOptionsOpen] = React.useState(false);
   // Mounting mid-recording (navigated away and back) reopens the surface —
   // and mounting mid-close-out reopens it on the step it left off at.

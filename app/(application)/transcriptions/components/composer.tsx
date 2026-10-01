@@ -31,18 +31,23 @@ import {
 } from "@/components/ui/select";
 import useUppy from "@/hooks/use-uppy";
 
-import { useProjectOptions } from "../hooks";
+import { usePostProcessingOptions, useProjectOptions } from "../hooks";
 import { START_TRANSCRIPTION_JOB } from "../queries";
 import {
   AUDIO_FILE_TYPES,
   decodeFilename,
+  sanitizeRightsMode,
   stripExtension,
   type ComposerPrimaryAction,
   type Mode,
+  type PostProcessingPrompt,
   type RbacRole,
   type RbacUser,
 } from "../types";
 import { FileGalleryDialog } from "./file-gallery-dialog";
+import { PostProcessingPicker, postProcessingRowsComplete } from "./post-processing-picker";
+import { useSeededPostProcessingRows } from "./use-seeded-post-processing-rows";
+import { useSeededValue } from "./use-seeded-value";
 
 const LANGUAGES = ["en", "de", "fr", "es", "it", "nl", "pt"] as const;
 const SPEAKER_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
@@ -58,9 +63,24 @@ export interface ComposerProps {
   /** Reports the current Start action so NewTranscriptDialog's shared footer
    *  can render it — the dialog owns Cancel/footer chrome now (Task 9). */
   onPrimaryActionChange: (action: ComposerPrimaryAction) => void;
+  /** Workspace summary presets (task-7 brief, Step 4), read once when the
+   *  dialog opens — pre-checked here but still freely removable for this one
+   *  upload. `undefined` while the settings round trip hasn't resolved yet. */
+  defaultPostProcessingPrompts?: PostProcessingPrompt[];
+  /** Workspace default sharing mode (final fix wave, Fix 1 —
+   *  settings/defaults-section.tsx's "Default sharing" control was stored and
+   *  resolved but read by nothing). Seeded with the same once-never-clobber
+   *  discipline as defaultPostProcessingPrompts above; `undefined` while
+   *  settings haven't resolved yet. */
+  defaultRightsMode?: string | null;
 }
 
-export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
+export function Composer({
+  onStarted,
+  onPrimaryActionChange,
+  defaultPostProcessingPrompts,
+  defaultRightsMode,
+}: ComposerProps) {
   const t = useTranslations("transcriptions");
 
   const [s3Key, setS3Key] = React.useState<string | null>(null);
@@ -70,13 +90,26 @@ export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
   const [language, setLanguage] = React.useState<string>("auto");
   const [numSpeakers, setNumSpeakers] = React.useState<string>("auto");
   const [projectId, setProjectId] = React.useState<string>("");
-  const [rightsMode, setRightsMode] = React.useState<Mode>("private");
+  // Seeded from the workspace default (final fix wave, Fix 1), re-synced at
+  // most once if it hadn't loaded yet at mount, never once the user picks a
+  // mode in the sharing dialog (use-seeded-value.ts) — a workspace value
+  // outside ALLOWED_MODES falls back to "private" (sanitizeRightsMode).
+  const [rightsMode, setRightsMode] = useSeededValue<Mode>(
+    sanitizeRightsMode(defaultRightsMode, ALLOWED_MODES),
+    "private",
+  );
   const [rbacUsers, setRbacUsers] = React.useState<RbacUser[]>([]);
   const [rbacRoles, setRbacRoles] = React.useState<RbacRole[]>([]);
+  // Seeded from the workspace defaults, re-synced at most once if they
+  // hadn't loaded yet at mount, never once the admin edits a row
+  // (use-seeded-post-processing-rows.ts) — never retroactively edits this
+  // upload once the admin has made a choice (task-7 brief, Step 4).
+  const [ppRows, setPpRows] = useSeededPostProcessingRows(defaultPostProcessingPrompts);
   const [optionsOpen, setOptionsOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
 
   const projects = useProjectOptions();
+  const { prompts, agents } = usePostProcessingOptions();
   const [startJob] = useMutation(START_TRANSCRIPTION_JOB);
 
   // Direct drag-and-drop upload path (the gallery's embedded Uppy Dashboard
@@ -144,7 +177,8 @@ export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
     );
   }, [s3Key]);
 
-  const canStart = Boolean(s3Key) && !busy && !uploading;
+  const canStart =
+    Boolean(s3Key) && !busy && !uploading && postProcessingRowsComplete(ppRows);
 
   const onStart = React.useCallback(async () => {
     if (!s3Key) return;
@@ -162,6 +196,7 @@ export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
             target_rights_mode: rightsMode,
             target_rbac_users: rbacUsers,
             target_rbac_roles: rbacRoles,
+            post_processing_prompts: ppRows.filter((r) => r.prompt_id && r.agent_id),
           },
         },
       });
@@ -185,6 +220,7 @@ export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
     rightsMode,
     rbacUsers,
     rbacRoles,
+    ppRows,
     t,
     onStarted,
   ]);
@@ -212,6 +248,9 @@ export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
       : t("composer.speakerCount", { count: Number(numSpeakers) }),
     projectName ?? t("composer.noProjectSummary"),
     t(`mode.${rightsMode === "teams" ? "private" : rightsMode}`),
+    ppRows.length > 0
+      ? `${t("composer.postProcessing")} (${ppRows.length})`
+      : t("composer.postProcessing"),
   ].join(" · ");
 
   return (
@@ -365,6 +404,13 @@ export function Composer({ onStarted, onPrimaryActionChange }: ComposerProps) {
                 }}
               />
             </div>
+
+            <PostProcessingPicker
+              rows={ppRows}
+              onChange={setPpRows}
+              prompts={prompts}
+              agents={agents}
+            />
           </div>
         </CollapsibleContent>
       </Collapsible>

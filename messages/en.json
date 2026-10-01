@@ -4708,6 +4708,10 @@
       "botName": "Bot name",
       "botNamePlaceholder": "IMP Notetaker",
       "notifyChat": "Notify participants in chat that the meeting is recorded",
+      "botIdentityLockedHint": "This workspace's bot name and recording notice are locked — recorders can't change them.",
+      "botIdentityLockedName": "Bot name: {botName}",
+      "botIdentityLockedNotifyOn": "Announces the recording in chat.",
+      "botIdentityLockedNotifyOff": "Does not announce the recording in chat.",
       "postProcessing": "Post-processing",
       "postProcessingHint": "Run prompts on the transcript automatically when it's ready",
       "addPrompt": "Add prompt",
@@ -4919,7 +4923,7 @@
     },
     "new": "New transcript",
     "newShort": "New",
-    "overflow": { "label": "More options" },
+    "overflow": { "label": "More options", "settings": "Transcript settings" },
     "queue": {
       "library": "Transcript library",
       "loadMore": "Load more",
@@ -4985,6 +4989,90 @@
       "bulkDisabled": "Bulk actions apply to saved transcripts, not recordings in progress"
     },
     "searchPlaceholder": "Search transcripts…",
+    "settings": {
+      "pageTitle": "Transcript settings",
+      "pageDescription": "Workspace defaults for transcription sources, the meeting bot, and recordings.",
+      "adminsOnlyBadge": "Admins only",
+      "notAdmin": {
+        "title": "Ask an admin",
+        "description": "Transcript settings can only be changed by a workspace admin."
+      },
+      "loadError": "Couldn't load the Transcripts settings",
+      "saved": "Setting saved",
+      "saveFailed": "Couldn't save this setting",
+      "resetToDefault": "Reset to default",
+      "sourceNote": {
+        "env": "Using the environment default",
+        "code": "Using the built-in default"
+      },
+      "sections": {
+        "sources": "Sources",
+        "meetingBot": "Meeting bot",
+        "defaults": "Defaults",
+        "storage": "Recordings & storage",
+        "limits": "Recording limits",
+        "knowledge": "Knowledge base and agents"
+      },
+      "summaries": {
+        "sources": "{configured} of {total} sources connected{embedderConfigured, select, false { — no embedding model set, transcripts won't be searchable} other {}}.",
+        "meetingBot": "\"{botName}\" joins meetings, {notifyChat, select, true {announces the recording in chat} other {does not announce the recording in chat}}; {mayOverride, select, true {recorders may change its name} other {recorders can't change its name}}.",
+        "defaults": "New transcripts default to {defaultRightsMode}; {presetCount, plural, =0 {no summary presets} one {# summary preset} other {# summary presets}}{stalePresetCount, plural, =0 {} other {, # no longer available}}.",
+        "storage": "Meeting video is {forever, select, true {kept forever} other {kept for {hours} hours}}; {storeVideoLocally, select, true {a local copy is also kept} other {no local copy is kept}}.",
+        "limits": "{none, select, true {No monthly recording cap is set.} other {Monthly recording cap: {minutes} minutes.}}",
+        "knowledge": "{readCount, plural, =0 {No agents use this knowledge base yet — transcripts are invisible to every agent} one {# agent can read this knowledge base} other {# agents can read this knowledge base}}{writeCount, plural, =0 {} other {, # can also write to it}}."
+      },
+      "sources": {
+        "uploadLabel": "File upload (Whisper)",
+        "meetingLabel": "Meeting bot (Recall)",
+        "recordLabel": "Record on this device",
+        "testButton": "Test",
+        "resultOk": "Connected",
+        "resultNotConfigured": "Not configured",
+        "resultUnreachable": "Unreachable: {message}",
+        "testFailed": "Couldn't reach the test endpoint",
+        "embedderHeading": "Make transcripts searchable",
+        "embedderDescription": "Transcripts need an embedding model to be searchable from Ask-about-this-transcript and knowledge search.",
+        "contextLoadFailed": "Couldn't load the embedder configuration.",
+        "loadingEmbedder": "Loading embedder configuration…"
+      },
+      "meetingBot": {
+        "mayOverrideLabel": "Recorders may set their own bot name and notice",
+        "mayOverrideHint": "When off, every meeting bot always uses the settings above, even if a recorder tries to change them."
+      },
+      "defaults": {
+        "rightsModeLabel": "Default sharing for new transcripts",
+        "presetsLabel": "Default summary presets",
+        "presetsHint": "Pre-selected in every composer; still removable for one recording.",
+        "stalePresetsNote": "{count, plural, one {# preset is} other {# presets are}} no longer available — the prompt or agent behind it was deleted."
+      },
+      "storage": {
+        "retentionLabel": "Meeting video retention",
+        "retentionOption": "{hours} hours",
+        "retentionForever": "Keep forever",
+        "hoursStoredLabel": "{hours} hours stored this month",
+        "storeLocallyLabel": "Keep a local copy of meeting video",
+        "storeLocallyHint": "When off, playback uses a temporary link from the meeting-bot provider.",
+        "costLabel": "Estimated storage cost per hour (USD)",
+        "costPlaceholder": "0.00",
+        "costEstimate": "Estimated cost this month: {amount}",
+        "costEstimateHint": "Set a rate above to see an estimated monthly cost."
+      },
+      "limits": {
+        "capLabel": "Monthly recording cap",
+        "capNone": "No cap",
+        "capOption": "{minutes} minutes"
+      },
+      "knowledge": {
+        "description": "Agents whose retrieval config includes this knowledge base, and what they may do.",
+        "loadError": "Couldn't load agents",
+        "loading": "Loading agents…",
+        "empty": "No agents use this knowledge base yet.",
+        "canRead": "Can read",
+        "canReadAndWrite": "Can read and write",
+        "canWriteOnly": "Can write (no read access)",
+        "openInKnowledge": "Open in Knowledge"
+      }
+    },
     "sharing": {
       "subject": "transcript"
     },

@@ -36,7 +36,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -49,6 +48,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { InProgressStrip } from "./components/in-progress-strip";
 import { NewTranscriptDialog } from "./components/new-transcript-dialog";
+import { RecordingUsageCard } from "./components/recording-usage-card";
 import { TranscriptListRow } from "./components/transcript-row";
 import {
   useRecordingUsage,
@@ -62,7 +62,6 @@ import {
 } from "./queries";
 import {
   filterTranscriptRows,
-  formatDuration,
   groupTranscriptRows,
   type JobSource,
   type TranscriptRow,
@@ -331,6 +330,16 @@ function TranscriptionsPageInner() {
                 <DropdownMenuItem asChild>
                   <Link href="/data/transcriptions">{t("queue.library")}</Link>
                 </DropdownMenuItem>
+                {/* The "…" menu itself is visible to every user (settings
+                    design doc §6) — only this item is super-admin-only. The
+                    settings page still renders its own "ask an admin" state
+                    rather than a 404 for anyone who reaches it another way
+                    (a stale link, a lost admin right). */}
+                {user?.super_admin && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/transcriptions/settings">{t("overflow.settings")}</Link>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
             <Button
@@ -345,32 +354,11 @@ function TranscriptionsPageInner() {
         }
       />
 
-      {/* Monthly recording budget — shown only when a cap is configured.
-          `enabled` alone was not that test: a workspace with recording on and
-          no cap has limit_seconds null, and the summary rendered it through
-          `?? 0` as "17h 16m 6s of 0s used (0%)" — a real numerator over a
-          denominator that does not exist. Checking for the cap is what the
-          comment always claimed this did. */}
-      {usage?.enabled && usage.limit_seconds != null && (
-        <div className="space-y-1.5 rounded-lg border p-3">
-          <div className="flex items-center justify-between gap-2 text-xs">
-            <span className="font-medium text-muted-foreground">
-              {t("usage.label")}
-            </span>
-            <span className="text-muted-foreground">
-              {t("usage.summary", {
-                used: formatDuration(usage.used_seconds),
-                limit: formatDuration(usage.limit_seconds ?? 0),
-                percent: Math.round(usage.percent ?? 0),
-              })}
-            </span>
-          </div>
-          <Progress value={Math.min(100, usage.percent ?? 0)} />
-          {usage.exceeded && (
-            <p className="text-xs text-destructive">{t("usage.exceeded")}</p>
-          )}
-        </div>
-      )}
+      {/* Monthly recording budget — shown only when a cap is configured
+          (RecordingUsageCard's own check); reused by the settings page's
+          right column (final fix wave, Fix 4a) so there is exactly one place
+          this renders. */}
+      <RecordingUsageCard usage={usage} />
 
       <NewTranscriptDialog
         open={composerVisible}
