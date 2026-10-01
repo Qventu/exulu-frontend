@@ -338,7 +338,7 @@ export const GET_TRANSCRIPT_ITEMS = gql`
  * comment in types.ts.
  */
 export const GET_TRANSCRIPT_ITEM = gql`
-  query GetTranscriptItem($id: ID!) {
+  query GetTranscriptItem($id: String!) {
     transcriptions_itemsPagination(page: 1, limit: 1, filters: [{ id: { eq: $id } }]) {
       items {
         id
