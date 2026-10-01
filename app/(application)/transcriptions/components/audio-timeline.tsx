@@ -18,11 +18,13 @@
  * - ribbon is taller on touch viewports (h-12 < md), speaker colors come from
  *   the chart token scale.
  */
-import { Loader2 } from "lucide-react";
+import { Loader2, Pause, Play } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
+import { Button } from "@/components/ui/button";
 import { getPresignedUrl } from "@/components/primitives/file-picker";
+import { cn } from "@/lib/utils";
 
 import {
   formatClock,
@@ -43,17 +45,25 @@ export interface AudioTimelineProps {
   onTime?: (second: number) => void;
   /** Fired when the user seeks via the ribbon (sheet scrolls the transcript). */
   onSeek?: (time: number) => void;
+  /**
+   * "row" lays the transport out as the design's single bottom bar — transport,
+   * elapsed time, ribbon and speed on one line. "stacked" keeps the narrow
+   * right-rail shape. Defaults to stacked.
+   */
+  layout?: "row" | "stacked";
 }
 
 export const AudioTimeline = React.forwardRef<
   AudioTimelineHandle,
   AudioTimelineProps
->(({ audioS3Key, segments, speakers, onTime, onSeek }, ref) => {
+>(({ audioS3Key, segments, speakers, onTime, onSeek, layout = "stacked" }, ref) => {
   const t = useTranslations("transcriptions");
   const [audioUrl, setAudioUrl] = React.useState<string | null>(null);
   const [failed, setFailed] = React.useState(false);
   const [duration, setDuration] = React.useState(0);
   const [currentTime, setCurrentTime] = React.useState(0);
+  const [playing, setPlaying] = React.useState(false);
+  const [rate, setRate] = React.useState(1);
   const [hover, setHover] = React.useState<{
     segment: Segment;
     leftPct: number;
@@ -88,6 +98,22 @@ export const AudioTimeline = React.forwardRef<
     }),
     [],
   );
+
+  React.useEffect(() => {
+    if (audioRef.current) audioRef.current.playbackRate = rate;
+  }, [rate, audioUrl]);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) void audio.play();
+    else audio.pause();
+  };
+
+  // 2× is the practical ceiling for reviewing speech; beyond it names and
+  // numbers stop being checkable, which is the whole point of this screen.
+  const RATES = [1, 1.25, 1.5, 2] as const;
+  const cycleRate = () => setRate((prev) => RATES[(RATES.indexOf(prev as 1) + 1) % RATES.length]);
 
   // The signed URL expires after ~1 minute; a seek into an unbuffered range
   // mid-review can 404. Re-fetch once (the module cache drops expired URLs).
@@ -140,19 +166,44 @@ export const AudioTimeline = React.forwardRef<
     );
   }
 
+  const row = layout === "row";
+
   return (
-    <div className="space-y-2">
+    <div className={cn(row ? "flex items-center gap-3" : "space-y-2")}>
       <audio
         ref={audioRef}
         src={audioUrl}
-        controls
         preload="metadata"
-        className="w-full"
-        onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)}
+        className="hidden"
+        onLoadedMetadata={(event) => {
+          setDuration(event.currentTarget.duration);
+          event.currentTarget.playbackRate = rate;
+        }}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
         onTimeUpdate={handleTimeUpdate}
         onError={handleAudioError}
       />
-      <div className="relative">
+      <div className={cn("flex shrink-0 items-center gap-2", row ? "" : "w-full")}>
+        <Button
+          type="button"
+          variant="default"
+          size="icon"
+          aria-label={playing ? t("review.pause") : t("review.play")}
+          className="size-10 shrink-0 rounded-full"
+          onClick={togglePlay}
+        >
+          {playing ? (
+            <Pause aria-hidden="true" className="size-4" />
+          ) : (
+            <Play aria-hidden="true" className="size-4" />
+          )}
+        </Button>
+        <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+          {formatClock(Math.floor(currentTime))} / {formatClock(Math.floor(totalDuration))}
+        </span>
+      </div>
+      <div className={cn("relative", row && "min-w-0 flex-1")}>
         {/* Navigational overview only — redundant with the transcript blocks,
             which are the accessible seek path (T7); hence aria-hidden. */}
         <div
@@ -223,6 +274,16 @@ export const AudioTimeline = React.forwardRef<
           </div>
         )}
       </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        aria-label={t("review.speed")}
+        className="shrink-0 font-mono text-xs tabular-nums max-md:h-11"
+        onClick={cycleRate}
+      >
+        {rate.toFixed(2).replace(/0$/, "")}×
+      </Button>
     </div>
   );
 });

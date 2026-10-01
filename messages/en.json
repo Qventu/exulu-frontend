@@ -4970,7 +4970,10 @@
       "correctHint": "Click any sentence to correct it. Timestamps stay in place.",
       "helpTitle": "Correcting a transcript",
       "helpBody": "Edits change the words only — the timing of every block stays as recorded, so the audio keeps lining up. Name a speaker once and every one of their blocks updates.",
-      "helpLabel": "How correcting works"
+      "helpLabel": "How correcting works",
+      "play": "Play",
+      "pause": "Pause",
+      "speed": "Playback speed"
     },
     "row": {
       "awaitingReview": "Awaiting review",

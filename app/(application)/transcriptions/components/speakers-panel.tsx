@@ -86,7 +86,10 @@ export function SpeakersPanel({
                     className="size-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: speakerColor(raw) }}
                   />
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  <span
+                    title={name || raw}
+                    className="min-w-0 flex-1 truncate text-sm font-medium"
+                  >
                     {name || raw}
                   </span>
                   {speakerNeedsName(raw, names) && (

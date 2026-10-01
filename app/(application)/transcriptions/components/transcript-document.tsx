@@ -1295,8 +1295,8 @@ export function TranscriptDocument({
       </div>
 
       {isEditable && (
-        <div className="shrink-0 space-y-3 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <div ref={mediaContainerRef}>
+        <div className="shrink-0 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div ref={mediaContainerRef} className="mx-auto w-full max-w-6xl">
             {hasVideo ? (
               <MeetingVideoPlayer
                 job={
@@ -1313,6 +1313,7 @@ export function TranscriptDocument({
                 audioS3Key={item.audio_s3key}
                 segments={segments}
                 speakers={speakers}
+                layout="row"
               />
             ) : (
               <p className="px-1 text-xs text-muted-foreground">{t("review.noAudio")}</p>

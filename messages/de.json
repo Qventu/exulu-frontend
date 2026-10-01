@@ -4970,7 +4970,10 @@
       "correctHint": "Klicke auf einen Satz, um ihn zu korrigieren. Zeitstempel bleiben erhalten.",
       "helpTitle": "Transkript korrigieren",
       "helpBody": "Änderungen betreffen nur den Wortlaut — die Zeiten jedes Blocks bleiben wie aufgezeichnet, sodass das Audio weiterhin passt. Wird eine Person einmal benannt, aktualisieren sich alle ihre Blöcke.",
-      "helpLabel": "So funktioniert das Korrigieren"
+      "helpLabel": "So funktioniert das Korrigieren",
+      "play": "Abspielen",
+      "pause": "Pause",
+      "speed": "Wiedergabegeschwindigkeit"
     },
     "row": {
       "awaitingReview": "Wartet auf Überprüfung",
