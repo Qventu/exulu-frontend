@@ -4965,7 +4965,12 @@
       "resultsReady": "{count, plural, =0 {Post-processing ready} one {# result ready} other {# results ready}}",
       "resultsShow": "Show",
       "resultsHide": "Hide",
-      "resultsPendingCount": "{count, plural, one {# result not run yet} other {# results not run yet}}"
+      "resultsPendingCount": "{count, plural, one {# result not run yet} other {# results not run yet}}",
+      "saveTranscript": "Save transcript",
+      "correctHint": "Click any sentence to correct it. Timestamps stay in place.",
+      "helpTitle": "Correcting a transcript",
+      "helpBody": "Edits change the words only — the timing of every block stays as recorded, so the audio keeps lining up. Name a speaker once and every one of their blocks updates.",
+      "helpLabel": "How correcting works"
     },
     "row": {
       "awaitingReview": "Awaiting review",
@@ -5096,7 +5101,9 @@
       "empty": "No speakers detected.",
       "needsName": "Needs a name",
       "nameLabel": "Name for {raw}",
-      "hear": "Hear"
+      "hear": "Hear",
+      "namedCount": "{named} of {total} named",
+      "talkStats": "{share}% of talk time · {blocks, plural, one {# block} other {# blocks}}"
     },
     "state": {
       "recording": "Recording",

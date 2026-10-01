@@ -4965,7 +4965,12 @@
       "resultsReady": "{count, plural, =0 {Nachbearbeitung fertig} one {# Ergebnis fertig} other {# Ergebnisse fertig}}",
       "resultsShow": "Anzeigen",
       "resultsHide": "Ausblenden",
-      "resultsPendingCount": "{count, plural, one {# Ergebnis noch nicht ausgeführt} other {# Ergebnisse noch nicht ausgeführt}}"
+      "resultsPendingCount": "{count, plural, one {# Ergebnis noch nicht ausgeführt} other {# Ergebnisse noch nicht ausgeführt}}",
+      "saveTranscript": "Transkript speichern",
+      "correctHint": "Klicke auf einen Satz, um ihn zu korrigieren. Zeitstempel bleiben erhalten.",
+      "helpTitle": "Transkript korrigieren",
+      "helpBody": "Änderungen betreffen nur den Wortlaut — die Zeiten jedes Blocks bleiben wie aufgezeichnet, sodass das Audio weiterhin passt. Wird eine Person einmal benannt, aktualisieren sich alle ihre Blöcke.",
+      "helpLabel": "So funktioniert das Korrigieren"
     },
     "row": {
       "awaitingReview": "Wartet auf Überprüfung",
@@ -5096,7 +5101,9 @@
       "empty": "Keine Sprecher erkannt.",
       "needsName": "Braucht einen Namen",
       "nameLabel": "Name für {raw}",
-      "hear": "Anhören"
+      "hear": "Anhören",
+      "namedCount": "{named} von {total} benannt",
+      "talkStats": "{share}% der Redezeit · {blocks, plural, one {# Block} other {# Blöcke}}"
     },
     "state": {
       "recording": "Aufnahme läuft",

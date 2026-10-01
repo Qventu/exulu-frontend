@@ -67,6 +67,7 @@ import {
   Share2,
   Trash2,
   Users,
+  HelpCircle,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
@@ -832,6 +833,15 @@ export function TranscriptDocument({
     }));
   };
 
+  // Blocks per raw speaker, for the rail's "N% of talk time · M blocks" line.
+  const blockCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const block of blocks) {
+      counts[block.rawSpeaker] = (counts[block.rawSpeaker] ?? 0) + 1;
+    }
+    return counts;
+  }, [blocks]);
+
   const unnamedSpeakerCount = rawSpeakers.filter(
     (raw) => !editState.speakers[raw]?.trim(),
   ).length;
@@ -885,12 +895,37 @@ export function TranscriptDocument({
           }
           action={
             isEditable ? (
-              <ReviewChecklist
-                titleSet={editState.title.trim().length > 0}
-                unnamedSpeakerCount={unnamedSpeakerCount}
-                hasSummary={hasSummary}
-                sharingChosen={sharingChosen}
-              />
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={saving}
+                  className="max-md:h-11"
+                  onClick={() => onDiscard?.()}
+                >
+                  {t("review.discard")}
+                </Button>
+                <ReviewChecklist
+                  titleSet={editState.title.trim().length > 0}
+                  unnamedSpeakerCount={unnamedSpeakerCount}
+                  hasSummary={hasSummary}
+                  sharingChosen={sharingChosen}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={saving || !onSave}
+                  aria-busy={saving}
+                  className="max-md:h-11"
+                  onClick={() => void handleSaveClick()}
+                >
+                  {saving ? (
+                    <Loader2 aria-hidden="true" className="mr-2 size-4 animate-spin" />
+                  ) : null}
+                  {t("review.saveTranscript")}
+                </Button>
+              </div>
             ) : (
               <div className="flex shrink-0 items-center gap-1">
                 <Button
@@ -1006,9 +1041,32 @@ export function TranscriptDocument({
 
             <section className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-medium">{t("review.transcript")}</p>
+                {isEditable ? (
+                  <p className="text-sm text-muted-foreground">{t("review.correctHint")}</p>
+                ) : (
+                  <p className="text-sm font-medium">{t("review.transcript")}</p>
+                )}
                 {isEditable && (
-                  <FindReplace segments={editState.segments} onReplaceAll={handleReplaceAll} />
+                  <div className="flex shrink-0 items-center gap-1">
+                    <FindReplace segments={editState.segments} onReplaceAll={handleReplaceAll} />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          aria-label={t("review.helpLabel")}
+                          className="size-8 shrink-0 p-0 max-md:size-11"
+                        >
+                          <HelpCircle aria-hidden="true" className="size-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-72 space-y-1.5">
+                        <p className="text-sm font-medium">{t("review.helpTitle")}</p>
+                        <p className="text-sm text-muted-foreground">{t("review.helpBody")}</p>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 )}
               </div>
               {blocks.length === 0 ? (
@@ -1017,29 +1075,31 @@ export function TranscriptDocument({
                 <div className="space-y-1">
                   {blocks.map((block, index) =>
                     isEditable ? (
-                      <div key={index} className="rounded-md px-2 py-1.5">
-                        <span className="flex flex-wrap items-center gap-2 text-xs">
+                      <div
+                        key={index}
+                        className="rounded-md px-2 py-1.5 md:grid md:grid-cols-[9rem_minmax(0,1fr)] md:gap-3"
+                      >
+                        <span className="flex flex-wrap items-baseline gap-x-2 text-xs md:flex-col md:items-start md:gap-y-0.5">
                           <span
-                            aria-hidden="true"
-                            className="inline-block size-2 shrink-0 rounded-full"
-                            style={{ backgroundColor: speakerColor(block.rawSpeaker) }}
-                          />
-                          <span className="truncate font-medium text-foreground">
+                            className="min-w-0 truncate font-medium"
+                            style={{ color: speakerColor(block.rawSpeaker) }}
+                          >
                             {block.label}
+                          </span>
+                          <span className="shrink-0 font-mono text-muted-foreground">
+                            {formatClock(block.start)}
                           </span>
                           {!speakers[block.rawSpeaker]?.trim() && (
                             <button
                               type="button"
-                              className="text-primary underline underline-offset-2 max-md:h-11"
+                              className="text-left text-primary underline underline-offset-2 max-md:h-11"
                               onClick={() => focusSpeaker(block.rawSpeaker)}
                             >
                               {t("document.nameSpeaker")}
                             </button>
                           )}
-                          <span className="shrink-0 font-mono text-muted-foreground">
-                            {formatClock(block.start)}
-                          </span>
                         </span>
+                        <div className="min-w-0">
                         {editingSegmentStart === block.segmentIndices[0] ? (
                           <Textarea
                             autoFocus
@@ -1085,6 +1145,7 @@ export function TranscriptDocument({
                             ))}
                           </button>
                         )}
+                        </div>
                       </div>
                     ) : (
                       <button
@@ -1093,18 +1154,22 @@ export function TranscriptDocument({
                         onClick={() => seekTo(block.start)}
                         className="w-full rounded-md px-2 py-1.5 text-left transition-colors duration-150 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
-                        <span className="flex items-center gap-2 text-xs">
-                          <span
-                            aria-hidden="true"
-                            className="inline-block size-2 shrink-0 rounded-full"
-                            style={{ backgroundColor: speakerColor(block.rawSpeaker) }}
-                          />
-                          <span className="truncate font-medium text-foreground">{block.label}</span>
-                          <span className="shrink-0 font-mono text-muted-foreground">
-                            {formatClock(block.start)}
+                        <span className="md:grid md:grid-cols-[9rem_minmax(0,1fr)] md:gap-3">
+                          <span className="flex flex-wrap items-baseline gap-x-2 text-xs md:flex-col md:items-start md:gap-y-0.5">
+                            <span
+                              className="min-w-0 truncate font-medium"
+                              style={{ color: speakerColor(block.rawSpeaker) }}
+                            >
+                              {block.label}
+                            </span>
+                            <span className="shrink-0 font-mono text-muted-foreground">
+                              {formatClock(block.start)}
+                            </span>
+                          </span>
+                          <span className="mt-0.5 block min-w-0 text-sm leading-relaxed md:mt-0">
+                            {block.text}
                           </span>
                         </span>
-                        <span className="mt-0.5 block text-sm leading-relaxed">{block.text}</span>
                       </button>
                     ),
                   )}
@@ -1176,6 +1241,7 @@ export function TranscriptDocument({
           <div className={cn("space-y-4", chapters.length > 0 ? "md:col-start-3" : "md:col-start-2")}>
             {isEditable ? (
               <SpeakersPanel
+                blockCounts={blockCounts}
                 rawSpeakers={rawSpeakers}
                 names={editState.speakers}
                 onNameChange={handleSpeakerNameChange}
@@ -1247,29 +1313,6 @@ export function TranscriptDocument({
             ) : (
               <p className="px-1 text-xs text-muted-foreground">{t("review.noAudio")}</p>
             )}
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={saving}
-              className="max-md:h-11"
-              onClick={() => onDiscard?.()}
-            >
-              {t("review.discard")}
-            </Button>
-            <Button
-              type="button"
-              disabled={saving || !onSave}
-              aria-busy={saving}
-              className="max-md:h-11"
-              onClick={() => void handleSaveClick()}
-            >
-              {saving ? (
-                <Loader2 aria-hidden="true" className="mr-2 size-4 animate-spin" />
-              ) : null}
-              {tCommon("save")}
-            </Button>
           </div>
         </div>
       )}

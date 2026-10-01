@@ -10,7 +10,7 @@
  * Stage 4 (out of scope — brief's "Scope discipline"): no speaker name
  * *suggestions* from earlier transcripts, no speaker *Merge* control.
  */
-import { Ear } from "lucide-react";
+import { ChevronDown, Ear } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
@@ -18,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+
+import { cn } from "@/lib/utils";
 
 import { speakerColor } from "../types";
 
@@ -31,6 +33,8 @@ export interface SpeakersPanelProps {
   talkShare: Record<string, number>;
   /** Seeks the player to that speaker's first block and plays ~4s. */
   onHear: (rawSpeaker: string) => void;
+  /** How many transcript blocks each raw label owns, for the card's stats line. */
+  blockCounts: Record<string, number>;
 }
 
 export function SpeakersPanel({
@@ -39,15 +43,27 @@ export function SpeakersPanel({
   onNameChange,
   talkShare,
   onHear,
+  blockCounts,
 }: SpeakersPanelProps) {
   const t = useTranslations("transcriptions");
   const [openSpeaker, setOpenSpeaker] = React.useState<string | null>(
     rawSpeakers[0] ?? null,
   );
+  const namedCount = rawSpeakers.filter((raw) => (names[raw] ?? "").trim()).length;
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{t("speakersPanel.title")}</p>
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-sm font-medium">{t("speakersPanel.title")}</p>
+        {rawSpeakers.length > 0 && (
+          <p className="shrink-0 text-xs text-muted-foreground">
+            {t("speakersPanel.namedCount", {
+              named: namedCount,
+              total: rawSpeakers.length,
+            })}
+          </p>
+        )}
+      </div>
       {rawSpeakers.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("speakersPanel.empty")}</p>
       ) : (
@@ -78,6 +94,13 @@ export function SpeakersPanel({
                     </Badge>
                   )}
                   <span className="shrink-0 text-xs text-muted-foreground">{share}%</span>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={cn(
+                      "size-4 shrink-0 text-muted-foreground transition-transform",
+                      open && "rotate-180",
+                    )}
+                  />
                 </button>
                 {open && (
                   <div className="mt-2 space-y-2 pl-[1.125rem]">
@@ -101,6 +124,12 @@ export function SpeakersPanel({
                       </Button>
                     </div>
                     <Progress value={share} className="h-1.5" />
+                    <p className="text-xs text-muted-foreground">
+                      {t("speakersPanel.talkStats", {
+                        share,
+                        blocks: blockCounts[raw] ?? 0,
+                      })}
+                    </p>
                   </div>
                 )}
               </div>
