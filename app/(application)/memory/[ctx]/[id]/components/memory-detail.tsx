@@ -21,10 +21,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import {
-  BULK_UPDATE_MEMORY_RBAC, DELETE_MEMORY_ITEM, GET_MEMORY_BASE_CONTRIBUTORS, GET_MEMORY_ITEM_BY_ID, GET_SOURCE_MESSAGES, GET_SOURCE_SESSION, MEMORY_ITEM_KEY,
+  BULK_UPDATE_MEMORY_RBAC, DELETE_MEMORY_ITEM, GET_MEMORY_BASE_CONTRIBUTORS, GET_MEMORY_ITEM_BY_ID, GET_MEMORY_USAGE, GET_SOURCE_MESSAGES, GET_SOURCE_SESSION, MEMORY_ITEM_KEY,
 } from "../../../queries";
 import { type MemoryContext, type MemoryContributor, type MemoryItem, creatorName, hasSourceSession, visibilityKey } from "../../components/memory-list-data";
 import { VisibilityLabel } from "../../components/memory-table";
+import { type UsageEntry, usageEntryLabel, usageLabel } from "../../components/usage-data";
 import { detailActions, sourceQuote } from "./memory-detail-data";
 
 type Rbac = { rights_mode: "private" | "users" | "roles" | "teams" | "public"; users: { id: number; rights: "read" | "write" }[]; roles: { id: string; rights: "read" | "write" }[]; teams: { id: string; rights: "read" | "write" }[] };
@@ -63,6 +64,7 @@ export function MemoryDetail({ context, itemId }: { context: MemoryContext; item
   const contributors = useQuery<{ memoryBaseContributors: MemoryContributor[] }>(GET_MEMORY_BASE_CONTRIBUTORS, { fetchPolicy: "cache-first", variables: { contextId: context.id } });
   const [updateRbac, updateState] = useMutation(BULK_UPDATE_MEMORY_RBAC(context.id));
   const [deleteItem] = useMutation(DELETE_MEMORY_ITEM(context.id));
+  const usage = useQuery<{ memoryUsage: { count: number; lastUsedAt: string | null; recent: UsageEntry[] } | null }>(GET_MEMORY_USAGE, { variables: { contextId: context.id, memoryId: itemId, limit: 5 }, skip: !memory });
 
   const [accessOpen, setAccessOpen] = React.useState(false);
   const [draft, setDraft] = React.useState<Rbac | null>(null);
@@ -151,6 +153,39 @@ export function MemoryDetail({ context, itemId }: { context: MemoryContext; item
               <dt className="text-muted-foreground">{t("detail.updated")}</dt>
               <dd>{memory.updatedAt ? <RelativeTime date={memory.updatedAt} /> : "—"}</dd>
             </dl>
+          </DetailSection>
+          <DetailSection title={t("usage.section")} defaultOpen>
+            {usage.loading && !usage.data ? (
+              <Skeleton className="h-16 w-full" />
+            ) : usage.error ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {t("usage.loadFailed")}
+                <Button variant="link" size="sm" className="h-auto p-0" onClick={() => { void usage.refetch(); }}>{tc("retry")}</Button>
+              </div>
+            ) : (() => {
+              const data = usage.data?.memoryUsage ?? { count: 0, lastUsedAt: null, recent: [] };
+              const label = usageLabel(data);
+              if (label.kind === "never") return <p className="text-sm text-muted-foreground">{t("usage.neverUsedLong")}</p>;
+              return (
+                <div className="flex flex-col gap-2 text-sm">
+                  <p>
+                    {t("usage.usedInCount", { count: label.count })}
+                    {label.lastUsedAt && <> · {t("usage.lastPrefix")} <RelativeTime date={label.lastUsedAt} /></>}
+                  </p>
+                  <ul className="flex flex-col gap-1">
+                    {data.recent.map((e) => (
+                      <li key={e.messageId} className="flex flex-wrap items-center gap-x-2 text-muted-foreground">
+                        <span>{usageEntryLabel(e, t("usage.guest"), t("usage.unknownAgent"))}</span>
+                        <RelativeTime date={e.usedAt} />
+                        {e.title !== null && e.sessionId && e.agent && (
+                          <Link href={`/chat/${e.agent.id}/${e.sessionId}`} className="underline">{e.title || t("usage.openConversation")}</Link>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
           </DetailSection>
           <div className="flex flex-wrap gap-2">
             {actions.canEdit && <Button variant="outline" asChild><Link href={`/data/${context.id}/items/${memory.id}`}>{t("detail.editWording")}</Link></Button>}
