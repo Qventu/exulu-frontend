@@ -180,9 +180,13 @@ export const GET_MEMORY_BASE_UNUSED_IDS = gql`
   }
 `;
 
-/** Same operation shape as knowledge's UPDATE_ITEM; used for the Archive bulk action. */
+/**
+ * Same operation shape as knowledge's UPDATE_ITEM; used for the Archive bulk
+ * action. `generateEmbeddings: false` because archiving must not re-embed on
+ * bases that embed on update.
+ */
 export const UPDATE_MEMORY_ITEM = (context: string) => gql`
   mutation UpdateMemory${context}($id: ID!, $input: ${context}_itemsInput!) {
-    ${context}_itemsUpdateOneById(id: $id, input: $input) { item { id } job }
+    ${context}_itemsUpdateOneById(id: $id, input: $input, generateEmbeddings: false) { item { id } job }
   }
 `;

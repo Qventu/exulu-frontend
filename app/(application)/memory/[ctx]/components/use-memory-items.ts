@@ -84,7 +84,10 @@ export function useMemoryItems(args: {
     pageInfo: noMatches ? emptyPageInfo(args.page) : (live?.pageInfo ?? emptyPageInfo(args.page)),
     contributors: contributors.data?.memoryBaseContributors ?? [],
     loading: query.loading && !query.data,
-    error: query.error,
+    // The unused-ids query failing would otherwise just read as "no memories
+    // match" — surface it through the same error so the table shows the
+    // DataTable error state with retry instead of a silent empty state.
+    error: query.error ?? unused.error,
     usage: usageById,
     usageError: !!usage.error,
     unusedLoading: !!mode && unused.loading && !unused.data,

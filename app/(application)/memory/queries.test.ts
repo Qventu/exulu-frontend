@@ -34,5 +34,6 @@ describe("usage documents", () => {
     expect(body(GET_MEMORY_BASE_USAGE)).toContain("query MemoryBaseUsage");
     expect(body(GET_MEMORY_BASE_UNUSED_IDS)).toContain("query MemoryBaseUnusedIds");
     expect(body(UPDATE_MEMORY_ITEM("mem"))).toContain("mem_itemsUpdateOneById(");
+    expect(body(UPDATE_MEMORY_ITEM("mem"))).toContain("generateEmbeddings: false");
   });
 });

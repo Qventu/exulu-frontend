@@ -74,8 +74,8 @@ export function BaseShell({
         />
         <StatCard
           label={t("usage.neverUsedCard")}
-          value={usage.data?.memoryBaseUsage?.neverUsed ?? 0}
-          caption={t("usage.neverUsedCaption")}
+          value={usage.error ? "—" : (usage.data?.memoryBaseUsage?.neverUsed ?? 0)}
+          caption={usage.error ? undefined : t("usage.neverUsedCaption")}
           loading={usage.loading && !usage.data}
         />
       </div>

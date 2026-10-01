@@ -90,9 +90,12 @@ export function MemorySection({ editor, refs }: EditorSectionProps) {
   const stats = statsData?.memoryBaseStats;
 
   const invalid = selected && selected.memoryBase && !selected.memoryBase.ok;
-  const { data: usageData, loading: usageLoading } = useQuery<{ memoryBaseUsage: BaseUsage | null }>(GET_MEMORY_BASE_USAGE, {
+  // A base missing from code (`!selected`) must not run the usage query either —
+  // it would otherwise show "no usage yet" underneath the missing-base warning.
+  const showInsights = !!selected && !invalid;
+  const { data: usageData, loading: usageLoading, error: usageError, refetch: refetchUsage } = useQuery<{ memoryBaseUsage: BaseUsage | null }>(GET_MEMORY_BASE_USAGE, {
     variables: { contextId, staleDays: 90 },
-    skip: !memoryOn || !!invalid,
+    skip: !memoryOn || !showInsights,
     fetchPolicy: "cache-and-network",
   });
 
@@ -261,8 +264,13 @@ export function MemorySection({ editor, refs }: EditorSectionProps) {
         </div>
       )}
 
-      {!invalid && (
-        <ChartCard title={t("editor.memory.insightsTitle")} description={t("editor.memory.insightsHint", { agent: agentName })} loading={usageLoading && !usageData}>
+      {showInsights && (
+        <ChartCard
+          title={t("editor.memory.insightsTitle")}
+          description={t("editor.memory.insightsHint", { agent: agentName })}
+          loading={usageLoading && !usageData}
+          error={usageError ? { message: usageError.message, onRetry: () => { void refetchUsage(); } } : null}
+        >
           {(() => {
             const u = usageData?.memoryBaseUsage;
             if (!u || (u.used === 0 && u.neverUsed === 0)) return <p className="text-sm text-muted-foreground">{t("editor.memory.noUsageYet")}</p>;
