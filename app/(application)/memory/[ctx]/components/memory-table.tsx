@@ -11,10 +11,10 @@ import { toast } from "sonner";
 import { BulkActionBar } from "@/components/primitives/bulk-action-bar";
 import { ConfirmDialog, type ConfirmDialogError } from "@/components/primitives/confirm-dialog";
 import { DataTable } from "@/components/primitives/data-table";
-import { FilterPanel, type FilterFieldDef } from "@/components/primitives/filter-panel";
 import { RelativeTime } from "@/components/primitives/relative-time";
 import { Toolbar } from "@/components/primitives/toolbar";
 import { BulkAccessDialog } from "@/components/widgets/bulk-access-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { BULK_UPDATE_MEMORY_RBAC, DELETE_MEMORY_ITEM } from "../../queries";
@@ -23,6 +23,9 @@ import {
   activeFilterCount, creatorName, hasSourceSession, memoryTypeOptions, visibilityKey,
 } from "./memory-list-data";
 import { useMemoryItems } from "./use-memory-items";
+
+/** Radix Select rejects "" as an item value; this reserved value means "no filter". */
+const ANY_FILTER_VALUE = "__any";
 
 const VISIBILITY_ICON = { public: Globe, private: Lock, users: Users, roles: Users, teams: Users } as const;
 
@@ -53,13 +56,11 @@ export function MemoryTable({
   context, initialMine, initialPage, onChanged,
 }: { context: MemoryContext; initialMine: boolean; initialPage: number; onChanged: () => void }) {
   const t = useTranslations("memory");
-  const tc = useTranslations("common");
   const router = useRouter();
   const client = useApolloClient();
   const [search, setSearch] = React.useState("");
   const [mine, setMine] = React.useState(initialMine);
   const [page, setPage] = React.useState(initialPage);
-  const [draft, setDraft] = React.useState<MemoryListFilters>({});
   const [filters, setFilters] = React.useState<MemoryListFilters>({});
   const [selected, setSelected] = React.useState<string[]>([]);
   const [accessOpen, setAccessOpen] = React.useState(false);
@@ -83,17 +84,20 @@ export function MemoryTable({
     setSelected([]);
   }, [search, mine, filters]);
 
-  const fields = React.useMemo<FilterFieldDef[]>(() => [
+  // Inline filter selects: the Toolbar renders its `filters` slot inline on
+  // desktop and inside its own bottom sheet on mobile, so each control applies
+  // immediately (same pattern as the agents and prompts pages).
+  const fields = React.useMemo<{ id: keyof MemoryListFilters & string; label: string; placeholder: string; options: { value: string; label: string }[] }[]>(() => [
     {
-      id: "visibility", label: t("filter.visibility"), type: "select", placeholder: t("filter.any"),
+      id: "visibility", label: t("filter.visibility"), placeholder: t("filter.any"),
       options: (["public", "private", "users", "roles", "teams"] as const).map((v) => ({ value: v, label: t(`visibility.${v}`) })),
     },
     {
-      id: "type", label: t("filter.type"), type: "select", placeholder: t("filter.any"),
+      id: "type", label: t("filter.type"), placeholder: t("filter.any"),
       options: memoryTypeOptions(context).map((v) => ({ value: v, label: v })),
     },
     {
-      id: "creator", label: t("filter.creator"), type: "select", placeholder: t("filter.creatorPlaceholder"),
+      id: "creator", label: t("filter.creator"), placeholder: t("filter.creatorPlaceholder"),
       options: list.contributors.map((c) => ({ value: String(c.id), label: c.name })),
     },
   ], [t, context, list.contributors]);
@@ -146,18 +150,34 @@ export function MemoryTable({
       <Toolbar
         search={{ value: search, onChange: setSearch, placeholder: t("filter.searchMemories") }}
         activeFilterCount={activeFilterCount(filters)}
-        onResetFilters={() => { setFilters({}); setDraft({}); }}
+        onResetFilters={() => setFilters({})}
         filters={
-          <FilterPanel<MemoryListFilters>
-            fields={fields}
-            value={draft}
-            onChange={setDraft}
-            ctaLabel={t("filter.apply")}
-            cancelLabel={tc("cancel")}
-            onCancel={() => setDraft(filters)}
-            onClear={() => { setDraft({}); setFilters({}); }}
-            onConfirm={() => setFilters(draft)}
-          />
+          <>
+            {fields.map((f) => (
+              <Select
+                key={f.id}
+                value={filters[f.id] ? String(filters[f.id]) : ANY_FILTER_VALUE}
+                onValueChange={(v) =>
+                  setFilters((current) => {
+                    const next = { ...current };
+                    if (v === ANY_FILTER_VALUE) delete next[f.id];
+                    else next[f.id] = v;
+                    return next;
+                  })
+                }
+              >
+                <SelectTrigger aria-label={f.label} className="w-full md:w-44">
+                  <SelectValue placeholder={f.placeholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ANY_FILTER_VALUE}>{f.placeholder}</SelectItem>
+                  {f.options.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ))}
+          </>
         }
         view={
           <Tabs value={mine ? "mine" : "all"} onValueChange={(v) => setMine(v === "mine")}>

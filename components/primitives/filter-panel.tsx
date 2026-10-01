@@ -32,16 +32,10 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-export type FilterFieldType = "text" | "datetime" | "number-range" | "select";
-
-export interface FilterFieldOption {
-  value: string;
-  label: string;
-}
+export type FilterFieldType = "text" | "datetime" | "number-range";
 
 export interface FilterFieldDef {
   /** Field identifier, e.g. "name", "createdAt". */
@@ -56,8 +50,6 @@ export interface FilterFieldDef {
    * objects without re-keying the UI state.
    */
   graphqlField?: string;
-  /** `select` only: the fixed choices. An empty selection clears the key. */
-  options?: FilterFieldOption[];
 }
 
 export interface FilterPanelBatchLimit {
@@ -129,29 +121,6 @@ function FieldRow<T extends Record<string, unknown>>({
           onChange={(e) => onChange(setKey(value, field.id, e.target.value))}
           placeholder={field.placeholder}
         />
-      </div>
-    );
-  }
-
-  if (field.type === "select") {
-    const current = (value as Record<string, unknown>)[field.id] as string | undefined;
-    return (
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={field.id}>{field.label}</Label>
-        <Select
-          value={current ?? "__any"}
-          onValueChange={(v) => onChange(setKey(value, field.id, v === "__any" ? undefined : v))}
-        >
-          <SelectTrigger id={field.id}>
-            <SelectValue placeholder={field.placeholder} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__any">{field.placeholder ?? "—"}</SelectItem>
-            {(field.options ?? []).map((o) => (
-              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
     );
   }

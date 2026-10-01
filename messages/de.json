@@ -3264,8 +3264,7 @@
       "type": "Typ",
       "creator": "Erstellt von",
       "creatorPlaceholder": "Beliebig",
-      "any": "Beliebig",
-      "apply": "Anwenden"
+      "any": "Beliebig"
     },
     "columns": {
       "base": "Gedächtnis-Basis",
