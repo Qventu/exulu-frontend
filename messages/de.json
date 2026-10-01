@@ -5061,7 +5061,8 @@
         "loading": "Agenten werden geladen…",
         "empty": "Noch kein Agent verwendet diese Wissensbasis.",
         "canRead": "Kann lesen",
-        "canWrite": "Kann lesen und schreiben",
+        "canReadAndWrite": "Kann lesen und schreiben",
+        "canWriteOnly": "Kann schreiben (kein Lesezugriff)",
         "openInKnowledge": "In Knowledge öffnen"
       }
     },

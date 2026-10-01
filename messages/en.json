@@ -5061,7 +5061,8 @@
         "loading": "Loading agents…",
         "empty": "No agents use this knowledge base yet.",
         "canRead": "Can read",
-        "canWrite": "Can read and write",
+        "canReadAndWrite": "Can read and write",
+        "canWriteOnly": "Can write (no read access)",
         "openInKnowledge": "Open in Knowledge"
       }
     },

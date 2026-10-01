@@ -6,6 +6,10 @@
  * and whether each may only read it or also write to it, plus a link into
  * Knowledge for the `transcriptions` context. Data/derivation lives in
  * `./knowledge.ts` — this file is render-only.
+ *
+ * Read and write are independent axes (fix round 2): an agent can be
+ * read-only, write-only (`knowledge_base_editor` without the retrieval
+ * tool), or both — the badge names whichever combination applies.
  */
 import { ExternalLink } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -20,6 +24,15 @@ export interface KnowledgeSectionProps {
   agents: AgentKnowledgeRow[];
   loading: boolean;
   error?: Error;
+}
+
+function accessLabel(
+  agent: Pick<AgentKnowledgeRow, "canRead" | "canWrite">,
+  t: ReturnType<typeof useTranslations>,
+): string {
+  if (agent.canRead && agent.canWrite) return t("settings.knowledge.canReadAndWrite");
+  if (agent.canWrite) return t("settings.knowledge.canWriteOnly");
+  return t("settings.knowledge.canRead");
 }
 
 export function KnowledgeSection({ agents, loading, error }: KnowledgeSectionProps) {
@@ -43,10 +56,8 @@ export function KnowledgeSection({ agents, loading, error }: KnowledgeSectionPro
               className="flex items-center justify-between gap-3 rounded-md border px-3 py-2"
             >
               <span className="truncate text-sm font-medium">{agent.name}</span>
-              <Badge variant={agent.access === "write" ? "secondary" : "outline"}>
-                {agent.access === "write"
-                  ? t("settings.knowledge.canWrite")
-                  : t("settings.knowledge.canRead")}
+              <Badge variant={agent.canWrite ? "secondary" : "outline"}>
+                {accessLabel(agent, t)}
               </Badge>
             </li>
           ))}

@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * Knowledge base and agents section data — which agents can read (and
- * optionally write to) the `transcriptions` knowledge base (settings design
- * doc §5; fix round 1, critical — this was the spec's sixth section, missing
- * from the original five).
+ * Knowledge base and agents section data — which agents can read and/or
+ * write the `transcriptions` knowledge base (settings design doc §5; fix
+ * round 1, critical — this was the spec's sixth section, missing from the
+ * original five).
  *
  * Deliberately does NOT import the parse helpers from `app/(application)/
  * agents/` (`parseWizardConfig`, `parseKbEditingConfig`, the `defaultTools`
@@ -23,12 +23,26 @@
  *  - `agents/edit/[id]/components/kb-editing/config-schema.ts` — the
  *    `knowledge_base_editor` tool's `knowledge_bases` entry, a map of
  *    context id → `{ create, update }`; a both-false entry "grants nothing"
- *    per that file's own comment, so it reads as read-only here too.
+ *    per that file's own comment, so it never counts as write access here.
  *
- * "Has a transcriptions key that is not disabled" is a narrower question than
- * `config-schema.ts`'s `selectedKbIds` ("missing profile = enabled against
- * the full context universe," used to pre-check a multi-select) — here the
- * key must actually be present in the stored map.
+ * Fix round 2, critical correction: a MISSING per-context entry is ENABLED,
+ * not excluded — this mirrors the actual retrieval pipeline exactly
+ * (backend `ee/agentic-retrieval/pipeline/index.ts:257`:
+ * `cfg.knowledgeBases[ctx.id]?.enabled !== false`, and its own test at
+ * `ee/agentic-retrieval/pipeline/config.test.ts:78`, "defaults a missing
+ * profile to enabled documents"; `defaultWizardConfig()` ships
+ * `knowledgeBases: {}`). An agent that has never customised its per-context
+ * toggles reads every context, `transcriptions` included, TODAY. Do not
+ * "tighten" this back to requiring the key's presence — that was round 1's
+ * bug, and it inverted the section's one job (telling an admin the truth).
+ * The retrieval TOOL itself is still required: an agent with no
+ * `agentic_context_search` tool at all genuinely retrieves nothing,
+ * regardless of what any `knowledge_bases` map would say.
+ *
+ * Read and write are independent axes (fix round 2): an agent can have
+ * either, both, or neither — `knowledge_base_editor` grants write without
+ * `agentic_context_search` granting read, and vice versa. An agent is only
+ * dropped from the list when it has neither.
  */
 import { gql, useQuery } from "@apollo/client";
 
@@ -52,12 +66,11 @@ export const GET_TRANSCRIPTS_KNOWLEDGE_AGENTS = gql`
   }
 `;
 
-export type AgentAccess = "read" | "write";
-
 export interface AgentKnowledgeRow {
   id: string;
   name: string;
-  access: AgentAccess;
+  canRead: boolean;
+  canWrite: boolean;
 }
 
 type RawToolConfigEntry = { name?: unknown; variable?: unknown };
@@ -85,7 +98,9 @@ function findToolConfig(tools: RawTool[], toolId: string): RawToolConfigEntry[] 
 }
 
 /** Parses one JSON-typed config entry's `variable`, tolerant of a raw string
- *  or an already-parsed object — never throws. */
+ *  or an already-parsed object — never throws. Returns `null` for absent or
+ *  unparseable input; the caller treats that exactly like an empty map
+ *  (`{}`), which is what `defaultWizardConfig()` actually ships. */
 function parseJsonEntry(
   config: RawToolConfigEntry[],
   entryName: string,
@@ -105,23 +120,31 @@ function parseJsonEntry(
 }
 
 /**
- * Whether this agent can read (and/or write) the `transcriptions` knowledge
- * base, derived straight from its raw `tools` field. `null` means no access
- * at all — the caller drops those agents from the list entirely rather than
- * showing a "none" row.
+ * Whether this agent can read and/or write the `transcriptions` knowledge
+ * base, derived straight from its raw `tools` field. `null` means neither —
+ * the caller drops those agents from the list entirely rather than showing
+ * a "none" row.
  */
-export function transcriptsAgentAccess(tools: unknown): AgentAccess | null {
+export function transcriptsAgentAccess(
+  tools: unknown,
+): { canRead: boolean; canWrite: boolean } | null {
   const list = parseTools(tools);
 
+  // Read: requires the retrieval tool to be present at all, but NOT a
+  // present knowledge_bases entry — see the file header. A missing or
+  // unparseable `knowledge_bases` map, or a missing `transcriptions` key
+  // within it, both resolve to "enabled" (ee/agentic-retrieval/pipeline/
+  // index.ts:257's `?.enabled !== false`); only an explicit `enabled: false`
+  // excludes it.
   const searchConfig = findToolConfig(list, KNOWLEDGE_SEARCH_TOOL_ID);
-  const knowledgeBases = searchConfig ? parseJsonEntry(searchConfig, "knowledge_bases") : null;
-  const readProfile = knowledgeBases?.[TRANSCRIPTIONS_CONTEXT_ID];
-  const explicitlyDisabled =
-    !!readProfile &&
-    typeof readProfile === "object" &&
-    (readProfile as { enabled?: unknown }).enabled === false;
-  const canRead = readProfile !== undefined && !explicitlyDisabled;
-  if (!canRead) return null;
+  let canRead = false;
+  if (searchConfig) {
+    const knowledgeBases = parseJsonEntry(searchConfig, "knowledge_bases");
+    const profile = knowledgeBases?.[TRANSCRIPTIONS_CONTEXT_ID];
+    const explicitlyDisabled =
+      !!profile && typeof profile === "object" && (profile as { enabled?: unknown }).enabled === false;
+    canRead = !explicitlyDisabled;
+  }
 
   const editorConfig = findToolConfig(list, KB_EDITOR_TOOL_ID);
   const editorKbs = editorConfig ? parseJsonEntry(editorConfig, "knowledge_bases") : null;
@@ -130,7 +153,8 @@ export function transcriptsAgentAccess(tools: unknown): AgentAccess | null {
     | undefined;
   const canWrite = !!permission && (permission.create === true || permission.update === true);
 
-  return canWrite ? "write" : "read";
+  if (!canRead && !canWrite) return null;
+  return { canRead, canWrite };
 }
 
 export interface TranscriptsKnowledgeAgents {
@@ -151,13 +175,15 @@ export function useTranscriptsKnowledgeAgents(skip = false): TranscriptsKnowledg
   const agents: AgentKnowledgeRow[] = [];
   for (const agent of items) {
     const access = transcriptsAgentAccess(agent.tools);
-    if (access) agents.push({ id: agent.id, name: agent.name, access });
+    if (access) {
+      agents.push({ id: agent.id, name: agent.name, canRead: access.canRead, canWrite: access.canWrite });
+    }
   }
 
   return {
     agents,
-    readCount: agents.length,
-    writeCount: agents.filter((agent) => agent.access === "write").length,
+    readCount: agents.filter((agent) => agent.canRead).length,
+    writeCount: agents.filter((agent) => agent.canWrite).length,
     loading: loading && !data,
     error: error as Error | undefined,
   };
