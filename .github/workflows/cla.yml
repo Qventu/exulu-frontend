@@ -60,23 +60,19 @@ jobs:
           custom-pr-sign-comment: 'I have read the CLA Document and I hereby sign the CLA'
           custom-allsigned-prcomment: 'All contributors have agreed to the CLA.'
 
-      # The action above resolves contributors from COMMIT authors. A commit
-      # whose email is not linked to a GitHub account resolves to no login, so
-      # it is silently not checked — which produced a false "all contributors
-      # have signed" pass on a pull request whose only external commit was
-      # authored under an unlinked address.
+      # The action above resolves contributors from COMMIT authors. When those
+      # resolve to the allowlist (or to nothing, for unlinked emails) it reports
+      # "all signed" and therefore RECORDS NOTHING — so a contributor posting the
+      # sign phrase was never written to the signatures file and could never go
+      # green. This step is self-sufficient: it records the agreement itself.
       #
-      # The pull request author is always a real GitHub identity, so check that
-      # too, and explain what to do rather than leaving a bare red cross.
+      # always(): the action also crashes outright on pull requests whose commits
+      # have no resolvable login, which would otherwise skip this step.
       #
       # Two tokens on purpose: PERSONAL_ACCESS_TOKEN is fine-grained and scoped
       # to the private signatures repo, so it cannot comment here; GITHUB_TOKEN
-      # can comment but cannot read that repo.
+      # can comment but cannot read or write that repo.
       - name: Require the pull request author to have agreed
-        # always(): the action above CRASHES on pull requests whose commits have
-        # no resolvable GitHub login ("Cannot read properties of undefined") —
-        # exactly the pull requests this check exists to catch. Without always()
-        # that failure skips this step and nothing is posted.
         if: >
           always() && (
             github.event_name == 'pull_request_target'
@@ -88,27 +84,57 @@ jobs:
           AUTHOR: ${{ github.event.pull_request.user.login || github.event.issue.user.login }}
           PR: ${{ github.event.pull_request.number || github.event.issue.number }}
           REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          COMMENTER: ${{ github.event.comment.user.login }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
           CLA_URL: https://github.com/Qventu/exulu-frontend/blob/main/CLA.md
           ALLOWLIST: 'dclaessen-exulu,dependabot[bot],semantic-release-bot'
         run: |
           set -euo pipefail
+          SIG_PATH=repos/Qventu/cla-signatures/contents/signatures/version1/cla.json
+          SIGN_PHRASE='I have read the CLA Document and I hereby sign the CLA'
 
           if printf '%s' "$ALLOWLIST" | tr ',' '\n' | grep -Fxq "$AUTHOR"; then
             echo "::notice::$AUTHOR is on the allowlist; no agreement required."
             exit 0
           fi
 
-          signed=$(GH_TOKEN="$SIG_TOKEN" gh api \
-                     repos/Qventu/cla-signatures/contents/signatures/version1/cla.json \
-                     --jq '.content' | base64 -d \
-                   | jq -r '[.signedContributors[]?.name] | join("\n")')
+          read_signed() {
+            GH_TOKEN="$SIG_TOKEN" gh api "$SIG_PATH" --jq '.content' | base64 -d \
+              | jq -r '[.signedContributors[]?.name] | join("\n")'
+          }
 
-          if printf '%s\n' "$signed" | grep -Fxq "$AUTHOR"; then
+          # Record an agreement when someone posts the sign phrase on this PR.
+          if [ "$EVENT" = "issue_comment" ]; then
+            trimmed=$(printf '%s' "${COMMENT_BODY:-}" | tr -d '\r' \
+                      | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+            if [ "$trimmed" = "$SIGN_PHRASE" ]; then
+              if read_signed | grep -Fxq "$COMMENTER"; then
+                echo "::notice::$COMMENTER had already agreed."
+              else
+                tmp=$(mktemp -d)
+                GH_TOKEN="$SIG_TOKEN" gh api "$SIG_PATH" > "$tmp/resp.json"
+                sha=$(jq -r .sha "$tmp/resp.json")
+                jq -r .content "$tmp/resp.json" | base64 -d > "$tmp/cur.json"
+                jq --arg n "$COMMENTER" \
+                   --arg d "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                   --arg r "$REPO" --argjson p "$PR" \
+                   '.signedContributors = ((.signedContributors // []) + [{name:$n, created_at:$d, repo:$r, pullRequestNo:$p}])' \
+                   "$tmp/cur.json" > "$tmp/new.json"
+                GH_TOKEN="$SIG_TOKEN" gh api -X PUT "$SIG_PATH" \
+                  -f message="CLA agreed by $COMMENTER ($REPO#$PR)" \
+                  -f content="$(base64 -w0 < "$tmp/new.json")" \
+                  -f sha="$sha" -f branch=main > /dev/null
+                echo "::notice::Recorded CLA agreement for $COMMENTER."
+              fi
+            fi
+          fi
+
+          if read_signed | grep -Fxq "$AUTHOR"; then
             echo "::notice::$AUTHOR has agreed to the CLA."
             exit 0
           fi
 
-          # Post the instructions once, then keep failing until they agree.
           marker='<!-- exulu-cla-author-check -->'
           posted=$(gh pr view "$PR" --repo "$REPO" --json comments \
                      --jq '[.comments[].body] | join("\n")' | grep -Fc "$marker" || true)
@@ -120,7 +146,7 @@ jobs:
               printf 'Before it can be merged you need to agree to the [Contributor License Agreement](%s). ' "$CLA_URL"
               printf 'You keep ownership of your contribution; the agreement gives Qventu the rights it needs to distribute and license it.\n\n'
               printf '**To agree, post this as a comment on this pull request, exactly as written:**\n\n'
-              printf '```\nI have read the CLA Document and I hereby sign the CLA\n```\n\n'
+              printf '```\n%s\n```\n\n' "$SIGN_PHRASE"
               printf 'The check then re-runs and turns green. You only need to do this once.\n\n'
               printf -- '---\n\n'
               printf 'Separately: your commits are authored under an email address that is not linked to your GitHub account, '
