@@ -5230,6 +5230,9 @@
       "plain": "Klartext",
       "plainWarning": "Wird ohne Verschlüsselung gespeichert. Nur für nicht-sensible Werte verwenden."
     },
+    "skillAccess": {
+      "badge": "Mit Skills geteilt"
+    },
     "usedBy": {
       "count": "{count, plural, one {# Ressource} other {# Ressourcen}}",
       "none": "—",
@@ -5279,7 +5282,9 @@
       "typePlainDescription": "Wird unverändert gespeichert. Für nicht-sensible Werte wie Basis-URLs verwenden.",
       "required": "{field} ist erforderlich.",
       "nameRequired": "Name ist erforderlich.",
-      "valueRequired": "Wert ist erforderlich."
+      "valueRequired": "Wert ist erforderlich.",
+      "allowSkillAccess": "Agentenzugriff bei Skill-Nutzung erlauben",
+      "allowSkillAccessDescription": "Wenn aktiviert, ist der Wert dieser Variable für Skills verfügbar, die in der Agenten-Sandbox laufen, sodass ein Skill den zugehörigen Dienst aufrufen kann. Lassen Sie dies für Zugangsdaten deaktiviert, die kein Skill benötigt — Skills führen Code aus, und alles, was sie lesen können, können sie auch weitergeben. Plattform-Geheimnisse wie Datenbank-, Speicher- und Proxy-Zugangsdaten werden unabhängig von dieser Einstellung niemals mit Skills geteilt."
     },
     "create": {
       "title": "Variable hinzufügen",

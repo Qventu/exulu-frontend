@@ -1269,6 +1269,7 @@ export const GET_VARIABLES_LIST = gql`
         id
         name
         encrypted
+        allow_skill_access
         createdAt
         updatedAt
       }
@@ -1320,6 +1321,7 @@ export const GET_VARIABLE_BY_ID = gql`
       id
       name
       encrypted
+      allow_skill_access
       createdAt
       updatedAt
     }
@@ -1361,12 +1363,14 @@ export const CREATE_VARIABLE = gql`
     $name: String!
     $value: String!
     $encrypted: Boolean
+    $allow_skill_access: Boolean
   ) {
     variablesCreateOne(
       input: {
         name: $name
         value: $value
         encrypted: $encrypted
+        allow_skill_access: $allow_skill_access
       }
     ) {
       item {
@@ -1374,6 +1378,7 @@ export const CREATE_VARIABLE = gql`
         name
         value
         encrypted
+        allow_skill_access
         createdAt
         updatedAt
       }
@@ -1538,6 +1543,7 @@ export const UPDATE_VARIABLE = gql`
     $name: String
     $value: String
     $encrypted: Boolean
+    $allow_skill_access: Boolean
   ) {
     variablesUpdateOneById(
       id: $id
@@ -1545,12 +1551,14 @@ export const UPDATE_VARIABLE = gql`
         name: $name
         value: $value
         encrypted: $encrypted
+        allow_skill_access: $allow_skill_access
       }
     ) {
       item {
         id
         name
         encrypted
+        allow_skill_access
         createdAt
         updatedAt
       }
