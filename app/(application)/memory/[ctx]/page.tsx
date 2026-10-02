@@ -14,7 +14,7 @@ export default async function MemoryBasePage({
   searchParams,
 }: {
   params: Promise<{ ctx: string }>;
-  searchParams: Promise<{ mine?: string; page?: string }>;
+  searchParams: Promise<{ mine?: string; page?: string; usage?: string }>;
 }) {
   const denied = await guardRoute("memory");
   if (denied) return denied;
@@ -28,5 +28,6 @@ export default async function MemoryBasePage({
   if (!context) return <NotFoundBase contextId={ctx} />;
   // ?page=0 / -3 / 2.7 / "abc" must not reach the list as a page number.
   const initialPage = Math.max(1, Math.floor(Number(sp.page)) || 1);
-  return <BaseShell context={context} initialMine={sp.mine === "1"} initialPage={initialPage} />;
+  const initialUsage = sp.usage === "never" || sp.usage === "stale" ? sp.usage : undefined;
+  return <BaseShell context={context} initialMine={sp.mine === "1"} initialPage={initialPage} initialUsage={initialUsage} />;
 }

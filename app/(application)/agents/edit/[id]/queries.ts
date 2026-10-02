@@ -285,6 +285,23 @@ export const GET_MEMORY_BASE_STATS = gql`
 `;
 
 /**
+ * Insights block (Task 8 memoryBaseUsage). Copy of memory/queries.ts'
+ * GET_MEMORY_BASE_USAGE under a distinct operation name — feature isolation
+ * forbids importing the memory feature's query documents from here.
+ */
+export const GET_MEMORY_BASE_USAGE = gql`
+  query WorkbenchMemoryBaseUsage($contextId: ID!, $staleDays: Int) {
+    memoryBaseUsage(contextId: $contextId, staleDays: $staleDays) {
+      used
+      neverUsed
+      stale
+      mostUsed { id information count lastUsedAt }
+      newPerWeek { weekStart count }
+    }
+  }
+`;
+
+/**
  * "used by" map for the memory-base picker (memory-section.tsx). Verbatim
  * agentsPagination args from agents/queries.ts' GET_AGENTS_INDEX — there is
  * no bare `agents(...)` query on the schema.

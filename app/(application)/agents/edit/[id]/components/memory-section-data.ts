@@ -73,3 +73,16 @@ export function sortContextsForPicker(
   const rank = (e: PickerEntry) => (e.disabled ? 2 : e.usedBy.length > 0 ? 0 : 1);
   return entries.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
 }
+
+/**
+ * Twin of app/(application)/memory/[ctx]/components/usage-data.ts' `weekBars`
+ * — feature isolation forbids importing the memory feature's helpers from
+ * here, so this tiny pure function is copied rather than shared.
+ */
+export function weekBars(buckets: { weekStart: string; count: number }[]) {
+  const max = Math.max(0, ...buckets.map((b) => b.count));
+  return buckets.map((b) => {
+    const [, m, d] = b.weekStart.split("-");
+    return { ...b, height: max > 0 ? Math.round((b.count / max) * 100) : 0, label: `${d}.${m}.` };
+  });
+}

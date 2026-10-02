@@ -643,6 +643,10 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   MemoryBases: () => ({ memoryBases: [] }),
   MemoryAgentCount: (world) => ({ memoryAgentCount: world.agents.length }),
   MemoryBaseContributors: () => ({ memoryBaseContributors: [] }),
+  MemoryUsageByIds: () => ({ memoryUsageByIds: [] }),
+  MemoryUsage: () => ({ memoryUsage: { count: 0, lastUsedAt: null, recent: [] } }),
+  MemoryBaseUsage: () => ({ memoryBaseUsage: { used: 0, neverUsed: 0, stale: 0, mostUsed: [], newPerWeek: [] } }),
+  MemoryBaseUnusedIds: () => ({ memoryBaseUnusedIds: [] }),
 
   // --- /agents/edit/[id] (chapter 3: agent configuration) -----------------
   AgentEditorById: (world, variables) => ({
@@ -683,6 +687,12 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // that would not be invented. Unmapped resolves to `{data:{}}` (see the
   // module doc comment above) — the card's stats grid and "used by" hints
   // simply do not render, same as any other not-yet-scripted screen.
+
+  // GET_MEMORY_BASE_USAGE (Task 8, Insights block) IS mapped, unlike its
+  // siblings above: an all-zero answer is not an invented number, it is the
+  // real empty state (the "no answers have used memories yet" copy), so it
+  // is safe to answer unconditionally rather than leave unmapped.
+  WorkbenchMemoryBaseUsage: () => ({ memoryBaseUsage: { used: 0, neverUsed: 0, stale: 0, mostUsed: [], newPerWeek: [] } }),
 
   // The Agentic retrieval card renders only when a tool with the id
   // `agentic_context_search` exists on the DEPLOYMENT, not merely on the agent

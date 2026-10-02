@@ -28,6 +28,7 @@ export interface MemoryListFilters {
   visibility?: string;
   type?: string;
   creator?: string;
+  usage?: string;
   [key: string]: string | number | undefined;
 }
 
@@ -36,6 +37,7 @@ export function buildMemoryFilters(args: {
   mine: boolean;
   userId: number | null | undefined;
   filters: MemoryListFilters;
+  ids?: string[];
 }): Record<string, unknown>[] {
   const f: Record<string, unknown> = { archived: { eq: false } };
   const q = args.search.trim();
@@ -50,11 +52,12 @@ export function buildMemoryFilters(args: {
   } else if (args.filters.creator) {
     f.created_by = { eq: Number(args.filters.creator) };
   }
+  if (args.ids) f.id = { in: args.ids };
   return [f];
 }
 
 export function activeFilterCount(filters: MemoryListFilters): number {
-  return ["visibility", "type", "creator"].filter((k) => !!filters[k]).length;
+  return ["visibility", "type", "creator", "usage"].filter((k) => !!filters[k]).length;
 }
 
 export function memoryTypeOptions(context: Pick<MemoryContext, "fields">): string[] {

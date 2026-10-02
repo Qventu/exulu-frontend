@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeMemoryConfig, sortContextsForPicker } from "./memory-section-data";
+import { normalizeMemoryConfig, sortContextsForPicker, weekBars } from "./memory-section-data";
 
 describe("normalizeMemoryConfig", () => {
   it("mirrors the backend defaults and clamps", () => {
@@ -21,5 +21,14 @@ describe("sortContextsForPicker", () => {
     expect(r.map((e) => e.id)).toEqual(["team", "mem", "docs"]);
     expect(r[0]).toMatchObject({ usedBy: ["Alfredinio", "Ersatzteil-Bot"], disabled: false });
     expect(r[2]).toMatchObject({ disabled: true, missing: ["information", "type"] });
+  });
+});
+
+describe("weekBars", () => {
+  it("normalises heights to the max and labels day.month.", () => {
+    expect(weekBars([{ weekStart: "2026-09-21", count: 1 }, { weekStart: "2026-09-28", count: 4 }])).toEqual([
+      { weekStart: "2026-09-21", count: 1, height: 25, label: "21.09." },
+      { weekStart: "2026-09-28", count: 4, height: 100, label: "28.09." },
+    ]);
   });
 });

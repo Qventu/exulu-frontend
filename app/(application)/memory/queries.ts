@@ -143,3 +143,50 @@ export const GET_SOURCE_MESSAGES = gql`
     }
   }
 `;
+
+// ---- Usage tracking (sub-project 3a) --------------------------------------
+
+export const GET_MEMORY_USAGE_BY_IDS = gql`
+  query MemoryUsageByIds($contextId: ID!, $ids: [ID!]!) {
+    memoryUsageByIds(contextId: $contextId, ids: $ids) { memoryId count lastUsedAt }
+  }
+`;
+
+export const GET_MEMORY_USAGE = gql`
+  query MemoryUsage($contextId: ID!, $memoryId: ID!, $limit: Int) {
+    memoryUsage(contextId: $contextId, memoryId: $memoryId, limit: $limit) {
+      count
+      lastUsedAt
+      recent { sessionId messageId usedAt agent { id name } user { id name } title }
+    }
+  }
+`;
+
+export const GET_MEMORY_BASE_USAGE = gql`
+  query MemoryBaseUsage($contextId: ID!, $staleDays: Int) {
+    memoryBaseUsage(contextId: $contextId, staleDays: $staleDays) {
+      used
+      neverUsed
+      stale
+      mostUsed { id information count lastUsedAt }
+      newPerWeek { weekStart count }
+    }
+  }
+`;
+
+export const GET_MEMORY_BASE_UNUSED_IDS = gql`
+  query MemoryBaseUnusedIds($contextId: ID!, $mode: MemoryUnusedMode!, $staleDays: Int) {
+    memoryBaseUnusedIds(contextId: $contextId, mode: $mode, staleDays: $staleDays)
+  }
+`;
+
+/**
+ * Same operation shape as knowledge's UPDATE_ITEM; used for the Archive bulk
+ * action. `generateEmbeddings: false` because archiving must not re-embed on
+ * bases that embed on update.
+ */
+export const UPDATE_MEMORY_ITEM = (context: string) => gql`
+  mutation UpdateMemory${context}($id: ID!, $input: ${context}_itemsInput!) {
+    ${context}_itemsUpdateOneById(id: $id, input: $input, generateEmbeddings: false) { item { id } job }
+  }
+`;

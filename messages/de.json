@@ -699,7 +699,16 @@
         "warningMissing": "Die konfigurierte Gedächtnis-Basis „{id}“ existiert in dieser Installation nicht mehr. Das Gedächtnis ist aus, bis du eine andere wählst.",
         "warningInvalid": "„{name}“ ist nicht korrekt für Gedächtnis konfiguriert (fehlt: {fields}). Erinnerungen werden weiter genutzt, aber nichts Neues kann gespeichert werden.",
         "wizardMoved": "Die Gedächtnis-Einstellungen sind jetzt im Bereich Wissen & Gedächtnis.",
-        "wizardOpen": "Gedächtnis-Einstellungen öffnen"
+        "wizardOpen": "Gedächtnis-Einstellungen öffnen",
+        "insightsTitle": "Einblicke",
+        "insightsHint": "Was die Erinnerungen {agent} bringen.",
+        "mostUsed": "Am häufigsten verwendet",
+        "needsAttention": "Braucht Aufmerksamkeit",
+        "neverUsed": "Nie verwendet",
+        "staleUsed": "Seit 90 Tagen nicht verwendet",
+        "newPerWeek": "Neue Erinnerungen pro Woche",
+        "lastWeeks": "Letzte 6 Wochen",
+        "noUsageYet": "Noch keine Antwort hat Erinnerungen verwendet."
       },
       "notFoundDescription": "Dieser Agent konnte nicht geladen werden. Möglicherweise wurde er gelöscht oder Sie haben keinen Zugriff.",
       "notFoundTitle": "Agent nicht gefunden",
@@ -3256,8 +3265,7 @@
       "contributors": "Beitragende",
       "lastSaved": "Zuletzt gespeichert",
       "lastSavedBy": "von {name}",
-      "never": "Nie",
-      "usedBy": "Genutzt von"
+      "never": "Nie"
     },
     "filter": {
       "all": "Alle",
@@ -3340,13 +3348,37 @@
       "unknownUser": "Unbekannter Nutzer",
       "failed": "Das hat nicht geklappt. Bitte versuche es erneut."
     },
+    "usage": {
+      "label": "Verwendung",
+      "any": "Beliebig",
+      "never": "Nie verwendet",
+      "stale": "Seit {days} Tagen nicht verwendet",
+      "neverUsedCard": "Nie verwendet",
+      "neverUsedCaption": "Kandidaten fürs Archiv",
+      "lastUsed": "Zuletzt verwendet",
+      "neverShort": "Nie",
+      "usedTimes": "{count}× verwendet",
+      "section": "Verwendung",
+      "usedInCount": "In {count, plural, one {# Antwort} other {# Antworten}} verwendet",
+      "lastPrefix": "zuletzt",
+      "neverUsedLong": "Nie verwendet",
+      "openConversation": "Gespräch öffnen",
+      "guest": "Gast",
+      "unknownAgent": "Unbekannter Agent",
+      "loadFailed": "Verwendung konnte nicht geladen werden."
+    },
     "bulk": {
       "setAccess": "Zugriff festlegen",
       "delete": "Löschen",
       "deleteTitle": "{count, plural, one {# Erinnerung löschen?} other {# Erinnerungen löschen?}}",
       "deleteDescription": "Agenten rufen sie nicht mehr ab. Das lässt sich nicht rückgängig machen.",
       "deleted": "{count, plural, one {# Erinnerung gelöscht} other {# Erinnerungen gelöscht}}",
-      "deleteFailed": "{count, plural, one {# konnte nicht gelöscht werden} other {# konnten nicht gelöscht werden}}"
+      "deleteFailed": "{count, plural, one {# konnte nicht gelöscht werden} other {# konnten nicht gelöscht werden}}",
+      "archive": "Archivieren",
+      "archiveTitle": "{count, plural, one {# Erinnerung archivieren?} other {# Erinnerungen archivieren?}}",
+      "archiveDescription": "Sie verlassen den Abruf und die Zählung; in Wissen lassen sie sich wiederherstellen.",
+      "archived": "{count, plural, one {# Erinnerung archiviert} other {# Erinnerungen archiviert}}",
+      "archiveFailed": "{count, plural, one {# konnte nicht archiviert werden} other {# konnten nicht archiviert werden}}"
     }
   },
   "models": {

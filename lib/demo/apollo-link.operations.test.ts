@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   GET_AGENT_EDITOR,
   GET_CONTEXTS_EDITOR,
+  GET_MEMORY_BASE_USAGE as GET_WORKBENCH_MEMORY_BASE_USAGE,
 } from "@/app/(application)/agents/edit/[id]/queries";
 import {
   GET_CONTEXTS,
@@ -13,6 +14,10 @@ import {
   GET_MEMORY_AGENT_COUNT,
   GET_MEMORY_BASES,
   GET_MEMORY_BASE_CONTRIBUTORS,
+  GET_MEMORY_BASE_UNUSED_IDS,
+  GET_MEMORY_BASE_USAGE,
+  GET_MEMORY_USAGE,
+  GET_MEMORY_USAGE_BY_IDS,
 } from "@/app/(application)/memory/queries";
 import { ROUTINE_RUNS_ATTENTION_COUNT } from "@/lib/routine-runs/queries";
 import { ALGI_RUNS_NEEDING_ATTENTION } from "./fixtures/chapter-email";
@@ -148,6 +153,11 @@ describe("/agents/edit/[id] operations", () => {
       expect(known.has(id), `knowledge_bases references unknown context: ${id}`).toBe(true);
     }
   });
+
+  it("answers WorkbenchMemoryBaseUsage with an object carrying used (Insights block)", async () => {
+    const data = await run(GET_WORKBENCH_MEMORY_BASE_USAGE, { contextId: "newton_memory_context" });
+    expect(typeof (data.memoryBaseUsage as { used: number }).used).toBe("number");
+  });
 });
 
 describe("/memory page operations", () => {
@@ -168,5 +178,25 @@ describe("/memory page operations", () => {
   it("answers MemoryBaseContributors with a list", async () => {
     const data = await run(GET_MEMORY_BASE_CONTRIBUTORS, { contextId: "newton_memory_context" });
     expect(Array.isArray(data.memoryBaseContributors)).toBe(true);
+  });
+
+  it("answers MemoryUsageByIds with a list", async () => {
+    const data = await run(GET_MEMORY_USAGE_BY_IDS, { contextId: "newton_memory_context", ids: ["1"] });
+    expect(Array.isArray(data.memoryUsageByIds)).toBe(true);
+  });
+
+  it("answers MemoryUsage with an object carrying a count", async () => {
+    const data = await run(GET_MEMORY_USAGE, { contextId: "newton_memory_context", memoryId: "1" });
+    expect(typeof (data.memoryUsage as { count: number }).count).toBe("number");
+  });
+
+  it("answers MemoryBaseUsage with an object carrying used", async () => {
+    const data = await run(GET_MEMORY_BASE_USAGE, { contextId: "newton_memory_context" });
+    expect(typeof (data.memoryBaseUsage as { used: number }).used).toBe("number");
+  });
+
+  it("answers MemoryBaseUnusedIds with a list", async () => {
+    const data = await run(GET_MEMORY_BASE_UNUSED_IDS, { contextId: "newton_memory_context", mode: "NEVER" });
+    expect(Array.isArray(data.memoryBaseUnusedIds)).toBe(true);
   });
 });
