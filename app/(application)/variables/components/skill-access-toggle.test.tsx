@@ -37,7 +37,13 @@ describe("SkillAccessToggle", () => {
     expect(
       screen.getByLabelText(/allow agent access when using skills/i),
     ).toBeDefined();
-    expect(screen.getByText(/never shared with skills/i)).toBeDefined();
+    expect(
+      screen.getByText(/withheld from the skill environment/i),
+    ).toBeDefined();
+    // The copy must keep the sandbox caveat: where the kernel sandbox is
+    // unavailable the strip is cosmetic and the container is the only
+    // boundary, so an absolute "never shared" claim would be untrue.
+    expect(screen.getByText(/the container is the only boundary/i)).toBeDefined();
   });
 
   test("reflects an off checked state", () => {

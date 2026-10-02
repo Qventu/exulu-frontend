@@ -5284,7 +5284,7 @@
       "nameRequired": "Name ist erforderlich.",
       "valueRequired": "Wert ist erforderlich.",
       "allowSkillAccess": "Agentenzugriff bei Skill-Nutzung erlauben",
-      "allowSkillAccessDescription": "Wenn aktiviert, ist der Wert dieser Variable für Skills verfügbar, die in der Agenten-Sandbox laufen, sodass ein Skill den zugehörigen Dienst aufrufen kann. Lassen Sie dies für Zugangsdaten deaktiviert, die kein Skill benötigt — Skills führen Code aus, und alles, was sie lesen können, können sie auch weitergeben. Plattform-Geheimnisse wie Datenbank-, Speicher- und Proxy-Zugangsdaten werden unabhängig von dieser Einstellung niemals mit Skills geteilt."
+      "allowSkillAccessDescription": "Wenn aktiviert, ist der Wert dieser Variable für Skills verfügbar, die in der Agenten-Sandbox laufen, sodass ein Skill den zugehörigen Dienst aufrufen kann. Lassen Sie dies für Zugangsdaten deaktiviert, die kein Skill benötigt — Skills führen Code aus, und alles, was sie lesen können, können sie auch weitergeben. Plattform-Geheimnisse wie Datenbank-, Speicher- und Proxy-Zugangsdaten werden unabhängig von dieser Einstellung aus der Skill-Umgebung entfernt; dies setzt eine aktive Sandbox voraus — kann der Host sie nicht bereitstellen, bleibt der Container die einzige Grenze."
     },
     "create": {
       "title": "Variable hinzufügen",

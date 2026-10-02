@@ -5284,7 +5284,7 @@
       "nameRequired": "Name is required.",
       "valueRequired": "Value is required.",
       "allowSkillAccess": "Allow agent access when using skills",
-      "allowSkillAccessDescription": "When enabled, this variable's value is available to skills running in the agent sandbox, so a skill can call the service it belongs to. Leave it off for credentials no skill needs — skills execute code, and anything they can read they can send on. Platform secrets such as database, storage and proxy credentials are never shared with skills, regardless of this setting."
+      "allowSkillAccessDescription": "When enabled, this variable's value is available to skills running in the agent sandbox, so a skill can call the service it belongs to. Leave it off for credentials no skill needs — skills execute code, and anything they can read they can send on. Platform secrets such as database, storage and proxy credentials are withheld from the skill environment regardless of this setting; that withholding relies on the sandbox being active, so where the host cannot provide it the container is the only boundary."
     },
     "create": {
       "title": "Add variable",

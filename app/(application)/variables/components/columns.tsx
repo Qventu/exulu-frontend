@@ -181,6 +181,7 @@ export function createColumns(
       cell: ({ row }) => (
         <SkillAccessCell allowSkillAccess={row.original.allow_skill_access} />
       ),
+      enableSorting: false,
     },
     {
       accessorKey: "used_by",
