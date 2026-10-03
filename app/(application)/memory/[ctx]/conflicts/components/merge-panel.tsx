@@ -50,6 +50,8 @@ export function MergePanel({ open, onOpenChange, group, context, onMerged }: Mer
   React.useEffect(() => {
     if (!open) {
       fetchedFor.current = null;
+      setInformation("");
+      setType(null);
       return;
     }
     if (fetchedFor.current === group.id) return;
@@ -88,7 +90,14 @@ export function MergePanel({ open, onOpenChange, group, context, onMerged }: Mer
   };
 
   return (
-    <SidePanel open={open} onOpenChange={onOpenChange} title={t("conflicts.mergeTitle")} description={t("conflicts.mergeHint")}>
+    <SidePanel
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("conflicts.mergeTitle")}
+      description={t("conflicts.mergeHint")}
+      resizable={false}
+      storageKey="memory-conflicts-merge"
+    >
       <div className="flex flex-col gap-4 p-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor={`merge-wording-${group.id}`}>{t("conflicts.wording")}</Label>
@@ -101,9 +110,9 @@ export function MergePanel({ open, onOpenChange, group, context, onMerged }: Mer
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label>{t("conflicts.type")}</Label>
+          <Label htmlFor={`merge-type-${group.id}`}>{t("conflicts.type")}</Label>
           <Select value={type ?? NO_TYPE_VALUE} onValueChange={(v) => setType(v === NO_TYPE_VALUE ? null : v)}>
-            <SelectTrigger>
+            <SelectTrigger id={`merge-type-${group.id}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

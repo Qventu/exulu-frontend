@@ -35,6 +35,7 @@ function hasAgentsWrite(user: ShellUser): boolean {
 
 export function ConflictsShell({ context }: { context: MemoryContext }) {
   const t = useTranslations("memory");
+  const tc = useTranslations("common");
   const { user } = React.useContext(UserContext) as { user?: ShellUser };
   const valid = context.memoryBase?.ok ?? false;
 
@@ -49,7 +50,7 @@ export function ConflictsShell({ context }: { context: MemoryContext }) {
   );
   const [scan, scanState] = useMutation(SCAN_MEMORY_CONFLICTS);
   const scanning = scanState.loading;
-  const canScan = hasAgentsWrite(user) && !isDemoMode();
+  const canScan = valid && hasAgentsWrite(user) && !isDemoMode();
 
   // Hides skipped cards for this visit only — a fresh load (or a rescan's
   // refetch) shows them again.
@@ -99,6 +100,12 @@ export function ConflictsShell({ context }: { context: MemoryContext }) {
         <EmptyState
           title={t("base.invalid", { fields: (context.memoryBase?.missing ?? []).join(", ") })}
           description={t("base.noList")}
+        />
+      ) : list.error || counts.error ? (
+        <EmptyState
+          variant="error"
+          title={tc("somethingWentWrong")}
+          action={{ label: tc("retry"), onClick: () => { void list.refetch(); void counts.refetch(); } }}
         />
       ) : initialLoading ? (
         <div className="flex flex-col gap-4">
