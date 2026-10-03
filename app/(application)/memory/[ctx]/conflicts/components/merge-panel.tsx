@@ -71,9 +71,10 @@ export function MergePanel({ open, onOpenChange, group, context, onMerged }: Mer
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-running on every `group`/`suggest`/`t` identity change would refetch mid-edit.
   }, [open, group.id]);
 
-  const authorCount = new Set(
+  // Members whose author the viewer cannot see still have one: never credit zero authors.
+  const authorCount = Math.max(1, new Set(
     group.members.map((m) => m.author?.id).filter((id): id is number => typeof id === "number"),
-  ).size;
+  ).size);
   const typeOptions = memoryTypeOptions(context);
 
   // ConfirmDialog: resolve closes it, reject keeps it open.

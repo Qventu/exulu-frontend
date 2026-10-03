@@ -13,14 +13,18 @@ describe("groupTitle", () => {
 
 describe("canResolve", () => {
   it("super admins may do everything; merge only on duplicates", () => {
-    expect(canResolve(group, { id: 1, super_admin: true })).toEqual({ keep: true, merge: true, dismiss: true, blockedBy: null });
-    expect(canResolve({ ...group, kind: "contradiction" }, { id: 1, super_admin: true })).toEqual({ keep: true, merge: false, dismiss: true, blockedBy: null });
+    expect(canResolve(group, { id: 1, super_admin: true }, "Unknown")).toEqual({ keep: true, merge: true, dismiss: true, blockedBy: null });
+    expect(canResolve({ ...group, kind: "contradiction" }, { id: 1, super_admin: true }, "Unknown")).toEqual({ keep: true, merge: false, dismiss: true, blockedBy: null });
   });
   it("a non-admin needs to be the author of every member; the first foreign member blocks and is named", () => {
-    expect(canResolve(group, { id: 4 })).toEqual({ keep: false, merge: false, dismiss: false, blockedBy: "Lena" });
+    expect(canResolve(group, { id: 4 }, "Unknown")).toEqual({ keep: false, merge: false, dismiss: false, blockedBy: "Lena" });
     const own: Conflict = { ...group, members: [member("a", { id: 4, name: "Sara" }), member("c", { id: 4, name: "Sara" })] };
-    expect(canResolve(own, { id: 4 })).toEqual({ keep: true, merge: true, dismiss: true, blockedBy: null });
-    expect(canResolve(group, undefined).keep).toBe(false);
+    expect(canResolve(own, { id: 4 }, "Unknown")).toEqual({ keep: true, merge: true, dismiss: true, blockedBy: null });
+    expect(canResolve(group, undefined, "Unknown").keep).toBe(false);
+  });
+  it("names a member without a visible author with the label it was given", () => {
+    const anonymous: Conflict = { ...group, members: [member("a", { id: 4, name: "Sara" }), member("b", null)] };
+    expect(canResolve(anonymous, { id: 4 }, "Unknown").blockedBy).toBe("Unknown");
   });
 });
 
@@ -29,9 +33,10 @@ describe("helpers", () => {
     expect(commonType([member("a", null, "FACT"), member("b", null, "FACT"), member("c", null, "RULE")])).toBe("FACT");
     expect(commonType([member("a", null, null), member("b", null, null)])).toBeNull();
   });
-  it("scan toast key depends on unjudged pairs", () => {
-    expect(scanToastKey({ open: 2, unjudged: 0 })).toBe("scanDone");
-    expect(scanToastKey({ open: 2, unjudged: 5 })).toBe("scanDoneUnjudged");
+  it("scan toast key depends on the pairs left to compare: unjudged or skipped", () => {
+    expect(scanToastKey({ open: 2, unjudged: 0, skipped: 0 })).toBe("scanDone");
+    expect(scanToastKey({ open: 2, unjudged: 5, skipped: 0 })).toBe("scanDoneUnjudged");
+    expect(scanToastKey({ open: 2, unjudged: 0, skipped: 3 })).toBe("scanDoneUnjudged");
   });
   it("member line joins type, author and leaves out blanks", () => {
     expect(memberLine(member("a", { id: 4, name: "Sara" }), "Unknown")).toBe("FACT · Sara");

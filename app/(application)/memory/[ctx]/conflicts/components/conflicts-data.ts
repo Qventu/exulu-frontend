@@ -11,13 +11,17 @@ export function groupTitle(group: Conflict): { kind: string; count: number } {
   return { kind: group.kind, count: group.members.length };
 }
 
-/** Mirrors the server rule the client can see: super admin, or author of every member (write grants are checked server-side). */
-export function canResolve(group: Conflict, user: Viewer | undefined): { keep: boolean; merge: boolean; dismiss: boolean; blockedBy: string | null } {
+/**
+ * Mirrors the server rule the client can see: super admin, or author of every
+ * member (write grants are checked server-side). `unknownLabel` names a member
+ * whose author the viewer cannot see, so the blocked line stays a sentence.
+ */
+export function canResolve(group: Conflict, user: Viewer | undefined, unknownLabel: string): { keep: boolean; merge: boolean; dismiss: boolean; blockedBy: string | null } {
   const none = { keep: false, merge: false, dismiss: false, blockedBy: null as string | null };
   if (!user?.id) return none;
   if (!user.super_admin) {
     const foreign = group.members.find((m) => m.author?.id !== user.id);
-    if (foreign) return { ...none, blockedBy: foreign.author?.name ?? "?" };
+    if (foreign) return { ...none, blockedBy: foreign.author?.name ?? unknownLabel };
   }
   return { keep: true, merge: group.kind === "duplicate", dismiss: true, blockedBy: null };
 }
@@ -31,8 +35,9 @@ export function commonType(members: Pick<ConflictMember, "type">[]): string | nu
   return sorted[0][0];
 }
 
-export function scanToastKey(result: { open: number; unjudged: number }): "scanDone" | "scanDoneUnjudged" {
-  return result.unjudged > 0 ? "scanDoneUnjudged" : "scanDone";
+/** Unjudged and skipped pairs are both work left for the next scan, so both ask for a rerun. */
+export function scanToastKey(result: { open: number; unjudged: number; skipped: number }): "scanDone" | "scanDoneUnjudged" {
+  return result.unjudged > 0 || result.skipped > 0 ? "scanDoneUnjudged" : "scanDone";
 }
 
 export function memberLine(member: Pick<ConflictMember, "type" | "author">, unknownLabel: string): string {

@@ -61,7 +61,7 @@ export function ConflictsShell({ context }: { context: MemoryContext }) {
       const res = await scan({ variables: { contextId: context.id } });
       const result = res.data?.memoryConflictsScan;
       if (result) {
-        toast.success(t(`conflicts.${scanToastKey(result)}`, { open: result.open, unjudged: result.unjudged }));
+        toast.success(t(`conflicts.${scanToastKey(result)}`, { open: result.open, pending: result.unjudged + result.skipped }));
       }
       await Promise.all([list.refetch(), counts.refetch()]);
     } catch (err) {
@@ -71,7 +71,7 @@ export function ConflictsShell({ context }: { context: MemoryContext }) {
 
   const countsData = counts.data?.memoryConflictCounts;
   const description =
-    counts.loading && !counts.data
+    (counts.loading && !counts.data) || counts.error
       ? undefined
       : countsData?.lastScanAt
         ? t("conflicts.lastScan", { when: new Date(countsData.lastScanAt).toLocaleString() })

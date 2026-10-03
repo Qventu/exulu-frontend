@@ -43,7 +43,7 @@ export interface ConflictCardProps {
 export function ConflictCard({ group, context, user, onSkip, onResolved }: ConflictCardProps) {
   const t = useTranslations("memory");
   const [resolve] = useMutation(RESOLVE_MEMORY_CONFLICT);
-  const actions = canResolve(group, user);
+  const actions = canResolve(group, user, t("conflicts.unknown"));
   const demoLocked = isDemoMode();
   const { count } = groupTitle(group);
 
