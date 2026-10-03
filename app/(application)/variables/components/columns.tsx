@@ -36,6 +36,9 @@ export interface Variable {
   id: string;
   name: string;
   encrypted: boolean;
+  /** Grants this variable's value to skills running in the agent sandbox.
+   *  Defaults false on the backend (feat/skill-env-isolation). */
+  allow_skill_access: boolean;
   /** Optional — only populated when BE-1 ships and a usage fetch resolves. */
   used_by?: string[] | null;
   createdAt: string;
@@ -89,6 +92,14 @@ function TypeCell({ encrypted }: { encrypted: boolean }) {
       <span>{t("variables.type.plain")}</span>
     </div>
   );
+}
+
+function SkillAccessCell({ allowSkillAccess }: { allowSkillAccess: boolean }) {
+  const t = useTranslations();
+  if (!allowSkillAccess) {
+    return <span className="text-sm text-muted-foreground">—</span>;
+  }
+  return <Badge variant="info">{t("variables.skillAccess.badge")}</Badge>;
 }
 
 function UsedByCell({
@@ -163,6 +174,14 @@ export function createColumns(
       filterFn: (row, id, value) => {
         return (value as unknown[]).includes(row.getValue(id));
       },
+    },
+    {
+      accessorKey: "allow_skill_access",
+      header: () => <span>Skill access</span>,
+      cell: ({ row }) => (
+        <SkillAccessCell allowSkillAccess={row.original.allow_skill_access} />
+      ),
+      enableSorting: false,
     },
     {
       accessorKey: "used_by",

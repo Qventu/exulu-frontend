@@ -36,6 +36,8 @@ import {
   GET_VARIABLES_LITE,
 } from "@/queries/queries";
 
+import { SkillAccessToggle } from "../components/skill-access-toggle";
+
 export const dynamic = "force-dynamic";
 
 type FormErrors = { name?: string; value?: string };
@@ -52,6 +54,9 @@ export default function CreateVariablePage() {
     // FIX U6: Secret/encrypted is the default — sensitive material handled with
     // visible care (philosophy §9). Users can opt into plain via the radio.
     encrypted: true,
+    // Default OFF — a new variable is not shared with skills until an admin
+    // opts in (backend default, mirrored here; see feat/skill-env-isolation).
+    allow_skill_access: false,
   });
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [redirected, setRedirected] = React.useState(false);
@@ -101,6 +106,7 @@ export default function CreateVariablePage() {
           name: formData.name.trim(),
           value: formData.value,
           encrypted: formData.encrypted,
+          allow_skill_access: formData.allow_skill_access,
         },
       });
 
@@ -255,6 +261,14 @@ export default function CreateVariablePage() {
             </p>
           )}
         </div>
+
+        {/* Skill access — default OFF. Gates whether this variable's value
+            ever reaches a skill's sandbox (feat/skill-env-isolation). */}
+        <SkillAccessToggle
+          checked={formData.allow_skill_access}
+          onCheckedChange={(value) => setField("allow_skill_access", value)}
+          disabled={loading}
+        />
 
         {/* Sticky footer */}
         <div className="sticky bottom-0 -mx-4 flex items-center justify-end gap-2 border-t bg-background p-4 md:-mx-8 md:px-8">

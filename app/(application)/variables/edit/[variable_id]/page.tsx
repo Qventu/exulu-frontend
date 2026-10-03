@@ -47,6 +47,8 @@ import {
   UPDATE_VARIABLE,
 } from "@/queries/queries";
 
+import { SkillAccessToggle } from "../../components/skill-access-toggle";
+
 export const dynamic = "force-dynamic";
 
 type FormErrors = { name?: string; value?: string };
@@ -89,6 +91,7 @@ export default function EditVariablePage() {
     name: "",
     value: "",
     encrypted: false,
+    allow_skill_access: false,
   });
   const [originalName, setOriginalName] = React.useState("");
   const [originalEncrypted, setOriginalEncrypted] = React.useState(false);
@@ -131,6 +134,7 @@ export default function EditVariablePage() {
         id: string;
         name: string;
         encrypted: boolean;
+        allow_skill_access: boolean;
         createdAt: string;
         updatedAt: string;
       }
@@ -155,6 +159,7 @@ export default function EditVariablePage() {
         name: variable.name || "",
         value: "",
         encrypted: variable.encrypted || false,
+        allow_skill_access: variable.allow_skill_access || false,
       });
       setOriginalName(variable.name || "");
       setOriginalEncrypted(variable.encrypted || false);
@@ -202,6 +207,7 @@ export default function EditVariablePage() {
         id: variableId,
         name: formData.name.trim(),
         encrypted: formData.encrypted,
+        allow_skill_access: formData.allow_skill_access,
       };
       // Only send the value when the user actually entered one — empty
       // textarea means "leave value unchanged" (UPDATE_VARIABLE plan,
@@ -436,6 +442,14 @@ export default function EditVariablePage() {
             </Button>
           </div>
         </div>
+
+        {/* Skill access — round-trips the backend's `allow_skill_access`
+            grant (feat/skill-env-isolation). */}
+        <SkillAccessToggle
+          checked={formData.allow_skill_access}
+          onCheckedChange={(value) => setField("allow_skill_access", value)}
+          disabled={updateLoading}
+        />
 
         {/* Sticky footer */}
         <div className="sticky bottom-0 -mx-4 flex items-center justify-end gap-2 border-t bg-background p-4 md:-mx-8 md:px-8">
