@@ -38,7 +38,7 @@ import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 
-import { GET_AGENTS_USING_MEMORY, GET_MEMORY_BASE_STATS, GET_MEMORY_BASE_USAGE } from "../queries";
+import { GET_AGENTS_USING_MEMORY, GET_MEMORY_BASE_STATS, GET_MEMORY_BASE_USAGE, GET_MEMORY_CONFLICT_COUNTS } from "../queries";
 import type { EditorSectionProps } from "../sections/types";
 import { MEMORY_DEFAULTS, parseWizardConfig, serializeWizardConfig } from "./knowledge-search/config-schema";
 import type { ToolConfigEntry } from "./tool-config-fields";
@@ -97,6 +97,10 @@ export function MemorySection({ editor, refs }: EditorSectionProps) {
     variables: { contextId, staleDays: 90 },
     skip: !memoryOn || !showInsights,
     fetchPolicy: "cache-and-network",
+  });
+  const { data: conflictCountsData, error: conflictCountsError } = useQuery<{ memoryConflictCounts: { open: number; memoriesInvolved: number; lastScanAt: string | null } }>(GET_MEMORY_CONFLICT_COUNTS, {
+    variables: { contextId },
+    skip: !memoryOn || !showInsights,
   });
 
   const [pickerOpen, setPickerOpen] = React.useState(false);
@@ -290,6 +294,9 @@ export function MemorySection({ editor, refs }: EditorSectionProps) {
                   <p className="text-xs font-medium text-muted-foreground">{t("editor.memory.needsAttention")}</p>
                   <Link href={`/memory/${contextId}?usage=never`} className="block text-sm hover:underline">{t("editor.memory.neverUsed")} <span className="text-muted-foreground">{u.neverUsed}</span></Link>
                   <Link href={`/memory/${contextId}?usage=stale`} className="block text-sm hover:underline">{t("editor.memory.staleUsed")} <span className="text-muted-foreground">{u.stale}</span></Link>
+                  <Link href={`/memory/${contextId}/conflicts`} className="block text-sm hover:underline">
+                    {t("editor.memory.conflictsLine")} <span className="text-muted-foreground">{conflictCountsError ? "—" : (conflictCountsData?.memoryConflictCounts?.open ?? 0)}</span>
+                  </Link>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-muted-foreground">{t("editor.memory.newPerWeek")}</p>

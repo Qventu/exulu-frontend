@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import {
-  BULK_UPDATE_MEMORY_RBAC, DELETE_MEMORY_ITEM, GET_MEMORY_BASE_CONTRIBUTORS, GET_MEMORY_ITEM_BY_ID, GET_MEMORY_USAGE, GET_SOURCE_MESSAGES, GET_SOURCE_SESSION, MEMORY_ITEM_KEY,
+  BULK_UPDATE_MEMORY_RBAC, DELETE_MEMORY_ITEM, GET_MEMORY_BASE_CONTRIBUTORS, GET_MEMORY_CONFLICTS_FOR_MEMORY, GET_MEMORY_ITEM_BY_ID, GET_MEMORY_USAGE, GET_SOURCE_MESSAGES, GET_SOURCE_SESSION, MEMORY_ITEM_KEY,
 } from "../../../queries";
 import { type MemoryContext, type MemoryContributor, type MemoryItem, creatorName, hasSourceSession, visibilityKey } from "../../components/memory-list-data";
 import { VisibilityLabel } from "../../components/memory-table";
@@ -65,6 +65,10 @@ export function MemoryDetail({ context, itemId }: { context: MemoryContext; item
   const [updateRbac, updateState] = useMutation(BULK_UPDATE_MEMORY_RBAC(context.id));
   const [deleteItem] = useMutation(DELETE_MEMORY_ITEM(context.id));
   const usage = useQuery<{ memoryUsage: { count: number; lastUsedAt: string | null; recent: UsageEntry[] } | null }>(GET_MEMORY_USAGE, { variables: { contextId: context.id, memoryId: itemId, limit: 5 }, skip: !memory });
+  const conflicts = useQuery<{ memoryConflictsForMemory: { open: { id: string }[]; mergedFrom: { id: string; information: string }[] } | null }>(
+    GET_MEMORY_CONFLICTS_FOR_MEMORY,
+    { variables: { contextId: context.id, memoryId: itemId }, skip: !memory },
+  );
 
   const [accessOpen, setAccessOpen] = React.useState(false);
   const [draft, setDraft] = React.useState<Rbac | null>(null);
@@ -153,6 +157,19 @@ export function MemoryDetail({ context, itemId }: { context: MemoryContext; item
               <dt className="text-muted-foreground">{t("detail.updated")}</dt>
               <dd>{memory.updatedAt ? <RelativeTime date={memory.updatedAt} /> : "—"}</dd>
             </dl>
+            {conflicts.data?.memoryConflictsForMemory?.open?.length ? (
+              <p className="mt-3 text-sm">
+                {t("conflicts.partOfOpen")} · <Link href={`/memory/${context.id}/conflicts`} className="underline">{t("conflicts.open")}</Link>
+              </p>
+            ) : null}
+            {conflicts.data?.memoryConflictsForMemory?.mergedFrom?.length ? (
+              <div className="mt-3 text-sm">
+                <p>{t("conflicts.mergedFrom", { count: conflicts.data.memoryConflictsForMemory.mergedFrom.length })}</p>
+                <ul className="mt-1 list-disc pl-4 text-muted-foreground">
+                  {conflicts.data.memoryConflictsForMemory.mergedFrom.map((m) => <li key={m.id}>{m.information}</li>)}
+                </ul>
+              </div>
+            ) : null}
           </DetailSection>
           <DetailSection title={t("usage.section")} defaultOpen>
             {usage.loading && !usage.data ? (

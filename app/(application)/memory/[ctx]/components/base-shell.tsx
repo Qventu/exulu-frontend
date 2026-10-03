@@ -12,7 +12,7 @@ import { PageShell } from "@/components/primitives/page-shell";
 import { StatCard } from "@/components/primitives/stat-card";
 
 import { type MemoryBase } from "../../components/memory-bases-data";
-import { GET_MEMORY_BASE_USAGE, GET_MEMORY_BASES } from "../../queries";
+import { GET_MEMORY_BASE_USAGE, GET_MEMORY_BASES, GET_MEMORY_CONFLICT_COUNTS } from "../../queries";
 import type { MemoryContext } from "./memory-list-data";
 import { MemoryTable } from "./memory-table";
 import type { BaseUsage } from "./usage-data";
@@ -41,6 +41,10 @@ export function BaseShell({
     fetchPolicy: "cache-and-network",
     skip: !valid,
   });
+  const counts = useQuery<{ memoryConflictCounts: { open: number; memoriesInvolved: number; lastScanAt: string | null } }>(
+    GET_MEMORY_CONFLICT_COUNTS,
+    { variables: { contextId: context.id }, skip: !valid },
+  );
 
   // Until memoryBases has answered, `agents` is empty for every base — showing
   // "Not used by any agent" then would claim something the page does not know.
@@ -56,9 +60,16 @@ export function BaseShell({
         breadcrumb={{ label: t("title"), href: "/memory" }}
         title={context.name}
         description={usedBy}
-        action={<OverflowMenu items={[{ label: t("base.openInKnowledge"), onSelect: () => router.push(`/data/${context.id}`) }]} />}
+        action={
+          <OverflowMenu
+            items={[
+              { label: t("base.openInKnowledge"), onSelect: () => router.push(`/data/${context.id}`) },
+              { label: t("conflicts.find"), onSelect: () => router.push(`/memory/${context.id}/conflicts`) },
+            ]}
+          />
+        }
       />
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard
           label={t("stats.memories")}
           value={stats?.total ?? 0}
@@ -77,6 +88,13 @@ export function BaseShell({
           value={usage.error ? "—" : (usage.data?.memoryBaseUsage?.neverUsed ?? 0)}
           caption={usage.error ? undefined : t("usage.neverUsedCaption")}
           loading={usage.loading && !usage.data}
+        />
+        <StatCard
+          label={t("conflicts.card")}
+          value={counts.error ? "—" : (counts.data?.memoryConflictCounts?.open ?? 0)}
+          caption={counts.data?.memoryConflictCounts?.lastScanAt ? t("conflicts.cardCaption", { count: counts.data.memoryConflictCounts.memoriesInvolved }) : t("conflicts.notScanned")}
+          loading={counts.loading && !counts.data}
+          href={`/memory/${context.id}/conflicts`}
         />
       </div>
       {valid ? (

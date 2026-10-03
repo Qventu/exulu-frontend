@@ -302,6 +302,17 @@ export const GET_MEMORY_BASE_USAGE = gql`
 `;
 
 /**
+ * Conflicts count (Task 8 memoryConflictCounts). Copy of memory/queries.ts'
+ * GET_MEMORY_CONFLICT_COUNTS under a distinct operation name — feature
+ * isolation forbids importing the memory feature's query documents from here.
+ */
+export const GET_MEMORY_CONFLICT_COUNTS = gql`
+  query WorkbenchMemoryConflictCounts($contextId: ID!) {
+    memoryConflictCounts(contextId: $contextId) { open memoriesInvolved lastScanAt }
+  }
+`;
+
+/**
  * "used by" map for the memory-base picker (memory-section.tsx). Verbatim
  * agentsPagination args from agents/queries.ts' GET_AGENTS_INDEX — there is
  * no bare `agents(...)` query on the schema.
