@@ -4,6 +4,7 @@ import {
   GET_MEMORY_BASE_UNUSED_IDS, GET_MEMORY_BASE_USAGE, GET_MEMORY_ITEMS, GET_MEMORY_ITEM_BY_ID, GET_MEMORY_USAGE, GET_MEMORY_USAGE_BY_IDS,
   MEMORY_ITEMS_KEY, MEMORY_ITEM_KEY, memoryItemFields, UPDATE_MEMORY_ITEM,
 } from "./queries";
+import { GET_MEMORY_CONFLICTS, GET_MEMORY_CONFLICT_COUNTS, GET_MEMORY_CONFLICTS_FOR_MEMORY, RESOLVE_MEMORY_CONFLICT, SCAN_MEMORY_CONFLICTS, SUGGEST_MEMORY_MERGE } from "./queries";
 
 const body = (doc: { loc?: { source: { body: string } } }) => doc.loc?.source.body ?? "";
 
@@ -35,5 +36,16 @@ describe("usage documents", () => {
     expect(body(GET_MEMORY_BASE_UNUSED_IDS)).toContain("query MemoryBaseUnusedIds");
     expect(body(UPDATE_MEMORY_ITEM("mem"))).toContain("mem_itemsUpdateOneById(");
     expect(body(UPDATE_MEMORY_ITEM("mem"))).toContain("generateEmbeddings: false");
+  });
+});
+
+describe("conflict documents", () => {
+  it("name the conflict operations", () => {
+    expect(body(GET_MEMORY_CONFLICTS)).toContain("query MemoryConflicts(");
+    expect(body(GET_MEMORY_CONFLICT_COUNTS)).toContain("query MemoryConflictCounts");
+    expect(body(GET_MEMORY_CONFLICTS_FOR_MEMORY)).toContain("query MemoryConflictsForMemory");
+    expect(body(SCAN_MEMORY_CONFLICTS)).toContain("mutation MemoryConflictsScan");
+    expect(body(RESOLVE_MEMORY_CONFLICT)).toContain("mutation MemoryConflictResolve");
+    expect(body(SUGGEST_MEMORY_MERGE)).toContain("mutation MemoryConflictSuggestMerge");
   });
 });

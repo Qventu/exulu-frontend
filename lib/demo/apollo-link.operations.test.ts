@@ -1,3 +1,4 @@
+import { gql } from "@apollo/client";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -16,6 +17,9 @@ import {
   GET_MEMORY_BASE_CONTRIBUTORS,
   GET_MEMORY_BASE_UNUSED_IDS,
   GET_MEMORY_BASE_USAGE,
+  GET_MEMORY_CONFLICTS,
+  GET_MEMORY_CONFLICT_COUNTS,
+  GET_MEMORY_CONFLICTS_FOR_MEMORY,
   GET_MEMORY_USAGE,
   GET_MEMORY_USAGE_BY_IDS,
 } from "@/app/(application)/memory/queries";
@@ -198,5 +202,31 @@ describe("/memory page operations", () => {
   it("answers MemoryBaseUnusedIds with a list", async () => {
     const data = await run(GET_MEMORY_BASE_UNUSED_IDS, { contextId: "newton_memory_context", mode: "NEVER" });
     expect(Array.isArray(data.memoryBaseUnusedIds)).toBe(true);
+  });
+
+  it("answers MemoryConflicts with a list (the page renders its empty state)", async () => {
+    const data = await run(GET_MEMORY_CONFLICTS, { contextId: "newton_memory_context" });
+    expect(Array.isArray(data.memoryConflicts)).toBe(true);
+  });
+
+  it("answers MemoryConflictCounts with an object carrying open", async () => {
+    const data = await run(GET_MEMORY_CONFLICT_COUNTS, { contextId: "newton_memory_context" });
+    expect(typeof (data.memoryConflictCounts as { open: number }).open).toBe("number");
+  });
+
+  it("answers MemoryConflictsForMemory with open and mergedFrom lists", async () => {
+    const data = await run(GET_MEMORY_CONFLICTS_FOR_MEMORY, { contextId: "newton_memory_context", memoryId: "1" });
+    const result = data.memoryConflictsForMemory as { open: unknown[]; mergedFrom: unknown[] };
+    expect(Array.isArray(result.open)).toBe(true);
+    expect(Array.isArray(result.mergedFrom)).toBe(true);
+  });
+
+  // No real product query names this operation yet — the workbench's Memory
+  // card (agents/edit/[id]) does not surface conflicts until a later task.
+  // The literal name matches the resolver key in lib/demo/resolvers.ts and
+  // the shape of the real GetMemoryConflictCounts resolver it reuses.
+  it("answers WorkbenchMemoryConflictCounts with an object carrying open", async () => {
+    const data = await run(gql`query WorkbenchMemoryConflictCounts($contextId: ID!) { memoryConflictCounts(contextId: $contextId) { open memoriesInvolved lastScanAt } }`, { contextId: "newton_memory_context" });
+    expect(typeof (data.memoryConflictCounts as { open: number }).open).toBe("number");
   });
 });

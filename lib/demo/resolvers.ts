@@ -648,6 +648,15 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   MemoryBaseUsage: () => ({ memoryBaseUsage: { used: 0, neverUsed: 0, stale: 0, mostUsed: [], newPerWeek: [] } }),
   MemoryBaseUnusedIds: () => ({ memoryBaseUnusedIds: [] }),
 
+  // --- /memory/[ctx]/conflicts (sub-project 3b) -----------------------------
+  // No fabricated conflicts: the page renders its empty/unscanned state.
+  // MemoryConflictsScan, MemoryConflictResolve and MemoryConflictSuggestMerge
+  // are deliberately NOT mapped — demo mode never scans or resolves.
+  MemoryConflicts: () => ({ memoryConflicts: [] }),
+  MemoryConflictCounts: () => ({ memoryConflictCounts: { open: 0, memoriesInvolved: 0, lastScanAt: null } }),
+  MemoryConflictsForMemory: () => ({ memoryConflictsForMemory: { open: [], mergedFrom: [] } }),
+  WorkbenchMemoryConflictCounts: () => ({ memoryConflictCounts: { open: 0, memoriesInvolved: 0, lastScanAt: null } }),
+
   // --- /agents/edit/[id] (chapter 3: agent configuration) -----------------
   AgentEditorById: (world, variables) => ({
     agentById: {
