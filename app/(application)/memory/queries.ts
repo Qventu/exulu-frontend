@@ -190,3 +190,46 @@ export const UPDATE_MEMORY_ITEM = (context: string) => gql`
     ${context}_itemsUpdateOneById(id: $id, input: $input, generateEmbeddings: false) { item { id } job }
   }
 `;
+
+// ---- Conflicts (sub-project 3b) --------------------------------------------
+
+const CONFLICT_FIELDS = `
+  id
+  kind
+  status
+  similarity
+  reason
+  members { id information type author { id name } createdAt usedCount }
+  scannedAt
+  resolvedAt
+  resolution
+  mergedInto
+`;
+
+export const GET_MEMORY_CONFLICTS = gql`
+  query MemoryConflicts($contextId: ID!) { memoryConflicts(contextId: $contextId) { ${CONFLICT_FIELDS} } }
+`;
+export const GET_MEMORY_CONFLICT_COUNTS = gql`
+  query MemoryConflictCounts($contextId: ID!) { memoryConflictCounts(contextId: $contextId) { open memoriesInvolved lastScanAt } }
+`;
+export const GET_MEMORY_CONFLICTS_FOR_MEMORY = gql`
+  query MemoryConflictsForMemory($contextId: ID!, $memoryId: ID!) {
+    memoryConflictsForMemory(contextId: $contextId, memoryId: $memoryId) {
+      open { ${CONFLICT_FIELDS} }
+      mergedFrom { id information type author { id name } createdAt usedCount }
+    }
+  }
+`;
+export const SCAN_MEMORY_CONFLICTS = gql`
+  mutation MemoryConflictsScan($contextId: ID!) {
+    memoryConflictsScan(contextId: $contextId) { open duplicateGroups contradictionGroups judged unjudged skipped scannedAt }
+  }
+`;
+export const RESOLVE_MEMORY_CONFLICT = gql`
+  mutation MemoryConflictResolve($id: ID!, $action: MemoryConflictAction!, $keepId: ID, $merged: MemoryMergeInput) {
+    memoryConflictResolve(id: $id, action: $action, keepId: $keepId, merged: $merged) { ${CONFLICT_FIELDS} }
+  }
+`;
+export const SUGGEST_MEMORY_MERGE = gql`
+  mutation MemoryConflictSuggestMerge($id: ID!) { memoryConflictSuggestMerge(id: $id) { information type } }
+`;
