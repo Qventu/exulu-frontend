@@ -91,6 +91,9 @@ afterEach(() => {
   viewport.large = false;
   asked.length = 0;
   canvas.renders.length = 0;
+  // The card mirrors its selection with history.replaceState, which outlives a
+  // render in the one jsdom document this file shares.
+  window.history.replaceState(null, "", "/");
 });
 
 const CONTEXT = "base-1";
@@ -478,9 +481,73 @@ describe("ContextMapCard", () => {
     expect(after.onUnsupported).toBe(before.onUnsupported);
 
     fireEvent.click(screen.getByRole("button", { name: /valves/i }));
-    expect(nav.replace).toHaveBeenCalledWith(
-      "/memory/base-1?selected=a&topic=0",
-      { scroll: false },
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("0"),
+    );
+    // Mirrored, never navigated: this page is dynamic, so a router write costs
+    // a server round-trip before the chip lights up, and if the route's loading
+    // state swaps in the canvas unmounts — camera reset, context recreated,
+    // cloud refetched.
+    expect(nav.replace).not.toHaveBeenCalled();
+    const mirrored = new URLSearchParams(window.location.search);
+    expect(mirrored.get("topic")).toBe("0");
+    expect(mirrored.get("selected")).toBe("a");
+  });
+
+  it("selects a passage without navigating, keeping the page's own parameters", async () => {
+    // The memory base page drives its tabs from ?tab=, so the mirror has to
+    // leave every parameter it does not own alone.
+    window.history.replaceState(null, "", "/memory/base-1?tab=overview");
+    render(
+      withProviders([pointsMock, emptyTopicsMock, statusMock, edgesMock], {
+        selected: "chunk-1",
+      }),
+    );
+    const neighbour = await screen.findByRole("button", {
+      name: /the text of chunk-2/i,
+    });
+    fireEvent.click(neighbour);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.selectedId).toBe("chunk-2"),
+    );
+    expect(nav.replace).not.toHaveBeenCalled();
+    expect(window.location.pathname).toBe("/memory/base-1");
+    const mirrored = new URLSearchParams(window.location.search);
+    expect(mirrored.get("selected")).toBe("chunk-2");
+    expect(mirrored.get("tab")).toBe("overview");
+  });
+
+  it("restores the selection a shared link names", async () => {
+    render(
+      withProviders([pointsMock, emptyTopicsMock, statusMock, edgesMock], {
+        selected: "chunk-1",
+      }),
+    );
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.selectedId).toBe("chunk-1"),
+    );
+    // And the panel really is showing that passage, not just the renderer prop.
+    expect(await screen.findByText(/the text of chunk-1/i)).toBeDefined();
+    expect(new URLSearchParams(window.location.search).get("selected")).toBe(
+      "chunk-1",
+    );
+  });
+
+  it("drops the selection from the URL when the panel is closed", async () => {
+    viewport.large = true;
+    render(
+      withProviders([pointsMock, emptyTopicsMock, statusMock, edgesMock], {
+        selected: "chunk-1",
+      }),
+    );
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.selectedId).toBe("chunk-1"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    await waitFor(() => expect(canvas.renders.at(-1)!.selectedId).toBeNull());
+    expect(nav.replace).not.toHaveBeenCalled();
+    expect(new URLSearchParams(window.location.search).has("selected")).toBe(
+      false,
     );
   });
 

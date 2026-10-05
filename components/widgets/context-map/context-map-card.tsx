@@ -11,7 +11,7 @@
 import { useQuery } from "@apollo/client";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import { ChartCard } from "@/components/primitives/chart-card";
@@ -97,13 +97,31 @@ export function ContextMapCard({
 }: ContextMapCardProps) {
   const t = useTranslations("map");
   const tCommon = useTranslations("common");
-  const router = useRouter();
-  const pathname = usePathname();
   const params = useSearchParams();
   const canvasRef = React.useRef<MapCanvasHandle>(null);
 
-  const selectedId = params?.get("selected") ?? null;
-  const requestedTopic = params?.get("topic") ?? null;
+  /**
+   * The selection and the requested region are component state, not route
+   * state.
+   *
+   * This page is dynamic, so writing them through the router costs a server
+   * round-trip before the dot even lights up, and if the route's loading state
+   * swaps in the canvas unmounts: camera reset, WebGL context recreated, the
+   * whole cloud refetched. `app/(application)/chat/hooks.ts` documents the same
+   * hazard and answers it the same way, and the memory table beside this card
+   * keeps its own state and never writes the URL at all.
+   *
+   * Read once from the search parameters, so a shared link still opens on the
+   * passage and the region it names, and mirrored back below so the link stays
+   * shareable. Nothing is lost: a `replace` had no back-button behaviour to
+   * preserve.
+   */
+  const [selectedId, setSelectedId] = React.useState<string | null>(
+    () => params?.get("selected") ?? null,
+  );
+  const [requestedTopic, setRequestedTopic] = React.useState<string | null>(
+    () => params?.get("topic") ?? null,
+  );
   const [paused, setPaused] = React.useState(false);
   const [allLinks, setAllLinks] = React.useState(false);
   const [unsupported, setUnsupported] = React.useState(false);
@@ -111,22 +129,31 @@ export function ContextMapCard({
     null,
   );
 
-  // The search string, not the object: `useSearchParams()` is stable per
-  // navigation in the app router, but the callbacks below are handed to the
-  // renderer and must not depend on that promise.
-  const search = params?.toString() ?? "";
-  const setParam = React.useCallback(
-    (key: string, value: string | null) => {
-      const url = new URLSearchParams(search);
-      if (value === null) url.delete(key);
-      else url.set(key, value);
-      const query = url.toString();
-      router.replace(query ? `${pathname}?${query}` : pathname, {
-        scroll: false,
-      });
-    },
-    [search, pathname, router],
-  );
+  /**
+   * Mirrors the two values into the URL without a navigation, so a link still
+   * restores them. Read from `window.location`, not from `useSearchParams()`:
+   * replaceState leaves the route tree untouched, so the hook would keep
+   * answering with the parameters this card arrived with and the mirror would
+   * undo its own last write. The requested region is mirrored rather than the
+   * resolved one, or a shared `?topic=` would be wiped in the moment before
+   * the regions have loaded.
+   *
+   * Only the two keys this card owns are touched: the surfaces around it drive
+   * their tabs from the same query string.
+   */
+  React.useEffect(() => {
+    const url = new URLSearchParams(window.location.search);
+    if (selectedId === null) url.delete("selected");
+    else url.set("selected", selectedId);
+    if (requestedTopic === null) url.delete("topic");
+    else url.set("topic", requestedTopic);
+    const query = url.toString();
+    const next = query
+      ? `${window.location.pathname}?${query}`
+      : window.location.pathname;
+    if (next === `${window.location.pathname}${window.location.search}`) return;
+    window.history.replaceState(null, "", next);
+  }, [selectedId, requestedTopic]);
 
   const pointsQuery = useQuery<PointsAnswer>(GET_CONTEXT_MAP_POINTS, {
     variables: {
@@ -274,8 +301,8 @@ export function ContextMapCard({
   const showLegend = stableGroups.length > 0 || ringed.size > 0;
 
   const select = React.useCallback(
-    (id: string | null) => setParam("selected", id),
-    [setParam],
+    (id: string | null) => setSelectedId(id),
+    [],
   );
   const reportUnsupported = React.useCallback(() => setUnsupported(true), []);
 
@@ -398,8 +425,7 @@ export function ContextMapCard({
                 variant={highlightTopic === topic.id ? "default" : "outline"}
                 aria-pressed={highlightTopic === topic.id}
                 onClick={() =>
-                  setParam(
-                    "topic",
+                  setRequestedTopic(
                     highlightTopic === topic.id ? null : topic.id,
                   )
                 }
@@ -472,7 +498,7 @@ export function ContextMapCard({
       <MapPanel
         open={panelOpen}
         onOpenChange={(next) => {
-          if (!next && selectedId !== null) setParam("selected", null);
+          if (!next) setSelectedId(null);
         }}
         selected={selected}
         missing={missing}
