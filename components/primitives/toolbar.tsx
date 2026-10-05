@@ -142,8 +142,10 @@ function Toolbar({
                     </>
                   )}
                 </Button>
-                {/* Desktop: filters inline. */}
-                <div className="hidden min-w-0 items-center gap-2 md:flex">
+                {/* Desktop: filters inline. Wraps — a page with several
+                    selects plus a Reset control overflowed the toolbar at
+                    narrower desktop widths. */}
+                <div className="hidden min-w-0 flex-wrap items-center gap-2 md:flex">
                   {filters}
                 </div>
               </>

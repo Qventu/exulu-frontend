@@ -122,6 +122,16 @@ function TranscriptionsPageInner() {
   const openComposer = () =>
     router.push(`${pathname}?new=1`, { scroll: false });
   const closeComposer = () => router.replace(pathname, { scroll: false });
+  // Stable identities: NewTranscriptDialog feeds these into the composers'
+  // `onStart` callbacks, and an inline arrow here churns their identity on
+  // every render — which is what drove the composer's report-up effect into
+  // an update loop.
+  const handleComposerOpenChange = React.useCallback(
+    (next: boolean) => {
+      if (!next) router.replace(pathname, { scroll: false });
+    },
+    [router, pathname],
+  );
 
   // The review sheet became a page (spec §1.2); keep old links working.
   const legacyReviewId = searchParams.get("review");
@@ -166,6 +176,11 @@ function TranscriptionsPageInner() {
     loadMore,
     refetchAll,
   } = useTranscripts(query);
+
+  const handleComposerStarted = React.useCallback(() => {
+    refetchAll();
+    refetchUsage();
+  }, [refetchAll, refetchUsage]);
 
   const projects = useProjectOptions();
 
@@ -250,7 +265,7 @@ function TranscriptionsPageInner() {
         value={sourceFilter}
         onValueChange={(value) => setSourceFilter(value as SourceFilter)}
       >
-        <SelectTrigger className="w-[160px]">
+        <SelectTrigger className="w-[160px] max-w-full shrink">
           <SelectValue placeholder={t("filter.source")} />
         </SelectTrigger>
         <SelectContent>
@@ -261,7 +276,7 @@ function TranscriptionsPageInner() {
         </SelectContent>
       </Select>
       <Select value={projectFilter} onValueChange={setProjectFilter}>
-        <SelectTrigger className="w-[160px]">
+        <SelectTrigger className="w-[160px] max-w-full shrink">
           <SelectValue placeholder={t("filter.project")} />
         </SelectTrigger>
         <SelectContent>
@@ -277,7 +292,7 @@ function TranscriptionsPageInner() {
         value={dateFilter}
         onValueChange={(value) => setDateFilter(value as DateFilter)}
       >
-        <SelectTrigger className="w-[160px]">
+        <SelectTrigger className="w-[160px] max-w-full shrink">
           <SelectValue placeholder={t("filter.date")} />
         </SelectTrigger>
         <SelectContent>
@@ -321,7 +336,7 @@ function TranscriptionsPageInner() {
                   variant="ghost"
                   size="icon"
                   aria-label={t("overflow.label")}
-                  className="max-md:size-11"
+                  className="size-9 shrink-0 max-md:size-11"
                 >
                   <MoreHorizontal aria-hidden="true" className="size-4" />
                 </Button>
@@ -362,11 +377,8 @@ function TranscriptionsPageInner() {
 
       <NewTranscriptDialog
         open={composerVisible}
-        onOpenChange={(open) => !open && closeComposer()}
-        onStarted={() => {
-          refetchAll();
-          refetchUsage();
-        }}
+        onOpenChange={handleComposerOpenChange}
+        onStarted={handleComposerStarted}
       />
 
       {/* Union list partial failure (spec §6): one failed half never blanks

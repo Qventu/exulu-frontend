@@ -5249,7 +5249,8 @@
       "transcribing": "Wird transkribiert",
       "needsReview": "Prüfung nötig",
       "ready": "Bereit",
-      "failed": "Fehlgeschlagen"
+      "failed": "Fehlgeschlagen",
+      "failedCount": "{count, plural, one {# fehlgeschlagen} other {# fehlgeschlagen}}"
     },
     "tabs": {
       "all": "Alle",

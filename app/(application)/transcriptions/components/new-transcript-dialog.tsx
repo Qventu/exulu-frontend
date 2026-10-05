@@ -161,21 +161,43 @@ export function NewTranscriptDialog({
   // caller's own `open` prop (composerVisible) is what actually keeps the
   // surface up during a recording; this is a plain, unconditional
   // pass-through so nothing here can go stale.
-  const handleCancel = () => onOpenChange(false);
+  const handleCancel = React.useCallback(() => onOpenChange(false), [onOpenChange]);
 
   // The upload/meeting composers report their own Start action up; the
   // dialog just renders whatever they currently say. Record keeps its own
   // Start button (see record-composer.tsx) — its close-out logic must not be
   // restructured, so it is never routed through this indirection.
+  // The composers re-report this on every render — their `onStart` callback
+  // depends on `onStarted`, which is an inline arrow here and in page.tsx, so
+  // its identity churns. Storing the reported object as-is therefore set state
+  // on every render and the dialog ↔ composer pair ping-ponged until React
+  // tripped "Maximum update depth exceeded" and the route's error boundary
+  // swallowed the whole page.
+  //
+  // So: keep `run` in a ref (always the newest, costs no render) and put only
+  // the three values the footer actually draws into state, skipping the update
+  // when none of them changed. The composers stay untouched, and no future
+  // identity churn on their side can reintroduce the loop.
+  const runRef = React.useRef<(() => void) | null>(null);
   const handlePrimaryActionChange = React.useCallback(
-    (action: ComposerPrimaryAction) => setPrimaryAction(action),
+    (action: ComposerPrimaryAction) => {
+      runRef.current = action.run;
+      setPrimaryAction((prev) =>
+        prev &&
+        prev.label === action.label &&
+        prev.disabled === action.disabled &&
+        prev.busy === action.busy
+          ? prev
+          : { label: action.label, disabled: action.disabled, busy: action.busy, run: action.run },
+      );
+    },
     [],
   );
 
-  const onComposerStarted = () => {
+  const onComposerStarted = React.useCallback(() => {
     onOpenChange(false);
     onStarted();
-  };
+  }, [onOpenChange, onStarted]);
 
   // Rendered unconditionally while a recording is active — see the pin note
   // in the file header. Otherwise, an unconfigured effective mode (only
@@ -274,7 +296,7 @@ export function NewTranscriptDialog({
             {showComposer && effectiveMode !== "record" && (
               <Button
                 type="button"
-                onClick={() => primaryAction?.run()}
+                onClick={() => runRef.current?.()}
                 disabled={!primaryAction || primaryAction.disabled}
                 className="max-md:h-11"
               >

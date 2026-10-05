@@ -10,11 +10,16 @@
  * expanded, with their existing recovery action (JobRow already renders the
  * "already saved as …" link via `recoveredBy`).
  */
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
 import { StatusDot } from "@/components/primitives/status-dot";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 
 import { JobRow } from "./job-row";
@@ -50,6 +55,7 @@ export function InProgressStrip({
 
   const runningJobs = withJob(running);
   const failedJobs = withJob(failed);
+  const [failedOpen, setFailedOpen] = React.useState(false);
 
   if (runningJobs.length === 0 && failedJobs.length === 0) return null;
 
@@ -111,10 +117,27 @@ export function InProgressStrip({
       )}
 
       {failedJobs.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="text-sm font-medium text-muted-foreground">
-            {t("state.failed")}
-          </h2>
+        // Collapsed by default: a workspace accumulates failed meeting-bot
+        // attempts indefinitely, and expanded they pushed every live and
+        // reviewable transcript off the screen. The count stays visible so a
+        // genuine failure is still noticed.
+        <Collapsible open={failedOpen} onOpenChange={setFailedOpen} className="space-y-2">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-md py-1 text-left text-sm font-medium text-muted-foreground hover:text-foreground max-md:h-11"
+            >
+              <ChevronRight
+                aria-hidden="true"
+                className={cn("size-4 shrink-0 transition-transform", failedOpen && "rotate-90")}
+              />
+              <span>{t("state.failed")}</span>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal">
+                {failedJobs.length}
+              </span>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
           <ul className="space-y-2">
             {failedJobs.map((row) => (
               <JobRow
@@ -126,7 +149,8 @@ export function InProgressStrip({
               />
             ))}
           </ul>
-        </div>
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </div>
   );
