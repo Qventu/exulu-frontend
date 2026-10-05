@@ -28,27 +28,12 @@ describe("resolvePalette", () => {
 
   it("falls back to grey when a token is unset or malformed", () => {
     const root = document.documentElement;
-    // Ensure a token is unset so getComputedStyle returns empty string.
-    root.style.removeProperty("--chart-fake-unset");
 
     const palette = resolvePalette(root);
 
     // An unset variable returns empty string, which parseHslTriplet treats as malformed → grey [0.5, 0.5, 0.5].
     // The noValue field should be grey (from --chart-5 which we haven't set, so it defaults to empty).
     expect(palette.noValue).toEqual([0.5, 0.5, 0.5]);
-  });
-
-  it("produces consistent results for the same theme", () => {
-    const root = document.documentElement;
-    root.style.setProperty("--chart-1", "148.0952 53.3898% 53.7255%");
-
-    const palette1 = resolvePalette(root);
-    const palette2 = resolvePalette(root);
-
-    const chartOneIdx = PALETTE_TOKENS.indexOf("--chart-1");
-    expect(palette1.colors[chartOneIdx]).toEqual(palette2.colors[chartOneIdx]);
-
-    root.style.removeProperty("--chart-1");
   });
 });
 

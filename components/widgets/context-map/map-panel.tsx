@@ -102,9 +102,10 @@ export function MapPanel({
                   {edges.map((edge) => {
                     const neighbour = byId.get(edge.target);
                     // The edges query does not filter to passages that have a
-                    // position, and the cloud is capped at 20,000 anyway, so a
-                    // neighbour can simply not be on screen. It is still a real
-                    // relation; it just cannot be pointed at.
+                    // position, and the cloud draws only as many as the card
+                    // asks for anyway, so a neighbour can simply not be on
+                    // screen. It is still a real relation; it just cannot be
+                    // pointed at.
                     if (neighbour === undefined) {
                       return (
                         <li

@@ -53,8 +53,13 @@ const MapCanvas = dynamic(
   { ssr: false, loading: () => <Skeleton className="h-[28rem] w-full" /> },
 );
 
-/** The cap the points query is asked for; the caption admits when it bites. */
-const POINTS_LIMIT = 20000;
+/**
+ * How many passages to draw. This is the API's own default, not its cap of
+ * 20,000: the cap measures at about 5.8 MB uncompressed, 2.4 MB of which is
+ * label text that only the tooltip and the panel ever read. The caption below
+ * the cloud already says how many of how many are drawn when the limit bites.
+ */
+const POINTS_LIMIT = 5000;
 
 // Stable empties. A fresh [] or Set() per render would re-upload every buffer
 // in the renderer each time this card re-renders — and it re-renders on every

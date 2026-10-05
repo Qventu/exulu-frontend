@@ -92,6 +92,7 @@ afterEach(() => {
   nav.replace.mockClear();
   viewport.large = false;
   asked.length = 0;
+  askedWith.length = 0;
   canvas.renders.length = 0;
   // The card mirrors its selection with history.replaceState, which outlives a
   // render in the one jsdom document this file shares.
@@ -120,7 +121,10 @@ const pointsRequest = {
     contextId: CONTEXT,
     mode: "PASSAGES",
     groupField: null,
-    limit: 20000,
+    // The API's default, not its cap. An unmatched request is a network error
+    // MockLink swallows, so a card that asked for anything else would show no
+    // cloud at all and every test below would say so.
+    limit: 5000,
   },
 };
 
@@ -269,6 +273,8 @@ const edgesErrorMock = {
  * query was issued.
  */
 const asked: string[] = [];
+/** The same operations with their variables, so a test can name a value. */
+const askedWith: { name: string; variables: Record<string, unknown> }[] = [];
 
 function withProviders(
   mocks: MockedResponse[],
@@ -285,6 +291,10 @@ function withProviders(
   nav.search = search.toString();
   const recorder = new ApolloLink((operation, forward) => {
     asked.push(operation.operationName);
+    askedWith.push({
+      name: operation.operationName,
+      variables: operation.variables,
+    });
     return forward(operation);
   });
   return (
@@ -657,6 +667,16 @@ describe("ContextMapCard", () => {
     );
     expect(await screen.findByText("the text of chunk-1")).toBeDefined();
     expect(screen.queryByText(/only the opening/i)).toBeNull();
+  });
+
+  it("asks for the default number of passages, not the cap", async () => {
+    // 20,000 rows measure at about 5.8 MB uncompressed, 2.4 MB of it label
+    // text that only the tooltip and the panel ever read. The caption already
+    // says how many of how many are drawn.
+    render(withProviders([pointsMock, emptyTopicsMock, statusMock]));
+    await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
+    const points = askedWith.find((o) => o.name === "ContextMapPoints");
+    expect(points?.variables.limit).toBe(5000);
   });
 
   it("asks for edges only once a passage is selected", async () => {
