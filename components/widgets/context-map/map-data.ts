@@ -253,10 +253,17 @@ export function coverageCaption({
  * Which region a passage belongs to, or null when it belongs to none.
  *
  * A passage carries no record of its region: the regions are k-means over the
- * fit's own sample, and k-means' final assignment *is* "nearest centre", so
- * this reproduces the clustering exactly for a sampled passage and extends the
- * same rule to the rest. A tie goes to the earlier region, so the chips never
- * flicker between two answers for the same passage.
+ * fit's own sample, and the fit's last act is to assign every sampled point to
+ * its nearest returned centre — so this is the same rule, extended to the
+ * passages the sample never saw. A tie goes to the earlier region, so the chips
+ * never flicker between two answers for the same passage.
+ *
+ * The same rule, not provably the same answer. A passage's coordinates are
+ * stored in `real` columns while the fit clustered on double precision, so a
+ * passage sitting almost exactly between two centres can fall on the other
+ * side here. And the count on a chip is the fit's own, over every chunk it
+ * sampled, while what dims is the capped, access-scoped answer this viewer
+ * loaded: the two numbers are not meant to match.
  *
  * Nothing is attributed to a region across a non-finite coordinate — the
  * passage's or the region's. Every comparison against NaN is false, so the
