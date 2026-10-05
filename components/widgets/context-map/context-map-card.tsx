@@ -91,13 +91,14 @@ export function ContextMapCard({
   titleKey,
 }: ContextMapCardProps) {
   const t = useTranslations("map");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const canvasRef = React.useRef<MapCanvasHandle>(null);
 
   const selectedId = params?.get("selected") ?? null;
-  const highlightTopic = params?.get("topic") ?? null;
+  const requestedTopic = params?.get("topic") ?? null;
   const [paused, setPaused] = React.useState(false);
   const [allLinks, setAllLinks] = React.useState(false);
   const [unsupported, setUnsupported] = React.useState(false);
@@ -105,15 +106,22 @@ export function ContextMapCard({
     null,
   );
 
-  const setParam = (key: string, value: string | null) => {
-    const url = new URLSearchParams(params?.toString() ?? "");
-    if (value === null) url.delete(key);
-    else url.set(key, value);
-    const query = url.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, {
-      scroll: false,
-    });
-  };
+  // The search string, not the object: `useSearchParams()` is stable per
+  // navigation in the app router, but the callbacks below are handed to the
+  // renderer and must not depend on that promise.
+  const search = params?.toString() ?? "";
+  const setParam = React.useCallback(
+    (key: string, value: string | null) => {
+      const url = new URLSearchParams(search);
+      if (value === null) url.delete(key);
+      else url.set(key, value);
+      const query = url.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      });
+    },
+    [search, pathname, router],
+  );
 
   const pointsQuery = useQuery<PointsAnswer>(GET_CONTEXT_MAP_POINTS, {
     variables: {
@@ -161,6 +169,19 @@ export function ContextMapCard({
   );
   const status = statusQuery.data?.contextProjectionStatus ?? null;
 
+  /**
+   * The region the chips are filtering by, which is only ever one this base
+   * actually has. The regions arrive from their own query, so for a moment
+   * every parameter names nothing; and a refit renumbers them, so a shared
+   * link can name one that is gone for good. Passing the raw parameter down
+   * would dim the whole cloud with no chip to explain why.
+   */
+  const highlightTopic =
+    requestedTopic !== null &&
+    topics.some((topic) => topic.id === requestedTopic)
+      ? requestedTopic
+      : null;
+
   // `groups` is a prop, and the surfaces above build it from a context's
   // declared fields — quite possibly inline, i.e. a new array identity on
   // every one of their renders. The renderer rebuilds its colour buffer when
@@ -203,14 +224,20 @@ export function ContextMapCard({
 
   const notMapped = status !== null && !status.fitted;
   const pointsFailed = pointsQuery.error !== undefined;
+  /**
+   * A failed status query is not an answer. Without one there is no telling
+   * whether an empty cloud means the base was never mapped or means the
+   * viewer may read none of it, and claiming either would be a guess.
+   */
+  const statusUnknown =
+    statusQuery.error !== undefined && status === null && points.length === 0;
   // Both answers gate the first paint: without the status a base that was
   // never fitted would flash "no passages" before saying so.
   const loadingCloud =
     (pointsQuery.loading || statusQuery.loading) && points.length === 0;
-  /** True only when there is a cloud for the controls to act on. */
-  const drawing = !unsupported && !notMapped && !pointsFailed;
+  const blocked = unsupported || notMapped || pointsFailed || statusUnknown;
   /** True once there is a cloud on screen, which is what the rows below read. */
-  const drawn = drawing && !loadingCloud && points.length > 0;
+  const drawn = !blocked && !loadingCloud && points.length > 0;
 
   // Grey is the palette's reserved "no value", and the legend only has to name
   // it when something on screen actually carries it.
@@ -225,14 +252,23 @@ export function ContextMapCard({
   const ringed = ringedIds ?? NO_IDS;
   const showLegend = stableGroups.length > 0 || ringed.size > 0;
 
-  const select = (id: string | null) => setParam("selected", id);
+  const select = React.useCallback(
+    (id: string | null) => setParam("selected", id),
+    [setParam],
+  );
+  const reportUnsupported = React.useCallback(() => setUnsupported(true), []);
 
-  // `undefined` until hydration, which is not "large": below lg the panel is a
-  // sheet, and a sheet open from first paint would cover the map on a phone.
-  // At lg it is docked and part of the layout, so closing it means closing the
-  // passage — the title falls back to the overview.
+  /**
+   * `undefined` until hydration, and deliberately counted as docked: the
+   * primitive renders its docked markup pre-hydration behind a `lg:` class, so
+   * a phone hides it anyway, while a large screen paints the panel in its
+   * final place instead of inserting it a frame later. What must not happen is
+   * the sheet being open on a phone, and `false` is the only value that means
+   * phone. At lg the panel is part of the layout, so closing it means closing
+   * the passage — the title falls back to the overview.
+   */
   const isDocked = useMediaQuery(LG_QUERY);
-  const panelOpen = selectedId !== null || isDocked === true;
+  const panelOpen = selectedId !== null || isDocked !== false;
 
   return (
     <div
@@ -252,7 +288,7 @@ export function ContextMapCard({
             : null
         }
         toolbar={
-          drawing ? (
+          drawn ? (
             <div className="flex flex-wrap items-center gap-2">
               <Tabs
                 value={allLinks ? "all" : "selection"}
@@ -295,6 +331,15 @@ export function ContextMapCard({
           />
         ) : loadingCloud ? (
           <Skeleton className="h-[28rem] w-full" />
+        ) : statusUnknown ? (
+          <EmptyState
+            variant="quiet"
+            title={t("empty.statusUnknown")}
+            action={{
+              label: tCommon("retry"),
+              onClick: () => void statusQuery.refetch(),
+            }}
+          />
         ) : points.length === 0 ? (
           <EmptyState variant="quiet" title={t("empty.noPassages")} />
         ) : (
@@ -313,7 +358,7 @@ export function ContextMapCard({
               allLinks={allLinks}
               hoverNeighbourId={hoverNeighbour}
               onSelect={select}
-              onUnsupported={() => setUnsupported(true)}
+              onUnsupported={reportUnsupported}
             />
           </div>
         )}

@@ -30,7 +30,13 @@ import enMessages from "@/messages/en.json";
  * behaviour: which queries it issues, which state it shows and what the panel
  * says — never markup.
  */
-const nav = vi.hoisted(() => ({ replace: vi.fn(), search: "" }));
+const nav = vi.hoisted(() => {
+  const replace = vi.fn();
+  // One object for the life of the suite: `useRouter()` reads a context value
+  // in the app router, so a fresh object per render would be the mock's
+  // invention and would hide a callback that churns.
+  return { replace, router: { replace }, search: "" };
+});
 /** Every set of props the renderer was handed, newest last. */
 const canvas = vi.hoisted(() => ({ renders: [] as Record<string, unknown>[] }));
 
@@ -43,7 +49,7 @@ vi.mock("next/dynamic", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: nav.replace }),
+  useRouter: () => nav.router,
   usePathname: () => "/memory/base-1",
   useSearchParams: () => new URLSearchParams(nav.search),
 }));
@@ -100,6 +106,9 @@ const passage = (id: string) => ({
   chunks: 1,
 });
 
+/** A passage on the x axis, so which region is nearest is arithmetic. */
+const placed = (id: string, x: number) => ({ ...passage(id), x, y: 0, z: 0 });
+
 const pointsRequest = {
   query: GET_CONTEXT_MAP_POINTS,
   variables: {
@@ -141,6 +150,32 @@ const emptyPointsMock = {
   result: { data: { contextMapPoints: null } },
 };
 
+const placedPointsMock = {
+  request: pointsRequest,
+  // Nearest centre: a -> "0" (1 vs 81), b -> "0" (16 vs 36), c -> "1" (81 vs 1).
+  result: {
+    data: {
+      contextMapPoints: {
+        points: [placed("a", 1), placed("b", 4), placed("c", 9)],
+        total: 3,
+        sampled: false,
+      },
+    },
+  },
+};
+
+const topicsMock = {
+  request: { query: GET_CONTEXT_MAP_TOPICS, variables: { contextId: CONTEXT } },
+  result: {
+    data: {
+      contextMapTopics: [
+        { id: "0", label: "Valves & Blocks", count: 2, x: 0, y: 0, z: 0 },
+        { id: "1", label: "Pricing", count: 1, x: 10, y: 0, z: 0 },
+      ],
+    },
+  },
+};
+
 const emptyTopicsMock = {
   request: { query: GET_CONTEXT_MAP_TOPICS, variables: { contextId: CONTEXT } },
   result: { data: { contextMapTopics: [] } },
@@ -164,6 +199,13 @@ const status = (fitted: boolean) => ({
   },
 });
 const statusMock = status(true);
+const statusErrorMock = {
+  request: {
+    query: GET_CONTEXT_PROJECTION_STATUS,
+    variables: { contextId: CONTEXT },
+  },
+  error: new Error("the status query is down"),
+};
 const notFittedStatusMock = status(false);
 
 const edgesRequest = (nodeId: string) => ({
@@ -183,6 +225,13 @@ const edgesMock = {
   },
 };
 
+const placedEdgesMock = {
+  request: edgesRequest("a"),
+  result: {
+    data: { contextMapEdges: [{ source: "a", target: "b", score: 0.8 }] },
+  },
+};
+
 const edgesErrorMock = {
   request: edgesRequest("chunk-1"),
   error: new Error("edges are down"),
@@ -198,9 +247,12 @@ const asked: string[] = [];
 
 function withProviders(
   mocks: MockedResponse[],
-  search: { selected?: string } = {},
+  params: { selected?: string; topic?: string } = {},
 ) {
-  nav.search = search.selected ? `selected=${search.selected}` : "";
+  const search = new URLSearchParams();
+  if (params.selected !== undefined) search.set("selected", params.selected);
+  if (params.topic !== undefined) search.set("topic", params.topic);
+  nav.search = search.toString();
   const recorder = new ApolloLink((operation, forward) => {
     asked.push(operation.operationName);
     return forward(operation);
@@ -382,6 +434,74 @@ describe("ContextMapCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "bump" }));
     await waitFor(() => expect(canvas.renders.length).toBeGreaterThan(renders));
     expect(canvas.renders.at(-1)!.groups).toBe(before.groups);
+  });
+
+  it("ties a chip to the region parameter, its members and one stable set", async () => {
+    // The whole chip path in one go: the parameter resolves to a region, the
+    // region resolves to its nearest-centre members, that set is what the
+    // renderer dims against, and it survives an unrelated re-render.
+    //
+    // On a large screen, because below lg the panel is a modal sheet and Radix
+    // marks the rest of the document aria-hidden while it is open — the chips
+    // are then genuinely unreachable, which is the sheet's business and not
+    // this test's subject.
+    viewport.large = true;
+    render(
+      withProviders(
+        [placedPointsMock, topicsMock, statusMock, placedEdgesMock],
+        { selected: "a", topic: "1" },
+      ),
+    );
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.topicMemberIds).toEqual(new Set(["c"])),
+    );
+    const before = canvas.renders.at(-1)!;
+
+    const neighbour = await screen.findByRole("button", {
+      name: /the text of b/i,
+    });
+    fireEvent.mouseEnter(neighbour);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.hoverNeighbourId).toBe("b"),
+    );
+    const after = canvas.renders.at(-1)!;
+    expect(after.topicMemberIds).toBe(before.topicMemberIds);
+    // The renderer reads these through a ref today; that is its choice, not a
+    // licence for this card to hand it a new function sixty times a second.
+    expect(after.onSelect).toBe(before.onSelect);
+    expect(after.onUnsupported).toBe(before.onUnsupported);
+
+    fireEvent.click(screen.getByRole("button", { name: /valves/i }));
+    expect(nav.replace).toHaveBeenCalledWith(
+      "/memory/base-1?selected=a&topic=0",
+      { scroll: false },
+    );
+  });
+
+  it("dims nothing while the region parameter names no region it loaded", async () => {
+    // A refit renumbers regions, so a shared ?topic= can name one that is
+    // gone — and the regions arrive from their own query, so for a moment
+    // every parameter names nothing. Either way the cloud must not go dim
+    // with no chip to explain it.
+    render(
+      withProviders([placedPointsMock, topicsMock, statusMock], {
+        topic: "99",
+      }),
+    );
+    await waitFor(() => expect(canvas.renders.at(-1)!.topics).toHaveLength(2));
+    expect(canvas.renders.at(-1)!.highlightTopic).toBeNull();
+    expect(canvas.renders.at(-1)!.topicMemberIds).toEqual(new Set());
+  });
+
+  it("does not call an unfitted base unreadable when the status query failed", async () => {
+    // Without the status there is no telling whether the base was never
+    // mapped or whether this viewer may read none of it.
+    render(withProviders([emptyPointsMock, emptyTopicsMock, statusErrorMock]));
+    await waitFor(() =>
+      expect(screen.getByText(/could not tell/i)).toBeDefined(),
+    );
+    expect(screen.queryByText(/available to you/i)).toBeNull();
+    expect(screen.queryByTestId("canvas")).toBeNull();
   });
 
   it("asks for edges only once a passage is selected", async () => {

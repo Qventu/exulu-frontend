@@ -3269,7 +3269,8 @@
       "noPassages": "No passage on this base is available to you",
       "notMapped": "This base has not been mapped yet",
       "notMappedHow": "An administrator fits the map once per base, from the passages already stored here.",
-      "noWebgl": "The map needs hardware acceleration, which this browser does not offer"
+      "noWebgl": "The map needs hardware acceleration, which this browser does not offer",
+      "statusUnknown": "Could not tell whether this base has been mapped"
     },
     "error": {
       "points": "Could not load the map."

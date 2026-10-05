@@ -3269,7 +3269,8 @@
       "noPassages": "Für dich ist keine Passage dieser Basis verfügbar",
       "notMapped": "Diese Basis wurde noch nicht kartiert",
       "notMappedHow": "Die Karte wird einmal pro Basis von der Administration berechnet, aus den hier gespeicherten Passagen.",
-      "noWebgl": "Die Karte braucht Hardwarebeschleunigung, die dieser Browser nicht bietet"
+      "noWebgl": "Die Karte braucht Hardwarebeschleunigung, die dieser Browser nicht bietet",
+      "statusUnknown": "Es ließ sich nicht feststellen, ob diese Basis kartiert wurde"
     },
     "error": {
       "points": "Die Karte konnte nicht geladen werden."
