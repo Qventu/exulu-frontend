@@ -484,8 +484,8 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
             label: topic.label,
             x: screen.x,
             y: screen.y,
-            width: topic.label.length * LABEL_CHAR_WIDTH,
-            height: LABEL_HEIGHT,
+            width: topic.label.length * LABEL_CHAR_WIDTH + 12,
+            height: LABEL_HEIGHT + 4,
             count: topic.count,
           });
         }
@@ -718,7 +718,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         {labels.map((label) => (
           <span
             key={label.id}
-            className="pointer-events-none absolute text-xs font-medium text-foreground/80"
+            className="pointer-events-none absolute whitespace-nowrap rounded border border-border/60 bg-background/85 px-1.5 py-0.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-[2px]"
             style={{
               left: label.x,
               top: label.y,
