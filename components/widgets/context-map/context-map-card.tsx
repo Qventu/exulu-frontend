@@ -255,6 +255,23 @@ export function ContextMapCard({
       : null;
 
   /**
+   * Which palette entry each region owns: its position in the regions array,
+   * by id.
+   *
+   * Both halves of the colour wiring read THIS, rather than each deriving a
+   * position of its own — the resolver below for the dots, and the chip row
+   * two hundred lines further down for its swatches. Shared, because a chip
+   * row is a natural thing to reorder or to filter (hiding a region that
+   * holds nothing, say), and a row that renumbered its own swatches would
+   * recolour every chip after the one it dropped while the cloud kept the
+   * colours this map names.
+   */
+  const regionOrder = React.useMemo(
+    () => new Map(topics.map((topic, index) => [topic.id, index])),
+    [topics],
+  );
+
+  /**
    * What colours a dot: the index of its region, or -1 for a passage in none.
    *
    * `topicOf` is the same nearest-centre rule the dimming below uses, so a
@@ -267,12 +284,11 @@ export function ContextMapCard({
    * would do that on every pointer move.
    */
   const regionIndex = React.useMemo(() => {
-    const order = new Map(topics.map((topic, index) => [topic.id, index]));
     return (point: MapPoint) => {
       const id = topicOf(point, topics);
-      return id === null ? -1 : (order.get(id) ?? -1);
+      return id === null ? -1 : (regionOrder.get(id) ?? -1);
     };
-  }, [topics]);
+  }, [topics, regionOrder]);
 
   /**
    * Which passages the highlighted region holds. A MapPoint records its
@@ -322,6 +338,14 @@ export function ContextMapCard({
   const blocked = unsupported || notMapped || pointsFailed || statusUnknown;
   /** True once there is a cloud on screen, which is what the rows below read. */
   const drawn = !blocked && !loadingCloud && points.length > 0;
+  /**
+   * Whether the links control is on screen — and therefore whether the web it
+   * governs may be drawn. One value read in both places, not two expressions
+   * that happen to agree: the control and its effect have to appear and
+   * disappear together, or a user who chose "All links" is left with a web
+   * and nothing to turn it off with.
+   */
+  const linksControl = drawn && selectedId !== null;
 
   /**
    * Which passages carry a ring. The caller names the conflicted ITEMS — the
@@ -378,10 +402,10 @@ export function ContextMapCard({
           /**
            * Only while a passage is selected: with nothing selected the
            * choice is between the whole-cloud web and nothing, which is not
-           * the choice its labels describe — and the web it would leave on
-           * screen is tied to it below, so neither outlives the other.
+           * the choice its labels describe — and the web is gated on this
+           * same value below, so neither outlives the other.
            */
-          drawn && selectedId !== null ? (
+          linksControl ? (
             <Tabs
               value={allLinks ? "all" : "selection"}
               onValueChange={(value) => setAllLinks(value === "all")}
@@ -430,11 +454,11 @@ export function ContextMapCard({
               topicMemberIds={topicMemberIds}
               ringedIds={ringed}
               paused={paused}
-              // The web is the links control's doing, and that control is
-              // only on screen while a passage is selected — so the web it
-              // turned on cannot outlive the only thing that could turn it
-              // off. The choice itself is kept, for the next selection.
-              allLinks={allLinks && selectedId !== null}
+              // The web is the links control's doing, so it is gated on the
+              // control being there — the same value, not a second copy of
+              // its condition. The choice itself is kept, for the next
+              // selection.
+              allLinks={allLinks && linksControl}
               hoverNeighbourId={hoverNeighbour}
               onSelect={select}
               onUnsupported={reportUnsupported}
@@ -473,10 +497,10 @@ export function ContextMapCard({
 
         {/*
           One row, and it is the legend: a chip carries its region's name, its
-          count and the swatch its dots take. The row renders in the regions
-          array's order and the renderer indexes colour by that same position,
-          so the index below must stay the render index — sorting the chips
-          while indexing by position would recolour every swatch silently.
+          count and the swatch its dots take. The swatch comes from
+          `regionOrder` — the same value the resolver above colours dots by —
+          and never from this row's own render position, so reordering or
+          filtering the row cannot recolour a single region.
         */}
         {drawn && (topics.length > 0 || ringed.size > 0) && (
           <div className="flex flex-wrap items-center gap-3 pt-4">
@@ -486,33 +510,36 @@ export function ContextMapCard({
                 role="group"
                 aria-label={t("legend.region")}
               >
-                {topics.map((topic, index) => (
-                  <Button
-                    key={topic.id}
-                    type="button"
-                    size="sm"
-                    variant={
-                      highlightTopic === topic.id ? "default" : "outline"
-                    }
-                    aria-pressed={highlightTopic === topic.id}
-                    onClick={() =>
-                      setRequestedTopic(
-                        highlightTopic === topic.id ? null : topic.id,
-                      )
-                    }
-                  >
-                    <span
-                      aria-hidden="true"
-                      data-region-swatch={index}
-                      className="mr-2 size-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: swatchColor(index) }}
-                    />
-                    {topic.label}
-                    <span className="ml-2 text-xs tabular-nums opacity-70">
-                      {topic.count}
-                    </span>
-                  </Button>
-                ))}
+                {topics.map((topic) => {
+                  const region = regionOrder.get(topic.id) ?? -1;
+                  return (
+                    <Button
+                      key={topic.id}
+                      type="button"
+                      size="sm"
+                      variant={
+                        highlightTopic === topic.id ? "default" : "outline"
+                      }
+                      aria-pressed={highlightTopic === topic.id}
+                      onClick={() =>
+                        setRequestedTopic(
+                          highlightTopic === topic.id ? null : topic.id,
+                        )
+                      }
+                    >
+                      <span
+                        aria-hidden="true"
+                        data-region-swatch={region}
+                        className="mr-2 size-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: swatchColor(region) }}
+                      />
+                      {topic.label}
+                      <span className="ml-2 text-xs tabular-nums opacity-70">
+                        {topic.count}
+                      </span>
+                    </Button>
+                  );
+                })}
               </div>
             )}
             {/* The one legend entry that is not a chip, because no chip says

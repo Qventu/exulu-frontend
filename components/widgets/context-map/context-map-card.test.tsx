@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { ApolloLink } from "@apollo/client";
+import { ApolloLink, InMemoryCache } from "@apollo/client";
 import {
   MockedProvider,
   MockLink,
@@ -175,6 +175,11 @@ const clippedPointsMock = {
   },
 };
 
+const pointsErrorMock = {
+  request: pointsRequest,
+  error: new Error("the points query is down"),
+};
+
 const emptyPointsMock = {
   request: pointsRequest,
   result: { data: { contextMapPoints: null } },
@@ -207,16 +212,25 @@ const topicsMock = {
 };
 
 /**
- * The same two regions, deliberately NOT in count order. A chip row sorted by
- * count would render Pricing first and hand it the first palette entry, while
- * the renderer would still colour its dots with the second — and the fixture
- * above, already count-descending, could not tell the two apart.
+ * Three regions, arranged so that the chip row's own render order cannot be
+ * mistaken for the palette index.
+ *
+ * They are deliberately NOT in count order: a row sorted by count would
+ * render Pricing first and hand it the first palette entry, while the
+ * renderer would still colour its dots with the third — and `topicsMock`,
+ * already count-descending, could not tell the two apart.
+ *
+ * And the first of the three holds nothing, which is the plausible reason to
+ * *filter* a chip row. Dropping it renumbers every chip after it, so a swatch
+ * read from a render position would recolour two regions that the renderer
+ * still colours by their position in this array.
  */
 const unsortedTopicsMock = {
   request: { query: GET_CONTEXT_MAP_TOPICS, variables: { contextId: CONTEXT } },
   result: {
     data: {
       contextMapTopics: [
+        { id: "2", label: "Fittings", count: 0, x: 100, y: 0, z: 0 },
         { id: "0", label: "Valves & Blocks", count: 1, x: 0, y: 0, z: 0 },
         { id: "1", label: "Pricing", count: 9, x: 10, y: 0, z: 0 },
       ],
@@ -302,6 +316,8 @@ function withProviders(
     topic?: string;
     /** Items in a conflict group, as the surfaces above actually know them. */
     ringedItemIds?: Set<string>;
+    /** A pre-populated cache, for the one test that needs an answer already in hand. */
+    cache?: InMemoryCache;
   } = {},
 ) {
   const search = new URLSearchParams();
@@ -320,6 +336,7 @@ function withProviders(
     <NextIntlClientProvider locale="en" messages={enMessages}>
       <MockedProvider
         addTypename={false}
+        cache={params.cache}
         link={ApolloLink.from([recorder, new MockLink(mocks, false)])}
       >
         <ContextMapCard
@@ -740,9 +757,11 @@ describe("ContextMapCard", () => {
     const root = screen.getByTestId("context-map-card");
     // jsdom resolves a custom property only on the element that declares it —
     // a browser inherits these from `:root` — so the card's own host carries
-    // them here. The palette's first entry is --chart-4, its second --chart-1.
+    // them here. The palette's first three entries are --chart-4, --chart-1
+    // and --chart-8.
     root.style.setProperty(PALETTE_TOKENS[0], "217 76% 54%");
     root.style.setProperty(PALETTE_TOKENS[1], "0 0% 0%");
+    root.style.setProperty(PALETTE_TOKENS[2], "120 100% 50%");
     // The card re-reads the theme exactly as the renderer does.
     document.documentElement.setAttribute("data-theme", "dark");
 
@@ -754,14 +773,20 @@ describe("ContextMapCard", () => {
     // token: an unparseable token greys a dot, while `hsl(var(--chart-4))` on
     // a swatch paints nothing at all, so the two would disagree exactly where
     // nobody would look.
+    // Each region keeps the palette entry its OWN position in the regions
+    // array names — not the one its place in this row would name, and not the
+    // one its count would. These two are asserted first on purpose: they are
+    // the chips that survive a filtered row, so a row that dropped the empty
+    // region and renumbered the rest fails here, on the colour, rather than
+    // on the chip that went missing.
     await waitFor(() =>
-      expect(swatchOf(/valves/i)?.style.backgroundColor).toBe(
-        "rgb(49, 117, 227)",
-      ),
+      expect(swatchOf(/valves/i)?.style.backgroundColor).toBe("rgb(0, 0, 0)"),
     );
-    // The second region takes the second palette entry whatever its count.
-    expect(swatchOf(/pricing/i)?.style.backgroundColor).toBe("rgb(0, 0, 0)");
-    // And that position is the one the renderer colours by, so a chip and its
+    expect(swatchOf(/pricing/i)?.style.backgroundColor).toBe("rgb(0, 255, 0)");
+    expect(swatchOf(/fittings/i)?.style.backgroundColor).toBe(
+      "rgb(49, 117, 227)",
+    );
+    // And that is the position the renderer colours by, so a chip and its
     // dots cannot drift apart.
     const regionOf = canvas.renders.at(-1)!.regionOf as (point: {
       x: number;
@@ -843,6 +868,31 @@ describe("ContextMapCard", () => {
     const explained = await screen.findAllByText(/each dot is one passage/i);
     expect(explained).toHaveLength(1);
     expect(screen.queryAllByText(/counted but never shown/i)).toHaveLength(1);
+  });
+
+  it("takes the cloud off screen when the points query fails on a cached answer", async () => {
+    // The links control and the web it governs read one value, `drawn`, and
+    // that is only safe while a cloud which is not `drawn` cannot be on
+    // screen. This is the state where it might not have been: `drawn` is
+    // false because the query failed, while the points are still in hand from
+    // the cache. ChartCard replaces its children with the error pane, so the
+    // renderer goes with them — and the day that stops being true, the web
+    // could stay on with no control to turn it off, and this fails.
+    const cache = new InMemoryCache({ addTypename: false });
+    cache.writeQuery({
+      query: GET_CONTEXT_MAP_POINTS,
+      variables: pointsRequest.variables,
+      data: pointsMock.result.data,
+    });
+    render(
+      withProviders([pointsErrorMock, emptyTopicsMock, statusMock], { cache }),
+    );
+    await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+    // The cloud really was painted first, from the cache — otherwise this
+    // would be the ordinary "no points" state and would prove nothing.
+    expect(canvas.renders.length).toBeGreaterThan(0);
+    expect(screen.queryByTestId("canvas")).toBeNull();
+    expect(screen.queryByRole("tab", { name: /links/i })).toBeNull();
   });
 
   it("asks for the default number of passages, not the cap", async () => {
