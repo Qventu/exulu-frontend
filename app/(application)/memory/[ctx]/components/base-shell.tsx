@@ -29,15 +29,6 @@ type MemoryTab = "overview" | "memories" | "conflicts";
 /** One identity for "nothing is ringed", so the card's derivation can rest. */
 const NO_ITEM_IDS: Set<string> = new Set();
 
-export function NotFoundBase({ contextId }: { contextId: string }) {
-  const t = useTranslations("memory");
-  return (
-    <PageShell>
-      <EmptyState title={t("base.missingFromCode")} description={contextId} action={{ label: t("empty.backToOverview"), href: "/memory" }} />
-    </PageShell>
-  );
-}
-
 export function BaseShell({
   context, initialMine, initialPage, initialUsage, initialTab,
 }: {

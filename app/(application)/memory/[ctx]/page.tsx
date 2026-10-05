@@ -6,7 +6,8 @@ import { fetchGraphQLServerSide } from "@/lib/graphql/server";
 import { guardRoute } from "@/lib/route-guard";
 
 import { GET_MEMORY_BASE } from "../queries";
-import { BaseShell, NotFoundBase } from "./components/base-shell";
+import { BaseShell } from "./components/base-shell";
+import { NotFoundBase } from "./components/not-found-base";
 import type { MemoryContext } from "./components/memory-list-data";
 
 export default async function MemoryBasePage({

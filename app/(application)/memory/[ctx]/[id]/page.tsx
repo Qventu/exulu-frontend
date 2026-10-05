@@ -3,7 +3,7 @@ import { fetchGraphQLServerSide } from "@/lib/graphql/server";
 import { guardRoute } from "@/lib/route-guard";
 
 import { GET_MEMORY_BASE } from "../../queries";
-import { NotFoundBase } from "../components/base-shell";
+import { NotFoundBase } from "../components/not-found-base";
 import type { MemoryContext } from "../components/memory-list-data";
 import { MemoryDetail } from "./components/memory-detail";
 
