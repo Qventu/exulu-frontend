@@ -4,6 +4,7 @@ import {
   buildBuffers, coverageCaption, isPassageClipped, legendEntries,
   nearestNeighbourSegments, NO_VALUE_TOKEN, PALETTE_TOKENS, PASSAGE_LABEL_LIMIT,
   parseHslTriplet, projectToScreen, resolveLabelCollisions, topicOf,
+  type Rgb,
 } from "./map-data";
 
 const point = (id: string, group: string | null, xyz: [number, number, number] = [0, 0, 0]) => ({
@@ -105,26 +106,36 @@ describe("parseHslTriplet", () => {
 });
 
 describe("buildBuffers", () => {
-  const palette = { colors: [[1, 0, 0], [0, 1, 0]] as [number, number, number][], noValue: [0.5, 0.5, 0.5] as [number, number, number] };
+  const palette = { colors: [[1, 0, 0], [0, 1, 0]] as Rgb[], noValue: [0.5, 0.5, 0.5] as Rgb };
 
   it("writes three floats per point in order", () => {
-    const { positions } = buildBuffers([point("a", "FACT", [1, 2, 3]), point("b", "FACT", [4, 5, 6])], ["FACT"], palette);
+    const { positions } = buildBuffers(
+      [point("a", "FACT", [1, 2, 3]), point("b", "FACT", [4, 5, 6])], () => 0, palette);
     expect(Array.from(positions)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
-  it("colours by the declared order of the groups, not by first appearance", () => {
-    const { colors } = buildBuffers([point("a", "SECOND"), point("b", "FIRST")], ["FIRST", "SECOND"], palette);
-    expect(Array.from(colors.slice(0, 3))).toEqual([0, 1, 0]);
-    expect(Array.from(colors.slice(3, 6))).toEqual([1, 0, 0]);
+  it("colours a point by its region, not by its group value", () => {
+    // Both passages carry the same grouping value, so anything still colouring
+    // by `group` would paint the two identically. A knowledge base has no
+    // grouping field at all, and its regions are the only thing to colour by.
+    const points = [point("a", "FACT"), point("b", "FACT")];
+    const { colors } = buildBuffers(points, (p) => (p.id === "a" ? 0 : 1), palette);
+    expect(Array.from(colors.slice(0, 3))).toEqual([1, 0, 0]);
+    expect(Array.from(colors.slice(3, 6))).toEqual([0, 1, 0]);
   });
 
-  it("gives a point with no group, or an unknown group, the reserved grey", () => {
-    const { colors } = buildBuffers([point("a", null), point("b", "NOPE")], ["FIRST"], palette);
+  it("gives a point in no region the reserved grey, whatever its group value", () => {
+    // The first passage's grouping value is one the palette could colour. No
+    // region still means grey: that is what keeps a dot's colour and the chips
+    // from ever disagreeing.
+    const { colors } = buildBuffers([point("a", "FACT"), point("b", null)], () => -1, palette);
     expect(Array.from(colors)).toEqual([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]);
   });
 
-  it("cycles when there are more groups than colours", () => {
-    const { colors } = buildBuffers([point("a", "THIRD")], ["FIRST", "SECOND", "THIRD"], palette);
+  it("cycles when a base has more regions than colours", () => {
+    // Twelve regions against seven colours is the real case. The chips carry
+    // identity, so a colour repeating at a distance is accepted.
+    const { colors } = buildBuffers([point("a", null)], () => 2, palette);
     expect(Array.from(colors)).toEqual([1, 0, 0]);
   });
 });

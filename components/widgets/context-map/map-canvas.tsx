@@ -31,7 +31,13 @@ import {
 export interface MapCanvasProps {
   points: MapPoint[];
   topics: MapTopic[];
-  groups: string[];
+  /**
+   * The region a passage belongs to, as an index into the palette, or -1 for
+   * none. The card derives it from the region centres with the same rule it
+   * dims by, so a dot's colour and its chip cannot disagree. Memoised there,
+   * so this effect may depend on its identity.
+   */
+  regionOf: (point: MapPoint) => number;
   edges: MapEdge[];
   selectedId: string | null;
   highlightTopic: string | null;
@@ -144,7 +150,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
     {
       points,
       topics,
-      groups,
+      regionOf,
       edges,
       selectedId,
       highlightTopic,
@@ -551,7 +557,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       if (!host || !cloud) return;
       const write = () => {
         const palette = resolvePalette(host);
-        const { positions, colors } = buildBuffers(points, groups, palette);
+        const { positions, colors } = buildBuffers(points, regionOf, palette);
         const ringed = latestRef.current.ringedIds;
         const dim = new Float32Array(points.length);
         for (let i = 0; i < points.length; i += 1) {
@@ -611,7 +617,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         attributeFilter: ["class", "data-theme"],
       });
       return () => observer.disconnect();
-    }, [points, groups, selectedId, highlightTopic, topicMemberIds, ringedKey]);
+    }, [points, regionOf, selectedId, highlightTopic, topicMemberIds, ringedKey]);
 
     // Neighbour lines, rebuilt only when the selection or the hovered
     // neighbour changes.

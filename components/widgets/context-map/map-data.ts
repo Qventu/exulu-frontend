@@ -68,9 +68,23 @@ export function resolveRingColor(element: Element): Rgb {
   return parseHslTriplet(getComputedStyle(element).getPropertyValue(RING_TOKEN));
 }
 
-/** Positions and colours as one typed array each: one draw call, no per-frame work. */
+/**
+ * Positions and colours as one typed array each: one draw call, no per-frame
+ * work.
+ *
+ * A dot takes the colour of its region. The grouping value it carries is not
+ * what colours it: a memory base has one such field and a knowledge base has
+ * none, so colouring by it left the first real base — eleven hundred German
+ * passages — a single grey blob, with the map's organising idea, its regions,
+ * the one thing colour never showed. `regionOf` is the caller's region index
+ * for a passage, or -1 for none, and -1 takes the palette's reserved grey.
+ *
+ * There are more regions than colours — twelve against seven once the violet
+ * tokens are out and grey is reserved — so the index cycles. The chips carry
+ * identity; colour only has to separate neighbours.
+ */
 export function buildBuffers(
-  points: MapPoint[], groups: string[], palette: Palette,
+  points: MapPoint[], regionOf: (point: MapPoint) => number, palette: Palette,
 ): { positions: Float32Array; colors: Float32Array } {
   const positions = new Float32Array(points.length * 3);
   const colors = new Float32Array(points.length * 3);
@@ -79,10 +93,10 @@ export function buildBuffers(
     positions[i * 3] = p.x;
     positions[i * 3 + 1] = p.y;
     positions[i * 3 + 2] = p.z;
-    const declared = p.group == null ? -1 : groups.indexOf(p.group);
-    const rgb = declared < 0
+    const region = regionOf(p);
+    const rgb = region < 0
       ? palette.noValue
-      : (palette.colors[declared % Math.max(1, palette.colors.length)] ?? palette.noValue);
+      : (palette.colors[region % Math.max(1, palette.colors.length)] ?? palette.noValue);
     colors[i * 3] = rgb[0];
     colors[i * 3 + 1] = rgb[1];
     colors[i * 3 + 2] = rgb[2];

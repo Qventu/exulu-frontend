@@ -456,7 +456,35 @@ describe("ContextMapCard", () => {
     expect(after.ringedIds).toBe(before.ringedIds);
   });
 
-  it("hands the renderer the same groups when the surface re-renders with a new array", async () => {
+  it("colours every dot by the region nearest it", async () => {
+    // The resolver is the whole of the colour wiring: a point's own grouping
+    // value ("fact" for all three) says nothing about its region, so this is
+    // the only thing that can separate a and b from c.
+    render(withProviders([placedPointsMock, topicsMock, statusMock]));
+    await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
+    const regionOf = canvas.renders.at(-1)!.regionOf as (
+      point: { x: number; y: number; z: number },
+    ) => number;
+    expect(regionOf(placed("a", 1))).toBe(0);
+    expect(regionOf(placed("b", 4))).toBe(0);
+    expect(regionOf(placed("c", 9))).toBe(1);
+  });
+
+  it("answers -1 for every dot when the base has no regions to colour by", async () => {
+    // Nothing to colour by means the palette's reserved grey, which only -1
+    // asks for: an index of 0 would paint the blob one real colour instead.
+    render(withProviders([pointsMock, emptyTopicsMock, statusMock]));
+    await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
+    const regionOf = canvas.renders.at(-1)!.regionOf as (
+      point: { x: number; y: number; z: number },
+    ) => number;
+    expect(regionOf(passage("chunk-1"))).toBe(-1);
+  });
+
+  it("hands the renderer the same region resolver when the surface re-renders with a new array", async () => {
+    // The resolver colours every dot, and the renderer rebuilds and re-uploads
+    // its whole colour buffer when this identity changes — a fresh arrow per
+    // render would do that on every pointer move.
     render(
       <NextIntlClientProvider locale="en" messages={enMessages}>
         <MockedProvider
@@ -471,10 +499,13 @@ describe("ContextMapCard", () => {
     );
     await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
     const before = canvas.renders.at(-1)!;
+    // Without this the assertion below would hold on two undefineds, which is
+    // how a prop that quietly stopped being passed goes unnoticed.
+    expect(typeof before.regionOf).toBe("function");
     const renders = canvas.renders.length;
     fireEvent.click(screen.getByRole("button", { name: "bump" }));
     await waitFor(() => expect(canvas.renders.length).toBeGreaterThan(renders));
-    expect(canvas.renders.at(-1)!.groups).toBe(before.groups);
+    expect(canvas.renders.at(-1)!.regionOf).toBe(before.regionOf);
   });
 
   it("ties a chip to the region parameter, its members and one stable set", async () => {

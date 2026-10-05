@@ -221,11 +221,31 @@ export function ContextMapCard({
 
   // `groups` is a prop, and the surfaces above build it from a context's
   // declared fields — quite possibly inline, i.e. a new array identity on
-  // every one of their renders. The renderer rebuilds its colour buffer when
-  // this changes, so it is pinned to the values rather than to the array.
+  // every one of their renders. `hasUnvalued` below walks every passage, so it
+  // is pinned to the values rather than to the array.
   const groupsKey = groups.join("\u0000");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const stableGroups = React.useMemo(() => groups, [groupsKey]);
+
+  /**
+   * What colours a dot: the index of its region, or -1 for a passage in none.
+   *
+   * `topicOf` is the same nearest-centre rule the dimming below uses, so a
+   * dot's colour and the chip that names its region can never disagree. It is
+   * also the only thing there is to colour by on a knowledge base, which
+   * declares no grouping field at all.
+   *
+   * Memoised on the regions: the renderer rebuilds and re-uploads its whole
+   * colour buffer whenever this identity changes, and a fresh arrow per render
+   * would do that on every pointer move.
+   */
+  const regionIndex = React.useMemo(() => {
+    const order = new Map(topics.map((topic, index) => [topic.id, index]));
+    return (point: MapPoint) => {
+      const id = topicOf(point, topics);
+      return id === null ? -1 : (order.get(id) ?? -1);
+    };
+  }, [topics]);
 
   /**
    * Which passages the highlighted region holds. A MapPoint records its
@@ -401,7 +421,7 @@ export function ContextMapCard({
               ref={canvasRef}
               points={points}
               topics={topics}
-              groups={stableGroups}
+              regionOf={regionIndex}
               edges={edges}
               selectedId={selectedId}
               highlightTopic={highlightTopic}
