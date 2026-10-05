@@ -250,6 +250,27 @@ export function coverageCaption({
 }
 
 /**
+ * How much of a passage the points answer carries: the resolver builds a
+ * point's `label` as `LEFT(COALESCE(chunks.content, items.name), 120)`. On a
+ * knowledge base a chunk runs to around two thousand characters, so what the
+ * panel is handed is an opening, not the passage. Widening the answer is not
+ * the alternative — the label text is already most of a multi-megabyte payload,
+ * sent for every row to serve the one that gets selected — so the panel says
+ * that it is an opening instead.
+ */
+export const PASSAGE_LABEL_LIMIT = 120;
+
+/**
+ * Whether a passage's text reaches that width, and is therefore almost
+ * certainly cut. A passage exactly that long reads as cut too: nothing in the
+ * answer could tell the two apart, and of the two possible mistakes, claiming
+ * the text is complete is the worse one.
+ */
+export function isPassageClipped(label: string): boolean {
+  return label.length >= PASSAGE_LABEL_LIMIT;
+}
+
+/**
  * Which region a passage belongs to, or null when it belongs to none.
  *
  * A passage carries no record of its region: the regions are k-means over the

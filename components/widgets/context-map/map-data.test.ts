@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildBuffers, coverageCaption, legendEntries, nearestNeighbourSegments,
-  NO_VALUE_TOKEN, PALETTE_TOKENS, parseHslTriplet, projectToScreen,
-  resolveLabelCollisions, topicOf,
+  buildBuffers, coverageCaption, isPassageClipped, legendEntries,
+  nearestNeighbourSegments, NO_VALUE_TOKEN, PALETTE_TOKENS, PASSAGE_LABEL_LIMIT,
+  parseHslTriplet, projectToScreen, resolveLabelCollisions, topicOf,
 } from "./map-data";
 
 const point = (id: string, group: string | null, xyz: [number, number, number] = [0, 0, 0]) => ({
@@ -298,6 +298,24 @@ describe("nearestNeighbourSegments", () => {
     // Every passage is an endpoint of something: nothing was silently dropped.
     const seen = new Set(drawn.flatMap(([from, to]) => [from.join(), to.join()]));
     for (const p of lattice) expect(seen.has([p.x, p.y, p.z].join())).toBe(true);
+  });
+});
+
+describe("isPassageClipped", () => {
+  it("knows the width the points answer actually carries", () => {
+    // The resolver builds a point's label as
+    // LEFT(COALESCE(chunks.content, items.name), 120); if that width changes,
+    // this constant has to change with it or the panel stops saying "cut".
+    expect(PASSAGE_LABEL_LIMIT).toBe(120);
+  });
+
+  it("calls a passage at the limit cut", () => {
+    expect(isPassageClipped("x".repeat(PASSAGE_LABEL_LIMIT))).toBe(true);
+  });
+
+  it("leaves a passage that fits alone", () => {
+    expect(isPassageClipped("x".repeat(PASSAGE_LABEL_LIMIT - 1))).toBe(false);
+    expect(isPassageClipped("")).toBe(false);
   });
 });
 

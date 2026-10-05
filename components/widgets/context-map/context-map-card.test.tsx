@@ -24,6 +24,8 @@ import {
 } from "@/lib/graphql/operations/context-map";
 import enMessages from "@/messages/en.json";
 
+import { PASSAGE_LABEL_LIMIT } from "./map-data";
+
 /**
  * The renderer opens a WebGL context, which jsdom has none of, so the dynamic
  * import is replaced by a marker. Everything asserted below is the card's own
@@ -143,6 +145,26 @@ const sampledPointsMock = {
         points: [passage("chunk-1")],
         total: 54321,
         sampled: true,
+      },
+    },
+  },
+};
+
+/**
+ * A passage whose text reaches the width the points answer carries. On a
+ * knowledge base a chunk is around two thousand characters, so this is what the
+ * panel is usually handed.
+ */
+const clippedPointsMock = {
+  request: pointsRequest,
+  result: {
+    data: {
+      contextMapPoints: {
+        points: [
+          { ...passage("chunk-1"), label: "a".repeat(PASSAGE_LABEL_LIMIT) },
+        ],
+        total: 1,
+        sampled: false,
       },
     },
   },
@@ -611,6 +633,30 @@ describe("ContextMapCard", () => {
     await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
     expect(canvas.renders.at(-1)!.ringedIds).toEqual(new Set());
     expect(screen.queryByText(/in a conflict/i)).toBeNull();
+  });
+
+  it("says so when the panel is only showing the opening of a passage", async () => {
+    render(
+      withProviders(
+        [clippedPointsMock, emptyTopicsMock, statusMock, edgesMock],
+        { selected: "chunk-1" },
+      ),
+    );
+    // The text carries the mark, and a line says what the mark means.
+    expect(
+      await screen.findByText(`${"a".repeat(PASSAGE_LABEL_LIMIT)}…`),
+    ).toBeDefined();
+    expect(await screen.findByText(/only the opening/i)).toBeDefined();
+  });
+
+  it("says nothing of the sort for a passage that arrived whole", async () => {
+    render(
+      withProviders([pointsMock, emptyTopicsMock, statusMock, edgesMock], {
+        selected: "chunk-1",
+      }),
+    );
+    expect(await screen.findByText("the text of chunk-1")).toBeDefined();
+    expect(screen.queryByText(/only the opening/i)).toBeNull();
   });
 
   it("asks for edges only once a passage is selected", async () => {

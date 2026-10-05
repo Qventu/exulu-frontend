@@ -3285,6 +3285,7 @@
       "selection": "Selection only"
     },
     "panel": {
+      "clipped": "Only the opening of this passage is shown.",
       "empty": "This base has no topics yet. They are named the next time it is mapped.",
       "neighbourMissing": "A related passage that is not on the map",
       "neighbours": "Closest by wording",

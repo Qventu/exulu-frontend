@@ -17,6 +17,7 @@ import { SidePanel } from "@/components/primitives/side-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
+import { isPassageClipped } from "./map-data";
 import type { MapEdge, MapPoint, MapTopic } from "./map-data";
 
 export interface MapPanelProps {
@@ -48,6 +49,10 @@ export function MapPanel({
   onHoverNeighbour,
 }: MapPanelProps) {
   const t = useTranslations("map");
+  // The points answer carries only the passage's opening (see
+  // PASSAGE_LABEL_LIMIT), and a reader cannot tell an opening from a whole
+  // passage by looking at it.
+  const clipped = selected !== null && isPassageClipped(selected.label);
 
   return (
     <SidePanel
@@ -69,8 +74,13 @@ export function MapPanel({
               <Badge variant="secondary">{selected.group}</Badge>
             )}
             <p className="whitespace-pre-wrap text-sm text-foreground">
-              {selected.label}
+              {clipped ? `${selected.label}…` : selected.label}
             </p>
+            {clipped && (
+              <p className="text-xs text-muted-foreground">
+                {t("panel.clipped")}
+              </p>
+            )}
             <Button asChild variant="outline" size="sm">
               {/* A route on this app, so client navigation rather than a reload. */}
               <Link href={itemHref(selected.itemId)}>{t("panel.open")}</Link>

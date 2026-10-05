@@ -3285,6 +3285,7 @@
       "selection": "Nur Auswahl"
     },
     "panel": {
+      "clipped": "Es wird nur der Anfang dieser Passage gezeigt.",
       "empty": "Diese Basis hat noch keine Themen. Sie werden beim nächsten Kartieren benannt.",
       "neighbourMissing": "Eine verwandte Passage, die nicht auf der Karte liegt",
       "neighbours": "Ähnlichste Wortwahl",
