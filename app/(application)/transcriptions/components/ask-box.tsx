@@ -162,14 +162,26 @@ export function AskBox({ itemId, suggestions }: AskBoxProps) {
         <p className="text-xs text-muted-foreground">{t("askBox.explainer")}</p>
       </div>
 
+      {/* One composer surface: the textarea, the agent it will go to, and
+          Send belong to the same control. Previously these were three
+          separate blocks stacked loosely, which read as unrelated widgets. */}
+      <div className="rounded-md border focus-within:ring-1 focus-within:ring-ring">
+        <Textarea
+          value={question}
+          onChange={(event) => setQuestion(event.target.value)}
+          placeholder={t("askBox.placeholder")}
+          rows={3}
+          className="min-h-[72px] resize-none border-0 bg-transparent text-sm shadow-none focus-visible:ring-0"
+        />
+        <div className="flex items-center justify-between gap-2 border-t px-2 py-1.5">
       <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="inline-flex h-9 max-md:h-11 items-center gap-1.5 rounded-full border px-3 text-sm font-medium hover:bg-muted"
+            className="inline-flex h-8 max-md:h-11 min-w-0 items-center gap-1.5 rounded-full px-2 text-xs font-medium text-muted-foreground hover:bg-muted"
           >
             <Bot aria-hidden="true" className="size-3.5 shrink-0" />
-            <span className="max-w-40 truncate">
+            <span className="max-w-32 truncate">
               {selectedAgent?.name ?? t("askBox.chooseAgent")}
             </span>
             <ChevronsUpDown
@@ -214,41 +226,40 @@ export function AskBox({ itemId, suggestions }: AskBoxProps) {
         </PopoverContent>
       </Popover>
 
-      <div className="flex items-end gap-2">
-        <Textarea
-          value={question}
-          onChange={(event) => setQuestion(event.target.value)}
-          placeholder={t("askBox.placeholder")}
-          rows={2}
-          className="min-h-11 resize-none text-sm"
-        />
-        <Button
-          type="button"
-          size="icon"
-          className="shrink-0 max-md:h-11 max-md:w-11"
-          disabled={!canSend}
-          aria-label={t("askBox.send")}
-          onClick={send}
-        >
-          <Send aria-hidden="true" className="size-4" />
-        </Button>
+          <Button
+            type="button"
+            size="icon"
+            className="size-8 shrink-0 max-md:size-11"
+            disabled={!canSend}
+            aria-label={t("askBox.send")}
+            onClick={send}
+          >
+            <Send aria-hidden="true" className="size-4" />
+          </Button>
+        </div>
       </div>
 
       {suggestions.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {suggestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-xs text-muted-foreground",
-                "hover:bg-muted max-md:h-11",
-              )}
-              onClick={() => setQuestion(suggestion)}
-            >
-              {suggestion}
-            </button>
-          ))}
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">
+            {t("askBox.suggestionsLabel")}
+          </p>
+          <ul className="space-y-0.5">
+            {suggestions.map((suggestion) => (
+              <li key={suggestion}>
+                <button
+                  type="button"
+                  className={cn(
+                    "text-left text-sm text-primary hover:underline",
+                    "underline-offset-2 max-md:min-h-11",
+                  )}
+                  onClick={() => setQuestion(suggestion)}
+                >
+                  {suggestion}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
     </div>

@@ -4885,7 +4885,8 @@
       "canSearch": "Kann Transkripte durchsuchen",
       "attachOnly": "Erhält dieses Transkript als Chat-Anhang",
       "placeholder": "Stellen Sie eine Frage zu diesem Transkript…",
-      "send": "Frage senden"
+      "send": "Frage senden",
+      "suggestionsLabel": "Zum Beispiel"
     },
     "confirmCancel": {
       "confirm": "Transkription stoppen",
@@ -5108,7 +5109,17 @@
       "helpLabel": "So funktioniert das Korrigieren",
       "play": "Abspielen",
       "pause": "Pause",
-      "speed": "Wiedergabegeschwindigkeit"
+      "speed": "Wiedergabegeschwindigkeit",
+      "publishAction": "In Wissensdatenbank veröffentlichen",
+      "publishTitle": "Dieses Transkript veröffentlichen",
+      "publishLead": "Speichern bewahrt nicht nur Ihre Änderungen.",
+      "publishStep1": "Der korrigierte Text ersetzt das Rohtranskript.",
+      "publishStep2": "Es wird in die Wissensdatenbank „Transkripte“ aufgenommen.",
+      "publishStep3": "Agenten mit Zugriff können es ab dann durchsuchen und zitieren.",
+      "publishSharingPrivate": "Nur Sie sehen es — das ändern Sie unter Freigabe.",
+      "publishSharingShared": "Die Personen, mit denen Sie es geteilt haben, sehen es ebenfalls.",
+      "publishConfirm": "Veröffentlichen",
+      "publishRunning": "Wird veröffentlicht…"
     },
     "row": {
       "awaitingReview": "Wartet auf Überprüfung",
@@ -5241,7 +5252,10 @@
       "nameLabel": "Name für {raw}",
       "hear": "Anhören",
       "namedCount": "{named} von {total} benannt",
-      "talkStats": "{share}% der Redezeit · {blocks, plural, one {# Block} other {# Blöcke}}"
+      "talkStats": "{share}% der Redezeit · {blocks, plural, one {# Block} other {# Blöcke}}",
+      "previewTitle": "Sprecher",
+      "editSpeakers": "Text und Sprecher korrigieren",
+      "previewMore": "{count, plural, one {# weitere} other {# weitere}}"
     },
     "state": {
       "recording": "Aufnahme läuft",

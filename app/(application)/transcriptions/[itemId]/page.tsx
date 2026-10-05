@@ -108,7 +108,7 @@ function TranscriptItemPageInner() {
 
   if (loading && !item) {
     return (
-      <PageShell variant="content" className="max-w-6xl">
+      <PageShell variant="full-bleed">
         <div className="space-y-6">
           <div className="space-y-2">
             <Skeleton className="h-8 w-2/3" />

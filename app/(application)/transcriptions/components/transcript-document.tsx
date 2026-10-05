@@ -138,6 +138,8 @@ import { ExportMenu } from "./export-menu";
 import { MeetingVideoPlayer } from "./meeting-video-player";
 import { cn } from "@/lib/utils";
 import { SpeakersPanel } from "./speakers-panel";
+import { PublishDialog } from "./publish-dialog";
+import { SpeakersPreview } from "./speakers-preview";
 import { SummaryMarkdown } from "./summary-markdown";
 import { FindReplace } from "./find-replace";
 import { ReviewChecklist } from "./review-checklist";
@@ -516,6 +518,7 @@ export function TranscriptDocument({
   const ownerLabel = useOwnerLabel(item.created_by, readOnlyDenied);
 
   const [accessOpen, setAccessOpen] = React.useState(false);
+  const [publishOpen, setPublishOpen] = React.useState(false);
   const [moveOpen, setMoveOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [projectIdOverride, setProjectIdOverride] = React.useState<string | null | undefined>(
@@ -922,12 +925,12 @@ export function TranscriptDocument({
                   disabled={saving || !onSave}
                   aria-busy={saving}
                   className="max-md:h-11"
-                  onClick={() => void handleSaveClick()}
+                  onClick={() => setPublishOpen(true)}
                 >
                   {saving ? (
                     <Loader2 aria-hidden="true" className="mr-2 size-4 animate-spin" />
                   ) : null}
-                  {t("review.saveTranscript")}
+                  {t("review.publishAction")}
                 </Button>
               </div>
             ) : (
@@ -965,12 +968,12 @@ export function TranscriptDocument({
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div
           className={cn(
-            "mx-auto grid w-full max-w-6xl gap-6 p-4 md:p-6",
+            "mx-auto grid w-full max-w-[1600px] gap-6 p-4 md:p-6 lg:gap-8",
             // Only reserve the chapters track when something fills it —
             // otherwise the document is pushed right by 200px of nothing.
             chapters.length > 0
-              ? "md:grid-cols-[200px_minmax(0,1fr)_300px]"
-              : "md:grid-cols-[minmax(0,1fr)_300px]",
+              ? "md:grid-cols-[200px_minmax(0,1fr)_320px] xl:grid-cols-[220px_minmax(0,1fr)_380px]"
+              : "md:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_380px]",
           )}
         >
           {/* Left: chapters — renders nothing without a supplying output. */}
@@ -1284,6 +1287,17 @@ export function TranscriptDocument({
                   )}
                 </div>
 
+                <SpeakersPreview
+                  rawSpeakers={rawSpeakers}
+                  names={speakers}
+                  talkShare={talkShare}
+                  onEdit={
+                    canWrite !== false
+                      ? () => router.push(`${pathname}?edit=1`)
+                      : undefined
+                  }
+                />
+
                 <AskBox
                   itemId={item.id}
                   suggestions={[t("document.askSuggestion1"), t("document.askSuggestion2")]}
@@ -1296,7 +1310,7 @@ export function TranscriptDocument({
 
       {isEditable && (
         <div className="shrink-0 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <div ref={mediaContainerRef} className="mx-auto w-full max-w-6xl">
+          <div ref={mediaContainerRef} className="mx-auto w-full max-w-[1600px]">
             {hasVideo ? (
               <MeetingVideoPlayer
                 job={
@@ -1321,6 +1335,20 @@ export function TranscriptDocument({
           </div>
         </div>
       )}
+
+      <PublishDialog
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+        busy={saving}
+        isPrivate={editState.rightsMode === "private"}
+        onConfirm={() => {
+          // Close only on success: onSave rethrows so edit mode stays open on
+          // failure, and the composer already surfaced the error as a toast.
+          void handleSaveClick()
+            .then(() => setPublishOpen(false))
+            .catch(() => undefined);
+        }}
+      />
 
       <MoveToProjectDialog
         item={item}

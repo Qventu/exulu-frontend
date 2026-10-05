@@ -4885,7 +4885,8 @@
       "canSearch": "Can search Transcriptions",
       "attachOnly": "Gets this transcript attached to the chat",
       "placeholder": "Ask a question about this transcript…",
-      "send": "Send question"
+      "send": "Send question",
+      "suggestionsLabel": "Try asking"
     },
     "confirmCancel": {
       "confirm": "Stop transcription",
@@ -5108,7 +5109,17 @@
       "helpLabel": "How correcting works",
       "play": "Play",
       "pause": "Pause",
-      "speed": "Playback speed"
+      "speed": "Playback speed",
+      "publishAction": "Publish to knowledge base",
+      "publishTitle": "Publishing this transcript",
+      "publishLead": "Saving does more than keep your edits.",
+      "publishStep1": "The corrected text replaces the raw transcript.",
+      "publishStep2": "It is added to the Transcriptions knowledge base.",
+      "publishStep3": "Agents with access can search and cite it from then on.",
+      "publishSharingPrivate": "Only you can see it — change that under Sharing.",
+      "publishSharingShared": "The people you shared it with can see it too.",
+      "publishConfirm": "Publish",
+      "publishRunning": "Publishing…"
     },
     "row": {
       "awaitingReview": "Awaiting review",
@@ -5241,7 +5252,10 @@
       "nameLabel": "Name for {raw}",
       "hear": "Hear",
       "namedCount": "{named} of {total} named",
-      "talkStats": "{share}% of talk time · {blocks, plural, one {# block} other {# blocks}}"
+      "talkStats": "{share}% of talk time · {blocks, plural, one {# block} other {# blocks}}",
+      "previewTitle": "Speakers",
+      "editSpeakers": "Correct text and speakers",
+      "previewMore": "{count, plural, one {# more} other {# more}}"
     },
     "state": {
       "recording": "Recording",

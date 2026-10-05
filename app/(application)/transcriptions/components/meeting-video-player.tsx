@@ -13,7 +13,6 @@ import { useTranslations } from "next-intl";
 import * as React from "react";
 
 import { getPresignedUrl } from "@/components/primitives/file-picker";
-import { Button } from "@/components/ui/button";
 
 import { GET_RECORDING_VIDEO_URL } from "../queries";
 import type { Job } from "../types";
@@ -42,6 +41,17 @@ export function MeetingVideoPlayer({ job }: { job: Job }) {
     recordingVideoUrl: string | null;
   }>(GET_RECORDING_VIDEO_URL, { fetchPolicy: "network-only" });
 
+  // Fetched on mount rather than behind a "Load video" button. Two reasons:
+  // the player is the page's main media surface and a button is a dead end
+  // for a reader who just wants to watch, and "Hear" in the speakers panel
+  // seeks whatever <video>/<audio> is mounted — with the gate in place that
+  // element did not exist, so the button silently did nothing.
+  const needsOnDemand = !job.video_s3key && !!job.recall_recording_id;
+  React.useEffect(() => {
+    if (!needsOnDemand) return;
+    void fetchOnDemandUrl({ variables: { job_id: job.id } });
+  }, [needsOnDemand, job.id, fetchOnDemandUrl]);
+
   if (job.video_s3key) {
     if (localFailed) {
       return (
@@ -49,7 +59,7 @@ export function MeetingVideoPlayer({ job }: { job: Job }) {
       );
     }
     if (!localUrl) return null;
-    return <video controls preload="metadata" className="w-full rounded-lg" src={localUrl} />;
+    return <video controls preload="metadata" className="w-full rounded-lg border bg-muted/40" src={localUrl} />;
   }
 
   if (!job.recall_recording_id) {
@@ -58,14 +68,18 @@ export function MeetingVideoPlayer({ job }: { job: Job }) {
 
   if (called) {
     if (loading) {
-      return <p className="px-1 text-xs text-muted-foreground">{t("review.loadingVideo")}</p>;
+      return (
+        <div className="flex aspect-video w-full items-center justify-center rounded-lg border bg-muted/40 text-xs text-muted-foreground">
+          {t("review.loadingVideo")}
+        </div>
+      );
     }
     if (data?.recordingVideoUrl) {
       return (
         <video
           controls
           preload="metadata"
-          className="w-full rounded-lg"
+          className="w-full rounded-lg border bg-muted/40"
           src={data.recordingVideoUrl}
         />
       );
@@ -76,14 +90,8 @@ export function MeetingVideoPlayer({ job }: { job: Job }) {
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      className="max-md:h-11"
-      onClick={() => void fetchOnDemandUrl({ variables: { job_id: job.id } })}
-    >
-      {t("review.loadVideo")}
-    </Button>
+    <div className="flex aspect-video w-full items-center justify-center rounded-lg border bg-muted/40 text-xs text-muted-foreground">
+      {t("review.loadingVideo")}
+    </div>
   );
 }
