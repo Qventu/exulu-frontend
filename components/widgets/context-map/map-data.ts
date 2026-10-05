@@ -21,12 +21,14 @@ export type Palette = { colors: Rgb[]; noValue: Rgb };
 export const PALETTE_TOKENS = [
   "--chart-4", "--chart-1", "--chart-8", "--chart-7", "--chart-6", "--chart-3", "--chart-10",
 ] as const;
-export const NO_VALUE_TOKEN = "--chart-5";
+export const NO_VALUE_TOKEN = "--chart-5" as const;
 
 const hslToRgb = (h: number, s: number, l: number): Rgb => {
+  // Normalize hue to 0–360 to handle negative values.
+  const normalizedH = ((h % 360) + 360) % 360;
   const a = s * Math.min(l, 1 - l);
   const f = (n: number) => {
-    const k = (n + h / 30) % 12;
+    const k = (n + normalizedH / 30) % 12;
     return l - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1)));
   };
   return [f(0), f(8), f(4)];
@@ -35,9 +37,9 @@ const hslToRgb = (h: number, s: number, l: number): Rgb => {
 /** Tokens are HSL triplets without the wrapper ("217 76% 54%"). */
 export function parseHslTriplet(value: string): Rgb {
   const parts = value.trim().split(/\s+/);
-  const h = Number.parseFloat(parts[0] ?? "0");
-  const s = Number.parseFloat((parts[1] ?? "0").replace("%", "")) / 100;
-  const l = Number.parseFloat((parts[2] ?? "0").replace("%", "")) / 100;
+  const h = Number.parseFloat(parts[0] ?? "NaN");
+  const s = Number.parseFloat((parts[1] ?? "NaN").replace("%", "")) / 100;
+  const l = Number.parseFloat((parts[2] ?? "NaN").replace("%", "")) / 100;
   if (![h, s, l].every(Number.isFinite)) return [0.5, 0.5, 0.5];
   return hslToRgb(h, s, l);
 }
@@ -92,9 +94,10 @@ export function projectToScreen(
   };
 }
 
+/** Position (x, y) is the label's centre, not top-left. */
 export type LabelBox = { id: string; x: number; y: number; width: number; height: number; count: number };
 
-/** Greedy, largest region first: a label only survives if nothing bigger covers it. */
+/** Greedy, largest region first: a label only survives if nothing bigger covers it. Returns IDs ordered by size (largest first), not input order. */
 export function resolveLabelCollisions(labels: LabelBox[]): string[] {
   const kept: LabelBox[] = [];
   for (const label of [...labels].sort((a, b) => b.count - a.count)) {
