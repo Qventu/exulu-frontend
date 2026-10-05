@@ -221,9 +221,11 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
     );
 
     /**
-     * The card rebuilds `ringedIds` on every one of its renders, so the colour
-     * and ring effects below depend on the set's contents rather than its
-     * identity: a fresh Set holding the same ids must not re-upload a buffer.
+     * The colour and ring effects below depend on this set's CONTENTS rather
+     * than its identity. The card memoises it, but it derives it from the
+     * points answer, and `cache-and-network` hands that answer a new identity
+     * on every refetch — so a Set holding exactly the same ids arrives
+     * regularly, and must not re-upload a buffer.
      */
     const ringedKey = React.useMemo(
       () => Array.from(ringedIds).sort().join("\u0000"),

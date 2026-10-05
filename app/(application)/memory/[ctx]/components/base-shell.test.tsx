@@ -1,6 +1,17 @@
 // @vitest-environment jsdom
-import { MockedProvider, type MockedResponse } from "@apollo/client/testing";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { ApolloLink } from "@apollo/client";
+import {
+  MockedProvider,
+  MockLink,
+  type MockedResponse,
+} from "@apollo/client/testing";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +22,7 @@ import {
   GET_MEMORY_BASES,
   GET_MEMORY_BASE_USAGE,
   GET_MEMORY_CONFLICT_COUNTS,
+  GET_MEMORY_CONFLICTS,
 } from "../../queries";
 
 /**
@@ -133,7 +145,64 @@ const countsMock = {
   },
 };
 
-const defaultMocks: MockedResponse[] = [basesMock, usageMock, countsMock];
+/** One unresolved duplicate group — `memoryConflicts` is server-side scoped
+ * to unresolved groups, which is why the Conflicts route filters nothing. */
+const conflictsMock = {
+  request: {
+    query: GET_MEMORY_CONFLICTS,
+    variables: { contextId: CONTEXT },
+  },
+  result: {
+    data: {
+      memoryConflicts: [
+        {
+          id: "group-1",
+          kind: "duplicate",
+          status: "open",
+          similarity: 0.94,
+          reason: null,
+          members: [
+            {
+              id: "mem-1",
+              information: "The client prefers morning calls",
+              type: "preference",
+              author: { id: 9, name: "Sara Kraus" },
+              createdAt: "2026-09-30T00:00:00.000Z",
+              usedCount: 2,
+            },
+            {
+              id: "mem-2",
+              information: "Client likes calls before noon",
+              type: "preference",
+              author: { id: 9, name: "Sara Kraus" },
+              createdAt: "2026-10-01T00:00:00.000Z",
+              usedCount: 0,
+            },
+          ],
+          scannedAt: "2026-10-04T00:00:00.000Z",
+          resolvedAt: null,
+          resolution: null,
+          mergedInto: null,
+        },
+      ],
+    },
+  },
+};
+
+const defaultMocks: MockedResponse[] = [
+  basesMock,
+  usageMock,
+  countsMock,
+  conflictsMock,
+];
+
+/**
+ * Every operation the shell actually sent, by name. A mock that simply goes
+ * unused proves nothing — an unmatched request is swallowed by MockLink as a
+ * network error, so a spy on a mock's result would stay silent even when the
+ * query was issued.
+ */
+const asked: string[] = [];
 
 afterEach(() => {
   cleanup();
@@ -141,13 +210,23 @@ afterEach(() => {
   nav.replace.mockClear();
   nav.push.mockClear();
   card.renders.length = 0;
+  asked.length = 0;
 });
 
 function withProviders(ui: React.ReactElement, mocks = defaultMocks) {
+  const recorder = new ApolloLink((operation, forward) => {
+    asked.push(operation.operationName);
+    return forward(operation);
+  });
   return (
     <NextIntlClientProvider locale="en" messages={enMessages}>
       {/* `addTypename` is a no-op in Apollo 3.14 and only logs a deprecation. */}
-      <MockedProvider mocks={mocks}>
+      {/* MockLink's addTypename must agree with the cache's, and the cache
+          here is MockedProvider's default (which adds it) — hand MockLink
+          `false` and every mock silently becomes a network error. */}
+      <MockedProvider
+        link={ApolloLink.from([recorder, new MockLink(mocks)])}
+      >
         {ui}
       </MockedProvider>
     </NextIntlClientProvider>
@@ -331,6 +410,50 @@ describe("BaseShell", () => {
     expect((props.itemHref as (id: string) => string)("mem-7")).toBe(
       "/memory/base-1/mem-7",
     );
+  });
+
+  it("rings the memories in an unresolved conflict group", async () => {
+    render(
+      withProviders(
+        <BaseShell context={validContext} initialMine={false} initialPage={1} />,
+      ),
+    );
+    await screen.findByTestId("context-map-card");
+    // ITEM ids: the card owns the translation to passages, because only it
+    // holds the answer that carries both ids.
+    await waitFor(() =>
+      expect(card.renders.at(-1)!.ringedItemIds).toEqual(
+        new Set(["mem-1", "mem-2"]),
+      ),
+    );
+  });
+
+  it("asks for the conflict groups on the overview tab only", async () => {
+    render(
+      withProviders(
+        <BaseShell context={validContext} initialMine={false} initialPage={1} />,
+      ),
+    );
+    await screen.findByTestId("context-map-card");
+    // Paired with the negative half below: without this, "never asked" would
+    // also pass on a shell that never asks at all.
+    await waitFor(() => expect(asked).toContain("MemoryConflicts"));
+
+    cleanup();
+    asked.length = 0;
+    render(
+      withProviders(
+        <BaseShell
+          context={validContext}
+          initialMine={false}
+          initialPage={1}
+          initialTab="memories"
+        />,
+      ),
+    );
+    await screen.findByTestId("memory-table");
+    await waitFor(() => expect(asked).toContain("MemoryBaseUsage"));
+    expect(asked).not.toContain("MemoryConflicts");
   });
 
   it("hands the map the same groups and itemHref across a re-render", async () => {

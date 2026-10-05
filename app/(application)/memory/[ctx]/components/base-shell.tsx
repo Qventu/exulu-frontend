@@ -14,7 +14,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ContextMapCard } from "@/components/widgets/context-map/context-map-card";
 
 import { type MemoryBase } from "../../components/memory-bases-data";
-import { GET_MEMORY_BASE_USAGE, GET_MEMORY_BASES, GET_MEMORY_CONFLICT_COUNTS } from "../../queries";
+import { GET_MEMORY_BASE_USAGE, GET_MEMORY_BASES, GET_MEMORY_CONFLICT_COUNTS, GET_MEMORY_CONFLICTS } from "../../queries";
 import { memoryTypeOptions, type MemoryContext } from "./memory-list-data";
 import { MemoryTable } from "./memory-table";
 import type { BaseUsage } from "./usage-data";
@@ -25,6 +25,9 @@ import type { BaseUsage } from "./usage-data";
  * growing a second copy of it.
  */
 type MemoryTab = "overview" | "memories" | "conflicts";
+
+/** One identity for "nothing is ringed", so the card's derivation can rest. */
+const NO_ITEM_IDS: Set<string> = new Set();
 
 export function NotFoundBase({ contextId }: { contextId: string }) {
   const t = useTranslations("memory");
@@ -88,6 +91,30 @@ export function BaseShell({
     const q = url.toString();
     router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
   };
+
+  /**
+   * The memories the map rings. `memoryConflicts` is scoped to unresolved
+   * groups server-side — which is why the Conflicts route filters none — and
+   * it is the same document that route issues, so the two share a cache entry.
+   * Only the overview mounts a map, so only the overview pays for the query.
+   */
+  const conflicts = useQuery<{ memoryConflicts: { id: string; members: { id: string }[] }[] }>(
+    GET_MEMORY_CONFLICTS,
+    {
+      variables: { contextId: context.id },
+      fetchPolicy: "cache-and-network",
+      skip: !valid || tab !== "overview",
+    },
+  );
+  const conflictGroups = conflicts.data?.memoryConflicts;
+  // ITEM ids: the card turns them into passages, because only it holds the
+  // answer that records both.
+  const ringedItemIds = React.useMemo(() => {
+    if (conflictGroups === undefined || conflictGroups.length === 0) return NO_ITEM_IDS;
+    const ids = new Set<string>();
+    for (const group of conflictGroups) for (const member of group.members) ids.add(member.id);
+    return ids;
+  }, [conflictGroups]);
 
   /**
    * The map's colours and legend come from the base's own declared `type`
@@ -168,6 +195,7 @@ export function BaseShell({
               contextId={context.id}
               groups={groups}
               groupField="type"
+              ringedItemIds={ringedItemIds}
               itemHref={itemHref}
               titleKey="memory"
             />

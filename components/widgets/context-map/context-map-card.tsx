@@ -77,7 +77,12 @@ export interface ContextMapCardProps {
   /** The base's declared enum values, in declared order. Empty means one colour. */
   groups: string[];
   groupField: string | null;
-  ringedIds?: Set<string>;
+  /**
+   * Items in a conflict group. ITEM ids, not passage ids: a surface's
+   * conflicts data names memories, and the translation to passages needs the
+   * points answer, which only this card holds.
+   */
+  ringedItemIds?: Set<string>;
   itemHref: (itemId: string) => string;
   titleKey: "memory" | "knowledge";
 }
@@ -86,7 +91,7 @@ export function ContextMapCard({
   contextId,
   groups,
   groupField,
-  ringedIds,
+  ringedItemIds,
   itemHref,
   titleKey,
 }: ContextMapCardProps) {
@@ -249,7 +254,23 @@ export function ContextMapCard({
       ),
     [points, stableGroups],
   );
-  const ringed = ringedIds ?? NO_IDS;
+  /**
+   * Which passages carry a ring. The caller names the conflicted ITEMS — the
+   * only id its conflicts data has — and a MapPoint records both, so the
+   * translation belongs here and nowhere else. A conflicted item the viewer
+   * may not read, or one with no position yet, is simply not among the points
+   * and contributes nothing, which is also why the legend below is gated on
+   * the result rather than on the input: it must not announce a ring the
+   * cloud does not carry.
+   */
+  const ringed = React.useMemo(() => {
+    if (ringedItemIds === undefined || ringedItemIds.size === 0) return NO_IDS;
+    const passages = new Set<string>();
+    for (const point of points) {
+      if (ringedItemIds.has(point.itemId)) passages.add(point.id);
+    }
+    return passages.size === 0 ? NO_IDS : passages;
+  }, [points, ringedItemIds]);
   const showLegend = stableGroups.length > 0 || ringed.size > 0;
 
   const select = React.useCallback(

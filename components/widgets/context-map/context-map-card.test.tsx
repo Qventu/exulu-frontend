@@ -247,7 +247,12 @@ const asked: string[] = [];
 
 function withProviders(
   mocks: MockedResponse[],
-  params: { selected?: string; topic?: string } = {},
+  params: {
+    selected?: string;
+    topic?: string;
+    /** Items in a conflict group, as the surfaces above actually know them. */
+    ringedItemIds?: Set<string>;
+  } = {},
 ) {
   const search = new URLSearchParams();
   if (params.selected !== undefined) search.set("selected", params.selected);
@@ -267,6 +272,7 @@ function withProviders(
           contextId={CONTEXT}
           groups={["fact", "preference"]}
           groupField={null}
+          ringedItemIds={params.ringedItemIds}
           itemHref={(itemId) => `/memory/${CONTEXT}/${itemId}`}
           titleKey="memory"
         />
@@ -502,6 +508,42 @@ describe("ContextMapCard", () => {
     );
     expect(screen.queryByText(/available to you/i)).toBeNull();
     expect(screen.queryByTestId("canvas")).toBeNull();
+  });
+
+  it("turns conflicted items into the passages it rings, and one stable set", async () => {
+    // The whole ring path. The surfaces above know which ITEMS are in a
+    // conflict group — that is the id their conflicts data carries — and only
+    // this card holds the points answer, which records both ids per passage.
+    // So the translation has to happen here, it must survive an unrelated
+    // re-render, and the legend must not announce an entry the cloud does not
+    // actually carry.
+    render(
+      withProviders([pointsMock, emptyTopicsMock, statusMock], {
+        ringedItemIds: new Set(["item-chunk-1"]),
+      }),
+    );
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.ringedIds).toEqual(new Set(["chunk-1"])),
+    );
+    expect(screen.getByText(/in a conflict/i)).toBeDefined();
+
+    const before = canvas.renders.at(-1)!;
+    fireEvent.click(screen.getByRole("button", { name: /pause/i }));
+    await waitFor(() => expect(canvas.renders.at(-1)!.paused).toBe(true));
+    expect(canvas.renders.at(-1)!.ringedIds).toBe(before.ringedIds);
+
+    // A conflicted item this viewer may not read, or one with no position
+    // yet: it is simply not among the points.
+    cleanup();
+    canvas.renders.length = 0;
+    render(
+      withProviders([pointsMock, emptyTopicsMock, statusMock], {
+        ringedItemIds: new Set(["item-not-mine"]),
+      }),
+    );
+    await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
+    expect(canvas.renders.at(-1)!.ringedIds).toEqual(new Set());
+    expect(screen.queryByText(/in a conflict/i)).toBeNull();
   });
 
   it("asks for edges only once a passage is selected", async () => {
