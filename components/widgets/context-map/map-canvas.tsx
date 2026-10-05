@@ -2,9 +2,10 @@
 
 /**
  * The point cloud. Plain three.js in one effect: a single Points object for
- * every passage, one LineSegments for the selected node's neighbours, a second
- * for the faint nearest-neighbour web, and HTML overlays for the topic labels
- * so they use the page's own type tokens.
+ * every passage, a second drawn over it for the ringed ones, one LineSegments
+ * for the selected node's neighbours, another for the faint nearest-neighbour
+ * web, and HTML overlays for the topic labels so they use the page's own type
+ * tokens.
  *
  * No test covers this file — jsdom has no WebGL context. Everything that can be
  * reasoned about without a GPU lives in ./map-data and is tested there, so what
@@ -21,6 +22,7 @@ import {
   projectToScreen,
   resolveLabelCollisions,
   resolvePalette,
+  resolveRingColor,
   type MapEdge,
   type MapPoint,
   type MapTopic,
@@ -74,6 +76,26 @@ const POINT_FRAGMENT = `
   }
 `;
 
+/** Ringed passages: an annulus, so the dot's own colour still reads through it. */
+const RING_INNER_RADIUS = 0.34;
+const RING_VERTEX = `
+  uniform float size;
+  uniform float pixelRatio;
+  void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_PointSize = size * pixelRatio * (300.0 / -mv.z);
+    gl_Position = projectionMatrix * mv;
+  }
+`;
+const RING_FRAGMENT = `
+  uniform vec3 ring;
+  void main() {
+    float d = length(gl_PointCoord - vec2(0.5));
+    if (d > 0.5 || d < ${RING_INNER_RADIUS.toFixed(2)}) discard;
+    gl_FragColor = vec4(ring, 1.0);
+  }
+`;
+
 /**
  * The layout is normalised to a 99th-percentile radius of 1, so every base
  * frames identically from this distance.
@@ -86,9 +108,13 @@ const PICK_THRESHOLD = 0.03;
 const DRAG_SLOP_PX = 4;
 /** Overlay work runs at ten frames a second, not sixty. */
 const OVERLAY_INTERVAL_MS = 100;
+/** Caps the frame delta so a backgrounded tab does not resume with a lurch. */
+const MAX_FRAME_SECONDS = 0.1;
 /** Label box estimate for the collision pass, in CSS pixels. */
 const LABEL_CHAR_WIDTH = 7;
 const LABEL_HEIGHT = 16;
+/** Wide enough that the annulus sits around the dot rather than on top of it. */
+const RING_SIZE = POINT_SIZE * 2.2;
 const SELECTED_LINE_OPACITY = 0.75;
 const WEB_LINE_OPACITY = 0.12;
 
@@ -137,6 +163,10 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       THREE.BufferGeometry,
       THREE.LineBasicMaterial
     > | null>(null);
+    const ringsRef = React.useRef<THREE.Points<
+      THREE.BufferGeometry,
+      THREE.ShaderMaterial
+    > | null>(null);
     const controlsRef = React.useRef<OrbitControls | null>(null);
     const pointerRef = React.useRef<{ x: number; y: number } | null>(null);
     const hoverKeyRef = React.useRef("");
@@ -171,9 +201,20 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
     );
 
     /**
+     * One lookup map per set of points, not one per hovered neighbour: the
+     * edge effect below re-runs on every panel hover, and rebuilding twenty
+     * thousand entries each time is the same churn `ringedKey` removes from
+     * the buffer path.
+     */
+    const byId = React.useMemo(
+      () => new Map(points.map((point) => [point.id, point])),
+      [points],
+    );
+
+    /**
      * The card rebuilds `ringedIds` on every one of its renders, so the colour
-     * effect below depends on the set's contents rather than its identity: a
-     * fresh Set holding the same ids must not re-upload every buffer.
+     * and ring effects below depend on the set's contents rather than its
+     * identity: a fresh Set holding the same ids must not re-upload a buffer.
      */
     const ringedKey = React.useMemo(
       () => Array.from(ringedIds).sort().join("\u0000"),
@@ -264,6 +305,28 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       scene.add(web);
       webRef.current = web;
 
+      const ringMaterial = new THREE.ShaderMaterial({
+        vertexShader: RING_VERTEX,
+        fragmentShader: RING_FRAGMENT,
+        uniforms: {
+          size: { value: RING_SIZE },
+          pixelRatio: { value: ratio() },
+          // A Vector3, not a Color: the shader writes gl_FragColor itself, so
+          // the sRGB triple has to reach it unconverted, exactly as the
+          // cloud's vertex colours do.
+          ring: { value: new THREE.Vector3() },
+        },
+        transparent: true,
+        depthWrite: false,
+      });
+      const rings = new THREE.Points(new THREE.BufferGeometry(), ringMaterial);
+      rings.frustumCulled = false;
+      // Nothing in this scene writes depth, so the order is the render order:
+      // a flagged passage must never be painted under an ordinary one.
+      rings.renderOrder = 1;
+      scene.add(rings);
+      ringsRef.current = rings;
+
       const raycaster = new THREE.Raycaster();
       raycaster.params.Points.threshold = PICK_THRESHOLD;
 
@@ -291,6 +354,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
 
       let frame = 0;
       let lastOverlay = 0;
+      let lastFrame = 0;
       let pressX = 0;
       let pressY = 0;
       let dragged = false;
@@ -340,6 +404,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         const next = ratio();
         renderer.setPixelRatio(next);
         cloudMaterial.uniforms.pixelRatio.value = next;
+        ringMaterial.uniforms.pixelRatio.value = next;
         camera.aspect = host.clientWidth / host.clientHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(host.clientWidth, host.clientHeight);
@@ -352,7 +417,15 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       // re-renders nothing.
       const tick = (now: number) => {
         frame = requestAnimationFrame(tick);
-        controls.update();
+        // OrbitControls falls back to a fixed per-frame increment when it is
+        // given no delta, which ties the idle rotation to the display's
+        // refresh rate: half a revolution's difference between 60 and 120 Hz.
+        // Clamped, so a backgrounded tab does not resume with a lurch.
+        const delta = lastFrame
+          ? Math.min((now - lastFrame) / 1000, MAX_FRAME_SECONDS)
+          : 0;
+        lastFrame = now;
+        controls.update(delta);
         renderer.render(scene, camera);
         if (now - lastOverlay < OVERLAY_INTERVAL_MS) return;
         lastOverlay = now;
@@ -440,6 +513,8 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         lines.material.dispose();
         web.geometry.dispose();
         web.material.dispose();
+        rings.geometry.dispose();
+        ringMaterial.dispose();
         scene.clear();
         renderer.dispose();
         // dispose() frees three's own caches but leaves the GL context alive
@@ -450,6 +525,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         cloudRef.current = null;
         linesRef.current = null;
         webRef.current = null;
+        ringsRef.current = null;
         controlsRef.current = null;
       };
       // The scene is built once; data arrives through the effects below.
@@ -508,6 +584,11 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
             THREE.SRGBColorSpace,
           );
         }
+        const rings = ringsRef.current;
+        if (rings) {
+          const ring = resolveRingColor(host);
+          rings.material.uniforms.ring.value.set(ring[0], ring[1], ring[2]);
+        }
       };
       write();
       const observer = new MutationObserver(write);
@@ -523,7 +604,6 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
     React.useEffect(() => {
       const lines = linesRef.current;
       if (!lines) return;
-      const byId = new Map(points.map((point) => [point.id, point]));
       const selected = selectedId ? byId.get(selectedId) : undefined;
       const vertices: number[] = [];
       const colors: number[] = [];
@@ -543,16 +623,16 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute(
         "position",
-        new THREE.Float32BufferAttribute(vertices, 3),
+        new THREE.BufferAttribute(new Float32Array(vertices), 3),
       );
       geometry.setAttribute(
         "color",
-        new THREE.Float32BufferAttribute(colors, 3),
+        new THREE.BufferAttribute(new Float32Array(colors), 3),
       );
       const previous = lines.geometry;
       lines.geometry = geometry;
       previous.dispose();
-    }, [edges, selectedId, points, hoverNeighbourId]);
+    }, [edges, selectedId, byId, hoverNeighbourId]);
 
     // The faint web. Its own object, so a nearest-neighbour pass over twenty
     // thousand passages does not run again every time the selection changes.
@@ -571,6 +651,33 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       web.geometry = geometry;
       previous.dispose();
     }, [allLinks, points]);
+
+    // The rings. Their own buffer, so flagging a handful of passages does not
+    // re-upload the whole cloud, and the common case stays one upload.
+    React.useEffect(() => {
+      const rings = ringsRef.current;
+      if (!rings) return;
+      const ringed = latestRef.current.ringedIds;
+      const positions = new Float32Array(ringed.size * 3);
+      let cursor = 0;
+      for (const point of points) {
+        if (!ringed.has(point.id)) continue;
+        positions[cursor] = point.x;
+        positions[cursor + 1] = point.y;
+        positions[cursor + 2] = point.z;
+        cursor += 3;
+      }
+      const geometry = new THREE.BufferGeometry();
+      // A ringed id the viewer may not read is simply not among the points,
+      // so the buffer is trimmed to what was actually found.
+      geometry.setAttribute(
+        "position",
+        new THREE.BufferAttribute(positions.subarray(0, cursor), 3),
+      );
+      const previous = rings.geometry;
+      rings.geometry = geometry;
+      previous.dispose();
+    }, [points, ringedKey]);
 
     // Idle rotation. OrbitControls owns it; pausing is one flag.
     React.useEffect(() => {

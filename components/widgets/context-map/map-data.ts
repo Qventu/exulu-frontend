@@ -56,6 +56,18 @@ export function resolvePalette(element: Element): Palette {
   };
 }
 
+/**
+ * Flagged or conflicting passages are ringed in the theme's destructive
+ * colour, which the legend names. It is not part of the categorical palette:
+ * the ring says something about the passage, not about its group.
+ */
+export const RING_TOKEN = "--destructive" as const;
+
+/** The ring colour, read from the theme exactly as the palette is. */
+export function resolveRingColor(element: Element): Rgb {
+  return parseHslTriplet(getComputedStyle(element).getPropertyValue(RING_TOKEN));
+}
+
 /** Positions and colours as one typed array each: one draw call, no per-frame work. */
 export function buildBuffers(
   points: MapPoint[], groups: string[], palette: Palette,
@@ -92,14 +104,22 @@ const MAX_GRID_DIVISIONS = 64;
  * the whole cloud — 20 000 passages against each other would be 400 million
  * comparisons. A mutually-nearest pair is emitted once: drawn twice it would
  * read as a brighter line, not as a duplicate.
+ *
+ * A passage whose stored coordinates are not finite is left out of the grid
+ * and given no segment: flooring a NaN survives both clamps, so bucketing it
+ * would hand the walk an index that is not in any bucket.
  */
 export function nearestNeighbourSegments(points: MapPoint[]): Float32Array {
   const count = points.length;
   if (count < 2) return new Float32Array(0);
 
+  const placeable = (p: MapPoint) =>
+    Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z);
+
   let minX = Infinity, minY = Infinity, minZ = Infinity;
   let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
   for (const p of points) {
+    if (!placeable(p)) continue;
     if (p.x < minX) minX = p.x;
     if (p.y < minY) minY = p.y;
     if (p.z < minZ) minZ = p.z;
@@ -122,6 +142,7 @@ export function nearestNeighbourSegments(points: MapPoint[]): Float32Array {
   const chain = new Int32Array(count).fill(-1);
   for (let i = 0; i < count; i += 1) {
     const p = points[i]!;
+    if (!placeable(p)) continue;
     const index = axis(p.x, minX)
       + divisions * (axis(p.y, minY) + divisions * axis(p.z, minZ));
     chain[i] = heads[index]!;
@@ -131,6 +152,7 @@ export function nearestNeighbourSegments(points: MapPoint[]): Float32Array {
   const nearest = new Int32Array(count).fill(-1);
   for (let i = 0; i < count; i += 1) {
     const p = points[i]!;
+    if (!placeable(p)) continue;
     const ix = axis(p.x, minX);
     const iy = axis(p.y, minY);
     const iz = axis(p.z, minZ);
@@ -138,13 +160,13 @@ export function nearestNeighbourSegments(points: MapPoint[]): Float32Array {
     let bestDistance = Infinity;
     for (let dz = -1; dz <= 1; dz += 1) {
       const z = iz + dz;
-      if (z < 0 || z >= divisions) continue;
+      if (!(z >= 0 && z < divisions)) continue;
       for (let dy = -1; dy <= 1; dy += 1) {
         const y = iy + dy;
-        if (y < 0 || y >= divisions) continue;
+        if (!(y >= 0 && y < divisions)) continue;
         for (let dx = -1; dx <= 1; dx += 1) {
           const x = ix + dx;
-          if (x < 0 || x >= divisions) continue;
+          if (!(x >= 0 && x < divisions)) continue;
           let j = heads[x + divisions * (y + divisions * z)]!;
           while (j !== -1) {
             if (j !== i) {

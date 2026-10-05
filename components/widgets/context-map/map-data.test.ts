@@ -258,6 +258,25 @@ describe("nearestNeighbourSegments", () => {
     ]);
   });
 
+  it("leaves out a passage whose stored coordinates are not finite", () => {
+    // Flooring a NaN survives both clamps and the range guards, so bucketing
+    // such a point used to hand the cell walk an index in no bucket at all.
+    const buffer = nearestNeighbourSegments([
+      point("a", null, [0, 0, 0]),
+      point("b", null, [1, 0, 0]),
+      point("nan", null, [Number.NaN, 0, 0]),
+      point("inf", null, [0, Infinity, 0]),
+    ]);
+    expect(segments(buffer)).toEqual([[[0, 0, 0], [1, 0, 0]]]);
+  });
+
+  it("draws nothing at all when no coordinate is finite", () => {
+    expect(nearestNeighbourSegments([
+      point("a", null, [Number.NaN, Number.NaN, Number.NaN]),
+      point("b", null, [Infinity, 0, 0]),
+    ]).length).toBe(0);
+  });
+
   it("finds the true nearest neighbour across a grid of cells", () => {
     // A 4x4x2 lattice of unit spacing: every passage has a neighbour at
     // distance 1, and the grid search must not settle for one further away.

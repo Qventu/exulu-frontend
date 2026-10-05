@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 
-import { PALETTE_TOKENS, resolvePalette, NO_VALUE_TOKEN } from "./map-data";
+import {
+  PALETTE_TOKENS, resolvePalette, resolveRingColor, NO_VALUE_TOKEN, RING_TOKEN,
+} from "./map-data";
 
 describe("resolvePalette", () => {
   it("resolves a known token to its expected RGB values", () => {
@@ -47,5 +49,34 @@ describe("resolvePalette", () => {
     expect(palette1.colors[chartOneIdx]).toEqual(palette2.colors[chartOneIdx]);
 
     root.style.removeProperty("--chart-1");
+  });
+});
+
+describe("resolveRingColor", () => {
+  it("reads the ring colour from the theme's own token", () => {
+    const root = document.documentElement;
+    // --destructive: 358.4416 74.7573% 59.6078% is the light theme's value.
+    root.style.setProperty(RING_TOKEN, "358.4416 74.7573% 59.6078%");
+
+    const ring = resolveRingColor(root);
+
+    expect(ring[0]).toBeCloseTo(0.898039, 4);
+    expect(ring[1]).toBeCloseTo(0.294117, 4);
+    expect(ring[2]).toBeCloseTo(0.309803, 4);
+
+    root.style.removeProperty(RING_TOKEN);
+  });
+
+  it("is not one of the categorical palette tokens", () => {
+    // The ring describes the passage, not its group, so it must never collide
+    // with a colour a group could already be wearing.
+    expect(PALETTE_TOKENS).not.toContain(RING_TOKEN);
+    expect(RING_TOKEN).not.toBe(NO_VALUE_TOKEN);
+  });
+
+  it("falls back to grey when the token is unset", () => {
+    const root = document.documentElement;
+    root.style.removeProperty(RING_TOKEN);
+    expect(resolveRingColor(root)).toEqual([0.5, 0.5, 0.5]);
   });
 });
