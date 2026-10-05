@@ -248,3 +248,33 @@ export function coverageCaption({
   if (totalChunks > mapped) return { key: "caption.partial", values: { missing: totalChunks - mapped } };
   return null;
 }
+
+/**
+ * Which region a passage belongs to, or null when it belongs to none.
+ *
+ * A passage carries no record of its region: the regions are k-means over the
+ * fit's own sample, and k-means' final assignment *is* "nearest centre", so
+ * this reproduces the clustering exactly for a sampled passage and extends the
+ * same rule to the rest. A tie goes to the earlier region, so the chips never
+ * flicker between two answers for the same passage.
+ *
+ * Nothing is attributed to a region across a non-finite coordinate — the
+ * passage's or the region's. Every comparison against NaN is false, so the
+ * walk starts from "no region" rather than from the first one, and a region
+ * with no usable centre is simply never the nearest.
+ */
+export function topicOf(
+  point: { x: number; y: number; z: number }, topics: MapTopic[],
+): string | null {
+  let best: string | null = null;
+  let bestDistance = Infinity;
+  for (const topic of topics) {
+    const distance = (topic.x - point.x) ** 2
+      + (topic.y - point.y) ** 2 + (topic.z - point.z) ** 2;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = topic.id;
+    }
+  }
+  return best;
+}

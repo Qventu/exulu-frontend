@@ -3253,6 +3253,54 @@
     "german": "German",
     "switchTo": "Switch to {language}"
   },
+  "map": {
+    "caption": {
+      "intro": "Similar passages sit close together. Lines join passages that share distinctive wording. Drag to rotate.",
+      "partial": "{missing, plural, one {# passage has no position yet.} other {# passages have no position yet.}}",
+      "private": "The counts cover the whole base, including items you may not read. Their content is never shown.",
+      "sampled": "Drawing {drawn, number} of {total, number} passages."
+    },
+    "controls": {
+      "pause": "Pause",
+      "reset": "Reset view",
+      "resume": "Resume"
+    },
+    "empty": {
+      "noPassages": "No passage on this base is available to you",
+      "notMapped": "This base has not been mapped yet",
+      "notMappedHow": "An administrator fits the map once per base, from the passages already stored here.",
+      "noWebgl": "The map needs hardware acceleration, which this browser does not offer"
+    },
+    "error": {
+      "points": "Could not load the map."
+    },
+    "legend": {
+      "noValue": "No value",
+      "ringed": "In a conflict"
+    },
+    "links": {
+      "all": "All links",
+      "selection": "Selection only"
+    },
+    "panel": {
+      "empty": "This base has no topics yet. They are named the next time it is mapped.",
+      "neighbourMissing": "A related passage that is not on the map",
+      "neighbours": "Closest by wording",
+      "neighboursFailed": "Could not load the related passages.",
+      "noNeighbours": "Nothing else on this base is worded comparably.",
+      "open": "Open the item",
+      "overview": "What is on the map",
+      "passage": "Passage",
+      "unavailable": "That passage is not available to you."
+    },
+    "title": {
+      "knowledge": "Knowledge map",
+      "memory": "Memory map"
+    },
+    "topics": {
+      "heading": "Topics"
+    }
+  },
   "memory": {
     "title": "Memory",
     "description": "What your agents have learned in conversations. One memory base can serve several agents.",

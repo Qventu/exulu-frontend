@@ -3253,6 +3253,54 @@
     "german": "Deutsch",
     "switchTo": "Wechseln zu {language}"
   },
+  "map": {
+    "caption": {
+      "intro": "Ähnliche Passagen liegen nah beieinander. Linien verbinden Passagen mit auffällig gleicher Wortwahl. Zum Drehen ziehen.",
+      "partial": "{missing, plural, one {# Passage hat noch keine Position.} other {# Passagen haben noch keine Position.}}",
+      "private": "Die Zahlen umfassen die ganze Basis, auch Einträge, die du nicht lesen darfst. Deren Inhalt wird nie gezeigt.",
+      "sampled": "Gezeichnet werden {drawn, number} von {total, number} Passagen."
+    },
+    "controls": {
+      "pause": "Pause",
+      "reset": "Ansicht zurücksetzen",
+      "resume": "Weiter"
+    },
+    "empty": {
+      "noPassages": "Für dich ist keine Passage dieser Basis verfügbar",
+      "notMapped": "Diese Basis wurde noch nicht kartiert",
+      "notMappedHow": "Die Karte wird einmal pro Basis von der Administration berechnet, aus den hier gespeicherten Passagen.",
+      "noWebgl": "Die Karte braucht Hardwarebeschleunigung, die dieser Browser nicht bietet"
+    },
+    "error": {
+      "points": "Die Karte konnte nicht geladen werden."
+    },
+    "legend": {
+      "noValue": "Kein Wert",
+      "ringed": "Im Konflikt"
+    },
+    "links": {
+      "all": "Alle Verbindungen",
+      "selection": "Nur Auswahl"
+    },
+    "panel": {
+      "empty": "Diese Basis hat noch keine Themen. Sie werden beim nächsten Kartieren benannt.",
+      "neighbourMissing": "Eine verwandte Passage, die nicht auf der Karte liegt",
+      "neighbours": "Ähnlichste Wortwahl",
+      "neighboursFailed": "Verwandte Passagen konnten nicht geladen werden.",
+      "noNeighbours": "Nichts anderes auf dieser Basis ist vergleichbar formuliert.",
+      "open": "Eintrag öffnen",
+      "overview": "Was auf der Karte ist",
+      "passage": "Passage",
+      "unavailable": "Diese Passage ist für dich nicht verfügbar."
+    },
+    "title": {
+      "knowledge": "Wissens-Karte",
+      "memory": "Gedächtnis-Karte"
+    },
+    "topics": {
+      "heading": "Themen"
+    }
+  },
   "memory": {
     "title": "Gedächtnis",
     "description": "Was deine Agenten in Gesprächen gelernt haben. Eine Gedächtnis-Basis kann mehrere Agenten versorgen.",

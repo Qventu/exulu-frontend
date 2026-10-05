@@ -32,7 +32,8 @@ import { cn } from "@/lib/utils";
  * The body is a single unpadded scroll container (V2) — content owns its padding.
  */
 
-const LG_QUERY = "(min-width: 1024px)";
+/** The breakpoint at which the panel is docked rather than a sheet. */
+export const LG_QUERY = "(min-width: 1024px)";
 const MD_QUERY = "(min-width: 768px)";
 
 const DEFAULT_WIDTH = 400;
@@ -41,8 +42,14 @@ const DEFAULT_MAX_WIDTH = 720;
 const RESIZE_STEP = 16;
 const STORAGE_PREFIX = "exulu.side-panel.width";
 
-/** `undefined` until hydrated — callers must treat it as "unknown", not false. */
-function useMediaQuery(query: string): boolean | undefined {
+/**
+ * `undefined` until hydrated — callers must treat it as "unknown", not false.
+ *
+ * Exported because a consumer that decides whether the panel is open at all
+ * has to make that call against the same breakpoint this file switches on; two
+ * implementations of the same query would drift.
+ */
+export function useMediaQuery(query: string): boolean | undefined {
   const subscribe = React.useCallback(
     (onStoreChange: () => void) => {
       const mql = window.matchMedia(query);

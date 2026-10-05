@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildBuffers, coverageCaption, legendEntries, nearestNeighbourSegments,
   NO_VALUE_TOKEN, PALETTE_TOKENS, parseHslTriplet, projectToScreen,
-  resolveLabelCollisions,
+  resolveLabelCollisions, topicOf,
 } from "./map-data";
 
 const point = (id: string, group: string | null, xyz: [number, number, number] = [0, 0, 0]) => ({
@@ -298,5 +298,56 @@ describe("nearestNeighbourSegments", () => {
     // Every passage is an endpoint of something: nothing was silently dropped.
     const seen = new Set(drawn.flatMap(([from, to]) => [from.join(), to.join()]));
     for (const p of lattice) expect(seen.has([p.x, p.y, p.z].join())).toBe(true);
+  });
+});
+
+describe("topicOf", () => {
+  const topic = (id: string, xyz: [number, number, number], count = 1) => ({
+    id, label: `Topic ${id}`, count, x: xyz[0], y: xyz[1], z: xyz[2],
+  });
+
+  it("names the nearest region, not the first one declared", () => {
+    // A passage carries no record of its region: membership is "nearest
+    // centre", because that is what the clustering's final assignment is.
+    expect(topicOf(point("p", null, [9, 0, 0]), [
+      topic("0", [0, 0, 0]),
+      topic("1", [10, 0, 0]),
+    ])).toBe("1");
+  });
+
+  it("measures the distance in all three dimensions", () => {
+    // Region 1 is nearest on x alone and far away in y and z: an answer of
+    // "1" would mean only one axis was compared.
+    expect(topicOf(point("p", null, [0.9, 0, 0]), [
+      topic("0", [0, 0, 0]),
+      topic("1", [1, 9, 9]),
+    ])).toBe("0");
+  });
+
+  it("has no region to name when the base was fitted before regions existed", () => {
+    expect(topicOf(point("p", null, [1, 2, 3]), [])).toBeNull();
+  });
+
+  it("settles a tie on the earlier region, so the answer never flickers", () => {
+    expect(topicOf(point("p", null, [0, 0, 0]), [
+      topic("0", [1, 0, 0]),
+      topic("1", [-1, 0, 0]),
+    ])).toBe("0");
+  });
+
+  it("names no region for a passage whose stored position is not finite", () => {
+    // Every comparison against NaN is false, so without a guard the walk
+    // would hand back whichever region it happened to start from.
+    expect(topicOf(point("p", null, [Number.NaN, 0, 0]), [
+      topic("0", [0, 0, 0]),
+      topic("1", [10, 0, 0]),
+    ])).toBeNull();
+  });
+
+  it("ignores a region whose own centre is not finite", () => {
+    expect(topicOf(point("p", null, [0, 0, 0]), [
+      topic("0", [Number.NaN, 0, 0]),
+      topic("1", [10, 0, 0]),
+    ])).toBe("1");
   });
 });

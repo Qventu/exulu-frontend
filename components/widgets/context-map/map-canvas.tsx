@@ -35,6 +35,14 @@ export interface MapCanvasProps {
   edges: MapEdge[];
   selectedId: string | null;
   highlightTopic: string | null;
+  /**
+   * The passages belonging to `highlightTopic`, which only the card can know:
+   * a MapPoint carries its grouping value, never its region, so membership is
+   * derived from the region centres by `topicOf`. Everything outside this set
+   * dims while a region is highlighted. Memoised by the card, so this effect
+   * may depend on its identity.
+   */
+  topicMemberIds: Set<string>;
   ringedIds: Set<string>;
   paused: boolean;
   /** Faint nearest-neighbour lines for every passage, not only the selected one. */
@@ -140,6 +148,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       edges,
       selectedId,
       highlightTopic,
+      topicMemberIds,
       ringedIds,
       paused,
       allLinks,
@@ -545,9 +554,12 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         const dim = new Float32Array(points.length);
         for (let i = 0; i < points.length; i += 1) {
           const point = points[i];
+          // Outside the highlighted region, so dimmed — whether or not the
+          // passage has a grouping value, which says nothing about its region.
+          // A ringed passage stays bright: the ring is there to be seen.
           const muted =
             highlightTopic !== null &&
-            point.group !== null &&
+            !topicMemberIds.has(point.id) &&
             !ringed.has(point.id);
           dim[i] =
             selectedId === point.id
@@ -597,7 +609,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         attributeFilter: ["class", "data-theme"],
       });
       return () => observer.disconnect();
-    }, [points, groups, selectedId, highlightTopic, ringedKey]);
+    }, [points, groups, selectedId, highlightTopic, topicMemberIds, ringedKey]);
 
     // Neighbour lines, rebuilt only when the selection or the hovered
     // neighbour changes.
