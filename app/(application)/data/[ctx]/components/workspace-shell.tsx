@@ -2,9 +2,10 @@
 
 /**
  * WorkspaceShell — client shell for /data/[ctx]. Owns the PageHeader,
- * Items|Pipeline tabs, the New item dialog, and the URL-driven search
- * params. Pipeline polling is gated on tab visibility (page-doc rule:
- * "poll only the visible tab").
+ * Items|Pipeline|Entities|Map tabs, the New item dialog, and the URL-driven
+ * search params. Pipeline polling is gated on tab visibility (page-doc rule:
+ * "poll only the visible tab"), and the map's renderer is a dynamic import
+ * inside the card, so three.js never reaches another tab.
  *
  * Inventory items handled here: 1 (per-ctx route), 6 (Items|Pipeline tab
  * switch), 7 (breadcrumb), 22 (Create-item dialog entry — junk-record
@@ -22,6 +23,7 @@ import { PageHeader } from "@/components/primitives/page-header";
 import { PageShell } from "@/components/primitives/page-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ContextMapCard } from "@/components/widgets/context-map/context-map-card";
 import type { Context } from "@/types/models/context";
 
 import { ContextEntityTypes } from "../../components/entity-types";
@@ -30,7 +32,7 @@ import { ItemsTab } from "./items-tab";
 import { NewItemDialog } from "./new-item-dialog";
 import { PipelineTab } from "./pipeline-tab";
 
-type WorkspaceTab = "items" | "pipeline" | "entities";
+type WorkspaceTab = "items" | "pipeline" | "entities" | "map";
 
 export interface WorkspaceShellProps {
   context: Context;
@@ -52,13 +54,15 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
   const pathname = usePathname();
   const params = useSearchParams();
 
-  // Tab — Items default. Pipeline/Entities only render (and poll) when active.
+  // Tab — Items default. The others only render (and poll) when active.
   const tab: WorkspaceTab =
     searchParams.tab === "pipeline"
       ? "pipeline"
       : searchParams.tab === "entities"
         ? "entities"
-        : "items";
+        : searchParams.tab === "map"
+          ? "map"
+          : "items";
 
   const [newItemOpen, setNewItemOpen] = React.useState(false);
   const [importOpen, setImportOpen] = React.useState(false);
@@ -67,11 +71,38 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
     const url = new URLSearchParams(params?.toString() ?? "");
     if (next === "items") url.delete("tab");
     else url.set("tab", next);
-    // switching tabs drops item-panel + page state to avoid stale params
+    // switching tabs drops item-panel + map state to avoid stale params:
+    // both survive a reload, so a stale one gets reapplied to another view
     url.delete("item");
+    url.delete("selected");
+    url.delete("topic");
     const q = url.toString();
     router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
   };
+
+  /**
+   * What the map colours by. A knowledge base has no memory type, so it is the
+   * FIRST declared field whose type is an enumeration — declaration order, not
+   * the name — and no legend at all when the base declares none.
+   *
+   * Memoised on the field list: the renderer rebuilds its colour buffer
+   * whenever this array's identity changes, and the card re-renders on every
+   * pointer move over its neighbour list.
+   */
+  const fields = context.fields;
+  const groupEnum = React.useMemo(
+    () => fields?.find((field) => field.type === "enum") ?? null,
+    [fields],
+  );
+  const groups = React.useMemo(
+    () => [...(groupEnum?.enumValues ?? [])],
+    [groupEnum],
+  );
+  const groupField = groupEnum?.name ?? null;
+  const itemHref = React.useCallback(
+    (itemId: string) => `/data/${context.id}/items/${itemId}`,
+    [context.id],
+  );
 
   const onCreated = (newItemId: string) => {
     setNewItemOpen(false);
@@ -123,6 +154,7 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
             <TabsTrigger value="entities">
               {t("workspace.tabs.entities")}
             </TabsTrigger>
+            <TabsTrigger value="map">{t("workspace.tabs.map")}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -144,6 +176,14 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
           />
         ) : tab === "pipeline" ? (
           <PipelineTab context={context} />
+        ) : tab === "map" ? (
+          <ContextMapCard
+            contextId={context.id}
+            groups={groups}
+            groupField={groupField}
+            itemHref={itemHref}
+            titleKey="knowledge"
+          />
         ) : (
           <ContextEntityTypes context={context.id} />
         )}

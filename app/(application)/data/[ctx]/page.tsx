@@ -19,7 +19,7 @@ import { NotFoundView } from "./components/not-found-view";
 import { WorkspaceShell } from "./components/workspace-shell";
 
 interface SearchParamsShape {
-  tab?: "items" | "pipeline";
+  tab?: "items" | "pipeline" | "entities" | "map";
   view?: "active" | "archived";
   item?: string;
   page?: string;

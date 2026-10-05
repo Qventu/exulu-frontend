@@ -3069,7 +3069,8 @@
       "tabs": {
         "items": "Items",
         "pipeline": "Pipeline",
-        "entities": "Entities"
+        "entities": "Entities",
+        "map": "Map"
       },
       "entities": {
         "description": "Entity types extracted from documents in this context. They're merged with any types declared in code and power entity-aware retrieval.",

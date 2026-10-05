@@ -3069,7 +3069,8 @@
       "tabs": {
         "items": "Elemente",
         "pipeline": "Pipeline",
-        "entities": "Entitäten"
+        "entities": "Entitäten",
+        "map": "Karte"
       },
       "entities": {
         "description": "Aus Dokumenten dieses Kontexts extrahierte Entitätstypen. Sie werden mit den im Code definierten Typen zusammengeführt und ermöglichen entitätsbewusstes Retrieval.",
