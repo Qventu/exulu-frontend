@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildBuffers, coverageCaption, isPassageClipped, legendEntries,
+  buildBuffers, coverageCaption, isPassageClipped,
   nearestNeighbourSegments, NO_VALUE_TOKEN, PALETTE_TOKENS, PASSAGE_LABEL_LIMIT,
-  parseHslTriplet, projectToScreen, resolveLabelCollisions, topicOf,
+  parseHslTriplet, projectToScreen, regionColor, resolveLabelCollisions, rgbCss, topicOf,
   type Rgb,
 } from "./map-data";
 
@@ -195,20 +195,40 @@ describe("resolveLabelCollisions", () => {
   });
 });
 
-describe("legendEntries", () => {
-  it("follows the declared order of the base's own enum, not alphabetical order", () => {
-    // Use values in non-alphabetical declared order (ZEBRA before APPLE).
-    expect(legendEntries(["ZEBRA", "APPLE", "MANGO"]).map((e) => e.value))
-      .toEqual(["ZEBRA", "APPLE", "MANGO"]);
+describe("regionColor", () => {
+  const palette = { colors: [[1, 0, 0], [0, 1, 0]] as Rgb[], noValue: [0.5, 0.5, 0.5] as Rgb };
+
+  it("cycles when there are more regions than colours", () => {
+    // Twelve regions against seven palette entries on the first real base, so
+    // the rule has to wrap — and the card paints its chip swatches through
+    // this same function, which is what keeps a chip and its dots in step.
+    expect(regionColor(palette, 0)).toEqual([1, 0, 0]);
+    expect(regionColor(palette, 1)).toEqual([0, 1, 0]);
+    expect(regionColor(palette, 2)).toEqual([1, 0, 0]);
   });
 
-  it("attaches the declared index to each entry", () => {
-    const entries = legendEntries(["RED", "GREEN", "BLUE"]);
-    expect(entries).toEqual([
-      { value: "RED", index: 0 },
-      { value: "GREEN", index: 1 },
-      { value: "BLUE", index: 2 },
-    ]);
+  it("gives a passage in no region the reserved grey", () => {
+    expect(regionColor(palette, -1)).toEqual([0.5, 0.5, 0.5]);
+  });
+
+  it("falls back to grey rather than nothing when the palette is empty", () => {
+    expect(regionColor({ colors: [], noValue: [0.5, 0.5, 0.5] }, 0)).toEqual([0.5, 0.5, 0.5]);
+  });
+});
+
+describe("rgbCss", () => {
+  it("writes a resolved triplet as a colour a browser will paint", () => {
+    // Not `hsl(var(--chart-4))`: a raw token on a swatch paints nothing when
+    // the variable is missing, while the dot it explains goes grey.
+    expect(rgbCss([0, 0.5, 1])).toBe("rgb(0, 128, 255)");
+  });
+
+  it("carries the grey an unparseable token resolves to", () => {
+    expect(rgbCss(parseHslTriplet("not a colour"))).toBe("rgb(128, 128, 128)");
+  });
+
+  it("clamps rather than emitting a channel no browser accepts", () => {
+    expect(rgbCss([-1, 2, 0])).toBe("rgb(0, 255, 0)");
   });
 });
 

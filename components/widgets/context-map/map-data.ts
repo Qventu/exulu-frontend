@@ -69,6 +69,28 @@ export function resolveRingColor(element: Element): Rgb {
 }
 
 /**
+ * The colour a region's dots take. The chips are the map's legend, so the
+ * card paints their swatches from this too — through this function rather
+ * than a second copy of the modulo, which is how a swatch and the dots it
+ * explains drift apart.
+ */
+export function regionColor(palette: Palette, region: number): Rgb {
+  if (region < 0) return palette.noValue;
+  return palette.colors[region % Math.max(1, palette.colors.length)] ?? palette.noValue;
+}
+
+/**
+ * A resolved colour as CSS, for an HTML swatch beside the cloud. The triplets
+ * are sRGB in 0..1 — the space the renderer tells three.js it is reading —
+ * so a byte per channel is the same colour, and an unparseable token greys
+ * the swatch exactly as it greys the dot.
+ */
+export function rgbCss(rgb: Rgb): string {
+  const channel = (value: number) => Math.round(Math.min(1, Math.max(0, value)) * 255);
+  return `rgb(${channel(rgb[0])}, ${channel(rgb[1])}, ${channel(rgb[2])})`;
+}
+
+/**
  * Positions and colours as one typed array each: one draw call, no per-frame
  * work.
  *
@@ -93,10 +115,7 @@ export function buildBuffers(
     positions[i * 3] = p.x;
     positions[i * 3 + 1] = p.y;
     positions[i * 3 + 2] = p.z;
-    const region = regionOf(p);
-    const rgb = region < 0
-      ? palette.noValue
-      : (palette.colors[region % Math.max(1, palette.colors.length)] ?? palette.noValue);
+    const rgb = regionColor(palette, regionOf(p));
     colors[i * 3] = rgb[0];
     colors[i * 3 + 1] = rgb[1];
     colors[i * 3 + 2] = rgb[2];
@@ -247,10 +266,6 @@ export function resolveLabelCollisions(labels: LabelBox[]): string[] {
     if (!overlaps) kept.push(label);
   }
   return kept.map((l) => l.id);
-}
-
-export function legendEntries(groups: string[]): { value: string; index: number }[] {
-  return groups.map((value, index) => ({ value, index }));
 }
 
 /** What the card says under the cloud, or nothing when there is nothing to admit. */

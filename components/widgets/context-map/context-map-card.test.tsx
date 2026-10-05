@@ -24,7 +24,7 @@ import {
 } from "@/lib/graphql/operations/context-map";
 import enMessages from "@/messages/en.json";
 
-import { PASSAGE_LABEL_LIMIT } from "./map-data";
+import { PALETTE_TOKENS, PASSAGE_LABEL_LIMIT } from "./map-data";
 
 /**
  * The renderer opens a WebGL context, which jsdom has none of, so the dynamic
@@ -91,6 +91,7 @@ afterEach(() => {
   nav.search = "";
   nav.replace.mockClear();
   viewport.large = false;
+  document.documentElement.removeAttribute("data-theme");
   asked.length = 0;
   askedWith.length = 0;
   canvas.renders.length = 0;
@@ -205,6 +206,24 @@ const topicsMock = {
   },
 };
 
+/**
+ * The same two regions, deliberately NOT in count order. A chip row sorted by
+ * count would render Pricing first and hand it the first palette entry, while
+ * the renderer would still colour its dots with the second — and the fixture
+ * above, already count-descending, could not tell the two apart.
+ */
+const unsortedTopicsMock = {
+  request: { query: GET_CONTEXT_MAP_TOPICS, variables: { contextId: CONTEXT } },
+  result: {
+    data: {
+      contextMapTopics: [
+        { id: "0", label: "Valves & Blocks", count: 1, x: 0, y: 0, z: 0 },
+        { id: "1", label: "Pricing", count: 9, x: 10, y: 0, z: 0 },
+      ],
+    },
+  },
+};
+
 const emptyTopicsMock = {
   request: { query: GET_CONTEXT_MAP_TOPICS, variables: { contextId: CONTEXT } },
   result: { data: { contextMapTopics: [] } },
@@ -305,7 +324,6 @@ function withProviders(
       >
         <ContextMapCard
           contextId={CONTEXT}
-          groups={["fact", "preference"]}
           groupField={null}
           ringedItemIds={params.ringedItemIds}
           itemHref={(itemId) => `/memory/${CONTEXT}/${itemId}`}
@@ -316,7 +334,7 @@ function withProviders(
   );
 }
 
-/** Re-renders the card with a *fresh* `groups` array holding the same values. */
+/** Re-renders the card from a surface above it, props unchanged. */
 function Harness() {
   const [, bump] = React.useState(0);
   return (
@@ -327,7 +345,6 @@ function Harness() {
       </button>
       <ContextMapCard
         contextId={CONTEXT}
-        groups={["fact", "preference"]}
         groupField={null}
         itemHref={(itemId) => `/memory/${CONTEXT}/${itemId}`}
         titleKey="memory"
@@ -341,7 +358,7 @@ describe("ContextMapCard", () => {
     // A base fitted before topics existed. The cloud must still render.
     render(withProviders([pointsMock, emptyTopicsMock, statusMock]));
     await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
-    expect(screen.queryByRole("group", { name: /topics/i })).toBeNull();
+    expect(screen.queryByRole("group", { name: /regions/i })).toBeNull();
   });
 
   it("shows the not-mapped state, and no canvas, when the base was never fitted", async () => {
@@ -383,22 +400,23 @@ describe("ContextMapCard", () => {
     expect(await screen.findByText(/could not load/i)).toBeDefined();
   });
 
-  it("leaves a small screen's panel shut until a passage is selected", async () => {
+  it("leaves a small screen's sheet shut until a passage is selected", async () => {
     // Below lg the panel is a full-height sheet: open from first paint it
     // would cover the map on a phone.
     render(withProviders([pointsMock, emptyTopicsMock, statusMock]));
     await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
-    expect(screen.queryByText(/what is on the map/i)).toBeNull();
-  });
+    expect(screen.queryByRole("dialog")).toBeNull();
 
-  it("docks the panel from the start on a large screen", async () => {
-    viewport.large = true;
-    render(withProviders([pointsMock, emptyTopicsMock, statusMock]));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("complementary", { name: /what is on the map/i }),
-      ).toBeDefined(),
+    // The other half, so the assertion above cannot pass on a sheet that
+    // never opens at all.
+    cleanup();
+    canvas.renders.length = 0;
+    render(
+      withProviders([pointsMock, emptyTopicsMock, statusMock, edgesMock], {
+        selected: "chunk-1",
+      }),
     );
+    expect(await screen.findByRole("dialog")).toBeDefined();
   });
 
   it("renders a relation whose target is not on the map, without pointing at it", async () => {
@@ -698,6 +716,133 @@ describe("ContextMapCard", () => {
     );
     expect(await screen.findByText("the text of chunk-1")).toBeDefined();
     expect(screen.queryByText(/only the opening/i)).toBeNull();
+  });
+
+  it("shows one row of chips carrying their region's colour, and no separate legend", async () => {
+    render(withProviders([pointsMock, topicsMock, statusMock]));
+    const chips = await screen.findAllByRole("button", { name: /valves/i });
+    expect(chips).toHaveLength(1);
+    // The chip row IS the legend: every swatch on screen sits inside a chip,
+    // so a second row naming the same colours fails this.
+    const swatches = screen
+      .getByTestId("context-map-card")
+      .querySelectorAll("[data-region-swatch]");
+    expect(swatches).toHaveLength(2);
+    for (const swatch of swatches) {
+      expect(swatch.closest("button")).not.toBeNull();
+    }
+    expect(screen.getByRole("group", { name: /regions/i })).toBeDefined();
+  });
+
+  it("paints a chip's swatch from the palette entry its region's dots take", async () => {
+    render(withProviders([placedPointsMock, unsortedTopicsMock, statusMock]));
+    await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
+    const root = screen.getByTestId("context-map-card");
+    // jsdom resolves a custom property only on the element that declares it —
+    // a browser inherits these from `:root` — so the card's own host carries
+    // them here. The palette's first entry is --chart-4, its second --chart-1.
+    root.style.setProperty(PALETTE_TOKENS[0], "217 76% 54%");
+    root.style.setProperty(PALETTE_TOKENS[1], "0 0% 0%");
+    // The card re-reads the theme exactly as the renderer does.
+    document.documentElement.setAttribute("data-theme", "dark");
+
+    const swatchOf = (name: RegExp) =>
+      screen
+        .getByRole("button", { name })
+        .querySelector("[data-region-swatch]") as HTMLElement | null;
+    // Resolved through the same parse as the dots rather than left as a raw
+    // token: an unparseable token greys a dot, while `hsl(var(--chart-4))` on
+    // a swatch paints nothing at all, so the two would disagree exactly where
+    // nobody would look.
+    await waitFor(() =>
+      expect(swatchOf(/valves/i)?.style.backgroundColor).toBe(
+        "rgb(49, 117, 227)",
+      ),
+    );
+    // The second region takes the second palette entry whatever its count.
+    expect(swatchOf(/pricing/i)?.style.backgroundColor).toBe("rgb(0, 0, 0)");
+    // And that position is the one the renderer colours by, so a chip and its
+    // dots cannot drift apart.
+    const regionOf = canvas.renders.at(-1)!.regionOf as (point: {
+      x: number;
+      y: number;
+      z: number;
+    }) => number;
+    expect(swatchOf(/valves/i)?.dataset.regionSwatch).toBe(
+      String(regionOf(placed("a", 1))),
+    );
+    expect(swatchOf(/pricing/i)?.dataset.regionSwatch).toBe(
+      String(regionOf(placed("c", 9))),
+    );
+  });
+
+  it("keeps the docked panel shut until a passage is selected", async () => {
+    viewport.large = true;
+    render(withProviders([pointsMock, topicsMock, statusMock]));
+    await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
+    // With nothing selected it has nothing to say.
+    expect(screen.queryByRole("complementary")).toBeNull();
+
+    // The other half, so the assertion above cannot pass on a panel that
+    // never opens at all.
+    cleanup();
+    canvas.renders.length = 0;
+    render(
+      withProviders([pointsMock, topicsMock, statusMock, edgesMock], {
+        selected: "chunk-1",
+      }),
+    );
+    expect(await screen.findByRole("complementary")).toBeDefined();
+  });
+
+  it("hides the links control until a passage is selected", async () => {
+    viewport.large = true;
+    render(withProviders([pointsMock, topicsMock, statusMock]));
+    await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
+    expect(screen.queryByRole("tab", { name: /links/i })).toBeNull();
+    // Pause and reset are not in that class: both do something the moment the
+    // cloud is drawn, so they stay — in the canvas corner, not the header.
+    expect(screen.getByRole("button", { name: /pause/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /reset/i })).toBeDefined();
+
+    cleanup();
+    canvas.renders.length = 0;
+    render(
+      withProviders([pointsMock, topicsMock, statusMock, edgesMock], {
+        selected: "chunk-1",
+      }),
+    );
+    expect(await screen.findByRole("tab", { name: /links/i })).toBeDefined();
+  });
+
+  it("stops drawing the whole-cloud web when the control that governs it goes", async () => {
+    // "All links" draws a web over every passage, and it outlives the
+    // selection — but its control does not, so with the control hidden
+    // nothing on screen could turn the web off again.
+    viewport.large = true;
+    render(
+      withProviders([pointsMock, topicsMock, statusMock, edgesMock], {
+        selected: "chunk-1",
+      }),
+    );
+    // Radix activates a tab on mousedown, never on click.
+    fireEvent.mouseDown(
+      await screen.findByRole("tab", { name: /all links/i }),
+      { button: 0 },
+    );
+    await waitFor(() => expect(canvas.renders.at(-1)!.allLinks).toBe(true));
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    await waitFor(() => expect(canvas.renders.at(-1)!.selectedId).toBeNull());
+    expect(canvas.renders.at(-1)!.allLinks).toBe(false);
+  });
+
+  it("states once what a dot is and what a count counts", async () => {
+    render(withProviders([pointsMock, topicsMock, statusMock]));
+    // One line, not two, and it names the dot, the count, and the items the
+    // count includes but the cloud never draws.
+    const explained = await screen.findAllByText(/each dot is one passage/i);
+    expect(explained).toHaveLength(1);
+    expect(screen.queryAllByText(/counted but never shown/i)).toHaveLength(1);
   });
 
   it("asks for the default number of passages, not the cap", async () => {

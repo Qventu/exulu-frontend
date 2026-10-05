@@ -81,22 +81,18 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
   };
 
   /**
-   * What the map colours by. A knowledge base has no memory type, so it is the
-   * FIRST declared field whose type is an enumeration — declaration order, not
-   * the name — and no legend at all when the base declares none.
+   * The field the map's points answer carries per passage, which the panel
+   * shows for the selected one. A knowledge base has no memory type, so it is
+   * the FIRST declared field whose type is an enumeration — declaration
+   * order, not the name — and nothing at all when the base declares none.
    *
-   * Memoised on the field list: the renderer rebuilds its colour buffer
-   * whenever this array's identity changes, and the card re-renders on every
-   * pointer move over its neighbour list.
+   * It is not what the map colours by: a dot takes the colour of its region,
+   * which is the only thing a knowledge base has to colour by at all.
    */
   const fields = context.fields;
   const groupEnum = React.useMemo(
     () => fields?.find((field) => field.type === "enum") ?? null,
     [fields],
-  );
-  const groups = React.useMemo(
-    () => [...(groupEnum?.enumValues ?? [])],
-    [groupEnum],
   );
   const groupField = groupEnum?.name ?? null;
   const itemHref = React.useCallback(
@@ -179,7 +175,6 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
         ) : tab === "map" ? (
           <ContextMapCard
             contextId={context.id}
-            groups={groups}
             groupField={groupField}
             itemHref={itemHref}
             titleKey="knowledge"

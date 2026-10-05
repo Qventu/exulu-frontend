@@ -3256,9 +3256,8 @@
   },
   "map": {
     "caption": {
-      "intro": "Similar passages sit close together. Lines join passages that share distinctive wording. Drag to rotate.",
+      "explained": "Each dot is one passage, and passages worded alike sit close together. Lines join passages that share distinctive wording. A region's count is every passage in it across the whole base — items you may not read are counted but never shown. Drag to rotate.",
       "partial": "{missing, plural, one {# passage has no position yet.} other {# passages have no position yet.}}",
-      "private": "The counts cover the whole base, including items you may not read. Their content is never shown.",
       "sampled": "Drawing {drawn, number} of {total, number} passages."
     },
     "controls": {
@@ -3277,7 +3276,7 @@
       "points": "Could not load the map."
     },
     "legend": {
-      "noValue": "No value",
+      "region": "Regions",
       "ringed": "In a conflict"
     },
     "links": {
@@ -3286,22 +3285,17 @@
     },
     "panel": {
       "clipped": "Only the opening of this passage is shown.",
-      "empty": "This base has no topics yet. They are named the next time it is mapped.",
       "neighbourMissing": "A related passage that is not on the map",
       "neighbours": "Closest by wording",
       "neighboursFailed": "Could not load the related passages.",
       "noNeighbours": "Nothing else on this base is worded comparably.",
       "open": "Open the item",
-      "overview": "What is on the map",
       "passage": "Passage",
       "unavailable": "That passage is not available to you."
     },
     "title": {
       "knowledge": "Knowledge map",
       "memory": "Memory map"
-    },
-    "topics": {
-      "heading": "Topics"
     }
   },
   "memory": {

@@ -9,6 +9,7 @@
  */
 
 import { useQuery } from "@apollo/client";
+import { Pause, Play, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
@@ -16,7 +17,6 @@ import * as React from "react";
 
 import { ChartCard } from "@/components/primitives/chart-card";
 import { EmptyState } from "@/components/primitives/empty-state";
-import { LG_QUERY, useMediaQuery } from "@/components/primitives/side-panel";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,14 +30,16 @@ import {
 import type { MapCanvasHandle } from "./map-canvas";
 import {
   coverageCaption,
-  legendEntries,
-  NO_VALUE_TOKEN,
-  PALETTE_TOKENS,
-  RING_TOKEN,
+  regionColor,
+  resolvePalette,
+  resolveRingColor,
+  rgbCss,
   topicOf,
   type MapEdge,
   type MapPoint,
   type MapTopic,
+  type Palette,
+  type Rgb,
 } from "./map-data";
 import { MapPanel } from "./map-panel";
 
@@ -69,6 +71,40 @@ const NO_POINTS: MapPoint[] = [];
 const NO_TOPICS: MapTopic[] = [];
 const NO_EDGES: MapEdge[] = [];
 
+/**
+ * The palette and the ring colour as the renderer resolves them, so the chip
+ * swatches below cannot disagree with the dots they explain. Reading the raw
+ * token into a style would diverge exactly where nobody would look: an
+ * unparseable token greys a dot, while `hsl(var(--chart-4))` on a swatch
+ * paints nothing at all.
+ *
+ * Re-read on a theme change for the same reason the renderer re-reads it —
+ * CSS variables are resolved once, not bound.
+ */
+function useThemeColors(host: React.RefObject<HTMLElement | null>) {
+  const [colors, setColors] = React.useState<{
+    palette: Palette;
+    ring: Rgb;
+  } | null>(null);
+  React.useEffect(() => {
+    const element = host.current;
+    if (element === null) return;
+    const read = () =>
+      setColors({
+        palette: resolvePalette(element),
+        ring: resolveRingColor(element),
+      });
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "data-theme"],
+    });
+    return () => observer.disconnect();
+  }, [host]);
+  return colors;
+}
+
 type PointsAnswer = {
   contextMapPoints: {
     points: MapPoint[];
@@ -79,8 +115,6 @@ type PointsAnswer = {
 
 export interface ContextMapCardProps {
   contextId: string;
-  /** The base's declared enum values, in declared order. Empty means one colour. */
-  groups: string[];
   groupField: string | null;
   /**
    * Items in a conflict group. ITEM ids, not passage ids: a surface's
@@ -94,7 +128,6 @@ export interface ContextMapCardProps {
 
 export function ContextMapCard({
   contextId,
-  groups,
   groupField,
   ringedItemIds,
   itemHref,
@@ -104,6 +137,8 @@ export function ContextMapCard({
   const tCommon = useTranslations("common");
   const params = useSearchParams();
   const canvasRef = React.useRef<MapCanvasHandle>(null);
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const colors = useThemeColors(rootRef);
 
   /**
    * The selection and the requested region are component state, not route
@@ -219,14 +254,6 @@ export function ContextMapCard({
       ? requestedTopic
       : null;
 
-  // `groups` is a prop, and the surfaces above build it from a context's
-  // declared fields — quite possibly inline, i.e. a new array identity on
-  // every one of their renders. `hasUnvalued` below walks every passage, so it
-  // is pinned to the values rather than to the array.
-  const groupsKey = groups.join("\u0000");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stableGroups = React.useMemo(() => groups, [groupsKey]);
-
   /**
    * What colours a dot: the index of its region, or -1 for a passage in none.
    *
@@ -296,24 +323,14 @@ export function ContextMapCard({
   /** True once there is a cloud on screen, which is what the rows below read. */
   const drawn = !blocked && !loadingCloud && points.length > 0;
 
-  // Grey is the palette's reserved "no value", and the legend only has to name
-  // it when something on screen actually carries it.
-  const hasUnvalued = React.useMemo(
-    () =>
-      stableGroups.length > 0 &&
-      points.some(
-        (point) => point.group === null || !stableGroups.includes(point.group),
-      ),
-    [points, stableGroups],
-  );
   /**
    * Which passages carry a ring. The caller names the conflicted ITEMS — the
    * only id its conflicts data has — and a MapPoint records both, so the
    * translation belongs here and nowhere else. A conflicted item the viewer
    * may not read, or one with no position yet, is simply not among the points
-   * and contributes nothing, which is also why the legend below is gated on
-   * the result rather than on the input: it must not announce a ring the
-   * cloud does not carry.
+   * and contributes nothing, which is also why the ring's legend entry beside
+   * the chips is gated on the result rather than on the input: it must not
+   * announce a ring the cloud does not carry.
    */
   const ringed = React.useMemo(() => {
     if (ringedItemIds === undefined || ringedItemIds.size === 0) return NO_IDS;
@@ -323,7 +340,6 @@ export function ContextMapCard({
     }
     return passages.size === 0 ? NO_IDS : passages;
   }, [points, ringedItemIds]);
-  const showLegend = stableGroups.length > 0 || ringed.size > 0;
 
   const select = React.useCallback(
     (id: string | null) => setSelectedId(id),
@@ -332,26 +348,24 @@ export function ContextMapCard({
   const reportUnsupported = React.useCallback(() => setUnsupported(true), []);
 
   /**
-   * `undefined` until hydration, and deliberately counted as docked: the
-   * primitive renders its docked markup pre-hydration behind a `lg:` class, so
-   * a phone hides it anyway, while a large screen paints the panel in its
-   * final place instead of inserting it a frame later. What must not happen is
-   * the sheet being open on a phone, and `false` is the only value that means
-   * phone. At lg the panel is part of the layout, so closing it means closing
-   * the passage — the title falls back to the overview.
+   * The colour of a chip's swatch, by region index. Resolved through the same
+   * function and the same cycling rule the renderer colours dots with, from
+   * the same parsed palette — the chips are the legend now, so a swatch that
+   * could drift from its dots would be a legend that lies. `undefined` only
+   * before the first paint resolves the theme.
    */
-  const isDocked = useMediaQuery(LG_QUERY);
-  const panelOpen = selectedId !== null || isDocked !== false;
+  const swatchColor = (region: number) =>
+    colors === null ? undefined : rgbCss(regionColor(colors.palette, region));
 
   return (
     <div
+      ref={rootRef}
       className="flex flex-col gap-4 lg:flex-row"
       data-testid="context-map-card"
     >
       <ChartCard
         className="min-w-0 flex-1"
         title={t(`title.${titleKey}`)}
-        description={t("caption.intro")}
         error={
           pointsFailed
             ? {
@@ -361,36 +375,24 @@ export function ContextMapCard({
             : null
         }
         toolbar={
-          drawn ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Tabs
-                value={allLinks ? "all" : "selection"}
-                onValueChange={(value) => setAllLinks(value === "all")}
-              >
-                <TabsList>
-                  <TabsTrigger value="all">{t("links.all")}</TabsTrigger>
-                  <TabsTrigger value="selection">
-                    {t("links.selection")}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setPaused((previous) => !previous)}
-              >
-                {paused ? t("controls.resume") : t("controls.pause")}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => canvasRef.current?.reset()}
-              >
-                {t("controls.reset")}
-              </Button>
-            </div>
+          /**
+           * Only while a passage is selected: with nothing selected the
+           * choice is between the whole-cloud web and nothing, which is not
+           * the choice its labels describe — and the web it would leave on
+           * screen is tied to it below, so neither outlives the other.
+           */
+          drawn && selectedId !== null ? (
+            <Tabs
+              value={allLinks ? "all" : "selection"}
+              onValueChange={(value) => setAllLinks(value === "all")}
+            >
+              <TabsList>
+                <TabsTrigger value="all">{t("links.all")}</TabsTrigger>
+                <TabsTrigger value="selection">
+                  {t("links.selection")}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           ) : undefined
         }
       >
@@ -416,7 +418,7 @@ export function ContextMapCard({
         ) : points.length === 0 ? (
           <EmptyState variant="quiet" title={t("empty.noPassages")} />
         ) : (
-          <div className="h-[28rem]">
+          <div className="relative h-[28rem]">
             <MapCanvas
               ref={canvasRef}
               points={points}
@@ -428,79 +430,104 @@ export function ContextMapCard({
               topicMemberIds={topicMemberIds}
               ringedIds={ringed}
               paused={paused}
-              allLinks={allLinks}
+              // The web is the links control's doing, and that control is
+              // only on screen while a passage is selected — so the web it
+              // turned on cannot outlive the only thing that could turn it
+              // off. The choice itself is kept, for the next selection.
+              allLinks={allLinks && selectedId !== null}
               hoverNeighbourId={hoverNeighbour}
               onSelect={select}
               onUnsupported={reportUnsupported}
             />
-          </div>
-        )}
-
-        {drawn && topics.length > 0 && (
-          <div
-            className="flex flex-wrap gap-2 pt-4"
-            role="group"
-            aria-label={t("topics.heading")}
-          >
-            {topics.map((topic) => (
+            {/* In the canvas's own corner, not the card header: unlike the
+                links control both do something the moment the cloud is
+                drawn, and the header has a title to carry. */}
+            <div className="absolute right-2 top-2 flex items-center gap-1">
               <Button
-                key={topic.id}
                 type="button"
-                size="sm"
-                variant={highlightTopic === topic.id ? "default" : "outline"}
-                aria-pressed={highlightTopic === topic.id}
-                onClick={() =>
-                  setRequestedTopic(
-                    highlightTopic === topic.id ? null : topic.id,
-                  )
-                }
+                variant="outline"
+                size="icon"
+                className="size-8 bg-background/80"
+                aria-label={paused ? t("controls.resume") : t("controls.pause")}
+                onClick={() => setPaused((previous) => !previous)}
               >
-                {topic.label}
-                <span className="ml-2 text-xs tabular-nums opacity-70">
-                  {topic.count}
-                </span>
+                {paused ? (
+                  <Play aria-hidden="true" className="size-4" />
+                ) : (
+                  <Pause aria-hidden="true" className="size-4" />
+                )}
               </Button>
-            ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-8 bg-background/80"
+                aria-label={t("controls.reset")}
+                onClick={() => canvasRef.current?.reset()}
+              >
+                <RotateCcw aria-hidden="true" className="size-4" />
+              </Button>
+            </div>
           </div>
         )}
 
-        {drawn && showLegend && (
-          <div className="flex flex-wrap items-center gap-3 pt-3">
-            {legendEntries(stableGroups).map((entry) => (
-              <span
-                key={entry.value}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground"
+        {/*
+          One row, and it is the legend: a chip carries its region's name, its
+          count and the swatch its dots take. The row renders in the regions
+          array's order and the renderer indexes colour by that same position,
+          so the index below must stay the render index — sorting the chips
+          while indexing by position would recolour every swatch silently.
+        */}
+        {drawn && (topics.length > 0 || ringed.size > 0) && (
+          <div className="flex flex-wrap items-center gap-3 pt-4">
+            {topics.length > 0 && (
+              <div
+                className="flex flex-wrap items-center gap-2"
+                role="group"
+                aria-label={t("legend.region")}
               >
-                <span
-                  aria-hidden="true"
-                  className="size-2.5 shrink-0 rounded-full"
-                  style={{
-                    background: `hsl(var(${
-                      PALETTE_TOKENS[entry.index % PALETTE_TOKENS.length]
-                    }))`,
-                  }}
-                />
-                {entry.value}
-              </span>
-            ))}
-            {hasUnvalued && (
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span
-                  aria-hidden="true"
-                  className="size-2.5 shrink-0 rounded-full"
-                  style={{ background: `hsl(var(${NO_VALUE_TOKEN}))` }}
-                />
-                {t("legend.noValue")}
-              </span>
+                {topics.map((topic, index) => (
+                  <Button
+                    key={topic.id}
+                    type="button"
+                    size="sm"
+                    variant={
+                      highlightTopic === topic.id ? "default" : "outline"
+                    }
+                    aria-pressed={highlightTopic === topic.id}
+                    onClick={() =>
+                      setRequestedTopic(
+                        highlightTopic === topic.id ? null : topic.id,
+                      )
+                    }
+                  >
+                    <span
+                      aria-hidden="true"
+                      data-region-swatch={index}
+                      className="mr-2 size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: swatchColor(index) }}
+                    />
+                    {topic.label}
+                    <span className="ml-2 text-xs tabular-nums opacity-70">
+                      {topic.count}
+                    </span>
+                  </Button>
+                ))}
+              </div>
             )}
+            {/* The one legend entry that is not a chip, because no chip says
+                it: a ring is about the passage, not about its region. */}
             {ringed.size > 0 && (
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span
                   aria-hidden="true"
                   className="size-2.5 shrink-0 rounded-full border-2 bg-transparent"
-                  // The ring colour is the renderer's, read from the same token
-                  // it resolves, so the swatch cannot drift from the dots.
-                  style={{ borderColor: `hsl(var(${RING_TOKEN}))` }}
+                  // The renderer's own ring colour, resolved from the theme
+                  // the same way, so the swatch cannot drift from the dots.
+                  style={{
+                    borderColor:
+                      colors === null ? undefined : rgbCss(colors.ring),
+                  }}
                 />
                 {t("legend.ringed")}
               </span>
@@ -508,26 +535,39 @@ export function ContextMapCard({
           </div>
         )}
 
-        {drawn && caption !== null && (
-          <p className="pt-2 text-xs text-muted-foreground">
-            {t(caption.key, caption.values)}
+        {/* One line, saying what a dot is, what a count counts and that the
+            counts include items the cloud never draws. */}
+        {drawn && (
+          <p className="pt-3 text-xs text-muted-foreground">
+            {t("caption.explained")}
           </p>
         )}
-        {drawn && (
+        {drawn && caption !== null && (
           <p className="pt-1 text-xs text-muted-foreground">
-            {t("caption.private")}
+            {t(caption.key, caption.values)}
           </p>
         )}
       </ChartCard>
 
+      {/*
+        Open only on a selection, and closed it renders nothing at all — the
+        primitive returns null when docked and Radix mounts no sheet below lg.
+        It used to be open from first paint on a large screen, showing the
+        region list, which was the chip row again one column over.
+        Closing it clears the selection, which is the only thing that keeps
+        it open.
+
+        Left mounted while closed on purpose: the primitive restores focus to
+        whatever had it before the panel opened, and that effect cannot run
+        in a component that was unmounted instead of closed.
+      */}
       <MapPanel
-        open={panelOpen}
+        open={selectedId !== null}
         onOpenChange={(next) => {
           if (!next) setSelectedId(null);
         }}
         selected={selected}
         missing={missing}
-        topics={topics}
         edges={edges}
         edgesError={edgesQuery.error !== undefined}
         byId={byId}

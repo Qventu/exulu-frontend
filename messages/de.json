@@ -3256,9 +3256,8 @@
   },
   "map": {
     "caption": {
-      "intro": "Ähnliche Passagen liegen nah beieinander. Linien verbinden Passagen mit auffällig gleicher Wortwahl. Zum Drehen ziehen.",
+      "explained": "Jeder Punkt ist eine Passage, und ähnlich formulierte Passagen liegen nah beieinander. Linien verbinden Passagen mit auffällig gleicher Wortwahl. Die Zahl einer Region umfasst alle ihre Passagen der ganzen Basis — Einträge, die du nicht lesen darfst, werden mitgezählt, aber nie gezeigt. Zum Drehen ziehen.",
       "partial": "{missing, plural, one {# Passage hat noch keine Position.} other {# Passagen haben noch keine Position.}}",
-      "private": "Die Zahlen umfassen die ganze Basis, auch Einträge, die du nicht lesen darfst. Deren Inhalt wird nie gezeigt.",
       "sampled": "Gezeichnet werden {drawn, number} von {total, number} Passagen."
     },
     "controls": {
@@ -3277,7 +3276,7 @@
       "points": "Die Karte konnte nicht geladen werden."
     },
     "legend": {
-      "noValue": "Kein Wert",
+      "region": "Regionen",
       "ringed": "Im Konflikt"
     },
     "links": {
@@ -3286,22 +3285,17 @@
     },
     "panel": {
       "clipped": "Es wird nur der Anfang dieser Passage gezeigt.",
-      "empty": "Diese Basis hat noch keine Themen. Sie werden beim nächsten Kartieren benannt.",
       "neighbourMissing": "Eine verwandte Passage, die nicht auf der Karte liegt",
       "neighbours": "Ähnlichste Wortwahl",
       "neighboursFailed": "Verwandte Passagen konnten nicht geladen werden.",
       "noNeighbours": "Nichts anderes auf dieser Basis ist vergleichbar formuliert.",
       "open": "Eintrag öffnen",
-      "overview": "Was auf der Karte ist",
       "passage": "Passage",
       "unavailable": "Diese Passage ist für dich nicht verfügbar."
     },
     "title": {
       "knowledge": "Wissens-Karte",
       "memory": "Gedächtnis-Karte"
-    },
-    "topics": {
-      "heading": "Themen"
     }
   },
   "memory": {

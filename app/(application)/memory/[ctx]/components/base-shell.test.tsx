@@ -395,7 +395,9 @@ describe("BaseShell", () => {
     expect(nav.replace).not.toHaveBeenCalled();
   });
 
-  it("colours the map by the base's declared type values, in declared order", async () => {
+  it("hands the map the base's own grouping field and item link", async () => {
+    // `type` is what the panel shows for the selected memory; it stopped
+    // being a colour channel when a dot took the colour of its region.
     render(
       withProviders(
         <BaseShell context={validContext} initialMine={false} initialPage={1} />,
@@ -404,7 +406,6 @@ describe("BaseShell", () => {
     await screen.findByTestId("context-map-card");
     const props = card.renders[card.renders.length - 1];
     expect(props.contextId).toBe(CONTEXT);
-    expect(props.groups).toEqual(["fact", "preference", "rule"]);
     expect(props.groupField).toBe("type");
     expect(props.titleKey).toBe("memory");
     expect((props.itemHref as (id: string) => string)("mem-7")).toBe(
@@ -456,16 +457,24 @@ describe("BaseShell", () => {
     expect(asked).not.toContain("MemoryConflicts");
   });
 
-  it("hands the map the same groups and itemHref across a re-render", async () => {
+  it("hands the map the same ringed set and item link across a re-render", async () => {
     render(withProviders(<Harness />));
     await screen.findByTestId("context-map-card");
-    const before = card.renders.length;
+    // Wait for the conflicts answer: before it lands the set is the shared
+    // empty one, and two renders of that would prove nothing.
+    await waitFor(() =>
+      expect(card.renders.at(-1)!.ringedItemIds).toEqual(
+        new Set(["mem-1", "mem-2"]),
+      ),
+    );
+    const before = card.renders.at(-1)!;
+    const renders = card.renders.length;
     fireEvent.click(screen.getByRole("button", { name: "bump" }));
-    // A fresh array or arrow here re-uploads every buffer in the renderer.
-    expect(card.renders.length).toBeGreaterThan(before);
-    const first = card.renders[0];
-    const last = card.renders[card.renders.length - 1];
-    expect(last.groups).toBe(first.groups);
-    expect(last.itemHref).toBe(first.itemHref);
+    expect(card.renders.length).toBeGreaterThan(renders);
+    const after = card.renders.at(-1)!;
+    // A fresh Set or arrow here re-uploads the renderer's ring buffer, and
+    // this shell re-renders on every one of its four query answers.
+    expect(after.ringedItemIds).toBe(before.ringedItemIds);
+    expect(after.itemHref).toBe(before.itemHref);
   });
 });
