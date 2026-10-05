@@ -2,7 +2,7 @@
 
 import { useQuery } from "@apollo/client";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import { EmptyState } from "@/components/primitives/empty-state";
@@ -10,12 +10,21 @@ import { OverflowMenu } from "@/components/primitives/overflow-menu";
 import { PageHeader } from "@/components/primitives/page-header";
 import { PageShell } from "@/components/primitives/page-shell";
 import { StatCard } from "@/components/primitives/stat-card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ContextMapCard } from "@/components/widgets/context-map/context-map-card";
 
 import { type MemoryBase } from "../../components/memory-bases-data";
 import { GET_MEMORY_BASE_USAGE, GET_MEMORY_BASES, GET_MEMORY_CONFLICT_COUNTS } from "../../queries";
-import type { MemoryContext } from "./memory-list-data";
+import { memoryTypeOptions, type MemoryContext } from "./memory-list-data";
 import { MemoryTable } from "./memory-table";
 import type { BaseUsage } from "./usage-data";
+
+/**
+ * The base's three tabs. Conflicts is a link in a tab's clothing: that view is
+ * its own shipped route, so the trigger navigates there instead of this shell
+ * growing a second copy of it.
+ */
+type MemoryTab = "overview" | "memories" | "conflicts";
 
 export function NotFoundBase({ contextId }: { contextId: string }) {
   const t = useTranslations("memory");
@@ -27,10 +36,17 @@ export function NotFoundBase({ contextId }: { contextId: string }) {
 }
 
 export function BaseShell({
-  context, initialMine, initialPage, initialUsage,
-}: { context: MemoryContext; initialMine: boolean; initialPage: number; initialUsage?: "never" | "stale" }) {
+  context, initialMine, initialPage, initialUsage, initialTab,
+}: {
+  context: MemoryContext; initialMine: boolean; initialPage: number;
+  initialUsage?: "never" | "stale";
+  /** The raw `?tab=` value: a URL may say anything, so it is narrowed here. */
+  initialTab?: string;
+}) {
   const t = useTranslations("memory");
   const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
   const bases = useQuery<{ memoryBases: MemoryBase[] }>(GET_MEMORY_BASES, { fetchPolicy: "cache-and-network" });
   const base = bases.data?.memoryBases.find((b) => b.id === context.id);
   const stats = base?.stats ?? null;
@@ -44,6 +60,47 @@ export function BaseShell({
   const counts = useQuery<{ memoryConflictCounts: { open: number; memoriesInvolved: number; lastScanAt: string | null } }>(
     GET_MEMORY_CONFLICT_COUNTS,
     { variables: { contextId: context.id }, skip: !valid },
+  );
+
+  // Overview is the default, and `conflicts` is never an active body: its
+  // trigger navigates away, so a hand-typed ?tab=conflicts lands on Overview.
+  const tab = initialTab === "memories" ? "memories" : "overview";
+
+  const setTab = (next: MemoryTab) => {
+    if (next === "conflicts") {
+      router.push(`/memory/${context.id}/conflicts`);
+      return;
+    }
+    const url = new URLSearchParams(params?.toString() ?? "");
+    if (next === "overview") url.delete("tab");
+    else url.set("tab", next);
+    // Switching drops the parameters only the tab being left reads: the list's
+    // page and visibility, and the map's selected passage and region. They
+    // survive a reload, so a stale one would be reapplied to the wrong view.
+    if (next !== "memories") {
+      url.delete("page");
+      url.delete("mine");
+    }
+    if (next !== "overview") {
+      url.delete("selected");
+      url.delete("topic");
+    }
+    const q = url.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+  };
+
+  /**
+   * The map's colours and legend come from the base's own declared `type`
+   * enum, in declared order — never a hardcoded list, because each base
+   * declares its own. Memoised because the renderer rebuilds its colour buffer
+   * whenever this array's identity changes, and this shell re-renders on every
+   * query answer.
+   */
+  const fields = context.fields;
+  const groups = React.useMemo(() => memoryTypeOptions({ fields }), [fields]);
+  const itemHref = React.useCallback(
+    (itemId: string) => `/memory/${context.id}/${itemId}`,
+    [context.id],
   );
 
   // Until memoryBases has answered, `agents` is empty for every base — showing
@@ -99,14 +156,33 @@ export function BaseShell({
       </div>
       {valid ? (
         <>
-          <MemoryTable
-            context={context}
-            initialMine={initialMine}
-            initialPage={initialPage}
-            initialUsage={initialUsage}
-            onChanged={() => { void bases.refetch(); void usage.refetch(); }}
-          />
-          {stats && <p className="text-xs text-muted-foreground">{t("base.visibleFooter", { visible: stats.visible, total: stats.total })}</p>}
+          <Tabs value={tab} onValueChange={(value) => setTab(value as MemoryTab)}>
+            <TabsList>
+              <TabsTrigger value="overview">{t("tabs.overview")}</TabsTrigger>
+              <TabsTrigger value="memories">{t("tabs.memories")}</TabsTrigger>
+              <TabsTrigger value="conflicts">{t("tabs.conflicts")}</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {tab === "overview" ? (
+            <ContextMapCard
+              contextId={context.id}
+              groups={groups}
+              groupField="type"
+              itemHref={itemHref}
+              titleKey="memory"
+            />
+          ) : (
+            <>
+              <MemoryTable
+                context={context}
+                initialMine={initialMine}
+                initialPage={initialPage}
+                initialUsage={initialUsage}
+                onChanged={() => { void bases.refetch(); void usage.refetch(); }}
+              />
+              {stats && <p className="text-xs text-muted-foreground">{t("base.visibleFooter", { visible: stats.visible, total: stats.total })}</p>}
+            </>
+          )}
         </>
       ) : (
         <EmptyState

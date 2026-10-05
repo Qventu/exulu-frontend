@@ -3306,6 +3306,11 @@
     "title": "Memory",
     "description": "What your agents have learned in conversations. One memory base can serve several agents.",
     "countsNote": "Counts include private memories; their content stays visible only to the people who saved them.",
+    "tabs": {
+      "overview": "Overview",
+      "memories": "Memories",
+      "conflicts": "Conflicts"
+    },
     "stats": {
       "bases": "Memory bases",
       "agents": "Agents with memory",

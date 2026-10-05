@@ -3306,6 +3306,11 @@
     "title": "Gedächtnis",
     "description": "Was deine Agenten in Gesprächen gelernt haben. Eine Gedächtnis-Basis kann mehrere Agenten versorgen.",
     "countsNote": "Die Zahlen enthalten private Erinnerungen; deren Inhalt sehen nur die Personen, die sie gespeichert haben.",
+    "tabs": {
+      "overview": "Übersicht",
+      "memories": "Erinnerungen",
+      "conflicts": "Konflikte"
+    },
     "stats": {
       "bases": "Gedächtnis-Basen",
       "agents": "Agenten mit Gedächtnis",
