@@ -28,9 +28,9 @@ describe("parseHslTriplet", () => {
     expect(rgb[2]).toBeCloseTo(expected[2], 4);
   };
 
-  it("converts a mid grey (H 0, S 0, L 50%)", () => {
-    const rgb = parseHslTriplet("0 0% 50%");
-    expectRgbClose(rgb, [0.5, 0.5, 0.5]);
+  it("converts a mid grey (H 0, S 0, L 45%)", () => {
+    const rgb = parseHslTriplet("0 0% 45%");
+    expectRgbClose(rgb, [0.45, 0.45, 0.45]);
   });
 
   it("converts pure red (H 0°, S 100%, L 50%)", () => {
@@ -66,35 +66,25 @@ describe("parseHslTriplet", () => {
   it("converts a real token from the theme: --chart-4", () => {
     // --chart-4: 217.0787 76.7241% 54.5098%
     const rgb = parseHslTriplet("217.0787 76.7241% 54.5098%");
-    expect(Number.isFinite(rgb[0])).toBe(true);
-    expect(Number.isFinite(rgb[1])).toBe(true);
-    expect(Number.isFinite(rgb[2])).toBe(true);
-    expect(rgb[0]).toBeGreaterThanOrEqual(0);
-    expect(rgb[0]).toBeLessThanOrEqual(1);
-    expect(rgb[1]).toBeGreaterThanOrEqual(0);
-    expect(rgb[1]).toBeLessThanOrEqual(1);
-    expect(rgb[2]).toBeGreaterThanOrEqual(0);
-    expect(rgb[2]).toBeLessThanOrEqual(1);
+    expectRgbClose(rgb, [0.196079, 0.462745, 0.894117]);
   });
 
   it("converts another real token: --chart-1", () => {
     // --chart-1: 148.0952 53.3898% 53.7255%
     const rgb = parseHslTriplet("148.0952 53.3898% 53.7255%");
-    expect(Number.isFinite(rgb[0])).toBe(true);
-    expect(Number.isFinite(rgb[1])).toBe(true);
-    expect(Number.isFinite(rgb[2])).toBe(true);
-    expect(rgb[0]).toBeGreaterThanOrEqual(0);
-    expect(rgb[0]).toBeLessThanOrEqual(1);
-    expect(rgb[1]).toBeGreaterThanOrEqual(0);
-    expect(rgb[1]).toBeLessThanOrEqual(1);
-    expect(rgb[2]).toBeGreaterThanOrEqual(0);
-    expect(rgb[2]).toBeLessThanOrEqual(1);
+    expectRgbClose(rgb, [0.290196, 0.784314, 0.521568]);
   });
 
   it("normalises negative hue into the correct colour", () => {
     // -120° should be the same as 240° (blue).
     const rgb = parseHslTriplet("-120 100% 50%");
     expectRgbClose(rgb, [0, 0, 1]);
+  });
+
+  it("normalises hue above 360 into the correct colour", () => {
+    // 480° should be the same as 120° (green).
+    const rgb = parseHslTriplet("480 100% 50%");
+    expectRgbClose(rgb, [0, 1, 0]);
   });
 
   it("falls back to grey when a token is truncated (two components)", () => {
@@ -139,38 +129,38 @@ describe("buildBuffers", () => {
 });
 
 describe("projectToScreen", () => {
-  it("distinguishes column-major from transposed matrices", () => {
-    // Build an asymmetric matrix that projects (1, 2, 3) differently based on layout.
-    // Correct (column-major): M[0]*x + M[4]*y + M[8]*z + M[12]
-    // Transposed (row-major): M[0]*x + M[1]*y + M[2]*z + M[3]
-    const correct = [2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-    const transposed = [2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  it("projects correctly with a realistic perspective matrix", () => {
+    // Perspective matrix: 50° FOV, 4:3 aspect, near 0.01, far 100, camera back 3.2.
+    // This matrix distinguishes column-major from transposed and from vertical-flip errors.
+    const matrix = [
+      1.60838, 0, 0, 0,
+      0, 2.144507, 0, 0,
+      0, 0, -1.0002, -1,
+      0, 0, 3.180638, 3.2,
+    ];
 
-    // For (1, 2, 0) with correct column-major:
-    // cx = 2*1 + 0*2 + 0*0 + 0 = 2
-    // cy = 0*1 + 3*2 + 0*0 + 0 = 6
-    // cw = 0*1 + 0*2 + 1*0 + 1 = 1
-    // screen x = ((2/1)*0.5 + 0.5)*800 = (1 + 0.5)*800 = 1200 (out of viewport)
-    // screen y = (0.5 - (6/1)*0.5)*600 = (0.5 - 3)*600 = -1500 (out of viewport)
-
-    // This test verifies the matrix layout is correctly interpreted.
-    const result = projectToScreen({ x: 0.1, y: 0.1, z: 0 }, correct, 800, 600);
+    const result = projectToScreen({ x: 0.5, y: 0.25, z: 0.75 }, matrix, 800, 600);
     expect(result.visible).toBe(true);
-    // With scale factors in the matrix, the point should move away from centre.
-    expect(Math.abs(result.x - 400) + Math.abs(result.y - 300)).toBeGreaterThan(10);
+    // Correct answer (column-major with vertical flip): (531.296, 234.352)
+    // Transposed read gives: (457.591, 271.204)
+    // Missing vertical flip gives: (531.296, 365.648)
+    // This single assertion catches all three wrong implementations at once.
+    expect(result.x).toBeCloseTo(531.296, 1);
+    expect(result.y).toBeCloseTo(234.352, 1);
   });
 
-  it("maps the centre of clip space to the centre of the viewport", () => {
-    const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-    expect(projectToScreen({ x: 0, y: 0, z: 0 }, identity, 800, 600)).toEqual({ x: 400, y: 300, visible: true });
-  });
+  it("reports a point behind the camera as not visible", () => {
+    // Same realistic matrix, depth 4 puts homogeneous coordinate at about -0.8.
+    const matrix = [
+      1.60838, 0, 0, 0,
+      0, 2.144507, 0, 0,
+      0, 0, -1.0002, -1,
+      0, 0, 3.180638, 3.2,
+    ];
 
-  it("reports a point with negative w as not visible", () => {
-    // Use a matrix that produces negative w for a specific point.
-    // Column-major: m[11] is row 3 of column 2 (the z coefficient in the w row).
-    const matrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -0.1, 0, 0, 0, 1];
-    // For (15, 15, 15): cw = -0.1*15 + 1 = -0.5 (negative, not visible)
-    expect(projectToScreen({ x: 15, y: 15, z: 15 }, matrix, 800, 600).visible).toBe(false);
+    // A transposed read would report this visible at roughly (420.2, 289.9), so this is a real check.
+    const result = projectToScreen({ x: 0, y: 0, z: 4 }, matrix, 800, 600);
+    expect(result.visible).toBe(false);
   });
 });
 
@@ -183,12 +173,13 @@ describe("resolveLabelCollisions", () => {
     expect(visible).toEqual(["big"]);
   });
 
-  it("keeps both when they do not overlap", () => {
+  it("keeps both when they do not overlap, ordered by size (largest first)", () => {
     const visible = resolveLabelCollisions([
       { id: "a", x: 0, y: 0, width: 50, height: 16, count: 3 },
       { id: "b", x: 300, y: 300, width: 50, height: 16, count: 4 },
     ]);
-    expect(visible.sort()).toEqual(["a", "b"]);
+    // Output is ordered by count descending (b has count 4, a has count 3), not input order.
+    expect(visible).toEqual(["b", "a"]);
   });
 });
 
