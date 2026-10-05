@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildBuffers, coverageCaption, legendEntries, NO_VALUE_TOKEN, PALETTE_TOKENS,
-  parseHslTriplet, projectToScreen, resolveLabelCollisions,
+  buildBuffers, coverageCaption, legendEntries, nearestNeighbourSegments,
+  NO_VALUE_TOKEN, PALETTE_TOKENS, parseHslTriplet, projectToScreen,
+  resolveLabelCollisions,
 } from "./map-data";
 
 const point = (id: string, group: string | null, xyz: [number, number, number] = [0, 0, 0]) => ({
@@ -213,5 +214,70 @@ describe("coverageCaption", () => {
 
   it("says nothing when everything is drawn and everything is mapped", () => {
     expect(coverageCaption({ drawn: 90, total: 90, sampled: false, mapped: 120, totalChunks: 120 })).toBeNull();
+  });
+});
+
+describe("nearestNeighbourSegments", () => {
+  /** Reads the buffer back as pairs of endpoints. */
+  const segments = (buffer: Float32Array) => {
+    expect(buffer.length % 6).toBe(0);
+    const out: [number[], number[]][] = [];
+    for (let i = 0; i < buffer.length; i += 6) {
+      out.push([
+        [buffer[i]!, buffer[i + 1]!, buffer[i + 2]!],
+        [buffer[i + 3]!, buffer[i + 4]!, buffer[i + 5]!],
+      ]);
+    }
+    return out;
+  };
+
+  it("draws nothing when there is nobody to draw to", () => {
+    expect(nearestNeighbourSegments([]).length).toBe(0);
+    expect(nearestNeighbourSegments([point("a", null, [0, 0, 0])]).length).toBe(0);
+  });
+
+  it("joins a pair once, not once from each end", () => {
+    const buffer = nearestNeighbourSegments([
+      point("a", null, [0, 0, 0]),
+      point("b", null, [1, 0, 0]),
+    ]);
+    expect(segments(buffer)).toEqual([[[0, 0, 0], [1, 0, 0]]]);
+  });
+
+  it("keeps the segment of a passage whose nearest neighbour prefers someone else", () => {
+    // a-b are mutually nearest; c's nearest is b, but b's is a, so c's segment
+    // is not a duplicate of anything and must survive.
+    const buffer = nearestNeighbourSegments([
+      point("a", null, [0, 0, 0]),
+      point("b", null, [1, 0, 0]),
+      point("c", null, [2.5, 0, 0]),
+    ]);
+    expect(segments(buffer)).toEqual([
+      [[0, 0, 0], [1, 0, 0]],
+      [[2.5, 0, 0], [1, 0, 0]],
+    ]);
+  });
+
+  it("finds the true nearest neighbour across a grid of cells", () => {
+    // A 4x4x2 lattice of unit spacing: every passage has a neighbour at
+    // distance 1, and the grid search must not settle for one further away.
+    const lattice: ReturnType<typeof point>[] = [];
+    for (let x = 0; x < 4; x += 1) {
+      for (let y = 0; y < 4; y += 1) {
+        for (let z = 0; z < 2; z += 1) {
+          lattice.push(point(`${x}-${y}-${z}`, null, [x, y, z]));
+        }
+      }
+    }
+    const drawn = segments(nearestNeighbourSegments(lattice));
+    expect(drawn.length).toBeGreaterThan(0);
+    expect(drawn.length).toBeLessThanOrEqual(lattice.length);
+    for (const [from, to] of drawn) {
+      const distance = Math.hypot(from[0]! - to[0]!, from[1]! - to[1]!, from[2]! - to[2]!);
+      expect(distance).toBeCloseTo(1, 6);
+    }
+    // Every passage is an endpoint of something: nothing was silently dropped.
+    const seen = new Set(drawn.flatMap(([from, to]) => [from.join(), to.join()]));
+    for (const p of lattice) expect(seen.has([p.x, p.y, p.z].join())).toBe(true);
   });
 });

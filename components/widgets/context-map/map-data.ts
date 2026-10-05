@@ -78,6 +78,110 @@ export function buildBuffers(
   return { positions, colors };
 }
 
+/** Average passages per cell of the grid that answers nearest-neighbour queries. */
+const CELL_OCCUPANCY = 2;
+const MAX_GRID_DIVISIONS = 64;
+
+/**
+ * One line segment per passage to its nearest neighbour, as a flat position
+ * buffer: the faint web the canvas draws when every link is asked for.
+ *
+ * A uniform grid keeps this linear in the number of passages. With roughly two
+ * per cell, the 27 cells around a point hold its nearest neighbour for all but
+ * the most isolated passages, and those get no segment rather than a scan of
+ * the whole cloud — 20 000 passages against each other would be 400 million
+ * comparisons. A mutually-nearest pair is emitted once: drawn twice it would
+ * read as a brighter line, not as a duplicate.
+ */
+export function nearestNeighbourSegments(points: MapPoint[]): Float32Array {
+  const count = points.length;
+  if (count < 2) return new Float32Array(0);
+
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (const p of points) {
+    if (p.x < minX) minX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.z < minZ) minZ = p.z;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y > maxY) maxY = p.y;
+    if (p.z > maxZ) maxZ = p.z;
+  }
+  // One cube side for all three axes keeps cells isotropic, so a 27-cell
+  // neighbourhood is the same distance in every direction.
+  const span = Math.max(maxX - minX, maxY - minY, maxZ - minZ, 1e-6);
+  const divisions = Math.max(1,
+    Math.min(MAX_GRID_DIVISIONS, Math.round(Math.cbrt(count / CELL_OCCUPANCY))));
+  const cell = span / divisions;
+  const axis = (value: number, min: number) =>
+    Math.min(divisions - 1, Math.max(0, Math.floor((value - min) / cell)));
+
+  // Singly-linked buckets: one array for the cell heads, one for the chains,
+  // and no per-cell array allocation.
+  const heads = new Int32Array(divisions * divisions * divisions).fill(-1);
+  const chain = new Int32Array(count).fill(-1);
+  for (let i = 0; i < count; i += 1) {
+    const p = points[i]!;
+    const index = axis(p.x, minX)
+      + divisions * (axis(p.y, minY) + divisions * axis(p.z, minZ));
+    chain[i] = heads[index]!;
+    heads[index] = i;
+  }
+
+  const nearest = new Int32Array(count).fill(-1);
+  for (let i = 0; i < count; i += 1) {
+    const p = points[i]!;
+    const ix = axis(p.x, minX);
+    const iy = axis(p.y, minY);
+    const iz = axis(p.z, minZ);
+    let best = -1;
+    let bestDistance = Infinity;
+    for (let dz = -1; dz <= 1; dz += 1) {
+      const z = iz + dz;
+      if (z < 0 || z >= divisions) continue;
+      for (let dy = -1; dy <= 1; dy += 1) {
+        const y = iy + dy;
+        if (y < 0 || y >= divisions) continue;
+        for (let dx = -1; dx <= 1; dx += 1) {
+          const x = ix + dx;
+          if (x < 0 || x >= divisions) continue;
+          let j = heads[x + divisions * (y + divisions * z)]!;
+          while (j !== -1) {
+            if (j !== i) {
+              const other = points[j]!;
+              const distance = (other.x - p.x) ** 2
+                + (other.y - p.y) ** 2 + (other.z - p.z) ** 2;
+              if (distance < bestDistance) {
+                bestDistance = distance;
+                best = j;
+              }
+            }
+            j = chain[j]!;
+          }
+        }
+      }
+    }
+    nearest[i] = best;
+  }
+
+  const positions = new Float32Array(count * 6);
+  let cursor = 0;
+  for (let i = 0; i < count; i += 1) {
+    const j = nearest[i]!;
+    if (j === -1 || (nearest[j] === i && j < i)) continue;
+    const from = points[i]!;
+    const to = points[j]!;
+    positions[cursor] = from.x;
+    positions[cursor + 1] = from.y;
+    positions[cursor + 2] = from.z;
+    positions[cursor + 3] = to.x;
+    positions[cursor + 4] = to.y;
+    positions[cursor + 5] = to.z;
+    cursor += 6;
+  }
+  return positions.subarray(0, cursor);
+}
+
 /** Projects a world position with a column-major 4×4 matrix, for HTML overlays. */
 export function projectToScreen(
   p: { x: number; y: number; z: number }, matrix: number[], width: number, height: number,
