@@ -6,7 +6,15 @@
 
 export type MapPoint = {
   id: string; itemId: string; x: number; y: number; z: number;
-  label: string; group: string | null; chunks: number;
+  /**
+   * The passage's opening — the matched text. NOT a title: see `pointTitle`
+   * and PASSAGE_LABEL_LIMIT below for why this string so often begins with a
+   * document header rather than with anything a reader would recognise.
+   */
+  label: string;
+  /** The name of the item the passage came from, or "" for an unnamed item. */
+  itemName: string;
+  group: string | null; chunks: number;
 };
 export type MapTopic = { id: string; label: string; count: number; x: number; y: number; z: number };
 export type MapEdge = { source: string; target: string; score: number };
@@ -69,6 +77,18 @@ export const RING_TOKEN = "--destructive" as const;
 /** The ring colour, read from the theme exactly as the palette is. */
 export function resolveRingColor(element: Element): Rgb {
   return parseHslTriplet(getComputedStyle(element).getPropertyValue(RING_TOKEN));
+}
+
+/**
+ * The outline round the dot under the pointer. The page's own text colour, so
+ * it reads against every palette entry and against the page in either theme —
+ * the one thing a hover affordance has to do.
+ */
+export const HOVER_OUTLINE_TOKEN = "--foreground" as const;
+
+/** That outline's colour, read from the theme exactly as the ring's is. */
+export function resolveHoverOutlineColor(element: Element): Rgb {
+  return parseHslTriplet(getComputedStyle(element).getPropertyValue(HOVER_OUTLINE_TOKEN));
 }
 
 /**
@@ -446,6 +466,62 @@ export function isPassageClipped(label: string): boolean {
 }
 
 /**
+ * What to call a point on screen.
+ *
+ * Never its `label`. That is the first 120 characters of the chunk, and this
+ * product's ingestion injects a document header into every chunk — so the
+ * opening reads `--- Document (Exulu ID: 6adc924b-…) ---` and a tooltip, a
+ * panel heading or a neighbour row taken from it shows an identifier. The
+ * item's name is what a reader calls the thing.
+ *
+ * NOT the opening, even when `itemName` is blank. `name` is nullable on an
+ * items table, and falling back to `label` here is exactly the bug a blank
+ * name exposed: in PASSAGES mode the "opening" IS that injected document
+ * header, so the fallback showed the identifier right back, and a heading
+ * taken from it duplicated the body text rendered immediately below it.
+ * Returning "" and letting each call site render its own translated
+ * "Untitled item" is the fix — this function is pure and lives in map-data,
+ * so it cannot reach next-intl itself.
+ */
+export function pointTitle(point: { itemName: string; label: string }): string {
+  return point.itemName.trim() === "" ? "" : point.itemName;
+}
+
+/**
+ * The neighbour list with one row per item, each keeping its strongest
+ * passage.
+ *
+ * The edges answer is per PASSAGE, so a document chunked into four pieces
+ * comes back as four neighbours — and the panel listed its name four times.
+ * A row therefore now counts an ITEM, not a chunk, and the list can be
+ * shorter than the number of relations the API was asked for. The edge the
+ * row carries is still a single passage's, so the line drawn on the cloud and
+ * the score behind the row are the strongest passage's, not an aggregate.
+ *
+ * An edge whose target is not among the points is left alone: the edges query
+ * does not filter to passages that have a position and the cloud is capped
+ * anyway, so such a row is a real relation whose item is simply unknown here
+ * and cannot be folded into anything. Keyed by its target, so it stays one
+ * row per relation exactly as before.
+ */
+export function strongestPerItem(
+  edges: MapEdge[], byId: Map<string, MapPoint>,
+): MapEdge[] {
+  // Insertion-ordered, so the sort below only has to settle the cases the
+  // answer's own order does not already.
+  const best = new Map<string, MapEdge>();
+  for (const edge of edges) {
+    const neighbour = byId.get(edge.target);
+    const key = neighbour === undefined ? `#${edge.target}` : neighbour.itemId;
+    const kept = best.get(key);
+    if (kept === undefined || edge.score > kept.score) best.set(key, edge);
+  }
+  // Array.prototype.sort is stable, so items whose strongest passage ties keep
+  // the order the answer gave them.
+  return Array.from(best.values()).sort((a, b) => b.score - a.score);
+}
+
+/**
  * Which region a passage belongs to, or null when it belongs to none.
  *
  * A passage carries no record of its region: the regions are k-means over the
@@ -481,3 +557,59 @@ export function topicOf(
   }
   return best;
 }
+
+/**
+ * The point cloud's dot sizes, and the hovered dot's outline width. These
+ * five are used by map-canvas.tsx's point-size shaders (gl_PointSize = size *
+ * pixelRatio * 300/-mv.z, there) and imported back, rather than declared in
+ * that file, because HOVER_SIZE's nesting guarantee against the ring is pure
+ * arithmetic and is the one invariant among them worth testing — and
+ * map-canvas.tsx has no tests, by design: jsdom has no WebGL context.
+ */
+
+/**
+ * gl_PointSize is in device pixels; see the pixelRatio factor in the point
+ * shader (map-canvas.tsx). This is the size that reads well at
+ * FRAMING_REFERENCE_DISTANCE, and the framing effect scales it by
+ * `sizeScale` so a dot keeps that apparent size however close the camera
+ * ends up.
+ */
+export const POINT_SIZE = 0.035;
+
+/** Wide enough that the ring's annulus sits around the dot rather than on top of it. */
+export const RING_SIZE = POINT_SIZE * 2.2;
+
+/** Ringed passages: an annulus, so the dot's own colour still reads through it. */
+export const RING_INNER_RADIUS = 0.34;
+
+/**
+ * The sprite the hovered dot is drawn on.
+ *
+ * Capped at the ring layer's inner edge — RING_SIZE × RING_INNER_RADIUS, as
+ * a diameter — so that growing the dot never paints over the conflict ring a
+ * viewer is leaning in to read. Written as one expression against those two,
+ * because widening the ring is exactly the change that would break the
+ * nesting silently.
+ */
+export const HOVER_SIZE = Math.min(POINT_SIZE * 1.5, RING_SIZE * RING_INNER_RADIUS * 2);
+
+/**
+ * The fraction of the hovered dot's sprite RADIUS that its outline takes, in
+ * map-canvas.tsx's HOVER_FRAGMENT, which paints outline wherever
+ * d > 0.5 × (1 − this).
+ *
+ * Radius, not diameter — the two differ by 2× and the earlier wording used
+ * both in one sentence. At FRAMING_REFERENCE_DISTANCE and DPR 1 the hovered
+ * sprite renders at HOVER_SIZE × 300/FRAMING_REFERENCE_DISTANCE ≈ 4.91 CSS px
+ * across, so its radius is ≈2.46 CSS px and the rim is this × 2.46, per side:
+ *
+ *   0.2 → ≈0.49 CSS px — half a device pixel, hard-edged with no antialiasing
+ *         to soften it, which did not read as a hover state at all.
+ *   0.4 → ≈0.98 CSS px, with a fill diameter of (1 − 0.4) × ≈4.91 ≈ 2.95 px.
+ *
+ * ≈1 CSS px is the most a rim can take here: HOVER_SIZE is already capped at
+ * the conflict ring's inner edge, so the sprite cannot grow, and past ≈0.5 the
+ * fill stops reading as the dot's region colour. A bolder hover state needs a
+ * larger POINT_SIZE cloud-wide, not a larger value here.
+ */
+export const HOVER_OUTLINE_WIDTH = 0.4;

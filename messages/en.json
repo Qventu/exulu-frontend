@@ -3285,13 +3285,15 @@
     },
     "panel": {
       "clipped": "Only the opening of this passage is shown.",
+      "item": "Item",
+      "matched": "Matched text",
       "neighbourMissing": "A related passage that is not on the map",
       "neighbours": "Closest by wording",
       "neighboursFailed": "Could not load the related passages.",
       "noNeighbours": "Nothing else on this base is worded comparably.",
       "open": "Open the item",
-      "passage": "Passage",
-      "unavailable": "That passage is not available to you."
+      "unavailable": "That passage is not available to you.",
+      "untitled": "Untitled item"
     },
     "title": {
       "knowledge": "Knowledge map",

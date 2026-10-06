@@ -2,15 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildBuffers, cloudBounds, coverageCaption, frameCloud, FRAMING_REFERENCE_DISTANCE,
-  isPassageClipped,
+  HOVER_OUTLINE_WIDTH, HOVER_SIZE, isPassageClipped,
   nearestNeighbourSegments, NO_VALUE_TOKEN, PALETTE_TOKENS, PASSAGE_LABEL_LIMIT,
-  parseHslTriplet, projectToScreen, regionColor, resolveLabelCollisions, rgbCss, topicOf,
+  parseHslTriplet, pointTitle, projectToScreen, regionColor, resolveLabelCollisions,
+  POINT_SIZE, RING_INNER_RADIUS, RING_SIZE, rgbCss,
+  strongestPerItem, topicOf,
   VIEWPORT_FILL,
-  type CloudBounds, type Rgb,
+  type CloudBounds, type MapPoint, type Rgb,
 } from "./map-data";
 
 const point = (id: string, group: string | null, xyz: [number, number, number] = [0, 0, 0]) => ({
-  id, itemId: `item-${id}`, x: xyz[0], y: xyz[1], z: xyz[2], label: id, group, chunks: 1,
+  id, itemId: `item-${id}`, x: xyz[0], y: xyz[1], z: xyz[2],
+  label: id, itemName: `item ${id}`, group, chunks: 1,
 });
 
 describe("the palette", () => {
@@ -581,5 +584,125 @@ describe("frameCloud", () => {
     for (const aspect of [0, -4, Number.NaN, Infinity]) {
       expect(frameCloud(MEASURED, aspect, FOV).distance).toBeCloseTo(square, 10);
     }
+  });
+});
+
+describe("pointTitle", () => {
+  it("names a point by its item rather than by the passage's opening", () => {
+    // The opening is what the chunk says, and this corpus prefixes every
+    // chunk with a document header — so the opening is an identifier.
+    expect(pointTitle({
+      itemName: "Price list 2026",
+      label: "--- Document (Exulu ID: 6adc924b-1423-42ac-8b9d-0f0f0f0f0f0f) ---",
+    })).toBe("Price list 2026");
+  });
+
+  it("returns \"\" for an item with no name, rather than falling back to the passage's opening", () => {
+    // `name` is nullable on an items table, and the resolver answers "" for a
+    // null. Falling back to `label` here is the exact bug this guards: in
+    // PASSAGES mode `label` is often the injected document header, so the
+    // fallback would show the identifier Daniel reported right back. Each
+    // call site renders its own translated "untitled" fallback instead; this
+    // function stays pure and cannot translate.
+    expect(pointTitle({ itemName: "", label: "the passage itself" })).toBe("");
+    expect(pointTitle({ itemName: "   ", label: "the passage itself" })).toBe("");
+  });
+
+  it("never returns the passage's opening, even when it looks like a plausible title", () => {
+    // Pins the fallback shut: if `pointTitle` ever regresses to returning
+    // `point.label` for a blank name, this fails even though the label here
+    // is innocuous-looking prose rather than an obvious document header.
+    expect(pointTitle({ itemName: "", label: "a perfectly readable sentence" }))
+      .not.toBe("a perfectly readable sentence");
+  });
+});
+
+describe("strongestPerItem", () => {
+  const edge = (target: string, score: number) => ({ source: "seed", target, score });
+  /** A passage of `item`, as the points answer carries it. */
+  const chunkOf = (id: string, item: string): MapPoint => ({
+    id, itemId: item, x: 0, y: 0, z: 0,
+    label: `the text of ${id}`, itemName: `the name of ${item}`, group: null, chunks: 1,
+  });
+  const byId = (...points: MapPoint[]) => new Map(points.map((p) => [p.id, p]));
+
+  it("lists an item once, keeping its strongest passage", () => {
+    // Four chunks of one document are four neighbours and one item: the panel
+    // showed the same name four times.
+    const rows = strongestPerItem(
+      [edge("c1", 0.4), edge("c2", 0.9), edge("c3", 0.2), edge("c4", 0.5)],
+      byId(
+        chunkOf("c1", "i1"), chunkOf("c2", "i1"),
+        chunkOf("c3", "i1"), chunkOf("c4", "i1"),
+      ),
+    );
+    expect(rows).toEqual([edge("c2", 0.9)]);
+  });
+
+  it("keeps separate items apart, strongest first", () => {
+    const rows = strongestPerItem(
+      [edge("a1", 0.3), edge("b1", 0.9), edge("a2", 0.8)],
+      byId(chunkOf("a1", "A"), chunkOf("a2", "A"), chunkOf("b1", "B")),
+    );
+    expect(rows.map((r) => r.target)).toEqual(["b1", "a2"]);
+  });
+
+  it("keeps a neighbour that is not on the map, which names no item", () => {
+    // The edges query does not filter to passages that have a position, and
+    // the cloud is capped anyway: such a row is a real relation whose item is
+    // simply unknown here, so it cannot be folded into one.
+    const rows = strongestPerItem(
+      [edge("c1", 0.9), edge("gone", 0.5), edge("also-gone", 0.4)],
+      byId(chunkOf("c1", "i1")),
+    );
+    expect(rows.map((r) => r.target)).toEqual(["c1", "gone", "also-gone"]);
+  });
+
+  it("answers nothing for no edges, and leaves one edge alone", () => {
+    expect(strongestPerItem([], byId())).toEqual([]);
+    expect(strongestPerItem([edge("c1", 0.5)], byId(chunkOf("c1", "i1"))))
+      .toEqual([edge("c1", 0.5)]);
+  });
+});
+
+describe("the hovered dot's nesting inside the ring", () => {
+  it("stays a legible hover state the shader cannot test for itself", () => {
+    // HOVER_SIZE is defined as Math.min(POINT_SIZE * 1.5, the ring's inner
+    // edge as a diameter), so this is the one invariant map-canvas.tsx's
+    // hover layer depends on and cannot itself test (it has no tests, by
+    // design). A future change that raises HOVER_SIZE directly, bypassing
+    // the Math.min, would silently paint the hovered dot over a flagged
+    // passage's conflict ring — this fails the moment that happens.
+    expect(HOVER_SIZE).toBeLessThanOrEqual(RING_SIZE * RING_INNER_RADIUS * 2);
+
+    // The invariant above is one-sided, so on its own it is satisfied by a
+    // hovered dot SMALLER than an ordinary one — which is the opposite of a
+    // hover state. This is the lower bound it needs.
+    expect(HOVER_SIZE).toBeGreaterThan(POINT_SIZE);
+
+    // The outline is baked into HOVER_FRAGMENT as a cutoff of 0.5 × (1 − w).
+    // At w ≥ 1 the cutoff reaches zero and the whole sprite is outline, so the
+    // hovered dot loses its region colour entirely; at w ≤ 0 there is no rim.
+    // Neither is visible to the invariant above, and map-canvas.tsx cannot
+    // test its own shader.
+    expect(HOVER_OUTLINE_WIDTH).toBeGreaterThan(0);
+    expect(HOVER_OUTLINE_WIDTH).toBeLessThan(1);
+
+    // The bounds above still admit the value this commit replaced. What the
+    // rim actually has to clear is one device pixel: the shader has no
+    // antialiasing, so a sub-pixel band renders as an intermittent fringe or
+    // not at all. Pin the rendered width rather than the ratio, since the
+    // ratio alone means nothing without the sprite's size.
+    //
+    // gl_PointSize = size × 300/z at DPR 1, and the framing effect's
+    // sizeScale of z/FRAMING_REFERENCE_DISTANCE cancels z — so the sprite is
+    // this wide at every camera distance, not only the reference one.
+    const spriteDiameterPx = HOVER_SIZE * (300 / FRAMING_REFERENCE_DISTANCE);
+    const rimPx = HOVER_OUTLINE_WIDTH * (spriteDiameterPx / 2);
+    expect(rimPx).toBeGreaterThanOrEqual(0.75);
+
+    // And the fill has to survive the rim, or the hovered dot stops carrying
+    // its region's colour and reads as a ring.
+    expect(spriteDiameterPx * (1 - HOVER_OUTLINE_WIDTH)).toBeGreaterThan(2);
   });
 });

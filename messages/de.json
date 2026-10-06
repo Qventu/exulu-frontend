@@ -3285,13 +3285,15 @@
     },
     "panel": {
       "clipped": "Es wird nur der Anfang dieser Passage gezeigt.",
+      "item": "Eintrag",
+      "matched": "Gefundene Textstelle",
       "neighbourMissing": "Eine verwandte Passage, die nicht auf der Karte liegt",
       "neighbours": "Ähnlichste Wortwahl",
       "neighboursFailed": "Verwandte Passagen konnten nicht geladen werden.",
       "noNeighbours": "Nichts anderes auf dieser Basis ist vergleichbar formuliert.",
       "open": "Eintrag öffnen",
-      "passage": "Passage",
-      "unavailable": "Diese Passage ist für dich nicht verfügbar."
+      "unavailable": "Diese Passage ist für dich nicht verfügbar.",
+      "untitled": "Unbenannter Eintrag"
     },
     "title": {
       "knowledge": "Wissens-Karte",

@@ -108,7 +108,11 @@ const passage = (id: string) => ({
   x: 0.1,
   y: 0.2,
   z: 0.3,
+  // The two are deliberately different strings. `label` is the passage's own
+  // opening — which on a real base begins with an injected document header —
+  // and `itemName` is what a reader calls the document it came from.
   label: `the text of ${id}`,
+  itemName: `the item of ${id}`,
   group: "fact",
   chunks: 1,
 });
@@ -300,6 +304,45 @@ const edgesErrorMock = {
 };
 
 /**
+ * Three passages of one document plus the seed, which is what any chunked file
+ * looks like on this map: four dots, one item, one name.
+ */
+const SHARED_ITEM = "Price list 2026";
+const chunkedPointsMock = {
+  request: pointsRequest,
+  result: {
+    data: {
+      contextMapPoints: {
+        points: [
+          passage("chunk-1"),
+          ...["chunk-2", "chunk-3", "chunk-4"].map((id) => ({
+            ...passage(id),
+            itemId: "item-shared",
+            itemName: SHARED_ITEM,
+          })),
+        ],
+        total: 4,
+        sampled: false,
+      },
+    },
+  },
+};
+
+/** Its three passages as neighbours, strongest in the middle of the answer. */
+const chunkedEdgesMock = {
+  request: edgesRequest("chunk-1"),
+  result: {
+    data: {
+      contextMapEdges: [
+        { source: "chunk-1", target: "chunk-2", score: 0.4 },
+        { source: "chunk-1", target: "chunk-3", score: 0.9 },
+        { source: "chunk-1", target: "chunk-4", score: 0.2 },
+      ],
+    },
+  },
+};
+
+/**
  * Every operation the card actually sent, by name. A mock that simply goes
  * unused proves nothing — an unmatched request is swallowed by MockLink as a
  * network error, so a spy on a mock's result would stay silent even when the
@@ -446,7 +489,7 @@ describe("ContextMapCard", () => {
       }),
     );
     expect(
-      await screen.findByRole("button", { name: /the text of chunk-2/i }),
+      await screen.findByRole("button", { name: /the item of chunk-2/i }),
     ).toBeDefined();
     expect(await screen.findByText(/not on the map/i)).toBeDefined();
     expect(screen.queryByRole("button", { name: /chunk-404/ })).toBeNull();
@@ -461,7 +504,7 @@ describe("ContextMapCard", () => {
       }),
     );
     const neighbour = await screen.findByRole("button", {
-      name: /the text of chunk-2/i,
+      name: /the item of chunk-2/i,
     });
     const before = canvas.renders.at(-1)!;
     fireEvent.mouseEnter(neighbour);
@@ -565,7 +608,7 @@ describe("ContextMapCard", () => {
     const before = canvas.renders.at(-1)!;
 
     const neighbour = await screen.findByRole("button", {
-      name: /the text of b/i,
+      name: /the item of b/i,
     });
     fireEvent.mouseEnter(neighbour);
     await waitFor(() =>
@@ -602,7 +645,7 @@ describe("ContextMapCard", () => {
       }),
     );
     const neighbour = await screen.findByRole("button", {
-      name: /the text of chunk-2/i,
+      name: /the item of chunk-2/i,
     });
     fireEvent.click(neighbour);
     await waitFor(() =>
@@ -903,6 +946,177 @@ describe("ContextMapCard", () => {
     await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
     const points = askedWith.find((o) => o.name === "ContextMapPoints");
     expect(points?.variables.limit).toBe(5000);
+  });
+
+  it("names the selected point by its item, and keeps the passage as the matched text", async () => {
+    // Every "passage opening" on this map begins with an injected document
+    // header on the real corpus, so a heading taken from the opening is an
+    // identifier. The opening is still the matched text and still belongs in
+    // the body — labelled as such.
+    viewport.large = true;
+    render(
+      withProviders([pointsMock, emptyTopicsMock, statusMock, edgesMock], {
+        selected: "chunk-1",
+      }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "the item of chunk-1" }),
+    ).toBeDefined();
+    // The section is titled Item, which is the panel's own accessible name.
+    expect(screen.getByRole("complementary", { name: "Item" })).toBeDefined();
+    expect(screen.queryByRole("complementary", { name: /passage/i })).toBeNull();
+    expect(screen.getByText(/matched text/i)).toBeDefined();
+    expect(screen.getByText("the text of chunk-1")).toBeDefined();
+  });
+
+  it("lists an item once in the neighbours, keeping its strongest passage", async () => {
+    // Daniel's screenshot: the same document four times, because those were
+    // four chunks of it.
+    viewport.large = true;
+    render(
+      withProviders(
+        [chunkedPointsMock, emptyTopicsMock, statusMock, chunkedEdgesMock],
+        { selected: "chunk-1" },
+      ),
+    );
+    const rows = await screen.findAllByRole("button", {
+      name: new RegExp(SHARED_ITEM, "i"),
+    });
+    expect(rows).toHaveLength(1);
+    // And the one it kept is the strongest of the three, not the first the
+    // answer happened to carry.
+    fireEvent.mouseEnter(rows[0]!);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.hoverNeighbourId).toBe("chunk-3"),
+    );
+  });
+
+  it("dims the other regions while a chip is hovered, choosing nothing", async () => {
+    // The same effect selecting a chip has, and none of its consequences: a
+    // hover is a look, not a choice.
+    viewport.large = true;
+    render(withProviders([placedPointsMock, topicsMock, statusMock]));
+    await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
+    expect(canvas.renders.at(-1)!.highlightTopic).toBeNull();
+
+    const chip = screen.getByRole("button", { name: /pricing/i });
+    fireEvent.mouseEnter(chip);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("1"),
+    );
+    // Dimmed against the region's real members, the same set a selected chip
+    // dims against.
+    expect(canvas.renders.at(-1)!.topicMemberIds).toEqual(new Set(["c"]));
+    // Nothing was chosen: the chip is not pressed, the URL is untouched, and
+    // no navigation happened.
+    expect(chip.getAttribute("aria-pressed")).toBe("false");
+    expect(new URLSearchParams(window.location.search).has("topic")).toBe(false);
+    expect(nav.replace).not.toHaveBeenCalled();
+
+    fireEvent.mouseLeave(chip);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBeNull(),
+    );
+    // And the keyboard reaches it the same way.
+    fireEvent.focus(chip);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("1"),
+    );
+    fireEvent.blur(chip);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBeNull(),
+    );
+  });
+
+  it("leaves a selected chip highlighted while another is hovered and let go", async () => {
+    // The hover is a preview over the choice, not a replacement for it: when
+    // the pointer leaves, the chosen region is still the one that is dim.
+    viewport.large = true;
+    render(
+      withProviders([placedPointsMock, topicsMock, statusMock], {
+        topic: "1",
+      }),
+    );
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("1"),
+    );
+    const other = screen.getByRole("button", { name: /valves/i });
+    fireEvent.mouseEnter(other);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("0"),
+    );
+    fireEvent.mouseLeave(other);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("1"),
+    );
+    expect(new URLSearchParams(window.location.search).get("topic")).toBe("1");
+  });
+
+  it("clears the hover preview when a click deselects a chip, so the cloud stops dimming", async () => {
+    // fireEvent.click does not focus an element the way a real click does,
+    // so the chip is focused explicitly first. That is also exactly what
+    // lets this bug persist indefinitely from the keyboard: focus never
+    // moves away on its own the way a pointer leaving the chip does.
+    viewport.large = true;
+    render(
+      withProviders([placedPointsMock, topicsMock, statusMock], {
+        topic: "1",
+      }),
+    );
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("1"),
+    );
+    // Establish the precondition on a chip that is NOT the selected one:
+    // asserting the preview is "1" after focusing the already-selected chip
+    // proves nothing, because the render selected "1" to begin with.
+    const other = screen.getByRole("button", { name: /valves/i });
+    fireEvent.focus(other);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("0"),
+    );
+    fireEvent.blur(other);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("1"),
+    );
+
+    // Focus now demonstrably sets hoverTopic, so the chip below really does
+    // carry a hover preview into its own deselecting click.
+    const chip = screen.getByRole("button", { name: /pricing/i });
+    fireEvent.focus(chip);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("1"),
+    );
+
+    fireEvent.click(chip);
+    await waitFor(() =>
+      expect(chip.getAttribute("aria-pressed")).toBe("false"),
+    );
+    // The bug: activeTopic = hoverTopic ?? highlightTopic, and onFocus set
+    // hoverTopic to this chip above. Without clearing it on a deselecting
+    // click, the chip says "not chosen" while activeTopic — and the cloud —
+    // stayed this one.
+    expect(canvas.renders.at(-1)!.highlightTopic).toBeNull();
+    expect(new URLSearchParams(window.location.search).has("topic")).toBe(
+      false,
+    );
+
+    // Nothing about the hover mechanism itself was lost: re-entering the
+    // chip still previews it.
+    fireEvent.mouseEnter(chip);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("1"),
+    );
+  });
+
+  it("asks the API for the item's name, not only the passage's opening", async () => {
+    // The name is what every surface showing a point calls it, and the items
+    // table is already joined for the access-control gate.
+    render(withProviders([pointsMock, emptyTopicsMock, statusMock]));
+    await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
+    expect(canvas.renders.at(-1)!.points).toEqual([
+      expect.objectContaining({ itemName: "the item of chunk-1" }),
+      expect.objectContaining({ itemName: "the item of chunk-2" }),
+    ]);
   });
 
   it("asks for edges only once a passage is selected", async () => {
