@@ -198,6 +198,44 @@ const DIM_MUTED = 0.15;
 const DIM_NORMAL = 0.85;
 
 /**
+ * One dim value per point: `DIM_SELECTED` for the selected point,
+ * `DIM_MUTED` outside a highlighted region — unless the point is ringed, a
+ * ringed passage stays bright — and `DIM_NORMAL` otherwise.
+ *
+ * Pulled out of the positions/colours effect's `write` so a chip hover can
+ * recompute just this array, in the dim-only effect below, without
+ * rebuilding the cloud's positions and colours: `highlightTopic` and
+ * `topicMemberIds` fed this loop and nothing else, so running `write` in
+ * full on every hover re-uploaded positions and colours that had not moved —
+ * ~140 KB at the card's default point limit, twice per chip crossed — and
+ * dropped the whole cloud back to full brightness between each pair while
+ * it did.
+ */
+function computeDim(
+  points: MapPoint[],
+  highlightTopic: string | null,
+  topicMemberIds: Set<string>,
+  selectedId: string | null,
+  ringed: Set<string>,
+): Float32Array {
+  const dim = new Float32Array(points.length);
+  for (let i = 0; i < points.length; i += 1) {
+    const point = points[i]!;
+    const muted =
+      highlightTopic !== null &&
+      !topicMemberIds.has(point.id) &&
+      !ringed.has(point.id);
+    dim[i] =
+      selectedId === point.id
+        ? DIM_SELECTED
+        : muted
+          ? DIM_MUTED
+          : DIM_NORMAL;
+  }
+  return dim;
+}
+
+/**
  * `id` is carried so the hovered-dot layer can key its effect on the DOT
  * rather than on this state, which is rewritten ten times a second while the
  * cloud turns under a still pointer.
@@ -298,6 +336,16 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
        * entire reason this ref exists.
        */
       hovered: null as MapPoint | null,
+      /**
+       * For the positions/colours effect's `write`, which the theme-change
+       * observer keeps calling long after a chip hover last ran that effect:
+       * `highlightTopic` and `topicMemberIds` are no longer that effect's own
+       * dependencies (see the dim-only effect below), so without this a theme
+       * change after a hover would repaint using whichever region was
+       * highlighted the last time positions and colours actually rebuilt.
+       */
+      highlightTopic,
+      topicMemberIds,
     });
     React.useEffect(() => {
       latestRef.current = {
@@ -309,6 +357,8 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         onSelect,
         onUnsupported,
         t,
+        highlightTopic,
+        topicMemberIds,
       };
     });
 
@@ -821,24 +871,19 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       const write = () => {
         const palette = resolvePalette(host);
         const { positions, colors } = buildBuffers(points, regionOf, palette);
-        const ringed = latestRef.current.ringedIds;
-        const dim = new Float32Array(points.length);
-        for (let i = 0; i < points.length; i += 1) {
-          const point = points[i];
-          // Outside the highlighted region, so dimmed — whether or not the
-          // passage has a grouping value, which says nothing about its region.
-          // A ringed passage stays bright: the ring is there to be seen.
-          const muted =
-            highlightTopic !== null &&
-            !topicMemberIds.has(point.id) &&
-            !ringed.has(point.id);
-          dim[i] =
-            selectedId === point.id
-              ? DIM_SELECTED
-              : muted
-                ? DIM_MUTED
-                : DIM_NORMAL;
-        }
+        // Read through the ref, not from this closure's own highlightTopic /
+        // topicMemberIds: those are no longer this effect's dependencies (see
+        // the dim-only effect below), so the theme-change observer calling
+        // this `write` long after the last hover needs the current values,
+        // not whichever were in scope when positions and colours last
+        // actually rebuilt.
+        const dim = computeDim(
+          points,
+          latestRef.current.highlightTopic,
+          latestRef.current.topicMemberIds,
+          selectedId,
+          latestRef.current.ringedIds,
+        );
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute(
           "position",
@@ -884,10 +929,38 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         attributeFilter: ["class", "data-theme"],
       });
       return () => observer.disconnect();
-    }, [
-      points, regionOf, selectedId, highlightTopic, topicMemberIds, ringedKey,
-      paintHoveredDot,
-    ]);
+    }, [points, regionOf, selectedId, ringedKey, paintHoveredDot]);
+
+    /**
+     * `dim` alone. `highlightTopic` and `topicMemberIds` — what a chip hover
+     * rewrites — are no longer dependencies of the effect above, so this is
+     * now the only thing a hover reruns. `selectedId` and `ringedKey` stay
+     * dependencies of both: the effect above still rebuilds the whole cloud
+     * on a selection or a ring change exactly as before (neither is the cost
+     * this fixes), and recomputing `dim` here too on those same two changes
+     * is redundant but harmless — this runs right after it, against the
+     * geometry it just built.
+     *
+     * Mutating the existing attribute's array and flagging it costs one
+     * O(N) loop and a partial GPU re-upload of a one-float-per-point
+     * buffer — no new geometry, no `computeBoundingSphere`, no touching the
+     * position or colour buffers — so the cloud no longer flashes back to
+     * full brightness between a chip row's hovers.
+     */
+    React.useEffect(() => {
+      const cloud = cloudRef.current;
+      if (!cloud) return;
+      const attribute = cloud.geometry.attributes.dim as
+        | THREE.BufferAttribute
+        | undefined;
+      if (!attribute) return;
+      const freshDim = computeDim(
+        points, highlightTopic, topicMemberIds, selectedId,
+        latestRef.current.ringedIds,
+      );
+      (attribute.array as Float32Array).set(freshDim);
+      attribute.needsUpdate = true;
+    }, [points, highlightTopic, topicMemberIds, selectedId, ringedKey]);
 
     /**
      * The dot under the pointer, drawn again larger and outlined.
