@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildBuffers, coverageCaption, isPassageClipped,
+  buildBuffers, cloudBounds, coverageCaption, frameCloud, FRAMING_REFERENCE_DISTANCE,
+  isPassageClipped,
   nearestNeighbourSegments, NO_VALUE_TOKEN, PALETTE_TOKENS, PASSAGE_LABEL_LIMIT,
   parseHslTriplet, projectToScreen, regionColor, resolveLabelCollisions, rgbCss, topicOf,
-  type Rgb,
+  VIEWPORT_FILL,
+  type CloudBounds, type Rgb,
 } from "./map-data";
 
 const point = (id: string, group: string | null, xyz: [number, number, number] = [0, 0, 0]) => ({
@@ -398,5 +400,186 @@ describe("topicOf", () => {
       topic("0", [Number.NaN, 0, 0]),
       topic("1", [10, 0, 0]),
     ])).toBe("1");
+  });
+});
+
+describe("cloudBounds", () => {
+  it("measures the box the passages occupy", () => {
+    expect(cloudBounds([
+      point("a", null, [-1, -2, -3]),
+      point("b", null, [4, 5, 6]),
+      point("c", null, [0, 0, 0]),
+    ])).toEqual({ min: { x: -1, y: -2, z: -3 }, max: { x: 4, y: 5, z: 6 } });
+  });
+
+  it("measures a box that is not centred on the origin", () => {
+    // The layout is centred on its own mean, which is not the middle of its
+    // box: the first real base runs from -0.58 to 0.95 across. A camera aimed
+    // at the origin is therefore aimed off to one side of the cloud.
+    const measured = cloudBounds([
+      point("a", null, [-0.58, 0, 0]),
+      point("b", null, [0.95, 0, 0]),
+    ]);
+    expect(measured?.min.x).toBeCloseTo(-0.58, 10);
+    expect(measured?.max.x).toBeCloseTo(0.95, 10);
+  });
+
+  it("leaves out a passage whose stored coordinates are not finite", () => {
+    // One NaN compares false against both bounds, so without the guard the
+    // box would stay open on whichever side it was written to.
+    expect(cloudBounds([
+      point("a", null, [-1, -1, -1]),
+      point("b", null, [Number.NaN, 100, 100]),
+      point("c", null, [1, 1, 1]),
+    ])).toEqual({ min: { x: -1, y: -1, z: -1 }, max: { x: 1, y: 1, z: 1 } });
+  });
+
+  it("has no box to report when there is nothing placeable", () => {
+    expect(cloudBounds([])).toBeNull();
+    expect(cloudBounds([point("a", null, [Number.NaN, 0, 0])])).toBeNull();
+  });
+
+  it("reports a zero-extent box for a single passage", () => {
+    expect(cloudBounds([point("a", null, [2, 3, 4])]))
+      .toEqual({ min: { x: 2, y: 3, z: 4 }, max: { x: 2, y: 3, z: 4 } });
+  });
+});
+
+describe("frameCloud", () => {
+  /** The camera's vertical field of view, as map-canvas creates it. */
+  const FOV = 50;
+  /** The card gives the canvas 28rem of height; this is that against 1792px. */
+  const WIDE_ASPECT = 4;
+  /** What the camera was parked at before it was fitted to anything. */
+  const OLD_FIXED_DISTANCE = FRAMING_REFERENCE_DISTANCE;
+
+  /**
+   * The first real knowledge base, 1134 passages: 1.53 across by 0.97 high,
+   * depth narrower still, and not centred on the origin.
+   */
+  const MEASURED: CloudBounds = {
+    min: { x: -0.58, y: -0.485, z: -0.4 },
+    max: { x: 0.95, y: 0.485, z: 0.4 },
+  };
+
+  /**
+   * The fraction of the canvas a box spans at a given distance, measured at
+   * the cloud's own depth: the full viewport there is 2 * distance * tan(fov/2)
+   * high, and the aspect ratio times that wide.
+   */
+  const spans = (bounds: CloudBounds, distance: number, aspect: number) => {
+    const viewportHeight = 2 * distance * Math.tan((FOV * Math.PI) / 360);
+    return {
+      width: (bounds.max.x - bounds.min.x) / (viewportHeight * aspect),
+      height: (bounds.max.y - bounds.min.y) / viewportHeight,
+    };
+  };
+
+  const scaled = (bounds: CloudBounds, by: number): CloudBounds => ({
+    min: { x: bounds.min.x * by, y: bounds.min.y * by, z: bounds.min.z * by },
+    max: { x: bounds.max.x * by, y: bounds.max.y * by, z: bounds.max.z * by },
+  });
+
+  it("aims at the centre of the box rather than at the origin", () => {
+    expect(frameCloud(MEASURED, WIDE_ASPECT, FOV).center.x).toBeCloseTo(0.185, 10);
+  });
+
+  it("fills the height of a wide canvas, which is what the fixed distance did not", () => {
+    // The diagnosis, as a test: parked at 3.2 this base sat in a third of the
+    // height and an eighth of the width of a canvas four times wider than it
+    // is tall, because 3.2 frames a world box about three units tall whatever
+    // the cloud happens to be.
+    const before = spans(MEASURED, OLD_FIXED_DISTANCE, WIDE_ASPECT);
+    expect(before.height).toBeCloseTo(0.33, 2);
+    expect(before.width).toBeCloseTo(0.13, 2);
+
+    const framing = frameCloud(MEASURED, WIDE_ASPECT, FOV);
+    const after = spans(MEASURED, framing.distance, WIDE_ASPECT);
+    expect(after.height).toBeCloseTo(VIEWPORT_FILL, 10);
+    expect(after.width).toBeGreaterThan(before.width * 2);
+    // Height is the limiting dimension here, so the width is not filled —
+    // but it is no longer an eighth either.
+    expect(after.width).toBeLessThan(VIEWPORT_FILL);
+  });
+
+  it("fills the width instead when the canvas is narrow", () => {
+    // Getting only the vertical right is what leaves a cloud small on a wide
+    // canvas; getting only the horizontal right would clip it on a narrow one.
+    const framing = frameCloud(MEASURED, 1, FOV);
+    const after = spans(MEASURED, framing.distance, 1);
+    expect(after.width).toBeCloseTo(VIEWPORT_FILL, 10);
+    expect(after.height).toBeLessThan(VIEWPORT_FILL);
+  });
+
+  it("counts depth as width, because the idle rotation swings it into view", () => {
+    // A narrow, deep cloud: fitted on x alone it would be framed ten times too
+    // close, and a quarter turn of the idle spin would throw it off both edges.
+    const deep: CloudBounds = {
+      min: { x: -0.1, y: -0.1, z: -1 },
+      max: { x: 0.1, y: 0.1, z: 1 },
+    };
+    const framing = frameCloud(deep, WIDE_ASPECT, FOV);
+    const turned: CloudBounds = {
+      min: { x: deep.min.z, y: deep.min.y, z: deep.min.x },
+      max: { x: deep.max.z, y: deep.max.y, z: deep.max.x },
+    };
+    expect(spans(turned, framing.distance, WIDE_ASPECT).width)
+      .toBeCloseTo(VIEWPORT_FILL, 10);
+  });
+
+  it("lets a viewer dolly closer than the framing and further out than it", () => {
+    const framing = frameCloud(MEASURED, WIDE_ASPECT, FOV);
+    expect(framing.minDistance).toBeLessThan(framing.distance);
+    expect(framing.maxDistance).toBeGreaterThan(framing.distance);
+    // The fixed clamp these limits replace sat at 1.2, which is all but
+    // exactly the distance this base wants to be framed from: zooming in by
+    // hand reached the right framing and then stopped, with no room left to
+    // look closer. The derived floor is well inside it.
+    const oldMinDistance = 1.2;
+    expect(framing.distance).toBeCloseTo(oldMinDistance, 1);
+    expect(framing.minDistance).toBeLessThan(oldMinDistance);
+  });
+
+  it("scales both limits with the cloud, not with a constant", () => {
+    const here = frameCloud(MEASURED, WIDE_ASPECT, FOV);
+    const small = frameCloud(scaled(MEASURED, 0.1), WIDE_ASPECT, FOV);
+    const large = frameCloud(scaled(MEASURED, 10), WIDE_ASPECT, FOV);
+    expect(small.minDistance).toBeLessThan(here.minDistance);
+    expect(large.maxDistance).toBeGreaterThan(here.maxDistance);
+    expect(small.distance * 100).toBeCloseTo(large.distance, 10);
+  });
+
+  it("keeps a dot the apparent size it had at the old fixed distance", () => {
+    // The point shader is `size * pixelRatio * (300 / -mv.z)`, so a dot's
+    // apparent size goes as size / distance. Without sizeScale, framing this
+    // base at its own distance would make every dot two and a half times
+    // larger.
+    const framing = frameCloud(MEASURED, WIDE_ASPECT, FOV);
+    expect(OLD_FIXED_DISTANCE / framing.distance).toBeCloseTo(2.6, 1);
+    const size = 1;
+    expect((size * framing.sizeScale) / framing.distance)
+      .toBeCloseTo(size / OLD_FIXED_DISTANCE, 10);
+  });
+
+  it("still puts the camera somewhere for a cloud with no extent", () => {
+    // One passage, or every passage stacked. A distance of 0 would leave
+    // OrbitControls nothing to orbit and the camera inside the point.
+    const framing = frameCloud(
+      { min: { x: 2, y: 3, z: 4 }, max: { x: 2, y: 3, z: 4 } }, WIDE_ASPECT, FOV,
+    );
+    expect(framing.center).toEqual({ x: 2, y: 3, z: 4 });
+    expect(framing.distance).toBeGreaterThan(0);
+    expect(framing.maxDistance).toBeGreaterThan(framing.minDistance);
+    expect(framing.minDistance).toBeGreaterThan(0);
+  });
+
+  it("frames as if the canvas were square when it has not been laid out", () => {
+    // The caller divides clientWidth by clientHeight, which is 0, NaN or
+    // Infinity before layout; any of those would otherwise reach the camera's
+    // position as a NaN.
+    const square = frameCloud(MEASURED, 1, FOV).distance;
+    for (const aspect of [0, -4, Number.NaN, Infinity]) {
+      expect(frameCloud(MEASURED, aspect, FOV).distance).toBeCloseTo(square, 10);
+    }
   });
 });

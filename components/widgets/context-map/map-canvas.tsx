@@ -18,6 +18,8 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import {
   buildBuffers,
+  cloudBounds,
+  frameCloud,
   nearestNeighbourSegments,
   projectToScreen,
   resolveLabelCollisions,
@@ -110,13 +112,30 @@ const RING_FRAGMENT = `
   }
 `;
 
+/** Vertical field of view, in degrees; `frameCloud` fits the cloud to it. */
+const CAMERA_FOV_DEGREES = 50;
 /**
- * The layout is normalised to a 99th-percentile radius of 1, so every base
- * frames identically from this distance.
+ * The clip planes. The layout is normalised to a 99th-percentile radius of 1,
+ * so a cloud is about a unit across and the distances `frameCloud` derives
+ * from it are a small multiple of that: these bound the whole dolly range with
+ * room to spare, rather than being fitted to any one base.
  */
-const CAMERA_DISTANCE = 3.2;
-/** gl_PointSize is in device pixels; see the pixelRatio factor in the shader. */
+const CAMERA_NEAR = 0.01;
+const CAMERA_FAR = 100;
+/**
+ * Where the camera waits until the framing effect fits it to the data. An
+ * empty base has nothing to frame and nothing to see; this only has to be a
+ * non-zero offset, so OrbitControls has something to orbit.
+ */
+const UNFRAMED_CAMERA_DISTANCE = 1;
+/**
+ * gl_PointSize is in device pixels; see the pixelRatio factor in the shader.
+ * This is the size that read well at FRAMING_REFERENCE_DISTANCE, and the
+ * framing effect scales it by `sizeScale` so a dot keeps that apparent size
+ * however close the camera ends up.
+ */
 const POINT_SIZE = 0.035;
+/** Scaled by `sizeScale` too, so the pick radius stays constant on screen. */
 const PICK_THRESHOLD = 0.03;
 /** A click that moved further than this was an orbit drag, not a selection. */
 const DRAG_SLOP_PX = 4;
@@ -194,12 +213,31 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       THREE.BufferGeometry,
       THREE.ShaderMaterial
     > | null>(null);
+    const cameraRef = React.useRef<THREE.PerspectiveCamera | null>(null);
     const controlsRef = React.useRef<OrbitControls | null>(null);
+    const raycasterRef = React.useRef<THREE.Raycaster | null>(null);
     const pointerRef = React.useRef<{ x: number; y: number } | null>(null);
     const hoverKeyRef = React.useRef("");
     const labelKeyRef = React.useRef("");
     const [labels, setLabels] = React.useState<Label[]>([]);
     const [hover, setHover] = React.useState<Hover>(null);
+
+    /** The box the camera is framed to, measured once per set of points. */
+    const bounds = React.useMemo(() => cloudBounds(points), [points]);
+
+    /**
+     * The framing effect depends on the box's NUMBERS rather than on the
+     * memo's identity, for the same reason `ringedKey` exists below:
+     * `cache-and-network` hands the points answer a new identity on every
+     * refetch, and a background refetch snapping the camera back to its
+     * framing mid-orbit is precisely what must not happen.
+     */
+    const boundsKey = bounds
+      ? [
+          bounds.min.x, bounds.min.y, bounds.min.z,
+          bounds.max.x, bounds.max.y, bounds.max.z,
+        ].join(",")
+      : "";
 
     // The scene is built once, so the loop and the click handler would otherwise
     // keep hit-testing the first render's cloud for ever. They read props from
@@ -208,6 +246,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       points,
       topics,
       ringedIds,
+      bounds,
       onSelect,
       onUnsupported,
     });
@@ -216,6 +255,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         points,
         topics,
         ringedIds,
+        bounds,
         onSelect,
         onUnsupported,
       };
@@ -276,19 +316,21 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(
-        50,
+        CAMERA_FOV_DEGREES,
         size.width / size.height,
-        0.01,
-        100,
+        CAMERA_NEAR,
+        CAMERA_FAR,
       );
-      camera.position.set(0, 0, CAMERA_DISTANCE);
+      camera.position.set(0, 0, UNFRAMED_CAMERA_DISTANCE);
+      cameraRef.current = camera;
 
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.08;
-      controls.minDistance = 1.2;
-      controls.maxDistance = 8;
       controls.autoRotateSpeed = 0.6;
+      // The dolly limits are a multiple of the distance the cloud is framed
+      // from, so the framing effect below owns them. Until it runs there is no
+      // cloud to clamp against, and OrbitControls' own 0..Infinity will do.
       controls.saveState();
       controlsRef.current = controls;
 
@@ -303,8 +345,9 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         depthWrite: false,
       });
       const cloud = new THREE.Points(new THREE.BufferGeometry(), cloudMaterial);
-      // The cloud is always on screen and always centred; culling it against a
-      // bounding sphere only risks dropping it while a buffer write is pending.
+      // The camera is framed to this cloud, so it is always on screen; culling
+      // it against a bounding sphere only risks dropping it while a buffer
+      // write is pending.
       cloud.frustumCulled = false;
       scene.add(cloud);
       cloudRef.current = cloud;
@@ -358,6 +401,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
 
       const raycaster = new THREE.Raycaster();
       raycaster.params.Points.threshold = PICK_THRESHOLD;
+      raycasterRef.current = raycaster;
 
       // Reused by the overlay pass: ten times a second is still ten allocations
       // a second for each of these.
@@ -555,10 +599,71 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         linesRef.current = null;
         webRef.current = null;
         ringsRef.current = null;
+        cameraRef.current = null;
         controlsRef.current = null;
+        raycasterRef.current = null;
       };
       // The scene is built once; data arrives through the effects below.
     }, []);
+
+    /**
+     * Fit the camera to the cloud.
+     *
+     * The camera used to be parked at a constant distance on the argument that
+     * the layout's 99th-percentile radius is normalised to 1, so every base
+     * would frame alike. It does frame alike — alike and too small. That
+     * distance frames a world box about three units tall whatever the cloud is,
+     * and on the first real base the cloud is 1.53 by 0.97, so it sat in a
+     * third of the height and an eighth of the width of a canvas four times
+     * wider than it is tall.
+     *
+     * Three things follow from the box rather than from a constant: where the
+     * camera sits (`frameCloud` fits both viewport dimensions), what it looks
+     * at (the box's centre, which is not the origin), and how far a viewer may
+     * dolly either way.
+     *
+     * A fourth thing follows from the distance. The point shader scales a dot
+     * by 1/distance, so framing this base at 1.22 instead of 3.2 would make
+     * every dot two and a half times larger — and so would the pick radius,
+     * which is a world-space distance from the ray. Both are scaled back by
+     * `sizeScale`, which leaves a dot and the slop around it exactly the
+     * apparent size they have today.
+     *
+     * Keyed on the box, so a different base or a refit re-frames and a
+     * selection, a panel hover or a theme change cannot move the camera.
+     */
+    React.useEffect(() => {
+      const host = hostRef.current;
+      const camera = cameraRef.current;
+      const controls = controlsRef.current;
+      const raycaster = raycasterRef.current;
+      const cloud = cloudRef.current;
+      const rings = ringsRef.current;
+      if (!host || !camera || !controls || !raycaster || !cloud || !rings) return;
+      const measured = latestRef.current.bounds;
+      if (!measured) return;
+
+      // A host with no layout yet divides to 0 or NaN, which frameCloud reads
+      // as "no aspect ratio" rather than propagating into the distance.
+      const framing = frameCloud(
+        measured,
+        host.clientWidth / host.clientHeight,
+        CAMERA_FOV_DEGREES,
+      );
+      const { center } = framing;
+      controls.target.set(center.x, center.y, center.z);
+      camera.position.set(center.x, center.y, center.z + framing.distance);
+      controls.minDistance = framing.minDistance;
+      controls.maxDistance = framing.maxDistance;
+      controls.update();
+      // Reset restores this framing, not wherever the camera was parked before
+      // the data arrived.
+      controls.saveState();
+
+      cloud.material.uniforms.size.value = POINT_SIZE * framing.sizeScale;
+      rings.material.uniforms.size.value = RING_SIZE * framing.sizeScale;
+      raycaster.params.Points.threshold = PICK_THRESHOLD * framing.sizeScale;
+    }, [boundsKey]);
 
     // Positions and colours. Also re-run when the theme changes: WebGL colours
     // were resolved from CSS once, so without this the cloud keeps the previous
