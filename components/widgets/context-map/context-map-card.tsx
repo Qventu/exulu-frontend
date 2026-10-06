@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   GET_CONTEXT_MAP_EDGES,
+  GET_CONTEXT_MAP_ITEM,
   GET_CONTEXT_MAP_POINTS,
   GET_CONTEXT_MAP_TOPICS,
   GET_CONTEXT_PROJECTION_STATUS,
@@ -32,13 +33,16 @@ import {
   coverageCaption,
   regionColor,
   resolvePalette,
+  itemsInRegion,
   resolveRingColor,
   rgbCss,
   topicOf,
   type MapEdge,
+  type MapItem,
   type MapPoint,
   type MapTopic,
   type Palette,
+  type RegionItem,
   type Rgb,
 } from "./map-data";
 import { MapPanel } from "./map-panel";
@@ -67,6 +71,8 @@ const POINTS_LIMIT = 5000;
 // in the renderer each time this card re-renders — and it re-renders on every
 // pointer move over the panel's neighbour list.
 const NO_IDS: Set<string> = new Set();
+/** One identity for the empty case, so the panel's props do not churn. */
+const NO_REGION_ITEMS: RegionItem[] = [];
 const NO_POINTS: MapPoint[] = [];
 const NO_TOPICS: MapTopic[] = [];
 const NO_EDGES: MapEdge[] = [];
@@ -330,6 +336,37 @@ export function ContextMapCard({
   // answer is access-scoped, so it simply is not here.
   const missing =
     selectedId !== null && selected === null && !pointsQuery.loading;
+
+  /**
+   * The selected point's item, asked for per selection the way the relations
+   * are — never on mount.
+   *
+   * Keyed on the ITEM rather than on the passage, so selecting another chunk
+   * of the same document asks for nothing: Apollo already holds that item.
+   */
+  const itemQuery = useQuery<{ contextMapItem: MapItem | null }>(
+    GET_CONTEXT_MAP_ITEM,
+    {
+      variables: { contextId, itemId: selected?.itemId ?? null },
+      skip: selected === null,
+    },
+  );
+
+  /**
+   * The items a chosen region holds, for the panel the chip opens.
+   *
+   * From the points already drawn — the same nearest-centre membership the
+   * colouring uses — so choosing a chip fetches nothing. Skipped while a
+   * passage is selected, because the panel shows that instead.
+   */
+  const regionItems = React.useMemo(
+    () => (selected === null ? itemsInRegion(points, topics, highlightTopic) : NO_REGION_ITEMS),
+    [selected, points, topics, highlightTopic],
+  );
+  const regionLabel =
+    selected === null
+      ? (topics.find((topic) => topic.id === highlightTopic)?.label ?? null)
+      : null;
 
   const caption = coverageCaption({
     drawn: points.length,
@@ -630,12 +667,20 @@ export function ContextMapCard({
         in a component that was unmounted instead of closed.
       */}
       <MapPanel
-        open={selectedId !== null}
+        // A chosen region opens it too, on its items. Not a hovered one:
+        // hovering previews the cloud, it does not select anything.
+        open={selectedId !== null || regionLabel !== null}
         onOpenChange={(next) => {
-          if (!next) setSelectedId(null);
+          if (next) return;
+          setSelectedId(null);
+          setRequestedTopic(null);
         }}
         selected={selected}
         missing={missing}
+        item={itemQuery.data?.contextMapItem ?? null}
+        itemLoading={itemQuery.loading}
+        regionLabel={regionLabel}
+        regionItems={regionItems}
         edges={edges}
         edgesError={edgesQuery.error !== undefined}
         byId={byId}

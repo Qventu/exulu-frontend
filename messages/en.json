@@ -3284,16 +3284,24 @@
       "selection": "Selection only"
     },
     "panel": {
-      "clipped": "Only the opening of this passage is shown.",
+      "added": "Added",
+      "characters": "{count, number} characters",
+      "chunks": "Passages",
       "item": "Item",
-      "matched": "Matched text",
       "neighbourMissing": "A related passage that is not on the map",
       "neighbours": "Closest by wording",
       "neighboursFailed": "Could not load the related passages.",
       "noNeighbours": "Nothing else on this base is worded comparably.",
       "open": "Open the item",
+      "passagesHere": "{count, plural, one {# passage in this region} other {# passages in this region}}",
+      "region": "Region",
+      "regionCount": "{count, plural, one {# item} other {# items}}",
+      "regionEmpty": "No items in this region",
+      "size": "Text length",
+      "source": "Source",
       "unavailable": "That passage is not available to you.",
-      "untitled": "Untitled item"
+      "untitled": "Untitled item",
+      "updated": "Last updated"
     },
     "title": {
       "knowledge": "Knowledge map",

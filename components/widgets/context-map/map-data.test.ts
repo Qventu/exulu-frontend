@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildBuffers, cloudBounds, coverageCaption, frameCloud, FRAMING_REFERENCE_DISTANCE,
-  HOVER_OUTLINE_WIDTH, HOVER_SIZE, isPassageClipped, labelFitsCanvas,
-  nearestNeighbourSegments, NO_VALUE_TOKEN, PALETTE_TOKENS, PASSAGE_LABEL_LIMIT,
+  HOVER_OUTLINE_WIDTH, HOVER_SIZE, itemsInRegion, labelFitsCanvas,
+  nearestNeighbourSegments, NO_VALUE_TOKEN, PALETTE_TOKENS,
   parseHslTriplet, pointTitle, projectToScreen, regionColor, resolveLabelCollisions,
   POINT_SIZE, RING_INNER_RADIUS, RING_SIZE, rgbCss,
   strongestPerItem, tooltipPosition, topicOf,
@@ -13,7 +13,7 @@ import {
 
 const point = (id: string, group: string | null, xyz: [number, number, number] = [0, 0, 0]) => ({
   id, itemId: `item-${id}`, x: xyz[0], y: xyz[1], z: xyz[2],
-  label: id, itemName: `item ${id}`, group, chunks: 1,
+  itemName: `item ${id}`, group, chunks: 1, createdAtMs: null,
 });
 
 describe("the palette", () => {
@@ -337,24 +337,6 @@ describe("nearestNeighbourSegments", () => {
   });
 });
 
-describe("isPassageClipped", () => {
-  it("knows the width the points answer actually carries", () => {
-    // The resolver builds a point's label as
-    // LEFT(COALESCE(chunks.content, items.name), 120); if that width changes,
-    // this constant has to change with it or the panel stops saying "cut".
-    expect(PASSAGE_LABEL_LIMIT).toBe(120);
-  });
-
-  it("calls a passage at the limit cut", () => {
-    expect(isPassageClipped("x".repeat(PASSAGE_LABEL_LIMIT))).toBe(true);
-  });
-
-  it("leaves a passage that fits alone", () => {
-    expect(isPassageClipped("x".repeat(PASSAGE_LABEL_LIMIT - 1))).toBe(false);
-    expect(isPassageClipped("")).toBe(false);
-  });
-});
-
 describe("topicOf", () => {
   const topic = (id: string, xyz: [number, number, number], count = 1) => ({
     id, label: `Topic ${id}`, count, x: xyz[0], y: xyz[1], z: xyz[2],
@@ -588,32 +570,22 @@ describe("frameCloud", () => {
 });
 
 describe("pointTitle", () => {
-  it("names a point by its item rather than by the passage's opening", () => {
-    // The opening is what the chunk says, and this corpus prefixes every
-    // chunk with a document header — so the opening is an identifier.
-    expect(pointTitle({
-      itemName: "Price list 2026",
-      label: "--- Document (Exulu ID: 6adc924b-1423-42ac-8b9d-0f0f0f0f0f0f) ---",
-    })).toBe("Price list 2026");
+  it("names a point by its item", () => {
+    expect(pointTitle({ itemName: "Price list 2026" })).toBe("Price list 2026");
   });
 
-  it("returns \"\" for an item with no name, rather than falling back to the passage's opening", () => {
-    // `name` is nullable on an items table, and the resolver answers "" for a
-    // null. Falling back to `label` here is the exact bug this guards: in
-    // PASSAGES mode `label` is often the injected document header, so the
-    // fallback would show the identifier Daniel reported right back. Each
-    // call site renders its own translated "untitled" fallback instead; this
-    // function stays pure and cannot translate.
-    expect(pointTitle({ itemName: "", label: "the passage itself" })).toBe("");
-    expect(pointTitle({ itemName: "   ", label: "the passage itself" })).toBe("");
-  });
-
-  it("never returns the passage's opening, even when it looks like a plausible title", () => {
-    // Pins the fallback shut: if `pointTitle` ever regresses to returning
-    // `point.label` for a blank name, this fails even though the label here
-    // is innocuous-looking prose rather than an obvious document header.
-    expect(pointTitle({ itemName: "", label: "a perfectly readable sentence" }))
-      .not.toBe("a perfectly readable sentence");
+  /**
+   * `name` is nullable on an items table and the resolver answers "" for a
+   * null, so this is a real shape. Each call site renders its own translated
+   * "untitled" fallback; this function stays pure and cannot translate.
+   *
+   * The passage's opening is no longer even requested — it was the injected
+   * document header on a real corpus, which is what made it unusable as a
+   * title and, once nothing read it, worth dropping from the query.
+   */
+  it("returns \"\" for an item with no name", () => {
+    expect(pointTitle({ itemName: "" })).toBe("");
+    expect(pointTitle({ itemName: "   " })).toBe("");
   });
 });
 
@@ -622,7 +594,7 @@ describe("strongestPerItem", () => {
   /** A passage of `item`, as the points answer carries it. */
   const chunkOf = (id: string, item: string): MapPoint => ({
     id, itemId: item, x: 0, y: 0, z: 0,
-    label: `the text of ${id}`, itemName: `the name of ${item}`, group: null, chunks: 1,
+    itemName: `the name of ${item}`, group: null, chunks: 1, createdAtMs: null,
   });
   const byId = (...points: MapPoint[]) => new Map(points.map((p) => [p.id, p]));
 
@@ -775,5 +747,67 @@ describe("tooltipPosition", () => {
     const { left, top } = tooltipPosition(10, 10, 120, 30, size);
     expect(left).toBeGreaterThanOrEqual(0);
     expect(top).toBeGreaterThanOrEqual(0);
+  });
+});
+
+/**
+ * The unique items a region holds, for the panel a chip opens.
+ *
+ * A region is a cluster of PASSAGES, so a document chunked into forty pieces
+ * is forty dots in it — which is the right picture of the cloud and the wrong
+ * answer to "what is in here". No new data: the points already carry their
+ * item, and region membership is the same nearest-centre rule the colouring
+ * uses.
+ */
+describe("itemsInRegion", () => {
+  const topics = [
+    { id: "a", label: "A", count: 0, x: 0, y: 0, z: 0 },
+    { id: "b", label: "B", count: 0, x: 10, y: 0, z: 0 },
+  ];
+  const at = (id: string, itemId: string, name: string, x: number) => ({
+    id, itemId, x, y: 0, z: 0, itemName: name,
+    group: null, chunks: 1, createdAtMs: null,
+  });
+
+  it("folds a document's passages into one row and counts them", () => {
+    const points = [at("c1", "i1", "Manual", 0), at("c2", "i1", "Manual", 1), at("c3", "i2", "Datasheet", 0)];
+    expect(itemsInRegion(points, topics, "a")).toEqual([
+      { itemId: "i1", name: "Manual", passages: 2 },
+      { itemId: "i2", name: "Datasheet", passages: 1 },
+    ]);
+  });
+
+  it("counts only the passages that belong to the region asked for", () => {
+    const points = [at("c1", "i1", "Manual", 0), at("c2", "i1", "Manual", 10)];
+    expect(itemsInRegion(points, topics, "a")).toEqual([{ itemId: "i1", name: "Manual", passages: 1 }]);
+    expect(itemsInRegion(points, topics, "b")).toEqual([{ itemId: "i1", name: "Manual", passages: 1 }]);
+  });
+
+  // Most-present first answers "what is this region about"; a row order that
+  // followed the cloud's random sampling order would answer nothing.
+  it("orders by how much of the item is in the region, then by name", () => {
+    const points = [
+      at("c1", "i1", "Zebra", 0), at("c2", "i2", "Apple", 0),
+      at("c3", "i2", "Apple", 1), at("c4", "i3", "Mango", 0),
+    ];
+    expect(itemsInRegion(points, topics, "a").map((r) => r.name)).toEqual(["Apple", "Mango", "Zebra"]);
+  });
+
+  it("is empty for a region with no passages, and for no region at all", () => {
+    expect(itemsInRegion([], topics, "a")).toEqual([]);
+    expect(itemsInRegion([at("c1", "i1", "Manual", 0)], topics, null)).toEqual([]);
+  });
+
+  // A nameless item still exists and still occupies the region; the caller
+  // renders the translated fallback, exactly as it does for a point.
+  it("keeps an unnamed item, with an empty name", () => {
+    expect(itemsInRegion([at("c1", "i1", "", 0)], topics, "a")).toEqual([
+      { itemId: "i1", name: "", passages: 1 },
+    ]);
+  });
+
+  it("takes the first non-empty name when a document's chunks disagree", () => {
+    const points = [at("c1", "i1", "", 0), at("c2", "i1", "Manual", 1)];
+    expect(itemsInRegion(points, topics, "a")).toEqual([{ itemId: "i1", name: "Manual", passages: 2 }]);
   });
 });

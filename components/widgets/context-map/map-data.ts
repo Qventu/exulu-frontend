@@ -6,16 +6,28 @@
 
 export type MapPoint = {
   id: string; itemId: string; x: number; y: number; z: number;
-  /**
-   * The passage's opening — the matched text. NOT a title: see `pointTitle`
-   * and PASSAGE_LABEL_LIMIT below for why this string so often begins with a
-   * document header rather than with anything a reader would recognise.
-   */
-  label: string;
   /** The name of the item the passage came from, or "" for an unnamed item. */
   itemName: string;
   group: string | null; chunks: number;
+  /**
+   * When the point's ITEM was created, as epoch milliseconds, or null when the
+   * base never recorded it. Null is "undated", not "oldest": a time filter
+   * must not park an undated point at the start of the range.
+   */
+  createdAtMs: number | null;
 };
+
+/**
+ * One item's own metadata, read when a point is selected. A separate query
+ * from the points, so every field here is null until it arrives.
+ */
+export type MapItem = {
+  id: string; name: string; chunks: number | null; textLength: number | null;
+  source: string | null; createdAt: string | null; updatedAt: string | null;
+};
+
+/** One item inside a region, for the panel a chip opens. */
+export type RegionItem = { itemId: string; name: string; passages: number };
 export type MapTopic = { id: string; label: string; count: number; x: number; y: number; z: number };
 export type MapEdge = { source: string; target: string; score: number };
 export type Rgb = [number, number, number];
@@ -419,6 +431,46 @@ export function projectToScreen(
   };
 }
 
+/**
+ * The unique items a region holds, most-present first.
+ *
+ * A region is a cluster of PASSAGES, so a document split into forty chunks is
+ * forty dots in it — the right picture of the cloud, and the wrong answer to
+ * "what is in here". This folds them by item.
+ *
+ * No new data is fetched: the points already carry their item, and membership
+ * is the same nearest-centre rule the colouring uses, so this cannot disagree
+ * with what is on screen. It inherits the cloud's honesty caveat too — these
+ * are the items among the passages the fit sampled, not everything on the
+ * base.
+ *
+ * Ordered by how much of the region an item occupies, then by name: a row
+ * order inherited from the cloud's random sampling would answer nothing.
+ */
+export function itemsInRegion(
+  points: MapPoint[],
+  topics: MapTopic[],
+  topicId: string | null,
+): RegionItem[] {
+  if (topicId === null) return [];
+  const rows = new Map<string, RegionItem>();
+  for (const point of points) {
+    if (topicOf(point, topics) !== topicId) continue;
+    const row = rows.get(point.itemId);
+    if (row === undefined) {
+      rows.set(point.itemId, { itemId: point.itemId, name: point.itemName, passages: 1 });
+      continue;
+    }
+    row.passages += 1;
+    // Chunks of one document can disagree only when some rows carry no name;
+    // the first real one is the item's.
+    if (row.name === "") row.name = point.itemName;
+  }
+  return [...rows.values()].sort(
+    (a, b) => b.passages - a.passages || a.name.localeCompare(b.name),
+  );
+}
+
 /** Gap between the pointer and the hover read-out, in CSS pixels. */
 export const TOOLTIP_OFFSET = 8;
 
@@ -504,34 +556,14 @@ export function coverageCaption({
 }
 
 /**
- * How much of a passage the points answer carries: the resolver builds a
- * point's `label` as `LEFT(COALESCE(chunks.content, items.name), 120)`. On a
- * knowledge base a chunk runs to around two thousand characters, so what the
- * panel is handed is an opening, not the passage. Widening the answer is not
- * the alternative — the label text is already most of a multi-megabyte payload,
- * sent for every row to serve the one that gets selected — so the panel says
- * that it is an opening instead.
- */
-export const PASSAGE_LABEL_LIMIT = 120;
-
-/**
- * Whether a passage's text reaches that width, and is therefore almost
- * certainly cut. A passage exactly that long reads as cut too: nothing in the
- * answer could tell the two apart, and of the two possible mistakes, claiming
- * the text is complete is the worse one.
- */
-export function isPassageClipped(label: string): boolean {
-  return label.length >= PASSAGE_LABEL_LIMIT;
-}
-
-/**
  * What to call a point on screen.
  *
- * Never its `label`. That is the first 120 characters of the chunk, and this
- * product's ingestion injects a document header into every chunk — so the
- * opening reads `--- Document (Exulu ID: 6adc924b-…) ---` and a tooltip, a
- * panel heading or a neighbour row taken from it shows an identifier. The
- * item's name is what a reader calls the thing.
+ * Never the passage's own opening. This product's ingestion injects a document
+ * header into every chunk, so the opening reads
+ * `--- Document (Exulu ID: 6adc924b-…) ---`, and a tooltip, a panel heading or
+ * a neighbour row taken from it shows an identifier. The item's name is what a
+ * reader calls the thing — which is why the opening is no longer requested at
+ * all.
  *
  * NOT the opening, even when `itemName` is blank. `name` is nullable on an
  * items table, and falling back to `label` here is exactly the bug a blank
@@ -542,7 +574,7 @@ export function isPassageClipped(label: string): boolean {
  * "Untitled item" is the fix — this function is pure and lives in map-data,
  * so it cannot reach next-intl itself.
  */
-export function pointTitle(point: { itemName: string; label: string }): string {
+export function pointTitle(point: { itemName: string }): string {
   return point.itemName.trim() === "" ? "" : point.itemName;
 }
 
