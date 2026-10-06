@@ -4959,7 +4959,8 @@
       "sharingButton": "Freigabe",
       "sharingDialogTitle": "Wer dieses Transkript sehen kann",
       "projectLabel": "Projekt",
-      "done": "Fertig"
+      "done": "Fertig",
+      "clickToCorrect": "Klicke auf einen Satz oder Namen, um ihn zu korrigieren."
     },
     "export": {
       "label": "Exportieren",
@@ -5132,7 +5133,8 @@
       "publishSharingShared": "Die Personen, mit denen Sie es geteilt haben, sehen es ebenfalls.",
       "publishConfirm": "Veröffentlichen",
       "publishRunning": "Wird veröffentlicht…",
-      "discardAction": "Transkript verwerfen"
+      "discardAction": "Transkript verwerfen",
+      "saveChanges": "Änderungen speichern"
     },
     "row": {
       "awaitingReview": "Wartet auf Überprüfung",

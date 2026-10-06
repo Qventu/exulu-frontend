@@ -72,7 +72,7 @@ import {
   Library,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -153,6 +153,12 @@ export interface TranscriptDocumentProps {
    *  The review page puts its post-processing banner here so it lines up with
    *  the document rather than sitting in a full-width bar above the grid. */
   banner?: React.ReactNode;
+  /** Whether this transcript is already in the knowledge base. A review
+   *  draft is not; a saved item is. Drives the knowledge-base card and
+   *  whether the primary action publishes or just saves changes — both of
+   *  which were wrongly keyed to edit mode, so re-editing a published
+   *  transcript claimed it was "not published yet". */
+  published?: boolean;
 }
 
 export type TranscriptDraft = {
@@ -501,11 +507,13 @@ export function TranscriptDocument({
   onDiscard,
   canWrite,
   banner,
+  published = false,
 }: TranscriptDocumentProps) {
   const t = useTranslations("transcriptions");
   const tCommon = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const projects = useProjectOptions();
 
   const requestedEdit = mode === "edit";
@@ -737,6 +745,38 @@ export function TranscriptDocument({
     });
   };
 
+  // Read mode -> correcting, focused on whatever was clicked. The target
+  // travels in the URL because entering edit mode remounts this component.
+  // Pick up the target the click handed over, once, then forget it so a
+  // later manual edit is not re-opened by a stale param on re-render.
+  const appliedTargetRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!isEditable || appliedTargetRef.current) return;
+    const wantedBlock = searchParams.get("block");
+    const wantedSpeaker = searchParams.get("speaker");
+    if (!wantedBlock && !wantedSpeaker) return;
+    appliedTargetRef.current = true;
+    if (wantedSpeaker) {
+      const at = blocks.findIndex((b) => b.rawSpeaker === wantedSpeaker);
+      if (at >= 0) setEditingSpeakerBlock(at);
+      return;
+    }
+    const segmentIndex = Number(wantedBlock);
+    const target = blocks.find((b) => b.segmentIndices[0] === segmentIndex);
+    if (target) startBlockEdit(target);
+  }, [isEditable, searchParams, blocks]);
+
+  const startCorrecting = React.useCallback(
+    (target: { block?: number; speaker?: string }) => {
+      if (canWrite === false) return;
+      const params = new URLSearchParams({ edit: "1" });
+      if (target.block !== undefined) params.set("block", String(target.block));
+      if (target.speaker !== undefined) params.set("speaker", target.speaker);
+      router.push(`${pathname}?${params.toString()}`);
+    },
+    [canWrite, pathname, router],
+  );
+
   const startBlockEdit = (block: TranscriptBlock) => {
     cancelledEditRef.current = false;
     setEditingSegmentStart(block.segmentIndices[0]);
@@ -871,12 +911,14 @@ export function TranscriptDocument({
                   disabled={saving || !onSave}
                   aria-busy={saving}
                   className="max-md:h-11"
-                  onClick={() => setPublishOpen(true)}
+                  onClick={() =>
+                    published ? void handleSaveClick() : setPublishOpen(true)
+                  }
                 >
                   {saving ? (
                     <Loader2 aria-hidden="true" className="mr-2 size-4 animate-spin" />
                   ) : null}
-                  {t("review.publishAction")}
+                  {published ? t("review.saveChanges") : t("review.publishAction")}
                 </Button>
               </div>
             ) : (
@@ -956,13 +998,16 @@ export function TranscriptDocument({
               <div className="min-w-0 space-y-0.5">
                 <p className="flex items-center gap-2 text-sm font-medium">
                   <Library aria-hidden="true" className="size-4 shrink-0" />
-                  {isEditable ? t("document.kbDraftTitle") : t("document.kbPublishedTitle")}
+                  {published ? t("document.kbPublishedTitle") : t("document.kbDraftTitle")}
                 </p>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  {isEditable ? t("document.kbDraftBody") : t("document.kbPublishedBody")}
+                  {published ? t("document.kbPublishedBody") : t("document.kbDraftBody")}
                 </p>
               </div>
-              {isEditable ? (
+              {!published ? (
+                // Shown in both modes: publishing as-is is a reasonable
+                // choice, and requiring a trip through edit mode to reach the
+                // button made it look like corrections were mandatory.
                 <Button
                   type="button"
                   size="sm"
@@ -1039,6 +1084,10 @@ export function TranscriptDocument({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 {isEditable ? (
                   <p className="text-sm text-muted-foreground">{t("review.correctHint")}</p>
+                ) : canWrite !== false ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("document.clickToCorrect")}
+                  </p>
                 ) : (
                   <p className="text-sm font-medium">{t("review.transcript")}</p>
                 )}
@@ -1176,29 +1225,56 @@ export function TranscriptDocument({
                         </div>
                       </div>
                     ) : (
-                      <button
+                      <div
                         key={index}
-                        type="button"
-                        onClick={() => seekTo(block.start)}
-                        className="w-full rounded-md px-2 py-1.5 text-left transition-colors duration-150 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="rounded-md px-2 py-1.5 md:grid md:grid-cols-[9rem_minmax(0,1fr)] md:gap-3"
                       >
-                        <span className="md:grid md:grid-cols-[9rem_minmax(0,1fr)] md:gap-3">
-                          <span className="flex flex-wrap items-baseline gap-x-2 text-xs md:flex-col md:items-start md:gap-y-0.5">
-                            <span
-                              className="min-w-0 truncate font-medium"
-                              style={{ color: speakerColor(block.rawSpeaker) }}
-                            >
-                              {block.label}
-                            </span>
-                            <span className="shrink-0 font-mono text-muted-foreground">
-                              {formatClock(block.start)}
-                            </span>
-                          </span>
-                          <span className="mt-0.5 block min-w-0 text-sm leading-relaxed md:mt-0">
-                            {block.text}
-                          </span>
+                        <span className="flex flex-wrap items-baseline gap-x-2 text-xs md:flex-col md:items-start md:gap-y-0.5">
+                          {/* Clicking a name or a sentence starts correcting
+                              right there — a separate "correct" button made
+                              editing feel like a mode you had to enter. The
+                              timecode keeps the seek in both modes. */}
+                          <button
+                            type="button"
+                            disabled={canWrite === false}
+                            onClick={() => startCorrecting({ speaker: block.rawSpeaker })}
+                            title={
+                              canWrite === false
+                                ? undefined
+                                : t("document.renameSpeaker", { speaker: block.label })
+                            }
+                            className={cn(
+                              "min-w-0 max-w-full truncate rounded px-1 text-left font-medium",
+                              canWrite !== false && "hover:bg-muted",
+                            )}
+                            style={{ color: speakerColor(block.rawSpeaker) }}
+                          >
+                            {block.label}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => seekTo(block.start)}
+                            title={t("document.jumpToTime", {
+                              time: formatClock(block.start),
+                            })}
+                            className="shrink-0 rounded px-1 font-mono text-muted-foreground hover:bg-muted hover:text-foreground"
+                          >
+                            {formatClock(block.start)}
+                          </button>
                         </span>
-                      </button>
+                        <button
+                          type="button"
+                          disabled={canWrite === false}
+                          onClick={() => startCorrecting({ block: block.segmentIndices[0] })}
+                          className={cn(
+                            "mt-0.5 block w-full rounded px-1 py-0.5 text-left text-sm leading-relaxed md:mt-0",
+                            canWrite !== false &&
+                              "hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          )}
+                        >
+                          {block.text}
+                        </button>
+                      </div>
                     ),
                   )}
                 </div>
@@ -1211,7 +1287,7 @@ export function TranscriptDocument({
             className={cn(
               // Travels with the transcript; scrolls on its own if the
               // speakers list and ask box together outgrow the viewport.
-              "space-y-4 md:sticky md:top-0 md:max-h-[calc(100svh-6rem)] md:self-start md:overflow-y-auto",
+              "space-y-4 md:sticky md:top-6 md:max-h-[calc(100svh-9rem)] md:self-start md:overflow-y-auto",
               chapters.length > 0 ? "md:col-start-3" : "md:col-start-2",
             )}
           >
@@ -1284,11 +1360,6 @@ export function TranscriptDocument({
                   rawSpeakers={rawSpeakers}
                   names={speakers}
                   talkShare={talkShare}
-                  onEdit={
-                    !isEditable && canWrite !== false
-                      ? () => router.push(`${pathname}?edit=1`)
-                      : undefined
-                  }
                 />
 
                 {!isEditable && (

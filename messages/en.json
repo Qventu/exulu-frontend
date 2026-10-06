@@ -4959,7 +4959,8 @@
       "sharingButton": "Sharing",
       "sharingDialogTitle": "Who can see this transcript",
       "projectLabel": "Project",
-      "done": "Done"
+      "done": "Done",
+      "clickToCorrect": "Click any sentence or name to correct it."
     },
     "export": {
       "label": "Export",
@@ -5132,7 +5133,8 @@
       "publishSharingShared": "The people you shared it with can see it too.",
       "publishConfirm": "Publish",
       "publishRunning": "Publishing…",
-      "discardAction": "Discard transcript"
+      "discardAction": "Discard transcript",
+      "saveChanges": "Save changes"
     },
     "row": {
       "awaitingReview": "Awaiting review",

@@ -3,18 +3,16 @@
 /**
  * Read-mode speakers card for the right rail.
  *
- * "Correct text and speakers" used to live only in the overflow menu, which
- * made the single most common follow-up action on a transcript invisible.
- * This surfaces who is in the recording — the thing a reader checks before
- * deciding anything needs correcting — and puts the edit affordance next to
- * it. Collapsed to a few rows so a nine-person meeting does not crowd out the
- * media and ask panel below.
+ * Who is in the recording, ordered by talk time — the thing a reader checks
+ * before deciding whether anything needs correcting. Collapsed to a few rows
+ * so a nine-person meeting does not crowd out the media and ask panel below.
+ *
+ * No edit action of its own: names and sentences in the transcript are
+ * themselves click-to-correct, so a button here would be a second way to do
+ * the same thing.
  */
-import { Pencil } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
-
-import { Button } from "@/components/ui/button";
 
 import { speakerColor } from "../types";
 
@@ -24,12 +22,10 @@ export function SpeakersPreview({
   rawSpeakers,
   names,
   talkShare,
-  onEdit,
 }: {
   rawSpeakers: string[];
   names: Record<string, string>;
   talkShare: Record<string, number>;
-  onEdit?: () => void;
 }) {
   const t = useTranslations("transcriptions");
   const [expanded, setExpanded] = React.useState(false);
@@ -74,18 +70,6 @@ export function SpeakersPreview({
         </button>
       )}
 
-      {onEdit && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onEdit}
-          className="w-full max-md:h-11"
-        >
-          <Pencil aria-hidden="true" className="mr-2 size-3.5" />
-          {t("speakersPanel.editSpeakers")}
-        </Button>
-      )}
     </div>
   );
 }
