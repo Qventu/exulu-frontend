@@ -5176,7 +5176,8 @@
       "people": "{count, plural, one {# Person} other {# Personen}}",
       "speakers": "{count, plural, one {# Sprecher} other {# Sprecher}}",
       "summaryPending": "Die Zusammenfassung läuft, sobald Sie die Überprüfung speichern",
-      "bulkDisabled": "Sammelaktionen gelten nur für gespeicherte Transkripte, nicht für laufende Aufnahmen"
+      "bulkDisabled": "Sammelaktionen gelten nur für gespeicherte Transkripte, nicht für laufende Aufnahmen",
+      "reviewedBadge": "Geprüft"
     },
     "searchPlaceholder": "Transkripte durchsuchen…",
     "settings": {

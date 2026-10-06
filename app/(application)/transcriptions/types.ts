@@ -112,12 +112,18 @@ export type Segment = {
 
 export type ProjectOption = { id: string; name: string };
 
-/** Statuses the "active" list query asks for (unchanged backend contract). */
+/**
+ * Statuses the "active" list query asks for. `reviewed` has no knowledge-base
+ * item to stand in for it (unlike `saved`), so it has to come back through
+ * this query or the row vanishes from /transcriptions entirely (final fix
+ * wave, Finding 1).
+ */
 export const ACTIVE_STATUSES = [
   "queued",
   "transcribing",
   "recording",
   "awaiting_review",
+  "reviewed",
   "failed",
 ] as const;
 

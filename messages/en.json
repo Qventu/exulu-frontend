@@ -5176,7 +5176,8 @@
       "people": "{count, plural, one {# person} other {# people}}",
       "speakers": "{count, plural, one {# speaker} other {# speakers}}",
       "summaryPending": "Summary runs when you save the review",
-      "bulkDisabled": "Bulk actions apply to saved transcripts, not recordings in progress"
+      "bulkDisabled": "Bulk actions apply to saved transcripts, not recordings in progress",
+      "reviewedBadge": "Reviewed"
     },
     "searchPlaceholder": "Search transcripts…",
     "settings": {

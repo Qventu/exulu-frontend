@@ -201,6 +201,14 @@ export function TranscriptListRow({
                 {t("tabs.needsReview")}
               </Badge>
             )}
+            {row.state === "reviewed" && (
+              // Quieter than the amber "Needs review" badge (spec: reviewed
+              // rows render "with a quieter badge") — signed off, not a
+              // call to action.
+              <Badge variant="secondary" className="shrink-0">
+                {t("row.reviewedBadge")}
+              </Badge>
+            )}
           </div>
           <p className="line-clamp-2 text-sm text-muted-foreground">
             {row.summaryLine ??
