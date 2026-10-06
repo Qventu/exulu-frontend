@@ -594,15 +594,22 @@ export const RING_INNER_RADIUS = 0.34;
 export const HOVER_SIZE = Math.min(POINT_SIZE * 1.5, RING_SIZE * RING_INNER_RADIUS * 2);
 
 /**
- * The band of the hovered dot's own sprite radius its outline takes, in
- * map-canvas.tsx's HOVER_FRAGMENT — the difference between the sprite's
- * outer diameter and its filled inner disc's diameter.
+ * The fraction of the hovered dot's sprite RADIUS that its outline takes, in
+ * map-canvas.tsx's HOVER_FRAGMENT, which paints outline wherever
+ * d > 0.5 × (1 − this).
  *
- * At FRAMING_REFERENCE_DISTANCE and DPR 1 the hovered sprite renders at
- * HOVER_SIZE × 300/FRAMING_REFERENCE_DISTANCE ≈ 4.91 CSS px. 0.2 put the
- * rendered band at ≈0.98 CSS px — under one device pixel, hard-edged with no
- * antialiasing to soften it, which did not read as a hover state on a dot
- * that size. 0.4 doubles the band to ≈1.96 CSS px while leaving a fill
- * diameter of (1 − 0.4) × ≈4.91 ≈ 2.95 CSS px — clearly visible inside it.
+ * Radius, not diameter — the two differ by 2× and the earlier wording used
+ * both in one sentence. At FRAMING_REFERENCE_DISTANCE and DPR 1 the hovered
+ * sprite renders at HOVER_SIZE × 300/FRAMING_REFERENCE_DISTANCE ≈ 4.91 CSS px
+ * across, so its radius is ≈2.46 CSS px and the rim is this × 2.46, per side:
+ *
+ *   0.2 → ≈0.49 CSS px — half a device pixel, hard-edged with no antialiasing
+ *         to soften it, which did not read as a hover state at all.
+ *   0.4 → ≈0.98 CSS px, with a fill diameter of (1 − 0.4) × ≈4.91 ≈ 2.95 px.
+ *
+ * ≈1 CSS px is the most a rim can take here: HOVER_SIZE is already capped at
+ * the conflict ring's inner edge, so the sprite cannot grow, and past ≈0.5 the
+ * fill stops reading as the dot's region colour. A bolder hover state needs a
+ * larger POINT_SIZE cloud-wide, not a larger value here.
  */
 export const HOVER_OUTLINE_WIDTH = 0.4;

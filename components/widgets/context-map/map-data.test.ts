@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildBuffers, cloudBounds, coverageCaption, frameCloud, FRAMING_REFERENCE_DISTANCE,
-  HOVER_SIZE, isPassageClipped,
+  HOVER_OUTLINE_WIDTH, HOVER_SIZE, isPassageClipped,
   nearestNeighbourSegments, NO_VALUE_TOKEN, PALETTE_TOKENS, PASSAGE_LABEL_LIMIT,
   parseHslTriplet, pointTitle, projectToScreen, regionColor, resolveLabelCollisions,
-  RING_INNER_RADIUS, RING_SIZE, rgbCss,
+  POINT_SIZE, RING_INNER_RADIUS, RING_SIZE, rgbCss,
   strongestPerItem, topicOf,
   VIEWPORT_FILL,
   type CloudBounds, type MapPoint, type Rgb,
@@ -666,7 +666,7 @@ describe("strongestPerItem", () => {
 });
 
 describe("the hovered dot's nesting inside the ring", () => {
-  it("never grows past the ring's inner edge", () => {
+  it("stays a legible hover state the shader cannot test for itself", () => {
     // HOVER_SIZE is defined as Math.min(POINT_SIZE * 1.5, the ring's inner
     // edge as a diameter), so this is the one invariant map-canvas.tsx's
     // hover layer depends on and cannot itself test (it has no tests, by
@@ -674,5 +674,35 @@ describe("the hovered dot's nesting inside the ring", () => {
     // the Math.min, would silently paint the hovered dot over a flagged
     // passage's conflict ring — this fails the moment that happens.
     expect(HOVER_SIZE).toBeLessThanOrEqual(RING_SIZE * RING_INNER_RADIUS * 2);
+
+    // The invariant above is one-sided, so on its own it is satisfied by a
+    // hovered dot SMALLER than an ordinary one — which is the opposite of a
+    // hover state. This is the lower bound it needs.
+    expect(HOVER_SIZE).toBeGreaterThan(POINT_SIZE);
+
+    // The outline is baked into HOVER_FRAGMENT as a cutoff of 0.5 × (1 − w).
+    // At w ≥ 1 the cutoff reaches zero and the whole sprite is outline, so the
+    // hovered dot loses its region colour entirely; at w ≤ 0 there is no rim.
+    // Neither is visible to the invariant above, and map-canvas.tsx cannot
+    // test its own shader.
+    expect(HOVER_OUTLINE_WIDTH).toBeGreaterThan(0);
+    expect(HOVER_OUTLINE_WIDTH).toBeLessThan(1);
+
+    // The bounds above still admit the value this commit replaced. What the
+    // rim actually has to clear is one device pixel: the shader has no
+    // antialiasing, so a sub-pixel band renders as an intermittent fringe or
+    // not at all. Pin the rendered width rather than the ratio, since the
+    // ratio alone means nothing without the sprite's size.
+    //
+    // gl_PointSize = size × 300/z at DPR 1, and the framing effect's
+    // sizeScale of z/FRAMING_REFERENCE_DISTANCE cancels z — so the sprite is
+    // this wide at every camera distance, not only the reference one.
+    const spriteDiameterPx = HOVER_SIZE * (300 / FRAMING_REFERENCE_DISTANCE);
+    const rimPx = HOVER_OUTLINE_WIDTH * (spriteDiameterPx / 2);
+    expect(rimPx).toBeGreaterThanOrEqual(0.75);
+
+    // And the fill has to survive the rim, or the hovered dot stops carrying
+    // its region's colour and reads as a ring.
+    expect(spriteDiameterPx * (1 - HOVER_OUTLINE_WIDTH)).toBeGreaterThan(2);
   });
 });

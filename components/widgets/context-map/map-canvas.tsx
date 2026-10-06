@@ -864,14 +864,22 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       (point: MapPoint | null) => {
         const hoverDot = hoverDotRef.current;
         if (!hoverDot) return;
-        hoverDot.visible = point !== null;
-        if (!point) return;
+        // Both guards come before `visible`. The uniforms start as zeroed
+        // vectors from the scene build, so showing the dot without the cached
+        // colours would paint a black disc with a black rim. The colour effect
+        // is declared before this one and fills the cache, so this is
+        // unreachable today — and is one line to keep unreachable if that
+        // ordering ever changes.
+        const cache = themeCacheRef.current;
+        if (!point || !cache) {
+          hoverDot.visible = false;
+          return;
+        }
+        hoverDot.visible = true;
         const position = hoverDot.geometry.attributes
           .position as THREE.BufferAttribute;
         (position.array as Float32Array).set([point.x, point.y, point.z]);
         position.needsUpdate = true;
-        const cache = themeCacheRef.current;
-        if (!cache) return;
         // The dot's own region colour, through the same function that colours
         // it in the cloud, so the hovered dot is recognisably the dot that was
         // there rather than a second mark in a colour of its own.

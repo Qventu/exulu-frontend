@@ -1066,6 +1066,21 @@ describe("ContextMapCard", () => {
     await waitFor(() =>
       expect(canvas.renders.at(-1)!.highlightTopic).toBe("1"),
     );
+    // Establish the precondition on a chip that is NOT the selected one:
+    // asserting the preview is "1" after focusing the already-selected chip
+    // proves nothing, because the render selected "1" to begin with.
+    const other = screen.getByRole("button", { name: /valves/i });
+    fireEvent.focus(other);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("0"),
+    );
+    fireEvent.blur(other);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("1"),
+    );
+
+    // Focus now demonstrably sets hoverTopic, so the chip below really does
+    // carry a hover preview into its own deselecting click.
     const chip = screen.getByRole("button", { name: /pricing/i });
     fireEvent.focus(chip);
     await waitFor(() =>
