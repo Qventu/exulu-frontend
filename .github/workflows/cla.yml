@@ -1,20 +1,14 @@
-# Contributor License Agreement check.
+# Contributor License Agreement gate.
 #
-# Comments on any pull request whose author has not yet agreed to CLA.md, and
-# blocks the merge until they reply with the sentence below. Agreements are
-# recorded in a separate private repository, one row per contributor with the
-# commit SHA and timestamp, which is the evidence trail an audit needs.
+# Deliberately does NOT use contributor-assistant. That action resolves
+# contributors from COMMIT authors, and ours commit under email addresses not
+# linked to their GitHub accounts. It produced a false "all signed" pass, then
+# crashed on some pull requests, then went permanently red on a pull request
+# whose author had agreed. This single step does the checking, the recording and
+# the commenting itself, against identities that actually resolve.
 #
-# SETUP REQUIRED BEFORE THIS DOES ANYTHING:
-#   1. Create a private repo to hold signatures, e.g. Qventu/cla-signatures,
-#      with an empty `signatures/version1/cla.json` containing `{}`.
-#   2. Create a Personal Access Token with `repo` scope on an account that can
-#      write to it, and add it to this repository as the secret
-#      PERSONAL_ACCESS_TOKEN.
-#   3. Update `remote-repository-name` below if you chose a different name.
-#
-# Until those exist the workflow will fail on external pull requests. Remove the
-# file, or leave it disabled, if you would rather track agreement by hand.
+# Signatures live in the private Qventu/cla-signatures repo so contributor email
+# addresses are not published here.
 
 name: CLA
 
@@ -25,90 +19,82 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  actions: write
   contents: read
   pull-requests: write
-  statuses: write
 
 jobs:
   cla:
     runs-on: ubuntu-latest
     steps:
-      - name: Check or record CLA agreement
-        if: >
-          (github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA')
-          || github.event_name == 'pull_request_target'
-        uses: contributor-assistant/github-action@v2.6.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-        with:
-          path-to-signatures: 'signatures/version1/cla.json'
-          path-to-document: 'https://github.com/Qventu/exulu-frontend/blob/main/CLA.md'
-          branch: 'main'
-          allowlist: dclaessen-exulu,bot*,dependabot[bot],semantic-release-bot
-
-          # Signatures live outside this public repository so contributor
-          # email addresses are not published.
-          remote-organization-name: Qventu
-          remote-repository-name: cla-signatures
-
-          custom-notsigned-prcomment: >
-            Thanks for the pull request. Before we can merge it, please read the
-            [Contributor License Agreement](https://github.com/Qventu/exulu-frontend/blob/main/CLA.md)
-            and agree to it by posting exactly this comment:
-          custom-pr-sign-comment: 'I have read the CLA Document and I hereby sign the CLA'
-          custom-allsigned-prcomment: 'All contributors have agreed to the CLA.'
-
-      # The action above resolves contributors from COMMIT authors. A commit
-      # whose email is not linked to a GitHub account resolves to no login, so
-      # it is silently not checked — which produced a false "all contributors
-      # have signed" pass on a pull request whose only external commit was
-      # authored under an unlinked address.
-      #
-      # The pull request author is always a real GitHub identity, so check that
-      # too, and explain what to do rather than leaving a bare red cross.
-      #
-      # Two tokens on purpose: PERSONAL_ACCESS_TOKEN is fine-grained and scoped
-      # to the private signatures repo, so it cannot comment here; GITHUB_TOKEN
-      # can comment but cannot read that repo.
       - name: Require the pull request author to have agreed
-        # always(): the action above CRASHES on pull requests whose commits have
-        # no resolvable GitHub login ("Cannot read properties of undefined") —
-        # exactly the pull requests this check exists to catch. Without always()
-        # that failure skips this step and nothing is posted.
         if: >
-          always() && (
-            github.event_name == 'pull_request_target'
-            || (github.event_name == 'issue_comment' && github.event.issue.pull_request)
-          )
+          github.event_name == 'pull_request_target'
+          || (github.event_name == 'issue_comment' && github.event.issue.pull_request)
         env:
+          # Two tokens on purpose: PERSONAL_ACCESS_TOKEN is fine-grained and
+          # scoped to the private signatures repo, so it cannot comment here;
+          # GITHUB_TOKEN can comment but cannot read or write that repo.
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SIG_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           AUTHOR: ${{ github.event.pull_request.user.login || github.event.issue.user.login }}
           PR: ${{ github.event.pull_request.number || github.event.issue.number }}
           REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          COMMENTER: ${{ github.event.comment.user.login }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
           CLA_URL: https://github.com/Qventu/exulu-frontend/blob/main/CLA.md
           ALLOWLIST: 'dclaessen-exulu,dependabot[bot],semantic-release-bot'
         run: |
           set -euo pipefail
+          SIG_PATH=repos/Qventu/cla-signatures/contents/signatures/version1/cla.json
+          SIGN_PHRASE='I have read the CLA Document and I hereby sign the CLA'
 
           if printf '%s' "$ALLOWLIST" | tr ',' '\n' | grep -Fxq "$AUTHOR"; then
             echo "::notice::$AUTHOR is on the allowlist; no agreement required."
             exit 0
           fi
 
-          signed=$(GH_TOKEN="$SIG_TOKEN" gh api \
-                     repos/Qventu/cla-signatures/contents/signatures/version1/cla.json \
-                     --jq '.content' | base64 -d \
-                   | jq -r '[.signedContributors[]?.name] | join("\n")')
+          # Scoped to THIS repository on purpose. The backend and frontend CLAs
+          # are different documents - the backend recites ELv2 plus the Exulu
+          # Enterprise License, the frontend recites MIT - so agreeing to one
+          # must not silently satisfy the other.
+          read_signed() {
+            GH_TOKEN="$SIG_TOKEN" gh api "$SIG_PATH" --jq '.content' | base64 -d \
+              | jq -r --arg r "$REPO" \
+                  '[.signedContributors[]? | select(.repo == $r) | .name] | join("\n")'
+          }
 
-          if printf '%s\n' "$signed" | grep -Fxq "$AUTHOR"; then
-            echo "::notice::$AUTHOR has agreed to the CLA."
+          # Record an agreement when someone posts the sign phrase on this PR.
+          if [ "$EVENT" = "issue_comment" ]; then
+            trimmed=$(printf '%s' "${COMMENT_BODY:-}" | tr -d '\r' \
+                      | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+            if [ "$trimmed" = "$SIGN_PHRASE" ]; then
+              if read_signed | grep -Fxq "$COMMENTER"; then
+                echo "::notice::$COMMENTER had already agreed for $REPO."
+              else
+                tmp=$(mktemp -d)
+                GH_TOKEN="$SIG_TOKEN" gh api "$SIG_PATH" > "$tmp/resp.json"
+                sha=$(jq -r .sha "$tmp/resp.json")
+                jq -r .content "$tmp/resp.json" | base64 -d > "$tmp/cur.json"
+                jq --arg n "$COMMENTER" \
+                   --arg d "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                   --arg r "$REPO" --argjson p "$PR" \
+                   '.signedContributors = ((.signedContributors // []) + [{name:$n, created_at:$d, repo:$r, pullRequestNo:$p}])' \
+                   "$tmp/cur.json" > "$tmp/new.json"
+                GH_TOKEN="$SIG_TOKEN" gh api -X PUT "$SIG_PATH" \
+                  -f message="CLA agreed by $COMMENTER ($REPO#$PR)" \
+                  -f content="$(base64 -w0 < "$tmp/new.json")" \
+                  -f sha="$sha" -f branch=main > /dev/null
+                echo "::notice::Recorded CLA agreement for $COMMENTER on $REPO."
+              fi
+            fi
+          fi
+
+          if read_signed | grep -Fxq "$AUTHOR"; then
+            echo "::notice::$AUTHOR has agreed to the CLA for $REPO."
             exit 0
           fi
 
-          # Post the instructions once, then keep failing until they agree.
           marker='<!-- exulu-cla-author-check -->'
           posted=$(gh pr view "$PR" --repo "$REPO" --json comments \
                      --jq '[.comments[].body] | join("\n")' | grep -Fc "$marker" || true)
@@ -120,15 +106,15 @@ jobs:
               printf 'Before it can be merged you need to agree to the [Contributor License Agreement](%s). ' "$CLA_URL"
               printf 'You keep ownership of your contribution; the agreement gives Qventu the rights it needs to distribute and license it.\n\n'
               printf '**To agree, post this as a comment on this pull request, exactly as written:**\n\n'
-              printf '```\nI have read the CLA Document and I hereby sign the CLA\n```\n\n'
-              printf 'The check then re-runs and turns green. You only need to do this once.\n\n'
+              printf '```\n%s\n```\n\n' "$SIGN_PHRASE"
+              printf 'The check then re-runs and turns green.\n\n'
               printf -- '---\n\n'
               printf 'Separately: your commits are authored under an email address that is not linked to your GitHub account, '
-              printf 'so they show as unattributed. Adding it under [Settings → Emails](https://github.com/settings/emails) fixes that.\n'
+              printf 'so they show as unattributed. Adding it under [Settings - Emails](https://github.com/settings/emails) fixes that.\n'
             } > /tmp/cla-comment.md
             gh pr comment "$PR" --repo "$REPO" --body-file /tmp/cla-comment.md
             echo "::notice::Posted CLA instructions for $AUTHOR."
           fi
 
-          echo "::error::The pull request author ($AUTHOR) has not agreed to the Contributor License Agreement. See the comment on this pull request for how to do it."
+          echo "::error::The pull request author ($AUTHOR) has not agreed to the Contributor License Agreement for this repository. See the comment on this pull request."
           exit 1

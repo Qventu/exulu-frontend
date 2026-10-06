@@ -97,6 +97,21 @@ export function BehaviorStep({
         />
       </div>
 
+      <div className="flex items-start justify-between gap-3 rounded-md border p-3">
+        <div className="space-y-0.5">
+          <p className="text-xs font-medium">
+            {t("editor.knowledge.wizard.behavior.showSources.label")}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {t("editor.knowledge.wizard.behavior.showSources.hint")}
+          </p>
+        </div>
+        <Switch
+          checked={draft.showSources}
+          onCheckedChange={(v) => setDraft((prev) => ({ ...prev, showSources: v }))}
+        />
+      </div>
+
       <div className="space-y-1">
         <p className="text-sm font-medium">
           {t("editor.knowledge.wizard.behavior.instructionsTitle")}

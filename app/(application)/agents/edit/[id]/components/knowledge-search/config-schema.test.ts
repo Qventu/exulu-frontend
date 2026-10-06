@@ -50,12 +50,12 @@ describe("parseWizardConfig", () => {
 });
 
 describe("serializeWizardConfig", () => {
-  test("emits exactly 13 entries with the platform value conventions", () => {
+  test("emits exactly 14 entries with the platform value conventions", () => {
     const cfg = defaultWizardConfig();
     cfg.managedContext = true;
     cfg.tuning.topK = 7;
     const entries = serializeWizardConfig(cfg);
-    expect(entries).toHaveLength(13);
+    expect(entries).toHaveLength(14);
     const byName = Object.fromEntries(entries.map((e) => [e.name, e]));
     expect(byName["max_steps"]).toEqual({ name: "max_steps", variable: "0", type: "number" });
     expect(byName["managed_context"]).toEqual({ name: "managed_context", variable: "true", type: "boolean" });
@@ -88,6 +88,23 @@ describe("projectSearch", () => {
     const entries = serializeWizardConfig(cfg);
     expect(entries.find((e) => e.name === "project_search")?.variable).toBe("false");
     expect(parseWizardConfig(entries).projectSearch).toBe(false);
+  });
+});
+
+describe("showSources", () => {
+  test("defaults to true when the entry is absent or staged empty", () => {
+    expect(parseWizardConfig([]).showSources).toBe(true);
+    expect(
+      parseWizardConfig([{ name: "show_sources_to_external_users", variable: "", type: "boolean" }])
+        .showSources,
+    ).toBe(true);
+  });
+
+  test("parses explicit false and round-trips", () => {
+    const cfg = { ...defaultWizardConfig(), showSources: false };
+    const entries = serializeWizardConfig(cfg);
+    expect(entries.find((e) => e.name === "show_sources_to_external_users")?.variable).toBe("false");
+    expect(parseWizardConfig(entries).showSources).toBe(false);
   });
 });
 
