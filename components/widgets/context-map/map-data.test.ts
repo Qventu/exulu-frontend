@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildBuffers, cloudBounds, coverageCaption, frameCloud, FRAMING_REFERENCE_DISTANCE,
-  isPassageClipped,
+  HOVER_SIZE, isPassageClipped,
   nearestNeighbourSegments, NO_VALUE_TOKEN, PALETTE_TOKENS, PASSAGE_LABEL_LIMIT,
-  parseHslTriplet, pointTitle, projectToScreen, regionColor, resolveLabelCollisions, rgbCss,
+  parseHslTriplet, pointTitle, projectToScreen, regionColor, resolveLabelCollisions,
+  RING_INNER_RADIUS, RING_SIZE, rgbCss,
   strongestPerItem, topicOf,
   VIEWPORT_FILL,
   type CloudBounds, type MapPoint, type Rgb,
@@ -661,5 +662,17 @@ describe("strongestPerItem", () => {
     expect(strongestPerItem([], byId())).toEqual([]);
     expect(strongestPerItem([edge("c1", 0.5)], byId(chunkOf("c1", "i1"))))
       .toEqual([edge("c1", 0.5)]);
+  });
+});
+
+describe("the hovered dot's nesting inside the ring", () => {
+  it("never grows past the ring's inner edge", () => {
+    // HOVER_SIZE is defined as Math.min(POINT_SIZE * 1.5, the ring's inner
+    // edge as a diameter), so this is the one invariant map-canvas.tsx's
+    // hover layer depends on and cannot itself test (it has no tests, by
+    // design). A future change that raises HOVER_SIZE directly, bypassing
+    // the Math.min, would silently paint the hovered dot over a flagged
+    // passage's conflict ring — this fails the moment that happens.
+    expect(HOVER_SIZE).toBeLessThanOrEqual(RING_SIZE * RING_INNER_RADIUS * 2);
   });
 });

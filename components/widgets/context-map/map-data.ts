@@ -557,3 +557,52 @@ export function topicOf(
   }
   return best;
 }
+
+/**
+ * The point cloud's dot sizes, and the hovered dot's outline width. These
+ * five are used by map-canvas.tsx's point-size shaders (gl_PointSize = size *
+ * pixelRatio * 300/-mv.z, there) and imported back, rather than declared in
+ * that file, because HOVER_SIZE's nesting guarantee against the ring is pure
+ * arithmetic and is the one invariant among them worth testing — and
+ * map-canvas.tsx has no tests, by design: jsdom has no WebGL context.
+ */
+
+/**
+ * gl_PointSize is in device pixels; see the pixelRatio factor in the point
+ * shader (map-canvas.tsx). This is the size that reads well at
+ * FRAMING_REFERENCE_DISTANCE, and the framing effect scales it by
+ * `sizeScale` so a dot keeps that apparent size however close the camera
+ * ends up.
+ */
+export const POINT_SIZE = 0.035;
+
+/** Wide enough that the ring's annulus sits around the dot rather than on top of it. */
+export const RING_SIZE = POINT_SIZE * 2.2;
+
+/** Ringed passages: an annulus, so the dot's own colour still reads through it. */
+export const RING_INNER_RADIUS = 0.34;
+
+/**
+ * The sprite the hovered dot is drawn on.
+ *
+ * Capped at the ring layer's inner edge — RING_SIZE × RING_INNER_RADIUS, as
+ * a diameter — so that growing the dot never paints over the conflict ring a
+ * viewer is leaning in to read. Written as one expression against those two,
+ * because widening the ring is exactly the change that would break the
+ * nesting silently.
+ */
+export const HOVER_SIZE = Math.min(POINT_SIZE * 1.5, RING_SIZE * RING_INNER_RADIUS * 2);
+
+/**
+ * The band of the hovered dot's own sprite radius its outline takes, in
+ * map-canvas.tsx's HOVER_FRAGMENT — the difference between the sprite's
+ * outer diameter and its filled inner disc's diameter.
+ *
+ * At FRAMING_REFERENCE_DISTANCE and DPR 1 the hovered sprite renders at
+ * HOVER_SIZE × 300/FRAMING_REFERENCE_DISTANCE ≈ 4.91 CSS px. 0.2 put the
+ * rendered band at ≈0.98 CSS px — under one device pixel, hard-edged with no
+ * antialiasing to soften it, which did not read as a hover state on a dot
+ * that size. 0.4 doubles the band to ≈1.96 CSS px while leaving a fill
+ * diameter of (1 − 0.4) × ≈4.91 ≈ 2.95 CSS px — clearly visible inside it.
+ */
+export const HOVER_OUTLINE_WIDTH = 0.4;

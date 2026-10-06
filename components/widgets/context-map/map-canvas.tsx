@@ -21,14 +21,19 @@ import {
   buildBuffers,
   cloudBounds,
   frameCloud,
+  HOVER_OUTLINE_WIDTH,
+  HOVER_SIZE,
   nearestNeighbourSegments,
   pointTitle,
+  POINT_SIZE,
   projectToScreen,
   regionColor,
   resolveHoverOutlineColor,
   resolveLabelCollisions,
   resolvePalette,
   resolveRingColor,
+  RING_INNER_RADIUS,
+  RING_SIZE,
   type MapEdge,
   type MapPoint,
   type MapTopic,
@@ -97,7 +102,6 @@ const POINT_FRAGMENT = `
 `;
 
 /** Ringed passages: an annulus, so the dot's own colour still reads through it. */
-const RING_INNER_RADIUS = 0.34;
 const RING_VERTEX = `
   uniform float size;
   uniform float pixelRatio;
@@ -130,10 +134,13 @@ const RING_FRAGMENT = `
  * its similarity to everything near it, so pushing neighbours aside would make
  * the map lie at the exact moment someone is reading it closely.
  *
- * Two constants shape it: this one, the band of the sprite's radius the
- * outline takes, and HOVER_SIZE with the other sizes further down.
+ * Two constants shape it: HOVER_OUTLINE_WIDTH, the band of the sprite's
+ * radius the outline takes, and HOVER_SIZE, which sizes the sprite itself.
+ * Both live in ./map-data, with POINT_SIZE, RING_SIZE and RING_INNER_RADIUS,
+ * because HOVER_SIZE's nesting guarantee against the ring is pure
+ * arithmetic and is the one invariant among them worth testing — and this
+ * file has none, by design.
  */
-const HOVER_OUTLINE_WIDTH = 0.2;
 const HOVER_FRAGMENT = `
   uniform vec3 fill;
   uniform vec3 outline;
@@ -160,13 +167,6 @@ const CAMERA_FAR = 100;
  * non-zero offset, so OrbitControls has something to orbit.
  */
 const UNFRAMED_CAMERA_DISTANCE = 1;
-/**
- * gl_PointSize is in device pixels; see the pixelRatio factor in the shader.
- * This is the size that read well at FRAMING_REFERENCE_DISTANCE, and the
- * framing effect scales it by `sizeScale` so a dot keeps that apparent size
- * however close the camera ends up.
- */
-const POINT_SIZE = 0.035;
 /** Scaled by `sizeScale` too, so the pick radius stays constant on screen. */
 const PICK_THRESHOLD = 0.03;
 /** A click that moved further than this was an orbit drag, not a selection. */
@@ -190,19 +190,6 @@ const LABEL_HEIGHT = 16;
  */
 const LABEL_PLATE_PAD_X = 12;
 const LABEL_PLATE_PAD_Y = 4;
-/** Wide enough that the annulus sits around the dot rather than on top of it. */
-const RING_SIZE = POINT_SIZE * 2.2;
-/**
- * The sprite the hovered dot is drawn on; HOVER_OUTLINE_WIDTH above is the
- * band of it the outline takes.
- *
- * Capped at the ring layer's inner edge — RING_SIZE × RING_INNER_RADIUS, as a
- * diameter — so that growing the dot never paints over the conflict ring a
- * viewer is leaning in to read. Written as one expression against those two,
- * because widening the ring is exactly the change that would break the
- * nesting silently.
- */
-const HOVER_SIZE = Math.min(POINT_SIZE * 1.5, RING_SIZE * RING_INNER_RADIUS * 2);
 const SELECTED_LINE_OPACITY = 0.75;
 const WEB_LINE_OPACITY = 0.12;
 
