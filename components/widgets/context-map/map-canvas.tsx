@@ -37,6 +37,8 @@ import {
   type MapEdge,
   type MapPoint,
   type MapTopic,
+  type Palette,
+  type Rgb,
 } from "./map-data";
 
 export interface MapCanvasProps {
@@ -296,6 +298,18 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
     const controlsRef = React.useRef<OrbitControls | null>(null);
     const raycasterRef = React.useRef<THREE.Raycaster | null>(null);
     const pointerRef = React.useRef<{ x: number; y: number } | null>(null);
+    /**
+     * The palette and the hover outline colour, refreshed by the
+     * positions/colours effect below whenever it actually runs — on a data
+     * change or a theme change — and read, never re-resolved, by
+     * `paintHoveredDot`. The cloud auto-rotates under a still pointer, so
+     * the dot under it changes on its own: without this, `paintHoveredDot`
+     * called `getComputedStyle` twice a time, up to ten times a second,
+     * for values only a theme change can alter.
+     */
+    const themeCacheRef = React.useRef<{ palette: Palette; outline: Rgb } | null>(
+      null,
+    );
     const hoverKeyRef = React.useRef("");
     const labelKeyRef = React.useRef("");
     const [labels, setLabels] = React.useState<Label[]>([]);
@@ -520,6 +534,17 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         new THREE.BufferGeometry(),
         hoverMaterial,
       );
+      // One vertex, allocated once: `paintHoveredDot` writes into this same
+      // attribute's array on every hover change instead of swapping in a
+      // fresh BufferGeometry, which is what a pointer held still over an
+      // auto-rotating cloud used to do up to ten times a second. `visible`
+      // stands in for "no dot hovered" — the attribute is always sized for
+      // one point, never for zero.
+      hoverDot.geometry.setAttribute(
+        "position",
+        new THREE.BufferAttribute(new Float32Array(3), 3),
+      );
+      hoverDot.visible = false;
       hoverDot.frustumCulled = false;
       // Above the rings, which are above the cloud: the dot under the pointer
       // is the one thing nothing else may be painted over. HOVER_SIZE keeps it
@@ -827,35 +852,35 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
      * the hover effect below when the dot changes, and the colour effect when
      * the theme changes — and an outline left in the previous theme's text
      * colour is the one thing that would otherwise go unnoticed.
+     *
+     * Writes into the position attribute allocated once in the scene-build
+     * effect, and reads the palette and the outline colour from
+     * `themeCacheRef` rather than resolving either — no `getComputedStyle`,
+     * no new BufferGeometry. The cloud auto-rotates under a still pointer,
+     * so the dot under it changes on its own, up to ten times a second,
+     * and only an actual theme change can alter either cached value.
      */
     const paintHoveredDot = React.useCallback(
-      (host: HTMLElement, point: MapPoint | null) => {
+      (point: MapPoint | null) => {
         const hoverDot = hoverDotRef.current;
         if (!hoverDot) return;
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute(
-          "position",
-          new THREE.BufferAttribute(
-            point
-              ? new Float32Array([point.x, point.y, point.z])
-              : new Float32Array(0),
-            3,
-          ),
-        );
-        const previous = hoverDot.geometry;
-        hoverDot.geometry = geometry;
-        previous.dispose();
+        hoverDot.visible = point !== null;
         if (!point) return;
+        const position = hoverDot.geometry.attributes
+          .position as THREE.BufferAttribute;
+        (position.array as Float32Array).set([point.x, point.y, point.z]);
+        position.needsUpdate = true;
+        const cache = themeCacheRef.current;
+        if (!cache) return;
         // The dot's own region colour, through the same function that colours
         // it in the cloud, so the hovered dot is recognisably the dot that was
         // there rather than a second mark in a colour of its own.
-        const fill = regionColor(resolvePalette(host), regionOf(point));
-        const outline = resolveHoverOutlineColor(host);
+        const fill = regionColor(cache.palette, regionOf(point));
         hoverDot.material.uniforms.fill.value.set(fill[0], fill[1], fill[2]);
         hoverDot.material.uniforms.outline.value.set(
-          outline[0],
-          outline[1],
-          outline[2],
+          cache.outline[0],
+          cache.outline[1],
+          cache.outline[2],
         );
       },
       [regionOf],
@@ -870,6 +895,14 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       if (!host || !cloud) return;
       const write = () => {
         const palette = resolvePalette(host);
+        // Cached for `paintHoveredDot`, which otherwise re-read both of
+        // these on every rotation-driven hover change. This effect already
+        // reruns on a theme change (the MutationObserver below), so it is
+        // the one place both need resolving — not a second observer.
+        themeCacheRef.current = {
+          palette,
+          outline: resolveHoverOutlineColor(host),
+        };
         const { positions, colors } = buildBuffers(points, regionOf, palette);
         // Read through the ref, not from this closure's own highlightTopic /
         // topicMemberIds: those are no longer this effect's dependencies (see
@@ -917,10 +950,10 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
           const ring = resolveRingColor(host);
           rings.material.uniforms.ring.value.set(ring[0], ring[1], ring[2]);
         }
-        // The hovered dot reads two theme colours of its own. Its id comes
-        // through the ref, so a pointer move does not land here — only a
-        // theme change and a data change do.
-        paintHoveredDot(host, latestRef.current.hovered);
+        // The hovered dot reads two theme colours of its own, now cached
+        // above. Its id comes through the ref, so a pointer move does not
+        // land here — only a theme change and a data change do.
+        paintHoveredDot(latestRef.current.hovered);
       };
       write();
       const observer = new MutationObserver(write);
@@ -979,7 +1012,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       // Read by the colour effect's theme re-read, which has no dependency on
       // the hovered dot and must not grow one.
       latestRef.current.hovered = point;
-      paintHoveredDot(host, point);
+      paintHoveredDot(point);
     }, [hoveredId, byId, paintHoveredDot]);
 
     // Neighbour lines, rebuilt only when the selection or the hovered
