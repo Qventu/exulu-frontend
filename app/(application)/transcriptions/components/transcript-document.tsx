@@ -861,6 +861,12 @@ export function TranscriptDocument({
     setSaving(true);
     try {
       await onMarkReviewed(buildDraft());
+    } catch {
+      // onMarkReviewed rethrows by design (same as onSave) so edit mode
+      // stays open and the reviewer's corrections aren't lost. The caller
+      // already surfaced a toast — swallow here only to stop that rethrow
+      // becoming an unhandled rejection from the `void` click handler; do
+      // not turn this into a silent swallow of something never surfaced.
     } finally {
       setSaving(false);
     }
