@@ -16,6 +16,7 @@ import {
   mergeTranscriptRows,
   shouldFinalizeItemSave,
   speakerNeedsName,
+  transcriptPublishState,
   type ItemRBAC,
   type Job,
   type Segment,
@@ -236,6 +237,39 @@ describe("mergeTranscriptRows", () => {
     );
     expect(rows).toHaveLength(1);
     expect(rows[0].kind).toBe("item");
+  });
+});
+
+describe("transcriptPublishState", () => {
+  it("reads the two axes off a job", () => {
+    expect(transcriptPublishState({ status: "awaiting_review", saved_item_id: null })).toBe("draft");
+    expect(transcriptPublishState({ status: "reviewed", saved_item_id: null })).toBe("reviewed");
+    expect(transcriptPublishState({ status: "saved", saved_item_id: "item-1" })).toBe("published");
+  });
+
+  it("trusts saved_item_id over a lagging status", () => {
+    // finalize writes the item before the status; a row caught in between is
+    // published, whatever its status still says.
+    expect(transcriptPublishState({ status: "reviewed", saved_item_id: "item-1" })).toBe("published");
+  });
+});
+
+describe("mergeTranscriptRows with a reviewed job", () => {
+  it("keeps a reviewed job in the list — it has no item to stand in for it", () => {
+    const rows = mergeTranscriptRows(
+      [{ id: "j1", status: "reviewed", saved_item_id: null, createdAt: "2026-10-01T00:00:00Z" } as never],
+      [],
+    );
+    expect(rows.map((r) => r.id)).toContain("j1");
+    expect(rows[0].state).toBe("reviewed");
+  });
+
+  it("still drops a job that produced an item", () => {
+    const rows = mergeTranscriptRows(
+      [{ id: "j1", status: "saved", saved_item_id: "i1", createdAt: "2026-10-01T00:00:00Z" } as never],
+      [],
+    );
+    expect(rows).toHaveLength(0);
   });
 });
 
