@@ -3284,16 +3284,31 @@
       "selection": "Nur Auswahl"
     },
     "panel": {
-      "clipped": "Es wird nur der Anfang dieser Passage gezeigt.",
+      "added": "Hinzugefügt",
+      "characters": "{count, plural, one {# Zeichen} other {# Zeichen}}",
+      "chunks": "Passagen",
+      "detailsFailed": "Details dieses Eintrags konnten nicht geladen werden.",
       "item": "Eintrag",
-      "matched": "Gefundene Textstelle",
       "neighbourMissing": "Eine verwandte Passage, die nicht auf der Karte liegt",
       "neighbours": "Ähnlichste Wortwahl",
       "neighboursFailed": "Verwandte Passagen konnten nicht geladen werden.",
       "noNeighbours": "Nichts anderes auf dieser Basis ist vergleichbar formuliert.",
       "open": "Eintrag öffnen",
+      "passagesHere": "{count, plural, one {# Passage in dieser Region} other {# Passagen in dieser Region}}",
+      "region": "Region",
+      "regionCount": "{count, plural, one {# Eintrag} other {# Einträge}}",
+      "regionEmpty": "Keine Einträge in dieser Region",
+      "size": "Textlänge",
+      "source": "Quelle",
       "unavailable": "Diese Passage ist für dich nicht verfügbar.",
-      "untitled": "Unbenannter Eintrag"
+      "untitled": "Unbenannter Eintrag",
+      "updated": "Zuletzt aktualisiert"
+    },
+    "time": {
+      "from": "Frühestens",
+      "label": "Hinzugefügt zwischen",
+      "range": "{from} – {to}",
+      "to": "Spätestens"
     },
     "title": {
       "knowledge": "Wissens-Karte",

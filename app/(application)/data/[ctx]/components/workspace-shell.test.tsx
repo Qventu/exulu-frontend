@@ -165,6 +165,18 @@ describe("WorkspaceShell", () => {
     expect(without.groupField).toBeNull();
   });
 
+  /**
+   * The counterpart of the memory shell's assertion. A knowledge base ingests
+   * in one batch — measured on a restored production copy, three of four have
+   * every item on a single day — so a time filter here would be an inert
+   * control. Without this, adding the prop to this shell passes every test.
+   */
+  it("does not offer the map's time filter", async () => {
+    render(shell({ tab: "map" }));
+    await screen.findByTestId("context-map-card");
+    expect(card.renders.at(-1)!.timeline).toBeFalsy();
+  });
+
   it("hands the map the workspace's own item link", async () => {
     render(shell({ tab: "map" }));
     await screen.findByTestId("context-map-card");

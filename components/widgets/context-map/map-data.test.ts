@@ -2,18 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildBuffers, cloudBounds, coverageCaption, frameCloud, FRAMING_REFERENCE_DISTANCE,
-  HOVER_OUTLINE_WIDTH, HOVER_SIZE, isPassageClipped,
-  nearestNeighbourSegments, NO_VALUE_TOKEN, PALETTE_TOKENS, PASSAGE_LABEL_LIMIT,
+  HOVER_OUTLINE_WIDTH, HOVER_SIZE, itemsInRegion, labelFitsCanvas,
+  nearestNeighbourSegments, NO_VALUE_TOKEN, PALETTE_TOKENS,
   parseHslTriplet, pointTitle, projectToScreen, regionColor, resolveLabelCollisions,
   POINT_SIZE, RING_INNER_RADIUS, RING_SIZE, rgbCss,
-  strongestPerItem, topicOf,
+  strongestPerItem, timeBounds, tooltipPosition, topicOf, withinWindow,
   VIEWPORT_FILL,
   type CloudBounds, type MapPoint, type Rgb,
 } from "./map-data";
 
 const point = (id: string, group: string | null, xyz: [number, number, number] = [0, 0, 0]) => ({
   id, itemId: `item-${id}`, x: xyz[0], y: xyz[1], z: xyz[2],
-  label: id, itemName: `item ${id}`, group, chunks: 1,
+  itemName: `item ${id}`, group, chunks: 1, createdAtMs: null,
 });
 
 describe("the palette", () => {
@@ -337,24 +337,6 @@ describe("nearestNeighbourSegments", () => {
   });
 });
 
-describe("isPassageClipped", () => {
-  it("knows the width the points answer actually carries", () => {
-    // The resolver builds a point's label as
-    // LEFT(COALESCE(chunks.content, items.name), 120); if that width changes,
-    // this constant has to change with it or the panel stops saying "cut".
-    expect(PASSAGE_LABEL_LIMIT).toBe(120);
-  });
-
-  it("calls a passage at the limit cut", () => {
-    expect(isPassageClipped("x".repeat(PASSAGE_LABEL_LIMIT))).toBe(true);
-  });
-
-  it("leaves a passage that fits alone", () => {
-    expect(isPassageClipped("x".repeat(PASSAGE_LABEL_LIMIT - 1))).toBe(false);
-    expect(isPassageClipped("")).toBe(false);
-  });
-});
-
 describe("topicOf", () => {
   const topic = (id: string, xyz: [number, number, number], count = 1) => ({
     id, label: `Topic ${id}`, count, x: xyz[0], y: xyz[1], z: xyz[2],
@@ -588,32 +570,22 @@ describe("frameCloud", () => {
 });
 
 describe("pointTitle", () => {
-  it("names a point by its item rather than by the passage's opening", () => {
-    // The opening is what the chunk says, and this corpus prefixes every
-    // chunk with a document header — so the opening is an identifier.
-    expect(pointTitle({
-      itemName: "Price list 2026",
-      label: "--- Document (Exulu ID: 6adc924b-1423-42ac-8b9d-0f0f0f0f0f0f) ---",
-    })).toBe("Price list 2026");
+  it("names a point by its item", () => {
+    expect(pointTitle({ itemName: "Price list 2026" })).toBe("Price list 2026");
   });
 
-  it("returns \"\" for an item with no name, rather than falling back to the passage's opening", () => {
-    // `name` is nullable on an items table, and the resolver answers "" for a
-    // null. Falling back to `label` here is the exact bug this guards: in
-    // PASSAGES mode `label` is often the injected document header, so the
-    // fallback would show the identifier Daniel reported right back. Each
-    // call site renders its own translated "untitled" fallback instead; this
-    // function stays pure and cannot translate.
-    expect(pointTitle({ itemName: "", label: "the passage itself" })).toBe("");
-    expect(pointTitle({ itemName: "   ", label: "the passage itself" })).toBe("");
-  });
-
-  it("never returns the passage's opening, even when it looks like a plausible title", () => {
-    // Pins the fallback shut: if `pointTitle` ever regresses to returning
-    // `point.label` for a blank name, this fails even though the label here
-    // is innocuous-looking prose rather than an obvious document header.
-    expect(pointTitle({ itemName: "", label: "a perfectly readable sentence" }))
-      .not.toBe("a perfectly readable sentence");
+  /**
+   * `name` is nullable on an items table and the resolver answers "" for a
+   * null, so this is a real shape. Each call site renders its own translated
+   * "untitled" fallback; this function stays pure and cannot translate.
+   *
+   * The passage's opening is no longer even requested — it was the injected
+   * document header on a real corpus, which is what made it unusable as a
+   * title and, once nothing read it, worth dropping from the query.
+   */
+  it("returns \"\" for an item with no name", () => {
+    expect(pointTitle({ itemName: "" })).toBe("");
+    expect(pointTitle({ itemName: "   " })).toBe("");
   });
 });
 
@@ -622,7 +594,7 @@ describe("strongestPerItem", () => {
   /** A passage of `item`, as the points answer carries it. */
   const chunkOf = (id: string, item: string): MapPoint => ({
     id, itemId: item, x: 0, y: 0, z: 0,
-    label: `the text of ${id}`, itemName: `the name of ${item}`, group: null, chunks: 1,
+    itemName: `the name of ${item}`, group: null, chunks: 1, createdAtMs: null,
   });
   const byId = (...points: MapPoint[]) => new Map(points.map((p) => [p.id, p]));
 
@@ -704,5 +676,233 @@ describe("the hovered dot's nesting inside the ring", () => {
     // And the fill has to survive the rim, or the hovered dot stops carrying
     // its region's colour and reads as a ring.
     expect(spriteDiameterPx * (1 - HOVER_OUTLINE_WIDTH)).toBeGreaterThan(2);
+  });
+});
+
+/**
+ * A region label is drawn as an absolutely-positioned plate over the canvas,
+ * and projectToScreen calls anything in FRONT of the camera visible — whether
+ * or not it lands inside the viewport. So a region whose centre swung off the
+ * side of the cloud was rendered at a negative coordinate, escaping the card
+ * entirely and landing on the page's tabs and header.
+ *
+ * The host clips now, which stops the escape on its own. This is the other
+ * half: a plate that merely straddles the edge would be sliced in two by that
+ * clip, which reads as a rendering fault rather than as a label.
+ */
+describe("labelFitsCanvas", () => {
+  const box = { id: "t", x: 100, y: 100, width: 80, height: 20, count: 1 };
+
+  it("keeps a label whose whole plate is inside the canvas", () => {
+    expect(labelFitsCanvas(box, 400, 300)).toBe(true);
+  });
+
+  // x and y are the plate's CENTRE, so the test is against half its size.
+  it.each([
+    ["off the left edge", { x: 39, y: 100 }],
+    ["off the right edge", { x: 361, y: 100 }],
+    ["off the top edge", { x: 100, y: 9 }],
+    ["off the bottom edge", { x: 100, y: 291 }],
+  ])("drops a label hanging %s", (_label, at) => {
+    expect(labelFitsCanvas({ ...box, ...at }, 400, 300)).toBe(false);
+  });
+
+  it("keeps a label resting exactly on the edge", () => {
+    expect(labelFitsCanvas({ ...box, x: 40, y: 10 }, 400, 300)).toBe(true);
+  });
+
+  // Defensive only: the overlay pass already returns early on a zero-sized
+  // host, so this branch is unreachable from the one caller. Kept because the
+  // rule "everything is outside a canvas of no size" is the wrong answer for
+  // any future caller, and asserted so the branch cannot rot into it.
+  it("keeps labels when the canvas has not been measured yet", () => {
+    expect(labelFitsCanvas(box, 0, 0)).toBe(true);
+  });
+});
+
+/**
+ * The hover read-out sits at the pointer, and the host clips now - so near the
+ * right or bottom edge it would be cut off mid-word instead of being readable.
+ */
+describe("tooltipPosition", () => {
+  const size = { width: 200, height: 40 };
+
+  it("sits below and to the right of the pointer with room to spare", () => {
+    expect(tooltipPosition(50, 50, 800, 600, size)).toEqual({ left: 58, top: 58 });
+  });
+
+  it("flips to the left of the pointer rather than overflowing the right edge", () => {
+    const { left } = tooltipPosition(700, 50, 800, 600, size);
+    expect(left).toBe(700 - 8 - size.width);
+    expect(left + size.width).toBeLessThanOrEqual(800);
+  });
+
+  it("flips above the pointer rather than overflowing the bottom edge", () => {
+    const { top } = tooltipPosition(50, 580, 800, 600, size);
+    expect(top).toBe(580 - 8 - size.height);
+  });
+
+  // A canvas narrower than the tooltip has no good side; it must still start
+  // on screen rather than at a negative coordinate.
+  it("never positions the tooltip off the top or left", () => {
+    const { left, top } = tooltipPosition(10, 10, 120, 30, size);
+    expect(left).toBeGreaterThanOrEqual(0);
+    expect(top).toBeGreaterThanOrEqual(0);
+  });
+});
+
+/**
+ * The unique items a region holds, for the panel a chip opens.
+ *
+ * A region is a cluster of PASSAGES, so a document chunked into forty pieces
+ * is forty dots in it — which is the right picture of the cloud and the wrong
+ * answer to "what is in here". No new data: the points already carry their
+ * item, and region membership is the same nearest-centre rule the colouring
+ * uses.
+ */
+describe("itemsInRegion", () => {
+  const topics = [
+    { id: "a", label: "A", count: 0, x: 0, y: 0, z: 0 },
+    { id: "b", label: "B", count: 0, x: 10, y: 0, z: 0 },
+  ];
+  const at = (id: string, itemId: string, name: string, x: number) => ({
+    id, itemId, x, y: 0, z: 0, itemName: name,
+    group: null, chunks: 1, createdAtMs: null,
+  });
+
+  it("folds a document's passages into one row and counts them", () => {
+    const points = [at("c1", "i1", "Manual", 0), at("c2", "i1", "Manual", 1), at("c3", "i2", "Datasheet", 0)];
+    expect(itemsInRegion(points, topics, "a")).toEqual([
+      { itemId: "i1", name: "Manual", passages: 2 },
+      { itemId: "i2", name: "Datasheet", passages: 1 },
+    ]);
+  });
+
+  it("counts only the passages that belong to the region asked for", () => {
+    const points = [at("c1", "i1", "Manual", 0), at("c2", "i1", "Manual", 10)];
+    expect(itemsInRegion(points, topics, "a")).toEqual([{ itemId: "i1", name: "Manual", passages: 1 }]);
+    expect(itemsInRegion(points, topics, "b")).toEqual([{ itemId: "i1", name: "Manual", passages: 1 }]);
+  });
+
+  // Most-present first answers "what is this region about"; a row order that
+  // followed the cloud's random sampling order would answer nothing.
+  it("orders by how much of the item is in the region, then by name", () => {
+    const points = [
+      at("c1", "i1", "Zebra", 0), at("c2", "i2", "Apple", 0),
+      at("c3", "i2", "Apple", 1), at("c4", "i3", "Mango", 0),
+    ];
+    expect(itemsInRegion(points, topics, "a").map((r) => r.name)).toEqual(["Apple", "Mango", "Zebra"]);
+  });
+
+  it("is empty for a region with no passages, and for a region this base lacks", () => {
+    expect(itemsInRegion([], topics, "a")).toEqual([]);
+    expect(itemsInRegion([at("c1", "i1", "Manual", 0)], topics, "nope")).toEqual([]);
+  });
+
+  /**
+   * Pins the early return. With NO topics, `topicOf` answers null for every
+   * point — so without the guard, asking for the null region would match
+   * every point rather than none. Passing `topics` here instead would make
+   * this pass with the guard deleted, which is how it was first written.
+   */
+  it("is empty when asked for no region at all", () => {
+    expect(itemsInRegion([at("c1", "i1", "Manual", 0)], [], null)).toEqual([]);
+  });
+
+  // A nameless item still exists and still occupies the region; the caller
+  // renders the translated fallback, exactly as it does for a point.
+  it("keeps an unnamed item, with an empty name", () => {
+    expect(itemsInRegion([at("c1", "i1", "", 0)], topics, "a")).toEqual([
+      { itemId: "i1", name: "", passages: 1 },
+    ]);
+  });
+
+  it("takes the first non-empty name when a document's chunks disagree", () => {
+    const points = [at("c1", "i1", "", 0), at("c2", "i1", "Manual", 1)];
+    expect(itemsInRegion(points, topics, "a")).toEqual([{ itemId: "i1", name: "Manual", passages: 2 }]);
+  });
+});
+
+/**
+ * The time filter, which only the memory pages offer.
+ *
+ * A memory base grows over time, so "what did I know in August" is a real
+ * question there. A knowledge base bulk-imported in one afternoon has every
+ * item on one day — which is why `timeBounds` answers null for a base whose
+ * items share a single day, and the control is not rendered at all.
+ */
+describe("timeBounds", () => {
+  const at = (id: string, createdAtMs: number | null) => ({
+    id, itemId: `i-${id}`, x: 0, y: 0, z: 0, itemName: id,
+    group: null, chunks: 1, createdAtMs,
+  });
+  const DAY = 86_400_000;
+
+  it("spans the earliest and latest item, snapped to whole days", () => {
+    const bounds = timeBounds([
+      at("a", Date.UTC(2026, 7, 14, 9, 30)),
+      at("b", Date.UTC(2026, 8, 28, 16, 0)),
+    ]);
+    // Snapped outwards, so both ends are inside the range the slider offers.
+    expect(bounds).not.toBeNull();
+    expect(bounds!.from).toBeLessThanOrEqual(Date.UTC(2026, 7, 14, 9, 30));
+    expect(bounds!.to).toBeGreaterThanOrEqual(Date.UTC(2026, 8, 28, 16, 0));
+    expect((bounds!.to - bounds!.from) % DAY).toBe(0);
+  });
+
+  /**
+   * The honest refusal. Daniel's knowledge bases ingest in one batch: 65 of 67
+   * items on one day, and three of the four bases on a single day outright. A
+   * slider there would be a control that implies a dimension the data has not
+   * got.
+   */
+  it("answers null when every item landed on the same day", () => {
+    const t = Date.UTC(2026, 6, 20, 8, 0);
+    expect(timeBounds([at("a", t), at("b", t + 3600_000)])).toBeNull();
+  });
+
+  it("answers null when nothing is dated, and when there are no points", () => {
+    expect(timeBounds([at("a", null), at("b", null)])).toBeNull();
+    expect(timeBounds([])).toBeNull();
+  });
+
+  // Asserting only "not null" here passed against `point.createdAtMs ?? 0`,
+  // which is the exact bug the test is named for: the undated item would be
+  // bucketed at 1970 and the slider would offer a 56-year span.
+  it("ignores undated items when measuring the span", () => {
+    const bounds = timeBounds([
+      at("a", Date.UTC(2026, 7, 14)),
+      at("b", null),
+      at("c", Date.UTC(2026, 8, 28)),
+    ]);
+    expect(bounds).not.toBeNull();
+    expect(bounds!.from).toBe(Date.UTC(2026, 7, 14));
+    expect(bounds!.to).toBe(Date.UTC(2026, 8, 28));
+  });
+});
+
+describe("withinWindow", () => {
+  const window = { from: Date.UTC(2026, 7, 1), to: Date.UTC(2026, 8, 1) };
+
+  it("keeps everything when no window is set", () => {
+    expect(withinWindow(Date.UTC(2020, 0, 1), null)).toBe(true);
+    expect(withinWindow(null, null)).toBe(true);
+  });
+
+  it("keeps a point inside the window, including both ends", () => {
+    expect(withinWindow(Date.UTC(2026, 7, 15), window)).toBe(true);
+    expect(withinWindow(window.from, window)).toBe(true);
+    expect(withinWindow(window.to, window)).toBe(true);
+  });
+
+  it("drops a point on either side of the window", () => {
+    expect(withinWindow(window.from - 1, window)).toBe(false);
+    expect(withinWindow(window.to + 1, window)).toBe(false);
+  });
+
+  // Undated is not "oldest": a point with no date cannot be placed in time,
+  // so a time filter cannot vouch for it.
+  it("drops an undated point once a window is set", () => {
+    expect(withinWindow(null, window)).toBe(false);
   });
 });

@@ -8,7 +8,7 @@ import { gql } from "@apollo/client";
 export const GET_CONTEXT_MAP_POINTS = gql`
   query ContextMapPoints($contextId: ID!, $mode: ContextMapMode, $groupField: String, $limit: Int) {
     contextMapPoints(contextId: $contextId, mode: $mode, groupField: $groupField, limit: $limit) {
-      points { id itemId x y z label itemName group chunks }
+      points { id itemId x y z itemName group chunks createdAtMs }
       total
       sampled
     }
@@ -39,6 +39,25 @@ export const GET_CONTEXT_PROJECTION_STATUS = gql`
       residual
       mappedChunks
       totalChunks
+    }
+  }
+`;
+
+/**
+ * One selected item's metadata. Separate from the points query on purpose: the
+ * panel shows this for one item at a time, and the points answer carries up to
+ * twenty thousand rows.
+ */
+export const GET_CONTEXT_MAP_ITEM = gql`
+  query ContextMapItem($contextId: ID!, $itemId: ID!) {
+    contextMapItem(contextId: $contextId, itemId: $itemId) {
+      id
+      name
+      chunks
+      textLength
+      source
+      createdAt
+      updatedAt
     }
   }
 `;

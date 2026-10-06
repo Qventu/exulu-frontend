@@ -5,26 +5,22 @@ import {
   MockLink,
   type MockedResponse,
 } from "@apollo/client/testing";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
+import { print } from "graphql";
 import * as React from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
   GET_CONTEXT_MAP_EDGES,
+  GET_CONTEXT_MAP_ITEM,
   GET_CONTEXT_MAP_POINTS,
   GET_CONTEXT_MAP_TOPICS,
   GET_CONTEXT_PROJECTION_STATUS,
 } from "@/lib/graphql/operations/context-map";
 import enMessages from "@/messages/en.json";
 
-import { PALETTE_TOKENS, PASSAGE_LABEL_LIMIT } from "./map-data";
+import { PALETTE_TOKENS } from "./map-data";
 
 /**
  * The renderer opens a WebGL context, which jsdom has none of, so the dynamic
@@ -68,6 +64,20 @@ import { ContextMapCard } from "./context-map-card";
 const viewport = { large: false };
 
 beforeAll(() => {
+  // Radix's slider observes its own size, and jsdom 26 has no ResizeObserver.
+  // The map canvas is mocked here, so nothing else in this tree needs one and
+  // a no-op is enough: the slider still responds to keyboard events, which is
+  // how these tests drive it.
+  if (!("ResizeObserver" in window)) {
+    Object.defineProperty(window, "ResizeObserver", {
+      writable: true,
+      value: class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    });
+  }
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: (query: string) => ({
@@ -108,13 +118,14 @@ const passage = (id: string) => ({
   x: 0.1,
   y: 0.2,
   z: 0.3,
-  // The two are deliberately different strings. `label` is the passage's own
-  // opening — which on a real base begins with an injected document header —
-  // and `itemName` is what a reader calls the document it came from.
-  label: `the text of ${id}`,
+  // What a reader calls the document this passage came from. The passage's
+  // own opening is no longer requested at all: it was the injected document
+  // header on a real base, and once nothing rendered it, it was 2.4 MB of
+  // payload at the cap serving nobody.
   itemName: `the item of ${id}`,
   group: "fact",
   chunks: 1,
+  createdAtMs: null,
 });
 
 /** A passage on the x axis, so which region is nearest is arithmetic. */
@@ -159,26 +170,6 @@ const sampledPointsMock = {
   },
 };
 
-/**
- * A passage whose text reaches the width the points answer carries. On a
- * knowledge base a chunk is around two thousand characters, so this is what the
- * panel is usually handed.
- */
-const clippedPointsMock = {
-  request: pointsRequest,
-  result: {
-    data: {
-      contextMapPoints: {
-        points: [
-          { ...passage("chunk-1"), label: "a".repeat(PASSAGE_LABEL_LIMIT) },
-        ],
-        total: 1,
-        sampled: false,
-      },
-    },
-  },
-};
-
 const pointsErrorMock = {
   request: pointsRequest,
   error: new Error("the points query is down"),
@@ -197,6 +188,66 @@ const placedPointsMock = {
       contextMapPoints: {
         points: [placed("a", 1), placed("b", 4), placed("c", 9)],
         total: 3,
+        sampled: false,
+      },
+    },
+  },
+};
+
+/**
+ * Two passages of one document and one of another, all nearest the region at
+ * x = 0. The shared itemId is the point of the fixture: a region panel that
+ * lists passages instead of items shows three rows here, not two.
+ */
+const sharedItemPointsMock = {
+  request: pointsRequest,
+  result: {
+    data: {
+      contextMapPoints: {
+        points: [
+          { ...placed("p1", 1), itemId: "item-manual", itemName: "Manual" },
+          { ...placed("p2", 2), itemId: "item-manual", itemName: "Manual" },
+          { ...placed("p3", 0), itemId: "item-datasheet", itemName: "Datasheet" },
+        ],
+        total: 3,
+        sampled: false,
+      },
+    },
+  },
+};
+
+const DAY = 86_400_000;
+const AUG14 = Date.UTC(2026, 7, 14, 9, 0);
+
+/** Three memories a fortnight apart, so the filter has a span to work on. */
+const datedPointsMock = {
+  request: pointsRequest,
+  result: {
+    data: {
+      contextMapPoints: {
+        points: [
+          { ...placed("old", 0), createdAtMs: AUG14 },
+          { ...placed("mid", 1), createdAtMs: AUG14 + 14 * DAY },
+          { ...placed("new", 2), createdAtMs: AUG14 + 28 * DAY },
+        ],
+        total: 3,
+        sampled: false,
+      },
+    },
+  },
+};
+
+/** The shape every knowledge base here actually has: one ingestion batch. */
+const sameDayPointsMock = {
+  request: pointsRequest,
+  result: {
+    data: {
+      contextMapPoints: {
+        points: [
+          { ...placed("a", 0), createdAtMs: AUG14 },
+          { ...placed("b", 1), createdAtMs: AUG14 + 3600_000 },
+        ],
+        total: 2,
         sampled: false,
       },
     },
@@ -291,6 +342,31 @@ const edgesMock = {
   },
 };
 
+/**
+ * The selected point's item. Its `chunks` is deliberately NOT 1: a passage
+ * point carries chunks: 1, so a panel reading the count off the point instead
+ * of off this answer shows 1 and fails the assertion.
+ */
+const itemMock = {
+  request: {
+    query: GET_CONTEXT_MAP_ITEM,
+    variables: { contextId: CONTEXT, itemId: "item-chunk-1" },
+  },
+  result: {
+    data: {
+      contextMapItem: {
+        id: "item-chunk-1",
+        name: "the item of chunk-1",
+        chunks: 42,
+        textLength: 81233,
+        source: "upload",
+        createdAt: "2026-07-20T08:00:00.000Z",
+        updatedAt: "2026-09-04T16:20:00.000Z",
+      },
+    },
+  },
+};
+
 const placedEdgesMock = {
   request: edgesRequest("a"),
   result: {
@@ -361,8 +437,20 @@ function withProviders(
     ringedItemIds?: Set<string>;
     /** A pre-populated cache, for the one test that needs an answer already in hand. */
     cache?: InMemoryCache;
+    /** Offer the time filter, as the memory page does. */
+    timeline?: boolean;
   } = {},
 ) {
+  // Selecting a point issues ContextMapItem. Without a mock, MockLink errors
+  // that observable and warns on every one of the ~18 selection tests that do
+  // not care about metadata - noise that would hide a real missing mock. Tests
+  // that DO care pass their own, which matches first.
+  const all =
+    params.selected === undefined ||
+    mocks.some((m) => (m.request.query as unknown) === GET_CONTEXT_MAP_ITEM)
+      ? mocks
+      : [...mocks, itemMock];
+
   const search = new URLSearchParams();
   if (params.selected !== undefined) search.set("selected", params.selected);
   if (params.topic !== undefined) search.set("topic", params.topic);
@@ -380,7 +468,7 @@ function withProviders(
       <MockedProvider
         addTypename={false}
         cache={params.cache}
-        link={ApolloLink.from([recorder, new MockLink(mocks, false)])}
+        link={ApolloLink.from([recorder, new MockLink(all, false)])}
       >
         <ContextMapCard
           contextId={CONTEXT}
@@ -388,6 +476,7 @@ function withProviders(
           ringedItemIds={params.ringedItemIds}
           itemHref={(itemId) => `/memory/${CONTEXT}/${itemId}`}
           titleKey="memory"
+          timeline={params.timeline}
         />
       </MockedProvider>
     </NextIntlClientProvider>
@@ -667,8 +756,11 @@ describe("ContextMapCard", () => {
     await waitFor(() =>
       expect(canvas.renders.at(-1)!.selectedId).toBe("chunk-1"),
     );
-    // And the panel really is showing that passage, not just the renderer prop.
-    expect(await screen.findByText(/the text of chunk-1/i)).toBeDefined();
+    // And the panel really is showing that passage's item, not just the
+    // renderer prop.
+    expect(
+      await screen.findByRole("heading", { name: "the item of chunk-1" }),
+    ).toBeDefined();
     expect(new URLSearchParams(window.location.search).get("selected")).toBe(
       "chunk-1",
     );
@@ -754,28 +846,147 @@ describe("ContextMapCard", () => {
     expect(screen.queryByText(/in a conflict/i)).toBeNull();
   });
 
-  it("says so when the panel is only showing the opening of a passage", async () => {
-    render(
-      withProviders(
-        [clippedPointsMock, emptyTopicsMock, statusMock, edgesMock],
-        { selected: "chunk-1" },
-      ),
-    );
-    // The text carries the mark, and a line says what the mark means.
-    expect(
-      await screen.findByText(`${"a".repeat(PASSAGE_LABEL_LIMIT)}…`),
-    ).toBeDefined();
-    expect(await screen.findByText(/only the opening/i)).toBeDefined();
+  it("opens the panel on a region's unique items when a chip is chosen", async () => {
+    viewport.large = true;
+    render(withProviders([sharedItemPointsMock, topicsMock, statusMock]));
+    const chip = await screen.findByRole("button", { name: /valves/i });
+    fireEvent.click(chip);
+
+    const panel = await screen.findByRole("complementary", { name: "Region" });
+    expect(within(panel).getByRole("heading", { name: "Valves & Blocks" })).toBeDefined();
+    // Two rows, not three: the two passages of one document fold into it.
+    const rows = within(panel).getAllByRole("link");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.textContent).toContain("Manual");
+    expect(rows[0]!.getAttribute("href")).toBe(`/memory/${CONTEXT}/item-manual`);
+    // Most-present first, and the count is passages in THIS region.
+    expect(rows[0]!.textContent).toContain("2");
+    expect(rows[1]!.textContent).toContain("Datasheet");
+    // No item query is issued: a region's items come from the points already
+    // drawn, so choosing a chip fetches nothing.
+    expect(askedWith.some((o) => o.name === "ContextMapItem")).toBe(false);
   });
 
-  it("says nothing of the sort for a passage that arrived whole", async () => {
-    render(
-      withProviders([pointsMock, emptyTopicsMock, statusMock, edgesMock], {
-        selected: "chunk-1",
-      }),
+  it("closes the region panel and clears the chip when the panel is dismissed", async () => {
+    viewport.large = true;
+    render(withProviders([sharedItemPointsMock, topicsMock, statusMock]));
+    fireEvent.click(await screen.findByRole("button", { name: /valves/i }));
+    await screen.findByRole("complementary", { name: "Region" });
+
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    await waitFor(() =>
+      expect(screen.queryByRole("complementary", { name: "Region" })).toBeNull(),
     );
-    expect(await screen.findByText("the text of chunk-1")).toBeDefined();
-    expect(screen.queryByText(/only the opening/i)).toBeNull();
+    // The chip is released too, or the cloud would stay dim with a panel that
+    // is gone and nothing to explain it.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /valves/i }).getAttribute("aria-pressed"),
+      ).toBe("false"),
+    );
+  });
+
+  describe("the time filter", () => {
+    it("names both thumbs and announces dates, not epoch numbers", async () => {
+      render(
+        withProviders([datedPointsMock, emptyTopicsMock, statusMock], {
+          timeline: true,
+        }),
+      );
+      await screen.findByTestId("canvas");
+      // Radix names an unlabelled thumb from a hardcoded English
+      // ["Minimum", "Maximum"] and announces the raw value, so without the
+      // per-thumb props a German reader hears "Minimum, 1786752000000".
+      const lower = screen.getByRole("slider", { name: "Earliest" });
+      const upper = screen.getByRole("slider", { name: "Latest" });
+      for (const thumb of [lower, upper]) {
+        const spoken = thumb.getAttribute("aria-valuetext");
+        expect(spoken).not.toBeNull();
+        expect(spoken).not.toMatch(/^\d+$/);
+        expect(spoken).toMatch(/2026/);
+      }
+    });
+
+    it("is absent on a base that does not offer it", async () => {
+      render(withProviders([datedPointsMock, emptyTopicsMock, statusMock]));
+      await screen.findByTestId("canvas");
+      expect(screen.queryByRole("slider")).toBeNull();
+    });
+
+    /**
+     * The honest refusal, and the reason this is gated on the data rather than
+     * only on the page: measured on a restored production copy, three of four
+     * knowledge bases have every item on a single day, and the largest has 65
+     * of 67 on one. A slider there would imply a dimension the data lacks.
+     */
+    it("is absent when every item landed on the same day, even where it is offered", async () => {
+      render(
+        withProviders([sameDayPointsMock, emptyTopicsMock, statusMock], {
+          timeline: true,
+        }),
+      );
+      await screen.findByTestId("canvas");
+      expect(screen.queryByRole("slider")).toBeNull();
+    });
+
+    it("offers a span once the base covers more than a day", async () => {
+      render(
+        withProviders([datedPointsMock, emptyTopicsMock, statusMock], {
+          timeline: true,
+        }),
+      );
+      await screen.findByTestId("canvas");
+      // Two thumbs: a window has two ends.
+      expect(screen.getAllByRole("slider")).toHaveLength(2);
+      expect(canvas.renders.at(-1)!.timeWindow).toBeNull();
+    });
+
+    it("clears the window when the slider is returned to its full span", async () => {
+      render(
+        withProviders([datedPointsMock, emptyTopicsMock, statusMock], {
+          timeline: true,
+        }),
+      );
+      await screen.findByTestId("canvas");
+      const [lower] = screen.getAllByRole("slider");
+      lower!.focus();
+      fireEvent.keyDown(lower!, { key: "ArrowRight" });
+      await waitFor(() =>
+        expect(canvas.renders.at(-1)!.timeWindow).not.toBeNull(),
+      );
+
+      fireEvent.keyDown(lower!, { key: "ArrowLeft" });
+      // Null, not a window that happens to span everything: undated points
+      // are dropped by any window at all, so they only come back when the
+      // filter is released outright.
+      await waitFor(() =>
+        expect(canvas.renders.at(-1)!.timeWindow).toBeNull(),
+      );
+    });
+
+    it("hands the renderer a window when the span is narrowed", async () => {
+      render(
+        withProviders([datedPointsMock, emptyTopicsMock, statusMock], {
+          timeline: true,
+        }),
+      );
+      await screen.findByTestId("canvas");
+      const [lower] = screen.getAllByRole("slider");
+      // Radix sliders move on keyboard, which jsdom can drive; a pointer drag
+      // needs layout it has not got.
+      lower!.focus();
+      fireEvent.keyDown(lower!, { key: "ArrowRight" });
+
+      await waitFor(() => {
+        const window = canvas.renders.at(-1)!.timeWindow as {
+          from: number;
+          to: number;
+        } | null;
+        expect(window).not.toBeNull();
+        // Moved off the earliest day, so the oldest memory is now outside it.
+        expect(window!.from).toBeGreaterThan(AUG14 - DAY);
+      });
+    });
   });
 
   it("shows one row of chips carrying their region's colour, and no separate legend", async () => {
@@ -939,8 +1150,8 @@ describe("ContextMapCard", () => {
   });
 
   it("asks for the default number of passages, not the cap", async () => {
-    // 20,000 rows measure at about 5.8 MB uncompressed, 2.4 MB of it label
-    // text that only the tooltip and the panel ever read. The caption already
+    // 20,000 rows measured at about 5.8 MB uncompressed when the passage
+    // opening was still requested; it no longer is, and the caption already
     // says how many of how many are drawn.
     render(withProviders([pointsMock, emptyTopicsMock, statusMock]));
     await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
@@ -948,14 +1159,13 @@ describe("ContextMapCard", () => {
     expect(points?.variables.limit).toBe(5000);
   });
 
-  it("names the selected point by its item, and keeps the passage as the matched text", async () => {
+  it("names the selected point by its item, and shows no passage text at all", async () => {
     // Every "passage opening" on this map begins with an injected document
-    // header on the real corpus, so a heading taken from the opening is an
-    // identifier. The opening is still the matched text and still belongs in
-    // the body — labelled as such.
+    // header on the real corpus, so neither a heading nor a body taken from
+    // it tells a reader anything. The item's own metadata replaced it.
     viewport.large = true;
     render(
-      withProviders([pointsMock, emptyTopicsMock, statusMock, edgesMock], {
+      withProviders([pointsMock, emptyTopicsMock, statusMock, edgesMock, itemMock], {
         selected: "chunk-1",
       }),
     );
@@ -965,8 +1175,75 @@ describe("ContextMapCard", () => {
     // The section is titled Item, which is the panel's own accessible name.
     expect(screen.getByRole("complementary", { name: "Item" })).toBeDefined();
     expect(screen.queryByRole("complementary", { name: /passage/i })).toBeNull();
-    expect(screen.getByText(/matched text/i)).toBeDefined();
-    expect(screen.getByText("the text of chunk-1")).toBeDefined();
+    expect(screen.queryByText(/matched text/i)).toBeNull();
+    // The real guard, and the one the fixture cannot give: the opening is no
+    // longer requested at all. Asserting it is not rendered proves nothing
+    // once the fixture stops carrying it.
+    const asked = askedWith.find((o) => o.name === "ContextMapPoints");
+    expect(asked).toBeDefined();
+    const selection = print(GET_CONTEXT_MAP_POINTS);
+    expect(selection).not.toMatch(/\blabel\b/);
+    expect(selection).toMatch(/\bitemName\b/);
+  });
+
+  it("shows the selected item's metadata, which the points answer does not carry", async () => {
+    viewport.large = true;
+    render(
+      withProviders([pointsMock, emptyTopicsMock, statusMock, edgesMock, itemMock], {
+        selected: "chunk-1",
+      }),
+    );
+    // Scoped to the panel: the caption under the cloud also says "passages".
+    const panel = await screen.findByRole("complementary", { name: "Item" });
+    // Fails against a panel that never issues the second query, and against
+    // one that reads `chunks` off the point - which is 1 for every passage.
+    expect(await within(panel).findByText("42")).toBeDefined();
+    expect(within(panel).getByText("Passages")).toBeDefined();
+    expect(within(panel).getByText("81,233 characters")).toBeDefined();
+    const asked = askedWith.find((o) => o.name === "ContextMapItem");
+    expect(asked?.variables).toEqual({ contextId: CONTEXT, itemId: "item-chunk-1" });
+  });
+
+  /**
+   * Found against a restored production copy, not against a fixture: every
+   * item on the base this map was built for carries textlength = 0, while
+   * another base populates it for 1,263 of 1,299. Zero is "never measured".
+   */
+  it("omits a metadata row the base never recorded, rather than showing zero", async () => {
+    viewport.large = true;
+    const unmeasured = {
+      request: {
+        query: GET_CONTEXT_MAP_ITEM,
+        variables: { contextId: CONTEXT, itemId: "item-chunk-1" },
+      },
+      result: {
+        data: {
+          contextMapItem: {
+            id: "item-chunk-1",
+            name: "the item of chunk-1",
+            chunks: 7,
+            textLength: 0,
+            source: null,
+            createdAt: null,
+            updatedAt: null,
+          },
+        },
+      },
+    };
+    render(
+      withProviders([pointsMock, emptyTopicsMock, statusMock, edgesMock, unmeasured], {
+        selected: "chunk-1",
+      }),
+    );
+    const panel = await screen.findByRole("complementary", { name: "Item" });
+    // The count it does have is shown...
+    expect(await within(panel).findByText("7")).toBeDefined();
+    // ...and the ones it does not are absent entirely, not rendered as zero
+    // or as an empty row.
+    expect(within(panel).queryByText(/characters/i)).toBeNull();
+    expect(within(panel).queryByText("Text length")).toBeNull();
+    expect(within(panel).queryByText("Source")).toBeNull();
+    expect(within(panel).queryByText("Added")).toBeNull();
   });
 
   it("lists an item once in the neighbours, keeping its strongest passage", async () => {

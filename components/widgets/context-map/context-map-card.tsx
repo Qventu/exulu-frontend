@@ -10,7 +10,7 @@
 
 import { useQuery } from "@apollo/client";
 import { Pause, Play, RotateCcw } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -19,9 +19,11 @@ import { ChartCard } from "@/components/primitives/chart-card";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   GET_CONTEXT_MAP_EDGES,
+  GET_CONTEXT_MAP_ITEM,
   GET_CONTEXT_MAP_POINTS,
   GET_CONTEXT_MAP_TOPICS,
   GET_CONTEXT_PROJECTION_STATUS,
@@ -32,14 +34,21 @@ import {
   coverageCaption,
   regionColor,
   resolvePalette,
+  itemsInRegion,
   resolveRingColor,
   rgbCss,
+  DAY_MS,
+  timeBounds,
   topicOf,
   type MapEdge,
+  type MapItem,
   type MapPoint,
   type MapTopic,
   type Palette,
+  type RegionItem,
   type Rgb,
+  type TimeWindow,
+  withinWindow,
 } from "./map-data";
 import { MapPanel } from "./map-panel";
 
@@ -57,9 +66,10 @@ const MapCanvas = dynamic(
 
 /**
  * How many passages to draw. This is the API's own default, not its cap of
- * 20,000: the cap measures at about 5.8 MB uncompressed, 2.4 MB of which is
- * label text that only the tooltip and the panel ever read. The caption below
- * the cloud already says how many of how many are drawn when the limit bites.
+ * 20,000: the cap measured at about 5.8 MB uncompressed when the passage
+ * opening was still requested, and it no longer is — but twenty thousand dots
+ * is still more cloud than a reader can take in, and the caption below says
+ * how many of how many are drawn when the limit bites.
  */
 const POINTS_LIMIT = 5000;
 
@@ -67,6 +77,8 @@ const POINTS_LIMIT = 5000;
 // in the renderer each time this card re-renders — and it re-renders on every
 // pointer move over the panel's neighbour list.
 const NO_IDS: Set<string> = new Set();
+/** One identity for the empty case, so the panel's props do not churn. */
+const NO_REGION_ITEMS: RegionItem[] = [];
 const NO_POINTS: MapPoint[] = [];
 const NO_TOPICS: MapTopic[] = [];
 const NO_EDGES: MapEdge[] = [];
@@ -124,6 +136,16 @@ export interface ContextMapCardProps {
   ringedItemIds?: Set<string>;
   itemHref: (itemId: string) => string;
   titleKey: "memory" | "knowledge";
+  /**
+   * Offer the time filter. The memory pages set it, because a memory base
+   * accumulates and "what did I know in August" is a real question there; a
+   * knowledge base ingests in one batch and the control would be inert.
+   *
+   * Its own prop rather than a read of `titleKey`, which should keep meaning
+   * what its name says. Even with it set, the filter appears only if the data
+   * actually spans more than one day — see `timeBounds`.
+   */
+  timeline?: boolean;
 }
 
 export function ContextMapCard({
@@ -132,8 +154,10 @@ export function ContextMapCard({
   ringedItemIds,
   itemHref,
   titleKey,
+  timeline = false,
 }: ContextMapCardProps) {
   const t = useTranslations("map");
+  const locale = useLocale();
   const tCommon = useTranslations("common");
   const params = useSearchParams();
   const canvasRef = React.useRef<MapCanvasHandle>(null);
@@ -331,6 +355,93 @@ export function ContextMapCard({
   const missing =
     selectedId !== null && selected === null && !pointsQuery.loading;
 
+  /**
+   * The selected point's item, asked for per selection the way the relations
+   * are — never on mount.
+   *
+   * Keyed on the ITEM rather than on the passage, so selecting another chunk
+   * of the same document while this one is open asks for nothing — the
+   * variables are unchanged and Apollo dedups the in-flight query. NOT a
+   * cache hit: this app sets fetchPolicy "no-cache" as the default for every
+   * query, so re-selecting an item viewed earlier does fetch again.
+   */
+  const itemQuery = useQuery<{ contextMapItem: MapItem | null }>(
+    GET_CONTEXT_MAP_ITEM,
+    {
+      variables: { contextId, itemId: selected?.itemId ?? null },
+      skip: selected === null,
+    },
+  );
+
+  /**
+   * The span the time filter may cover, or null when the base cannot support
+   * one. Null for every knowledge base measured so far, which is why the
+   * control is gated on the data and not only on the page.
+   */
+  const bounds = React.useMemo(
+    () => (timeline ? timeBounds(points) : null),
+    [timeline, points],
+  );
+  /** The chosen window, or null for "the whole span" — the slider's rest state. */
+  const [timeWindow, setTimeWindow] = React.useState<TimeWindow | null>(null);
+  // A refit or a different base moves the span under the slider; a window from
+  // the old one would filter against dates this base has not got.
+  const boundsKey = bounds === null ? "" : `${bounds.from}:${bounds.to}`;
+  React.useEffect(() => {
+    setTimeWindow(null);
+  }, [boundsKey]);
+
+  /**
+   * The window's ends as the viewer reads them. Used both for the line above
+   * the slider and for each thumb's aria-valuetext, so what is announced and
+   * what is shown cannot drift apart.
+   */
+  const fromLabel = new Date(
+    timeWindow?.from ?? bounds?.from ?? 0,
+  ).toLocaleDateString(locale, { dateStyle: "medium" });
+  const toLabel = new Date(
+    timeWindow?.to ?? bounds?.to ?? 0,
+  ).toLocaleDateString(locale, { dateStyle: "medium" });
+
+  /**
+   * The items a chosen region holds, for the panel the chip opens.
+   *
+   * From the points already drawn — the same nearest-centre membership the
+   * colouring uses — so choosing a chip fetches nothing. Skipped while a
+   * passage is selected, because the panel shows that instead.
+   */
+  const regionItems = React.useMemo(
+    () =>
+      selectedId !== null
+        ? NO_REGION_ITEMS
+        : itemsInRegion(
+            // Only the points the time filter is showing. Listing items whose
+            // every passage is dimmed out would make the panel disagree with
+            // the cloud it describes.
+            timeWindow === null
+              ? points
+              : points.filter((point) => withinWindow(point.createdAtMs, timeWindow)),
+            topics,
+            highlightTopic,
+          ),
+    [selectedId, points, topics, highlightTopic, timeWindow],
+  );
+  /**
+   * Keyed on `selectedId`, not on the resolved `selected`.
+   *
+   * The card writes both keys into the URL, so a shared link can carry a
+   * selection AND a chip. The topics query is small and unparameterised and
+   * almost always returns first, so keying on the resolved point meant that
+   * while the points query was still in flight the panel opened on the region
+   * — over an empty points array — and announced "No items in this region"
+   * for a region that has items, before switching to the item.
+   */
+  const regionLabel =
+    selectedId === null
+      ? (topics.find((topic) => topic.id === highlightTopic)?.label ?? null)
+      : null;
+
+
   const caption = coverageCaption({
     drawn: points.length,
     total: answer?.total ?? points.length,
@@ -478,6 +589,7 @@ export function ContextMapCard({
               // The hovered region if there is one; see `activeTopic`.
               highlightTopic={activeTopic}
               topicMemberIds={topicMemberIds}
+              timeWindow={timeWindow}
               ringedIds={ringed}
               paused={paused}
               // The web is the links control's doing, so it is gated on the
@@ -603,6 +715,48 @@ export function ContextMapCard({
           </div>
         )}
 
+        {/*
+          The time filter, on the memory pages and only where the base spans
+          more than a day. Dots outside the window dim rather than disappear,
+          so the cloud keeps its shape and a reader watches memory accumulate
+          into it rather than watching it jump about.
+        */}
+        {drawn && bounds !== null && (
+          <div className="pt-4">
+            <div className="flex items-baseline justify-between gap-3 pb-2">
+              <span className="text-xs font-medium text-foreground">
+                {t("time.label")}
+              </span>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {t("time.range", { from: fromLabel, to: toLabel })}
+              </span>
+            </div>
+            <Slider
+              // On the thumbs, not on Root: Root is role-less, so a name there
+              // never reaches either thumb, and Radix would fall back to its
+              // hardcoded English "Minimum"/"Maximum" and read out the raw
+              // epoch number.
+              thumbProps={[
+                { "aria-label": t("time.from"), "aria-valuetext": fromLabel },
+                { "aria-label": t("time.to"), "aria-valuetext": toLabel },
+              ]}
+              min={bounds.from}
+              max={bounds.to}
+              step={DAY_MS}
+              value={[timeWindow?.from ?? bounds.from, timeWindow?.to ?? bounds.to]}
+              onValueChange={([from, to]) => {
+                if (from === undefined || to === undefined) return;
+                // Back at full span is "no filter", not a window that happens
+                // to cover everything: an undated point must come back when
+                // the filter is released.
+                setTimeWindow(
+                  from === bounds.from && to === bounds.to ? null : { from, to },
+                );
+              }}
+            />
+          </div>
+        )}
+
         {/* One line, saying what a dot is, what a count counts and that the
             counts include items the cloud never draws. */}
         {drawn && (
@@ -630,12 +784,21 @@ export function ContextMapCard({
         in a component that was unmounted instead of closed.
       */}
       <MapPanel
-        open={selectedId !== null}
+        // A chosen region opens it too, on its items. Not a hovered one:
+        // hovering previews the cloud, it does not select anything.
+        open={selectedId !== null || regionLabel !== null}
         onOpenChange={(next) => {
-          if (!next) setSelectedId(null);
+          if (next) return;
+          setSelectedId(null);
+          setRequestedTopic(null);
         }}
         selected={selected}
         missing={missing}
+        item={itemQuery.data?.contextMapItem ?? null}
+        itemLoading={itemQuery.loading}
+        itemError={itemQuery.error !== undefined}
+        regionLabel={regionLabel}
+        regionItems={regionItems}
         edges={edges}
         edgesError={edgesQuery.error !== undefined}
         byId={byId}

@@ -1,24 +1,22 @@
 "use client";
 
 /**
- * The map's side panel: the item the selected passage came from, its type
- * where the base declares one, the passage itself as the matched text, a link
- * to the item, and its closest neighbours by wording.
+ * The map's side panel. It shows whatever is selected: an ITEM when a passage
+ * is selected, or a REGION's items when a chip is.
  *
- * Everything that names a point names it by its ITEM. A point's `label` is the
- * first 120 characters of the chunk, and this product's ingestion injects a
- * document header into every chunk — so a heading or a row taken from the
- * opening reads `--- Document (Exulu ID: 6adc924b-…) ---`. See `pointTitle`.
+ * Everything that names a point names it by its ITEM. See `pointTitle`.
  *
- * It only ever shows a passage. It used to list the regions and their counts
- * when nothing was selected, which was the chip row again one column over, so
- * the card mounts it on a selection and not before.
+ * It used to show the passage's own opening as "matched text". This product's
+ * ingestion injects a document header into every chunk, so on a real base that
+ * opening read `--- Document (Exulu ID: 6adc924b-…) ---` nearly every time: an
+ * identifier where a reader expected the passage. The item's own metadata is
+ * in its place, and the opening is no longer requested at all.
  *
  * It owns no data and no URL state: the card fetches, the card decides what is
  * selected, and this file renders it.
  */
 
-import { useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import * as React from "react";
 
@@ -27,8 +25,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { isPassageClipped, pointTitle, strongestPerItem } from "./map-data";
-import type { MapEdge, MapPoint } from "./map-data";
+import { pointTitle, strongestPerItem } from "./map-data";
+import type { MapEdge, MapItem, MapPoint, RegionItem } from "./map-data";
 
 export interface MapPanelProps {
   open: boolean;
@@ -36,12 +34,30 @@ export interface MapPanelProps {
   selected: MapPoint | null;
   /** True when ?selected= names a passage absent from the access-scoped answer. */
   missing: boolean;
+  /** The selected point's item, or null while it loads or if it is unreadable. */
+  item: MapItem | null;
+  itemLoading: boolean;
+  /** True when the metadata query failed, which is not the same as no metadata. */
+  itemError: boolean;
   edges: MapEdge[];
   edgesError: boolean;
   byId: Map<string, MapPoint>;
+  /** Set when a region chip is chosen and no passage is selected. */
+  regionLabel: string | null;
+  regionItems: RegionItem[];
   itemHref: (itemId: string) => string;
   onSelect: (id: string) => void;
   onHoverNeighbour: (id: string | null) => void;
+}
+
+/** One label/value row of the metadata list. Values are already formatted. */
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="text-foreground">{value}</dd>
+    </>
+  );
 }
 
 export function MapPanel({
@@ -49,18 +65,21 @@ export function MapPanel({
   onOpenChange,
   selected,
   missing,
+  item,
+  itemLoading,
+  itemError,
   edges,
   edgesError,
   byId,
+  regionLabel,
+  regionItems,
   itemHref,
   onSelect,
   onHoverNeighbour,
 }: MapPanelProps) {
   const t = useTranslations("map");
-  // The points answer carries only the passage's opening (see
-  // PASSAGE_LABEL_LIMIT), and a reader cannot tell an opening from a whole
-  // passage by looking at it.
-  const clipped = selected !== null && isPassageClipped(selected.label);
+  const format = useFormatter();
+  const locale = useLocale();
 
   /**
    * One row per item, not per passage. The edges answer is per passage, so a
@@ -79,50 +98,155 @@ export function MapPanel({
     [edges, byId],
   );
 
+  /**
+   * A date the base recorded, or nothing — never a placeholder date.
+   *
+   * toLocaleDateString rather than next-intl's formatter, which this app has
+   * no global timeZone configured for and which therefore warns on every
+   * render. The rest of the app formats dates the same way.
+   */
+  const asDate = (value: string | null): string | null => {
+    if (value === null) return null;
+    const date = new Date(value);
+    return Number.isFinite(date.getTime())
+      ? date.toLocaleDateString(locale, { dateStyle: "medium" })
+      : null;
+  };
+
+  /**
+   * A count the base actually recorded.
+   *
+   * Zero is "never measured", not "empty": `textlength` is populated on some
+   * bases and left at 0 on others — measured on a restored production copy,
+   * 1,263 of 1,299 items on one base carry a real length while all 67 on
+   * another sit at 0. Rendering "0 characters" there would put a number in
+   * the panel that means nothing, which is the complaint this panel exists to
+   * answer.
+   */
+  const recorded = (value: number | null): boolean => value !== null && value > 0;
+
+  const showRegion = selected === null && regionLabel !== null;
+
   return (
     <SidePanel
       open={open}
       onOpenChange={onOpenChange}
-      title={t("panel.item")}
+      title={showRegion ? t("panel.region") : t("panel.item")}
       storageKey="context-map"
       mobileSize="full"
       className="lg:h-auto"
     >
-      <div className="p-4">
+      <div className="space-y-5 p-4">
         {missing ? (
           <p className="text-sm text-muted-foreground">
             {t("panel.unavailable")}
           </p>
-        ) : selected ? (
-          <div className="space-y-4">
-            {selected.group !== null && (
-              <Badge variant="secondary">{selected.group}</Badge>
-            )}
-            {/* The panel's own title is an h2, so its subject is an h3 and the
-                two sections about that subject are h4s. `break-words` because
-                a document name can be one long unbroken token. */}
+        ) : showRegion ? (
+          <div className="space-y-3">
             <h3 className="break-words text-sm font-semibold text-foreground">
-              {pointTitle(selected) || t("panel.untitled")}
+              {regionLabel}
             </h3>
-            <div className="space-y-1">
-              {/* Labelled, because a passage of a long document is a quotation
-                  from it and reads as a summary of it if nothing says so. */}
-              <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {t("panel.matched")}
-              </h4>
-              <p className="whitespace-pre-wrap text-sm text-foreground">
-                {clipped ? `${selected.label}…` : selected.label}
+            {regionItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {t("panel.regionEmpty")}
               </p>
-              {clipped && (
+            ) : (
+              <>
                 <p className="text-xs text-muted-foreground">
-                  {t("panel.clipped")}
+                  {t("panel.regionCount", { count: regionItems.length })}
                 </p>
+                <ul className="space-y-1">
+                  {regionItems.map((row) => (
+                    <li key={row.itemId}>
+                      <Link
+                        href={itemHref(row.itemId)}
+                        className="flex items-baseline justify-between gap-3 rounded px-2 py-1 text-sm hover:bg-muted"
+                      >
+                        <span className="truncate">
+                          {row.name || t("panel.untitled")}
+                        </span>
+                        <span
+                          className="shrink-0 text-xs tabular-nums text-muted-foreground"
+                          // A bare number in a row says nothing on its own,
+                          // and this one is passages, not chunks of the item.
+                          aria-label={t("panel.passagesHere", {
+                            count: row.passages,
+                          })}
+                        >
+                          {format.number(row.passages)}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        ) : selected ? (
+          <>
+            <div className="space-y-2">
+              {selected.group !== null && (
+                <Badge variant="secondary">{selected.group}</Badge>
               )}
+              {/* The panel's own title is an h2, so its subject is an h3 and
+                  the sections about that subject are h4s. `break-words`
+                  because a document name can be one long unbroken token. */}
+              <h3 className="break-words text-sm font-semibold text-foreground">
+                {pointTitle(selected) || t("panel.untitled")}
+              </h3>
             </div>
+
+            {/* The name and the neighbours are already known; only this block
+                waits on a second query, so only this block shows a skeleton.
+                Holding the whole panel for it would make selecting a dot feel
+                slower than it is. */}
+            {itemLoading ? (
+              <Skeleton className="h-16 w-full" />
+            ) : itemError ? (
+              // Said rather than swallowed: a failed query rendered exactly
+              // like an item that recorded nothing, which is a different
+              // claim. The neighbours list says so when it fails; this does
+              // now too.
+              <p className="text-sm text-muted-foreground">
+                {t("panel.detailsFailed")}
+              </p>
+            ) : item === null ? null : (
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+                {recorded(item.chunks) && (
+                  <Detail
+                    label={t("panel.chunks")}
+                    value={format.number(item.chunks as number)}
+                  />
+                )}
+                {recorded(item.textLength) && (
+                  <Detail
+                    label={t("panel.size")}
+                    value={t("panel.characters", { count: item.textLength as number })}
+                  />
+                )}
+                {asDate(item.createdAt) !== null && (
+                  <Detail
+                    label={t("panel.added")}
+                    value={asDate(item.createdAt) as string}
+                  />
+                )}
+                {asDate(item.updatedAt) !== null && (
+                  <Detail
+                    label={t("panel.updated")}
+                    value={asDate(item.updatedAt) as string}
+                  />
+                )}
+                {item.source !== null && (
+                  <Detail label={t("panel.source")} value={item.source} />
+                )}
+              </dl>
+            )}
+
             <Button asChild variant="outline" size="sm">
               {/* A route on this app, so client navigation rather than a reload. */}
               <Link href={itemHref(selected.itemId)}>{t("panel.open")}</Link>
             </Button>
+
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-foreground">
                 {t("panel.neighbours")}
@@ -174,7 +298,7 @@ export function MapPanel({
                 </ul>
               )}
             </div>
-          </div>
+          </>
         ) : (
           // A selection with no passage yet: a shared ?selected= opens the
           // panel while the points answer is still in flight.

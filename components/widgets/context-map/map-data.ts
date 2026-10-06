@@ -6,16 +6,91 @@
 
 export type MapPoint = {
   id: string; itemId: string; x: number; y: number; z: number;
-  /**
-   * The passage's opening — the matched text. NOT a title: see `pointTitle`
-   * and PASSAGE_LABEL_LIMIT below for why this string so often begins with a
-   * document header rather than with anything a reader would recognise.
-   */
-  label: string;
   /** The name of the item the passage came from, or "" for an unnamed item. */
   itemName: string;
   group: string | null; chunks: number;
+  /**
+   * When the point's ITEM was created, as epoch milliseconds, or null when the
+   * base never recorded it. Null is "undated", not "oldest": a time filter
+   * must not park an undated point at the start of the range.
+   */
+  createdAtMs: number | null;
 };
+
+/**
+ * One item's own metadata, read when a point is selected. A separate query
+ * from the points, so every field here is null until it arrives.
+ */
+export type MapItem = {
+  id: string; name: string; chunks: number | null; textLength: number | null;
+  source: string | null; createdAt: string | null; updatedAt: string | null;
+};
+
+/** Milliseconds in a day: the time filter's step, and what it snaps to. */
+export const DAY_MS = 86_400_000;
+
+/** An inclusive range of item creation times, in epoch milliseconds. */
+export type TimeWindow = { from: number; to: number };
+
+/**
+ * The span the time filter may cover, or null when there is nothing to filter.
+ *
+ * Null when fewer than two distinct DAYS are represented — which is the honest
+ * refusal, not a degenerate case. Measured on a restored production copy:
+ * every knowledge base here ingests in one batch, 65 of 67 items on a single
+ * day on the largest, and three of four bases on one day outright. A slider
+ * there implies the map has a time dimension that the data has not got, which
+ * is exactly the kind of control that made the first version of this map
+ * useless. The memory base, which accumulates, spans twelve days across six
+ * weeks — that is where this earns its place.
+ *
+ * Undated items are ignored when measuring; they are not evidence of a span.
+ * Snapped outwards to whole days so both ends sit inside the offered range.
+ *
+ * Days are UTC days, while the label above the slider is formatted in the
+ * viewer's zone — so for a reader far from UTC, two items either side of
+ * midnight UTC count as two days and the refusal lets a one-afternoon import
+ * through. Deliberate: local midnights are 23 or 25 hours apart across a DST
+ * boundary, which would break the exact DAY_MS step the slider relies on to
+ * return to its own endpoints. The margin is narrow and the alternative is
+ * a slider that cannot be released cleanly.
+ */
+export function timeBounds(points: MapPoint[]): TimeWindow | null {
+  let min = Infinity;
+  let max = -Infinity;
+  const days = new Set<number>();
+  for (const point of points) {
+    const at = point.createdAtMs;
+    if (at === null || !Number.isFinite(at)) continue;
+    if (at < min) min = at;
+    if (at > max) max = at;
+    days.add(Math.floor(at / DAY_MS));
+  }
+  if (days.size < 2) return null;
+  return {
+    from: Math.floor(min / DAY_MS) * DAY_MS,
+    to: Math.ceil(max / DAY_MS) * DAY_MS,
+  };
+}
+
+/**
+ * Whether a point's item was created inside the filter's window.
+ *
+ * An undated point is dropped once a window is set. Null is "undated", not
+ * "oldest": nothing can place it in time, so a time filter cannot vouch for
+ * it — and treating it as 1970 would park it permanently at the left end.
+ */
+export function withinWindow(
+  createdAtMs: number | null,
+  window: TimeWindow | null,
+): boolean {
+  if (window === null) return true;
+  if (createdAtMs === null || !Number.isFinite(createdAtMs)) return false;
+  return createdAtMs >= window.from && createdAtMs <= window.to;
+}
+
+/** One item inside a region, for the panel a chip opens. */
+export type RegionItem = { itemId: string; name: string; passages: number };
 export type MapTopic = { id: string; label: string; count: number; x: number; y: number; z: number };
 export type MapEdge = { source: string; target: string; score: number };
 export type Rgb = [number, number, number];
@@ -419,6 +494,105 @@ export function projectToScreen(
   };
 }
 
+/**
+ * The unique items a region holds, most-present first.
+ *
+ * A region is a cluster of PASSAGES, so a document split into forty chunks is
+ * forty dots in it — the right picture of the cloud, and the wrong answer to
+ * "what is in here". This folds them by item.
+ *
+ * No new data is fetched: the points already carry their item, and membership
+ * is the same nearest-centre rule the colouring uses, so this cannot disagree
+ * with what is on screen. It inherits the cloud's honesty caveat too — these
+ * are the items among the passages the fit sampled, not everything on the
+ * base.
+ *
+ * Ordered by how much of the region an item occupies, then by name: a row
+ * order inherited from the cloud's random sampling would answer nothing.
+ */
+export function itemsInRegion(
+  points: MapPoint[],
+  topics: MapTopic[],
+  topicId: string | null,
+): RegionItem[] {
+  if (topicId === null) return [];
+  const rows = new Map<string, RegionItem>();
+  for (const point of points) {
+    if (topicOf(point, topics) !== topicId) continue;
+    const row = rows.get(point.itemId);
+    if (row === undefined) {
+      rows.set(point.itemId, { itemId: point.itemId, name: point.itemName, passages: 1 });
+      continue;
+    }
+    row.passages += 1;
+    // Chunks of one document can disagree only when some rows carry no name;
+    // the first real one is the item's.
+    if (row.name === "") row.name = point.itemName;
+  }
+  return [...rows.values()].sort(
+    (a, b) => b.passages - a.passages || a.name.localeCompare(b.name),
+  );
+}
+
+/** Gap between the pointer and the hover read-out, in CSS pixels. */
+export const TOOLTIP_OFFSET = 8;
+
+/**
+ * Whether a label's whole plate lands inside the canvas.
+ *
+ * projectToScreen calls anything in front of the camera visible, regardless of
+ * where it lands, so a region centre that swings off the side of the cloud
+ * still produced a label — at a coordinate outside the canvas, which escaped
+ * the card and drew over the page's tabs and header. The host clips now, which
+ * ends the escape; this drops the labels that would merely be sliced in half
+ * by that clip, which reads as a fault rather than as a label.
+ *
+ * Before the collision pass, not after: an off-screen label must not win a
+ * collision against one a reader can actually see.
+ *
+ * A canvas of zero size is "not measured yet" — the overlay runs before the
+ * first resize observation — and keeps everything, since the alternative is
+ * blanking the layer for a frame on every mount.
+ */
+export function labelFitsCanvas(
+  box: { x: number; y: number; width: number; height: number },
+  width: number,
+  height: number,
+): boolean {
+  if (width <= 0 || height <= 0) return true;
+  const halfW = box.width / 2;
+  const halfH = box.height / 2;
+  return (
+    box.x - halfW >= 0 &&
+    box.x + halfW <= width &&
+    box.y - halfH >= 0 &&
+    box.y + halfH <= height
+  );
+}
+
+/**
+ * Where to put the hover read-out so the clipped host cannot cut it off.
+ *
+ * Below-right of the pointer by default, flipping to the other side of it
+ * rather than sliding along the edge: a tooltip that slides detaches from the
+ * dot it describes, while one that flips stays anchored to it. Clamped at 0
+ * for the case where neither side fits, which a canvas narrower than the
+ * tooltip can produce.
+ */
+export function tooltipPosition(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  size: { width: number; height: number },
+): { left: number; top: number } {
+  const right = x + TOOLTIP_OFFSET;
+  const below = y + TOOLTIP_OFFSET;
+  const left = right + size.width > width ? x - TOOLTIP_OFFSET - size.width : right;
+  const top = below + size.height > height ? y - TOOLTIP_OFFSET - size.height : below;
+  return { left: Math.max(0, left), top: Math.max(0, top) };
+}
+
 /** Position (x, y) is the label's centre, not top-left. */
 export type LabelBox = { id: string; x: number; y: number; width: number; height: number; count: number };
 
@@ -445,34 +619,14 @@ export function coverageCaption({
 }
 
 /**
- * How much of a passage the points answer carries: the resolver builds a
- * point's `label` as `LEFT(COALESCE(chunks.content, items.name), 120)`. On a
- * knowledge base a chunk runs to around two thousand characters, so what the
- * panel is handed is an opening, not the passage. Widening the answer is not
- * the alternative — the label text is already most of a multi-megabyte payload,
- * sent for every row to serve the one that gets selected — so the panel says
- * that it is an opening instead.
- */
-export const PASSAGE_LABEL_LIMIT = 120;
-
-/**
- * Whether a passage's text reaches that width, and is therefore almost
- * certainly cut. A passage exactly that long reads as cut too: nothing in the
- * answer could tell the two apart, and of the two possible mistakes, claiming
- * the text is complete is the worse one.
- */
-export function isPassageClipped(label: string): boolean {
-  return label.length >= PASSAGE_LABEL_LIMIT;
-}
-
-/**
  * What to call a point on screen.
  *
- * Never its `label`. That is the first 120 characters of the chunk, and this
- * product's ingestion injects a document header into every chunk — so the
- * opening reads `--- Document (Exulu ID: 6adc924b-…) ---` and a tooltip, a
- * panel heading or a neighbour row taken from it shows an identifier. The
- * item's name is what a reader calls the thing.
+ * Never the passage's own opening. This product's ingestion injects a document
+ * header into every chunk, so the opening reads
+ * `--- Document (Exulu ID: 6adc924b-…) ---`, and a tooltip, a panel heading or
+ * a neighbour row taken from it shows an identifier. The item's name is what a
+ * reader calls the thing — which is why the opening is no longer requested at
+ * all.
  *
  * NOT the opening, even when `itemName` is blank. `name` is nullable on an
  * items table, and falling back to `label` here is exactly the bug a blank
@@ -483,7 +637,7 @@ export function isPassageClipped(label: string): boolean {
  * "Untitled item" is the fix — this function is pure and lives in map-data,
  * so it cannot reach next-intl itself.
  */
-export function pointTitle(point: { itemName: string; label: string }): string {
+export function pointTitle(point: { itemName: string }): string {
   return point.itemName.trim() === "" ? "" : point.itemName;
 }
 
