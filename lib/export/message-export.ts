@@ -451,3 +451,61 @@ export async function copyMessageFormatted(
   await clipboard.writeText(text);
   return "plain";
 }
+
+// --------------------------------------------------------------------------
+// Citation stripping
+// --------------------------------------------------------------------------
+
+/**
+ * The two citation shapes the model emits inline in its answer text:
+ * `{item_name: …, item_id: …, chunk_id: …, chunk_index: …, context: …}` for a
+ * knowledge-base source and `{url: …, title: …, snippet: …}` for a web result.
+ *
+ * `MessageRenderer` turns these into `<cite-marker-*>` elements and the chat
+ * renders them as badges — but nothing downstream of this file does, so a copy
+ * or a download carries them as raw braces. Same patterns the renderer and the
+ * feedback dialog already match on, lifted here so there is one definition
+ * instead of a third copy.
+ */
+const KNOWLEDGE_CITATION = /\{[^}]*?item_name\s*:\s*[^,}]+[^}]*?\}/g;
+const WEB_CITATION = /\{[^}]*?url\s*:\s*[^,}]+[^}]*?\}/g;
+
+/** Fenced blocks and inline spans, so code is never rewritten. */
+const CODE_SPAN = /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g;
+
+/**
+ * Remove the inline source references from an answer, leaving prose a reader
+ * can forward without editing it by hand.
+ *
+ * Code is left exactly as written: a JSON sample containing a `url` field is
+ * indistinguishable from a web citation by pattern alone, and silently
+ * rewriting someone's code block would be a worse bug than the one this fixes.
+ * So the text is split on fenced blocks and inline spans, and only the prose
+ * between them is touched.
+ *
+ * Removing a blob mid-sentence leaves debris — two spaces where there was one,
+ * a space before a full stop, a line that is now only whitespace — so the
+ * prose is tidied afterwards. Paragraph breaks are preserved; a run of three
+ * or more blank lines collapses to one blank line.
+ */
+export function stripCitations(markdown: string): string {
+  if (!markdown) return markdown;
+
+  const cleaned = markdown
+    .split(CODE_SPAN)
+    .map((segment, index) => {
+      // split() with one capture group yields code at every odd index.
+      if (index % 2 === 1) return segment;
+      return segment.replace(KNOWLEDGE_CITATION, "").replace(WEB_CITATION, "");
+    })
+    .join("");
+
+  return cleaned
+    // Spaces left where a blob used to sit, including before punctuation.
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+([.,;:!?])/g, "$1")
+    // A blob alone on its line leaves whitespace behind.
+    .replace(/[ \t]+$/gm, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}

@@ -38,7 +38,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Agent } from "@/types/models/agent"
 import { ImageGenerationWidget } from "./image-generation/image-generation-widget"
 
-import { buildMessageHtmlDocument, copyMessageFormatted } from "@/lib/export/message-export"
+import { buildMessageHtmlDocument, copyMessageFormatted, stripCitations } from "@/lib/export/message-export"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,8 +65,32 @@ function messageMarkdown(message: UIMessage): string {
     .join('\n\n')
 }
 
-function downloadMessage(message: UIMessage, format: 'html' | 'md') {
+/**
+ * Copy an answer to the clipboard, optionally without its inline source
+ * references. Reported by a client who was deleting them by hand before
+ * forwarding answers on to their own customers.
+ */
+function copyMessage(message: UIMessage, options: { withoutSources?: boolean } = {}) {
   const markdown = messageMarkdown(message)
+  const text = options.withoutSources ? stripCitations(markdown) : markdown
+  return copyMessageFormatted(text)
+    .then((flavor) => {
+      toast.success(options.withoutSources ? "Copied without sources" : "Copied message", {
+        description: flavor === 'rich'
+          ? "Formatted copy — paste into email or WhatsApp."
+          : "The message was copied as text.",
+      })
+    })
+    .catch(() => {
+      toast.error("Copy failed", { description: "Clipboard is not available in this browser." })
+    })
+}
+
+function downloadMessage(message: UIMessage, format: 'html' | 'md') {
+  // Nothing downstream of here renders citation markers, so they would land in
+  // the file as raw `{item_name: …}` braces. A download exists to be sent on,
+  // which is exactly when they are noise.
+  const markdown = stripCitations(messageMarkdown(message))
   const isHtml = format === 'html'
   const content = isHtml ? buildMessageHtmlDocument(markdown) : markdown
   const blob = new Blob([content], { type: isHtml ? 'text/html' : 'text/markdown' })
@@ -1293,25 +1317,23 @@ const MessageItem = memo(function MessageItem({
                         </MessageAction>
                       )}
                       {showActions && message.role === 'assistant' && (
-                        <MessageAction
-                          className="mr-1"
-                          onClick={() => {
-                            copyMessageFormatted(messageMarkdown(message))
-                              .then((flavor) => {
-                                toast.success("Copied message", {
-                                  description: flavor === 'rich'
-                                    ? "Formatted copy — paste into email or WhatsApp."
-                                    : "The message was copied as text.",
-                                })
-                              })
-                              .catch(() => {
-                                toast.error("Copy failed", { description: "Clipboard is not available in this browser." })
-                              })
-                          }}
-                          label="Copy"
-                        >
-                          <CopyIcon className="size-3" />
-                        </MessageAction>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <MessageAction className="mr-1" label="Copy">
+                              <CopyIcon className="size-3" />
+                            </MessageAction>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => void copyMessage(message)}>
+                              Copy
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => void copyMessage(message, { withoutSources: true })}
+                            >
+                              Copy without sources
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                       {ttsEnabled && showActions && message.role === 'assistant' && (
                         <MessageAction

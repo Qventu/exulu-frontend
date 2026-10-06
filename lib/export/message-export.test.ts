@@ -13,6 +13,7 @@ import {
   copyMessageFormatted,
   markdownToClipboardHtml,
   markdownToWhatsAppText,
+  stripCitations,
 } from "./message-export";
 
 describe("markdownToWhatsAppText", () => {
@@ -294,3 +295,78 @@ describe("copyMessageFormatted", () => {
     await expect(copyMessageFormatted("hi")).rejects.toThrow();
   });
 });
+
+describe("stripCitations", () => {
+  const knowledge =
+    "{item_name: Vertrag.pdf, item_id: abc-123, chunk_id: c-1, chunk_index: 2, context: knowledge}";
+  const web = "{url: https://example.com, title: Example, snippet: Some text}";
+
+  it("removes a knowledge-base reference and closes the gap it leaves", () => {
+    expect(stripCitations(`Der Termin ist der 15.10. ${knowledge}`)).toBe(
+      "Der Termin ist der 15.10.",
+    );
+  });
+
+  it("removes a web reference", () => {
+    expect(stripCitations(`Laut der Website ${web} gilt das.`)).toBe(
+      "Laut der Website gilt das.",
+    );
+  });
+
+  it("removes several references from one answer", () => {
+    const out = stripCitations(
+      `Erstens ${knowledge} und zweitens ${web} sowie drittens ${knowledge}`,
+    );
+    expect(out).toBe("Erstens und zweitens sowie drittens");
+    expect(out).not.toMatch(/item_name|url:/);
+  });
+
+  it("does not leave a space before punctuation", () => {
+    expect(stripCitations(`Das steht so im Vertrag ${knowledge}.`)).toBe(
+      "Das steht so im Vertrag.",
+    );
+  });
+
+  it("keeps paragraph breaks but collapses the blank run a lone reference leaves", () => {
+    expect(stripCitations(`Absatz eins.\n\n${knowledge}\n\nAbsatz zwei.`)).toBe(
+      "Absatz eins.\n\nAbsatz zwei.",
+    );
+  });
+
+  it("leaves a fenced code block alone, even when it contains a url field", () => {
+    // A JSON sample is indistinguishable from a web citation by pattern alone;
+    // rewriting someone's code would be worse than the bug this fixes.
+    const md = [
+      "Beispiel:",
+      "",
+      "```json",
+      '{ "url": "https://api.example.com", "title": "x" }',
+      "```",
+    ].join("\n");
+    expect(stripCitations(md)).toBe(md);
+  });
+
+  it("leaves an inline code span alone", () => {
+    const md = "Siehe `{url: https://example.com, title: t, snippet: s}` im Beispiel.";
+    expect(stripCitations(md)).toBe(md);
+  });
+
+  it("strips prose around a code block without touching the block", () => {
+    const md = `Vorher ${knowledge}\n\n\`\`\`\n{url: keep-me, title: t, snippet: s}\n\`\`\`\n\nNachher ${web}`;
+    const out = stripCitations(md);
+    expect(out).toContain("{url: keep-me");
+    expect(out).toContain("Vorher");
+    expect(out).toContain("Nachher");
+    expect(out).not.toContain("item_name");
+  });
+
+  it("returns ordinary prose unchanged", () => {
+    const md = "Ein ganz normaler Satz mit { geschweiften } Klammern.";
+    expect(stripCitations(md)).toBe(md);
+  });
+
+  it("handles an empty message", () => {
+    expect(stripCitations("")).toBe("");
+  });
+});
+
