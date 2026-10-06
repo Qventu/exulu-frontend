@@ -1052,6 +1052,47 @@ describe("ContextMapCard", () => {
     expect(new URLSearchParams(window.location.search).get("topic")).toBe("1");
   });
 
+  it("clears the hover preview when a click deselects a chip, so the cloud stops dimming", async () => {
+    // fireEvent.click does not focus an element the way a real click does,
+    // so the chip is focused explicitly first. That is also exactly what
+    // lets this bug persist indefinitely from the keyboard: focus never
+    // moves away on its own the way a pointer leaving the chip does.
+    viewport.large = true;
+    render(
+      withProviders([placedPointsMock, topicsMock, statusMock], {
+        topic: "1",
+      }),
+    );
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("1"),
+    );
+    const chip = screen.getByRole("button", { name: /pricing/i });
+    fireEvent.focus(chip);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("1"),
+    );
+
+    fireEvent.click(chip);
+    await waitFor(() =>
+      expect(chip.getAttribute("aria-pressed")).toBe("false"),
+    );
+    // The bug: activeTopic = hoverTopic ?? highlightTopic, and onFocus set
+    // hoverTopic to this chip above. Without clearing it on a deselecting
+    // click, the chip says "not chosen" while activeTopic — and the cloud —
+    // stayed this one.
+    expect(canvas.renders.at(-1)!.highlightTopic).toBeNull();
+    expect(new URLSearchParams(window.location.search).has("topic")).toBe(
+      false,
+    );
+
+    // Nothing about the hover mechanism itself was lost: re-entering the
+    // chip still previews it.
+    fireEvent.mouseEnter(chip);
+    await waitFor(() =>
+      expect(canvas.renders.at(-1)!.highlightTopic).toBe("1"),
+    );
+  });
+
   it("asks the API for the item's name, not only the passage's opening", async () => {
     // The name is what every surface showing a point calls it, and the items
     // table is already joined for the access-control gate.

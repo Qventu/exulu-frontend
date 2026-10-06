@@ -547,11 +547,18 @@ export function ContextMapCard({
                         highlightTopic === topic.id ? "default" : "outline"
                       }
                       aria-pressed={highlightTopic === topic.id}
-                      onClick={() =>
-                        setRequestedTopic(
-                          highlightTopic === topic.id ? null : topic.id,
-                        )
-                      }
+                      onClick={() => {
+                        const deselecting = highlightTopic === topic.id;
+                        setRequestedTopic(deselecting ? null : topic.id);
+                        // A click focuses the button, which set (or kept)
+                        // `hoverTopic` to this chip — from the keyboard, focus
+                        // never moves away on its own. Left alone, the chip
+                        // would say "not chosen" while `activeTopic` stayed
+                        // this one and the cloud kept it dim, indefinitely
+                        // from the keyboard. Re-entering the chip restores
+                        // the preview, so nothing is lost.
+                        if (deselecting) setHoverTopic(null);
+                      }}
                       // A look, not a choice: the cloud dims as it would if
                       // this chip were chosen, and nothing is written.
                       // Focus and blur too, so the keyboard sees the same map
