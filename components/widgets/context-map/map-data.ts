@@ -126,6 +126,149 @@ export function buildBuffers(
   return { positions, colors };
 }
 
+/** The cloud's axis-aligned bounding box, in the layout's own coordinates. */
+export type CloudBounds = {
+  min: { x: number; y: number; z: number };
+  max: { x: number; y: number; z: number };
+};
+
+/**
+ * The box the passages occupy, or null when none of them has a position worth
+ * framing.
+ *
+ * A plain bounding box, with nothing trimmed off its ends. On the first real
+ * base — 1134 passages — the radii run median 0.465, 90th percentile 0.813,
+ * 99th 1.000, maximum 1.012: a spread, not a tight core with a few points
+ * flung out, so a percentile box would frame almost the same cloud while
+ * cutting off real passages at the rim.
+ *
+ * The box is NOT symmetric about the origin even though the layout is centred
+ * on its own mean — that base runs from -0.58 to 0.95 across — which is why
+ * the camera is aimed at this box's centre rather than at the origin.
+ *
+ * A passage whose stored coordinates are not finite is left out, exactly as
+ * `nearestNeighbourSegments` leaves it out of the grid: one NaN would
+ * otherwise swallow the whole box.
+ */
+export function cloudBounds(
+  points: readonly { x: number; y: number; z: number }[],
+): CloudBounds | null {
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (const p of points) {
+    if (!(Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z))) continue;
+    if (p.x < minX) minX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.z < minZ) minZ = p.z;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y > maxY) maxY = p.y;
+    if (p.z > maxZ) maxZ = p.z;
+  }
+  if (minX === Infinity) return null;
+  return { min: { x: minX, y: minY, z: minZ }, max: { x: maxX, y: maxY, z: maxZ } };
+}
+
+/**
+ * The fraction of the limiting viewport dimension the cloud spans. The rest is
+ * margin: a cloud that touched both edges would read as cropped, and the
+ * margin also absorbs the near face of the cloud projecting slightly larger
+ * than the mid-plane this fit is measured at.
+ */
+export const VIEWPORT_FILL = 0.85;
+
+/**
+ * How close and how far a viewer may dolly, as multiples of the framing
+ * distance. Relative, not absolute: the fixed 1.2 these replace sat all but
+ * exactly at the distance the first real base wants to be framed from, so
+ * zooming in by hand crawled to the right framing and then stopped dead, with
+ * no room left to look closer. A small cloud can now be approached and a large
+ * one backed away from, in proportion to its own size.
+ */
+const NEAR_LIMIT_FACTOR = 0.3;
+const FAR_LIMIT_FACTOR = 3;
+
+/** A canvas with no measurable size yet is framed as if it were square. */
+const FALLBACK_ASPECT = 1;
+
+/** One passage, or every passage stacked: no extent, but the camera still needs to be somewhere. */
+const DEGENERATE_DISTANCE = 1;
+
+/**
+ * The distance the map was framed from before the camera was fitted to the
+ * data, and so the distance the dot sizes in map-canvas were chosen at. The
+ * point shader scales a dot by 1/distance, so framing a cloud closer enlarges
+ * every dot in proportion; `sizeScale` below undoes exactly that.
+ */
+export const FRAMING_REFERENCE_DISTANCE = 3.2;
+
+/** Where the camera looks from, how far a viewer may dolly, and what that does to the dots. */
+export type Framing = {
+  center: { x: number; y: number; z: number };
+  distance: number;
+  minDistance: number;
+  maxDistance: number;
+  /**
+   * Multiply a world-space size — a point size, a pick radius — by this to
+   * keep it the same apparent size it had at FRAMING_REFERENCE_DISTANCE.
+   */
+  sizeScale: number;
+};
+
+/**
+ * Where to put the camera so the cloud fills the viewport.
+ *
+ * `fovDegrees` is the camera's VERTICAL field of view; the horizontal one is
+ * the aspect ratio times it. Each screen axis is therefore fitted against its
+ * own field and the further of the two distances wins, which makes the height
+ * the limiting dimension on a wide canvas and the width on a narrow one.
+ *
+ * Fitting one radius against the vertical field instead is what leaves a cloud
+ * marooned, and is in effect what the constant distance did: this base's
+ * radius is set by its width, 0.765, while its height is only 0.485, so the
+ * vertical field would be asked to frame a cloud half again as tall as the one
+ * it actually has to hold — and on a canvas four times wider than it is tall,
+ * the width it wasted on that has four times the room to spare.
+ *
+ * The horizontal fit uses the larger of the x and z half-extents because the
+ * map idles in an azimuthal rotation about the camera's up axis, which swings
+ * depth into width and back. That rotation leaves the vertical extent exactly
+ * as it is, so the fit holds for every frame of the idle spin. A viewer who
+ * tilts the camera off the horizon can swing depth into the height instead and
+ * push the rim past the frame — their own doing, and they can dolly back out.
+ */
+export function frameCloud(
+  bounds: CloudBounds, aspect: number, fovDegrees: number,
+): Framing {
+  const center = {
+    x: (bounds.min.x + bounds.max.x) / 2,
+    y: (bounds.min.y + bounds.max.y) / 2,
+    z: (bounds.min.z + bounds.max.z) / 2,
+  };
+  const halfX = (bounds.max.x - bounds.min.x) / 2;
+  const halfY = (bounds.max.y - bounds.min.y) / 2;
+  const halfZ = (bounds.max.z - bounds.min.z) / 2;
+
+  // Half the viewport, in world units, one unit in front of the camera.
+  const perUnitHeight = Math.tan((fovDegrees * Math.PI) / 360);
+  const usableAspect =
+    Number.isFinite(aspect) && aspect > 0 ? aspect : FALLBACK_ASPECT;
+  const perUnitWidth = perUnitHeight * usableAspect;
+
+  const forHeight = halfY / (perUnitHeight * VIEWPORT_FILL);
+  const forWidth = Math.max(halfX, halfZ) / (perUnitWidth * VIEWPORT_FILL);
+  const fitted = Math.max(forHeight, forWidth);
+  const distance =
+    Number.isFinite(fitted) && fitted > 0 ? fitted : DEGENERATE_DISTANCE;
+
+  return {
+    center,
+    distance,
+    minDistance: distance * NEAR_LIMIT_FACTOR,
+    maxDistance: distance * FAR_LIMIT_FACTOR,
+    sizeScale: distance / FRAMING_REFERENCE_DISTANCE,
+  };
+}
+
 /** Average passages per cell of the grid that answers nearest-neighbour queries. */
 const CELL_OCCUPANCY = 2;
 const MAX_GRID_DIVISIONS = 64;
