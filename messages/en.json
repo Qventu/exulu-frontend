@@ -3256,7 +3256,7 @@
   },
   "map": {
     "caption": {
-      "explained": "Each dot is one passage, and passages worded alike sit close together. Lines join passages that share distinctive wording. A region's count is every passage in it across the whole base — items you may not read are counted but never shown. Drag to rotate.",
+      "explained": "Each dot is one passage, and passages worded alike sit close together. Lines join passages that share distinctive wording. A region's count is every passage the fit measured, not every passage on the base — items you may not read are counted but never shown. Drag to rotate.",
       "partial": "{missing, plural, one {# passage has no position yet.} other {# passages have no position yet.}}",
       "sampled": "Drawing {drawn, number} of {total, number} passages."
     },

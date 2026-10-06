@@ -3256,7 +3256,7 @@
   },
   "map": {
     "caption": {
-      "explained": "Jeder Punkt ist eine Passage, und ähnlich formulierte Passagen liegen nah beieinander. Linien verbinden Passagen mit auffällig gleicher Wortwahl. Die Zahl einer Region umfasst alle ihre Passagen der ganzen Basis — Einträge, die du nicht lesen darfst, werden mitgezählt, aber nie gezeigt. Zum Drehen ziehen.",
+      "explained": "Jeder Punkt ist eine Passage, und ähnlich formulierte Passagen liegen nah beieinander. Linien verbinden Passagen mit auffällig gleicher Wortwahl. Die Zahl einer Region umfasst alle Passagen, die in die Berechnung eingingen, nicht alle der Basis — Einträge, die du nicht lesen darfst, werden mitgezählt, aber nie gezeigt. Zum Drehen ziehen.",
       "partial": "{missing, plural, one {# Passage hat noch keine Position.} other {# Passagen haben noch keine Position.}}",
       "sampled": "Gezeichnet werden {drawn, number} von {total, number} Passagen."
     },
