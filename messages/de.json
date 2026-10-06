@@ -4888,8 +4888,8 @@
       "title": "Transkription stoppen?"
     },
     "confirmDiscard": {
-      "confirm": "Verwerfen",
-      "description": "Die Audiodatei bleibt in Ihren Dateien; der Transkriptionsauftrag wird abgebrochen.",
+      "confirm": "Aufnahme verwerfen",
+      "description": "Der Transkriptionsauftrag wird abgebrochen und dieses Transkript nicht behalten. Die Originalaufnahme bleibt in Ihren Dateien, Sie können daraus eine neue Transkription starten.",
       "title": "Dieses Transkript verwerfen?"
     },
     "confirmDismiss": {
@@ -4955,7 +4955,11 @@
       "kbRemove": "Entfernen…",
       "renameSpeaker": "{speaker} überall umbenennen",
       "jumpToTime": "Zu {time} springen",
-      "speakerNamePlaceholder": "Name der Person"
+      "speakerNamePlaceholder": "Name der Person",
+      "sharingButton": "Freigabe",
+      "sharingDialogTitle": "Wer dieses Transkript sehen kann",
+      "projectLabel": "Projekt",
+      "done": "Fertig"
     },
     "export": {
       "label": "Exportieren",
@@ -5121,7 +5125,8 @@
       "publishSharingPrivate": "Nur Sie sehen es — das ändern Sie unter Freigabe.",
       "publishSharingShared": "Die Personen, mit denen Sie es geteilt haben, sehen es ebenfalls.",
       "publishConfirm": "Veröffentlichen",
-      "publishRunning": "Wird veröffentlicht…"
+      "publishRunning": "Wird veröffentlicht…",
+      "discardAction": "Aufnahme verwerfen"
     },
     "row": {
       "awaitingReview": "Wartet auf Überprüfung",

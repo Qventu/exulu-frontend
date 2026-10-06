@@ -59,7 +59,6 @@
  */
 import { useMutation, useQuery } from "@apollo/client";
 import {
-  ChevronRight,
   ExternalLink,
   Folder,
   Globe,
@@ -85,11 +84,6 @@ import { RelativeTime } from "@/components/primitives/relative-time";
 import { RBACControl } from "@/components/rbac";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -141,6 +135,7 @@ import { ExportMenu } from "./export-menu";
 import { MeetingVideoPlayer } from "./meeting-video-player";
 import { cn } from "@/lib/utils";
 import { PublishDialog } from "./publish-dialog";
+import { SharingButton } from "./sharing-button";
 import { SpeakersPreview } from "./speakers-preview";
 import { SummaryMarkdown } from "./summary-markdown";
 import { FindReplace } from "./find-replace";
@@ -520,7 +515,9 @@ export function TranscriptDocument({
 
   const [accessOpen, setAccessOpen] = React.useState(false);
   const [publishOpen, setPublishOpen] = React.useState(false);
-  const [editingSpeaker, setEditingSpeaker] = React.useState<string | null>(null);
+  // Block index, not raw label: a speaker owns many blocks, and keying this
+  // by speaker opened an autofocused input in every one of them.
+  const [editingSpeakerBlock, setEditingSpeakerBlock] = React.useState<number | null>(null);
   const [moveOpen, setMoveOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [projectIdOverride, setProjectIdOverride] = React.useState<string | null | undefined>(
@@ -534,7 +531,6 @@ export function TranscriptDocument({
   const [editState, setEditState] = React.useState<EditDraftState>(() =>
     buildEditDraftState(item),
   );
-  const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [editingSegmentStart, setEditingSegmentStart] = React.useState<number | null>(null);
   const [editingText, setEditingText] = React.useState("");
@@ -844,27 +840,23 @@ export function TranscriptDocument({
                   className="max-md:h-11"
                   onClick={() => onDiscard?.()}
                 >
-                  {t("review.discard")}
+                  {t("review.discardAction")}
                 </Button>
                 {/* Same affordance as read mode's Share, driving the draft's
-                    own RBAC rather than a saved item's. Replaces the
-                    "ready to save" badge, which told the reviewer nothing
-                    they could act on. */}
-                <RBACControl
+                    own RBAC rather than a saved item's. */}
+                <SharingButton
                   allowedModes={ALLOWED_MODES}
-                  subjectLabel={t("sharing.subject")}
-                  initialRightsMode={editState.rightsMode}
-                  initialUsers={editState.rbacUsers}
-                  initialRoles={editState.rbacRoles}
-                  modalMode
-                  onChange={(nextMode, nextUsers, nextRoles) => {
+                  rightsMode={editState.rightsMode}
+                  users={editState.rbacUsers}
+                  roles={editState.rbacRoles}
+                  onChange={(nextMode, nextUsers, nextRoles) =>
                     setEditState((prev) => ({
                       ...prev,
                       rightsMode: nextMode,
                       rbacUsers: nextUsers,
                       rbacRoles: nextRoles,
-                    }));
-                  }}
+                    }))
+                  }
                 />
                 <Button
                   type="button"
@@ -1080,7 +1072,7 @@ export function TranscriptDocument({
                           {/* Click-to-rename, applied to every block this
                               speaker owns — the names map is keyed by the raw
                               label, so one edit renames them all. */}
-                          {editingSpeaker === block.rawSpeaker ? (
+                          {editingSpeakerBlock === index ? (
                             <Input
                               autoFocus
                               value={speakers[block.rawSpeaker] ?? ""}
@@ -1091,11 +1083,11 @@ export function TranscriptDocument({
                               onChange={(event) =>
                                 handleSpeakerNameChange(block.rawSpeaker, event.target.value)
                               }
-                              onBlur={() => setEditingSpeaker(null)}
+                              onBlur={() => setEditingSpeakerBlock(null)}
                               onKeyDown={(event) => {
                                 if (event.key === "Enter" || event.key === "Escape") {
                                   event.preventDefault();
-                                  setEditingSpeaker(null);
+                                  setEditingSpeakerBlock(null);
                                 }
                               }}
                               className="h-7 w-full max-w-36 px-1 text-xs"
@@ -1103,7 +1095,7 @@ export function TranscriptDocument({
                           ) : (
                             <button
                               type="button"
-                              onClick={() => setEditingSpeaker(block.rawSpeaker)}
+                              onClick={() => setEditingSpeakerBlock(index)}
                               title={t("document.renameSpeaker", { speaker: block.label })}
                               className="min-w-0 max-w-full truncate rounded px-1 text-left font-medium hover:bg-muted"
                               style={{ color: speakerColor(block.rawSpeaker) }}
@@ -1202,45 +1194,6 @@ export function TranscriptDocument({
               )}
             </section>
 
-            {isEditable && (
-              <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
-                <CollapsibleTrigger className="group flex min-h-9 w-full items-center gap-2 rounded-md text-left text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                  <ChevronRight
-                    aria-hidden="true"
-                    className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-90 motion-reduce:transition-none"
-                  />
-                  <span>{tCommon("details")}</span>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down motion-reduce:animate-none">
-                  <div className="space-y-4 pt-4">
-                    <div className="space-y-2">
-                      <Label>{t("composer.project")}</Label>
-                      <Select
-                        value={editState.projectId || "none"}
-                        onValueChange={(value) =>
-                          setEditState((prev) => ({
-                            ...prev,
-                            projectId: value === "none" ? "" : value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("composer.noProject")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">{t("composer.noProject")}</SelectItem>
-                          {projects.map((project) => (
-                            <SelectItem key={project.id} value={project.id}>
-                              {project.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
           </div>
 
           <div className={cn("space-y-4", chapters.length > 0 ? "md:col-start-3" : "md:col-start-2")}>
@@ -1279,6 +1232,35 @@ export function TranscriptDocument({
                     <p className="text-xs text-muted-foreground">{t("review.noAudio")}</p>
                   )}
                 </div>
+
+                {isEditable && (
+                  <div className="space-y-2 rounded-lg border p-3">
+                    <Label className="text-sm font-medium">
+                      {t("document.projectLabel")}
+                    </Label>
+                    <Select
+                      value={editState.projectId || "none"}
+                      onValueChange={(value) =>
+                        setEditState((prev) => ({
+                          ...prev,
+                          projectId: value === "none" ? "" : value,
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("composer.noProject")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{t("composer.noProject")}</SelectItem>
+                        {projects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <SpeakersPreview
                   rawSpeakers={rawSpeakers}

@@ -4888,8 +4888,8 @@
       "title": "Stop transcribing?"
     },
     "confirmDiscard": {
-      "confirm": "Discard",
-      "description": "The audio stays in your files; the transcription job will be cancelled.",
+      "confirm": "Discard recording",
+      "description": "The transcription job is cancelled and this transcript is not kept. The original audio stays in your files, so you can start a new transcription from it.",
       "title": "Discard this transcript?"
     },
     "confirmDismiss": {
@@ -4955,7 +4955,11 @@
       "kbRemove": "Remove…",
       "renameSpeaker": "Rename {speaker} everywhere",
       "jumpToTime": "Jump to {time}",
-      "speakerNamePlaceholder": "Speaker name"
+      "speakerNamePlaceholder": "Speaker name",
+      "sharingButton": "Sharing",
+      "sharingDialogTitle": "Who can see this transcript",
+      "projectLabel": "Project",
+      "done": "Done"
     },
     "export": {
       "label": "Export",
@@ -5121,7 +5125,8 @@
       "publishSharingPrivate": "Only you can see it — change that under Sharing.",
       "publishSharingShared": "The people you shared it with can see it too.",
       "publishConfirm": "Publish",
-      "publishRunning": "Publishing…"
+      "publishRunning": "Publishing…",
+      "discardAction": "Discard recording"
     },
     "row": {
       "awaitingReview": "Awaiting review",
