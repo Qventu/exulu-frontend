@@ -4888,8 +4888,8 @@
       "title": "Stop transcribing?"
     },
     "confirmDiscard": {
-      "confirm": "Discard recording",
-      "description": "The transcription job is cancelled and this transcript is not kept. The original audio stays in your files, so you can start a new transcription from it.",
+      "confirm": "Discard transcript",
+      "description": "The transcript is discarded and disappears from your list. The recording itself is not deleted.",
       "title": "Discard this transcript?"
     },
     "confirmDismiss": {
@@ -5126,7 +5126,7 @@
       "publishSharingShared": "The people you shared it with can see it too.",
       "publishConfirm": "Publish",
       "publishRunning": "Publishing…",
-      "discardAction": "Discard recording"
+      "discardAction": "Discard transcript"
     },
     "row": {
       "awaitingReview": "Awaiting review",
