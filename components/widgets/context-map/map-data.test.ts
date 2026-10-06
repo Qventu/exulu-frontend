@@ -6,7 +6,7 @@ import {
   nearestNeighbourSegments, NO_VALUE_TOKEN, PALETTE_TOKENS,
   parseHslTriplet, pointTitle, projectToScreen, regionColor, resolveLabelCollisions,
   POINT_SIZE, RING_INNER_RADIUS, RING_SIZE, rgbCss,
-  strongestPerItem, tooltipPosition, topicOf,
+  strongestPerItem, timeBounds, tooltipPosition, topicOf, withinWindow,
   VIEWPORT_FILL,
   type CloudBounds, type MapPoint, type Rgb,
 } from "./map-data";
@@ -809,5 +809,84 @@ describe("itemsInRegion", () => {
   it("takes the first non-empty name when a document's chunks disagree", () => {
     const points = [at("c1", "i1", "", 0), at("c2", "i1", "Manual", 1)];
     expect(itemsInRegion(points, topics, "a")).toEqual([{ itemId: "i1", name: "Manual", passages: 2 }]);
+  });
+});
+
+/**
+ * The time filter, which only the memory pages offer.
+ *
+ * A memory base grows over time, so "what did I know in August" is a real
+ * question there. A knowledge base bulk-imported in one afternoon has every
+ * item on one day — which is why `timeBounds` answers null for a base whose
+ * items share a single day, and the control is not rendered at all.
+ */
+describe("timeBounds", () => {
+  const at = (id: string, createdAtMs: number | null) => ({
+    id, itemId: `i-${id}`, x: 0, y: 0, z: 0, itemName: id,
+    group: null, chunks: 1, createdAtMs,
+  });
+  const DAY = 86_400_000;
+
+  it("spans the earliest and latest item, snapped to whole days", () => {
+    const bounds = timeBounds([
+      at("a", Date.UTC(2026, 7, 14, 9, 30)),
+      at("b", Date.UTC(2026, 8, 28, 16, 0)),
+    ]);
+    // Snapped outwards, so both ends are inside the range the slider offers.
+    expect(bounds).not.toBeNull();
+    expect(bounds!.from).toBeLessThanOrEqual(Date.UTC(2026, 7, 14, 9, 30));
+    expect(bounds!.to).toBeGreaterThanOrEqual(Date.UTC(2026, 8, 28, 16, 0));
+    expect((bounds!.to - bounds!.from) % DAY).toBe(0);
+  });
+
+  /**
+   * The honest refusal. Daniel's knowledge bases ingest in one batch: 65 of 67
+   * items on one day, and three of the four bases on a single day outright. A
+   * slider there would be a control that implies a dimension the data has not
+   * got.
+   */
+  it("answers null when every item landed on the same day", () => {
+    const t = Date.UTC(2026, 6, 20, 8, 0);
+    expect(timeBounds([at("a", t), at("b", t + 3600_000)])).toBeNull();
+  });
+
+  it("answers null when nothing is dated, and when there are no points", () => {
+    expect(timeBounds([at("a", null), at("b", null)])).toBeNull();
+    expect(timeBounds([])).toBeNull();
+  });
+
+  it("ignores undated items when measuring the span", () => {
+    const bounds = timeBounds([
+      at("a", Date.UTC(2026, 7, 14)),
+      at("b", null),
+      at("c", Date.UTC(2026, 8, 28)),
+    ]);
+    expect(bounds).not.toBeNull();
+  });
+});
+
+describe("withinWindow", () => {
+  const window = { from: Date.UTC(2026, 7, 1), to: Date.UTC(2026, 8, 1) };
+
+  it("keeps everything when no window is set", () => {
+    expect(withinWindow(Date.UTC(2020, 0, 1), null)).toBe(true);
+    expect(withinWindow(null, null)).toBe(true);
+  });
+
+  it("keeps a point inside the window, including both ends", () => {
+    expect(withinWindow(Date.UTC(2026, 7, 15), window)).toBe(true);
+    expect(withinWindow(window.from, window)).toBe(true);
+    expect(withinWindow(window.to, window)).toBe(true);
+  });
+
+  it("drops a point on either side of the window", () => {
+    expect(withinWindow(window.from - 1, window)).toBe(false);
+    expect(withinWindow(window.to + 1, window)).toBe(false);
+  });
+
+  // Undated is not "oldest": a point with no date cannot be placed in time,
+  // so a time filter cannot vouch for it.
+  it("drops an undated point once a window is set", () => {
+    expect(withinWindow(null, window)).toBe(false);
   });
 });

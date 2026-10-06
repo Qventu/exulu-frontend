@@ -179,6 +179,10 @@ export function BaseShell({
               ringedItemIds={ringedItemIds}
               itemHref={itemHref}
               titleKey="memory"
+              // A memory base accumulates, so filtering the cloud by when a
+              // memory was added answers a real question here. The knowledge
+              // workspace does not pass this: those bases ingest in one batch.
+              timeline
             />
           ) : (
             <>

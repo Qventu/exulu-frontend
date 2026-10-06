@@ -32,6 +32,7 @@ import {
   labelFitsCanvas,
   resolveLabelCollisions,
   tooltipPosition,
+  withinWindow,
   resolvePalette,
   resolveRingColor,
   RING_INNER_RADIUS,
@@ -39,6 +40,7 @@ import {
   type MapEdge,
   type MapPoint,
   type MapTopic,
+  type TimeWindow,
   type Palette,
   type Rgb,
 } from "./map-data";
@@ -65,6 +67,12 @@ export interface MapCanvasProps {
    */
   topicMemberIds: Set<string>;
   ringedIds: Set<string>;
+  /**
+   * The time filter's window, or null when the memory page's slider is absent
+   * or at full span. Points whose item falls outside it dim exactly as points
+   * outside a highlighted region do.
+   */
+  timeWindow: TimeWindow | null;
   paused: boolean;
   /** Faint nearest-neighbour lines for every passage, not only the selected one. */
   allLinks: boolean;
@@ -232,14 +240,21 @@ function computeDim(
   topicMemberIds: Set<string>,
   selectedId: string | null,
   ringed: Set<string>,
+  timeWindow: TimeWindow | null,
 ): Float32Array {
   const dim = new Float32Array(points.length);
   for (let i = 0; i < points.length; i += 1) {
     const point = points[i]!;
+    // Two independent reasons to mute, combined: a dot is bright when it is
+    // inside the time window AND either no region is chosen or it belongs to
+    // the chosen one. The conflict ring exempts a dot from the REGION rule
+    // only — time is a filter, not a highlight, and a flagged passage from
+    // outside the window is still outside it.
     const muted =
-      highlightTopic !== null &&
-      !topicMemberIds.has(point.id) &&
-      !ringed.has(point.id);
+      !withinWindow(point.createdAtMs, timeWindow) ||
+      (highlightTopic !== null &&
+        !topicMemberIds.has(point.id) &&
+        !ringed.has(point.id));
     dim[i] =
       selectedId === point.id
         ? DIM_SELECTED
@@ -280,6 +295,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       highlightTopic,
       topicMemberIds,
       ringedIds,
+      timeWindow,
       paused,
       allLinks,
       hoverNeighbourId,
@@ -378,6 +394,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
        */
       highlightTopic,
       topicMemberIds,
+      timeWindow,
     });
     React.useEffect(() => {
       latestRef.current = {
@@ -391,6 +408,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         t,
         highlightTopic,
         topicMemberIds,
+        timeWindow,
       };
     });
 
@@ -952,6 +970,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
           latestRef.current.topicMemberIds,
           selectedId,
           latestRef.current.ringedIds,
+          latestRef.current.timeWindow,
         );
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute(
@@ -1025,11 +1044,14 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       if (!attribute) return;
       const freshDim = computeDim(
         points, highlightTopic, topicMemberIds, selectedId,
-        latestRef.current.ringedIds,
+        latestRef.current.ringedIds, timeWindow,
       );
       (attribute.array as Float32Array).set(freshDim);
       attribute.needsUpdate = true;
-    }, [points, highlightTopic, topicMemberIds, selectedId, ringedKey]);
+      // The window's ENDS, not its identity: the card builds a fresh object
+      // on every slider move, and depending on the object would rewrite the
+      // attribute on moves that changed nothing.
+    }, [points, highlightTopic, topicMemberIds, selectedId, ringedKey, timeWindow?.from, timeWindow?.to]);
 
     /**
      * The dot under the pointer, drawn again larger and outlined.

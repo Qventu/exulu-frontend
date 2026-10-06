@@ -26,6 +26,61 @@ export type MapItem = {
   source: string | null; createdAt: string | null; updatedAt: string | null;
 };
 
+/** Milliseconds in a day: the time filter's step, and what it snaps to. */
+export const DAY_MS = 86_400_000;
+
+/** An inclusive range of item creation times, in epoch milliseconds. */
+export type TimeWindow = { from: number; to: number };
+
+/**
+ * The span the time filter may cover, or null when there is nothing to filter.
+ *
+ * Null when fewer than two distinct DAYS are represented — which is the honest
+ * refusal, not a degenerate case. Measured on a restored production copy:
+ * every knowledge base here ingests in one batch, 65 of 67 items on a single
+ * day on the largest, and three of four bases on one day outright. A slider
+ * there implies the map has a time dimension that the data has not got, which
+ * is exactly the kind of control that made the first version of this map
+ * useless. The memory base, which accumulates, spans twelve days across six
+ * weeks — that is where this earns its place.
+ *
+ * Undated items are ignored when measuring; they are not evidence of a span.
+ * Snapped outwards to whole days so both ends sit inside the offered range.
+ */
+export function timeBounds(points: MapPoint[]): TimeWindow | null {
+  let min = Infinity;
+  let max = -Infinity;
+  const days = new Set<number>();
+  for (const point of points) {
+    const at = point.createdAtMs;
+    if (at === null || !Number.isFinite(at)) continue;
+    if (at < min) min = at;
+    if (at > max) max = at;
+    days.add(Math.floor(at / DAY_MS));
+  }
+  if (days.size < 2) return null;
+  return {
+    from: Math.floor(min / DAY_MS) * DAY_MS,
+    to: Math.ceil(max / DAY_MS) * DAY_MS,
+  };
+}
+
+/**
+ * Whether a point's item was created inside the filter's window.
+ *
+ * An undated point is dropped once a window is set. Null is "undated", not
+ * "oldest": nothing can place it in time, so a time filter cannot vouch for
+ * it — and treating it as 1970 would park it permanently at the left end.
+ */
+export function withinWindow(
+  createdAtMs: number | null,
+  window: TimeWindow | null,
+): boolean {
+  if (window === null) return true;
+  if (createdAtMs === null || !Number.isFinite(createdAtMs)) return false;
+  return createdAtMs >= window.from && createdAtMs <= window.to;
+}
+
 /** One item inside a region, for the panel a chip opens. */
 export type RegionItem = { itemId: string; name: string; passages: number };
 export type MapTopic = { id: string; label: string; count: number; x: number; y: number; z: number };

@@ -63,6 +63,20 @@ import { ContextMapCard } from "./context-map-card";
 const viewport = { large: false };
 
 beforeAll(() => {
+  // Radix's slider observes its own size, and jsdom 26 has no ResizeObserver.
+  // The map canvas is mocked here, so nothing else in this tree needs one and
+  // a no-op is enough: the slider still responds to keyboard events, which is
+  // how these tests drive it.
+  if (!("ResizeObserver" in window)) {
+    Object.defineProperty(window, "ResizeObserver", {
+      writable: true,
+      value: class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    });
+  }
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: (query: string) => ({
@@ -195,6 +209,44 @@ const sharedItemPointsMock = {
           { ...placed("p3", 0), itemId: "item-datasheet", itemName: "Datasheet" },
         ],
         total: 3,
+        sampled: false,
+      },
+    },
+  },
+};
+
+const DAY = 86_400_000;
+const AUG14 = Date.UTC(2026, 7, 14, 9, 0);
+
+/** Three memories a fortnight apart, so the filter has a span to work on. */
+const datedPointsMock = {
+  request: pointsRequest,
+  result: {
+    data: {
+      contextMapPoints: {
+        points: [
+          { ...placed("old", 0), createdAtMs: AUG14 },
+          { ...placed("mid", 1), createdAtMs: AUG14 + 14 * DAY },
+          { ...placed("new", 2), createdAtMs: AUG14 + 28 * DAY },
+        ],
+        total: 3,
+        sampled: false,
+      },
+    },
+  },
+};
+
+/** The shape every knowledge base here actually has: one ingestion batch. */
+const sameDayPointsMock = {
+  request: pointsRequest,
+  result: {
+    data: {
+      contextMapPoints: {
+        points: [
+          { ...placed("a", 0), createdAtMs: AUG14 },
+          { ...placed("b", 1), createdAtMs: AUG14 + 3600_000 },
+        ],
+        total: 2,
         sampled: false,
       },
     },
@@ -384,6 +436,8 @@ function withProviders(
     ringedItemIds?: Set<string>;
     /** A pre-populated cache, for the one test that needs an answer already in hand. */
     cache?: InMemoryCache;
+    /** Offer the time filter, as the memory page does. */
+    timeline?: boolean;
   } = {},
 ) {
   const search = new URLSearchParams();
@@ -411,6 +465,7 @@ function withProviders(
           ringedItemIds={params.ringedItemIds}
           itemHref={(itemId) => `/memory/${CONTEXT}/${itemId}`}
           titleKey="memory"
+          timeline={params.timeline}
         />
       </MockedProvider>
     </NextIntlClientProvider>
@@ -818,6 +873,66 @@ describe("ContextMapCard", () => {
         screen.getByRole("button", { name: /valves/i }).getAttribute("aria-pressed"),
       ).toBe("false"),
     );
+  });
+
+  describe("the time filter", () => {
+    it("is absent on a base that does not offer it", async () => {
+      render(withProviders([datedPointsMock, emptyTopicsMock, statusMock]));
+      await screen.findByTestId("canvas");
+      expect(screen.queryByRole("slider")).toBeNull();
+    });
+
+    /**
+     * The honest refusal, and the reason this is gated on the data rather than
+     * only on the page: measured on a restored production copy, three of four
+     * knowledge bases have every item on a single day, and the largest has 65
+     * of 67 on one. A slider there would imply a dimension the data lacks.
+     */
+    it("is absent when every item landed on the same day, even where it is offered", async () => {
+      render(
+        withProviders([sameDayPointsMock, emptyTopicsMock, statusMock], {
+          timeline: true,
+        }),
+      );
+      await screen.findByTestId("canvas");
+      expect(screen.queryByRole("slider")).toBeNull();
+    });
+
+    it("offers a span once the base covers more than a day", async () => {
+      render(
+        withProviders([datedPointsMock, emptyTopicsMock, statusMock], {
+          timeline: true,
+        }),
+      );
+      await screen.findByTestId("canvas");
+      // Two thumbs: a window has two ends.
+      expect(screen.getAllByRole("slider")).toHaveLength(2);
+      expect(canvas.renders.at(-1)!.timeWindow).toBeNull();
+    });
+
+    it("hands the renderer a window when the span is narrowed", async () => {
+      render(
+        withProviders([datedPointsMock, emptyTopicsMock, statusMock], {
+          timeline: true,
+        }),
+      );
+      await screen.findByTestId("canvas");
+      const [lower] = screen.getAllByRole("slider");
+      // Radix sliders move on keyboard, which jsdom can drive; a pointer drag
+      // needs layout it has not got.
+      lower!.focus();
+      fireEvent.keyDown(lower!, { key: "ArrowRight" });
+
+      await waitFor(() => {
+        const window = canvas.renders.at(-1)!.timeWindow as {
+          from: number;
+          to: number;
+        } | null;
+        expect(window).not.toBeNull();
+        // Moved off the earliest day, so the oldest memory is now outside it.
+        expect(window!.from).toBeGreaterThan(AUG14 - DAY);
+      });
+    });
   });
 
   it("shows one row of chips carrying their region's colour, and no separate legend", async () => {

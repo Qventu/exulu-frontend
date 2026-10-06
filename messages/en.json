@@ -3303,6 +3303,10 @@
       "untitled": "Untitled item",
       "updated": "Last updated"
     },
+    "time": {
+      "label": "Added between",
+      "range": "{from} – {to}"
+    },
     "title": {
       "knowledge": "Knowledge map",
       "memory": "Memory map"

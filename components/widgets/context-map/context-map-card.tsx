@@ -10,7 +10,7 @@
 
 import { useQuery } from "@apollo/client";
 import { Pause, Play, RotateCcw } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -19,6 +19,7 @@ import { ChartCard } from "@/components/primitives/chart-card";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   GET_CONTEXT_MAP_EDGES,
@@ -36,6 +37,8 @@ import {
   itemsInRegion,
   resolveRingColor,
   rgbCss,
+  DAY_MS,
+  timeBounds,
   topicOf,
   type MapEdge,
   type MapItem,
@@ -44,6 +47,7 @@ import {
   type Palette,
   type RegionItem,
   type Rgb,
+  type TimeWindow,
 } from "./map-data";
 import { MapPanel } from "./map-panel";
 
@@ -130,6 +134,16 @@ export interface ContextMapCardProps {
   ringedItemIds?: Set<string>;
   itemHref: (itemId: string) => string;
   titleKey: "memory" | "knowledge";
+  /**
+   * Offer the time filter. The memory pages set it, because a memory base
+   * accumulates and "what did I know in August" is a real question there; a
+   * knowledge base ingests in one batch and the control would be inert.
+   *
+   * Its own prop rather than a read of `titleKey`, which should keep meaning
+   * what its name says. Even with it set, the filter appears only if the data
+   * actually spans more than one day — see `timeBounds`.
+   */
+  timeline?: boolean;
 }
 
 export function ContextMapCard({
@@ -138,8 +152,10 @@ export function ContextMapCard({
   ringedItemIds,
   itemHref,
   titleKey,
+  timeline = false,
 }: ContextMapCardProps) {
   const t = useTranslations("map");
+  const locale = useLocale();
   const tCommon = useTranslations("common");
   const params = useSearchParams();
   const canvasRef = React.useRef<MapCanvasHandle>(null);
@@ -368,6 +384,24 @@ export function ContextMapCard({
       ? (topics.find((topic) => topic.id === highlightTopic)?.label ?? null)
       : null;
 
+  /**
+   * The span the time filter may cover, or null when the base cannot support
+   * one. Null for every knowledge base measured so far, which is why the
+   * control is gated on the data and not only on the page.
+   */
+  const bounds = React.useMemo(
+    () => (timeline ? timeBounds(points) : null),
+    [timeline, points],
+  );
+  /** The chosen window, or null for "the whole span" — the slider's rest state. */
+  const [timeWindow, setTimeWindow] = React.useState<TimeWindow | null>(null);
+  // A refit or a different base moves the span under the slider; a window from
+  // the old one would filter against dates this base has not got.
+  const boundsKey = bounds === null ? "" : `${bounds.from}:${bounds.to}`;
+  React.useEffect(() => {
+    setTimeWindow(null);
+  }, [boundsKey]);
+
   const caption = coverageCaption({
     drawn: points.length,
     total: answer?.total ?? points.length,
@@ -515,6 +549,7 @@ export function ContextMapCard({
               // The hovered region if there is one; see `activeTopic`.
               highlightTopic={activeTopic}
               topicMemberIds={topicMemberIds}
+              timeWindow={timeWindow}
               ringedIds={ringed}
               paused={paused}
               // The web is the links control's doing, so it is gated on the
@@ -637,6 +672,46 @@ export function ContextMapCard({
                 {t("legend.ringed")}
               </span>
             )}
+          </div>
+        )}
+
+        {/*
+          The time filter, on the memory pages and only where the base spans
+          more than a day. Dots outside the window dim rather than disappear,
+          so the cloud keeps its shape and a reader watches memory accumulate
+          into it rather than watching it jump about.
+        */}
+        {drawn && bounds !== null && (
+          <div className="pt-4">
+            <div className="flex items-baseline justify-between gap-3 pb-2">
+              <span className="text-xs font-medium text-foreground">
+                {t("time.label")}
+              </span>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {t("time.range", {
+                  from: new Date(timeWindow?.from ?? bounds.from)
+                    .toLocaleDateString(locale, { dateStyle: "medium" }),
+                  to: new Date(timeWindow?.to ?? bounds.to)
+                    .toLocaleDateString(locale, { dateStyle: "medium" }),
+                })}
+              </span>
+            </div>
+            <Slider
+              aria-label={t("time.label")}
+              min={bounds.from}
+              max={bounds.to}
+              step={DAY_MS}
+              value={[timeWindow?.from ?? bounds.from, timeWindow?.to ?? bounds.to]}
+              onValueChange={([from, to]) => {
+                if (from === undefined || to === undefined) return;
+                // Back at full span is "no filter", not a window that happens
+                // to cover everything: an undated point must come back when
+                // the filter is released.
+                setTimeWindow(
+                  from === bounds.from && to === bounds.to ? null : { from, to },
+                );
+              }}
+            />
           </div>
         )}
 

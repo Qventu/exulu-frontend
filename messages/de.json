@@ -3303,6 +3303,10 @@
       "untitled": "Unbenannter Eintrag",
       "updated": "Zuletzt aktualisiert"
     },
+    "time": {
+      "label": "Hinzugefügt zwischen",
+      "range": "{from} – {to}"
+    },
     "title": {
       "knowledge": "Wissens-Karte",
       "memory": "Gedächtnis-Karte"
