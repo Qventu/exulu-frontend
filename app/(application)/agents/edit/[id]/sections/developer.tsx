@@ -82,9 +82,15 @@ export function DeveloperSection({ agent }: EditorSectionProps) {
   const config = useContext(ConfigContext);
 
   const backend = config?.backend?.replace(/\/$/, "") ?? "";
-  const slug = agent.slug ?? "";
-  const endpoint = `${backend}/agents/${slug}/run/${agent.id}`;
-  const slugLine = slug ? `agents/${slug}/run/${agent.id}` : "";
+  // agent.slug IS the full route path already ("/agents/litellm/run" — see the
+  // backend's graphql/utilities/sanitize-and-hydrate-fields.ts). Wrapping it in
+  // another `/agents/.../run/` produced "/agents//agents/litellm/run/run/<id>",
+  // which 404s — and that string is what people copy into production configs.
+  // The working reference is chat/hooks.ts: `${backend}${agent.slug}/${agent.id}`.
+  const slug = (agent.slug ?? "").replace(/\/+$/, "");
+  const slugPath = slug.replace(/^\/+/, "");
+  const endpoint = slug ? `${backend}/${slugPath}/${agent.id}` : "";
+  const slugLine = slug ? `${slugPath}/${agent.id}` : "";
 
   return (
     <section id="developer" className="scroll-mt-20 space-y-4">

@@ -72,7 +72,8 @@ export function EditorHeader({
     // Mirror the Developer section's slug field — copy the routable path,
     // not the bare slug (2026-06-12 QA: the bare slug is ambiguous; the
     // path is what fits straight into a URL/curl).
-    const path = `agents/${agent.slug}/run/${agent.id}`;
+    // agent.slug already carries the full route path; see the Developer section.
+    const path = `${agent.slug.replace(/^\/+|\/+$/g, "")}/${agent.id}`;
     try {
       await navigator.clipboard.writeText(path);
       toast.success(tCommon("copied"));
