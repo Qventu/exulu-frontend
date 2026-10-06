@@ -111,7 +111,12 @@ function ReviewJobPageInner({ jobId }: { jobId: string }) {
   // The redirect effect above is handling this case.
   if (!job || job.status === "saved") return null;
 
-  if (job.status !== "awaiting_review") {
+  // A reviewed job has no item of its own — this route is the only place
+  // left to reopen it, and it's exactly where someone comes back to publish
+  // it later (the design doc's reviewed -> publish -> saved transition).
+  // Below this point publishState already resolves to "reviewed" and the
+  // card offers Publish; finalize accepts "reviewed" as a starting status.
+  if (job.status !== "awaiting_review" && job.status !== "reviewed") {
     return (
       <PageShell variant="content">
         <EmptyState variant="quiet" title={t("review.notReady")} />
