@@ -29,7 +29,9 @@ import {
   projectToScreen,
   regionColor,
   resolveHoverOutlineColor,
+  labelFitsCanvas,
   resolveLabelCollisions,
+  tooltipPosition,
   resolvePalette,
   resolveRingColor,
   RING_INNER_RADIUS,
@@ -192,6 +194,17 @@ const LABEL_HEIGHT = 16;
  */
 const LABEL_PLATE_PAD_X = 12;
 const LABEL_PLATE_PAD_Y = 4;
+/**
+ * The hover read-out's size estimate, for keeping it inside the clipped host.
+ *
+ * COUPLED TO THE SPAN'S CLASSES at the bottom of this file, the same way the
+ * label plate's padding is: max-w-xs is 320, and px-2 py-1 on text-xs makes
+ * roughly 24 high. An estimate is enough — it decides which side of the
+ * pointer the read-out sits on, not where the text goes.
+ */
+const TOOLTIP_MAX_WIDTH = 320;
+const TOOLTIP_HEIGHT = 24;
+const TOOLTIP_PAD_X = 16;
 const SELECTED_LINE_OPACITY = 0.75;
 const WEB_LINE_OPACITY = 0.12;
 
@@ -242,7 +255,12 @@ function computeDim(
  * rather than on this state, which is rewritten ten times a second while the
  * cloud turns under a still pointer.
  */
-type Hover = { id: string; name: string; x: number; y: number } | null;
+/**
+ * `left`/`top` rather than the pointer's own position: the host clips now, so
+ * where the read-out may sit depends on the canvas size, which the overlay
+ * pass knows and the render does not.
+ */
+type Hover = { id: string; name: string; left: number; top: number } | null;
 type Label = { id: string; label: string; x: number; y: number };
 /** A LabelBox for resolveLabelCollisions, carrying the text through with it. */
 type LabelCandidate = Label & {
@@ -685,20 +703,27 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         if (hovered) {
           const screen = projectToScreen(hovered, matrix, width, height);
           if (screen.visible) {
+            const name =
+              pointTitle(hovered) || latestRef.current.t("panel.untitled");
             nextHover = {
               id: hovered.id,
               // The item's name, not the passage's opening: the opening begins
               // with an injected document header on a real base. pointTitle
               // returns "" for a blank name — never the opening — so the
               // translated fallback is rendered here, not inside it.
-              name: pointTitle(hovered) || latestRef.current.t("panel.untitled"),
-              x: screen.x,
-              y: screen.y,
+              name,
+              ...tooltipPosition(screen.x, screen.y, width, height, {
+                width: Math.min(
+                  name.length * LABEL_CHAR_WIDTH + TOOLTIP_PAD_X,
+                  TOOLTIP_MAX_WIDTH,
+                ),
+                height: TOOLTIP_HEIGHT,
+              }),
             };
           }
         }
         const hoverKey = nextHover
-          ? `${hovered?.id}:${Math.round(nextHover.x)}:${Math.round(nextHover.y)}`
+          ? `${hovered?.id}:${Math.round(nextHover.left)}:${Math.round(nextHover.top)}`
           : "";
         if (hoverKey !== hoverKeyRef.current) {
           hoverKeyRef.current = hoverKey;
@@ -719,10 +744,13 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
             count: topic.count,
           });
         }
+        // Culled BEFORE the collision pass: a label outside the canvas must not
+        // win a collision against one a reader can actually see.
+        const onScreen = boxes.filter((box) => labelFitsCanvas(box, width, height));
         // resolveLabelCollisions answers largest-region-first; the overlay keeps
         // the topics' own order so React is not re-keying the list every pass.
-        const keep = new Set(resolveLabelCollisions(boxes));
-        const nextLabels = boxes
+        const keep = new Set(resolveLabelCollisions(onScreen));
+        const nextLabels = onScreen
           .filter((box) => keep.has(box.id))
           .map((box) => ({
             id: box.id,
@@ -1117,7 +1145,10 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
     }, [paused]);
 
     return (
-      <div ref={hostRef} className="relative size-full">
+      // overflow-hidden is the containment guarantee: a label or read-out
+      // positioned outside the canvas is clipped rather than drawn over the
+      // page. labelFitsCanvas keeps plates from being sliced by it.
+      <div ref={hostRef} className="relative size-full overflow-hidden">
         <div ref={layerRef} className="absolute inset-0" />
         {labels.map((label) => (
           // `px-1.5 py-0.5` is what LABEL_PLATE_PAD_X / _Y encode for the
@@ -1137,7 +1168,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         {hover && (
           <span
             className="pointer-events-none absolute max-w-xs truncate rounded border bg-popover px-2 py-1 text-xs text-popover-foreground shadow"
-            style={{ left: hover.x + 8, top: hover.y + 8 }}
+            style={{ left: hover.left, top: hover.top }}
           >
             {hover.name}
           </span>

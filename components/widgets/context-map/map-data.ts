@@ -419,6 +419,65 @@ export function projectToScreen(
   };
 }
 
+/** Gap between the pointer and the hover read-out, in CSS pixels. */
+export const TOOLTIP_OFFSET = 8;
+
+/**
+ * Whether a label's whole plate lands inside the canvas.
+ *
+ * projectToScreen calls anything in front of the camera visible, regardless of
+ * where it lands, so a region centre that swings off the side of the cloud
+ * still produced a label — at a coordinate outside the canvas, which escaped
+ * the card and drew over the page's tabs and header. The host clips now, which
+ * ends the escape; this drops the labels that would merely be sliced in half
+ * by that clip, which reads as a fault rather than as a label.
+ *
+ * Before the collision pass, not after: an off-screen label must not win a
+ * collision against one a reader can actually see.
+ *
+ * A canvas of zero size is "not measured yet" — the overlay runs before the
+ * first resize observation — and keeps everything, since the alternative is
+ * blanking the layer for a frame on every mount.
+ */
+export function labelFitsCanvas(
+  box: { x: number; y: number; width: number; height: number },
+  width: number,
+  height: number,
+): boolean {
+  if (width <= 0 || height <= 0) return true;
+  const halfW = box.width / 2;
+  const halfH = box.height / 2;
+  return (
+    box.x - halfW >= 0 &&
+    box.x + halfW <= width &&
+    box.y - halfH >= 0 &&
+    box.y + halfH <= height
+  );
+}
+
+/**
+ * Where to put the hover read-out so the clipped host cannot cut it off.
+ *
+ * Below-right of the pointer by default, flipping to the other side of it
+ * rather than sliding along the edge: a tooltip that slides detaches from the
+ * dot it describes, while one that flips stays anchored to it. Clamped at 0
+ * for the case where neither side fits, which a canvas narrower than the
+ * tooltip can produce.
+ */
+export function tooltipPosition(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  size: { width: number; height: number },
+): { left: number; top: number } {
+  const right = x + TOOLTIP_OFFSET;
+  const below = y + TOOLTIP_OFFSET;
+  const left = right + size.width > width ? x - TOOLTIP_OFFSET - size.width : right;
+  const top = below + size.height > height ? y - TOOLTIP_OFFSET - size.height : below;
+  return { left: Math.max(0, left), top: Math.max(0, top) };
+}
+
 /** Position (x, y) is the label's centre, not top-left. */
 export type LabelBox = { id: string; x: number; y: number; width: number; height: number; count: number };
 

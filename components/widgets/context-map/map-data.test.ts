@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildBuffers, cloudBounds, coverageCaption, frameCloud, FRAMING_REFERENCE_DISTANCE,
-  HOVER_OUTLINE_WIDTH, HOVER_SIZE, isPassageClipped,
+  HOVER_OUTLINE_WIDTH, HOVER_SIZE, isPassageClipped, labelFitsCanvas,
   nearestNeighbourSegments, NO_VALUE_TOKEN, PALETTE_TOKENS, PASSAGE_LABEL_LIMIT,
   parseHslTriplet, pointTitle, projectToScreen, regionColor, resolveLabelCollisions,
   POINT_SIZE, RING_INNER_RADIUS, RING_SIZE, rgbCss,
-  strongestPerItem, topicOf,
+  strongestPerItem, tooltipPosition, topicOf,
   VIEWPORT_FILL,
   type CloudBounds, type MapPoint, type Rgb,
 } from "./map-data";
@@ -704,5 +704,76 @@ describe("the hovered dot's nesting inside the ring", () => {
     // And the fill has to survive the rim, or the hovered dot stops carrying
     // its region's colour and reads as a ring.
     expect(spriteDiameterPx * (1 - HOVER_OUTLINE_WIDTH)).toBeGreaterThan(2);
+  });
+});
+
+/**
+ * A region label is drawn as an absolutely-positioned plate over the canvas,
+ * and projectToScreen calls anything in FRONT of the camera visible — whether
+ * or not it lands inside the viewport. So a region whose centre swung off the
+ * side of the cloud was rendered at a negative coordinate, escaping the card
+ * entirely and landing on the page's tabs and header.
+ *
+ * The host clips now, which stops the escape on its own. This is the other
+ * half: a plate that merely straddles the edge would be sliced in two by that
+ * clip, which reads as a rendering fault rather than as a label.
+ */
+describe("labelFitsCanvas", () => {
+  const box = { id: "t", x: 100, y: 100, width: 80, height: 20, count: 1 };
+
+  it("keeps a label whose whole plate is inside the canvas", () => {
+    expect(labelFitsCanvas(box, 400, 300)).toBe(true);
+  });
+
+  // x and y are the plate's CENTRE, so the test is against half its size.
+  it.each([
+    ["off the left edge", { x: 39, y: 100 }],
+    ["off the right edge", { x: 361, y: 100 }],
+    ["off the top edge", { x: 100, y: 9 }],
+    ["off the bottom edge", { x: 100, y: 291 }],
+  ])("drops a label hanging %s", (_label, at) => {
+    expect(labelFitsCanvas({ ...box, ...at }, 400, 300)).toBe(false);
+  });
+
+  it("keeps a label resting exactly on the edge", () => {
+    expect(labelFitsCanvas({ ...box, x: 40, y: 10 }, 400, 300)).toBe(true);
+  });
+
+  // The overlay runs before the first resize observation, and every label is
+  // "outside" a zero-sized canvas - which would blank the layer rather than
+  // leave it alone for one frame.
+  it("keeps labels when the canvas has not been measured yet", () => {
+    expect(labelFitsCanvas(box, 0, 0)).toBe(true);
+  });
+});
+
+/**
+ * The hover read-out sits at the pointer, and the host clips now - so near the
+ * right or bottom edge it would be cut off mid-word instead of being readable.
+ */
+describe("tooltipPosition", () => {
+  const size = { width: 200, height: 40 };
+
+  it("sits below and to the right of the pointer with room to spare", () => {
+    expect(tooltipPosition(50, 50, 800, 600, size)).toEqual({ left: 58, top: 58 });
+  });
+
+  it("flips to the left of the pointer rather than overflowing the right edge", () => {
+    const { left } = tooltipPosition(700, 50, 800, 600, size);
+    expect(left).toBe(700 - 8 - size.width);
+    expect(left + size.width).toBeLessThanOrEqual(800);
+  });
+
+  it("flips above the pointer rather than overflowing the bottom edge", () => {
+    const { top } = tooltipPosition(50, 580, 800, 600, size);
+    expect(top).toBe(580 - 8 - size.height);
+  });
+
+  // A canvas narrower than the tooltip has no good side; it must still start
+  // on screen rather than at a negative coordinate.
+  it("never positions the tooltip off the top or left", () => {
+    const { left, top } = tooltipPosition(10, 10, 120, 30, size);
+    expect(left).toBeGreaterThanOrEqual(0);
+    expect(top).toBeGreaterThanOrEqual(0);
   });
 });
