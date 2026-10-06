@@ -38,8 +38,9 @@ import {
   CANCEL_TRANSCRIPTION_JOB,
   FINALIZE_TRANSCRIPTION_JOB,
   GET_TRANSCRIPTION_JOB,
+  MARK_TRANSCRIPTION_JOB_REVIEWED,
 } from "../../queries";
-import { hasPostProcessing } from "../../types";
+import { hasPostProcessing, transcriptPublishState } from "../../types";
 import { jobToDraftItem, type JobWithSegments } from "./job-to-draft-item";
 
 export default function ReviewJobPage() {
@@ -63,6 +64,7 @@ function ReviewJobPageInner({ jobId }: { jobId: string }) {
   const job = data?.transcription_jobById ?? null;
 
   const [finalize] = useMutation(FINALIZE_TRANSCRIPTION_JOB);
+  const [markReviewed] = useMutation(MARK_TRANSCRIPTION_JOB_REVIEWED);
   const [cancelJob] = useMutation(CANCEL_TRANSCRIPTION_JOB);
   const [discardOpen, setDiscardOpen] = React.useState(false);
 
@@ -147,6 +149,36 @@ function ReviewJobPageInner({ jobId }: { jobId: string }) {
     }
   };
 
+  // Signs the transcript off without publishing it — same payload as
+  // finalize, but there is no item to navigate to, so this sends the user
+  // back to the list instead of a saved item's page.
+  const handleMarkReviewed = async (draft: TranscriptDraft) => {
+    try {
+      const input: Record<string, unknown> = {
+        title: draft.title,
+        speakers: draft.speakers,
+        project_id: draft.projectId,
+        target_rights_mode: draft.rightsMode,
+        target_rbac_users: draft.rbacUsers,
+        target_rbac_roles: draft.rbacRoles,
+      };
+      // null = untouched (TranscriptDraft's contract) — omit the key
+      // entirely rather than send an explicit null, which would be treated
+      // as "clear the correction".
+      if (draft.correctedSegments !== null) {
+        input.corrected_segments = draft.correctedSegments;
+      }
+      await markReviewed({ variables: { id: job.id, input } });
+      toast.success(t("review.markedReviewed"));
+      router.push("/transcriptions");
+    } catch (err: unknown) {
+      toast.error(t("toasts.saveFailed"), {
+        description: err instanceof Error ? err.message : undefined,
+      });
+      throw err; // TranscriptDocument keeps edit mode open
+    }
+  };
+
   const handleConfirmDiscard = async () => {
     try {
       await cancelJob({ variables: { id: job.id } });
@@ -166,7 +198,9 @@ function ReviewJobPageInner({ jobId }: { jobId: string }) {
         <TranscriptDocument
           item={jobToDraftItem(job)}
           mode="edit"
+          publishState={transcriptPublishState(job)}
           onSave={handleSave}
+          onMarkReviewed={handleMarkReviewed}
           onDiscard={() => setDiscardOpen(true)}
           // Above the document rather than in a full-width bar over the whole
           // grid, so it lines up with the transcript it belongs to.

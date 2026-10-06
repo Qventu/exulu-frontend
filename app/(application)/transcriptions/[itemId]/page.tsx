@@ -231,7 +231,7 @@ function TranscriptItemPageInner() {
         item={item}
         mode={mode}
         canWrite={canWrite}
-        published
+        publishState="published"
         onSave={mode === "edit" ? handleSave : undefined}
         onDiscard={mode === "edit" ? () => setDiscardOpen(true) : undefined}
       />
