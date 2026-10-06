@@ -905,21 +905,21 @@ export function TranscriptDocument({
                     }))
                   }
                 />
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={saving || !onSave}
-                  aria-busy={saving}
-                  className="max-md:h-11"
-                  onClick={() =>
-                    published ? void handleSaveClick() : setPublishOpen(true)
-                  }
-                >
-                  {saving ? (
-                    <Loader2 aria-hidden="true" className="mr-2 size-4 animate-spin" />
-                  ) : null}
-                  {published ? t("review.saveChanges") : t("review.publishAction")}
-                </Button>
+                {published && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={saving || !onSave}
+                    aria-busy={saving}
+                    className="max-md:h-11"
+                    onClick={() => void handleSaveClick()}
+                  >
+                    {saving ? (
+                      <Loader2 aria-hidden="true" className="mr-2 size-4 animate-spin" />
+                    ) : null}
+                    {t("review.saveChanges")}
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="flex shrink-0 items-center gap-1">
