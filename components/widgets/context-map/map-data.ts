@@ -58,8 +58,11 @@ export function resolvePalette(element: Element): Palette {
 
 /**
  * Flagged or conflicting passages are ringed in the theme's destructive
- * colour, which the legend names. It is not part of the categorical palette:
- * the ring says something about the passage, not about its group.
+ * colour, which the chip row names in the one entry that is not a chip. It is
+ * not part of the categorical palette: the ring says something about the
+ * passage, not about its region — the card's own entry is worded the same way,
+ * and it is the region rather than the group because colour is no longer by
+ * group at all.
  */
 export const RING_TOKEN = "--destructive" as const;
 

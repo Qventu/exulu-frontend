@@ -373,10 +373,18 @@ export function ContextMapCard({
 
   /**
    * The colour of a chip's swatch, by region index. Resolved through the same
-   * function and the same cycling rule the renderer colours dots with, from
-   * the same parsed palette — the chips are the legend now, so a swatch that
-   * could drift from its dots would be a legend that lies. `undefined` only
-   * before the first paint resolves the theme.
+   * function and the same cycling rule the renderer colours dots with — the
+   * chips are the legend now, so a swatch that could drift from its dots would
+   * be a legend that lies. `undefined` only before the first paint resolves the
+   * theme.
+   *
+   * Not from the same parsed palette, though, which an earlier version of this
+   * comment claimed: this card resolves from its own root element and the
+   * renderer from the canvas host, so there are two `Palette` objects. What
+   * makes them agree is the CASCADE — the palette tokens are declared once at
+   * the document root and both elements inherit the same computed values — and
+   * not a shared value. Overriding a palette token on anything between the two
+   * elements is the one thing that would pull them apart.
    */
   const swatchColor = (region: number) =>
     colors === null ? undefined : rgbCss(regionColor(colors.palette, region));

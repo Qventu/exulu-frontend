@@ -81,20 +81,23 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
   };
 
   /**
-   * The field the map's points answer carries per passage, which the panel
-   * shows for the selected one. A knowledge base has no memory type, so it is
-   * the FIRST declared field whose type is an enumeration — declaration
-   * order, not the name — and nothing at all when the base declares none.
+   * The NAME of the field the map's points answer carries per passage, which
+   * the panel shows for the selected one. A knowledge base has no memory type,
+   * so it is the FIRST declared field whose type is an enumeration —
+   * declaration order, not the name — and nothing at all when the base
+   * declares none.
    *
-   * It is not what the map colours by: a dot takes the colour of its region,
-   * which is the only thing a knowledge base has to colour by at all.
+   * The name is the whole of what is read. Its enumerated VALUES used to be
+   * read here too, as the set the map coloured by and the legend listed; a dot
+   * now takes the colour of its region, which is the only thing a knowledge
+   * base has to colour by at all, so nothing consumes them any more. Nothing to
+   * drop from the context query for that, though — `fields` arrives as a single
+   * JSON scalar that the items table, the item form, the entity types and the
+   * import wizard all read, so it is not dead payload. Only the field object
+   * held here was, which is why this is now one expression yielding a string.
    */
-  const fields = context.fields;
-  const groupEnum = React.useMemo(
-    () => fields?.find((field) => field.type === "enum") ?? null,
-    [fields],
-  );
-  const groupField = groupEnum?.name ?? null;
+  const groupField =
+    context.fields?.find((field) => field.type === "enum")?.name ?? null;
   const itemHref = React.useCallback(
     (itemId: string) => `/data/${context.id}/items/${itemId}`,
     [context.id],
