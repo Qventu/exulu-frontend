@@ -265,7 +265,7 @@ function TranscriptionsPageInner() {
         value={sourceFilter}
         onValueChange={(value) => setSourceFilter(value as SourceFilter)}
       >
-        <SelectTrigger className="w-[160px] max-w-full shrink">
+        <SelectTrigger className="w-[160px] min-w-0 shrink">
           <SelectValue placeholder={t("filter.source")} />
         </SelectTrigger>
         <SelectContent>
@@ -276,7 +276,7 @@ function TranscriptionsPageInner() {
         </SelectContent>
       </Select>
       <Select value={projectFilter} onValueChange={setProjectFilter}>
-        <SelectTrigger className="w-[160px] max-w-full shrink">
+        <SelectTrigger className="w-[160px] min-w-0 shrink">
           <SelectValue placeholder={t("filter.project")} />
         </SelectTrigger>
         <SelectContent>
@@ -292,7 +292,7 @@ function TranscriptionsPageInner() {
         value={dateFilter}
         onValueChange={(value) => setDateFilter(value as DateFilter)}
       >
-        <SelectTrigger className="w-[160px] max-w-full shrink">
+        <SelectTrigger className="w-[160px] min-w-0 shrink">
           <SelectValue placeholder={t("filter.date")} />
         </SelectTrigger>
         <SelectContent>

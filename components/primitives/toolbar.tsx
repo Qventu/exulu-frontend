@@ -142,10 +142,13 @@ function Toolbar({
                     </>
                   )}
                 </Button>
-                {/* Desktop: filters inline. Wraps — a page with several
-                    selects plus a Reset control overflowed the toolbar at
-                    narrower desktop widths. */}
-                <div className="hidden min-w-0 flex-wrap items-center gap-2 md:flex">
+                {/* Desktop: filters inline. Deliberately does NOT wrap:
+                    wrapping drops one control onto a second line and leaves a
+                    hole beside it. The filters share whatever the row has left
+                    after search, so they shrink (and truncate their labels)
+                    instead — which is also what keeps a Reset control from
+                    overflowing at narrow desktop widths. */}
+                <div className="hidden min-w-0 items-center gap-2 md:flex">
                   {filters}
                 </div>
               </>
