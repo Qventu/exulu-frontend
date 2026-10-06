@@ -162,6 +162,11 @@ export function ContextMapCard({
   const [requestedTopic, setRequestedTopic] = React.useState<string | null>(
     () => params?.get("topic") ?? null,
   );
+  /**
+   * The chip the pointer (or the keyboard) is on. Not a selection: it never
+   * reaches `requestedTopic`, so it never reaches the URL either.
+   */
+  const [hoverTopic, setHoverTopic] = React.useState<string | null>(null);
   const [paused, setPaused] = React.useState(false);
   const [allLinks, setAllLinks] = React.useState(false);
   const [unsupported, setUnsupported] = React.useState(false);
@@ -255,6 +260,18 @@ export function ContextMapCard({
       : null;
 
   /**
+   * The region the cloud is actually dimmed against: the hovered chip if there
+   * is one, otherwise the chosen one.
+   *
+   * Hovering a chip shows what choosing it would show — the same dimming rule,
+   * the same member set, no second mechanism — and the moment the pointer
+   * leaves, the chosen region is dim again. The chips' own `aria-pressed` and
+   * variant stay on `highlightTopic`: a hover must not look like a choice,
+   * because it is not one.
+   */
+  const activeTopic = hoverTopic ?? highlightTopic;
+
+  /**
    * Which palette entry each region owns: its position in the regions array,
    * by id.
    *
@@ -296,13 +313,13 @@ export function ContextMapCard({
    * which is exactly what the clustering computed.
    */
   const topicMemberIds = React.useMemo(() => {
-    if (highlightTopic === null) return NO_IDS;
+    if (activeTopic === null) return NO_IDS;
     const members = new Set<string>();
     for (const point of points) {
-      if (topicOf(point, topics) === highlightTopic) members.add(point.id);
+      if (topicOf(point, topics) === activeTopic) members.add(point.id);
     }
     return members;
-  }, [highlightTopic, points, topics]);
+  }, [activeTopic, points, topics]);
 
   const byId = React.useMemo(
     () => new Map(points.map((point) => [point.id, point])),
@@ -458,7 +475,8 @@ export function ContextMapCard({
               regionOf={regionIndex}
               edges={edges}
               selectedId={selectedId}
-              highlightTopic={highlightTopic}
+              // The hovered region if there is one; see `activeTopic`.
+              highlightTopic={activeTopic}
               topicMemberIds={topicMemberIds}
               ringedIds={ringed}
               paused={paused}
@@ -534,6 +552,14 @@ export function ContextMapCard({
                           highlightTopic === topic.id ? null : topic.id,
                         )
                       }
+                      // A look, not a choice: the cloud dims as it would if
+                      // this chip were chosen, and nothing is written.
+                      // Focus and blur too, so the keyboard sees the same map
+                      // the pointer does.
+                      onMouseEnter={() => setHoverTopic(topic.id)}
+                      onMouseLeave={() => setHoverTopic(null)}
+                      onFocus={() => setHoverTopic(topic.id)}
+                      onBlur={() => setHoverTopic(null)}
                     >
                       <span
                         aria-hidden="true"

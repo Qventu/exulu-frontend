@@ -6,7 +6,15 @@
 
 export type MapPoint = {
   id: string; itemId: string; x: number; y: number; z: number;
-  label: string; group: string | null; chunks: number;
+  /**
+   * The passage's opening — the matched text. NOT a title: see `pointTitle`
+   * and PASSAGE_LABEL_LIMIT below for why this string so often begins with a
+   * document header rather than with anything a reader would recognise.
+   */
+  label: string;
+  /** The name of the item the passage came from, or "" for an unnamed item. */
+  itemName: string;
+  group: string | null; chunks: number;
 };
 export type MapTopic = { id: string; label: string; count: number; x: number; y: number; z: number };
 export type MapEdge = { source: string; target: string; score: number };
@@ -69,6 +77,18 @@ export const RING_TOKEN = "--destructive" as const;
 /** The ring colour, read from the theme exactly as the palette is. */
 export function resolveRingColor(element: Element): Rgb {
   return parseHslTriplet(getComputedStyle(element).getPropertyValue(RING_TOKEN));
+}
+
+/**
+ * The outline round the dot under the pointer. The page's own text colour, so
+ * it reads against every palette entry and against the page in either theme —
+ * the one thing a hover affordance has to do.
+ */
+export const HOVER_OUTLINE_TOKEN = "--foreground" as const;
+
+/** That outline's colour, read from the theme exactly as the ring's is. */
+export function resolveHoverOutlineColor(element: Element): Rgb {
+  return parseHslTriplet(getComputedStyle(element).getPropertyValue(HOVER_OUTLINE_TOKEN));
 }
 
 /**
@@ -443,6 +463,57 @@ export const PASSAGE_LABEL_LIMIT = 120;
  */
 export function isPassageClipped(label: string): boolean {
   return label.length >= PASSAGE_LABEL_LIMIT;
+}
+
+/**
+ * What to call a point on screen.
+ *
+ * Never its `label`. That is the first 120 characters of the chunk, and this
+ * product's ingestion injects a document header into every chunk — so the
+ * opening reads `--- Document (Exulu ID: 6adc924b-…) ---` and a tooltip, a
+ * panel heading or a neighbour row taken from it shows an identifier. The
+ * item's name is what a reader calls the thing.
+ *
+ * The fallback is the opening after all, because `name` is nullable on an
+ * items table and a blank heading reads as a broken map rather than as a
+ * nameless document.
+ */
+export function pointTitle(point: { itemName: string; label: string }): string {
+  return point.itemName.trim() === "" ? point.label : point.itemName;
+}
+
+/**
+ * The neighbour list with one row per item, each keeping its strongest
+ * passage.
+ *
+ * The edges answer is per PASSAGE, so a document chunked into four pieces
+ * comes back as four neighbours — and the panel listed its name four times.
+ * A row therefore now counts an ITEM, not a chunk, and the list can be
+ * shorter than the number of relations the API was asked for. The edge the
+ * row carries is still a single passage's, so the line drawn on the cloud and
+ * the score behind the row are the strongest passage's, not an aggregate.
+ *
+ * An edge whose target is not among the points is left alone: the edges query
+ * does not filter to passages that have a position and the cloud is capped
+ * anyway, so such a row is a real relation whose item is simply unknown here
+ * and cannot be folded into anything. Keyed by its target, so it stays one
+ * row per relation exactly as before.
+ */
+export function strongestPerItem(
+  edges: MapEdge[], byId: Map<string, MapPoint>,
+): MapEdge[] {
+  // Insertion-ordered, so the sort below only has to settle the cases the
+  // answer's own order does not already.
+  const best = new Map<string, MapEdge>();
+  for (const edge of edges) {
+    const neighbour = byId.get(edge.target);
+    const key = neighbour === undefined ? `#${edge.target}` : neighbour.itemId;
+    const kept = best.get(key);
+    if (kept === undefined || edge.score > kept.score) best.set(key, edge);
+  }
+  // Array.prototype.sort is stable, so items whose strongest passage ties keep
+  // the order the answer gave them.
+  return Array.from(best.values()).sort((a, b) => b.score - a.score);
 }
 
 /**

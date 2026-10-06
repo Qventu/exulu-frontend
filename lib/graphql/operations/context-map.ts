@@ -8,7 +8,7 @@ import { gql } from "@apollo/client";
 export const GET_CONTEXT_MAP_POINTS = gql`
   query ContextMapPoints($contextId: ID!, $mode: ContextMapMode, $groupField: String, $limit: Int) {
     contextMapPoints(contextId: $contextId, mode: $mode, groupField: $groupField, limit: $limit) {
-      points { id itemId x y z label group chunks }
+      points { id itemId x y z label itemName group chunks }
       total
       sampled
     }

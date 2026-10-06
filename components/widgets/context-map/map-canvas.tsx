@@ -2,10 +2,10 @@
 
 /**
  * The point cloud. Plain three.js in one effect: a single Points object for
- * every passage, a second drawn over it for the ringed ones, one LineSegments
- * for the selected node's neighbours, another for the faint nearest-neighbour
- * web, and HTML overlays for the topic labels so they use the page's own type
- * tokens.
+ * every passage, a second drawn over it for the ringed ones, a third holding
+ * only the dot under the pointer, one LineSegments for the selected node's
+ * neighbours, another for the faint nearest-neighbour web, and HTML overlays
+ * for the topic labels so they use the page's own type tokens.
  *
  * No test covers this file — jsdom has no WebGL context. Everything that can be
  * reasoned about without a GPU lives in ./map-data and is tested there, so what
@@ -21,7 +21,10 @@ import {
   cloudBounds,
   frameCloud,
   nearestNeighbourSegments,
+  pointTitle,
   projectToScreen,
+  regionColor,
+  resolveHoverOutlineColor,
   resolveLabelCollisions,
   resolvePalette,
   resolveRingColor,
@@ -112,6 +115,34 @@ const RING_FRAGMENT = `
   }
 `;
 
+/**
+ * The hovered dot: a disc in the dot's own colour with a band of the page's
+ * text colour round its rim, so the dot is both bigger and outlined and is
+ * still recognisably the dot that was there.
+ *
+ * Its own layer, for the same reason the rings have one — a buffer of one
+ * vertex, so a pointer move never re-uploads the cloud's positions or colours.
+ * It shares RING_VERTEX: a point sprite's size is the only thing either layer
+ * asks the vertex stage for.
+ *
+ * Deliberately NOT a displacement of the dots around it. A dot's position IS
+ * its similarity to everything near it, so pushing neighbours aside would make
+ * the map lie at the exact moment someone is reading it closely.
+ *
+ * Two constants shape it: this one, the band of the sprite's radius the
+ * outline takes, and HOVER_SIZE with the other sizes further down.
+ */
+const HOVER_OUTLINE_WIDTH = 0.2;
+const HOVER_FRAGMENT = `
+  uniform vec3 fill;
+  uniform vec3 outline;
+  void main() {
+    float d = length(gl_PointCoord - vec2(0.5));
+    if (d > 0.5) discard;
+    gl_FragColor = vec4(d > ${(0.5 * (1 - HOVER_OUTLINE_WIDTH)).toFixed(3)} ? outline : fill, 1.0);
+  }
+`;
+
 /** Vertical field of view, in degrees; `frameCloud` fits the cloud to it. */
 const CAMERA_FOV_DEGREES = 50;
 /**
@@ -160,6 +191,17 @@ const LABEL_PLATE_PAD_X = 12;
 const LABEL_PLATE_PAD_Y = 4;
 /** Wide enough that the annulus sits around the dot rather than on top of it. */
 const RING_SIZE = POINT_SIZE * 2.2;
+/**
+ * The sprite the hovered dot is drawn on; HOVER_OUTLINE_WIDTH above is the
+ * band of it the outline takes.
+ *
+ * Capped at the ring layer's inner edge — RING_SIZE × RING_INNER_RADIUS, as a
+ * diameter — so that growing the dot never paints over the conflict ring a
+ * viewer is leaning in to read. Written as one expression against those two,
+ * because widening the ring is exactly the change that would break the
+ * nesting silently.
+ */
+const HOVER_SIZE = Math.min(POINT_SIZE * 1.5, RING_SIZE * RING_INNER_RADIUS * 2);
 const SELECTED_LINE_OPACITY = 0.75;
 const WEB_LINE_OPACITY = 0.12;
 
@@ -167,7 +209,12 @@ const DIM_SELECTED = 1;
 const DIM_MUTED = 0.15;
 const DIM_NORMAL = 0.85;
 
-type Hover = { label: string; x: number; y: number } | null;
+/**
+ * `id` is carried so the hovered-dot layer can key its effect on the DOT
+ * rather than on this state, which is rewritten ten times a second while the
+ * cloud turns under a still pointer.
+ */
+type Hover = { id: string; name: string; x: number; y: number } | null;
 type Label = { id: string; label: string; x: number; y: number };
 /** A LabelBox for resolveLabelCollisions, carrying the text through with it. */
 type LabelCandidate = Label & {
@@ -213,6 +260,11 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       THREE.BufferGeometry,
       THREE.ShaderMaterial
     > | null>(null);
+    /** One vertex: the dot under the pointer, or none. */
+    const hoverDotRef = React.useRef<THREE.Points<
+      THREE.BufferGeometry,
+      THREE.ShaderMaterial
+    > | null>(null);
     const cameraRef = React.useRef<THREE.PerspectiveCamera | null>(null);
     const controlsRef = React.useRef<OrbitControls | null>(null);
     const raycasterRef = React.useRef<THREE.Raycaster | null>(null);
@@ -249,9 +301,17 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       bounds,
       onSelect,
       onUnsupported,
+      /**
+       * The dot under the pointer, for the colour effect's theme re-read to
+       * repaint. Through this ref and not through that effect's dependencies,
+       * or a pointer move would re-upload the whole cloud — which is the
+       * entire reason this ref exists.
+       */
+      hovered: null as MapPoint | null,
     });
     React.useEffect(() => {
       latestRef.current = {
+        ...latestRef.current,
         points,
         topics,
         ringedIds,
@@ -399,6 +459,34 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       scene.add(rings);
       ringsRef.current = rings;
 
+      const hoverMaterial = new THREE.ShaderMaterial({
+        // The size-only vertex stage the rings already use.
+        vertexShader: RING_VERTEX,
+        fragmentShader: HOVER_FRAGMENT,
+        uniforms: {
+          size: { value: HOVER_SIZE },
+          pixelRatio: { value: ratio() },
+          // Vector3s for the same reason the ring's colour is one: the shader
+          // writes gl_FragColor itself, so the sRGB triples have to reach it
+          // unconverted.
+          fill: { value: new THREE.Vector3() },
+          outline: { value: new THREE.Vector3() },
+        },
+        transparent: true,
+        depthWrite: false,
+      });
+      const hoverDot = new THREE.Points(
+        new THREE.BufferGeometry(),
+        hoverMaterial,
+      );
+      hoverDot.frustumCulled = false;
+      // Above the rings, which are above the cloud: the dot under the pointer
+      // is the one thing nothing else may be painted over. HOVER_SIZE keeps it
+      // inside the ring's annulus, so a flagged dot keeps its ring as well.
+      hoverDot.renderOrder = 2;
+      scene.add(hoverDot);
+      hoverDotRef.current = hoverDot;
+
       const raycaster = new THREE.Raycaster();
       raycaster.params.Points.threshold = PICK_THRESHOLD;
       raycasterRef.current = raycaster;
@@ -450,6 +538,10 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       const onPointerLeave = () => {
         pointerRef.current = null;
         hoverKeyRef.current = "";
+        // The hit test only runs with the overlay pass, so the cursor is
+        // cleared here rather than waiting up to OVERLAY_INTERVAL_MS to
+        // discover that the pointer has gone.
+        renderer.domElement.style.cursor = "";
         setHover(null);
       };
       const onClick = (event: MouseEvent) => {
@@ -478,6 +570,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         renderer.setPixelRatio(next);
         cloudMaterial.uniforms.pixelRatio.value = next;
         ringMaterial.uniforms.pixelRatio.value = next;
+        hoverMaterial.uniforms.pixelRatio.value = next;
         camera.aspect = host.clientWidth / host.clientHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(host.clientWidth, host.clientHeight);
@@ -516,11 +609,24 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
 
         const pointer = pointerRef.current;
         const hovered = pointer ? hitTest(pointer.x, pointer.y) : null;
+        // A dot is clickable, so it says so. Written only on a change: this
+        // runs ten times a second.
+        const cursor = hovered ? "pointer" : "";
+        if (renderer.domElement.style.cursor !== cursor) {
+          renderer.domElement.style.cursor = cursor;
+        }
         let nextHover: Hover = null;
         if (hovered) {
           const screen = projectToScreen(hovered, matrix, width, height);
           if (screen.visible) {
-            nextHover = { label: hovered.label, x: screen.x, y: screen.y };
+            nextHover = {
+              id: hovered.id,
+              // The item's name, not the passage's opening: the opening begins
+              // with an injected document header on a real base.
+              name: pointTitle(hovered),
+              x: screen.x,
+              y: screen.y,
+            };
           }
         }
         const hoverKey = nextHover
@@ -588,6 +694,8 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         web.material.dispose();
         rings.geometry.dispose();
         ringMaterial.dispose();
+        hoverDot.geometry.dispose();
+        hoverMaterial.dispose();
         scene.clear();
         renderer.dispose();
         // dispose() frees three's own caches but leaves the GL context alive
@@ -599,6 +707,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         linesRef.current = null;
         webRef.current = null;
         ringsRef.current = null;
+        hoverDotRef.current = null;
         cameraRef.current = null;
         controlsRef.current = null;
         raycasterRef.current = null;
@@ -639,7 +748,8 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       const raycaster = raycasterRef.current;
       const cloud = cloudRef.current;
       const rings = ringsRef.current;
-      if (!host || !camera || !controls || !raycaster || !cloud || !rings) return;
+      const hoverDot = hoverDotRef.current;
+      if (!host || !camera || !controls || !raycaster || !cloud || !rings || !hoverDot) return;
       const measured = latestRef.current.bounds;
       if (!measured) return;
 
@@ -662,8 +772,51 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
 
       cloud.material.uniforms.size.value = POINT_SIZE * framing.sizeScale;
       rings.material.uniforms.size.value = RING_SIZE * framing.sizeScale;
+      hoverDot.material.uniforms.size.value = HOVER_SIZE * framing.sizeScale;
       raycaster.params.Points.threshold = PICK_THRESHOLD * framing.sizeScale;
     }, [boundsKey]);
+
+    /**
+     * Paints the hovered dot's layer: one vertex, and the two colours it is
+     * drawn in.
+     *
+     * A callback rather than effect bodies, because two things repaint it —
+     * the hover effect below when the dot changes, and the colour effect when
+     * the theme changes — and an outline left in the previous theme's text
+     * colour is the one thing that would otherwise go unnoticed.
+     */
+    const paintHoveredDot = React.useCallback(
+      (host: HTMLElement, point: MapPoint | null) => {
+        const hoverDot = hoverDotRef.current;
+        if (!hoverDot) return;
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute(
+          "position",
+          new THREE.BufferAttribute(
+            point
+              ? new Float32Array([point.x, point.y, point.z])
+              : new Float32Array(0),
+            3,
+          ),
+        );
+        const previous = hoverDot.geometry;
+        hoverDot.geometry = geometry;
+        previous.dispose();
+        if (!point) return;
+        // The dot's own region colour, through the same function that colours
+        // it in the cloud, so the hovered dot is recognisably the dot that was
+        // there rather than a second mark in a colour of its own.
+        const fill = regionColor(resolvePalette(host), regionOf(point));
+        const outline = resolveHoverOutlineColor(host);
+        hoverDot.material.uniforms.fill.value.set(fill[0], fill[1], fill[2]);
+        hoverDot.material.uniforms.outline.value.set(
+          outline[0],
+          outline[1],
+          outline[2],
+        );
+      },
+      [regionOf],
+    );
 
     // Positions and colours. Also re-run when the theme changes: WebGL colours
     // were resolved from CSS once, so without this the cloud keeps the previous
@@ -726,6 +879,10 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
           const ring = resolveRingColor(host);
           rings.material.uniforms.ring.value.set(ring[0], ring[1], ring[2]);
         }
+        // The hovered dot reads two theme colours of its own. Its id comes
+        // through the ref, so a pointer move does not land here — only a
+        // theme change and a data change do.
+        paintHoveredDot(host, latestRef.current.hovered);
       };
       write();
       const observer = new MutationObserver(write);
@@ -734,7 +891,30 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         attributeFilter: ["class", "data-theme"],
       });
       return () => observer.disconnect();
-    }, [points, regionOf, selectedId, highlightTopic, topicMemberIds, ringedKey]);
+    }, [
+      points, regionOf, selectedId, highlightTopic, topicMemberIds, ringedKey,
+      paintHoveredDot,
+    ]);
+
+    /**
+     * The dot under the pointer, drawn again larger and outlined.
+     *
+     * Keyed on the dot's ID, not on the hover state: that state also carries
+     * the tooltip's screen position and is rewritten ten times a second while
+     * the cloud turns under a still pointer. Keyed on the id, this writes one
+     * vertex when the dot actually changes, and the cloud's own position and
+     * colour buffers are never touched by a hover at all.
+     */
+    const hoveredId = hover?.id ?? null;
+    React.useEffect(() => {
+      const host = hostRef.current;
+      if (!host) return;
+      const point = hoveredId === null ? null : (byId.get(hoveredId) ?? null);
+      // Read by the colour effect's theme re-read, which has no dependency on
+      // the hovered dot and must not grow one.
+      latestRef.current.hovered = point;
+      paintHoveredDot(host, point);
+    }, [hoveredId, byId, paintHoveredDot]);
 
     // Neighbour lines, rebuilt only when the selection or the hovered
     // neighbour changes.
@@ -852,7 +1032,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
             className="pointer-events-none absolute max-w-xs truncate rounded border bg-popover px-2 py-1 text-xs text-popover-foreground shadow"
             style={{ left: hover.x + 8, top: hover.y + 8 }}
           >
-            {hover.label}
+            {hover.name}
           </span>
         )}
       </div>

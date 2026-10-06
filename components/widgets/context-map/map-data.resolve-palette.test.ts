@@ -2,7 +2,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  PALETTE_TOKENS, resolvePalette, resolveRingColor, NO_VALUE_TOKEN, RING_TOKEN,
+  HOVER_OUTLINE_TOKEN, PALETTE_TOKENS, resolveHoverOutlineColor, resolvePalette,
+  resolveRingColor, NO_VALUE_TOKEN, RING_TOKEN,
 } from "./map-data";
 
 describe("resolvePalette", () => {
@@ -63,5 +64,36 @@ describe("resolveRingColor", () => {
     const root = document.documentElement;
     root.style.removeProperty(RING_TOKEN);
     expect(resolveRingColor(root)).toEqual([0.5, 0.5, 0.5]);
+  });
+});
+
+describe("resolveHoverOutlineColor", () => {
+  it("reads the outline from the theme's own text colour", () => {
+    const root = document.documentElement;
+    // --foreground: 240 10% 3.9% is the light theme's value.
+    root.style.setProperty(HOVER_OUTLINE_TOKEN, "240 10% 3.9%");
+
+    const outline = resolveHoverOutlineColor(root);
+
+    expect(outline[0]).toBeCloseTo(0.03510, 4);
+    expect(outline[1]).toBeCloseTo(0.03510, 4);
+    expect(outline[2]).toBeCloseTo(0.04290, 4);
+
+    root.style.removeProperty(HOVER_OUTLINE_TOKEN);
+  });
+
+  it("is neither a palette colour nor the ring's", () => {
+    // The outline says "this is the dot under your pointer" and nothing else.
+    // A token a region could already be wearing would make it say nothing, and
+    // the ring's would make it claim a conflict.
+    expect(PALETTE_TOKENS).not.toContain(HOVER_OUTLINE_TOKEN);
+    expect(HOVER_OUTLINE_TOKEN).not.toBe(NO_VALUE_TOKEN);
+    expect(HOVER_OUTLINE_TOKEN).not.toBe(RING_TOKEN);
+  });
+
+  it("falls back to grey when the token is unset", () => {
+    const root = document.documentElement;
+    root.style.removeProperty(HOVER_OUTLINE_TOKEN);
+    expect(resolveHoverOutlineColor(root)).toEqual([0.5, 0.5, 0.5]);
   });
 });

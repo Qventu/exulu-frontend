@@ -4,13 +4,15 @@ import {
   buildBuffers, cloudBounds, coverageCaption, frameCloud, FRAMING_REFERENCE_DISTANCE,
   isPassageClipped,
   nearestNeighbourSegments, NO_VALUE_TOKEN, PALETTE_TOKENS, PASSAGE_LABEL_LIMIT,
-  parseHslTriplet, projectToScreen, regionColor, resolveLabelCollisions, rgbCss, topicOf,
+  parseHslTriplet, pointTitle, projectToScreen, regionColor, resolveLabelCollisions, rgbCss,
+  strongestPerItem, topicOf,
   VIEWPORT_FILL,
-  type CloudBounds, type Rgb,
+  type CloudBounds, type MapPoint, type Rgb,
 } from "./map-data";
 
 const point = (id: string, group: string | null, xyz: [number, number, number] = [0, 0, 0]) => ({
-  id, itemId: `item-${id}`, x: xyz[0], y: xyz[1], z: xyz[2], label: id, group, chunks: 1,
+  id, itemId: `item-${id}`, x: xyz[0], y: xyz[1], z: xyz[2],
+  label: id, itemName: `item ${id}`, group, chunks: 1,
 });
 
 describe("the palette", () => {
@@ -581,5 +583,74 @@ describe("frameCloud", () => {
     for (const aspect of [0, -4, Number.NaN, Infinity]) {
       expect(frameCloud(MEASURED, aspect, FOV).distance).toBeCloseTo(square, 10);
     }
+  });
+});
+
+describe("pointTitle", () => {
+  it("names a point by its item rather than by the passage's opening", () => {
+    // The opening is what the chunk says, and this corpus prefixes every
+    // chunk with a document header — so the opening is an identifier.
+    expect(pointTitle({
+      itemName: "Price list 2026",
+      label: "--- Document (Exulu ID: 6adc924b-1423-42ac-8b9d-0f0f0f0f0f0f) ---",
+    })).toBe("Price list 2026");
+  });
+
+  it("falls back to the matched text for an item with no name", () => {
+    // `name` is nullable on an items table, and the resolver answers "" for a
+    // null. An empty tooltip or a blank heading reads as a broken map rather
+    // than as a nameless document.
+    expect(pointTitle({ itemName: "", label: "the passage itself" }))
+      .toBe("the passage itself");
+    expect(pointTitle({ itemName: "   ", label: "the passage itself" }))
+      .toBe("the passage itself");
+  });
+});
+
+describe("strongestPerItem", () => {
+  const edge = (target: string, score: number) => ({ source: "seed", target, score });
+  /** A passage of `item`, as the points answer carries it. */
+  const chunkOf = (id: string, item: string): MapPoint => ({
+    id, itemId: item, x: 0, y: 0, z: 0,
+    label: `the text of ${id}`, itemName: `the name of ${item}`, group: null, chunks: 1,
+  });
+  const byId = (...points: MapPoint[]) => new Map(points.map((p) => [p.id, p]));
+
+  it("lists an item once, keeping its strongest passage", () => {
+    // Four chunks of one document are four neighbours and one item: the panel
+    // showed the same name four times.
+    const rows = strongestPerItem(
+      [edge("c1", 0.4), edge("c2", 0.9), edge("c3", 0.2), edge("c4", 0.5)],
+      byId(
+        chunkOf("c1", "i1"), chunkOf("c2", "i1"),
+        chunkOf("c3", "i1"), chunkOf("c4", "i1"),
+      ),
+    );
+    expect(rows).toEqual([edge("c2", 0.9)]);
+  });
+
+  it("keeps separate items apart, strongest first", () => {
+    const rows = strongestPerItem(
+      [edge("a1", 0.3), edge("b1", 0.9), edge("a2", 0.8)],
+      byId(chunkOf("a1", "A"), chunkOf("a2", "A"), chunkOf("b1", "B")),
+    );
+    expect(rows.map((r) => r.target)).toEqual(["b1", "a2"]);
+  });
+
+  it("keeps a neighbour that is not on the map, which names no item", () => {
+    // The edges query does not filter to passages that have a position, and
+    // the cloud is capped anyway: such a row is a real relation whose item is
+    // simply unknown here, so it cannot be folded into one.
+    const rows = strongestPerItem(
+      [edge("c1", 0.9), edge("gone", 0.5), edge("also-gone", 0.4)],
+      byId(chunkOf("c1", "i1")),
+    );
+    expect(rows.map((r) => r.target)).toEqual(["c1", "gone", "also-gone"]);
+  });
+
+  it("answers nothing for no edges, and leaves one edge alone", () => {
+    expect(strongestPerItem([], byId())).toEqual([]);
+    expect(strongestPerItem([edge("c1", 0.5)], byId(chunkOf("c1", "i1"))))
+      .toEqual([edge("c1", 0.5)]);
   });
 });
