@@ -109,7 +109,9 @@ function TranscriptItemPageInner() {
   if (loading && !item) {
     return (
       <PageShell variant="full-bleed">
-        <div className="space-y-6">
+        {/* full-bleed has no padding of its own — without this the skeletons
+            run straight into the navigation rail. */}
+        <div className="space-y-6 p-4 md:p-6">
           <div className="space-y-2">
             <Skeleton className="h-8 w-2/3" />
             <Skeleton className="h-4 w-1/3" />

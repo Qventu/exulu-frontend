@@ -19,7 +19,8 @@
  * - Right: the video/audio player, then `<AskBox />`.
  *
  * Edit mode (task-12 brief, Steps 5-8):
- * - Header action area swaps Share/Export/Overflow for `<ReviewChecklist />`
+ * - Header action area swaps Share/Export/Overflow for Discard / sharing /
+ *   Publish; the rail and media are the same in both states.
  *   (a pure report — nothing on it disables Save); the title becomes a live
  *   preview of the draft title typed in the centre column.
  * - Centre: find-and-replace (hidden behind a button) above the transcript;
@@ -31,7 +32,8 @@
  *   the transcript, a "Details" section holds project + sharing as local
  *   draft state (applied only on Save, unlike read mode's immediate-apply
  *   popovers).
- * - Right: `<SpeakersPanel />` replaces the video/ask panel.
+ * - Right: the same media + speakers rail as read mode; speaker naming
+ *   happens inline in the transcript.
  * - A pinned footer holds the audio/video player and Save / Discard.
  * - `canWrite === false` while `mode === "edit"` renders the READ-mode UI
  *   (unchanged) plus an inline `Alert` explaining why, and never a Save
@@ -68,6 +70,7 @@ import {
   Trash2,
   Users,
   HelpCircle,
+  Library,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
@@ -137,12 +140,10 @@ import { AudioTimeline, type AudioTimelineHandle } from "./audio-timeline";
 import { ExportMenu } from "./export-menu";
 import { MeetingVideoPlayer } from "./meeting-video-player";
 import { cn } from "@/lib/utils";
-import { SpeakersPanel } from "./speakers-panel";
 import { PublishDialog } from "./publish-dialog";
 import { SpeakersPreview } from "./speakers-preview";
 import { SummaryMarkdown } from "./summary-markdown";
 import { FindReplace } from "./find-replace";
-import { ReviewChecklist } from "./review-checklist";
 
 export interface TranscriptDocumentProps {
   item: TranscriptItemDetail;
@@ -519,6 +520,7 @@ export function TranscriptDocument({
 
   const [accessOpen, setAccessOpen] = React.useState(false);
   const [publishOpen, setPublishOpen] = React.useState(false);
+  const [editingSpeaker, setEditingSpeaker] = React.useState<string | null>(null);
   const [moveOpen, setMoveOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [projectIdOverride, setProjectIdOverride] = React.useState<string | null | undefined>(
@@ -602,9 +604,6 @@ export function TranscriptDocument({
     () => outputs.filter((output) => output.status === "failed" || !!output.output?.trim()),
     [outputs],
   );
-  const hasSummary = outputs.some(
-    (output) => output.status === "done" && !!output.output?.trim(),
-  );
 
   const audioTimelineRef = React.useRef<AudioTimelineHandle>(null);
   const mediaContainerRef = React.useRef<HTMLDivElement>(null);
@@ -633,52 +632,6 @@ export function TranscriptDocument({
     },
     [hasVideo],
   );
-
-  // "Hear" (SpeakersPanel): seek to the speaker's first block and stop after
-  // ~4s. Reuses `seekTo` for both the audio ribbon and the meeting video, so
-  // it degrades the same way seekTo already does before media is ready. The
-  // pending timeout is tracked so a second "Hear" (or unmount) can clear a
-  // still-pending one — otherwise a stale timer fires later and pauses
-  // whatever the user is manually playing by then (fix-round-1, non-gating #1).
-  const hearTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  React.useEffect(
-    () => () => {
-      if (hearTimeoutRef.current != null) clearTimeout(hearTimeoutRef.current);
-    },
-    [],
-  );
-  const handleHear = React.useCallback(
-    (rawSpeaker: string) => {
-      const firstBlock = blocks.find((block) => block.rawSpeaker === rawSpeaker);
-      if (!firstBlock) return;
-      if (hearTimeoutRef.current != null) clearTimeout(hearTimeoutRef.current);
-      seekTo(firstBlock.start);
-      hearTimeoutRef.current = setTimeout(() => {
-        mediaContainerRef.current?.querySelector<HTMLMediaElement>("audio, video")?.pause();
-        hearTimeoutRef.current = null;
-      }, 4000);
-    },
-    [blocks, seekTo],
-  );
-
-  // "Name speaker" (transcript block, still-raw label): scroll the speakers
-  // panel's row into view and open it. SpeakersPanel's "one row open at a
-  // time" state is internal (its prop contract is fixed — no imperative
-  // open control), so this drives it the same way a person would: find the
-  // row, open it only if it isn't already open, then focus its input.
-  const focusSpeaker = React.useCallback((rawSpeaker: string) => {
-    const row = document.getElementById(`speaker-panel-${rawSpeaker}`);
-    if (!row) return;
-    const reduced =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    row.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
-    const toggle = row.querySelector<HTMLButtonElement>("button[aria-expanded]");
-    if (toggle && toggle.getAttribute("aria-expanded") !== "true") {
-      toggle.click();
-    }
-    requestAnimationFrame(() => row.querySelector<HTMLInputElement>("input")?.focus());
-  }, []);
 
   const title = item.name?.trim() || t("review.fallbackTitle");
   const headerTitle = isEditable
@@ -837,26 +790,6 @@ export function TranscriptDocument({
     }));
   };
 
-  // Blocks per raw speaker, for the rail's "N% of talk time · M blocks" line.
-  const blockCounts = React.useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const block of blocks) {
-      counts[block.rawSpeaker] = (counts[block.rawSpeaker] ?? 0) + 1;
-    }
-    return counts;
-  }, [blocks]);
-
-  // Only placeholder labels count: a meeting bot already supplies real
-  // participant names, so counting those as "unnamed" would block the review
-  // checklist on work that does not exist. See speakerNeedsName in types.ts.
-  const unnamedSpeakerCount = rawSpeakers.filter((raw) =>
-    speakerNeedsName(raw, editState.speakers),
-  ).length;
-  const sharingChosen = isSharingConfigured(
-    editState.rightsMode,
-    editState.rbacUsers,
-    editState.rbacRoles,
-  );
 
   const handleSaveClick = async () => {
     if (!onSave) return;
@@ -913,11 +846,25 @@ export function TranscriptDocument({
                 >
                   {t("review.discard")}
                 </Button>
-                <ReviewChecklist
-                  titleSet={editState.title.trim().length > 0}
-                  unnamedSpeakerCount={unnamedSpeakerCount}
-                  hasSummary={hasSummary}
-                  sharingChosen={sharingChosen}
+                {/* Same affordance as read mode's Share, driving the draft's
+                    own RBAC rather than a saved item's. Replaces the
+                    "ready to save" badge, which told the reviewer nothing
+                    they could act on. */}
+                <RBACControl
+                  allowedModes={ALLOWED_MODES}
+                  subjectLabel={t("sharing.subject")}
+                  initialRightsMode={editState.rightsMode}
+                  initialUsers={editState.rbacUsers}
+                  initialRoles={editState.rbacRoles}
+                  modalMode
+                  onChange={(nextMode, nextUsers, nextRoles) => {
+                    setEditState((prev) => ({
+                      ...prev,
+                      rightsMode: nextMode,
+                      rbacUsers: nextUsers,
+                      rbacRoles: nextRoles,
+                    }));
+                  }}
                 />
                 <Button
                   type="button"
@@ -1002,6 +949,49 @@ export function TranscriptDocument({
           {/* Centre: summary/action-item outputs, then the transcript. */}
           <div className={cn("min-w-0 space-y-6", chapters.length > 0 && "md:col-start-2")}>
             {banner}
+
+            {/* Where this transcript stands relative to the knowledge base,
+                in both states — the one thing the old "Save transcript"
+                button never said out loud. */}
+            <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border p-3">
+              <div className="min-w-0 space-y-0.5">
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  <Library aria-hidden="true" className="size-4 shrink-0" />
+                  {isEditable ? t("document.kbDraftTitle") : t("document.kbPublishedTitle")}
+                </p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {isEditable ? t("document.kbDraftBody") : t("document.kbPublishedBody")}
+                </p>
+              </div>
+              {isEditable ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={saving || !onSave}
+                  aria-busy={saving}
+                  className="shrink-0 max-md:h-11"
+                  onClick={() => setPublishOpen(true)}
+                >
+                  {saving ? (
+                    <Loader2 aria-hidden="true" className="mr-2 size-4 animate-spin" />
+                  ) : null}
+                  {t("review.publishAction")}
+                </Button>
+              ) : canWrite !== false ? (
+                // No non-destructive unpublish exists server-side, so this is
+                // the existing delete, labelled and confirmed as such rather
+                // than dressed up as "remove from the knowledge base".
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 max-md:h-11"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  {t("document.kbRemove")}
+                </Button>
+              ) : null}
+            </div>
             {isEditable && (
               <div className="space-y-1">
                 <Input
@@ -1087,24 +1077,52 @@ export function TranscriptDocument({
                         className="rounded-md px-2 py-1.5 md:grid md:grid-cols-[9rem_minmax(0,1fr)] md:gap-3"
                       >
                         <span className="flex flex-wrap items-baseline gap-x-2 text-xs md:flex-col md:items-start md:gap-y-0.5">
-                          <span
-                            className="min-w-0 truncate font-medium"
-                            style={{ color: speakerColor(block.rawSpeaker) }}
-                          >
-                            {block.label}
-                          </span>
-                          <span className="shrink-0 font-mono text-muted-foreground">
-                            {formatClock(block.start)}
-                          </span>
-                          {speakerNeedsName(block.rawSpeaker, speakers) && (
+                          {/* Click-to-rename, applied to every block this
+                              speaker owns — the names map is keyed by the raw
+                              label, so one edit renames them all. */}
+                          {editingSpeaker === block.rawSpeaker ? (
+                            <Input
+                              autoFocus
+                              value={speakers[block.rawSpeaker] ?? ""}
+                              placeholder={t("document.speakerNamePlaceholder")}
+                              aria-label={t("document.renameSpeaker", {
+                                speaker: block.label,
+                              })}
+                              onChange={(event) =>
+                                handleSpeakerNameChange(block.rawSpeaker, event.target.value)
+                              }
+                              onBlur={() => setEditingSpeaker(null)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === "Escape") {
+                                  event.preventDefault();
+                                  setEditingSpeaker(null);
+                                }
+                              }}
+                              className="h-7 w-full max-w-36 px-1 text-xs"
+                            />
+                          ) : (
                             <button
                               type="button"
-                              className="text-left text-primary underline underline-offset-2 max-md:h-11"
-                              onClick={() => focusSpeaker(block.rawSpeaker)}
+                              onClick={() => setEditingSpeaker(block.rawSpeaker)}
+                              title={t("document.renameSpeaker", { speaker: block.label })}
+                              className="min-w-0 max-w-full truncate rounded px-1 text-left font-medium hover:bg-muted"
+                              style={{ color: speakerColor(block.rawSpeaker) }}
                             >
-                              {t("document.nameSpeaker")}
+                              {block.label}
                             </button>
                           )}
+                          {/* The block body is the edit target while
+                              correcting, so the timecode carries the seek. */}
+                          <button
+                            type="button"
+                            onClick={() => seekTo(block.start)}
+                            title={t("document.jumpToTime", {
+                              time: formatClock(block.start),
+                            })}
+                            className="shrink-0 rounded px-1 font-mono text-muted-foreground hover:bg-muted hover:text-foreground"
+                          >
+                            {formatClock(block.start)}
+                          </button>
                         </span>
                         <div className="min-w-0">
                         {editingSegmentStart === block.segmentIndices[0] ? (
@@ -1219,44 +1237,19 @@ export function TranscriptDocument({
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label>{t("composer.sharing")}</Label>
-                      <RBACControl
-                        allowedModes={ALLOWED_MODES}
-                        subjectLabel={t("sharing.subject")}
-                        initialRightsMode={editState.rightsMode}
-                        initialUsers={editState.rbacUsers}
-                        initialRoles={editState.rbacRoles}
-                        modalMode
-                        onChange={(nextMode, nextUsers, nextRoles) => {
-                          setEditState((prev) => ({
-                            ...prev,
-                            rightsMode: nextMode,
-                            rbacUsers: nextUsers,
-                            rbacRoles: nextRoles,
-                          }));
-                        }}
-                      />
-                    </div>
                   </div>
                 </CollapsibleContent>
               </Collapsible>
             )}
           </div>
 
-          {/* Right: SpeakersPanel in edit mode; media + ask box in read mode. */}
           <div className={cn("space-y-4", chapters.length > 0 ? "md:col-start-3" : "md:col-start-2")}>
-            {isEditable ? (
-              <SpeakersPanel
-                blockCounts={blockCounts}
-                rawSpeakers={rawSpeakers}
-                names={editState.speakers}
-                onNameChange={handleSpeakerNameChange}
-                talkShare={talkShare}
-                onHear={handleHear}
-              />
-            ) : (
-              <>
+            {/* One rail in both states (review feedback): the media stays
+                beside the transcript rather than dropping to a bar under it,
+                where a long transcript put it out of reach. Speaker naming
+                moved into the transcript itself, so edit mode no longer needs
+                a panel of its own. */}
+            <>
                 <div ref={mediaContainerRef} className="space-y-2">
                   {hasVideo ? (
                     <>
@@ -1292,49 +1285,23 @@ export function TranscriptDocument({
                   names={speakers}
                   talkShare={talkShare}
                   onEdit={
-                    canWrite !== false
+                    !isEditable && canWrite !== false
                       ? () => router.push(`${pathname}?edit=1`)
                       : undefined
                   }
                 />
 
-                <AskBox
-                  itemId={item.id}
-                  suggestions={[t("document.askSuggestion1"), t("document.askSuggestion2")]}
-                />
-              </>
-            )}
+                {!isEditable && (
+                  <AskBox
+                    itemId={item.id}
+                    suggestions={[t("document.askSuggestion1"), t("document.askSuggestion2")]}
+                  />
+                )}
+            </>
           </div>
         </div>
       </div>
 
-      {isEditable && (
-        <div className="shrink-0 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <div ref={mediaContainerRef} className="mx-auto w-full max-w-[1600px]">
-            {hasVideo ? (
-              <MeetingVideoPlayer
-                job={
-                  {
-                    id: item.job_id ?? item.id,
-                    video_s3key: item.video_s3key,
-                    recall_recording_id: item.recall_recording_id,
-                  } as unknown as Job
-                }
-              />
-            ) : item.audio_s3key ? (
-              <AudioTimeline
-                ref={audioTimelineRef}
-                audioS3Key={item.audio_s3key}
-                segments={segments}
-                speakers={speakers}
-                layout="row"
-              />
-            ) : (
-              <p className="px-1 text-xs text-muted-foreground">{t("review.noAudio")}</p>
-            )}
-          </div>
-        </div>
-      )}
 
       <PublishDialog
         open={publishOpen}

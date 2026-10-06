@@ -4947,7 +4947,15 @@
       "writeAccessDenied": "Sie haben keine Berechtigung, Änderungen an diesem Transkript zu speichern.",
       "staleConflictTitle": "Dieses Transkript hat sich geändert, seit Sie mit der Bearbeitung begonnen haben",
       "staleConflictDescription": "Möglicherweise wurden in der Zwischenzeit Änderungen gespeichert. Wenn Sie jetzt speichern, wird diese Version mit Ihrer überschrieben.",
-      "staleConflictConfirm": "Trotzdem speichern"
+      "staleConflictConfirm": "Trotzdem speichern",
+      "kbPublishedTitle": "In der Wissensdatenbank",
+      "kbPublishedBody": "Agenten mit Zugriff können dieses Transkript durchsuchen und zitieren.",
+      "kbDraftTitle": "Noch nicht veröffentlicht",
+      "kbDraftBody": "Dies ist noch ein Entwurf. Beim Veröffentlichen ersetzt Ihr korrigierter Text das Rohtranskript und es wird in die Wissensdatenbank „Transkripte“ aufgenommen.",
+      "kbRemove": "Entfernen…",
+      "renameSpeaker": "{speaker} überall umbenennen",
+      "jumpToTime": "Zu {time} springen",
+      "speakerNamePlaceholder": "Name der Person"
     },
     "export": {
       "label": "Exportieren",
