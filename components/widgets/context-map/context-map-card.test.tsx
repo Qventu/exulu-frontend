@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { ApolloLink } from "@apollo/client";
+import { ApolloLink, InMemoryCache } from "@apollo/client";
 import {
   MockedProvider,
   MockLink,
@@ -24,7 +24,7 @@ import {
 } from "@/lib/graphql/operations/context-map";
 import enMessages from "@/messages/en.json";
 
-import { PASSAGE_LABEL_LIMIT } from "./map-data";
+import { PALETTE_TOKENS, PASSAGE_LABEL_LIMIT } from "./map-data";
 
 /**
  * The renderer opens a WebGL context, which jsdom has none of, so the dynamic
@@ -91,6 +91,7 @@ afterEach(() => {
   nav.search = "";
   nav.replace.mockClear();
   viewport.large = false;
+  document.documentElement.removeAttribute("data-theme");
   asked.length = 0;
   askedWith.length = 0;
   canvas.renders.length = 0;
@@ -174,6 +175,11 @@ const clippedPointsMock = {
   },
 };
 
+const pointsErrorMock = {
+  request: pointsRequest,
+  error: new Error("the points query is down"),
+};
+
 const emptyPointsMock = {
   request: pointsRequest,
   result: { data: { contextMapPoints: null } },
@@ -200,6 +206,33 @@ const topicsMock = {
       contextMapTopics: [
         { id: "0", label: "Valves & Blocks", count: 2, x: 0, y: 0, z: 0 },
         { id: "1", label: "Pricing", count: 1, x: 10, y: 0, z: 0 },
+      ],
+    },
+  },
+};
+
+/**
+ * Three regions, arranged so that the chip row's own render order cannot be
+ * mistaken for the palette index.
+ *
+ * They are deliberately NOT in count order: a row sorted by count would
+ * render Pricing first and hand it the first palette entry, while the
+ * renderer would still colour its dots with the third — and `topicsMock`,
+ * already count-descending, could not tell the two apart.
+ *
+ * And the first of the three holds nothing, which is the plausible reason to
+ * *filter* a chip row. Dropping it renumbers every chip after it, so a swatch
+ * read from a render position would recolour two regions that the renderer
+ * still colours by their position in this array.
+ */
+const unsortedTopicsMock = {
+  request: { query: GET_CONTEXT_MAP_TOPICS, variables: { contextId: CONTEXT } },
+  result: {
+    data: {
+      contextMapTopics: [
+        { id: "2", label: "Fittings", count: 0, x: 100, y: 0, z: 0 },
+        { id: "0", label: "Valves & Blocks", count: 1, x: 0, y: 0, z: 0 },
+        { id: "1", label: "Pricing", count: 9, x: 10, y: 0, z: 0 },
       ],
     },
   },
@@ -283,6 +316,8 @@ function withProviders(
     topic?: string;
     /** Items in a conflict group, as the surfaces above actually know them. */
     ringedItemIds?: Set<string>;
+    /** A pre-populated cache, for the one test that needs an answer already in hand. */
+    cache?: InMemoryCache;
   } = {},
 ) {
   const search = new URLSearchParams();
@@ -301,11 +336,11 @@ function withProviders(
     <NextIntlClientProvider locale="en" messages={enMessages}>
       <MockedProvider
         addTypename={false}
+        cache={params.cache}
         link={ApolloLink.from([recorder, new MockLink(mocks, false)])}
       >
         <ContextMapCard
           contextId={CONTEXT}
-          groups={["fact", "preference"]}
           groupField={null}
           ringedItemIds={params.ringedItemIds}
           itemHref={(itemId) => `/memory/${CONTEXT}/${itemId}`}
@@ -316,7 +351,7 @@ function withProviders(
   );
 }
 
-/** Re-renders the card with a *fresh* `groups` array holding the same values. */
+/** Re-renders the card from a surface above it, props unchanged. */
 function Harness() {
   const [, bump] = React.useState(0);
   return (
@@ -327,7 +362,6 @@ function Harness() {
       </button>
       <ContextMapCard
         contextId={CONTEXT}
-        groups={["fact", "preference"]}
         groupField={null}
         itemHref={(itemId) => `/memory/${CONTEXT}/${itemId}`}
         titleKey="memory"
@@ -341,7 +375,7 @@ describe("ContextMapCard", () => {
     // A base fitted before topics existed. The cloud must still render.
     render(withProviders([pointsMock, emptyTopicsMock, statusMock]));
     await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
-    expect(screen.queryByRole("group", { name: /topics/i })).toBeNull();
+    expect(screen.queryByRole("group", { name: /regions/i })).toBeNull();
   });
 
   it("shows the not-mapped state, and no canvas, when the base was never fitted", async () => {
@@ -383,22 +417,23 @@ describe("ContextMapCard", () => {
     expect(await screen.findByText(/could not load/i)).toBeDefined();
   });
 
-  it("leaves a small screen's panel shut until a passage is selected", async () => {
+  it("leaves a small screen's sheet shut until a passage is selected", async () => {
     // Below lg the panel is a full-height sheet: open from first paint it
     // would cover the map on a phone.
     render(withProviders([pointsMock, emptyTopicsMock, statusMock]));
     await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
-    expect(screen.queryByText(/what is on the map/i)).toBeNull();
-  });
+    expect(screen.queryByRole("dialog")).toBeNull();
 
-  it("docks the panel from the start on a large screen", async () => {
-    viewport.large = true;
-    render(withProviders([pointsMock, emptyTopicsMock, statusMock]));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("complementary", { name: /what is on the map/i }),
-      ).toBeDefined(),
+    // The other half, so the assertion above cannot pass on a sheet that
+    // never opens at all.
+    cleanup();
+    canvas.renders.length = 0;
+    render(
+      withProviders([pointsMock, emptyTopicsMock, statusMock, edgesMock], {
+        selected: "chunk-1",
+      }),
     );
+    expect(await screen.findByRole("dialog")).toBeDefined();
   });
 
   it("renders a relation whose target is not on the map, without pointing at it", async () => {
@@ -456,7 +491,35 @@ describe("ContextMapCard", () => {
     expect(after.ringedIds).toBe(before.ringedIds);
   });
 
-  it("hands the renderer the same groups when the surface re-renders with a new array", async () => {
+  it("colours every dot by the region nearest it", async () => {
+    // The resolver is the whole of the colour wiring: a point's own grouping
+    // value ("fact" for all three) says nothing about its region, so this is
+    // the only thing that can separate a and b from c.
+    render(withProviders([placedPointsMock, topicsMock, statusMock]));
+    await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
+    const regionOf = canvas.renders.at(-1)!.regionOf as (
+      point: { x: number; y: number; z: number },
+    ) => number;
+    expect(regionOf(placed("a", 1))).toBe(0);
+    expect(regionOf(placed("b", 4))).toBe(0);
+    expect(regionOf(placed("c", 9))).toBe(1);
+  });
+
+  it("answers -1 for every dot when the base has no regions to colour by", async () => {
+    // Nothing to colour by means the palette's reserved grey, which only -1
+    // asks for: an index of 0 would paint the blob one real colour instead.
+    render(withProviders([pointsMock, emptyTopicsMock, statusMock]));
+    await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
+    const regionOf = canvas.renders.at(-1)!.regionOf as (
+      point: { x: number; y: number; z: number },
+    ) => number;
+    expect(regionOf(passage("chunk-1"))).toBe(-1);
+  });
+
+  it("hands the renderer the same region resolver when the surface re-renders with a new array", async () => {
+    // The resolver colours every dot, and the renderer rebuilds and re-uploads
+    // its whole colour buffer when this identity changes — a fresh arrow per
+    // render would do that on every pointer move.
     render(
       <NextIntlClientProvider locale="en" messages={enMessages}>
         <MockedProvider
@@ -471,10 +534,13 @@ describe("ContextMapCard", () => {
     );
     await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
     const before = canvas.renders.at(-1)!;
+    // Without this the assertion below would hold on two undefineds, which is
+    // how a prop that quietly stopped being passed goes unnoticed.
+    expect(typeof before.regionOf).toBe("function");
     const renders = canvas.renders.length;
     fireEvent.click(screen.getByRole("button", { name: "bump" }));
     await waitFor(() => expect(canvas.renders.length).toBeGreaterThan(renders));
-    expect(canvas.renders.at(-1)!.groups).toBe(before.groups);
+    expect(canvas.renders.at(-1)!.regionOf).toBe(before.regionOf);
   });
 
   it("ties a chip to the region parameter, its members and one stable set", async () => {
@@ -667,6 +733,166 @@ describe("ContextMapCard", () => {
     );
     expect(await screen.findByText("the text of chunk-1")).toBeDefined();
     expect(screen.queryByText(/only the opening/i)).toBeNull();
+  });
+
+  it("shows one row of chips carrying their region's colour, and no separate legend", async () => {
+    render(withProviders([pointsMock, topicsMock, statusMock]));
+    const chips = await screen.findAllByRole("button", { name: /valves/i });
+    expect(chips).toHaveLength(1);
+    // The chip row IS the legend: every swatch on screen sits inside a chip,
+    // so a second row naming the same colours fails this.
+    const swatches = screen
+      .getByTestId("context-map-card")
+      .querySelectorAll("[data-region-swatch]");
+    expect(swatches).toHaveLength(2);
+    for (const swatch of swatches) {
+      expect(swatch.closest("button")).not.toBeNull();
+    }
+    expect(screen.getByRole("group", { name: /regions/i })).toBeDefined();
+  });
+
+  it("paints a chip's swatch from the palette entry its region's dots take", async () => {
+    render(withProviders([placedPointsMock, unsortedTopicsMock, statusMock]));
+    await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
+    const root = screen.getByTestId("context-map-card");
+    // jsdom resolves a custom property only on the element that declares it —
+    // a browser inherits these from `:root` — so the card's own host carries
+    // them here. The palette's first three entries are --chart-4, --chart-1
+    // and --chart-8.
+    root.style.setProperty(PALETTE_TOKENS[0], "217 76% 54%");
+    root.style.setProperty(PALETTE_TOKENS[1], "0 0% 0%");
+    root.style.setProperty(PALETTE_TOKENS[2], "120 100% 50%");
+    // The card re-reads the theme exactly as the renderer does.
+    document.documentElement.setAttribute("data-theme", "dark");
+
+    const swatchOf = (name: RegExp) =>
+      screen
+        .getByRole("button", { name })
+        .querySelector("[data-region-swatch]") as HTMLElement | null;
+    // Resolved through the same parse as the dots rather than left as a raw
+    // token: an unparseable token greys a dot, while `hsl(var(--chart-4))` on
+    // a swatch paints nothing at all, so the two would disagree exactly where
+    // nobody would look.
+    // Each region keeps the palette entry its OWN position in the regions
+    // array names — not the one its place in this row would name, and not the
+    // one its count would. These two are asserted first on purpose: they are
+    // the chips that survive a filtered row, so a row that dropped the empty
+    // region and renumbered the rest fails here, on the colour, rather than
+    // on the chip that went missing.
+    await waitFor(() =>
+      expect(swatchOf(/valves/i)?.style.backgroundColor).toBe("rgb(0, 0, 0)"),
+    );
+    expect(swatchOf(/pricing/i)?.style.backgroundColor).toBe("rgb(0, 255, 0)");
+    expect(swatchOf(/fittings/i)?.style.backgroundColor).toBe(
+      "rgb(49, 117, 227)",
+    );
+    // And that is the position the renderer colours by, so a chip and its
+    // dots cannot drift apart.
+    const regionOf = canvas.renders.at(-1)!.regionOf as (point: {
+      x: number;
+      y: number;
+      z: number;
+    }) => number;
+    expect(swatchOf(/valves/i)?.dataset.regionSwatch).toBe(
+      String(regionOf(placed("a", 1))),
+    );
+    expect(swatchOf(/pricing/i)?.dataset.regionSwatch).toBe(
+      String(regionOf(placed("c", 9))),
+    );
+  });
+
+  it("keeps the docked panel shut until a passage is selected", async () => {
+    viewport.large = true;
+    render(withProviders([pointsMock, topicsMock, statusMock]));
+    await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
+    // With nothing selected it has nothing to say.
+    expect(screen.queryByRole("complementary")).toBeNull();
+
+    // The other half, so the assertion above cannot pass on a panel that
+    // never opens at all.
+    cleanup();
+    canvas.renders.length = 0;
+    render(
+      withProviders([pointsMock, topicsMock, statusMock, edgesMock], {
+        selected: "chunk-1",
+      }),
+    );
+    expect(await screen.findByRole("complementary")).toBeDefined();
+  });
+
+  it("hides the links control until a passage is selected", async () => {
+    viewport.large = true;
+    render(withProviders([pointsMock, topicsMock, statusMock]));
+    await waitFor(() => expect(screen.getByTestId("canvas")).toBeDefined());
+    expect(screen.queryByRole("tab", { name: /links/i })).toBeNull();
+    // Pause and reset are not in that class: both do something the moment the
+    // cloud is drawn, so they stay — in the canvas corner, not the header.
+    expect(screen.getByRole("button", { name: /pause/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /reset/i })).toBeDefined();
+
+    cleanup();
+    canvas.renders.length = 0;
+    render(
+      withProviders([pointsMock, topicsMock, statusMock, edgesMock], {
+        selected: "chunk-1",
+      }),
+    );
+    expect(await screen.findByRole("tab", { name: /links/i })).toBeDefined();
+  });
+
+  it("stops drawing the whole-cloud web when the control that governs it goes", async () => {
+    // "All links" draws a web over every passage, and it outlives the
+    // selection — but its control does not, so with the control hidden
+    // nothing on screen could turn the web off again.
+    viewport.large = true;
+    render(
+      withProviders([pointsMock, topicsMock, statusMock, edgesMock], {
+        selected: "chunk-1",
+      }),
+    );
+    // Radix activates a tab on mousedown, never on click.
+    fireEvent.mouseDown(
+      await screen.findByRole("tab", { name: /all links/i }),
+      { button: 0 },
+    );
+    await waitFor(() => expect(canvas.renders.at(-1)!.allLinks).toBe(true));
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    await waitFor(() => expect(canvas.renders.at(-1)!.selectedId).toBeNull());
+    expect(canvas.renders.at(-1)!.allLinks).toBe(false);
+  });
+
+  it("states once what a dot is and what a count counts", async () => {
+    render(withProviders([pointsMock, topicsMock, statusMock]));
+    // One line, not two, and it names the dot, the count, and the items the
+    // count includes but the cloud never draws.
+    const explained = await screen.findAllByText(/each dot is one passage/i);
+    expect(explained).toHaveLength(1);
+    expect(screen.queryAllByText(/counted but never shown/i)).toHaveLength(1);
+  });
+
+  it("takes the cloud off screen when the points query fails on a cached answer", async () => {
+    // The links control and the web it governs read one value, `drawn`, and
+    // that is only safe while a cloud which is not `drawn` cannot be on
+    // screen. This is the state where it might not have been: `drawn` is
+    // false because the query failed, while the points are still in hand from
+    // the cache. ChartCard replaces its children with the error pane, so the
+    // renderer goes with them — and the day that stops being true, the web
+    // could stay on with no control to turn it off, and this fails.
+    const cache = new InMemoryCache({ addTypename: false });
+    cache.writeQuery({
+      query: GET_CONTEXT_MAP_POINTS,
+      variables: pointsRequest.variables,
+      data: pointsMock.result.data,
+    });
+    render(
+      withProviders([pointsErrorMock, emptyTopicsMock, statusMock], { cache }),
+    );
+    await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+    // The cloud really was painted first, from the cache — otherwise this
+    // would be the ordinary "no points" state and would prove nothing.
+    expect(canvas.renders.length).toBeGreaterThan(0);
+    expect(screen.queryByTestId("canvas")).toBeNull();
+    expect(screen.queryByRole("tab", { name: /links/i })).toBeNull();
   });
 
   it("asks for the default number of passages, not the cap", async () => {

@@ -1,9 +1,13 @@
 "use client";
 
 /**
- * The map's side panel. With nothing selected it describes the base's shape —
- * the regions and their counts. With a passage selected it shows the passage,
- * a link to the item it came from, and its closest neighbours by wording.
+ * The map's side panel: the selected passage, its type where the base
+ * declares one, a link to the item it came from, and its closest neighbours
+ * by wording.
+ *
+ * It only ever shows a passage. It used to list the regions and their counts
+ * when nothing was selected, which was the chip row again one column over, so
+ * the card mounts it on a selection and not before.
  *
  * It owns no data and no URL state: the card fetches, the card decides what is
  * selected, and this file renders it.
@@ -16,9 +20,10 @@ import * as React from "react";
 import { SidePanel } from "@/components/primitives/side-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { isPassageClipped } from "./map-data";
-import type { MapEdge, MapPoint, MapTopic } from "./map-data";
+import type { MapEdge, MapPoint } from "./map-data";
 
 export interface MapPanelProps {
   open: boolean;
@@ -26,7 +31,6 @@ export interface MapPanelProps {
   selected: MapPoint | null;
   /** True when ?selected= names a passage absent from the access-scoped answer. */
   missing: boolean;
-  topics: MapTopic[];
   edges: MapEdge[];
   edgesError: boolean;
   byId: Map<string, MapPoint>;
@@ -40,7 +44,6 @@ export function MapPanel({
   onOpenChange,
   selected,
   missing,
-  topics,
   edges,
   edgesError,
   byId,
@@ -58,7 +61,7 @@ export function MapPanel({
     <SidePanel
       open={open}
       onOpenChange={onOpenChange}
-      title={selected ? t("panel.passage") : t("panel.overview")}
+      title={t("panel.passage")}
       storageKey="context-map"
       mobileSize="full"
       className="lg:h-auto"
@@ -136,24 +139,10 @@ export function MapPanel({
               )}
             </div>
           </div>
-        ) : topics.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("panel.empty")}</p>
         ) : (
-          <ul className="space-y-1">
-            {topics.map((topic) => (
-              <li
-                key={topic.id}
-                className="flex items-center justify-between gap-2 text-sm"
-              >
-                <span className="min-w-0 truncate text-foreground">
-                  {topic.label}
-                </span>
-                <span className="shrink-0 tabular-nums text-muted-foreground">
-                  {topic.count}
-                </span>
-              </li>
-            ))}
-          </ul>
+          // A selection with no passage yet: a shared ?selected= opens the
+          // panel while the points answer is still in flight.
+          <Skeleton className="h-24 w-full" />
         )}
       </div>
     </SidePanel>

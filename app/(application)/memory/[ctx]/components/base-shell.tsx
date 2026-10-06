@@ -15,7 +15,7 @@ import { ContextMapCard } from "@/components/widgets/context-map/context-map-car
 
 import { type MemoryBase } from "../../components/memory-bases-data";
 import { GET_MEMORY_BASE_USAGE, GET_MEMORY_BASES, GET_MEMORY_CONFLICT_COUNTS, GET_MEMORY_CONFLICTS } from "../../queries";
-import { memoryTypeOptions, type MemoryContext } from "./memory-list-data";
+import { type MemoryContext } from "./memory-list-data";
 import { MemoryTable } from "./memory-table";
 import type { BaseUsage } from "./usage-data";
 
@@ -107,15 +107,6 @@ export function BaseShell({
     return ids;
   }, [conflictGroups]);
 
-  /**
-   * The map's colours and legend come from the base's own declared `type`
-   * enum, in declared order — never a hardcoded list, because each base
-   * declares its own. Memoised because the renderer rebuilds its colour buffer
-   * whenever this array's identity changes, and this shell re-renders on every
-   * query answer.
-   */
-  const fields = context.fields;
-  const groups = React.useMemo(() => memoryTypeOptions({ fields }), [fields]);
   const itemHref = React.useCallback(
     (itemId: string) => `/memory/${context.id}/${itemId}`,
     [context.id],
@@ -184,7 +175,6 @@ export function BaseShell({
           {tab === "overview" ? (
             <ContextMapCard
               contextId={context.id}
-              groups={groups}
               groupField="type"
               ringedItemIds={ringedItemIds}
               itemHref={itemHref}

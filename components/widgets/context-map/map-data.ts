@@ -58,8 +58,11 @@ export function resolvePalette(element: Element): Palette {
 
 /**
  * Flagged or conflicting passages are ringed in the theme's destructive
- * colour, which the legend names. It is not part of the categorical palette:
- * the ring says something about the passage, not about its group.
+ * colour, which the chip row names in the one entry that is not a chip. It is
+ * not part of the categorical palette: the ring says something about the
+ * passage, not about its region — the card's own entry is worded the same way,
+ * and it is the region rather than the group because colour is no longer by
+ * group at all.
  */
 export const RING_TOKEN = "--destructive" as const;
 
@@ -68,9 +71,45 @@ export function resolveRingColor(element: Element): Rgb {
   return parseHslTriplet(getComputedStyle(element).getPropertyValue(RING_TOKEN));
 }
 
-/** Positions and colours as one typed array each: one draw call, no per-frame work. */
+/**
+ * The colour a region's dots take. The chips are the map's legend, so the
+ * card paints their swatches from this too — through this function rather
+ * than a second copy of the modulo, which is how a swatch and the dots it
+ * explains drift apart.
+ */
+export function regionColor(palette: Palette, region: number): Rgb {
+  if (region < 0) return palette.noValue;
+  return palette.colors[region % Math.max(1, palette.colors.length)] ?? palette.noValue;
+}
+
+/**
+ * A resolved colour as CSS, for an HTML swatch beside the cloud. The triplets
+ * are sRGB in 0..1 — the space the renderer tells three.js it is reading —
+ * so a byte per channel is the same colour, and an unparseable token greys
+ * the swatch exactly as it greys the dot.
+ */
+export function rgbCss(rgb: Rgb): string {
+  const channel = (value: number) => Math.round(Math.min(1, Math.max(0, value)) * 255);
+  return `rgb(${channel(rgb[0])}, ${channel(rgb[1])}, ${channel(rgb[2])})`;
+}
+
+/**
+ * Positions and colours as one typed array each: one draw call, no per-frame
+ * work.
+ *
+ * A dot takes the colour of its region. The grouping value it carries is not
+ * what colours it: a memory base has one such field and a knowledge base has
+ * none, so colouring by it left the first real base — eleven hundred German
+ * passages — a single grey blob, with the map's organising idea, its regions,
+ * the one thing colour never showed. `regionOf` is the caller's region index
+ * for a passage, or -1 for none, and -1 takes the palette's reserved grey.
+ *
+ * There are more regions than colours — twelve against seven once the violet
+ * tokens are out and grey is reserved — so the index cycles. The chips carry
+ * identity; colour only has to separate neighbours.
+ */
 export function buildBuffers(
-  points: MapPoint[], groups: string[], palette: Palette,
+  points: MapPoint[], regionOf: (point: MapPoint) => number, palette: Palette,
 ): { positions: Float32Array; colors: Float32Array } {
   const positions = new Float32Array(points.length * 3);
   const colors = new Float32Array(points.length * 3);
@@ -79,10 +118,7 @@ export function buildBuffers(
     positions[i * 3] = p.x;
     positions[i * 3 + 1] = p.y;
     positions[i * 3 + 2] = p.z;
-    const declared = p.group == null ? -1 : groups.indexOf(p.group);
-    const rgb = declared < 0
-      ? palette.noValue
-      : (palette.colors[declared % Math.max(1, palette.colors.length)] ?? palette.noValue);
+    const rgb = regionColor(palette, regionOf(p));
     colors[i * 3] = rgb[0];
     colors[i * 3 + 1] = rgb[1];
     colors[i * 3 + 2] = rgb[2];
@@ -233,10 +269,6 @@ export function resolveLabelCollisions(labels: LabelBox[]): string[] {
     if (!overlaps) kept.push(label);
   }
   return kept.map((l) => l.id);
-}
-
-export function legendEntries(groups: string[]): { value: string; index: number }[] {
-  return groups.map((value, index) => ({ value, index }));
 }
 
 /** What the card says under the cloud, or nothing when there is nothing to admit. */

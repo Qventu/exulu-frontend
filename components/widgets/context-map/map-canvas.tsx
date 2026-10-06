@@ -31,7 +31,13 @@ import {
 export interface MapCanvasProps {
   points: MapPoint[];
   topics: MapTopic[];
-  groups: string[];
+  /**
+   * The region a passage belongs to, as an index into the palette, or -1 for
+   * none. The card derives it from the region centres with the same rule it
+   * dims by, so a dot's colour and its chip cannot disagree. Memoised there,
+   * so this effect may depend on its identity.
+   */
+  regionOf: (point: MapPoint) => number;
   edges: MapEdge[];
   selectedId: string | null;
   highlightTopic: string | null;
@@ -121,6 +127,18 @@ const MAX_FRAME_SECONDS = 0.1;
 /** Label box estimate for the collision pass, in CSS pixels. */
 const LABEL_CHAR_WIDTH = 7;
 const LABEL_HEIGHT = 16;
+/**
+ * The plate the label text sits on, added to the collision box so two labels
+ * are kept apart by their plates rather than by their text.
+ *
+ * COUPLED TO THE SPAN'S PADDING CLASSES, which are `px-1.5 py-0.5` at the
+ * bottom of this file: 1.5 and 0.5 on Tailwind's 4px scale, both sides, so 12
+ * horizontal and 4 vertical. Change the classes and these go stale silently —
+ * the labels keep rendering, they just start overlapping again, which is the
+ * failure mode that is easiest to ship and hardest to notice.
+ */
+const LABEL_PLATE_PAD_X = 12;
+const LABEL_PLATE_PAD_Y = 4;
 /** Wide enough that the annulus sits around the dot rather than on top of it. */
 const RING_SIZE = POINT_SIZE * 2.2;
 const SELECTED_LINE_OPACITY = 0.75;
@@ -144,7 +162,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
     {
       points,
       topics,
-      groups,
+      regionOf,
       edges,
       selectedId,
       highlightTopic,
@@ -478,8 +496,8 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
             label: topic.label,
             x: screen.x,
             y: screen.y,
-            width: topic.label.length * LABEL_CHAR_WIDTH,
-            height: LABEL_HEIGHT,
+            width: topic.label.length * LABEL_CHAR_WIDTH + LABEL_PLATE_PAD_X,
+            height: LABEL_HEIGHT + LABEL_PLATE_PAD_Y,
             count: topic.count,
           });
         }
@@ -551,7 +569,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       if (!host || !cloud) return;
       const write = () => {
         const palette = resolvePalette(host);
-        const { positions, colors } = buildBuffers(points, groups, palette);
+        const { positions, colors } = buildBuffers(points, regionOf, palette);
         const ringed = latestRef.current.ringedIds;
         const dim = new Float32Array(points.length);
         for (let i = 0; i < points.length; i += 1) {
@@ -611,7 +629,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         attributeFilter: ["class", "data-theme"],
       });
       return () => observer.disconnect();
-    }, [points, groups, selectedId, highlightTopic, topicMemberIds, ringedKey]);
+    }, [points, regionOf, selectedId, highlightTopic, topicMemberIds, ringedKey]);
 
     // Neighbour lines, rebuilt only when the selection or the hovered
     // neighbour changes.
@@ -710,9 +728,11 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       <div ref={hostRef} className="relative size-full">
         <div ref={layerRef} className="absolute inset-0" />
         {labels.map((label) => (
+          // `px-1.5 py-0.5` is what LABEL_PLATE_PAD_X / _Y encode for the
+          // collision box; changing the padding here means changing those.
           <span
             key={label.id}
-            className="pointer-events-none absolute text-xs font-medium text-foreground/80"
+            className="pointer-events-none absolute whitespace-nowrap rounded border border-border/60 bg-background/85 px-1.5 py-0.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-[2px]"
             style={{
               left: label.x,
               top: label.y,

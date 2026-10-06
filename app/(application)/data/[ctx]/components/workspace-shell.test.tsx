@@ -147,12 +147,14 @@ describe("WorkspaceShell", () => {
     expect(screen.queryByTestId("items-tab")).toBeNull();
   });
 
-  it("colours by the first declared enum field, and by nothing when there is none", async () => {
+  it("asks for the first declared enum field, and for none when there is none", async () => {
+    // What the map shows for the selected passage, not what it colours by:
+    // a dot takes the colour of its region, which is all a knowledge base
+    // has to colour by.
     render(shell({ tab: "map" }));
     await screen.findByTestId("context-map-card");
     const withEnum = card.renders[card.renders.length - 1];
     // "audience" is an enum too; declaration order decides, not the name.
-    expect(withEnum.groups).toEqual(["draft", "live"]);
     expect(withEnum.groupField).toBe("status");
 
     cleanup();
@@ -160,7 +162,6 @@ describe("WorkspaceShell", () => {
     render(shell({ tab: "map" }, noEnum));
     await screen.findByTestId("context-map-card");
     const without = card.renders[card.renders.length - 1];
-    expect(without.groups).toEqual([]);
     expect(without.groupField).toBeNull();
   });
 
@@ -187,16 +188,19 @@ describe("WorkspaceShell", () => {
     });
   });
 
-  it("hands the map the same groups and itemHref across a re-render", async () => {
+  it("hands the map the same item link across a re-render", async () => {
     render(withProviders(<Harness />));
     await screen.findByTestId("context-map-card");
     const before = card.renders.length;
     fireEvent.click(screen.getByRole("button", { name: "bump" }));
-    // A fresh array or arrow here re-uploads every buffer in the renderer.
     expect(card.renders.length).toBeGreaterThan(before);
     const first = card.renders[0];
     const last = card.renders[card.renders.length - 1];
-    expect(last.groups).toBe(first.groups);
+    // Without this the assertion below would hold on two undefineds, which
+    // is how a prop that quietly stopped being passed goes unnoticed.
+    expect(typeof first.itemHref).toBe("function");
+    // A fresh arrow here re-renders the whole card on every one of this
+    // shell's renders, and the card re-renders on every pointer move.
     expect(last.itemHref).toBe(first.itemHref);
   });
 });
