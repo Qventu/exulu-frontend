@@ -48,6 +48,7 @@ import {
   type RegionItem,
   type Rgb,
   type TimeWindow,
+  withinWindow,
 } from "./map-data";
 import { MapPanel } from "./map-panel";
 
@@ -65,9 +66,10 @@ const MapCanvas = dynamic(
 
 /**
  * How many passages to draw. This is the API's own default, not its cap of
- * 20,000: the cap measures at about 5.8 MB uncompressed, 2.4 MB of which is
- * label text that only the tooltip and the panel ever read. The caption below
- * the cloud already says how many of how many are drawn when the limit bites.
+ * 20,000: the cap measured at about 5.8 MB uncompressed when the passage
+ * opening was still requested, and it no longer is — but twenty thousand dots
+ * is still more cloud than a reader can take in, and the caption below says
+ * how many of how many are drawn when the limit bites.
  */
 const POINTS_LIMIT = 5000;
 
@@ -358,7 +360,10 @@ export function ContextMapCard({
    * are — never on mount.
    *
    * Keyed on the ITEM rather than on the passage, so selecting another chunk
-   * of the same document asks for nothing: Apollo already holds that item.
+   * of the same document while this one is open asks for nothing — the
+   * variables are unchanged and Apollo dedups the in-flight query. NOT a
+   * cache hit: this app sets fetchPolicy "no-cache" as the default for every
+   * query, so re-selecting an item viewed earlier does fetch again.
    */
   const itemQuery = useQuery<{ contextMapItem: MapItem | null }>(
     GET_CONTEXT_MAP_ITEM,
@@ -367,22 +372,6 @@ export function ContextMapCard({
       skip: selected === null,
     },
   );
-
-  /**
-   * The items a chosen region holds, for the panel the chip opens.
-   *
-   * From the points already drawn — the same nearest-centre membership the
-   * colouring uses — so choosing a chip fetches nothing. Skipped while a
-   * passage is selected, because the panel shows that instead.
-   */
-  const regionItems = React.useMemo(
-    () => (selected === null ? itemsInRegion(points, topics, highlightTopic) : NO_REGION_ITEMS),
-    [selected, points, topics, highlightTopic],
-  );
-  const regionLabel =
-    selected === null
-      ? (topics.find((topic) => topic.id === highlightTopic)?.label ?? null)
-      : null;
 
   /**
    * The span the time filter may cover, or null when the base cannot support
@@ -401,6 +390,57 @@ export function ContextMapCard({
   React.useEffect(() => {
     setTimeWindow(null);
   }, [boundsKey]);
+
+  /**
+   * The window's ends as the viewer reads them. Used both for the line above
+   * the slider and for each thumb's aria-valuetext, so what is announced and
+   * what is shown cannot drift apart.
+   */
+  const fromLabel = new Date(
+    timeWindow?.from ?? bounds?.from ?? 0,
+  ).toLocaleDateString(locale, { dateStyle: "medium" });
+  const toLabel = new Date(
+    timeWindow?.to ?? bounds?.to ?? 0,
+  ).toLocaleDateString(locale, { dateStyle: "medium" });
+
+  /**
+   * The items a chosen region holds, for the panel the chip opens.
+   *
+   * From the points already drawn — the same nearest-centre membership the
+   * colouring uses — so choosing a chip fetches nothing. Skipped while a
+   * passage is selected, because the panel shows that instead.
+   */
+  const regionItems = React.useMemo(
+    () =>
+      selectedId !== null
+        ? NO_REGION_ITEMS
+        : itemsInRegion(
+            // Only the points the time filter is showing. Listing items whose
+            // every passage is dimmed out would make the panel disagree with
+            // the cloud it describes.
+            timeWindow === null
+              ? points
+              : points.filter((point) => withinWindow(point.createdAtMs, timeWindow)),
+            topics,
+            highlightTopic,
+          ),
+    [selectedId, points, topics, highlightTopic, timeWindow],
+  );
+  /**
+   * Keyed on `selectedId`, not on the resolved `selected`.
+   *
+   * The card writes both keys into the URL, so a shared link can carry a
+   * selection AND a chip. The topics query is small and unparameterised and
+   * almost always returns first, so keying on the resolved point meant that
+   * while the points query was still in flight the panel opened on the region
+   * — over an empty points array — and announced "No items in this region"
+   * for a region that has items, before switching to the item.
+   */
+  const regionLabel =
+    selectedId === null
+      ? (topics.find((topic) => topic.id === highlightTopic)?.label ?? null)
+      : null;
+
 
   const caption = coverageCaption({
     drawn: points.length,
@@ -688,16 +728,18 @@ export function ContextMapCard({
                 {t("time.label")}
               </span>
               <span className="text-xs tabular-nums text-muted-foreground">
-                {t("time.range", {
-                  from: new Date(timeWindow?.from ?? bounds.from)
-                    .toLocaleDateString(locale, { dateStyle: "medium" }),
-                  to: new Date(timeWindow?.to ?? bounds.to)
-                    .toLocaleDateString(locale, { dateStyle: "medium" }),
-                })}
+                {t("time.range", { from: fromLabel, to: toLabel })}
               </span>
             </div>
             <Slider
-              aria-label={t("time.label")}
+              // On the thumbs, not on Root: Root is role-less, so a name there
+              // never reaches either thumb, and Radix would fall back to its
+              // hardcoded English "Minimum"/"Maximum" and read out the raw
+              // epoch number.
+              thumbProps={[
+                { "aria-label": t("time.from"), "aria-valuetext": fromLabel },
+                { "aria-label": t("time.to"), "aria-valuetext": toLabel },
+              ]}
               min={bounds.from}
               max={bounds.to}
               step={DAY_MS}
@@ -754,6 +796,7 @@ export function ContextMapCard({
         missing={missing}
         item={itemQuery.data?.contextMapItem ?? null}
         itemLoading={itemQuery.loading}
+        itemError={itemQuery.error !== undefined}
         regionLabel={regionLabel}
         regionItems={regionItems}
         edges={edges}

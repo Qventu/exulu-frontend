@@ -408,6 +408,10 @@ describe("BaseShell", () => {
     expect(props.contextId).toBe(CONTEXT);
     expect(props.groupField).toBe("type");
     expect(props.titleKey).toBe("memory");
+    // A memory base accumulates, so the time filter belongs here. Asserted on
+    // the wiring and not only inside the card: without this, deleting the prop
+    // from the shell leaves the whole suite green.
+    expect(props.timeline).toBe(true);
     expect((props.itemHref as (id: string) => string)("mem-7")).toBe(
       "/memory/base-1/mem-7",
     );

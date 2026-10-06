@@ -3285,8 +3285,9 @@
     },
     "panel": {
       "added": "Added",
-      "characters": "{count, number} characters",
+      "characters": "{count, plural, one {# character} other {# characters}}",
       "chunks": "Passages",
+      "detailsFailed": "Could not load this item's details.",
       "item": "Item",
       "neighbourMissing": "A related passage that is not on the map",
       "neighbours": "Closest by wording",
@@ -3304,8 +3305,10 @@
       "updated": "Last updated"
     },
     "time": {
+      "from": "Earliest",
       "label": "Added between",
-      "range": "{from} – {to}"
+      "range": "{from} – {to}",
+      "to": "Latest"
     },
     "title": {
       "knowledge": "Knowledge map",

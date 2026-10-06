@@ -4,15 +4,13 @@
  * The map's side panel. It shows whatever is selected: an ITEM when a passage
  * is selected, or a REGION's items when a chip is.
  *
- * Everything that names a point names it by its ITEM. A point's `label` is the
- * first 120 characters of the chunk, and this product's ingestion injects a
- * document header into every chunk — so a heading or a row taken from the
- * opening reads `--- Document (Exulu ID: 6adc924b-…) ---`. See `pointTitle`.
+ * Everything that names a point names it by its ITEM. See `pointTitle`.
  *
- * It used to show that opening as "matched text". On a real base it was the
- * injected header nearly every time, which told a reader nothing about the
- * passage and filled the panel with an identifier. The item's own metadata
- * is in its place.
+ * It used to show the passage's own opening as "matched text". This product's
+ * ingestion injects a document header into every chunk, so on a real base that
+ * opening read `--- Document (Exulu ID: 6adc924b-…) ---` nearly every time: an
+ * identifier where a reader expected the passage. The item's own metadata is
+ * in its place, and the opening is no longer requested at all.
  *
  * It owns no data and no URL state: the card fetches, the card decides what is
  * selected, and this file renders it.
@@ -39,6 +37,8 @@ export interface MapPanelProps {
   /** The selected point's item, or null while it loads or if it is unreadable. */
   item: MapItem | null;
   itemLoading: boolean;
+  /** True when the metadata query failed, which is not the same as no metadata. */
+  itemError: boolean;
   edges: MapEdge[];
   edgesError: boolean;
   byId: Map<string, MapPoint>;
@@ -67,6 +67,7 @@ export function MapPanel({
   missing,
   item,
   itemLoading,
+  itemError,
   edges,
   edgesError,
   byId,
@@ -201,6 +202,14 @@ export function MapPanel({
                 slower than it is. */}
             {itemLoading ? (
               <Skeleton className="h-16 w-full" />
+            ) : itemError ? (
+              // Said rather than swallowed: a failed query rendered exactly
+              // like an item that recorded nothing, which is a different
+              // claim. The neighbours list says so when it fails; this does
+              // now too.
+              <p className="text-sm text-muted-foreground">
+                {t("panel.detailsFailed")}
+              </p>
             ) : item === null ? null : (
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
                 {recorded(item.chunks) && (

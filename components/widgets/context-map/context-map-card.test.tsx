@@ -7,6 +7,7 @@ import {
 } from "@apollo/client/testing";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
+import { print } from "graphql";
 import * as React from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -440,6 +441,16 @@ function withProviders(
     timeline?: boolean;
   } = {},
 ) {
+  // Selecting a point issues ContextMapItem. Without a mock, MockLink errors
+  // that observable and warns on every one of the ~18 selection tests that do
+  // not care about metadata - noise that would hide a real missing mock. Tests
+  // that DO care pass their own, which matches first.
+  const all =
+    params.selected === undefined ||
+    mocks.some((m) => (m.request.query as unknown) === GET_CONTEXT_MAP_ITEM)
+      ? mocks
+      : [...mocks, itemMock];
+
   const search = new URLSearchParams();
   if (params.selected !== undefined) search.set("selected", params.selected);
   if (params.topic !== undefined) search.set("topic", params.topic);
@@ -457,7 +468,7 @@ function withProviders(
       <MockedProvider
         addTypename={false}
         cache={params.cache}
-        link={ApolloLink.from([recorder, new MockLink(mocks, false)])}
+        link={ApolloLink.from([recorder, new MockLink(all, false)])}
       >
         <ContextMapCard
           contextId={CONTEXT}
@@ -876,6 +887,26 @@ describe("ContextMapCard", () => {
   });
 
   describe("the time filter", () => {
+    it("names both thumbs and announces dates, not epoch numbers", async () => {
+      render(
+        withProviders([datedPointsMock, emptyTopicsMock, statusMock], {
+          timeline: true,
+        }),
+      );
+      await screen.findByTestId("canvas");
+      // Radix names an unlabelled thumb from a hardcoded English
+      // ["Minimum", "Maximum"] and announces the raw value, so without the
+      // per-thumb props a German reader hears "Minimum, 1786752000000".
+      const lower = screen.getByRole("slider", { name: "Earliest" });
+      const upper = screen.getByRole("slider", { name: "Latest" });
+      for (const thumb of [lower, upper]) {
+        const spoken = thumb.getAttribute("aria-valuetext");
+        expect(spoken).not.toBeNull();
+        expect(spoken).not.toMatch(/^\d+$/);
+        expect(spoken).toMatch(/2026/);
+      }
+    });
+
     it("is absent on a base that does not offer it", async () => {
       render(withProviders([datedPointsMock, emptyTopicsMock, statusMock]));
       await screen.findByTestId("canvas");
@@ -908,6 +939,29 @@ describe("ContextMapCard", () => {
       // Two thumbs: a window has two ends.
       expect(screen.getAllByRole("slider")).toHaveLength(2);
       expect(canvas.renders.at(-1)!.timeWindow).toBeNull();
+    });
+
+    it("clears the window when the slider is returned to its full span", async () => {
+      render(
+        withProviders([datedPointsMock, emptyTopicsMock, statusMock], {
+          timeline: true,
+        }),
+      );
+      await screen.findByTestId("canvas");
+      const [lower] = screen.getAllByRole("slider");
+      lower!.focus();
+      fireEvent.keyDown(lower!, { key: "ArrowRight" });
+      await waitFor(() =>
+        expect(canvas.renders.at(-1)!.timeWindow).not.toBeNull(),
+      );
+
+      fireEvent.keyDown(lower!, { key: "ArrowLeft" });
+      // Null, not a window that happens to span everything: undated points
+      // are dropped by any window at all, so they only come back when the
+      // filter is released outright.
+      await waitFor(() =>
+        expect(canvas.renders.at(-1)!.timeWindow).toBeNull(),
+      );
     });
 
     it("hands the renderer a window when the span is narrowed", async () => {
@@ -1122,7 +1176,14 @@ describe("ContextMapCard", () => {
     expect(screen.getByRole("complementary", { name: "Item" })).toBeDefined();
     expect(screen.queryByRole("complementary", { name: /passage/i })).toBeNull();
     expect(screen.queryByText(/matched text/i)).toBeNull();
-    expect(screen.queryByText("the text of chunk-1")).toBeNull();
+    // The real guard, and the one the fixture cannot give: the opening is no
+    // longer requested at all. Asserting it is not rendered proves nothing
+    // once the fixture stops carrying it.
+    const asked = askedWith.find((o) => o.name === "ContextMapPoints");
+    expect(asked).toBeDefined();
+    const selection = print(GET_CONTEXT_MAP_POINTS);
+    expect(selection).not.toMatch(/\blabel\b/);
+    expect(selection).toMatch(/\bitemName\b/);
   });
 
   it("shows the selected item's metadata, which the points answer does not carry", async () => {

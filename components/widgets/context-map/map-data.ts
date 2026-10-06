@@ -46,6 +46,14 @@ export type TimeWindow = { from: number; to: number };
  *
  * Undated items are ignored when measuring; they are not evidence of a span.
  * Snapped outwards to whole days so both ends sit inside the offered range.
+ *
+ * Days are UTC days, while the label above the slider is formatted in the
+ * viewer's zone — so for a reader far from UTC, two items either side of
+ * midnight UTC count as two days and the refusal lets a one-afternoon import
+ * through. Deliberate: local midnights are 23 or 25 hours apart across a DST
+ * boundary, which would break the exact DAY_MS step the slider relies on to
+ * return to its own endpoints. The margin is narrow and the alternative is
+ * a slider that cannot be released cleanly.
  */
 export function timeBounds(points: MapPoint[]): TimeWindow | null {
   let min = Infinity;

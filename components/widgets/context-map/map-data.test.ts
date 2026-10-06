@@ -711,9 +711,10 @@ describe("labelFitsCanvas", () => {
     expect(labelFitsCanvas({ ...box, x: 40, y: 10 }, 400, 300)).toBe(true);
   });
 
-  // The overlay runs before the first resize observation, and every label is
-  // "outside" a zero-sized canvas - which would blank the layer rather than
-  // leave it alone for one frame.
+  // Defensive only: the overlay pass already returns early on a zero-sized
+  // host, so this branch is unreachable from the one caller. Kept because the
+  // rule "everything is outside a canvas of no size" is the wrong answer for
+  // any future caller, and asserted so the branch cannot rot into it.
   it("keeps labels when the canvas has not been measured yet", () => {
     expect(labelFitsCanvas(box, 0, 0)).toBe(true);
   });
@@ -793,9 +794,19 @@ describe("itemsInRegion", () => {
     expect(itemsInRegion(points, topics, "a").map((r) => r.name)).toEqual(["Apple", "Mango", "Zebra"]);
   });
 
-  it("is empty for a region with no passages, and for no region at all", () => {
+  it("is empty for a region with no passages, and for a region this base lacks", () => {
     expect(itemsInRegion([], topics, "a")).toEqual([]);
-    expect(itemsInRegion([at("c1", "i1", "Manual", 0)], topics, null)).toEqual([]);
+    expect(itemsInRegion([at("c1", "i1", "Manual", 0)], topics, "nope")).toEqual([]);
+  });
+
+  /**
+   * Pins the early return. With NO topics, `topicOf` answers null for every
+   * point — so without the guard, asking for the null region would match
+   * every point rather than none. Passing `topics` here instead would make
+   * this pass with the guard deleted, which is how it was first written.
+   */
+  it("is empty when asked for no region at all", () => {
+    expect(itemsInRegion([at("c1", "i1", "Manual", 0)], [], null)).toEqual([]);
   });
 
   // A nameless item still exists and still occupies the region; the caller
@@ -855,6 +866,9 @@ describe("timeBounds", () => {
     expect(timeBounds([])).toBeNull();
   });
 
+  // Asserting only "not null" here passed against `point.createdAtMs ?? 0`,
+  // which is the exact bug the test is named for: the undated item would be
+  // bucketed at 1970 and the slider would offer a 56-year span.
   it("ignores undated items when measuring the span", () => {
     const bounds = timeBounds([
       at("a", Date.UTC(2026, 7, 14)),
@@ -862,6 +876,8 @@ describe("timeBounds", () => {
       at("c", Date.UTC(2026, 8, 28)),
     ]);
     expect(bounds).not.toBeNull();
+    expect(bounds!.from).toBe(Date.UTC(2026, 7, 14));
+    expect(bounds!.to).toBe(Date.UTC(2026, 8, 28));
   });
 });
 

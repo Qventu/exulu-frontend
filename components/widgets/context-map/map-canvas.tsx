@@ -1136,6 +1136,13 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       let cursor = 0;
       for (const point of points) {
         if (!ringed.has(point.id)) continue;
+        // The time filter applies here too. A ring is opaque and painted at
+        // renderOrder 1, over everything — so a conflicted memory outside the
+        // window would keep a full-strength ring sitting on a muted dot,
+        // reading as present and flagged. The ring exempts a dot from the
+        // REGION rule, never from the time window: computeDim says as much,
+        // and this is the layer that has to agree with it.
+        if (!withinWindow(point.createdAtMs, timeWindow)) continue;
         positions[cursor] = point.x;
         positions[cursor + 1] = point.y;
         positions[cursor + 2] = point.z;
@@ -1151,7 +1158,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       const previous = rings.geometry;
       rings.geometry = geometry;
       previous.dispose();
-    }, [points, ringedKey]);
+    }, [points, ringedKey, timeWindow?.from, timeWindow?.to]);
 
     // Idle rotation. OrbitControls owns it; pausing is one flag.
     React.useEffect(() => {
