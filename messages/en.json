@@ -4954,6 +4954,8 @@
       "kbPublishedBody": "Agents with access can search and cite this transcript.",
       "kbDraftTitle": "Not published yet",
       "kbDraftBody": "This is still a draft. Publishing replaces the raw transcript with your corrections and adds it to the Transcriptions knowledge base.",
+      "kbReviewedTitle": "Reviewed, not published",
+      "kbReviewedBody": "You have signed this transcript off. It is not in the knowledge base, so no agent can search it — publish it when you want that.",
       "kbRemove": "Remove…",
       "renameSpeaker": "Rename {speaker} everywhere",
       "jumpToTime": "Jump to {time}",
@@ -5136,7 +5138,9 @@
       "publishConfirm": "Publish",
       "publishRunning": "Publishing…",
       "discardAction": "Discard transcript",
-      "saveChanges": "Save changes"
+      "saveChanges": "Save changes",
+      "markReviewed": "Mark as reviewed",
+      "markedReviewed": "Marked as reviewed"
     },
     "row": {
       "awaitingReview": "Awaiting review",
@@ -5172,7 +5176,8 @@
       "people": "{count, plural, one {# person} other {# people}}",
       "speakers": "{count, plural, one {# speaker} other {# speakers}}",
       "summaryPending": "Summary runs when you save the review",
-      "bulkDisabled": "Bulk actions apply to saved transcripts, not recordings in progress"
+      "bulkDisabled": "Bulk actions apply to saved transcripts, not recordings in progress",
+      "reviewedBadge": "Reviewed"
     },
     "searchPlaceholder": "Search transcripts…",
     "settings": {

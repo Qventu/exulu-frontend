@@ -128,6 +128,7 @@ import {
   type RbacUser,
   type Segment,
   type TranscriptItemDetail,
+  type TranscriptPublishState,
 } from "../types";
 import { AskBox } from "./ask-box";
 import { AudioTimeline, type AudioTimelineHandle } from "./audio-timeline";
@@ -146,6 +147,9 @@ export interface TranscriptDocumentProps {
   /** edit mode only; absent in read mode. Task 12 wires these. */
   onSave?: (draft: TranscriptDraft) => Promise<void>;
   onDiscard?: () => void;
+  /** edit mode only; signs the transcript off without publishing it. Absent
+   *  on the detail page, which has nothing left to review. */
+  onMarkReviewed?: (draft: TranscriptDraft) => Promise<void>;
   /** False when the viewer may read but not write — edit mode renders
    *  read-only with an explanation instead of a Save button. */
   canWrite?: boolean;
@@ -153,12 +157,10 @@ export interface TranscriptDocumentProps {
    *  The review page puts its post-processing banner here so it lines up with
    *  the document rather than sitting in a full-width bar above the grid. */
   banner?: React.ReactNode;
-  /** Whether this transcript is already in the knowledge base. A review
-   *  draft is not; a saved item is. Drives the knowledge-base card and
-   *  whether the primary action publishes or just saves changes — both of
-   *  which were wrongly keyed to edit mode, so re-editing a published
-   *  transcript claimed it was "not published yet". */
-  published?: boolean;
+  /** Where this transcript stands: a draft, signed off but not in the
+   *  knowledge base, or published. Drives the knowledge-base card and which
+   *  primary action the header offers. */
+  publishState?: TranscriptPublishState;
 }
 
 export type TranscriptDraft = {
@@ -505,9 +507,10 @@ export function TranscriptDocument({
   mode,
   onSave,
   onDiscard,
+  onMarkReviewed,
   canWrite,
   banner,
-  published = false,
+  publishState = "draft",
 }: TranscriptDocumentProps) {
   const t = useTranslations("transcriptions");
   const tCommon = useTranslations("common");
@@ -827,22 +830,43 @@ export function TranscriptDocument({
   };
 
 
+  // Shared by Save and Mark as reviewed — two copies of this once silently
+  // dropped target_rbac_users on save, so there is exactly one place that
+  // assembles a TranscriptDraft from the edit state.
+  const buildDraft = (): TranscriptDraft => ({
+    title: editState.title.trim() || item.name || t("review.fallbackTitle"),
+    speakers: editState.speakers,
+    correctedSegments: editState.segmentsDirty ? editState.segments : null,
+    projectId: editState.projectId || null,
+    rightsMode: editState.rightsMode,
+    rbacUsers: editState.rbacUsers,
+    rbacRoles: editState.rbacRoles,
+  });
+
   const handleSaveClick = async () => {
     if (!onSave) return;
-    const draft: TranscriptDraft = {
-      title: editState.title.trim() || item.name || t("review.fallbackTitle"),
-      speakers: editState.speakers,
-      correctedSegments: editState.segmentsDirty ? editState.segments : null,
-      projectId: editState.projectId || null,
-      rightsMode: editState.rightsMode,
-      rbacUsers: editState.rbacUsers,
-      rbacRoles: editState.rbacRoles,
-    };
+    const draft = buildDraft();
     setSaving(true);
     try {
       await onSave(draft);
     } catch {
       // The caller already surfaced a toast; keep editing open so nothing is lost.
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleMarkReviewedClick = async () => {
+    if (!onMarkReviewed) return;
+    setSaving(true);
+    try {
+      await onMarkReviewed(buildDraft());
+    } catch {
+      // onMarkReviewed rethrows by design (same as onSave) so edit mode
+      // stays open and the reviewer's corrections aren't lost. The caller
+      // already surfaced a toast — swallow here only to stop that rethrow
+      // becoming an unhandled rejection from the `void` click handler; do
+      // not turn this into a silent swallow of something never surfaced.
     } finally {
       setSaving(false);
     }
@@ -889,6 +913,18 @@ export function TranscriptDocument({
                 >
                   {t("review.discardAction")}
                 </Button>
+                {publishState !== "published" && onMarkReviewed && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={saving}
+                    className="max-md:h-11"
+                    onClick={() => void handleMarkReviewedClick()}
+                  >
+                    {t("review.markReviewed")}
+                  </Button>
+                )}
                 {/* Same affordance as read mode's Share, driving the draft's
                     own RBAC rather than a saved item's. */}
                 <SharingButton
@@ -905,7 +941,18 @@ export function TranscriptDocument({
                     }))
                   }
                 />
-                {published && (
+                {/* Reopening an already-reviewed job (the only way back here
+                    once it's past `needs_review`) is done — a human already
+                    signed it off — so exporting it doesn't wait on a second
+                    save or a publish decision. Nothing to export yet while
+                    first-time reviewing a draft. */}
+                {publishState !== "draft" && (
+                  <ExportMenu
+                    itemId={publishState === "published" ? item.id : undefined}
+                    jobId={publishState === "reviewed" ? (item.job_id ?? item.id) : undefined}
+                  />
+                )}
+                {publishState === "published" && (
                   <Button
                     type="button"
                     size="sm"
@@ -933,7 +980,12 @@ export function TranscriptDocument({
                   <Share2 aria-hidden="true" className="mr-2 size-4" />
                   {t("document.share")}
                 </Button>
-                <ExportMenu itemId={item.id} />
+                {publishState !== "draft" && (
+                  <ExportMenu
+                    itemId={publishState === "published" ? item.id : undefined}
+                    jobId={publishState === "reviewed" ? (item.job_id ?? item.id) : undefined}
+                  />
+                )}
                 <OverflowMenu items={overflowItems} label={t("overflow.label")} />
               </div>
             )
@@ -998,13 +1050,21 @@ export function TranscriptDocument({
               <div className="min-w-0 space-y-0.5">
                 <p className="flex items-center gap-2 text-sm font-medium">
                   <Library aria-hidden="true" className="size-4 shrink-0" />
-                  {published ? t("document.kbPublishedTitle") : t("document.kbDraftTitle")}
+                  {publishState === "published"
+                    ? t("document.kbPublishedTitle")
+                    : publishState === "reviewed"
+                      ? t("document.kbReviewedTitle")
+                      : t("document.kbDraftTitle")}
                 </p>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  {published ? t("document.kbPublishedBody") : t("document.kbDraftBody")}
+                  {publishState === "published"
+                    ? t("document.kbPublishedBody")
+                    : publishState === "reviewed"
+                      ? t("document.kbReviewedBody")
+                      : t("document.kbDraftBody")}
                 </p>
               </div>
-              {!published ? (
+              {publishState !== "published" ? (
                 // Shown in both modes: publishing as-is is a reasonable
                 // choice, and requiring a trip through edit mode to reach the
                 // button made it look like corrections were mandatory.

@@ -29,6 +29,7 @@ import {
   type TranscriptItem,
   type TranscriptItemDetail,
   type TranscriptRow,
+  type TranscriptState,
 } from "./types";
 
 const POLL_INTERVAL_MS = 5000;
@@ -57,6 +58,12 @@ export interface TranscriptsResult {
 }
 
 const ITEMS_PAGE_SIZE = 50;
+
+/** Rows still waiting on a human. A reviewed transcript is done, whether or
+ *  not anyone chose to publish it. */
+export function countNeedsReview(rows: { state: TranscriptState }[]): number {
+  return rows.filter((row) => row.state === "needs_review").length;
+}
 
 /**
  * The merged home data layer (codebase-structure §1.1): unions the
@@ -149,7 +156,7 @@ export function useTranscripts(search: string): TranscriptsResult {
   return {
     rows,
     recoveredJobs,
-    needsReviewCount: rows.filter((row) => row.state === "needs_review").length,
+    needsReviewCount: countNeedsReview(rows),
     initialLoading:
       (active.loading && !active.data) || (items.loading && !items.data),
     jobsError: active.error as Error | undefined,

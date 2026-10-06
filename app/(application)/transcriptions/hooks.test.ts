@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSettingsInput,
+  countNeedsReview,
   parseNumericOrSentinel,
   resolveNotifyChatSeed,
   serializeNumericOrSentinel,
@@ -172,5 +173,22 @@ describe("resolveNotifyChatSeed", () => {
 
   it("falls back to true for a stored null (defensive, should not occur)", () => {
     expect(resolveNotifyChatSeed({ value: null, source: "database" })).toBe(true);
+  });
+});
+
+/**
+ * Task 7: a reviewed transcript is done, whether or not anyone chose to
+ * publish it — it must not keep nagging the list as something that still
+ * needs a human.
+ */
+describe("needsReviewCount", () => {
+  it("counts only what still needs a human, not what has been signed off", () => {
+    const rows = [
+      { state: "needs_review" },
+      { state: "needs_review" },
+      { state: "reviewed" },
+      { state: "ready" },
+    ] as never[];
+    expect(countNeedsReview(rows)).toBe(2);
   });
 });

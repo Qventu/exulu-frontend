@@ -29,6 +29,7 @@ export type JobStatus =
   | "transcribing"
   | "recording" // live browser recording in progress
   | "awaiting_review"
+  | "reviewed" // signed off by a human but deliberately not in the knowledge base
   | "saved"
   | "failed"
   | "cancelled";
@@ -111,12 +112,18 @@ export type Segment = {
 
 export type ProjectOption = { id: string; name: string };
 
-/** Statuses the "active" list query asks for (unchanged backend contract). */
+/**
+ * Statuses the "active" list query asks for. `reviewed` has no knowledge-base
+ * item to stand in for it (unlike `saved`), so it has to come back through
+ * this query or the row vanishes from /transcriptions entirely (final fix
+ * wave, Finding 1).
+ */
 export const ACTIVE_STATUSES = [
   "queued",
   "transcribing",
   "recording",
   "awaiting_review",
+  "reviewed",
   "failed",
 ] as const;
 
@@ -532,6 +539,7 @@ export type TranscriptState =
   | "queued"
   | "transcribing"
   | "needs_review"
+  | "reviewed"
   | "failed"
   | "ready";
 
@@ -560,8 +568,26 @@ const JOB_STATE: Partial<Record<JobStatus, TranscriptState>> = {
   queued: "queued",
   transcribing: "transcribing",
   awaiting_review: "needs_review",
+  reviewed: "reviewed",
   failed: "failed",
 };
+
+/**
+ * Where a transcript stands on the two independent axes: reviewed by a
+ * human, and present in the knowledge base. `saved_item_id` is the
+ * authority on publication — the item is what agents retrieve — so it wins
+ * over a status that has not caught up.
+ */
+export type TranscriptPublishState = "draft" | "reviewed" | "published";
+
+export function transcriptPublishState(job: {
+  status: JobStatus;
+  saved_item_id?: string | null;
+}): TranscriptPublishState {
+  if (job.saved_item_id || job.status === "saved") return "published";
+  if (job.status === "reviewed") return "reviewed";
+  return "draft";
+}
 
 /** First non-empty post-processing output, trimmed to one line for the row. */
 function itemSummaryLine(item: TranscriptItem): string | null {
@@ -604,6 +630,8 @@ export function mergeTranscriptRows(
   const jobRows: TranscriptRow[] = jobs
     .filter((job) => {
       // A job that already produced an item is represented by that item.
+      // `reviewed` deliberately stays: it is signed off but has no item, so
+      // nothing else in the list would represent it.
       if (job.status === "saved" || job.status === "cancelled") return false;
       if (job.saved_item_id) return false;
       return !claimedJobIds.has(job.id);

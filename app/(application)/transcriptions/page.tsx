@@ -205,8 +205,14 @@ function TranscriptionsPageInner() {
   const failedRows = rows.filter((row) => row.state === "failed");
 
   const tabRows = filterTranscriptRows(rows, tab, user.id);
+  // `reviewed` belongs here too — it is done, just deliberately not
+  // published, and the in-progress strip/failed list above don't claim it
+  // either (final fix wave, Finding 1).
   const mainRows = tabRows.filter(
-    (row) => row.state === "needs_review" || row.state === "ready",
+    (row) =>
+      row.state === "needs_review" ||
+      row.state === "reviewed" ||
+      row.state === "ready",
   );
   const filteredMainRows = mainRows.filter(
     (row) =>

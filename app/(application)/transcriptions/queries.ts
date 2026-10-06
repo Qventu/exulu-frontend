@@ -81,6 +81,20 @@ export const FINALIZE_TRANSCRIPTION_JOB = gql`
   }
 `;
 
+/**
+ * Signs a transcript off without publishing it — reuses
+ * `TranscriptionJobFinalizeInput` verbatim (the payload is identical to
+ * finalize's) and returns the job row directly, since marking reviewed
+ * creates no item.
+ */
+export const MARK_TRANSCRIPTION_JOB_REVIEWED = gql`
+  mutation MarkTranscriptionJobReviewed($id: ID!, $input: TranscriptionJobFinalizeInput!) {
+    transcriptionJobMarkReviewed(id: $id, input: $input) {
+      ${TRANSCRIPTION_JOB_FIELDS}
+    }
+  }
+`;
+
 export const CANCEL_TRANSCRIPTION_JOB = gql`
   mutation CancelTranscriptionJob($id: ID!) {
     transcriptionJobCancel(id: $id) {

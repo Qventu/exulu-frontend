@@ -4954,6 +4954,8 @@
       "kbPublishedBody": "Agenten mit Zugriff können dieses Transkript durchsuchen und zitieren.",
       "kbDraftTitle": "Noch nicht veröffentlicht",
       "kbDraftBody": "Dies ist noch ein Entwurf. Beim Veröffentlichen ersetzt Ihr korrigierter Text das Rohtranskript und es wird in die Wissensdatenbank „Transkripte“ aufgenommen.",
+      "kbReviewedTitle": "Geprüft, nicht veröffentlicht",
+      "kbReviewedBody": "Sie haben dieses Transkript freigegeben. Es ist nicht in der Wissensdatenbank, also kann es kein Agent durchsuchen — veröffentlichen Sie es, wenn Sie das möchten.",
       "kbRemove": "Entfernen…",
       "renameSpeaker": "{speaker} überall umbenennen",
       "jumpToTime": "Zu {time} springen",
@@ -5136,7 +5138,9 @@
       "publishConfirm": "Veröffentlichen",
       "publishRunning": "Wird veröffentlicht…",
       "discardAction": "Transkript verwerfen",
-      "saveChanges": "Änderungen speichern"
+      "saveChanges": "Änderungen speichern",
+      "markReviewed": "Als geprüft markieren",
+      "markedReviewed": "Als geprüft markiert"
     },
     "row": {
       "awaitingReview": "Wartet auf Überprüfung",
@@ -5172,7 +5176,8 @@
       "people": "{count, plural, one {# Person} other {# Personen}}",
       "speakers": "{count, plural, one {# Sprecher} other {# Sprecher}}",
       "summaryPending": "Die Zusammenfassung läuft, sobald Sie die Überprüfung speichern",
-      "bulkDisabled": "Sammelaktionen gelten nur für gespeicherte Transkripte, nicht für laufende Aufnahmen"
+      "bulkDisabled": "Sammelaktionen gelten nur für gespeicherte Transkripte, nicht für laufende Aufnahmen",
+      "reviewedBadge": "Geprüft"
     },
     "searchPlaceholder": "Transkripte durchsuchen…",
     "settings": {
