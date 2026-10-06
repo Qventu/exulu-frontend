@@ -1143,6 +1143,48 @@ describe("ContextMapCard", () => {
     expect(asked?.variables).toEqual({ contextId: CONTEXT, itemId: "item-chunk-1" });
   });
 
+  /**
+   * Found against a restored production copy, not against a fixture: every
+   * item on the base this map was built for carries textlength = 0, while
+   * another base populates it for 1,263 of 1,299. Zero is "never measured".
+   */
+  it("omits a metadata row the base never recorded, rather than showing zero", async () => {
+    viewport.large = true;
+    const unmeasured = {
+      request: {
+        query: GET_CONTEXT_MAP_ITEM,
+        variables: { contextId: CONTEXT, itemId: "item-chunk-1" },
+      },
+      result: {
+        data: {
+          contextMapItem: {
+            id: "item-chunk-1",
+            name: "the item of chunk-1",
+            chunks: 7,
+            textLength: 0,
+            source: null,
+            createdAt: null,
+            updatedAt: null,
+          },
+        },
+      },
+    };
+    render(
+      withProviders([pointsMock, emptyTopicsMock, statusMock, edgesMock, unmeasured], {
+        selected: "chunk-1",
+      }),
+    );
+    const panel = await screen.findByRole("complementary", { name: "Item" });
+    // The count it does have is shown...
+    expect(await within(panel).findByText("7")).toBeDefined();
+    // ...and the ones it does not are absent entirely, not rendered as zero
+    // or as an empty row.
+    expect(within(panel).queryByText(/characters/i)).toBeNull();
+    expect(within(panel).queryByText("Text length")).toBeNull();
+    expect(within(panel).queryByText("Source")).toBeNull();
+    expect(within(panel).queryByText("Added")).toBeNull();
+  });
+
   it("lists an item once in the neighbours, keeping its strongest passage", async () => {
     // Daniel's screenshot: the same document four times, because those were
     // four chunks of it.

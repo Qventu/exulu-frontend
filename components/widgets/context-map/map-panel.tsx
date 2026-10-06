@@ -112,6 +112,18 @@ export function MapPanel({
       : null;
   };
 
+  /**
+   * A count the base actually recorded.
+   *
+   * Zero is "never measured", not "empty": `textlength` is populated on some
+   * bases and left at 0 on others — measured on a restored production copy,
+   * 1,263 of 1,299 items on one base carry a real length while all 67 on
+   * another sit at 0. Rendering "0 characters" there would put a number in
+   * the panel that means nothing, which is the complaint this panel exists to
+   * answer.
+   */
+  const recorded = (value: number | null): boolean => value !== null && value > 0;
+
   const showRegion = selected === null && regionLabel !== null;
 
   return (
@@ -191,16 +203,16 @@ export function MapPanel({
               <Skeleton className="h-16 w-full" />
             ) : item === null ? null : (
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
-                {item.chunks !== null && (
+                {recorded(item.chunks) && (
                   <Detail
                     label={t("panel.chunks")}
-                    value={format.number(item.chunks)}
+                    value={format.number(item.chunks as number)}
                   />
                 )}
-                {item.textLength !== null && (
+                {recorded(item.textLength) && (
                   <Detail
                     label={t("panel.size")}
-                    value={t("panel.characters", { count: item.textLength })}
+                    value={t("panel.characters", { count: item.textLength as number })}
                   />
                 )}
                 {asDate(item.createdAt) !== null && (
