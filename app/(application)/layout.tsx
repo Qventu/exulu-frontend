@@ -13,6 +13,7 @@ import Authenticated from "@/app/(application)/authenticated";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 import { ConfigContextProvider } from "@/components/shell/config-context";
+import { mediaFeatureConfig } from "@/lib/config/media-features";
 import { configApi, BackendConfigType } from "@/lib/api/config";
 import { LanguageProvider } from "@/components/shell/language-provider";
 import { LOCALE_COOKIE, Locale, defaultLocale } from "@/i18n/config";
@@ -97,18 +98,8 @@ export default async function RootLayout({
             enabled: typeof process.env.N8N_URL === "string" && process.env.N8N_URL !== "",
             url: typeof process.env.N8N_URL === "string" ? process.env.N8N_URL : undefined,
         },
-        transcription: {
-            enabled:
-                typeof process.env.TRANSCRIPTION_MODEL === "string" &&
-                process.env.TRANSCRIPTION_MODEL !== "" &&
-                process.env.EXULU_USE_LITELLM === "true",
-        },
-        tts: {
-            enabled:
-                typeof process.env.TTS_MODEL === "string" &&
-                process.env.TTS_MODEL !== "" &&
-                process.env.EXULU_USE_LITELLM === "true",
-        },
+        // Shared with the public-agents layout so the two cannot drift again.
+        ...mediaFeatureConfig(),
         public_auth: {
             otp_available: !!process.env.EMAIL_SERVER_HOST,
         },

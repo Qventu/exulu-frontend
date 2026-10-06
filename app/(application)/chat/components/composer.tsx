@@ -168,7 +168,14 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
 
   // Speech-to-text state machine (item 62). Feature hidden unless the shared
   // config enables transcription (EXULU_USE_LITELLM + TRANSCRIPTION_MODEL).
-  const transcriptionEnabled = configContext?.transcription?.enabled === true;
+  // Needs BOTH the feature and an identity. The request carries a bearer token
+  // and a `User` header, so an anonymous visitor cannot use it — getToken()
+  // resolves null and `user.id` would throw. Guests on a public agent that
+  // requires sign-in DO have both, which is the case this unhides: the public
+  // layout never carried `transcription`, so the microphone was missing there
+  // even for signed-in visitors.
+  const transcriptionEnabled =
+    configContext?.transcription?.enabled === true && !!user?.id;
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "transcribing"
   >("idle");
@@ -438,7 +445,8 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
       if (!token) throw new Error("No valid session token available.");
       const res = await fetch(`${configContext?.backend}/transcribe`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, User: user.id },
+        // `user.id` is guaranteed by transcriptionEnabled above.
+        headers: { Authorization: `Bearer ${token}`, User: String(user?.id ?? "") },
         body: formData,
       });
       if (!res.ok) {

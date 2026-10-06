@@ -38,6 +38,16 @@ export async function POST(
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Stream: "true",
+    // This is a guest surface, whoever is signed in. The page always renders
+    // in guest mode, and until the backend was told so it keyed guest
+    // behaviour off `!user?.id` alone — a signed-in visitor then got recalled
+    // memories the agent's `guests.showRecalled` had switched off, and recall
+    // ran against their PRIVATE memories on a public link.
+    //
+    // Set here rather than in the browser: this route is the only way into
+    // the public chat, so the header cannot be forgotten by a caller. It can
+    // only remove privileges, never grant them.
+    "x-public-surface": "1",
   };
   if (meta.guest_auth_mode === "regular") {
     const session: any = await getServerSession(await getAuthOptions());

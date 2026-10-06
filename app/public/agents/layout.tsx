@@ -21,6 +21,7 @@ import { ThemeProvider } from "@/components/shell/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { LOCALE_COOKIE, Locale, defaultLocale } from "@/i18n/config";
 import { configApi } from "@/lib/api/config";
+import { mediaFeatureConfig } from "@/lib/config/media-features";
 import { cn } from "@/lib/utils";
 
 export const viewport: Viewport = {
@@ -34,6 +35,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale = (cookieStore.get(LOCALE_COOKIE)?.value as Locale) || defaultLocale;
   const messages = (await import(`../../../messages/${locale}.json`)).default;
 
+  // Deliberately smaller than the authenticated layout's config: no feedback
+  // backend, no Google client id. Feature availability for the composer's
+  // microphone and read-aloud comes from the shared helper — building it here
+  // by hand is what made the microphone vanish on public pages.
   const config = {
     backend: process.env.BACKEND || "",
     google_client_id: "",
@@ -41,6 +46,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     public_auth: {
       otp_available: !!process.env.EMAIL_SERVER_HOST,
     },
+    ...mediaFeatureConfig(),
   };
 
   const themeConfig = await configApi.theme();
