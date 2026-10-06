@@ -5021,7 +5021,13 @@
       "matchCaseShort": "Aa",
       "matchCount": "{count, plural, one {# match} other {# matches}}",
       "hint": "Type something to find",
-      "replaceAll": "Replace all"
+      "replaceAll": "Replace all",
+      "shortcut": "⇧⌘F",
+      "shortcutWin": "Ctrl+Shift+F",
+      "blocksAffected": "{matches, plural, one {# match} other {# matches}} in {blocks, plural, one {# block} other {# blocks}}",
+      "noMatches": "No matches",
+      "previewTitle": "Preview",
+      "previewHint": "Replacements are shown highlighted. Nothing changes until you confirm."
     },
     "gallery": {
       "allowedTypes": "Allowed file types: {types}",

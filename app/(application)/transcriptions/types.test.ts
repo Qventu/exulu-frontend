@@ -7,6 +7,7 @@ import {
   effectiveSegments,
   filterTranscriptRows,
   findRecoveredJob,
+  findReplacePreview,
   groupTranscriptRows,
   hasPostProcessing,
   isLiveJob,
@@ -499,6 +500,52 @@ describe("speakerNeedsName", () => {
 
   it("never asks for a name a meeting bot already supplied", () => {
     expect(speakerNeedsName("Mario Gramsch", {})).toBe(false);
+  });
+});
+
+describe("findReplacePreview", () => {
+  const seg = (text: string) => ({ start: 0, end: 1, speaker: "A", text });
+
+  it("shows the replacement in place, split for highlighting", () => {
+    const { rows, count } = findReplacePreview(
+      [seg("Zet Cad und zet cad"), seg("nichts hier")],
+      "zet cad",
+      "ZetCAD",
+      false,
+    );
+    expect(count).toBe(2);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].index).toBe(0);
+    expect(rows[0].after).toEqual([
+      { text: "ZetCAD", hit: true },
+      { text: " und ", hit: false },
+      { text: "ZetCAD", hit: true },
+    ]);
+  });
+
+  it("agrees with applyFindReplace on the resulting text", () => {
+    const segments = [seg("a b a"), seg("b only"), seg("ends with a")];
+    const { rows } = findReplacePreview(segments, "a", "X", true);
+    const applied = applyFindReplace(segments, "a", "X", true).segments;
+    for (const row of rows) {
+      expect(row.after.map((part) => part.text).join("")).toBe(applied[row.index].text);
+    }
+  });
+
+  it("respects match case", () => {
+    expect(findReplacePreview([seg("Alpha alpha")], "alpha", "x", true).count).toBe(1);
+    expect(findReplacePreview([seg("Alpha alpha")], "alpha", "x", false).count).toBe(2);
+  });
+
+  it("previews a deletion, which has no highlighted span", () => {
+    const { rows, count } = findReplacePreview([seg("ähm also ähm ja")], "ähm ", "", false);
+    expect(count).toBe(2);
+    expect(rows[0].after.map((p) => p.text).join("")).toBe("also ja");
+    expect(rows[0].after.every((p) => !p.hit)).toBe(true);
+  });
+
+  it("returns nothing for an empty search", () => {
+    expect(findReplacePreview([seg("anything")], "", "x", false)).toEqual({ rows: [], count: 0 });
   });
 });
 

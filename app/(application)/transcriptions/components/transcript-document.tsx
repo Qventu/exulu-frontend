@@ -1037,7 +1037,11 @@ export function TranscriptDocument({
                 )}
                 {isEditable && (
                   <div className="flex shrink-0 items-center gap-1">
-                    <FindReplace segments={editState.segments} onReplaceAll={handleReplaceAll} />
+                    <FindReplace
+                      segments={editState.segments}
+                      speakers={speakers}
+                      onReplaceAll={handleReplaceAll}
+                    />
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button

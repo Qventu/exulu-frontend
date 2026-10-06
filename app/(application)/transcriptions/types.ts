@@ -693,3 +693,71 @@ export function speakerNeedsName(raw: string, names: Record<string, string>): bo
   if (names[raw]?.trim()) return false;
   return isPlaceholderSpeaker(raw);
 }
+
+/** One run of text in a find/replace preview; `hit` marks a replaced span. */
+export interface PreviewPart {
+  text: string;
+  hit: boolean;
+}
+
+export interface FindReplacePreviewRow {
+  /** Index into the segments array, so callers can show speaker/time. */
+  index: number;
+  /** The segment's text as it will read after Replace all, split for display. */
+  after: PreviewPart[];
+  /** Replacements inside this one segment. */
+  count: number;
+}
+
+/**
+ * What Replace all is about to do, segment by segment.
+ *
+ * `applyFindReplace` answers "how many" but not "to what", so the modal had
+ * nothing to show the user before they committed. This walks the same pattern
+ * and emits the resulting text already split into plain runs and replaced
+ * runs, so a preview can highlight exactly what changed without re-deriving
+ * the match positions (and risking a preview that disagrees with the edit).
+ *
+ * An empty `replace` is a deletion, which has no span to highlight — the row
+ * still appears, so removing a filler word is as reviewable as changing one.
+ */
+export function findReplacePreview(
+  segments: Segment[],
+  find: string,
+  replace: string,
+  matchCase: boolean,
+): { rows: FindReplacePreviewRow[]; count: number } {
+  if (!find) return { rows: [], count: 0 };
+  const pattern = new RegExp(escapeRegExp(find), matchCase ? "g" : "gi");
+  const rows: FindReplacePreviewRow[] = [];
+  let count = 0;
+
+  segments.forEach((segment, index) => {
+    pattern.lastIndex = 0;
+    const after: PreviewPart[] = [];
+    let cursor = 0;
+    let hits = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = pattern.exec(segment.text)) !== null) {
+      if (match.index > cursor) {
+        after.push({ text: segment.text.slice(cursor, match.index), hit: false });
+      }
+      if (replace) after.push({ text: replace, hit: true });
+      cursor = match.index + match[0].length;
+      hits += 1;
+      // Zero-length matches cannot happen here (find is non-empty and
+      // escaped), but guard anyway so a future change cannot spin forever.
+      if (match[0].length === 0) pattern.lastIndex += 1;
+    }
+
+    if (hits === 0) return;
+    if (cursor < segment.text.length) {
+      after.push({ text: segment.text.slice(cursor), hit: false });
+    }
+    count += hits;
+    rows.push({ index, after, count: hits });
+  });
+
+  return { rows, count };
+}
