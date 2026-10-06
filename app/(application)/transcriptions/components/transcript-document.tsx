@@ -941,6 +941,17 @@ export function TranscriptDocument({
                     }))
                   }
                 />
+                {/* Reopening an already-reviewed job (the only way back here
+                    once it's past `needs_review`) is done — a human already
+                    signed it off — so exporting it doesn't wait on a second
+                    save or a publish decision. Nothing to export yet while
+                    first-time reviewing a draft. */}
+                {publishState !== "draft" && (
+                  <ExportMenu
+                    itemId={publishState === "published" ? item.id : undefined}
+                    jobId={publishState === "reviewed" ? (item.job_id ?? item.id) : undefined}
+                  />
+                )}
                 {publishState === "published" && (
                   <Button
                     type="button"
@@ -969,7 +980,12 @@ export function TranscriptDocument({
                   <Share2 aria-hidden="true" className="mr-2 size-4" />
                   {t("document.share")}
                 </Button>
-                <ExportMenu itemId={item.id} />
+                {publishState !== "draft" && (
+                  <ExportMenu
+                    itemId={publishState === "published" ? item.id : undefined}
+                    jobId={publishState === "reviewed" ? (item.job_id ?? item.id) : undefined}
+                  />
+                )}
                 <OverflowMenu items={overflowItems} label={t("overflow.label")} />
               </div>
             )

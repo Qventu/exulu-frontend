@@ -8,6 +8,12 @@
  * the downloaded .md file can never diverge — there is exactly one markdown
  * builder, and it lives on the backend.
  *
+ * Task 7: a reviewed-but-unpublished transcript has no item yet, so it is
+ * exported through the sibling `GET {backend}/transcription-jobs/:jobId/export`
+ * route instead — same formats, same header auth, same generic-toast failure
+ * handling. The caller passes exactly one of `itemId` / `jobId`
+ * (`ExportMenuProps`); `fetchExport` refuses to build a URL out of neither.
+ *
  * Deviation from the task-13 brief, on purpose: the brief specified
  * downloads via a plain `window.location.href` navigation. That cannot work
  * against this backend — confirmed with the plan's author before writing
@@ -60,7 +66,11 @@ export type ExportIncludeOptions = {
 };
 
 export interface ExportMenuProps {
-  itemId: string;
+  /** A published transcript's item. */
+  itemId?: string;
+  /** A reviewed-but-unpublished transcript's job — the route refuses a job
+   *  that has not been reviewed, so this is only passed once it has been. */
+  jobId?: string;
 }
 
 type ExportFormat = "md" | "docx" | "pdf" | "csv" | "srt";
@@ -116,20 +126,30 @@ function filenameFromResponse(res: Response, format: ExportFormat): string {
   return `transcript.${format}`;
 }
 
-/** Throws on a missing backend config or a non-OK response — callers treat
- *  both the same as any other failure. */
+/** Throws on a missing backend config, a missing id, or a non-OK response —
+ *  callers treat all three the same as any other failure. Exactly one of
+ *  `itemId` / `jobId` is expected (ExportMenuProps); getting neither would
+ *  otherwise silently build a URL out of `undefined`, so that case throws
+ *  here instead of reaching `fetch`. */
 async function fetchExport(
   backend: string | undefined,
-  itemId: string,
+  itemId: string | undefined,
+  jobId: string | undefined,
   format: ExportFormat,
   options: ExportIncludeOptions,
 ): Promise<Response> {
   if (!backend) {
     throw new Error("Backend is not configured.");
   }
+  if (!itemId && !jobId) {
+    throw new Error("Export requires an item id or a job id.");
+  }
   const token = await getToken();
+  const path = itemId
+    ? `transcription-items/${encodeURIComponent(itemId)}`
+    : `transcription-jobs/${encodeURIComponent(jobId!)}`;
   const url =
-    `${backend}/transcription-items/${encodeURIComponent(itemId)}/export?format=${format}` +
+    `${backend}/${path}/export?format=${format}` +
     `&summary=${options.summary ? 1 : 0}` +
     `&timestamps=${options.timestamps ? 1 : 0}` +
     `&speakers=${options.speakers ? 1 : 0}`;
@@ -142,7 +162,7 @@ async function fetchExport(
   return res;
 }
 
-export function ExportMenu({ itemId }: ExportMenuProps) {
+export function ExportMenu({ itemId, jobId }: ExportMenuProps) {
   const t = useTranslations("transcriptions");
   const config = React.useContext(ConfigContext);
   const backend = config?.backend;
@@ -167,7 +187,7 @@ export function ExportMenu({ itemId }: ExportMenuProps) {
   const handleCopyText = async () => {
     let text: string;
     try {
-      const res = await fetchExport(backend, itemId, "md", options);
+      const res = await fetchExport(backend, itemId, jobId, "md", options);
       text = await res.text();
     } catch {
       toast.error(t("export.copyFailed"));
@@ -186,7 +206,7 @@ export function ExportMenu({ itemId }: ExportMenuProps) {
 
   const handleDownload = async (format: ExportFormat) => {
     try {
-      const res = await fetchExport(backend, itemId, format, options);
+      const res = await fetchExport(backend, itemId, jobId, format, options);
       const blob = await res.blob();
       const filename = filenameFromResponse(res, format);
       const objectUrl = URL.createObjectURL(blob);
