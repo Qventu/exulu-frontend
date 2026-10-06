@@ -809,7 +809,14 @@ export function TranscriptDocument({
   };
 
   return (
-    <PageShell variant="full-bleed">
+    // full-bleed is meant to be a bounded-height work surface whose children
+    // own their scroll, but nothing upstream actually clamps the height — the
+    // app shell is min-h-svh, so a 13,000px transcript simply grew the whole
+    // chain and the document scrolled instead. Pinning the shell to the
+    // viewport minus the 3rem top bar (measured) makes the region below it a
+    // real scrollport, which is what lets the rail stick to it. Left alone
+    // below md, where the rail stacks under the transcript anyway.
+    <PageShell variant="full-bleed" className="md:h-[calc(100svh-3rem)]">
       <div className="shrink-0 border-b px-4 py-3 md:px-6">
         <PageHeader
           density="compact"
@@ -1200,7 +1207,14 @@ export function TranscriptDocument({
 
           </div>
 
-          <div className={cn("space-y-4", chapters.length > 0 ? "md:col-start-3" : "md:col-start-2")}>
+          <div
+            className={cn(
+              // Travels with the transcript; scrolls on its own if the
+              // speakers list and ask box together outgrow the viewport.
+              "space-y-4 md:sticky md:top-0 md:max-h-[calc(100svh-6rem)] md:self-start md:overflow-y-auto",
+              chapters.length > 0 ? "md:col-start-3" : "md:col-start-2",
+            )}
+          >
             {/* One rail in both states (review feedback): the media stays
                 beside the transcript rather than dropping to a bar under it,
                 where a long transcript put it out of reach. Speaker naming
