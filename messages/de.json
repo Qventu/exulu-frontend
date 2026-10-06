@@ -3292,7 +3292,8 @@
       "neighboursFailed": "Verwandte Passagen konnten nicht geladen werden.",
       "noNeighbours": "Nichts anderes auf dieser Basis ist vergleichbar formuliert.",
       "open": "Eintrag öffnen",
-      "unavailable": "Diese Passage ist für dich nicht verfügbar."
+      "unavailable": "Diese Passage ist für dich nicht verfügbar.",
+      "untitled": "Unbenannter Eintrag"
     },
     "title": {
       "knowledge": "Wissens-Karte",

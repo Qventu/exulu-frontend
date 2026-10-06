@@ -3292,7 +3292,8 @@
       "neighboursFailed": "Could not load the related passages.",
       "noNeighbours": "Nothing else on this base is worded comparably.",
       "open": "Open the item",
-      "unavailable": "That passage is not available to you."
+      "unavailable": "That passage is not available to you.",
+      "untitled": "Untitled item"
     },
     "title": {
       "knowledge": "Knowledge map",

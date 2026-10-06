@@ -596,14 +596,23 @@ describe("pointTitle", () => {
     })).toBe("Price list 2026");
   });
 
-  it("falls back to the matched text for an item with no name", () => {
+  it("returns \"\" for an item with no name, rather than falling back to the passage's opening", () => {
     // `name` is nullable on an items table, and the resolver answers "" for a
-    // null. An empty tooltip or a blank heading reads as a broken map rather
-    // than as a nameless document.
-    expect(pointTitle({ itemName: "", label: "the passage itself" }))
-      .toBe("the passage itself");
-    expect(pointTitle({ itemName: "   ", label: "the passage itself" }))
-      .toBe("the passage itself");
+    // null. Falling back to `label` here is the exact bug this guards: in
+    // PASSAGES mode `label` is often the injected document header, so the
+    // fallback would show the identifier Daniel reported right back. Each
+    // call site renders its own translated "untitled" fallback instead; this
+    // function stays pure and cannot translate.
+    expect(pointTitle({ itemName: "", label: "the passage itself" })).toBe("");
+    expect(pointTitle({ itemName: "   ", label: "the passage itself" })).toBe("");
+  });
+
+  it("never returns the passage's opening, even when it looks like a plausible title", () => {
+    // Pins the fallback shut: if `pointTitle` ever regresses to returning
+    // `point.label` for a blank name, this fails even though the label here
+    // is innocuous-looking prose rather than an obvious document header.
+    expect(pointTitle({ itemName: "", label: "a perfectly readable sentence" }))
+      .not.toBe("a perfectly readable sentence");
   });
 });
 

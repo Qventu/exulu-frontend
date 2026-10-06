@@ -102,7 +102,7 @@ export function MapPanel({
                 two sections about that subject are h4s. `break-words` because
                 a document name can be one long unbroken token. */}
             <h3 className="break-words text-sm font-semibold text-foreground">
-              {pointTitle(selected)}
+              {pointTitle(selected) || t("panel.untitled")}
             </h3>
             <div className="space-y-1">
               {/* Labelled, because a passage of a long document is a quotation
@@ -166,7 +166,7 @@ export function MapPanel({
                           onBlur={() => onHoverNeighbour(null)}
                           onClick={() => onSelect(edge.target)}
                         >
-                          {pointTitle(neighbour)}
+                          {pointTitle(neighbour) || t("panel.untitled")}
                         </button>
                       </li>
                     );

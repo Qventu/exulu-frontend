@@ -12,6 +12,7 @@
  * is left here is the WebGL wiring, the animation loop and their teardown.
  */
 
+import { useTranslations } from "next-intl";
 import * as React from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -242,6 +243,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
     },
     ref,
   ) {
+    const t = useTranslations("map");
     const hostRef = React.useRef<HTMLDivElement | null>(null);
     const layerRef = React.useRef<HTMLDivElement | null>(null);
     const cloudRef = React.useRef<THREE.Points<
@@ -301,6 +303,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
       bounds,
       onSelect,
       onUnsupported,
+      t,
       /**
        * The dot under the pointer, for the colour effect's theme re-read to
        * repaint. Through this ref and not through that effect's dependencies,
@@ -318,6 +321,7 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
         bounds,
         onSelect,
         onUnsupported,
+        t,
       };
     });
 
@@ -622,8 +626,10 @@ export const MapCanvas = React.forwardRef<MapCanvasHandle, MapCanvasProps>(
             nextHover = {
               id: hovered.id,
               // The item's name, not the passage's opening: the opening begins
-              // with an injected document header on a real base.
-              name: pointTitle(hovered),
+              // with an injected document header on a real base. pointTitle
+              // returns "" for a blank name — never the opening — so the
+              // translated fallback is rendered here, not inside it.
+              name: pointTitle(hovered) || latestRef.current.t("panel.untitled"),
               x: screen.x,
               y: screen.y,
             };

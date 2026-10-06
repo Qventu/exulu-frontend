@@ -474,12 +474,17 @@ export function isPassageClipped(label: string): boolean {
  * panel heading or a neighbour row taken from it shows an identifier. The
  * item's name is what a reader calls the thing.
  *
- * The fallback is the opening after all, because `name` is nullable on an
- * items table and a blank heading reads as a broken map rather than as a
- * nameless document.
+ * NOT the opening, even when `itemName` is blank. `name` is nullable on an
+ * items table, and falling back to `label` here is exactly the bug a blank
+ * name exposed: in PASSAGES mode the "opening" IS that injected document
+ * header, so the fallback showed the identifier right back, and a heading
+ * taken from it duplicated the body text rendered immediately below it.
+ * Returning "" and letting each call site render its own translated
+ * "Untitled item" is the fix — this function is pure and lives in map-data,
+ * so it cannot reach next-intl itself.
  */
 export function pointTitle(point: { itemName: string; label: string }): string {
-  return point.itemName.trim() === "" ? point.label : point.itemName;
+  return point.itemName.trim() === "" ? "" : point.itemName;
 }
 
 /**
