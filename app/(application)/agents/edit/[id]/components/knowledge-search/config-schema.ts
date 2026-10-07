@@ -101,6 +101,13 @@ export const KIND_PRESETS: Record<KbKind, { limit: number; expand: number }> = {
 // Zod schemas (mirror backend shapes; every field has .default())
 // ---------------------------------------------------------------------------
 
+// Every object below is .passthrough(): zod strips unknown keys by default, and
+// serializeWizardConfig writes the parsed subset straight back, so a key the
+// wizard does not model is deleted by ANY save. That is not hypothetical — it
+// silently removed `tuning.engine: "v2"` from NEWLIFT's production agent on
+// 2026-10-06 (the flag had been set directly in the DB during v2-engine
+// development) and reverted retrieval to the slow v1 orchestration. Note that
+// .passthrough() must precede .default(), which wraps the object schema.
 const kbOverridesSchema = z
   .object({
     limit: z.number().optional(),
@@ -108,6 +115,7 @@ const kbOverridesSchema = z
     multiQuery: z.boolean().optional(),
     hyde: z.boolean().optional(),
   })
+  .passthrough()
   .default({});
 
 const kbProfileSchema = z
@@ -117,39 +125,49 @@ const kbProfileSchema = z
     instructions: z.string().default(""),
     overrides: kbOverridesSchema,
   })
+  .passthrough()
   .default({ enabled: true, kind: "documents", instructions: "", overrides: {} });
 
-const routingRuleSchema = z.object({
-  id: z.string().default(""),
-  label: z.string().default(""),
-  description: z.string().default(""),
-  main: z.array(z.string()).default([]),
-  fallback: z.array(z.string()).default([]),
-});
+const routingRuleSchema = z
+  .object({
+    id: z.string().default(""),
+    label: z.string().default(""),
+    description: z.string().default(""),
+    main: z.array(z.string()).default([]),
+    fallback: z.array(z.string()).default([]),
+  })
+  .passthrough();
 
 const routingSchema = z
   .object({
     rules: z.array(routingRuleSchema).default([]),
   })
+  .passthrough()
   .default({ rules: [] });
 
-const glossaryEntrySchema = z.object({
-  term: z.string().default(""),
-  meaning: z.string().default(""),
-});
+const glossaryEntrySchema = z
+  .object({
+    term: z.string().default(""),
+    meaning: z.string().default(""),
+  })
+  .passthrough();
 
-const identifierSetSchema = z.object({
-  name: z.string().default(""),
-  description: z.string().default(""),
-  examples: z.array(z.string()).default([]),
-  strategy: z.enum(["fuzzy", "exact"]).default("fuzzy"),
-  contexts: z.array(z.string()).default([]),
-});
+const identifierSetSchema = z
+  .object({
+    name: z.string().default(""),
+    description: z.string().default(""),
+    examples: z.array(z.string()).default([]),
+    strategy: z.enum(["fuzzy", "exact"]).default("fuzzy"),
+    contexts: z.array(z.string()).default([]),
+  })
+  .passthrough();
 
-const rewriteSchema = z.object({
-  find: z.string().default(""),
-  replace: z.string().default(""),
-});
+const rewriteSchema = z
+  .object({
+    find: z.string().default(""),
+    replace: z.string().default(""),
+  })
+  .passthrough();
 
 const vocabularySchema = z
   .object({
@@ -158,6 +176,7 @@ const vocabularySchema = z
     rewrites: z.array(rewriteSchema).default([]),
     styleHint: z.string().default(""),
   })
+  .passthrough()
   .default({ glossary: [], identifiers: [], rewrites: [], styleHint: "" });
 
 const memorySchema = z
@@ -167,6 +186,7 @@ const memorySchema = z
     filePrioritization: z.boolean().default(MEMORY_DEFAULTS.filePrioritization),
     queryAugmentation: z.boolean().default(MEMORY_DEFAULTS.queryAugmentation),
   })
+  .passthrough()
   .default(MEMORY_DEFAULTS);
 
 const tuningSchema = z
@@ -178,6 +198,7 @@ const tuningSchema = z
     pageWindow: z.number().default(TUNING_DEFAULTS.pageWindow),
     maxQueriesPerContext: z.number().default(TUNING_DEFAULTS.maxQueriesPerContext),
   })
+  .passthrough()
   .default(TUNING_DEFAULTS);
 
 const knowledgeBasesSchema = z

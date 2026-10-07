@@ -49,6 +49,56 @@ describe("parseWizardConfig", () => {
   });
 });
 
+describe("unknown keys in json blobs survive a load/save roundtrip", () => {
+  // engine/v2 were added straight into the DB during v2-engine development and
+  // were never fields the wizard knows. Zod strips unknown keys, and
+  // serializeWizardConfig writes the parsed subset back, so an unrelated save
+  // silently deleted `engine: "v2"` from NEWLIFT's production agent on
+  // 2026-10-06 and reverted retrieval to the slow v1 orchestration.
+  const withUnknown: ToolConfigEntry[] = [
+    {
+      name: "tuning",
+      type: "json",
+      variable: JSON.stringify({
+        topK: 10,
+        fallbackThreshold: 0.7,
+        pinBoost: 0.15,
+        identifierBoost: 0.15,
+        pageWindow: 1,
+        maxQueriesPerContext: 3,
+        engine: "v2",
+      }),
+    },
+  ];
+
+  test("keeps tuning.engine through parse and serialize", () => {
+    const cfg = parseWizardConfig(withUnknown);
+    const out = serializeWizardConfig(cfg);
+    const tuning = JSON.parse(
+      out.find((e) => e.name === "tuning")!.variable as string,
+    );
+    expect(tuning.engine).toBe("v2");
+    // the known fields must still round-trip unchanged
+    expect(tuning.topK).toBe(10);
+    expect(tuning.maxQueriesPerContext).toBe(3);
+  });
+
+  test("keeps an unknown key on the memory blob too", () => {
+    const memoryEntries: ToolConfigEntry[] = [
+      {
+        name: "memory",
+        type: "json",
+        variable: JSON.stringify({ enabled: true, somethingOperational: 7 }),
+      },
+    ];
+    const cfg = parseWizardConfig(memoryEntries);
+    const memory = JSON.parse(
+      serializeWizardConfig(cfg).find((e) => e.name === "memory")!.variable as string,
+    );
+    expect(memory.somethingOperational).toBe(7);
+  });
+});
+
 describe("serializeWizardConfig", () => {
   test("emits exactly 14 entries with the platform value conventions", () => {
     const cfg = defaultWizardConfig();
