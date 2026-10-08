@@ -32,7 +32,7 @@ export default async function ArtifactPage({
     auth_mode: "public" | "password" | "regular";
     filename: string;
     is_html: boolean;
-    grant_viewer_identity: boolean;
+    grant_viewer_identity?: boolean;
   };
   const contentUrl = `/artifacts/${encodeURIComponent(artifact_name)}/content`;
 
