@@ -144,4 +144,68 @@ describe("/artifacts/[name]/identity", () => {
       fetchMock.mock.calls.filter(([u]) => String(u).endsWith("/access")),
     ).toHaveLength(0);
   });
+
+  // F1: port-first names this failure state explicitly — "the channel
+  // arrived but no grant followed". A throw (network failure, or the abort
+  // from the 10s timeout — the catch block does not distinguish) must 502,
+  // not escape as an unhandled exception into Next's generic 500.
+  test("502s when /meta throws", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (String(url).endsWith("/meta")) throw new Error("network down");
+        return { ok: true, status: 204 } as any;
+      }),
+    );
+    const res = await GET(req, { params });
+    expect(res.status).toBe(502);
+  });
+
+  test("502s when /access throws", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (String(url).endsWith("/meta")) {
+          return { ok: true, status: 200, json: async () => grantingMeta.body } as any;
+        }
+        throw new Error("network down");
+      }),
+    );
+    const res = await GET(req, { params });
+    expect(res.status).toBe(502);
+  });
+
+  test("passes a timeout signal on both backend fetches", async () => {
+    const fetchMock = stubFetch(grantingMeta);
+    await GET(req, { params });
+    for (const call of fetchMock.mock.calls) {
+      expect((call[1] as any)?.signal).toBeInstanceOf(AbortSignal);
+    }
+  });
+
+  // F3: a share deleted or expired between /meta and /access is the truth,
+  // not a gateway error.
+  test.each([404, 410])(
+    "maps a %s from the access check to 404, not 502",
+    async (status) => {
+      stubFetch(grantingMeta, { status });
+      const res = await GET(req, { params });
+      expect(res.status).toBe(404);
+    },
+  );
+
+  // F2: Cache-Control must be set on every response path, not just the 200,
+  // so an intermediary cannot cache a refusal and keep a newly granted
+  // artifact perpetually refused.
+  test.each([
+    ["404 (capability off)", () => stubFetch({ status: 200, body: { auth_mode: "regular", grant_viewer_identity: false } })],
+    ["401 (no session token)", () => { stubFetch(grantingMeta); getServerSession.mockResolvedValue({ user: { email: "a@b.test" } }); }],
+    ["403 (access denied)", () => stubFetch(grantingMeta, { status: 403 })],
+    ["502 (outside contract)", () => stubFetch(grantingMeta, { status: 500 })],
+    ["500 (misconfigured)", () => { vi.stubEnv("BACKEND", undefined); stubFetch(grantingMeta); }],
+  ])("sets Cache-Control: private, no-store on the %s path", async (_label, setup) => {
+    setup();
+    const res = await GET(req, { params });
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+  });
 });

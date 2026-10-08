@@ -5,6 +5,25 @@ import { getAuthOptions } from "@/app/api/auth/[...nextauth]/options";
 
 export const dynamic = "force-dynamic";
 
+/** Neither backend fetch may hang the handler forever. */
+const FETCH_TIMEOUT_MS = 10_000;
+
+/**
+ * Every response from this route — success or refusal — carries this
+ * header. `force-dynamic` prevents static generation but adds no response
+ * header of its own, so an intermediary could otherwise cache a 404 or 403,
+ * meaning a newly granted artifact keeps being refused.
+ */
+const NO_STORE = { "Cache-Control": "private, no-store" } as const;
+
+function empty(status: number) {
+  return new NextResponse(null, { status, headers: NO_STORE });
+}
+
+function json(body: unknown, status: number) {
+  return NextResponse.json(body, { status, headers: NO_STORE });
+}
+
 /**
  * Hands the viewer's credential to an artifact that a platform administrator
  * has explicitly granted the viewer-identity capability.
@@ -20,51 +39,72 @@ export async function GET(
   const { artifact_name } = await params;
   const backend = process.env.BACKEND;
   if (!backend) {
-    return NextResponse.json({ detail: "Server misconfigured." }, { status: 500 });
+    return json({ detail: "Server misconfigured." }, 500);
   }
 
-  const metaRes = await fetch(
-    `${backend}/shared-artifacts/${encodeURIComponent(artifact_name)}/meta`,
-    { cache: "no-store" },
-  );
+  let metaRes: Response;
+  try {
+    metaRes = await fetch(
+      `${backend}/shared-artifacts/${encodeURIComponent(artifact_name)}/meta`,
+      { cache: "no-store", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) },
+    );
+  } catch {
+    // The port-first protocol names this failure state explicitly: the
+    // channel arrived but no grant followed. Distinct from "not running
+    // inside the IMP" (the 404 branches below) — a hung or unreachable
+    // backend must not be reported the same way a missing capability is.
+    return empty(502);
+  }
   // Covers 404 and 410 (expired) alike: no meta, no grant.
-  if (!metaRes.ok) return new NextResponse(null, { status: 404 });
+  if (!metaRes.ok) return empty(404);
   const meta = await metaRes.json();
 
   // An artifact without the capability is indistinguishable from one that does
   // not exist. The auth_mode check is load-bearing: a public or password share
   // would otherwise hand a credential to a visitor who never logged in.
   if (meta?.auth_mode !== "regular" || meta?.grant_viewer_identity !== true) {
-    return new NextResponse(null, { status: 404 });
+    return empty(404);
   }
 
   const session = (await getServerSession(await getAuthOptions())) as any;
   const token = session?.user?.jwt as string | undefined;
-  if (!token) return new NextResponse(null, { status: 401 });
+  if (!token) return empty(401);
 
-  const accessRes = await fetch(
-    `${backend}/shared-artifacts/${encodeURIComponent(artifact_name)}/access`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-      redirect: "manual",
-    },
-  );
-  // The access check's contract is exactly 204 (allow), 401, or 403 — nothing
-  // else. Trusting `ok` would accept any 2xx, and fetch's default
-  // redirect:"follow" means a 3xx that lands on a 200 (an SSO interstitial, a
-  // proxy page) would then read as "access granted". Anything outside the
-  // contract is reported as 502 rather than forwarded verbatim: forwarding
-  // could republish a bare 3xx with no Location, or pass off a backend 500 as
-  // this route's own.
+  let accessRes: Response;
+  try {
+    accessRes = await fetch(
+      `${backend}/shared-artifacts/${encodeURIComponent(artifact_name)}/access`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+        redirect: "manual",
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      },
+    );
+  } catch {
+    return empty(502);
+  }
+  // The access check's contract is exactly 204 (allow), 401, 403, 404, or
+  // 410 — nothing else. Trusting `ok` would accept any 2xx, and fetch's
+  // default redirect:"follow" means a 3xx that lands on a 200 (an SSO
+  // interstitial, a proxy page) would then read as "access granted".
   if (accessRes.status === 401 || accessRes.status === 403) {
-    return new NextResponse(null, { status: accessRes.status });
+    return empty(accessRes.status);
   }
+  // A share deleted or expired between the /meta and /access calls is the
+  // truth, not a gateway failure — report it the same way a missing share
+  // is reported everywhere else on this route.
+  if (accessRes.status === 404 || accessRes.status === 410) {
+    return empty(404);
+  }
+  // Anything else outside the contract is reported as 502 rather than
+  // forwarded verbatim: forwarding could republish a bare 3xx with no
+  // Location, or pass off a backend 500 as this route's own.
   if (accessRes.status !== 204) {
-    return new NextResponse(null, { status: 502 });
+    return empty(502);
   }
 
-  return NextResponse.json(
+  return json(
     {
       token,
       // The artifact runs in an opaque origin and cannot read BACKEND or infer
@@ -75,6 +115,6 @@ export async function GET(
         name: session?.user?.name ?? null,
       },
     },
-    { headers: { "Cache-Control": "private, no-store" } },
+    200,
   );
 }
