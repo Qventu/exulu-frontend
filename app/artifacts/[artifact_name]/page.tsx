@@ -7,6 +7,7 @@ import { withFragmentNavFix } from "@/lib/artifacts/fragment-nav";
 import { getAuthOptions } from "@/app/api/auth/[...nextauth]/options";
 import { Centered, AutoDownload } from "./ui";
 import { PasswordGate } from "./password-gate";
+import { ArtifactFrame } from "./artifact-frame";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function ArtifactPage({
     auth_mode: "public" | "password" | "regular";
     filename: string;
     is_html: boolean;
+    grant_viewer_identity: boolean;
   };
   const contentUrl = `/artifacts/${encodeURIComponent(artifact_name)}/content`;
 
@@ -68,11 +70,11 @@ export default async function ArtifactPage({
     if (!contentRes.ok) return <Centered title="Something went wrong" />;
     const html = await contentRes.text();
     return (
-      <iframe
-        srcDoc={withFragmentNavFix(html)}
-        sandbox="allow-scripts allow-popups allow-forms"
-        className="h-screen w-screen border-0"
+      <ArtifactFrame
+        html={withFragmentNavFix(html)}
         title={meta.filename}
+        artifactName={artifact_name}
+        grantIdentity={meta.grant_viewer_identity === true}
       />
     );
   }
