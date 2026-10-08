@@ -44,10 +44,24 @@ export async function GET(
 
   const accessRes = await fetch(
     `${backend}/shared-artifacts/${encodeURIComponent(artifact_name)}/access`,
-    { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+      redirect: "manual",
+    },
   );
-  if (!accessRes.ok) {
+  // The access check's contract is exactly 204 (allow), 401, or 403 — nothing
+  // else. Trusting `ok` would accept any 2xx, and fetch's default
+  // redirect:"follow" means a 3xx that lands on a 200 (an SSO interstitial, a
+  // proxy page) would then read as "access granted". Anything outside the
+  // contract is reported as 502 rather than forwarded verbatim: forwarding
+  // could republish a bare 3xx with no Location, or pass off a backend 500 as
+  // this route's own.
+  if (accessRes.status === 401 || accessRes.status === 403) {
     return new NextResponse(null, { status: accessRes.status });
+  }
+  if (accessRes.status !== 204) {
+    return new NextResponse(null, { status: 502 });
   }
 
   return NextResponse.json(

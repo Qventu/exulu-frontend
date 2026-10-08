@@ -8,7 +8,7 @@ vi.mock("@/app/api/auth/[...nextauth]/options", () => ({
 
 import { GET } from "./route";
 
-const params = Promise.resolve({ artifact_name: "cockpit" });
+const params = Promise.resolve({ artifact_name: "my-artifact" });
 const req = {} as any;
 
 /** meta + access responses, in the order the handler fetches them. */
@@ -16,7 +16,7 @@ function stubFetch(
   meta: { status: number; body?: unknown },
   access?: { status: number },
 ) {
-  const fetchMock = vi.fn(async (url: string) => {
+  const fetchMock = vi.fn(async (url: string, _init?: unknown) => {
     if (String(url).endsWith("/meta")) {
       return {
         ok: meta.status >= 200 && meta.status < 300,
@@ -49,13 +49,21 @@ describe("/artifacts/[name]/identity", () => {
   });
 
   test("grants the token, the backend origin and the user", async () => {
-    stubFetch(grantingMeta);
+    const fetchMock = stubFetch(grantingMeta);
     const res = await GET(req, { params });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       token: "jwt-abc",
       backendOrigin: "http://backend.test",
       user: { email: "a@b.test", name: "A B" },
+    });
+    // The access check must actually carry the viewer's credential, not just
+    // be invoked.
+    const accessCall = fetchMock.mock.calls.find(([u]) =>
+      String(u).endsWith("/access"),
+    );
+    expect((accessCall?.[1] as any)?.headers).toEqual({
+      Authorization: "Bearer jwt-abc",
     });
   });
 
@@ -106,6 +114,17 @@ describe("/artifacts/[name]/identity", () => {
     stubFetch(grantingMeta, { status: 403 });
     const res = await GET(req, { params });
     expect(res.status).toBe(403);
+  });
+
+  // The access check's contract is exactly 204/401/403. Anything else (here,
+  // an upstream 500) must never be forwarded or mistaken for "granted" — it
+  // becomes a 502, and above all must never leak a token in the body.
+  test("502s when the access check answers outside its contract", async () => {
+    stubFetch(grantingMeta, { status: 500 });
+    const res = await GET(req, { params });
+    expect(res.status).toBe(502);
+    const text = await res.text();
+    expect(text).not.toContain("jwt-abc");
   });
 
   test("500s when BACKEND is unset", async () => {
