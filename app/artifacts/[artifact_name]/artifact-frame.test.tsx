@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { ArtifactFrame } from "./artifact-frame";
@@ -58,9 +58,9 @@ function spyPost(frame: HTMLIFrameElement) {
 }
 
 /** A request as the artifact would post it. */
-const request = (source: MessageEventSource | null) =>
+const request = (source: MessageEventSource | null, v: number = 1) =>
   new MessageEvent("message", {
-    data: { type: "exulu:identity:request", v: 1 },
+    data: { type: "exulu:identity:request", v },
     source,
   });
 
@@ -277,5 +277,83 @@ describe("ArtifactFrame", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(received.find((m) => "token" in m)).toBeUndefined();
+  });
+
+  // F5: the Global Constraint says every message carries v: 1. A v: 2
+  // artifact must not silently receive a v1 answer.
+  test("ignores a request whose v is not 1", async () => {
+    const fetchMock = stubFetch();
+    const { frame } = renderFrame(true);
+    const post = spyPost(frame);
+
+    window.dispatchEvent(request(frame.contentWindow, 2));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  // F7: a buggy artifact re-posting on every render must not drive unbounded
+  // identity-route calls or unbounded retained ports. At most one request is
+  // answered per frame load.
+  test("ignores a second request from the same frame load", async () => {
+    const fetchMock = stubFetch();
+    const { frame } = renderFrame(true);
+    const post = spyPost(frame);
+
+    window.dispatchEvent(request(frame.contentWindow));
+    window.dispatchEvent(request(frame.contentWindow));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  // The iframe's own `load` event is the reset boundary: after it fires
+  // again (a navigation of the frame), a new request is answered.
+  test("answers a new request once the iframe's load event fires again", async () => {
+    const fetchMock = stubFetch();
+    const { frame } = renderFrame(true);
+    const post = spyPost(frame);
+
+    window.dispatchEvent(request(frame.contentWindow));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(post).toHaveBeenCalledTimes(1);
+
+    fireEvent.load(frame);
+    window.dispatchEvent(request(frame.contentWindow));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(post).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  // F4: a malformed route response (user missing or not an object) must not
+  // be read by the artifact as a usable grant — the denial path must run
+  // instead of handing over a Grant with user: undefined.
+  test("denies when the identity route's user is not an object", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ ...GRANT_BODY, user: undefined }),
+      }) as any),
+    );
+    const { frame } = renderFrame(true);
+    const post = spyPost(frame);
+
+    window.dispatchEvent(request(frame.contentWindow));
+
+    const port = (post.mock.calls[0]![2] as Transferable[])[0] as MessagePort;
+    const answer = new Promise<any>((resolve) => {
+      port.onmessage = (e) => resolve(e.data);
+    });
+    port.start();
+
+    expect(await answer).toMatchObject({
+      type: "exulu:identity:denied",
+      v: 1,
+    });
   });
 });

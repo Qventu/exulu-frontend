@@ -53,6 +53,12 @@ export function ArtifactFrame({
   grantIdentity: boolean;
 }) {
   const ref = useRef<HTMLIFrameElement>(null);
+  // At most one request per frame load is answered — a buggy artifact
+  // re-posting on every render must not drive unbounded identity-route calls
+  // (two backend fetches plus a getServerSession each) or unbounded retained
+  // ports. Reset by the iframe's own `load` event, which fires again on any
+  // navigation (including a re-navigation to the same srcDoc).
+  const handledRef = useRef(false);
 
   useEffect(() => {
     if (!grantIdentity) return;
@@ -69,9 +75,14 @@ export function ArtifactFrame({
         const body = await res.json();
         // Fail closed against a route regression: a 200 with a malformed or
         // empty body must not be read by the artifact as a usable grant.
+        // `user` must be an object — the Grant type declares it as one, and
+        // a malformed route response must not silently pass `undefined`
+        // through to the artifact.
         if (
           typeof body?.token !== "string" ||
-          typeof body?.backendOrigin !== "string"
+          typeof body?.backendOrigin !== "string" ||
+          typeof body?.user !== "object" ||
+          body?.user === null
         ) {
           return null;
         }
@@ -93,7 +104,11 @@ export function ArtifactFrame({
       // origin is the string "null" and proves nothing, whereas a window
       // reference is the frame itself.
       if (!frame || event.source !== frame.contentWindow) return;
+      if (event.data?.v !== V) return;
       if (event.data?.type !== "exulu:identity:request") return;
+      // Answer at most one request per frame load.
+      if (handledRef.current) return;
+      handledRef.current = true;
       const target = frame.contentWindow;
       if (!target) return;
 
@@ -105,11 +120,14 @@ export function ArtifactFrame({
       const channel = new MessageChannel();
       ports.push(channel.port1);
       channel.port1.onmessage = async (portEvent: MessageEvent) => {
+        if (portEvent.data?.v !== V) return;
         if (portEvent.data?.type !== "exulu:identity:refresh") return;
         const fresh = await fetchGrant();
-        channel.port1.postMessage(
-          cancelled ? denied("unavailable") : (fresh ?? denied("unavailable")),
-        );
+        // Cleanup both sets `cancelled` and closes this port, so a denial
+        // posted here could never be delivered anyway — the page is gone by
+        // the time cleanup has run, so there is no consumer to inform.
+        if (cancelled) return;
+        channel.port1.postMessage(fresh ?? denied("unavailable"));
       };
       target.postMessage({ type: "exulu:identity:channel", v: V }, "*", [
         channel.port2,
@@ -117,9 +135,8 @@ export function ArtifactFrame({
 
       void (async () => {
         const grant = await fetchGrant();
-        channel.port1.postMessage(
-          cancelled ? denied("unavailable") : (grant ?? denied("unavailable")),
-        );
+        if (cancelled) return;
+        channel.port1.postMessage(grant ?? denied("unavailable"));
       })();
     };
 
@@ -138,6 +155,9 @@ export function ArtifactFrame({
       sandbox="allow-scripts allow-popups allow-forms"
       className="h-screen w-screen border-0"
       title={title}
+      onLoad={() => {
+        handledRef.current = false;
+      }}
     />
   );
 }
