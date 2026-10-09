@@ -59,10 +59,23 @@ export async function GET(
   if (!metaRes.ok) return empty(404);
   const meta = await metaRes.json();
 
-  // An artifact without the capability is indistinguishable from one that does
-  // not exist. The auth_mode check is load-bearing: a public or password share
-  // would otherwise hand a credential to a visitor who never logged in.
-  if (meta?.auth_mode !== "regular" || meta?.grant_viewer_identity !== true) {
+  // `auth_mode: "regular"` IS the capability: the artifact only renders for a
+  // logged-in user who passes RBAC on the share row, so handing that user their
+  // own identity grants nothing they did not already have in the IMP itself.
+  //
+  // Still load-bearing, and the explicit equality is deliberate: a public or
+  // password share is gated upstream by an internal key and never reaches RBAC,
+  // so granting on one would hand a credential to a visitor who never logged in.
+  //
+  // A second condition used to sit here — a per-row `grant_viewer_identity` flag
+  // a super-admin had to set. Removed deliberately. Exfiltration is contained by
+  // the inherited CSP (`connect-src` is an allowlist with no wildcard,
+  // `form-action 'self'`, `object-src 'none'`), which bounds a compromised
+  // dependency whether or not a flag is set; and the flag could not deliver the
+  // code review its framing implied, because it pins the share row rather than
+  // the bytes (content stays replaceable afterwards) and `script-src` permits
+  // jsdelivr, so what executes is not determined by what was reviewed.
+  if (meta?.auth_mode !== "regular") {
     return empty(404);
   }
 
