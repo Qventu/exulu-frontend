@@ -32,7 +32,6 @@ export default async function ArtifactPage({
     auth_mode: "public" | "password" | "regular";
     filename: string;
     is_html: boolean;
-    grant_viewer_identity?: boolean;
   };
   const contentUrl = `/artifacts/${encodeURIComponent(artifact_name)}/content`;
 
@@ -74,7 +73,15 @@ export default async function ArtifactPage({
         html={withFragmentNavFix(html)}
         title={meta.filename}
         artifactName={artifact_name}
-        grantIdentity={meta.grant_viewer_identity === true}
+        // `auth_mode: "regular"` IS the viewer-identity capability: such an
+        // artifact only renders for a logged-in user who passed RBAC on the
+        // share row, so handing that user their own identity grants nothing
+        // they did not already have. This used to read the per-row
+        // `grant_viewer_identity` flag, which has been removed. Stated
+        // explicitly rather than hardcoded `true` so it stays correct if this
+        // branch is ever reached for a non-regular share — and it must agree
+        // with the identity route's own gate, which checks the same thing.
+        grantIdentity={meta.auth_mode === "regular"}
       />
     );
   }

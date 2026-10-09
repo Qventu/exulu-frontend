@@ -33,9 +33,11 @@ function stubFetch(
   return fetchMock;
 }
 
+// `auth_mode: "regular"` is the capability on its own; the per-row
+// grant_viewer_identity flag this used to carry has been removed.
 const grantingMeta = {
   status: 200,
-  body: { auth_mode: "regular", grant_viewer_identity: true },
+  body: { auth_mode: "regular" },
 };
 
 describe("/artifacts/[name]/identity", () => {
@@ -73,24 +75,34 @@ describe("/artifacts/[name]/identity", () => {
     expect(res.headers.get("Cache-Control")).toBe("private, no-store");
   });
 
-  test("404s when the artifact lacks the capability", async () => {
+  // This asserted a 404 when the per-row `grant_viewer_identity` flag was
+  // false. That gate is gone — `auth_mode: "regular"` is the capability — so
+  // the case is inverted: a regular share must now proceed past the gate even
+  // when a retired flag is present and false. It is the behaviour change, and
+  // it fails loudly if the flag is ever reinstated as a condition.
+  test("proceeds for a regular share even when a retired grant flag says false", async () => {
     stubFetch({
       status: 200,
       body: { auth_mode: "regular", grant_viewer_identity: false },
     });
     const res = await GET(req, { params });
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+  });
+
+  test("proceeds for a regular share whose meta omits the retired flag entirely", async () => {
+    stubFetch({ status: 200, body: { auth_mode: "regular" } });
+    const res = await GET(req, { params });
+    expect(res.status).toBe(200);
   });
 
   // Review Focus 2: the worst failure in the design — a public share must
-  // never hand a credential to an anonymous visitor.
+  // never hand a credential to an anonymous visitor. This is now the ONLY
+  // thing standing between a non-regular share and a credential, so it matters
+  // more than it did when a second flag also had to be set.
   test.each(["public", "password"])(
-    "404s a %s share even when the flag is true",
+    "404s a %s share, which is the whole remaining gate",
     async (auth_mode) => {
-      stubFetch({
-        status: 200,
-        body: { auth_mode, grant_viewer_identity: true },
-      });
+      stubFetch({ status: 200, body: { auth_mode } });
       const res = await GET(req, { params });
       expect(res.status).toBe(404);
     },
@@ -134,11 +146,12 @@ describe("/artifacts/[name]/identity", () => {
     expect(res.status).toBe(500);
   });
 
-  test("does not call the access check before the capability gate", async () => {
-    const fetchMock = stubFetch({
-      status: 200,
-      body: { auth_mode: "regular", grant_viewer_identity: false },
-    });
+  // The ordering still matters, but the gate it is ordered against changed:
+  // this used to short-circuit on the grant flag, and now short-circuits on a
+  // non-regular auth_mode. Keeping the assertion means a public share is still
+  // refused without the route doing any work on its behalf.
+  test("does not call the access check for a non-regular share", async () => {
+    const fetchMock = stubFetch({ status: 200, body: { auth_mode: "public" } });
     await GET(req, { params });
     expect(
       fetchMock.mock.calls.filter(([u]) => String(u).endsWith("/access")),
@@ -198,7 +211,7 @@ describe("/artifacts/[name]/identity", () => {
   // so an intermediary cannot cache a refusal and keep a newly granted
   // artifact perpetually refused.
   test.each([
-    ["404 (capability off)", () => stubFetch({ status: 200, body: { auth_mode: "regular", grant_viewer_identity: false } })],
+    ["404 (non-regular share)", () => stubFetch({ status: 200, body: { auth_mode: "public" } })],
     ["401 (no session token)", () => { stubFetch(grantingMeta); getServerSession.mockResolvedValue({ user: { email: "a@b.test" } }); }],
     ["403 (access denied)", () => stubFetch(grantingMeta, { status: 403 })],
     ["502 (outside contract)", () => stubFetch(grantingMeta, { status: 500 })],
