@@ -10,6 +10,9 @@ export const configChapter: DemoChapter = {
       id: "config-overview",
       route: "/agents/edit/demo-agent-newton",
       anchor: "agent-agentic-retrieval",
+      // "start", not the default "nearest": the card is below the fold on a
+      // 6,400px page, and "nearest" parks its top at the viewport's bottom.
+      scrollBlock: "start",
       title: "Der ganze Assistent ist Konfiguration",
       content: [
         { kind: "figure", src: "/demo/ch3-config.webp", alt: "Der Assistent als Konfiguration" },

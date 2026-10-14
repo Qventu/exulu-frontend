@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { isOutsideViewport } from "@/lib/demo/ring-geometry";
+
 import { useTour } from "./tour-provider";
 
 // How long to keep looking for a step's anchor before giving up on that
@@ -110,6 +112,10 @@ export function TourRing() {
     let observedEl: Element | null = null;
     let lastRect: DOMRect | null = null;
     let holding = false;
+    // One re-scroll per attach. The agent editor's prompt and tool sections
+    // load after first paint and push the anchor back below the fold after
+    // the first scrollIntoView; measured at y=1009 in a 900px viewport.
+    let rescrolled = false;
     let giveUpTimer: ReturnType<typeof setTimeout> | null = null;
 
     // Only sets state when the box actually moved. The settle ticker below
@@ -119,6 +125,11 @@ export function TourRing() {
     const measure = () => {
       if (!observedEl || holding) return;
       const next = observedEl.getBoundingClientRect();
+      if (!rescrolled && isOutsideViewport(next, window.innerHeight)) {
+        rescrolled = true;
+        observedEl.scrollIntoView({ block: scrollBlock, behavior: "smooth" });
+        return;
+      }
       if (
         lastRect &&
         next.top === lastRect.top &&
@@ -164,6 +175,7 @@ export function TourRing() {
       observedEl = null;
       lastRect = null;
       holding = false;
+      rescrolled = false;
       stopSettling();
     };
 
@@ -190,6 +202,12 @@ export function TourRing() {
         }
         measure();
         startSettling();
+      } else if (el && el === observedEl) {
+        // Late DOM growth above the anchor (sections mounting after first
+        // paint) never fires the ResizeObserver on the anchor itself; the
+        // MutationObserver does reach here, and measure() is a no-op when
+        // nothing moved.
+        measure();
       } else if (!el && observedEl) {
         detach();
         setRect(null);
