@@ -69,6 +69,8 @@ import {
   FeedbackDialog,
   type FeedbackTarget,
 } from "./feedback-dialog";
+import { ClaimCheck, type ClaimCheckState } from "./claim-check";
+import { collectSources, parseClaimCheckTrigger } from "./claim-check-data";
 import { MemoryCard } from "./memory-card";
 import { isMemoryToolPart } from "./memory-card-data";
 import { MemoryStack } from "./memory-stack";
@@ -232,6 +234,39 @@ function makeRecalledMemories(guestMode: boolean) {
   return RecalledMemoriesForColumn;
 }
 
+/**
+ * Carries the per-message claim-check state and guestMode in a closure, the
+ * same way makeRecalledMemories does — MessageRenderer's component props are a
+ * frozen shape and take only { message, agent }.
+ *
+ * Also derives `sourceNames` (id -> name) from the message's own retrieval
+ * parts: `collectSources` (F2) re-reads the same tool output the message
+ * already carries, so this costs nothing extra. An id whose source carries no
+ * name is skipped rather than falling back to the id itself — a raw source id
+ * must never reach the panel, which already falls back to the quote alone
+ * when a name is absent.
+ */
+export function makeClaimCheck(claimChecks: Record<string, ClaimCheckState>, guestMode: boolean) {
+  const ClaimCheckForColumn = ({ message }: { message: UIMessage; agent: Agent }) => {
+    const trigger = parseClaimCheckTrigger(message.metadata);
+    const sourceNames: Record<string, string> = {};
+    if (trigger) {
+      for (const source of collectSources(message, trigger.sourceIds)) {
+        if (source.name) sourceNames[source.id] = source.name;
+      }
+    }
+    return (
+      <ClaimCheck
+        state={claimChecks[message.id] ?? null}
+        guestMode={guestMode}
+        sourceNames={sourceNames}
+      />
+    );
+  };
+  ClaimCheckForColumn.displayName = "ClaimCheckForColumn";
+  return ClaimCheckForColumn;
+}
+
 export function MessageColumn({ controller, guestMode = false }: MessageColumnProps) {
   const t = useTranslations("chat");
   const { user } = useContext(UserContext);
@@ -293,6 +328,11 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
   const RecalledMemoriesComponent = useMemo(
     () => makeRecalledMemories(guestMode),
     [guestMode],
+  );
+
+  const ClaimCheckComponent = useMemo(
+    () => makeClaimCheck(controller.claimChecks, guestMode),
+    [controller.claimChecks, guestMode],
   );
 
   // Single focal point (item 31, fixes U9): the agent's own visual when one
@@ -396,6 +436,13 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
               // (final-review finding 4) rather than link/mutate against
               // routes a guest has no access to.
               RecalledMemoriesComponent={RecalledMemoriesComponent}
+              // "Checked the answer" panel (spec §5, §5.1), rendered directly
+              // after recalled-memories so the two sit together under the
+              // answer. The factory closes over controller.claimChecks (keyed
+              // by message id, fired on stream end) and guestMode, mirroring
+              // RecalledMemoriesComponent above — MessageRenderer's frozen
+              // component-prop shape has no room for either.
+              ClaimCheckComponent={ClaimCheckComponent}
               AgentVisualComponent={AgentVisual}
             />
           ) : null}

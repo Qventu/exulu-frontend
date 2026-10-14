@@ -302,8 +302,15 @@ export function computeUntypedToolData(
  *   stable/ref-backed state or is re-captured whenever this item's data props
  *   change (see message-renderer.tsx).
  * - Component-type props (UntypedToolPartComponent, AgentVisualComponent,
- *   MemoryStackComponent, RecalledMemoriesComponent) ARE compared — swapping
- *   a component type must remount the subtree.
+ *   MemoryStackComponent, RecalledMemoriesComponent, ClaimCheckComponent)
+ *   ARE compared — swapping a component type must remount the subtree.
+ *   EVERY component-type prop MessageRenderer accepts must be listed below:
+ *   the chat surface builds several of them with a `useMemo` over state the
+ *   item renders (claimChecks is the live example), so their identity is the
+ *   only signal that state changed. Skipping one as if it were a handler
+ *   discards that signal and the subtree silently keeps the previous state —
+ *   for claim check, the panel appeared only a turn later, when some
+ *   unrelated prop of that item happened to change.
  * - `config` is compared by its two known fields since call sites pass it as
  *   an inline object literal.
  * - Everything else compares by Object.is; finished messages keep their
@@ -315,6 +322,7 @@ const COMPARED_FUNCTION_PROPS = new Set([
   "AgentVisualComponent",
   "MemoryStackComponent",
   "RecalledMemoriesComponent",
+  "ClaimCheckComponent",
 ]);
 
 export function messageItemPropsEqual(

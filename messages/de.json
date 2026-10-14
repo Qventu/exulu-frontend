@@ -479,7 +479,10 @@
           "editSources": "Wissensdatenbanken",
           "editRouting": "Routing",
           "editVocabulary": "Fachvokabular",
-          "editBehavior": "Verhalten"
+          "editBehavior": "Verhalten",
+          "claimCheckOn": "Antwortprüfung aktiv",
+          "claimCheckOff": "Antwortprüfung inaktiv",
+          "editVerification": "Antwortprüfung"
         },
         "wizard": {
           "title": "Wissenssuche konfigurieren",
@@ -506,6 +509,10 @@
             "behavior": {
               "label": "Verhalten",
               "description": "Passen Sie an, wie Ergebnisse gewichtet werden und wie viele zurückgegeben werden."
+            },
+            "verification": {
+              "label": "Antwortprüfung",
+              "description": "Prüft die fertige Antwort darauf, welche ihrer Aussagen von den gefundenen Quellen gedeckt sind. Kostet zusätzliche Modellaufrufe pro Antwort."
             },
             "review": {
               "label": "Überprüfung",
@@ -631,6 +638,22 @@
             "maxStepsLabel": "Max. Wissenssuchen pro Nachricht",
             "maxStepsHint": "Begrenzt, wie viele Wissenssuchen der Assistent für eine Nachricht ausführen darf. Danach ist die Suche für den Rest der Nachricht deaktiviert. 0 = keine suchspezifische Grenze (das allgemeine Tool-Schritte-Budget gilt weiterhin)."
           },
+          "verification": {
+            "claimCheckEnabled": "Antwortprüfung aktivieren",
+            "claimCheckModel": "Modell für die Prüfung",
+            "claimCheckModelHelp": "Ein schnelles, günstiges Modell genügt. Ohne Auswahl wird zuerst das Hilfsmodell des Agenten verwendet, sonst dessen eigenes Modell.",
+            "claimCheckModelReset": "Modellauswahl zurücksetzen",
+            "claimCheckFidelity": "Prüftiefe",
+            "claimCheckFidelityFast": "Schnell",
+            "claimCheckFidelityPaper": "Gründlich",
+            "claimCheckThresholds": "Schwellenwerte",
+            "claimCheckThresholdsHint": "Anteil der geprüften Aussagen, die widerlegt oder ohne Belegstelle sind. Ab der Warnschwelle wird die Antwort gelb markiert, ab der Alarmschwelle rot. Die Warnschwelle liegt immer bei oder unter der Alarmschwelle.",
+            "claimCheckThresholdWarnLabel": "Warnschwelle: {percent}%",
+            "claimCheckThresholdAlertLabel": "Alarmschwelle: {percent}%",
+            "claimCheckReRetrieve": "Bei fehlender Belegstelle erneut suchen",
+            "claimCheckShowExternal": "Auch externen Nutzern anzeigen",
+            "claimCheckShowExternalHint": "Wirkt nur, solange „Quellen für externe Nutzer anzeigen“ (Schritt Verhalten) aktiv ist: ist das aus, werden für diese Nutzer die Quellen-IDs entfernt und es läuft unabhängig von dieser Einstellung keine Prüfung. Auf der öffentlichen Gast-Oberfläche erscheint die Prüfung derzeit gar nicht."
+          },
           "review": {
             "intro": "Das wird übernommen. Verwenden Sie die Schritt-Schaltflächen oben, um etwas zu ändern.",
             "sourcesTitle": "{count, plural, one {# Wissensdatenbank} other {# Wissensdatenbanken}}",
@@ -643,7 +666,10 @@
             "memoryOff": "Gedächtnis ist für den Abruf deaktiviert.",
             "behaviorTitle": "Verhalten",
             "behaviorLine": "Top {topK} Ergebnisse · Backup-Auslöser {percent}% · {reranker}",
-            "noReranker": "kein Reranker"
+            "noReranker": "kein Reranker",
+            "verificationTitle": "Antwortprüfung",
+            "verificationOn": "Antwortprüfung ist aktiv.",
+            "verificationOff": "Antwortprüfung ist deaktiviert."
           }
         }
       },
@@ -1173,6 +1199,22 @@
       "submit": "Speichern & erneut versuchen",
       "submitting": "Prüfe…"
     },
+    "claimCheckRunning": "Antwort wird geprüft…",
+    "claimCheckFailed": "Die Prüfung konnte nicht abgeschlossen werden.",
+    "claimCheckNoClaims": "Keine überprüfbaren Aussagen in dieser Antwort.",
+    "claimCheckIncomplete": "Die Antwort konnte nicht vollständig geprüft werden.",
+    "claimCheckNotesTitle": "Hinweise der Prüfung",
+    "claimCheckSummary": "{checked, plural, one {{supported} von # Aussage belegt} other {{supported} von # Aussagen belegt}}",
+    "claimCheckContradicted": "{count} widerlegt",
+    "claimCheckUnsupported": "{count} ohne Belegstelle",
+    "claimCheckPartial": "Prüfung unvollständig – der Wert beschreibt nur den geprüften Teil der Antwort.",
+    "claimCheckVerdictSupported": "belegt",
+    "claimCheckVerdictContradicted": "widerlegt",
+    "claimCheckVerdictUnsupported": "ohne Belegstelle",
+    "claimCheckInferred": "abgeleitet",
+    "claimCheckRechecked": "nachgeprüft",
+    "claimCheckEvidenceQuote": "„{quote}“",
+    "claimCheckEvidenceNamed": "{source}: „{quote}“",
     "runBanner": {
       "label": "Routine-Lauf — {name}",
       "fallbackName": "Routine",

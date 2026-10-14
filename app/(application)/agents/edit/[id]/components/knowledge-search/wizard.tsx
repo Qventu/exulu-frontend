@@ -27,13 +27,14 @@ import { RoutingStep } from "./steps/routing-step";
 import { VocabularyStep } from "./steps/vocabulary-step";
 import { MemoryStep } from "./steps/memory-step";
 import { BehaviorStep } from "./steps/behavior-step";
+import { VerificationStep } from "./steps/verification-step";
 import { ReviewStep } from "./steps/review-step";
 
 export type WizardStepId =
-  | "sources" | "routing" | "vocabulary" | "memory" | "behavior" | "review";
+  | "sources" | "routing" | "vocabulary" | "memory" | "behavior" | "verification" | "review";
 
 export const WIZARD_STEPS: WizardStepId[] = [
-  "sources", "routing", "vocabulary", "memory", "behavior", "review",
+  "sources", "routing", "vocabulary", "memory", "behavior", "verification", "review",
 ];
 
 export function KnowledgeSearchWizard({
@@ -156,6 +157,9 @@ export function KnowledgeSearchWizard({
             />
           )}
           {step === "behavior" && <BehaviorStep draft={draft} setDraft={setDraft} />}
+          {step === "verification" && (
+            <VerificationStep draft={draft} setDraft={setDraft} />
+          )}
           {step === "review" && (
             <ReviewStep draft={draft} contexts={contexts} memoryContextId={memoryContextId} />
           )}
