@@ -59,9 +59,24 @@ export type ClaimCheckRequest = {
 
 export const CLAIM_CHECK_PATH = "/claims/check";
 
-/** Runs a check. Throws on a non-2xx so the caller can show a failed state. */
-export const postClaimCheck = (body: ClaimCheckRequest): Promise<ClaimCheckResult> =>
-  request(CLAIM_CHECK_PATH, "POST", body) as Promise<ClaimCheckResult>;
+/**
+ * Runs a check. Throws on a non-2xx so the caller can show a failed state —
+ * and also when the response is not a usable result.
+ *
+ * That second guard is not belt-and-braces: `request` returns `null` for any
+ * path its demo-mode fixture table does not answer, and a bare
+ * `as Promise<ClaimCheckResult>` turned that into a `result` the panel then
+ * dereferenced (`result.score`). Rejecting routes it into the caller's
+ * existing catch, which is the honest failed state, instead of a crash.
+ */
+export async function postClaimCheck(body: ClaimCheckRequest): Promise<ClaimCheckResult> {
+  const res = await request(CLAIM_CHECK_PATH, "POST", body);
+  const score = res && typeof res === "object" ? (res as { score?: unknown }).score : undefined;
+  if (!score || typeof score !== "object") {
+    throw new Error("claim check returned no result");
+  }
+  return res as ClaimCheckResult;
+}
 
 /**
  * Stored checks for a session, keyed by message id.

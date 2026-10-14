@@ -1030,6 +1030,11 @@ export function useChatSession({
   React.useEffect(() => {
     const prev = claimCheckPrevStatusRef.current;
     claimCheckPrevStatusRef.current = status as ChatStatus;
+    // The check is a REST call, and `request` answers `null` for any path the
+    // demo's fixture table does not cover — which would hand the panel a
+    // result it then dereferences. The sibling follow-up-suggestions effect
+    // short-circuits here for the same reason.
+    if (isDemoMode()) return;
     if (prev !== "streaming" && prev !== "submitted") return; // no transition into "ready" this render
     if (status !== "ready") return;
     if (!messages || messages.length === 0) return;
@@ -1080,6 +1085,8 @@ export function useChatSession({
   React.useEffect(() => {
     const id = currentSession?.id;
     if (!id || id === "new") return;
+    // Same reason as the fire effect above: no REST fixture in demo mode.
+    if (isDemoMode()) return;
     let cancelled = false;
     (async () => {
       // getSessionClaimChecks never throws (it swallows every failure into an

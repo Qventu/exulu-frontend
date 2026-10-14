@@ -26,6 +26,18 @@ describe("postClaimCheck", () => {
     request.mockRejectedValueOnce(new Error("429"));
     await expect(postClaimCheck({ question: "q", answer: "a", sources: [] })).rejects.toThrow("429");
   });
+
+  // M2: `request` answers `null` for any demo-mode path it has no fixture
+  // for, and the cast to `Promise<ClaimCheckResult>` made that a lie the
+  // panel then dereferenced (`result.score`). Rejecting routes it into the
+  // caller's existing catch, which renders the failed state.
+  it.each([[null], [undefined], [{}], [{ status: "ok" }], [{ status: "ok", score: null }], ["not json"]])(
+    "rejects a response that is not a usable result (%p) rather than handing back a fake one",
+    async (res) => {
+      request.mockResolvedValueOnce(res);
+      await expect(postClaimCheck({ question: "q", answer: "a", sources: [] })).rejects.toThrow();
+    },
+  );
 });
 
 describe("getSessionClaimChecks", () => {

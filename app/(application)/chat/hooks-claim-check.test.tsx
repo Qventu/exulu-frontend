@@ -46,14 +46,17 @@ vi.mock("@/lib/api/claim-check", () => ({
   postClaimCheck: vi.fn(),
   getSessionClaimChecks: vi.fn(),
 }));
+vi.mock("@/lib/demo/flag", () => ({ isDemoMode: vi.fn(() => false) }));
 
 import { useChat } from "@ai-sdk/react";
+import { isDemoMode } from "@/lib/demo/flag";
 import { getSessionClaimChecks, postClaimCheck } from "@/lib/api/claim-check";
 import { useChatSession } from "./hooks";
 
 const mockUseChat = vi.mocked(useChat);
 const mockPostClaimCheck = vi.mocked(postClaimCheck);
 const mockGetSessionClaimChecks = vi.mocked(getSessionClaimChecks);
+const mockIsDemoMode = vi.mocked(isDemoMode);
 
 const AGENT: Agent = {
   id: "a1",
@@ -185,6 +188,7 @@ afterEach(() => {
 beforeEach(() => {
   mockGetSessionClaimChecks.mockResolvedValue({});
   mockPostClaimCheck.mockResolvedValue(STUB_RESULT);
+  mockIsDemoMode.mockReturnValue(false);
 });
 
 describe("useChatSession — claim check wiring (F4)", () => {
@@ -441,5 +445,37 @@ describe("useChatSession — claim check wiring (F4)", () => {
 
     expect(result.current.claimChecks.msg_gone).toBeUndefined();
     expect(mockPostClaimCheck).not.toHaveBeenCalled();
+  });
+
+  // M2: `request` answers null for any demo-mode path it has no fixture for,
+  // so the panel would have dereferenced a null result. The sibling
+  // follow-up-suggestions effect short-circuits on isDemoMode() for exactly
+  // this reason.
+  it("never fires in demo mode", async () => {
+    mockIsDemoMode.mockReturnValue(true);
+    const user = userMessage("msg_0", "Womit?");
+    const assistant = triggeredAssistantMessage("msg_1", "Die FST-2XT arbeitet mit 230 Volt.");
+
+    mockUseChat.mockReturnValue(chatReturn([user, assistant], "streaming"));
+    const { result, rerender } = renderHook(
+      () =>
+        useChatSession({
+          agent: AGENT,
+          initialSession: SESSION,
+          initialMessages: [user, assistant],
+          beginLazyCreate: () => () => {},
+        }),
+      { wrapper: Wrapper },
+    );
+
+    mockUseChat.mockReturnValue(chatReturn([user, assistant], "ready"));
+    await act(async () => {
+      rerender();
+    });
+    await act(async () => {});
+
+    expect(mockPostClaimCheck).not.toHaveBeenCalled();
+    expect(mockGetSessionClaimChecks).not.toHaveBeenCalled();
+    expect(result.current.claimChecks.msg_1).toBeUndefined();
   });
 });
