@@ -56,11 +56,26 @@ const VERDICT_KEY: Record<ClaimVerdict, "claimCheckVerdictSupported" | "claimChe
   unsupported: "claimCheckVerdictUnsupported",
 };
 
-/** A quiet, non-judgemental line — used for running/failed/no-claims, none of which carry a score. */
-function QuietLine({ icon: Icon, children }: { icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>; children: ReactNode }) {
+/**
+ * A quiet, non-judgemental line — used for running/failed/no-claims, none of
+ * which carry a score.
+ *
+ * `spin` exists for exactly one caller: the running state's icon is `Loader2`,
+ * whose whole job is to turn, and a hardcoded icon class left it sitting
+ * still.
+ */
+function QuietLine({
+  icon: Icon,
+  spin = false,
+  children,
+}: {
+  icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  spin?: boolean;
+  children: ReactNode;
+}) {
   return (
     <p className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
-      <Icon className="size-3.5 shrink-0" aria-hidden />
+      <Icon className={cn("size-3.5 shrink-0", spin && "animate-spin")} aria-hidden />
       {children}
     </p>
   );
@@ -134,7 +149,34 @@ function EngineNotes({ notes, title }: { notes: string[]; title: string }) {
  * renders alone. A raw source id is never shown to a reader: it is noise,
  * and worse than no attribution.
  */
-export function ClaimCheck({
+export function ClaimCheck(props: {
+  state: ClaimCheckState;
+  guestMode?: boolean;
+  sourceNames?: Record<string, string>;
+}) {
+  if (props.state === null) return null;
+  // One stable live region around every state this panel can be in.
+  //
+  // The panel appears SECONDS after the answer finished streaming and then
+  // changes again when the result lands — two transitions a screen-reader
+  // user gets no cue about otherwise. It has to be one element that OUTLIVES
+  // the transition: `aria-live` announces changes INSIDE an existing region,
+  // so putting it on each state's own markup would announce nothing (the
+  // element itself is what gets replaced). Hence a wrapper that React
+  // reconciles across running -> done, rendered only once there is a state
+  // at all, so an assistant message with no check adds nothing to the DOM.
+  //
+  // `aria-atomic="false"` overrides `role="status"`'s implicit `true`, and
+  // the claim list carries `aria-live="off"`, so expanding it does not
+  // re-read the panel — only the state line changing does.
+  return (
+    <div role="status" aria-live="polite" aria-atomic="false">
+      <ClaimCheckBody {...props} />
+    </div>
+  );
+}
+
+function ClaimCheckBody({
   state,
   guestMode: _guestMode = false,
   sourceNames,
@@ -148,7 +190,11 @@ export function ClaimCheck({
   if (state === null) return null;
 
   if (state.status === "running") {
-    return <QuietLine icon={Loader2}>{t("claimCheckRunning")}</QuietLine>;
+    return (
+      <QuietLine icon={Loader2} spin>
+        {t("claimCheckRunning")}
+      </QuietLine>
+    );
   }
 
   if (state.status === "failed") {
@@ -206,7 +252,9 @@ export function ClaimCheck({
         )}
         <ChevronDownIcon className="h-4 w-4" />
       </SourcesTrigger>
-      <SourcesContent className="w-full gap-3">
+      {/* The expanded list is long and user-initiated: without this it would
+          be re-read by the live region every time the reader opens it. */}
+      <SourcesContent className="w-full gap-3" aria-live="off">
         <EngineNotes notes={result.notes} title={t("claimCheckNotesTitle")} />
         <ol className="space-y-3">
           {result.claims.map((claim) => (

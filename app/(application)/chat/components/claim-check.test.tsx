@@ -258,4 +258,65 @@ describe("ClaimCheck", () => {
     expect(await screen.findByText("Die FST-2XT ist wartungsfrei.")).toBeDefined();
     expect(screen.queryByText(/„/)).toBeNull();
   });
+
+  // M1: the running icon is Loader2 — a spinner whose whole job is to turn —
+  // and QuietLine hardcoded `size-3.5 shrink-0`, so it sat still.
+  it("spins the running icon, and only that one", () => {
+    const { container } = show({ status: "running" });
+    expect(container.querySelector(".animate-spin")).not.toBeNull();
+    cleanup();
+    const failed = show({ status: "failed" });
+    expect(failed.container.querySelector(".animate-spin")).toBeNull();
+  });
+
+  // The panel appears seconds AFTER the answer has finished streaming, so a
+  // screen-reader user gets no cue unless the transition is announced.
+  it("announces the state through a live region, running and done", () => {
+    const running = show({ status: "running" });
+    const region = running.container.querySelector('[role="status"]');
+    expect(region).not.toBeNull();
+    expect(region!.getAttribute("aria-live")).toBe("polite");
+    expect(region!.textContent).toMatch(/wird geprüft/i);
+    cleanup();
+
+    const done = show({ status: "done", result: result() });
+    const doneRegion = done.container.querySelector('[role="status"]');
+    expect(doneRegion).not.toBeNull();
+    expect(doneRegion!.textContent).toMatch(/3 von 4 Aussagen belegt/);
+  });
+
+  // The whole point of the region: `aria-live` announces changes INSIDE an
+  // element that already exists, so a region that is itself replaced on the
+  // transition announces nothing. One wrapper must survive running -> done.
+  it("keeps the same live-region element across the running -> done transition", () => {
+    const { container, rerender } = render(
+      <NextIntlClientProvider locale="de" messages={de as never}>
+        <ClaimCheck state={{ status: "running" }} />
+      </NextIntlClientProvider>,
+    );
+    const before = container.querySelector('[role="status"]');
+    rerender(
+      <NextIntlClientProvider locale="de" messages={de as never}>
+        <ClaimCheck state={{ status: "done", result: result() }} />
+      </NextIntlClientProvider>,
+    );
+    const after = container.querySelector('[role="status"]');
+    expect(after).toBe(before);
+    expect(after!.textContent).toMatch(/3 von 4 Aussagen belegt/);
+  });
+
+  // The claim list is long and the reader opens it deliberately; without the
+  // override it would be re-read by the live region on every expand.
+  it("exempts the expanded claim list from the live region", () => {
+    const { container } = show({ status: "done", result: result() });
+    const off = container.querySelector('[aria-live="off"]');
+    expect(off).not.toBeNull();
+  });
+
+  // An assistant message with no check must add nothing at all — not an
+  // empty live region under every answer in the conversation.
+  it("adds no live region when there is no state", () => {
+    const { container } = show(null);
+    expect(container.querySelector('[role="status"]')).toBeNull();
+  });
 });
