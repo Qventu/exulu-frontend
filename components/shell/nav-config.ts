@@ -424,7 +424,10 @@ export function visibleEntries(
     (entry) =>
       can(user, entry.requires) &&
       flagEnabled(config, entry.configFlag) &&
-      (!allow || allow.has(entry.route)),
+      // A null route is an entry that opens a dialog instead of a page (the
+      // feedback item); in demo mode only routed entries on the allowlist
+      // survive.
+      (!allow || (entry.route !== null && allow.has(entry.route))),
   );
 }
 
