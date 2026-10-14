@@ -12,6 +12,7 @@ import { SessionProvider } from "next-auth/react";
 import * as React from "react";
 
 import { createDemoLink } from "@/lib/demo/apollo-link";
+import { DemoStepRefetch } from "@/components/demo/step-refetch";
 import { getCurrentPosition } from "@/lib/demo/current-position";
 import { getWorld } from "@/lib/demo/fixtures";
 
@@ -209,6 +210,13 @@ const Authenticated = ({
 
   return (
     <ApolloProvider client={client}>
+      {demoMode && (
+        // useSearchParams needs a Suspense boundary or the whole subtree
+        // opts out of static rendering — same rule as TourOverlay.
+        <React.Suspense fallback={null}>
+          <DemoStepRefetch />
+        </React.Suspense>
+      )}
       <SessionProvider>
         <AppShell sidebarDefaultOpen={sidebarDefaultOpen} user={user}>
           {children}
