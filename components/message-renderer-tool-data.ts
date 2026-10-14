@@ -12,6 +12,8 @@
  * terminal state is immutable, so its parsed form never needs recomputing.
  */
 
+import { isDemoMode } from "@/lib/demo/flag";
+import { contextDisplayName } from "@/lib/demo/overlays";
 import type { DynamicToolUIPart } from "ai";
 
 import type { ImageGenerationWidgetConfig } from "@/components/image-generation/image-generation-widget";
@@ -116,10 +118,10 @@ export function computeContextSearchData(part: {
   );
 
   const itemsMap = new Map<string, ItemWithChunks>();
+  const labelFor = (name: string) =>
+    isDemoMode() ? contextDisplayName(name) : name.replaceAll("_", " ");
   const uniqueContexts = new Set(
-    chunks?.map((chunk) =>
-      chunk.context?.name ? chunk.context.name.replaceAll("_", " ") : "",
-    ),
+    chunks?.map((chunk) => (chunk.context?.name ? labelFor(chunk.context.name) : "")),
   );
   const contextNames = Array.from(uniqueContexts).join(", ");
   if (chunks) {

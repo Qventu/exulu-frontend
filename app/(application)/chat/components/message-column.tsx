@@ -19,6 +19,8 @@
  *   stays untouched (item 50).
  */
 
+import { isDemoMode } from "@/lib/demo/flag";
+import { toolLabel } from "@/lib/demo/overlays";
 import type {
   ChatAddToolApproveResponseFunction,
   DynamicToolUIPart,
@@ -123,6 +125,10 @@ function makeUntypedToolPart(
     styleToolName = styleToolName?.replace(/_/g, " ");
     styleToolName =
       styleToolName?.charAt(0).toUpperCase() + styleToolName?.slice(1);
+    // The demo names the tool in German ("Wissenssuche", "Gedächtnis-Eintrag
+    // gespeichert"); the product shows the raw name with underscores spaced.
+    const rawToolName = (untypedToolPart.type ?? "").replace(/^tool-/, "");
+    const toolTitle = isDemoMode() ? toolLabel(rawToolName) : styleToolName;
 
     // Memory cards (spec §4.1) replace the generic approval card for
     // tool-memory_* parts. No "Allow for this chat" — the card is the
@@ -177,7 +183,7 @@ function makeUntypedToolPart(
     return (
       <Tool key={callId} className="mt-3" defaultOpen={false} data-demo-id="chat-tool-trace">
         <ToolHeader
-          title={styleToolName}
+          title={toolTitle}
           className="capitalize"
           type={styleToolName as `tool-${string}`}
           state={untypedToolPart.state}

@@ -1,5 +1,7 @@
 'use client';
 
+import { stripIncompleteCitation } from "@/lib/chat/strip-incomplete-citation";
+import { contextDisplayName } from "@/lib/demo/overlays";
 import { chunkPreviewText } from '@/lib/chunk-preview';
 import { isDemoMode } from '@/lib/demo/flag';
 import { cn } from '@/lib/utils';
@@ -36,7 +38,9 @@ function parseIncompleteMarkdown(text: string): string {
     return text;
   }
 
-  let result = text;
+  // Before the markdown rules: a citation marker is not markdown, and half
+  // of one must not reach the screen (see lib/chat/strip-incomplete-citation).
+  let result = stripIncompleteCitation(text);
 
   // Handle incomplete links and images
   // Pattern: [...] or ![...] where the closing ] is missing
@@ -428,7 +432,9 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
   }, [chunk?.chunk_metadata?.pdf, chunk?.chunk_metadata?.document]);
 
   const page = chunk?.chunk_metadata?.page ? parseInt(chunk.chunk_metadata.page) : 1;
-  const contextLabel = context.replaceAll('_', ' ');
+  // The demo names the knowledge base as the Wissen page does; the product
+  // shows the id with underscores spaced (and Title Case via the class).
+  const contextLabel = isDemoMode() ? contextDisplayName(context) : context.replaceAll('_', ' ');
   let preview: React.ReactNode | undefined = undefined;
   if (pdfUrl) {
     if (loadingPdf) {

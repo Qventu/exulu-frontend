@@ -1,5 +1,7 @@
 "use client";
 
+import { isDemoMode } from "@/lib/demo/flag";
+import { TOOL_STATUS_LABELS } from "@/lib/demo/overlays";
 import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
@@ -37,7 +39,7 @@ export type ToolHeaderProps = {
 };
 
 const getStatusBadge = (status: ToolUIPart["state"]) => {
-  const labels: Record<ToolUIPart["state"], string> = {
+  const english: Record<ToolUIPart["state"], string> = {
     "input-streaming": "Pending",
     "input-available": "Running",
     "approval-requested": "Awaiting Approval",
@@ -46,6 +48,8 @@ const getStatusBadge = (status: ToolUIPart["state"]) => {
     "output-error": "Error",
     "output-denied": "Denied",
   };
+  // No i18n key exists for these; the demo shows German, the product is unchanged.
+  const labels = isDemoMode() ? TOOL_STATUS_LABELS : english;
 
   const icons: Record<ToolUIPart["state"], ReactNode> = {
     "input-streaming": <CircleIcon className="size-4" />,
