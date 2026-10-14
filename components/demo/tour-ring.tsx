@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { isOutsideViewport } from "@/lib/demo/ring-geometry";
+import { isOutsideViewport, shouldRescroll } from "@/lib/demo/ring-geometry";
 
 import { useTour } from "./tour-provider";
 
@@ -116,20 +116,23 @@ export function TourRing() {
     // load after first paint and push the anchor back below the fold after
     // the first scrollIntoView; measured at y=1009 in a 900px viewport.
     let rescrolled = false;
+    let wasInView = false;
     let giveUpTimer: ReturnType<typeof setTimeout> | null = null;
 
     // Only sets state when the box actually moved. The settle ticker below
     // fires every SETTLE_TICK_MS and the animation-end listeners fire for
     // every transition anywhere in the product; an unconditional setRect
     // would re-render the ring for all of them.
-    const measure = () => {
+    const measure = (cause: "scroll" | "layout" = "layout") => {
       if (!observedEl || holding) return;
       const next = observedEl.getBoundingClientRect();
-      if (!rescrolled && isOutsideViewport(next, window.innerHeight)) {
+      const outsideNow = isOutsideViewport(next, window.innerHeight);
+      if (shouldRescroll({ wasInView, outsideNow, cause, alreadyRescrolled: rescrolled })) {
         rescrolled = true;
         observedEl.scrollIntoView({ block: scrollBlock, behavior: "smooth" });
         return;
       }
+      if (!outsideNow) wasInView = true;
       if (
         lastRect &&
         next.top === lastRect.top &&
@@ -158,16 +161,17 @@ export function TourRing() {
     };
     const startSettling = () => {
       stopSettling();
-      settleTicker = setInterval(measure, SETTLE_TICK_MS);
+      settleTicker = setInterval(() => measure(), SETTLE_TICK_MS);
       // Also the hold's deadline: an animation that outlasts the window, or
       // one whose `finished` never settles, must not leave the ring undrawn.
       settleStop = setTimeout(() => { release(); stopSettling(); }, SETTLE_MS);
     };
 
-    const onScroll = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(measure); };
+    const onScroll = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => measure("scroll")); };
+    const onLayout = () => measure();
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", measure);
-    for (const t of ANIMATION_END) document.addEventListener(t, measure, true);
+    for (const t of ANIMATION_END) document.addEventListener(t, onLayout, true);
 
     const detach = () => {
       ro?.disconnect();
@@ -176,6 +180,7 @@ export function TourRing() {
       lastRect = null;
       holding = false;
       rescrolled = false;
+      wasInView = false;
       stopSettling();
     };
 
@@ -189,7 +194,7 @@ export function TourRing() {
         observedEl = el;
         if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; }
         el.scrollIntoView({ block: scrollBlock, behavior: "smooth" });
-        ro = new ResizeObserver(measure);
+        ro = new ResizeObserver(() => measure());
         ro.observe(el);
         // Anything still sliding in? Then this frame's rect is a lie — wait
         // for it to land before drawing anything. See ancestorAnimations.
@@ -229,7 +234,7 @@ export function TourRing() {
       detach();
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", measure);
-      for (const t of ANIMATION_END) document.removeEventListener(t, measure, true);
+      for (const t of ANIMATION_END) document.removeEventListener(t, onLayout, true);
       cancelAnimationFrame(raf);
     };
   }, [anchor, scrollBlock]);
