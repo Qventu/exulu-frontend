@@ -190,13 +190,50 @@ function documentSource(part: Record<string, unknown>, entry: ClaimCheckManifest
 }
 
 /**
+ * The backend's `internet_search` replaces every `[n]` marker in Perplexity's
+ * prose with `JSON.stringify({ url, title, snippet })` of `search_results[n-1]`
+ * (`src/templates/tools/perplexity.ts`), so the body the model read carries
+ * citation JSON where a reader expects `[1]`. Rebuilding that exact string per
+ * index — same keys, same order, same `undefined`-dropping — and putting the
+ * marker back is what keeps an evidence quote shown under a verdict from
+ * being a `{"url":…}` blob.
+ *
+ * Unmatched blobs are left alone rather than scrubbed by a loose regex: the
+ * substitution only happens when `search_results[index]` exists, so a blob
+ * with no match is text the model genuinely received.
+ */
+function restoreCitationMarkers(body: string, results: unknown[]): string {
+  let out = body;
+  results.forEach((r, i) => {
+    if (!isRecord(r)) return;
+    const blob = JSON.stringify({ url: r.url, title: r.title, snippet: r.snippet });
+    if (!out.includes(blob)) return;
+    out = out.split(blob).join(`[${i + 1}]`);
+  });
+  return out;
+}
+
+/**
  * Perplexity answers `{ result: JSON.stringify({ content, citations,
- * search_results }) }`. Each `search_results` entry becomes its own source so
- * a verdict can cite the page it came from; with none, the search's own
- * answer text becomes a single source — zero sources would make the caller
- * refuse the whole check, which would silence every search turn. The
- * produced ids are namespaced `${entry.id}#<index>` so several sources can
- * come from one manifest entry.
+ * search_results }) }`.
+ *
+ * `content` is the prose answer — **the text the assistant paraphrased** —
+ * and each `search_results[i].snippet` is a sentence or two from one page. So
+ * the body is sent ALWAYS, as its own source named for the search, and each
+ * cited page is sent as well so a verdict can still cite the page it came
+ * from. Sending only the snippets (the Stage 4 shape, fix round 3 Critical 1)
+ * scores a claim that paraphrases the body but appears in no snippet
+ * `unsupported` — a false "your answer was unfounded" on an ordinary search
+ * turn, which is the exact failure this feature exists to prevent. Extra
+ * sources cost no model calls: `evidence.ts` selects the top passages per
+ * claim (spec §7).
+ *
+ * Perplexity's synthesis counting as evidence is deliberate, not an
+ * oversight: spec §2 rules out trust tiers, and the engine checks grounding
+ * in the evidence the model was given, not truth.
+ *
+ * The body keeps the bare `entry.id`; the per-page ids are namespaced
+ * `${entry.id}#<index>` so several sources can come from one manifest entry.
  */
 function webSources(part: Record<string, unknown>, entry: ClaimCheckManifestEntry): ClaimCheckSource[] {
   const output = isRecord(part.output) ? part.output : undefined;
@@ -218,9 +255,14 @@ function webSources(part: Record<string, unknown>, entry: ClaimCheckManifestEntr
     if (!content.trim()) return [];
     return [{ id: `${entry.id}#${i}`, name: url ?? title, type: "web" as const, content }];
   });
-  if (cited.length > 0) return cited;
-  const answer = typeof parsed.content === "string" ? parsed.content : "";
-  return answer.trim() ? [{ id: entry.id, name: undefined, type: "web", content: answer }] : [];
+  const raw = typeof parsed.content === "string" ? parsed.content : "";
+  const body = raw.trim() ? restoreCitationMarkers(raw, results) : "";
+  const input = isRecord(part.input) ? part.input : undefined;
+  const query = typeof input?.query === "string" && input.query.trim() ? input.query : undefined;
+  const answer: ClaimCheckSource[] = body.trim()
+    ? [{ id: entry.id, name: query, type: "web", content: body }]
+    : [];
+  return [...answer, ...cited];
 }
 
 /**

@@ -265,8 +265,76 @@ describe("collectSources — web", () => {
       parts: [{ type: "tool-Internet_Search", toolCallId: "call_9", output: { result: JSON.stringify(parsed) } }],
     } as unknown as UIMessage;
     const out = collectSources(message, [{ type: "web", id: "tool:call_9", toolCallId: "call_9" }]);
-    expect(out).toHaveLength(2);
-    expect(out[0]).toEqual({ id: "tool:call_9#0", name: "https://example.com/a", type: "web", content: "Anlagen A\n\n230 Volt." });
+    expect(out.filter((s) => s.id.includes("#"))).toHaveLength(2);
+    expect(out.find((s) => s.id === "tool:call_9#0")).toEqual({
+      id: "tool:call_9#0", name: "https://example.com/a", type: "web", content: "Anlagen A\n\n230 Volt.",
+    });
+  });
+
+  // Fix round 3, Critical 1. The snippets are a sentence or two each; the
+  // text the assistant actually paraphrased is Perplexity's prose answer in
+  // `content`. Sending only the snippets scores a claim that paraphrases the
+  // body but appears in no snippet `unsupported` — a false "your answer was
+  // unfounded" on an ordinary search turn.
+  it("always sends the answer body as its own source, not only when citations are missing", () => {
+    const parsed = {
+      content: "Die Anlage läuft mit 230 Volt und braucht jährliche Wartung.",
+      search_results: [
+        { url: "https://example.com/a", title: "Anlagen A", snippet: "230 Volt." },
+        { url: "https://example.com/b", title: "Anlagen B", snippet: "Wartung jährlich." },
+      ],
+    };
+    const message = {
+      parts: [{
+        type: "tool-Internet_Search",
+        toolCallId: "call_9",
+        input: { query: "Womit arbeitet die FST-2XT?" },
+        output: { result: JSON.stringify(parsed) },
+      }],
+    } as unknown as UIMessage;
+    const out = collectSources(message, [{ type: "web", id: "tool:call_9", toolCallId: "call_9" }]);
+    // The body AND both pages: a verdict can still cite the page it came from.
+    expect(out).toHaveLength(3);
+    expect(out.find((s) => s.id === "tool:call_9")).toEqual({
+      id: "tool:call_9",
+      name: "Womit arbeitet die FST-2XT?",
+      type: "web",
+      content: "Die Anlage läuft mit 230 Volt und braucht jährliche Wartung.",
+    });
+  });
+
+  // The backend's internet_search substitutes each `[n]` marker in the prose
+  // for `JSON.stringify({ url, title, snippet })` of search_results[n-1]
+  // (src/templates/tools/perplexity.ts). Left alone, an evidence quote shown
+  // to a reader can be a `{"url":…}` blob.
+  it("puts the inline citation markers back, so a quote never surfaces a {\"url\":…} blob", () => {
+    const first = { url: "https://example.com/a", title: "Anlagen A", snippet: "230 Volt." };
+    const second = { url: "https://example.com/b", title: "Anlagen B", snippet: "Wartung jährlich." };
+    const parsed = {
+      content:
+        `Die Anlage läuft mit 230 Volt${JSON.stringify(first)} und wird jährlich gewartet${JSON.stringify(second)}.`,
+      search_results: [first, second],
+    };
+    const message = {
+      parts: [{ type: "tool-Internet_Search", toolCallId: "call_9", output: { result: JSON.stringify(parsed) } }],
+    } as unknown as UIMessage;
+    const body = collectSources(message, [{ type: "web", id: "tool:call_9", toolCallId: "call_9" }])
+      .find((s) => s.id === "tool:call_9");
+    expect(body?.content).toBe("Die Anlage läuft mit 230 Volt[1] und wird jährlich gewartet[2].");
+    expect(body?.content).not.toContain('{"url"');
+  });
+
+  it("still sends the body when the search cited nothing usable", () => {
+    const message = {
+      parts: [{
+        type: "tool-Internet_Search",
+        toolCallId: "call_9",
+        output: { result: JSON.stringify({ content: "Nur Prosa.", search_results: [{ url: "https://x" }] }) },
+      }],
+    } as unknown as UIMessage;
+    expect(collectSources(message, [{ type: "web", id: "tool:call_9", toolCallId: "call_9" }])).toEqual([
+      { id: "tool:call_9", name: undefined, type: "web", content: "Nur Prosa." },
+    ]);
   });
 
   // Review Focus 3 — zero sources here would trip the completeness guard and

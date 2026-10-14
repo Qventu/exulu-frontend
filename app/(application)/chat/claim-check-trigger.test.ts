@@ -150,9 +150,14 @@ const memoryMaskedByOverContributingWebMessage = {
 
 describe("claimCheckRequestFor", () => {
   it("runs the check when every manifest entry produced at least one source", () => {
-    // A web entry yields two sources, so a count comparison would wrongly refuse.
+    // A web entry yields THREE sources — the answer body plus its two cited
+    // pages (fix round 3, Critical 1) — so a count comparison would wrongly
+    // refuse this fully-covered turn.
     const body = claimCheckRequestFor({ message: webAndKbMessage, question: "q", session: "s", agentId: "a", locale: "de" });
-    expect(body?.sources).toHaveLength(3);
+    expect(body?.sources).toHaveLength(4);
+    // The prose answer the assistant paraphrased has to be in there, not
+    // just the one-sentence snippets.
+    expect(body?.sources.map((s) => s.content)).toContain("Die Anlage läuft mit 230 Volt.");
   });
 
   // The spec's §8 end-to-end case: the turn that produced NOTHING before Stage 4.
