@@ -30,6 +30,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { format } from "date-fns";
+import { de, enUS } from "date-fns/locale";
 import {
   CheckCircle,
   ChevronsLeft,
@@ -39,7 +40,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import {
@@ -97,6 +98,12 @@ export function EvalRunsTable({
 }: EvalRunsTableProps) {
   const t = useTranslations("evals.runs");
   const tMatrix = useTranslations("evals.runs.matrix");
+  // date-fns formats month names in English unless told otherwise; the run
+  // headers read "Oct 6, 2026" on a German screen.
+  const locale = useLocale();
+  const runDateFormat = locale.startsWith("de")
+    ? { pattern: "d. MMM yyyy · HH:mm", locale: de }
+    : { pattern: "MMM d, yyyy · HH:mm", locale: enUS };
 
   const [visibleRuns, setVisibleRuns] = useState(INITIAL_VISIBLE);
   const [selectedResult, setSelectedResult] = useState<JobResult | null>(null);
@@ -326,7 +333,7 @@ export function EvalRunsTable({
                 {run.name}
               </div>
               <div className="text-[10px] leading-tight text-muted-foreground">
-                {format(new Date(run.createdAt), "MMM d, yyyy · HH:mm")}
+                {format(new Date(run.createdAt), runDateFormat.pattern, { locale: runDateFormat.locale })}
               </div>
               <div className="mx-auto max-w-[120px] truncate text-[10px] leading-tight text-muted-foreground">
                 {agentsMap.get(run.agent_id)?.name || run.agent_id}
