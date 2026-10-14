@@ -479,7 +479,10 @@
           "editSources": "Knowledge bases",
           "editRouting": "Routing",
           "editVocabulary": "Vocabulary",
-          "editBehavior": "Behavior"
+          "editBehavior": "Behavior",
+          "claimCheckOn": "verification on",
+          "claimCheckOff": "verification off",
+          "editVerification": "Verification"
         },
         "wizard": {
           "title": "Configure knowledge search",
@@ -506,6 +509,10 @@
             "behavior": {
               "label": "Behavior",
               "description": "Tune how results are ranked and how many are returned."
+            },
+            "verification": {
+              "label": "Verification",
+              "description": "Checks, after streaming, which statements in the answer are backed by the sources found. Costs extra model calls per answer."
             },
             "review": {
               "label": "Review",
@@ -631,6 +638,21 @@
             "maxStepsLabel": "Max knowledge searches per message",
             "maxStepsHint": "Caps how many knowledge searches the assistant may run for one message. Once spent, the search tool is disabled for the rest of the turn. 0 = no search-specific cap (the overall tool-step budget still applies)."
           },
+          "verification": {
+            "claimCheckStepTitle": "Verification",
+            "claimCheckStepHelp": "Checks, after streaming, which statements in the answer are backed by the sources found. Costs extra model calls per answer.",
+            "claimCheckEnabled": "Enable verification",
+            "claimCheckModel": "Model for verification",
+            "claimCheckModelHelp": "A fast, cheap model is enough. Empty = the agent's default model.",
+            "claimCheckFidelity": "Check depth",
+            "claimCheckFidelityFast": "Fast",
+            "claimCheckFidelityPaper": "Thorough",
+            "claimCheckThresholds": "Thresholds",
+            "claimCheckThresholdWarnLabel": "Warn threshold",
+            "claimCheckThresholdAlertLabel": "Alert threshold",
+            "claimCheckReRetrieve": "Re-search when evidence is missing",
+            "claimCheckShowExternal": "Also show to external users and guests"
+          },
           "review": {
             "intro": "Here's what will be applied. Use the step buttons above to change anything.",
             "sourcesTitle": "{count, plural, one {# knowledge base} other {# knowledge bases}}",
@@ -643,7 +665,10 @@
             "memoryOff": "Memory is off for retrieval.",
             "behaviorTitle": "Behavior",
             "behaviorLine": "Top {topK} results · backup trigger {percent}% · {reranker}",
-            "noReranker": "no reranker"
+            "noReranker": "no reranker",
+            "verificationTitle": "Verification",
+            "verificationOn": "Verification is on.",
+            "verificationOff": "Verification is off."
           }
         }
       },

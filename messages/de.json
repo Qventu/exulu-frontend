@@ -479,7 +479,10 @@
           "editSources": "Wissensdatenbanken",
           "editRouting": "Routing",
           "editVocabulary": "Fachvokabular",
-          "editBehavior": "Verhalten"
+          "editBehavior": "Verhalten",
+          "claimCheckOn": "Antwortprüfung aktiv",
+          "claimCheckOff": "Antwortprüfung inaktiv",
+          "editVerification": "Antwortprüfung"
         },
         "wizard": {
           "title": "Wissenssuche konfigurieren",
@@ -506,6 +509,10 @@
             "behavior": {
               "label": "Verhalten",
               "description": "Passen Sie an, wie Ergebnisse gewichtet werden und wie viele zurückgegeben werden."
+            },
+            "verification": {
+              "label": "Antwortprüfung",
+              "description": "Prüft nach dem Streamen, welche Aussagen der Antwort von den gefundenen Quellen gedeckt sind. Kostet zusätzliche Modellaufrufe pro Antwort."
             },
             "review": {
               "label": "Überprüfung",
@@ -631,6 +638,21 @@
             "maxStepsLabel": "Max. Wissenssuchen pro Nachricht",
             "maxStepsHint": "Begrenzt, wie viele Wissenssuchen der Assistent für eine Nachricht ausführen darf. Danach ist die Suche für den Rest der Nachricht deaktiviert. 0 = keine suchspezifische Grenze (das allgemeine Tool-Schritte-Budget gilt weiterhin)."
           },
+          "verification": {
+            "claimCheckStepTitle": "Antwortprüfung",
+            "claimCheckStepHelp": "Prüft nach dem Streamen, welche Aussagen der Antwort von den gefundenen Quellen gedeckt sind. Kostet zusätzliche Modellaufrufe pro Antwort.",
+            "claimCheckEnabled": "Antwortprüfung aktivieren",
+            "claimCheckModel": "Modell für die Prüfung",
+            "claimCheckModelHelp": "Ein schnelles, günstiges Modell genügt. Leer = Standardmodell des Agenten.",
+            "claimCheckFidelity": "Prüftiefe",
+            "claimCheckFidelityFast": "Schnell",
+            "claimCheckFidelityPaper": "Gründlich",
+            "claimCheckThresholds": "Schwellenwerte",
+            "claimCheckThresholdWarnLabel": "Warnschwelle",
+            "claimCheckThresholdAlertLabel": "Alarmschwelle",
+            "claimCheckReRetrieve": "Bei fehlender Belegstelle erneut suchen",
+            "claimCheckShowExternal": "Auch externen Nutzern und Gästen anzeigen"
+          },
           "review": {
             "intro": "Das wird übernommen. Verwenden Sie die Schritt-Schaltflächen oben, um etwas zu ändern.",
             "sourcesTitle": "{count, plural, one {# Wissensdatenbank} other {# Wissensdatenbanken}}",
@@ -643,7 +665,10 @@
             "memoryOff": "Gedächtnis ist für den Abruf deaktiviert.",
             "behaviorTitle": "Verhalten",
             "behaviorLine": "Top {topK} Ergebnisse · Backup-Auslöser {percent}% · {reranker}",
-            "noReranker": "kein Reranker"
+            "noReranker": "kein Reranker",
+            "verificationTitle": "Antwortprüfung",
+            "verificationOn": "Antwortprüfung ist aktiv.",
+            "verificationOff": "Antwortprüfung ist deaktiviert."
           }
         }
       },
