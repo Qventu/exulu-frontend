@@ -338,7 +338,11 @@ function ClaimRow({
             const typeLabel = typeKey ? t(typeKey) : undefined;
             return (
               <li key={i} className="text-xs italic text-muted-foreground">
-                {typeLabel && <span className="not-italic font-medium">{typeLabel}: </span>}
+                {/* A dash, not a colon: `claimCheckEvidenceNamed` already
+                    reads "{source}: „{quote}“", so a colon here would stack
+                    two colons in one line ("Erinnerung: Sprache: „…“") and
+                    read as a mistake. */}
+                {typeLabel && <span className="not-italic font-medium">{typeLabel} – </span>}
                 {name
                   ? t("claimCheckEvidenceNamed", { source: name, quote: evidence.quote })
                   : t("claimCheckEvidenceQuote", { quote: evidence.quote })}

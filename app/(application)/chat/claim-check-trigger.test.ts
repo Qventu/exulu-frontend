@@ -108,6 +108,46 @@ const oneMissingMessage = {
   ],
 } as unknown as UIMessage;
 
+// The regression a future "simplification" would reintroduce: a memory
+// entry with no matching `recalledMemories` item (unrecoverable) alongside a
+// web entry whose payload cites TWO pages. That recovers exactly two
+// sources for two manifest entries, so `sources.length ===
+// trigger.sources.length` AGREES and would run the check — while the memory
+// entry contributed nothing and the answer may rest on evidence never sent.
+// Every other fixture in this file happens to have total-count and coverage
+// disagree together; this one is the single case that tells them apart, so
+// reverting the per-entry check back to a bare length comparison fails only
+// here.
+const memoryMaskedByOverContributingWebMessage = {
+  id: "msg_mem_masked",
+  role: "assistant",
+  metadata: {
+    claimCheck: {
+      enabled: true,
+      sources: [
+        { type: "memory", id: "memory:m_9" },
+        { type: "web", id: "tool:call_9", toolCallId: "call_9" },
+      ],
+    },
+    recalledMemories: [],
+  },
+  parts: [
+    {
+      type: "tool-Internet_Search",
+      toolCallId: "call_9",
+      output: {
+        result: JSON.stringify({
+          search_results: [
+            { url: "https://example.com/a", title: "Anlagen A", snippet: "230 Volt." },
+            { url: "https://example.com/b", title: "Anlagen B", snippet: "Wartung jährlich." },
+          ],
+        }),
+      },
+    },
+    { type: "text", text: "Die FST-2XT arbeitet mit 230 Volt." },
+  ],
+} as unknown as UIMessage;
+
 describe("claimCheckRequestFor", () => {
   it("runs the check when every manifest entry produced at least one source", () => {
     // A web entry yields two sources, so a count comparison would wrongly refuse.
@@ -126,6 +166,24 @@ describe("claimCheckRequestFor", () => {
     // Two entries named, only one recoverable: the answer may rest on evidence we
     // cannot send, and a partial check reports grounded claims unsupported.
     expect(claimCheckRequestFor({ message: oneMissingMessage, question: "q", session: "s", agentId: "a", locale: "de" })).toBeNull();
+  });
+
+  // The fixture a count comparison cannot tell apart from a covered turn:
+  // two sources recovered for two entries (counts agree), but both sources
+  // came from the web entry and the memory entry contributed zero. A guard
+  // that only checked `sources.length !== trigger.sources.length` would run
+  // this check and let a claim grounded in nothing from the missing memory
+  // score as `unsupported` — refusing here is the only thing standing
+  // between a "simplify the guard" edit and that regression.
+  it("refuses when one entry contributed nothing, even though another entry's extra sources make the totals match", () => {
+    const body = claimCheckRequestFor({
+      message: memoryMaskedByOverContributingWebMessage,
+      question: "q",
+      session: "s",
+      agentId: "a",
+      locale: "de",
+    });
+    expect(body).toBeNull();
   });
 
   it("builds the exact body for a triggered message", () => {

@@ -327,6 +327,26 @@ describe("ClaimCheck", () => {
     expect(await screen.findByText(/Erinnerung/i)).toBeDefined();
   });
 
+  // `claimCheckEvidenceNamed` is already "{source}: „{quote}“", so a colon
+  // after the type label would stack two colons in one line
+  // ("Erinnerung: Sprache: „…“") and read as a mistake. Pins the exact
+  // rendered line — a dash between the label and the name, one colon
+  // total — since no test asserted the concatenated string before this.
+  it("puts a dash, not a second colon, between the type label and the named source", async () => {
+    const { container } = show(
+      { status: "done", result: resultWithEvidence({ sourceId: "memory:m_7" }) },
+      { sourceNames: { "memory:m_7": "Sprache" }, sourceTypes: { "memory:m_7": "memory" } },
+    );
+    const trigger = container.querySelector("[data-claim-check-trigger]") as HTMLElement;
+    trigger.click();
+    // The type label is its own sibling <span>, so the evidence <li>'s own
+    // direct text node is only "Sprache: „bevorzugt Deutsch“" — matched
+    // here — while its full `textContent` (span + text node) is the exact
+    // line a reader sees.
+    const evidenceLine = await screen.findByText(/Sprache: „bevorzugt Deutsch“/);
+    expect(evidenceLine.textContent).toBe("Erinnerung – Sprache: „bevorzugt Deutsch“");
+  });
+
   // A type this client does not recognise (or has no entry for) must never
   // surface as a raw key or a raw source id — it falls back to the same
   // plain name+quote line the panel has always rendered.
