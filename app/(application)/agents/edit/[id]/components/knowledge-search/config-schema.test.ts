@@ -100,12 +100,12 @@ describe("unknown keys in json blobs survive a load/save roundtrip", () => {
 });
 
 describe("serializeWizardConfig", () => {
-  test("emits exactly 15 entries with the platform value conventions", () => {
+  test("emits exactly 16 entries with the platform value conventions", () => {
     const cfg = defaultWizardConfig();
     cfg.managedContext = true;
     cfg.tuning.topK = 7;
     const entries = serializeWizardConfig(cfg);
-    expect(entries).toHaveLength(15);
+    expect(entries).toHaveLength(16);
     const byName = Object.fromEntries(entries.map((e) => [e.name, e]));
     expect(byName["max_steps"]).toEqual({ name: "max_steps", variable: "0", type: "number" });
     expect(byName["managed_context"]).toEqual({ name: "managed_context", variable: "true", type: "boolean" });
@@ -225,9 +225,9 @@ describe("claim_check", () => {
   });
 
   // Review Focus 5
-  it("serialises exactly 15 entries, with claim_check among them", () => {
+  it("serialises exactly 16 entries, with claim_check among them", () => {
     const entries = serializeWizardConfig(parseWizardConfig([]));
-    expect(entries).toHaveLength(15);
+    expect(entries).toHaveLength(16);
     expect(entries.map((e) => e.name)).toContain("claim_check");
   });
 
@@ -279,5 +279,50 @@ describe("claim_check", () => {
     ]);
     expect(cfg.claimCheck.thresholds).toEqual({ warn: 0, alert: 1 });
     expect(cfg.claimCheck.enabled).toBe(true);
+  });
+});
+
+// The backend's tool declares 16 config keys; this schema emitted 15, and a
+// key it does not declare is DELETED on every save. The missing one was
+// `suppress_duplicate_passages`, a default-on retrieval flag — and the
+// verification step makes this wizard the only way to enable claim check, so
+// every admin turning the feature on also wiped that key in the same save,
+// reverting an explicit `false` to default-on.
+describe("suppress_duplicate_passages", () => {
+  it("defaults to on, like the backend, when the key is absent or empty", () => {
+    expect(parseWizardConfig([]).suppressDuplicatePassages).toBe(true);
+    expect(
+      parseWizardConfig([{ name: "suppress_duplicate_passages", variable: "", type: "boolean" }])
+        .suppressDuplicatePassages,
+    ).toBe(true);
+  });
+
+  it("round-trips an explicit false instead of wiping it back to the default", () => {
+    const cfg = parseWizardConfig([
+      { name: "suppress_duplicate_passages", variable: "false", type: "boolean" },
+    ]);
+    expect(cfg.suppressDuplicatePassages).toBe(false);
+    const entries = serializeWizardConfig(cfg);
+    expect(entries.find((e) => e.name === "suppress_duplicate_passages")).toEqual({
+      name: "suppress_duplicate_passages",
+      variable: "false",
+      type: "boolean",
+    });
+    expect(parseWizardConfig(entries).suppressDuplicatePassages).toBe(false);
+  });
+
+  it("serialises an explicit true as the platform's boolean convention", () => {
+    const entries = serializeWizardConfig(parseWizardConfig([]));
+    expect(entries.find((e) => e.name === "suppress_duplicate_passages")).toEqual({
+      name: "suppress_duplicate_passages",
+      variable: "true",
+      type: "boolean",
+    });
+  });
+
+  it("is the 16th key, so enabling claim check no longer wipes it", () => {
+    const names = serializeWizardConfig(defaultWizardConfig()).map((e) => e.name);
+    expect(names).toHaveLength(16);
+    expect(names).toContain("suppress_duplicate_passages");
   });
 });

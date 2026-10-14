@@ -2,7 +2,7 @@
  * config-schema.ts — single source of truth for the knowledge-search wizard
  * config: types, zod schemas, parse / serialize / digest helpers.
  *
- * Shapes mirror the backend pipeline exactly (15-entry serialisation contract).
+ * Shapes mirror the backend pipeline exactly (16-entry serialisation contract).
  * Never throws — all parse paths fall back to schema defaults on failure.
  */
 
@@ -52,6 +52,20 @@ export type WizardConfig = {
   projectSearch: boolean;
   /** Show source references (item names, IDs, chunk info) to external users and guests. Default on. */
   showSources: boolean;
+  /**
+   * Drop near-identical retrieved passages during top-K selection (and widen
+   * the identifier-pin budget, which is only safe together with it). Default
+   * ON, like the backend.
+   *
+   * No control in the wizard — same contract as claimCheck's `completions`
+   * and `caps`: a key this schema does not declare is DELETED on every save,
+   * so it is declared and round-tripped so an operator who set it through
+   * the API does not lose it. Spec §10 deferred this as a separate change
+   * until the verification step made this wizard the only way to enable
+   * claim check: every admin turning that on would then have wiped this key
+   * in the same save, reverting an explicit `false` to default-on.
+   */
+  suppressDuplicatePassages: boolean;
   knowledgeBases: Record<string, WizardKbProfile>;
   routing: { rules: RoutingRule[] };
   vocabulary: {
@@ -352,6 +366,7 @@ export function defaultWizardConfig(): WizardConfig {
     logging: false,
     projectSearch: true,
     showSources: true,
+    suppressDuplicatePassages: true,
     knowledgeBases: {},
     routing: { rules: [] },
     vocabulary: { glossary: [], identifiers: [], rewrites: [], styleHint: "" },
@@ -395,6 +410,13 @@ export function parseWizardConfig(
   const showSourcesRaw = findEntry(list, "show_sources_to_external_users")?.variable;
   const showSources =
     showSourcesRaw === undefined || showSourcesRaw === "" ? true : boolVal(showSourcesRaw);
+  // Empty reads as the default, exactly as the backend's parse does — the
+  // tool's own declaration says "leave empty to keep it on".
+  const suppressDuplicatePassagesRaw = findEntry(list, "suppress_duplicate_passages")?.variable;
+  const suppressDuplicatePassages =
+    suppressDuplicatePassagesRaw === undefined || suppressDuplicatePassagesRaw === ""
+      ? true
+      : boolVal(suppressDuplicatePassagesRaw);
 
   // --- json fields ---
   const knowledgeBases = safeZodParse(
@@ -439,6 +461,7 @@ export function parseWizardConfig(
     logging,
     projectSearch,
     showSources,
+    suppressDuplicatePassages,
     knowledgeBases,
     routing,
     vocabulary,
@@ -449,7 +472,7 @@ export function parseWizardConfig(
 }
 
 // ---------------------------------------------------------------------------
-// serializeWizardConfig — exactly 15 entries in declaration order
+// serializeWizardConfig — exactly 16 entries in declaration order
 // ---------------------------------------------------------------------------
 
 export function serializeWizardConfig(cfg: WizardConfig): ToolConfigEntry[] {
@@ -466,6 +489,7 @@ export function serializeWizardConfig(cfg: WizardConfig): ToolConfigEntry[] {
     { name: "logging", variable: cfg.logging ? "true" : "false", type: "boolean" },
     { name: "project_search", variable: cfg.projectSearch ? "true" : "false", type: "boolean" },
     { name: "show_sources_to_external_users", variable: cfg.showSources ? "true" : "false", type: "boolean" },
+    { name: "suppress_duplicate_passages", variable: cfg.suppressDuplicatePassages ? "true" : "false", type: "boolean" },
     // json entries (JSON.stringify'd)
     { name: "knowledge_bases", variable: JSON.stringify(cfg.knowledgeBases), type: "json" },
     { name: "routing", variable: JSON.stringify(cfg.routing), type: "json" },
