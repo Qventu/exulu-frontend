@@ -80,10 +80,29 @@ describe("ClaimCheck", () => {
     expect(screen.queryByText(/belegt/i)).toBeNull();
   });
 
+  // M3: the summary used one invariable plural, so a one-claim answer read
+  // "1 von 1 Aussagen belegt". The neighbouring wizard keys all use ICU
+  // plurals.
+  it("uses the singular when exactly one claim was checked", () => {
+    show({
+      status: "done",
+      result: result({
+        score: { claims: 1, supported: 1, contradicted: 0, unsupported: 0, unsupportedShare: 0, label: "ok" },
+        claims: [],
+      }),
+    });
+    expect(screen.getByText("1 von 1 Aussage belegt")).toBeDefined();
+  });
+
+  it("uses the plural for more than one", () => {
+    show({ status: "done", result: result() });
+    expect(screen.getByText("3 von 4 Aussagen belegt")).toBeDefined();
+  });
+
   it("leads with the counts and names contradictions separately from missing evidence", () => {
     show({ status: "done", result: result() });
     expect(screen.getByText(/3 von 4 Aussagen belegt/i)).toBeDefined();
-    expect(screen.getByText(/1 widersprochen/i)).toBeDefined();
+    expect(screen.getByText(/1 widerlegt/i)).toBeDefined();
   });
 
   // Mirror of the above with the two counts swapped: every other fixture in
@@ -101,7 +120,7 @@ describe("ClaimCheck", () => {
     });
     expect(screen.getByText(/2 von 4 Aussagen belegt/i)).toBeDefined();
     expect(screen.getByText(/2 ohne Belegstelle/i)).toBeDefined();
-    expect(screen.queryByText(/widersprochen/i)).toBeNull();
+    expect(screen.queryByText(/widerlegt/i)).toBeNull();
   });
 
   // Review Focus 3

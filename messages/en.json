@@ -512,7 +512,7 @@
             },
             "verification": {
               "label": "Verification",
-              "description": "Checks, after streaming, which statements in the answer are backed by the sources found. Costs extra model calls per answer."
+              "description": "Checks the finished answer for which of its statements are backed by the sources found. Costs extra model calls per answer."
             },
             "review": {
               "label": "Review",
@@ -1199,12 +1199,12 @@
       "submit": "Save & retry",
       "submitting": "Checking…"
     },
-    "claimCheckRunning": "Checking the answer …",
+    "claimCheckRunning": "Checking the answer…",
     "claimCheckFailed": "The check could not be completed.",
     "claimCheckNoClaims": "No checkable statements in this answer.",
     "claimCheckIncomplete": "The answer could not be checked in full.",
     "claimCheckNotesTitle": "Notes from the check",
-    "claimCheckSummary": "{supported} of {checked} statements supported",
+    "claimCheckSummary": "{checked, plural, one {{supported} of # statement supported} other {{supported} of # statements supported}}",
     "claimCheckContradicted": "{count} contradicted",
     "claimCheckUnsupported": "{count} without evidence",
     "claimCheckPartial": "Check incomplete — the score describes only the part of the answer that was checked.",

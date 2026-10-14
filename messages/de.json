@@ -512,7 +512,7 @@
             },
             "verification": {
               "label": "Antwortprüfung",
-              "description": "Prüft nach dem Streamen, welche Aussagen der Antwort von den gefundenen Quellen gedeckt sind. Kostet zusätzliche Modellaufrufe pro Antwort."
+              "description": "Prüft die fertige Antwort darauf, welche ihrer Aussagen von den gefundenen Quellen gedeckt sind. Kostet zusätzliche Modellaufrufe pro Antwort."
             },
             "review": {
               "label": "Überprüfung",
@@ -1199,17 +1199,17 @@
       "submit": "Speichern & erneut versuchen",
       "submitting": "Prüfe…"
     },
-    "claimCheckRunning": "Antwort wird geprüft …",
+    "claimCheckRunning": "Antwort wird geprüft…",
     "claimCheckFailed": "Die Prüfung konnte nicht abgeschlossen werden.",
     "claimCheckNoClaims": "Keine überprüfbaren Aussagen in dieser Antwort.",
     "claimCheckIncomplete": "Die Antwort konnte nicht vollständig geprüft werden.",
     "claimCheckNotesTitle": "Hinweise der Prüfung",
-    "claimCheckSummary": "{supported} von {checked} Aussagen belegt",
-    "claimCheckContradicted": "{count} widersprochen",
+    "claimCheckSummary": "{checked, plural, one {{supported} von # Aussage belegt} other {{supported} von # Aussagen belegt}}",
+    "claimCheckContradicted": "{count} widerlegt",
     "claimCheckUnsupported": "{count} ohne Belegstelle",
     "claimCheckPartial": "Prüfung unvollständig – der Wert beschreibt nur den geprüften Teil der Antwort.",
     "claimCheckVerdictSupported": "belegt",
-    "claimCheckVerdictContradicted": "widersprochen",
+    "claimCheckVerdictContradicted": "widerlegt",
     "claimCheckVerdictUnsupported": "ohne Belegstelle",
     "claimCheckInferred": "abgeleitet",
     "claimCheckRechecked": "nachgeprüft",
