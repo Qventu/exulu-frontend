@@ -86,6 +86,24 @@ describe("ClaimCheck", () => {
     expect(screen.getByText(/1 widersprochen/i)).toBeDefined();
   });
 
+  // Mirror of the above with the two counts swapped: every other fixture in
+  // this file sets `unsupported: 0`, so without this case nothing would
+  // catch a copy-paste slip in the unsupported badge line — wrong key, wrong
+  // variant, or an accidental reuse of the `contradicted` one. Requirement 2
+  // ("contradicted and unsupported are never merged into one count or one
+  // colour") needs both halves pinned, not just the contradicted one.
+  it("names missing evidence separately from contradictions when it is unsupported, not contradicted, that is non-zero", () => {
+    show({
+      status: "done",
+      result: result({
+        score: { claims: 4, supported: 2, contradicted: 0, unsupported: 2, unsupportedShare: 0.5, label: "warn" },
+      }),
+    });
+    expect(screen.getByText(/2 von 4 Aussagen belegt/i)).toBeDefined();
+    expect(screen.getByText(/2 ohne Belegstelle/i)).toBeDefined();
+    expect(screen.queryByText(/widersprochen/i)).toBeNull();
+  });
+
   // Review Focus 3
   it("says nothing was checkable instead of showing a zero score when label is n/a", () => {
     show({

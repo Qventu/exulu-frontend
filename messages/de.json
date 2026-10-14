@@ -1184,7 +1184,7 @@
     "claimCheckVerdictContradicted": "widersprochen",
     "claimCheckVerdictUnsupported": "ohne Belegstelle",
     "claimCheckInferred": "abgeleitet",
-    "claimCheckRechecked": "nachgeschlagen",
+    "claimCheckRechecked": "nachgeprüft",
     "claimCheckEvidenceQuote": "„{quote}“",
     "claimCheckEvidenceNamed": "{source}: „{quote}“",
     "runBanner": {
