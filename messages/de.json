@@ -639,11 +639,9 @@
             "maxStepsHint": "Begrenzt, wie viele Wissenssuchen der Assistent für eine Nachricht ausführen darf. Danach ist die Suche für den Rest der Nachricht deaktiviert. 0 = keine suchspezifische Grenze (das allgemeine Tool-Schritte-Budget gilt weiterhin)."
           },
           "verification": {
-            "claimCheckStepTitle": "Antwortprüfung",
-            "claimCheckStepHelp": "Prüft nach dem Streamen, welche Aussagen der Antwort von den gefundenen Quellen gedeckt sind. Kostet zusätzliche Modellaufrufe pro Antwort.",
             "claimCheckEnabled": "Antwortprüfung aktivieren",
             "claimCheckModel": "Modell für die Prüfung",
-            "claimCheckModelHelp": "Ein schnelles, günstiges Modell genügt. Leer = Standardmodell des Agenten.",
+            "claimCheckModelHelp": "Ein schnelles, günstiges Modell genügt. Leer = zuerst das Hilfsmodell des Agenten, sonst dessen eigenes Modell.",
             "claimCheckFidelity": "Prüftiefe",
             "claimCheckFidelityFast": "Schnell",
             "claimCheckFidelityPaper": "Gründlich",

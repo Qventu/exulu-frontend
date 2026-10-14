@@ -639,11 +639,9 @@
             "maxStepsHint": "Caps how many knowledge searches the assistant may run for one message. Once spent, the search tool is disabled for the rest of the turn. 0 = no search-specific cap (the overall tool-step budget still applies)."
           },
           "verification": {
-            "claimCheckStepTitle": "Verification",
-            "claimCheckStepHelp": "Checks, after streaming, which statements in the answer are backed by the sources found. Costs extra model calls per answer.",
             "claimCheckEnabled": "Enable verification",
             "claimCheckModel": "Model for verification",
-            "claimCheckModelHelp": "A fast, cheap model is enough. Empty = the agent's default model.",
+            "claimCheckModelHelp": "A fast, cheap model is enough. Empty = first the agent's utility model, then its own model.",
             "claimCheckFidelity": "Check depth",
             "claimCheckFidelityFast": "Fast",
             "claimCheckFidelityPaper": "Thorough",

@@ -56,10 +56,6 @@ export function VerificationStep({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        {t("editor.knowledge.wizard.verification.claimCheckStepHelp")}
-      </p>
-
       <div className="flex items-start justify-between gap-3 rounded-md border p-3">
         <div className="space-y-0.5">
           <p className="text-xs font-medium">
