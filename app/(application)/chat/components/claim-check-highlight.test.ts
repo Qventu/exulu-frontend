@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseMarkdownIntoBlocks } from "streamdown";
 
+import type { ClaimCheckSentence } from "@/lib/api/claim-check";
 import { blockOffsets, sentencesInBlock } from "./claim-check-highlight";
 
 // The premise this whole module relies on: streamdown's block splitter must
@@ -39,11 +40,11 @@ describe("blockOffsets", () => {
 });
 
 describe("sentencesInBlock", () => {
-  const sentences = [
+  const sentences: ClaimCheckSentence[] = [
     { index: 0, start: 0, end: 5, state: "checked", claimIds: ["c1"] },
     { index: 1, start: 6, end: 11, state: "no_verifiable_content", claimIds: [] },
     { index: 2, start: 12, end: 17, state: "checked", claimIds: ["c2"] },
-  ] as never[];
+  ];
 
   it("selects only the sentences that fall inside the block's range", () => {
     expect(sentencesInBlock(sentences, 6, 12).map((s) => s.index)).toEqual([1]);
@@ -55,5 +56,18 @@ describe("sentencesInBlock", () => {
 
   it("returns an empty list when the block holds no sentences", () => {
     expect(sentencesInBlock(sentences, 100, 200)).toEqual([]);
+  });
+
+  it("includes a sentence whose start sits exactly on blockStart (the lower boundary is inclusive)", () => {
+    // blockStart (6) equals sentence 1's start exactly; blockEnd (20) is past
+    // every sentence's end, so this isolates the start-boundary check from
+    // the exact-fit case above rather than retesting it.
+    expect(sentencesInBlock(sentences, 6, 20).map((s) => s.index)).toEqual([1, 2]);
+  });
+
+  it("returns nothing for a zero-length block (blockStart === blockEnd)", () => {
+    // No sentence both starts at-or-after 11 and ends at-or-before 11:
+    // sentence 1 starts before it (6 < 11), sentence 2 ends after it (17 > 11).
+    expect(sentencesInBlock(sentences, 11, 11)).toEqual([]);
   });
 });
