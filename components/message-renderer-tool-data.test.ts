@@ -258,6 +258,31 @@ describe("messageItemPropsEqual", () => {
     ).toBe(false);
   });
 
+  // Claim check (spec §5) feeds MessageItem a component prop built by a
+  // useMemo over `controller.claimChecks`, so its identity is the ONLY prop
+  // that changes when a check starts running or finishes. Treating it as an
+  // ignorable handler swallows that signal and the panel never appears for
+  // the answer it belongs to — it shows up one turn late, when some other
+  // prop of that item happens to change. Every component-type prop
+  // MessageRenderer accepts must be listed in COMPARED_FUNCTION_PROPS; this
+  // asserts the whole set rather than one member, so the next one added is
+  // caught here instead of in production.
+  it("compares every component-type prop by identity, claim check included", () => {
+    const other = function Other() {
+      return null;
+    };
+    for (const key of [
+      "UntypedToolPartComponent",
+      "AgentVisualComponent",
+      "MemoryStackComponent",
+      "RecalledMemoriesComponent",
+      "ClaimCheckComponent",
+    ]) {
+      const prev = { ...base, [key]: function Mine() { return null; } };
+      expect(messageItemPropsEqual(prev, { ...prev, [key]: other })).toBe(false);
+    }
+  });
+
   it("compares config by its fields, not by object identity", () => {
     expect(
       messageItemPropsEqual(base, {

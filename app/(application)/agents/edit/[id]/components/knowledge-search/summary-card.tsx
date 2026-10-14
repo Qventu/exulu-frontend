@@ -29,6 +29,9 @@ export function KnowledgeSearchSummaryCard({
     s.rerankerLabel
       ? t("editor.knowledge.summary.reranker", { name: s.rerankerLabel })
       : t("editor.knowledge.summary.noReranker"),
+    cfg.claimCheck.enabled
+      ? t("editor.knowledge.summary.claimCheckOn")
+      : t("editor.knowledge.summary.claimCheckOff"),
   ];
 
   const areas: { step: WizardStepId; key: string }[] = [
@@ -36,6 +39,7 @@ export function KnowledgeSearchSummaryCard({
     { step: "routing", key: "editRouting" },
     { step: "vocabulary", key: "editVocabulary" },
     { step: "behavior", key: "editBehavior" },
+    { step: "verification", key: "editVerification" },
   ];
 
   return (

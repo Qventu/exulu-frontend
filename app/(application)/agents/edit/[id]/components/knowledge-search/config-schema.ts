@@ -2,7 +2,7 @@
  * config-schema.ts — single source of truth for the knowledge-search wizard
  * config: types, zod schemas, parse / serialize / digest helpers.
  *
- * Shapes mirror the backend pipeline exactly (14-entry serialisation contract).
+ * Shapes mirror the backend pipeline exactly (16-entry serialisation contract).
  * Never throws — all parse paths fall back to schema defaults on failure.
  */
 
@@ -52,6 +52,20 @@ export type WizardConfig = {
   projectSearch: boolean;
   /** Show source references (item names, IDs, chunk info) to external users and guests. Default on. */
   showSources: boolean;
+  /**
+   * Drop near-identical retrieved passages during top-K selection (and widen
+   * the identifier-pin budget, which is only safe together with it). Default
+   * ON, like the backend.
+   *
+   * No control in the wizard — same contract as claimCheck's `completions`
+   * and `caps`: a key this schema does not declare is DELETED on every save,
+   * so it is declared and round-tripped so an operator who set it through
+   * the API does not lose it. Spec §10 deferred this as a separate change
+   * until the verification step made this wizard the only way to enable
+   * claim check: every admin turning that on would then have wiped this key
+   * in the same save, reverting an explicit `false` to default-on.
+   */
+  suppressDuplicatePassages: boolean;
   knowledgeBases: Record<string, WizardKbProfile>;
   routing: { rules: RoutingRule[] };
   vocabulary: {
@@ -69,6 +83,24 @@ export type WizardConfig = {
     pageWindow: number;
     maxQueriesPerContext: number;
   };
+  /**
+   * Post-answer claim verification (spec 2026-10-13). The wizard UI only
+   * edits enabled/model/fidelity/reRetrieve/thresholds/showToExternalUsers —
+   * completions and caps have no control here but must still round-trip,
+   * because a key this schema does not declare is deleted on every save.
+   */
+  claimCheck: ClaimCheckConfig;
+};
+
+export type ClaimCheckConfig = {
+  enabled: boolean;
+  model: string;
+  fidelity: "fast" | "paper";
+  completions: number;
+  reRetrieve: boolean;
+  thresholds: { warn: number; alert: number };
+  showToExternalUsers: boolean;
+  caps: { maxSentences: number; maxClaims: number; maxReRetrievals: number };
 };
 
 // ---------------------------------------------------------------------------
@@ -89,6 +121,18 @@ export const MEMORY_DEFAULTS: WizardConfig["memory"] = {
   override: false,
   filePrioritization: false,
   queryAugmentation: true,
+};
+
+// Mirrors the backend's CLAIM_CHECK_DEFAULTS (ee/claim-check/types.ts).
+export const CLAIM_CHECK_DEFAULTS: ClaimCheckConfig = {
+  enabled: false,
+  model: "",
+  fidelity: "fast",
+  completions: 1,
+  reRetrieve: true,
+  thresholds: { warn: 0.1, alert: 0.3 },
+  showToExternalUsers: false,
+  caps: { maxSentences: 120, maxClaims: 200, maxReRetrievals: 10 },
 };
 
 export const KIND_PRESETS: Record<KbKind, { limit: number; expand: number }> = {
@@ -205,6 +249,46 @@ const knowledgeBasesSchema = z
   .record(z.string(), kbProfileSchema)
   .default({});
 
+// completions and caps carry no UI control (schema-only, round-tripped so an
+// operator who tuned them through the API does not lose them on a save).
+// Bounds mirror the backend's `claimCheckSchema` exactly
+// (`ee/agentic-retrieval/pipeline/config.ts`): both are a SHARE, 0..1. The
+// backend's `jsonVal` falls back to the whole schema default — `enabled:
+// false` included — on any validation failure, so a blob holding `warn: 20`
+// disables claim check server-side while a frontend that accepted the value
+// kept showing it as active. Declaring the same bounds here means the wizard
+// can neither author such a blob nor misrepresent a stored one.
+const claimCheckThresholdsSchema = z
+  .object({
+    warn: z.number().min(0).max(1).default(CLAIM_CHECK_DEFAULTS.thresholds.warn),
+    alert: z.number().min(0).max(1).default(CLAIM_CHECK_DEFAULTS.thresholds.alert),
+  })
+  .passthrough()
+  .default(CLAIM_CHECK_DEFAULTS.thresholds);
+
+const claimCheckCapsSchema = z
+  .object({
+    maxSentences: z.number().default(CLAIM_CHECK_DEFAULTS.caps.maxSentences),
+    maxClaims: z.number().default(CLAIM_CHECK_DEFAULTS.caps.maxClaims),
+    maxReRetrievals: z.number().default(CLAIM_CHECK_DEFAULTS.caps.maxReRetrievals),
+  })
+  .passthrough()
+  .default(CLAIM_CHECK_DEFAULTS.caps);
+
+const claimCheckSchema = z
+  .object({
+    enabled: z.boolean().default(CLAIM_CHECK_DEFAULTS.enabled),
+    model: z.string().default(CLAIM_CHECK_DEFAULTS.model),
+    fidelity: z.enum(["fast", "paper"]).default(CLAIM_CHECK_DEFAULTS.fidelity),
+    completions: z.number().default(CLAIM_CHECK_DEFAULTS.completions),
+    reRetrieve: z.boolean().default(CLAIM_CHECK_DEFAULTS.reRetrieve),
+    thresholds: claimCheckThresholdsSchema,
+    showToExternalUsers: z.boolean().default(CLAIM_CHECK_DEFAULTS.showToExternalUsers),
+    caps: claimCheckCapsSchema,
+  })
+  .passthrough()
+  .default(CLAIM_CHECK_DEFAULTS);
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -282,11 +366,17 @@ export function defaultWizardConfig(): WizardConfig {
     logging: false,
     projectSearch: true,
     showSources: true,
+    suppressDuplicatePassages: true,
     knowledgeBases: {},
     routing: { rules: [] },
     vocabulary: { glossary: [], identifiers: [], rewrites: [], styleHint: "" },
     memory: { ...MEMORY_DEFAULTS },
     tuning: { ...TUNING_DEFAULTS },
+    claimCheck: {
+      ...CLAIM_CHECK_DEFAULTS,
+      thresholds: { ...CLAIM_CHECK_DEFAULTS.thresholds },
+      caps: { ...CLAIM_CHECK_DEFAULTS.caps },
+    },
   };
 }
 
@@ -320,6 +410,13 @@ export function parseWizardConfig(
   const showSourcesRaw = findEntry(list, "show_sources_to_external_users")?.variable;
   const showSources =
     showSourcesRaw === undefined || showSourcesRaw === "" ? true : boolVal(showSourcesRaw);
+  // Empty reads as the default, exactly as the backend's parse does — the
+  // tool's own declaration says "leave empty to keep it on".
+  const suppressDuplicatePassagesRaw = findEntry(list, "suppress_duplicate_passages")?.variable;
+  const suppressDuplicatePassages =
+    suppressDuplicatePassagesRaw === undefined || suppressDuplicatePassagesRaw === ""
+      ? true
+      : boolVal(suppressDuplicatePassagesRaw);
 
   // --- json fields ---
   const knowledgeBases = safeZodParse(
@@ -347,6 +444,11 @@ export function parseWizardConfig(
     parseJsonField(findEntry(list, "tuning")?.variable),
   );
 
+  const claimCheck = safeZodParse(
+    claimCheckSchema,
+    parseJsonField(findEntry(list, "claim_check")?.variable),
+  );
+
   // The zod schemas have `.default()` everywhere, so the runtime shape is
   // always fully-populated — the `as` cast bridges the inferred optional types.
   return {
@@ -359,16 +461,18 @@ export function parseWizardConfig(
     logging,
     projectSearch,
     showSources,
+    suppressDuplicatePassages,
     knowledgeBases,
     routing,
     vocabulary,
     memory,
     tuning,
+    claimCheck,
   } as WizardConfig;
 }
 
 // ---------------------------------------------------------------------------
-// serializeWizardConfig — exactly 14 entries in declaration order
+// serializeWizardConfig — exactly 16 entries in declaration order
 // ---------------------------------------------------------------------------
 
 export function serializeWizardConfig(cfg: WizardConfig): ToolConfigEntry[] {
@@ -385,12 +489,14 @@ export function serializeWizardConfig(cfg: WizardConfig): ToolConfigEntry[] {
     { name: "logging", variable: cfg.logging ? "true" : "false", type: "boolean" },
     { name: "project_search", variable: cfg.projectSearch ? "true" : "false", type: "boolean" },
     { name: "show_sources_to_external_users", variable: cfg.showSources ? "true" : "false", type: "boolean" },
+    { name: "suppress_duplicate_passages", variable: cfg.suppressDuplicatePassages ? "true" : "false", type: "boolean" },
     // json entries (JSON.stringify'd)
     { name: "knowledge_bases", variable: JSON.stringify(cfg.knowledgeBases), type: "json" },
     { name: "routing", variable: JSON.stringify(cfg.routing), type: "json" },
     { name: "vocabulary", variable: JSON.stringify(cfg.vocabulary), type: "json" },
     { name: "memory", variable: JSON.stringify(cfg.memory), type: "json" },
     { name: "tuning", variable: JSON.stringify(cfg.tuning), type: "json" },
+    { name: "claim_check", variable: JSON.stringify(cfg.claimCheck), type: "json" },
   ];
 }
 

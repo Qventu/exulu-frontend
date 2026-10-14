@@ -93,6 +93,15 @@ export function ReviewStep({
           })}
         </p>
       </div>
+
+      <div className="space-y-1 rounded-md border p-3">
+        <p className="text-sm font-medium">{t("editor.knowledge.wizard.review.verificationTitle")}</p>
+        <p className="text-xs text-muted-foreground">
+          {draft.claimCheck.enabled
+            ? t("editor.knowledge.wizard.review.verificationOn")
+            : t("editor.knowledge.wizard.review.verificationOff")}
+        </p>
+      </div>
     </div>
   );
 }
