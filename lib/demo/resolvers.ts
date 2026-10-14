@@ -600,7 +600,9 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
     // routine id (useLastRunForPage). Answer it from the real runs; the
     // row read "Noch nie ausgeführt" above twenty-five of them.
     if (needle === ALGI_ROUTINE.id) {
-      const newest = [...ALGI_RUNS].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+      const newest = [...ALGI_RUNS].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))[0];
+      // RoutineRun.createdAt is nullable in the product type; every ALGI run has one.
+      const stamp = newest.createdAt ?? new Date(0).toISOString();
       return {
         job_resultsPagination: {
           pageInfo: page(1),
@@ -613,8 +615,8 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
               label: `routine:${ALGI_ROUTINE.id}`,
               result: null,
               metadata: null,
-              createdAt: newest.createdAt,
-              updatedAt: newest.createdAt,
+              createdAt: stamp,
+              updatedAt: stamp,
             },
           ],
         },
