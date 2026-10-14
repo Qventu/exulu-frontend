@@ -1,15 +1,23 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 
 import { ClaimCheck, type ClaimCheckState } from "./claim-check";
 import de from "@/messages/de.json";
 
-const show = (state: ClaimCheckState) =>
+// vitest.config.ts does not set `test.globals: true`, so testing-library's
+// implicit afterEach(cleanup) registration never fires here — without this,
+// renders from earlier tests in this file pile up in the same jsdom
+// document, which turns an unambiguous `queryByText` into a "found multiple
+// elements" throw once two tests render overlapping text (e.g. the same
+// quote via two different `show()` calls).
+afterEach(cleanup);
+
+const show = (state: ClaimCheckState, extra: { guestMode?: boolean; sourceNames?: Record<string, string> } = {}) =>
   render(
     <NextIntlClientProvider locale="de" messages={de as never}>
-      <ClaimCheck state={state} />
+      <ClaimCheck state={state} {...extra} />
     </NextIntlClientProvider>,
   );
 
@@ -108,5 +116,54 @@ describe("ClaimCheck", () => {
     trigger.click();
     expect(await screen.findByText("Die FST-2XT wiegt 12 kg.")).toBeDefined();
     expect(screen.getByText(/Die Quelle nennt 18 kg\./i)).toBeDefined();
+  });
+
+  // A row without its evidence quote would be an unexplained accusation
+  // about the reader's own answer (plan fix f87da41, backend repo): deferring
+  // in-body highlighting and source-viewer links was argued on the quote
+  // being present, so it must render once the panel is open.
+  it("shows each claim's evidence quote once opened", async () => {
+    const { container } = show({ status: "done", result: result() });
+    const trigger = container.querySelector("[data-claim-check-trigger]") as HTMLElement;
+    trigger.click();
+    // The quote marks disambiguate the evidence line from c1's own claim
+    // text, which happens to contain the same words ("… arbeitet mit 230
+    // Volt.").
+    expect(await screen.findByText(/„arbeitet mit 230 Volt“/)).toBeDefined();
+    expect(screen.getByText(/„wiegt 18 kg“/)).toBeDefined();
+  });
+
+  it("names the source next to its quote when sourceNames carries one for that evidence", async () => {
+    const { container } = show({ status: "done", result: result() }, { sourceNames: { i1: "handbuch.pdf" } });
+    const trigger = container.querySelector("[data-claim-check-trigger]") as HTMLElement;
+    trigger.click();
+    expect(await screen.findByText(/handbuch\.pdf.*arbeitet mit 230 Volt/)).toBeDefined();
+    // No sourceNames entry anywhere names a raw id — only the quote and,
+    // when known, the given name ever reach the reader.
+    expect(screen.queryByText(/i1/)).toBeNull();
+  });
+
+  it("renders a claim with no evidence without a quote block, rather than an empty one or a crash", async () => {
+    const { container } = show({
+      status: "done",
+      result: result({
+        claims: [
+          {
+            id: "c3",
+            sentenceIndex: 0,
+            text: "Die FST-2XT ist wartungsfrei.",
+            inferred: false,
+            verdict: "unsupported",
+            evidence: [],
+            rationale: "Keine Quelle erwähnt Wartungsfreiheit.",
+            rechecked: false,
+          },
+        ],
+      }),
+    });
+    const trigger = container.querySelector("[data-claim-check-trigger]") as HTMLElement;
+    trigger.click();
+    expect(await screen.findByText("Die FST-2XT ist wartungsfrei.")).toBeDefined();
+    expect(screen.queryByText(/„/)).toBeNull();
   });
 });

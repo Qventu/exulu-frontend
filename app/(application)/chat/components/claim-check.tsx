@@ -94,8 +94,25 @@ function QuietLine({ icon: Icon, children }: { icon: ComponentType<{ className?:
  * evidence-link follow-up will need it to suppress a link into the
  * authenticated `/data/...` route. Nothing in this component links anywhere
  * yet, so it currently has no visible effect.
+ *
+ * Each claim row renders its `evidence[].quote` — the quote is the whole
+ * reason a verdict is auditable without the deferred highlighting/link, so a
+ * row without it would be an unexplained accusation about the reader's own
+ * answer. `sourceNames` (keyed by `evidence[].sourceId`) is optional and
+ * supplied by a later task's factory (`collectSources`, Task F2) — when a
+ * name is known the quote is attributed to it; when it is not, the quote
+ * renders alone. A raw source id is never shown to a reader: it is noise,
+ * and worse than no attribution.
  */
-export function ClaimCheck({ state, guestMode: _guestMode = false }: { state: ClaimCheckState; guestMode?: boolean }) {
+export function ClaimCheck({
+  state,
+  guestMode: _guestMode = false,
+  sourceNames,
+}: {
+  state: ClaimCheckState;
+  guestMode?: boolean;
+  sourceNames?: Record<string, string>;
+}) {
   const t = useTranslations("chat");
 
   if (state === null) return null;
@@ -152,7 +169,7 @@ export function ClaimCheck({ state, guestMode: _guestMode = false }: { state: Cl
       <SourcesContent className="w-full gap-3">
         <ol className="space-y-3">
           {result.claims.map((claim) => (
-            <ClaimRow key={claim.id} claim={claim} t={t} />
+            <ClaimRow key={claim.id} claim={claim} sourceNames={sourceNames} t={t} />
           ))}
         </ol>
       </SourcesContent>
@@ -160,7 +177,15 @@ export function ClaimCheck({ state, guestMode: _guestMode = false }: { state: Cl
   );
 }
 
-function ClaimRow({ claim, t }: { claim: ClaimCheckClaim; t: ReturnType<typeof useTranslations> }) {
+function ClaimRow({
+  claim,
+  sourceNames,
+  t,
+}: {
+  claim: ClaimCheckClaim;
+  sourceNames?: Record<string, string>;
+  t: ReturnType<typeof useTranslations>;
+}) {
   return (
     <li className="text-sm text-foreground">
       <div className="mb-1 flex flex-wrap items-center gap-1.5">
@@ -170,6 +195,20 @@ function ClaimRow({ claim, t }: { claim: ClaimCheckClaim; t: ReturnType<typeof u
       </div>
       <p>{claim.text}</p>
       <p className="mt-0.5 text-xs text-muted-foreground">{claim.rationale}</p>
+      {claim.evidence.length > 0 && (
+        <ul className="mt-1 space-y-0.5">
+          {claim.evidence.map((evidence, i) => {
+            const name = sourceNames?.[evidence.sourceId];
+            return (
+              <li key={i} className="text-xs italic text-muted-foreground">
+                {name
+                  ? t("claimCheckEvidenceNamed", { source: name, quote: evidence.quote })
+                  : t("claimCheckEvidenceQuote", { quote: evidence.quote })}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </li>
   );
 }
