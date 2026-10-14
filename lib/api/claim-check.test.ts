@@ -23,7 +23,7 @@ describe("postClaimCheck", () => {
   });
 
   it("propagates a rejection rather than swallowing it", async () => {
-    request.mockRejectedValue(new Error("429"));
+    request.mockRejectedValueOnce(new Error("429"));
     await expect(postClaimCheck({ question: "q", answer: "a", sources: [] })).rejects.toThrow("429");
   });
 });
@@ -43,7 +43,7 @@ describe("getSessionClaimChecks", () => {
   });
 
   it("returns an empty map instead of throwing when the route fails — a missing panel is not an error", async () => {
-    request.mockRejectedValue(new Error("500"));
+    request.mockRejectedValueOnce(new Error("500"));
     await expect(getSessionClaimChecks("s")).resolves.toEqual({});
   });
 });
