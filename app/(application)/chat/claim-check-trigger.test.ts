@@ -41,6 +41,89 @@ describe("claimCheckRequestFor", () => {
     expect(claimCheckRequestFor({ ...args, message: noTool })).toBeNull();
   });
 
+  // M6. The case above recovers ZERO sources, so it passes even if the guard
+  // is weakened to `sources.length === 0`. This one recovers SOME but not
+  // all: the fragment names two ids and only one chunk survived. That is the
+  // dangerous shape — checking an answer against a subset of the evidence it
+  // actually used returns `unsupported` for claims that are in fact
+  // grounded, and `unsupported` is in the numerator of the label share, so
+  // the panel renders an alert for a correct answer (spec §2.4, §5). This
+  // guard is the client's half of that invariant; a missing panel is the
+  // honest failure.
+  it("returns null when SOME of the named sources are recovered but not all", () => {
+    const partial = {
+      ...base,
+      metadata: { claimCheck: { enabled: true, sourceIds: ["i1", "i2"], toolCallIds: ["call_1"] } },
+      parts: [
+        {
+          type: "tool-Context_Search",
+          toolCallId: "call_1",
+          output: {
+            result: JSON.stringify({
+              chunks: [{ item_id: "i1", item_name: "h.pdf", chunk_content: "230 Volt." }],
+            }),
+          },
+        },
+        { type: "text", text: "Die FST-2XT arbeitet mit 230 Volt." },
+      ],
+    } as unknown as UIMessage;
+    expect(claimCheckRequestFor({ ...args, message: partial })).toBeNull();
+  });
+
+  // The same two-id fragment with both chunks present DOES check — so the
+  // case above is pinning the mismatch, not simply "two ids never work".
+  it("checks when every named source is recovered, two of two included", () => {
+    const both = {
+      ...base,
+      metadata: { claimCheck: { enabled: true, sourceIds: ["i1", "i2"], toolCallIds: ["call_1"] } },
+      parts: [
+        {
+          type: "tool-Context_Search",
+          toolCallId: "call_1",
+          output: {
+            result: JSON.stringify({
+              chunks: [
+                { item_id: "i1", item_name: "h.pdf", chunk_content: "230 Volt." },
+                { item_id: "i2", item_name: "w.pdf", chunk_content: "18 kg." },
+              ],
+            }),
+          },
+        },
+        { type: "text", text: "Die FST-2XT arbeitet mit 230 Volt." },
+      ],
+    } as unknown as UIMessage;
+    expect(claimCheckRequestFor({ ...args, message: both })?.sources).toEqual([
+      { id: "i1", name: "h.pdf", content: "230 Volt." },
+      { id: "i2", name: "w.pdf", content: "18 kg." },
+    ]);
+  });
+
+  // A chunk that exists for the id but carries no text is dropped by
+  // collectSources ("a source with no text is indistinguishable from a
+  // fabricated one"), so it reaches this guard as a mismatch too.
+  it("returns null when a named source's only chunk has no text", () => {
+    const empty = {
+      ...base,
+      metadata: { claimCheck: { enabled: true, sourceIds: ["i1", "i2"], toolCallIds: ["call_1"] } },
+      parts: [
+        {
+          type: "tool-Context_Search",
+          toolCallId: "call_1",
+          output: {
+            result: JSON.stringify({
+              chunks: [
+                { item_id: "i1", item_name: "h.pdf", chunk_content: "230 Volt." },
+                { item_id: "i2", item_name: "w.pdf", chunk_content: "" },
+              ],
+            }),
+          },
+        },
+        { type: "text", text: "Die FST-2XT arbeitet mit 230 Volt." },
+      ],
+    } as unknown as UIMessage;
+    expect(claimCheckRequestFor({ ...args, message: empty })).toBeNull();
+  });
+
   it("returns null for an empty answer", () => {
     const noText = { ...base, parts: [base.parts![0]] } as unknown as UIMessage;
     expect(claimCheckRequestFor({ ...args, message: noText })).toBeNull();
