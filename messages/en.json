@@ -651,7 +651,8 @@
             "claimCheckThresholdWarnLabel": "Warn threshold: {percent}%",
             "claimCheckThresholdAlertLabel": "Alert threshold: {percent}%",
             "claimCheckReRetrieve": "Re-search when evidence is missing",
-            "claimCheckShowExternal": "Also show to external users and guests"
+            "claimCheckShowExternal": "Also show to external users",
+            "claimCheckShowExternalHint": "Takes effect only while \"Show sources to external users\" (Behavior step) is on: with that off, source ids are stripped for those viewers and no check runs regardless of this setting. On the public guest surface the check does not appear at all yet."
           },
           "review": {
             "intro": "Here's what will be applied. Use the step buttons above to change anything.",

@@ -273,8 +273,16 @@ export function usePublicChatSession({
     contextState: "ok" as ContextState,
     compacting: false,
     compactConversation: async () => false,
-    // claim check — a licensed, bearer-authenticated feature (see hooks.ts);
-    // guests never trigger or see it.
+    // claim check (spec §5) — permanently empty on this surface, which is a
+    // KNOWN GAP, not the product rule. The backend does emit the trigger
+    // fragment for a SIGNED-IN guest-surface visitor when the agent has
+    // `claim_check.showToExternalUsers` on (only fully anonymous visitors are
+    // excluded, because `POST /claims/check` needs a user id). This
+    // controller never fires the check, so on the guest surface nothing
+    // renders however the admin sets that flag. Closing it means F4's
+    // trigger, state and rehydrate logic in this hook — recorded in spec §10
+    // rather than reproduced here, and the switch's label and hint on the
+    // wizard no longer promise guests.
     claimChecks: {},
   } satisfies ChatSessionController;
 

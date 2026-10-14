@@ -163,3 +163,24 @@ describe("VerificationStep model field", () => {
     expect(screen.getByText("Modellauswahl zurücksetzen")).toBeDefined();
   });
 });
+
+describe("VerificationStep external visibility", () => {
+  // The switch read "Auch externen Nutzern und Gästen anzeigen", and the
+  // guest half is dead: the backend emits the fragment for a signed-in
+  // guest-surface visitor, but `use-public-chat-session.ts` never fires the
+  // check, so nothing renders there. The label now names only what the
+  // switch does (spec §10 records the gap).
+  it("does not promise guests", () => {
+    renderStep();
+    expect(screen.getByText("Auch externen Nutzern anzeigen")).toBeDefined();
+    expect(screen.queryByText(/Gästen anzeigen/)).toBeNull();
+  });
+
+  // Spec §5: `show_sources_to_external_users: false` strips `item_id` from
+  // every chunk for that viewer, so no fragment is emitted whatever this
+  // flag says. Pinned by a backend test, invisible on this screen until now.
+  it("states that hidden sources suppress the check regardless", () => {
+    renderStep();
+    expect(screen.getByText(/Quellen für externe Nutzer anzeigen/)).toBeDefined();
+  });
+});

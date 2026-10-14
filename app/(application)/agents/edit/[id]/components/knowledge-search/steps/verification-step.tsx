@@ -213,6 +213,23 @@ export function VerificationStep({
           <p className="text-xs font-medium">
             {t("editor.knowledge.wizard.verification.claimCheckShowExternal")}
           </p>
+          {/* Two things the label cannot say on its own.
+              (1) Spec §5: an external viewer with
+              `show_sources_to_external_users: false` never gets the fragment
+              whatever this flag says, because `serializeOutput` strips
+              `item_id` from every chunk for that viewer and there are then no
+              source ids to send. That interaction is pinned by a backend test
+              in `finish-metadata.test.ts` and was invisible here, so an admin
+              could enable this and get silence.
+              (2) The label used to promise guests. The backend does emit the
+              fragment for a signed-in guest-surface visitor when this flag is
+              on, but `use-public-chat-session.ts` never fires the check, so
+              nothing renders there — see spec §10. The label now names only
+              the half that works (external role, app surface) and the hint
+              states the gap rather than letting the switch promise it. */}
+          <p className="text-xs text-muted-foreground">
+            {t("editor.knowledge.wizard.verification.claimCheckShowExternalHint")}
+          </p>
         </div>
         <Switch
           checked={draft.claimCheck.showToExternalUsers}

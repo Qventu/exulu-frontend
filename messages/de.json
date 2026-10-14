@@ -651,7 +651,8 @@
             "claimCheckThresholdWarnLabel": "Warnschwelle: {percent}%",
             "claimCheckThresholdAlertLabel": "Alarmschwelle: {percent}%",
             "claimCheckReRetrieve": "Bei fehlender Belegstelle erneut suchen",
-            "claimCheckShowExternal": "Auch externen Nutzern und Gästen anzeigen"
+            "claimCheckShowExternal": "Auch externen Nutzern anzeigen",
+            "claimCheckShowExternalHint": "Wirkt nur, solange „Quellen für externe Nutzer anzeigen“ (Schritt Verhalten) aktiv ist: ist das aus, werden für diese Nutzer die Quellen-IDs entfernt und es läuft unabhängig von dieser Einstellung keine Prüfung. Auf der öffentlichen Gast-Oberfläche erscheint die Prüfung derzeit gar nicht."
           },
           "review": {
             "intro": "Das wird übernommen. Verwenden Sie die Schritt-Schaltflächen oben, um etwas zu ändern.",
