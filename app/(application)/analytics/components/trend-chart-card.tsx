@@ -13,6 +13,7 @@
  * discipline #10c).
  */
 
+import { spendCurrency } from "@/lib/spend-currency";
 import { eachDayOfInterval, format, parseISO, startOfDay } from "date-fns";
 import { useReducedMotion } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
@@ -42,7 +43,8 @@ const chartConfig: ChartConfig = {
   },
 };
 
-const SPEND_CURRENCY = "USD";
+// LiteLLM reports spend in USD; the demo displays EUR (lib/spend-currency).
+const SPEND_CURRENCY = spendCurrency().currency;
 
 export function TrendChartCard({ lens }: TrendChartCardProps) {
   const t = useTranslations("analytics");

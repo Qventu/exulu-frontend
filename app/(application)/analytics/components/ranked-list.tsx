@@ -17,6 +17,7 @@
  *   - zero console.log on render (UX#13 / bug 2.f sibling).
  */
 
+import { spendCurrency } from "@/lib/spend-currency";
 import { useLocale } from "next-intl";
 import * as React from "react";
 
@@ -45,7 +46,8 @@ export interface RankedListProps {
   loadingRows?: number;
 }
 
-const SPEND_CURRENCY = "USD";
+// LiteLLM reports spend in USD; the demo displays EUR (lib/spend-currency).
+const SPEND_CURRENCY = spendCurrency().currency;
 
 const RANK_STYLES: Record<number, string> = {
   // Subtle medal tints — token-only, additive ring tint on the rank numeral

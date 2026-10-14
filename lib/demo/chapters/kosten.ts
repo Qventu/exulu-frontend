@@ -56,7 +56,7 @@ import type { DemoChapter } from "../tour";
  * CURRENCY: the product renders LiteLLM's spend in USD (kpi-strip.tsx's
  * SPEND_CURRENCY, lib/budget.ts's formatUsd — both hardcode USD/en-US), and
  * every dollar figure in this file and in fixtures/chapter-kosten.ts is USD
- * accordingly. Don't "fix" the fixtures to EUR later.
+ * accordingly. Don't "fix" the fixtures to EUR: the VALUES stay USD example figures; since 2026-10-14 the DISPLAY is EUR in demo mode through lib/spend-currency.ts.
  *
  * KNOWN HAZARD, NOT FIXED HERE: /analytics' own controls (RangePicker,
  * KPIStrip's hrefFor) rebuild the URL from lensToSearchParams() alone

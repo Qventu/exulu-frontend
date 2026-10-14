@@ -11,6 +11,7 @@
  * ten in both themes; verified).
  */
 
+import { spendCurrency } from "@/lib/spend-currency";
 import { useReducedMotion } from "framer-motion";
 import { useLocale } from "next-intl";
 import * as React from "react";
@@ -40,7 +41,8 @@ export interface DonutViewProps {
   measure?: "spend" | "tokens" | "requests";
 }
 
-const SPEND_CURRENCY = "USD";
+// LiteLLM reports spend in USD; the demo displays EUR (lib/spend-currency).
+const SPEND_CURRENCY = spendCurrency().currency;
 
 const CHART_COLORS = [
   "hsl(var(--chart-1))",

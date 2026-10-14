@@ -16,6 +16,7 @@
  * /analytics (e.g. clicking Spend sets measure=spend).
  */
 
+import { spendCurrency } from "@/lib/spend-currency";
 import { useLocale, useTranslations } from "next-intl";
 import * as React from "react";
 
@@ -32,7 +33,8 @@ import {
 } from "../hooks";
 
 const EMPHASIS_THRESHOLD_PERCENT = 25;
-const SPEND_CURRENCY = "USD"; // LiteLLM reports spend in USD; see analytics.md §4 Risks.
+// LiteLLM reports spend in USD; the demo displays EUR (lib/spend-currency).
+const SPEND_CURRENCY = spendCurrency().currency; // LiteLLM reports spend in USD; see analytics.md §4 Risks.
 
 function unattributedHint(
   tagged: number | null,

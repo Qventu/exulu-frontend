@@ -106,12 +106,13 @@ export function computeBudgetProjection(b: BudgetInfo | null | undefined): Budge
   return { percentUsed, projected, projectedPercent, overPace, overBudget, level };
 }
 
-/** Format a USD amount compactly (e.g. $19.50, $1,200). */
+/** Format a spend amount compactly (e.g. $19.50, $1,200 — or 19,50 € in the demo, see lib/spend-currency). */
 export function formatUsd(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "—";
-  return new Intl.NumberFormat("en-US", {
+  const { currency, locale } = spendCurrency();
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "USD",
+    currency,
     minimumFractionDigits: value % 1 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(value);
@@ -232,4 +233,5 @@ export function defaultResetDate(duration: BudgetDuration, now: Date = new Date(
   }
   // "1d" → next UTC midnight
   return new Date(Date.UTC(y, mo, d + 1));
-}
+}import { spendCurrency } from "@/lib/spend-currency";
+
