@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+import { footerControls } from "@/lib/demo/panel-controls";
+import { nextPosition } from "@/lib/demo/tour";
+
 import { StepPanel } from "./step-panel";
 import { useTour } from "./tour-provider";
 
@@ -51,6 +54,10 @@ export function TourPanel() {
   const index = chapters.findIndex((c) => c.id === position.chapter);
   const chapter = chapters[index];
   const hasDetail = step.content.length > 0;
+  const controls = footerControls({
+    hasCta: !!step.cta,
+    isLast: nextPosition(chapters, position) === null,
+  });
 
   return (
     <aside
@@ -122,10 +129,13 @@ export function TourPanel() {
       </div>
 
       <div className="flex items-center justify-end gap-2 border-t p-4">
-        <button type="button" onClick={prev} className="demo-button demo-button-secondary">Zurück</button>
-        {step.cta ? (
+        {controls.includes("back") && (
+          <button type="button" onClick={prev} className="demo-button demo-button-secondary">Zurück</button>
+        )}
+        {controls.includes("cta") && step.cta && (
           <a href={step.cta.href} className="demo-button">{step.cta.label}</a>
-        ) : (
+        )}
+        {controls.includes("next") && (
           <button type="button" onClick={next} className="demo-button">Weiter</button>
         )}
       </div>
