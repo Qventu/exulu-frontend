@@ -378,7 +378,7 @@ const CLICK_PROBES = {
   "config.2": { attempts: [{ spec: { kind: "wizard-tab" }, describe: "a different wizard step tab — would swap the visible wizard panel away from Routing" }] },
   "config.3": { attempts: [{ spec: { kind: "wizard-tab" }, describe: "a different wizard step tab — would swap the visible wizard panel away from Fachvokabular" }] },
   "config.4": { attempts: [{ spec: { kind: "wizard-tab" }, describe: "a different wizard step tab — would swap the visible wizard panel away from Verhalten" }] },
-  "evals.0": { attempts: [{ spec: { kind: "text", containerSelector: '[data-demo-id="evals-suites"]', tag: "button", textIncludes: "Technical documentation regression" }, describe: "the eval-suite row — would navigate to its detail page" }] },
+  "evals.0": { attempts: [{ spec: { kind: "text", containerSelector: '[data-demo-id="evals-suites"]', tag: "button", textIncludes: "Regression Technische Dokumentation" }, describe: "the eval-suite row — would navigate to its detail page" }] },
   "evals.1": { attempts: [{ spec: { kind: "text", containerSelector: "main", tag: "button", textIncludes: "Testfälle" }, describe: "the 'Testfälle' tab — would swap the results matrix for the test-cases panel" }] },
   "evals.2": { attempts: [{ spec: { kind: "text", containerSelector: "main", tag: "button", textIncludes: "Ergebnisse" }, describe: "the 'Ergebnisse' tab — would swap the test-cases panel back for the results matrix" }] },
   "email.0": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="routine-runs"] button[role="combobox"]' }, describe: "the 'Alle Status' filter combobox — would open its dropdown" }] },
