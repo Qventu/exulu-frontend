@@ -1173,6 +1173,18 @@
       "submit": "Speichern & erneut versuchen",
       "submitting": "Prüfe…"
     },
+    "claimCheckRunning": "Antwort wird geprüft …",
+    "claimCheckFailed": "Die Prüfung konnte nicht abgeschlossen werden.",
+    "claimCheckNoClaims": "Keine überprüfbaren Aussagen in dieser Antwort.",
+    "claimCheckSummary": "{supported} von {checked} Aussagen belegt",
+    "claimCheckContradicted": "{count} widersprochen",
+    "claimCheckUnsupported": "{count} ohne Belegstelle",
+    "claimCheckPartial": "Prüfung unvollständig – der Wert beschreibt nur den geprüften Teil der Antwort.",
+    "claimCheckVerdictSupported": "belegt",
+    "claimCheckVerdictContradicted": "widersprochen",
+    "claimCheckVerdictUnsupported": "ohne Belegstelle",
+    "claimCheckInferred": "abgeleitet",
+    "claimCheckRechecked": "nachgeschlagen",
     "runBanner": {
       "label": "Routine-Lauf — {name}",
       "fallbackName": "Routine",

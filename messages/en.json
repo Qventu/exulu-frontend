@@ -1173,6 +1173,18 @@
       "submit": "Save & retry",
       "submitting": "Checking…"
     },
+    "claimCheckRunning": "Checking the answer …",
+    "claimCheckFailed": "The check could not be completed.",
+    "claimCheckNoClaims": "No checkable statements in this answer.",
+    "claimCheckSummary": "{supported} of {checked} statements supported",
+    "claimCheckContradicted": "{count} contradicted",
+    "claimCheckUnsupported": "{count} without evidence",
+    "claimCheckPartial": "Check incomplete — the score describes only the part of the answer that was checked.",
+    "claimCheckVerdictSupported": "supported",
+    "claimCheckVerdictContradicted": "contradicted",
+    "claimCheckVerdictUnsupported": "without evidence",
+    "claimCheckInferred": "inferred",
+    "claimCheckRechecked": "re-checked",
     "runBanner": {
       "label": "Routine run — {name}",
       "fallbackName": "Routine",

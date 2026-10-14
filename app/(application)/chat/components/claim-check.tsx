@@ -1,0 +1,175 @@
+"use client";
+
+import { ChevronDownIcon, Loader2, Shield, ShieldAlert, ShieldCheck, ShieldQuestion, ShieldX, TriangleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
+import type { ComponentType, ReactNode } from "react";
+
+import { Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/sources";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import type { ClaimCheckClaim, ClaimCheckResult, ClaimVerdict, ScoreLabel } from "@/lib/api/claim-check";
+
+import { summarise } from "./claim-check-data";
+
+/**
+ * Claim-check panel state (spec §4-5). Only a finished `"done"` check carries
+ * a `result` — `running`/`failed` never pretend to have a score. Imported by
+ * name from two later tasks (F4 fires the check and supplies this; a further
+ * task rehydrates it from `getSessionClaimChecks`), so the shape here is the
+ * contract, not an implementation detail.
+ */
+export type ClaimCheckState =
+  | { status: "running" }
+  | { status: "done"; result: ClaimCheckResult }
+  | { status: "failed" }
+  | null;
+
+/** `score.label` colored with the project's semantic tokens — no new literals. */
+const LABEL_TEXT_CLASS: Record<Exclude<ScoreLabel, "n/a">, string> = {
+  ok: "text-success",
+  warn: "text-warning",
+  alert: "text-destructive",
+};
+
+const LABEL_ICON: Record<Exclude<ScoreLabel, "n/a">, ComponentType<{ className?: string; "aria-hidden"?: boolean }>> = {
+  ok: ShieldCheck,
+  warn: ShieldAlert,
+  alert: ShieldX,
+};
+
+/**
+ * Verdict badge colour, by the same semantic tokens: `supported` reads as a
+ * quiet pass, `contradicted` and `unsupported` are kept visually distinct
+ * (destructive vs. warning) because "the sources say otherwise" and "I
+ * couldn't find this" are different findings and must never collapse into
+ * one colour.
+ */
+const VERDICT_BADGE_VARIANT: Record<ClaimVerdict, "success" | "destructive" | "warning"> = {
+  supported: "success",
+  contradicted: "destructive",
+  unsupported: "warning",
+};
+
+const VERDICT_KEY: Record<ClaimVerdict, "claimCheckVerdictSupported" | "claimCheckVerdictContradicted" | "claimCheckVerdictUnsupported"> = {
+  supported: "claimCheckVerdictSupported",
+  contradicted: "claimCheckVerdictContradicted",
+  unsupported: "claimCheckVerdictUnsupported",
+};
+
+/** A quiet, non-judgemental line — used for running/failed/no-claims, none of which carry a score. */
+function QuietLine({ icon: Icon, children }: { icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>; children: ReactNode }) {
+  return (
+    <p className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
+      <Icon className="size-3.5 shrink-0" aria-hidden />
+      {children}
+    </p>
+  );
+}
+
+/**
+ * "Checked the answer" panel under an assistant message (spec §5, §5.1).
+ * Reuses the `Sources` collapsible `RecalledMemories` uses, so it sits
+ * visually beside the existing source badge — collapsed by default, since a
+ * real answer can produce dozens of claims and a flat always-open list isn't
+ * acceptable (spec §5.1 / task brief).
+ *
+ * Three things this panel must never get wrong (task brief):
+ *  1. `label: "n/a"` means no checkable claims were made — it reads as
+ *     "nothing to check here", never a 0% score.
+ *  2. `contradicted` and `unsupported` are different findings and are never
+ *     merged into one count or colour.
+ *  3. `status: "partial"` means the score covers only part of the answer,
+ *     and that warning is shown without opening the panel.
+ *
+ * Presentational only: a later task (F4) fires the check and supplies
+ * `state`; this component never fetches. Two spec §5.1 items are
+ * deliberately not delivered here: a live claim counter while running (needs
+ * the progressive A2 stream the spec defers — the A1 single-shot endpoint
+ * returns once, so there is nothing to count up), and a link from each
+ * claim's evidence into the existing source viewer (needs wiring through
+ * `components/ai-elements/sources.tsx` and the `/data/<context>/<item>`
+ * route; a wrong link is worse than none, so left for a follow-up).
+ *
+ * `guestMode` is accepted for parity with `RecalledMemories` and because that
+ * evidence-link follow-up will need it to suppress a link into the
+ * authenticated `/data/...` route. Nothing in this component links anywhere
+ * yet, so it currently has no visible effect.
+ */
+export function ClaimCheck({ state, guestMode: _guestMode = false }: { state: ClaimCheckState; guestMode?: boolean }) {
+  const t = useTranslations("chat");
+
+  if (state === null) return null;
+
+  if (state.status === "running") {
+    return <QuietLine icon={Loader2}>{t("claimCheckRunning")}</QuietLine>;
+  }
+
+  if (state.status === "failed") {
+    return <QuietLine icon={ShieldQuestion}>{t("claimCheckFailed")}</QuietLine>;
+  }
+
+  const { result } = state;
+  const summary = summarise(result);
+
+  if (summary.label === "n/a") {
+    return (
+      <div>
+        <QuietLine icon={Shield}>{t("claimCheckNoClaims")}</QuietLine>
+        {summary.partial && (
+          <p className="mb-4 flex items-center gap-2 text-xs text-warning">
+            <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+            {t("claimCheckPartial")}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  const label = summary.label;
+  const Icon = LABEL_ICON[label];
+
+  return (
+    <Sources data-demo-id="chat-claim-check">
+      {summary.partial && (
+        <p className="mb-2 flex items-center gap-2 text-warning">
+          <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+          {t("claimCheckPartial")}
+        </p>
+      )}
+      <SourcesTrigger count={summary.checked} data-claim-check-trigger>
+        <Icon className={cn("size-4 shrink-0", LABEL_TEXT_CLASS[label])} aria-hidden />
+        <p className={cn("font-medium", LABEL_TEXT_CLASS[label])}>
+          {t("claimCheckSummary", { supported: summary.supported, checked: summary.checked })}
+        </p>
+        {summary.contradicted > 0 && (
+          <Badge variant="destructive">{t("claimCheckContradicted", { count: summary.contradicted })}</Badge>
+        )}
+        {summary.unsupported > 0 && (
+          <Badge variant="warning">{t("claimCheckUnsupported", { count: summary.unsupported })}</Badge>
+        )}
+        <ChevronDownIcon className="h-4 w-4" />
+      </SourcesTrigger>
+      <SourcesContent className="w-full gap-3">
+        <ol className="space-y-3">
+          {result.claims.map((claim) => (
+            <ClaimRow key={claim.id} claim={claim} t={t} />
+          ))}
+        </ol>
+      </SourcesContent>
+    </Sources>
+  );
+}
+
+function ClaimRow({ claim, t }: { claim: ClaimCheckClaim; t: ReturnType<typeof useTranslations> }) {
+  return (
+    <li className="text-sm text-foreground">
+      <div className="mb-1 flex flex-wrap items-center gap-1.5">
+        <Badge variant={VERDICT_BADGE_VARIANT[claim.verdict]}>{t(VERDICT_KEY[claim.verdict])}</Badge>
+        {claim.inferred && <Badge variant="outline">{t("claimCheckInferred")}</Badge>}
+        {claim.rechecked && <Badge variant="outline">{t("claimCheckRechecked")}</Badge>}
+      </div>
+      <p>{claim.text}</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">{claim.rationale}</p>
+    </li>
+  );
+}
