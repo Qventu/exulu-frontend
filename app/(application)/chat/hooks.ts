@@ -39,8 +39,10 @@ import { isDemoMode } from "@/lib/demo/flag";
 
 import { UserContext } from "@/app/(application)/authenticated";
 import { ConfigContext } from "@/components/shell/config-context";
+import { useLanguage } from "@/components/shell/language-provider";
 import { getPresignedUrl } from "@/components/primitives/file-picker";
 import { getToken } from "@/lib/api/client";
+import { getSessionClaimChecks, postClaimCheck, type ClaimCheckRequest } from "@/lib/api/claim-check";
 import { sessionFilesApi } from "@/lib/api/session-files";
 import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
 import type { Agent } from "@/types/models/agent";
@@ -67,6 +69,8 @@ import {
   type ContextState,
 } from "./lib/context-budget";
 import { savedIdsFromMessages } from "./components/memory-panel-data";
+import { answerTextOf, collectSources, parseClaimCheckTrigger } from "./components/claim-check-data";
+import type { ClaimCheckState } from "./components/claim-check";
 
 // ---------------------------------------------------------------------------
 // Shared types (binding contracts)
@@ -160,6 +164,9 @@ export interface ChatSessionController {
   contextState: ContextState;
   compacting: boolean;
   compactConversation: (steer?: string) => Promise<boolean>;
+  // claim check (spec §5) — keyed by message id so MessageColumn can read a
+  // message's state without prop-drilling.
+  claimChecks: Record<string, ClaimCheckState>;
 }
 
 // ---------------------------------------------------------------------------
@@ -191,6 +198,37 @@ function readPreApprovedList(sessionId: string | undefined): string[] {
   }
 }
 
+/**
+ * The body to post for one finished assistant message, or null when no check
+ * should run. Pure so the decision is testable without React: the hook below
+ * only owns *when* to call it and where to put the answer.
+ */
+export function claimCheckRequestFor({ message, question, session, agentId, locale }: {
+  message: UIMessage;
+  question: string;
+  session: string | undefined;
+  agentId: string;
+  locale: string;
+}): ClaimCheckRequest | null {
+  const trigger = parseClaimCheckTrigger(message.metadata);
+  if (!trigger) return null;
+  const sources = collectSources(message, trigger.sourceIds);
+  // Fewer sources than the fragment named means the client can no longer
+  // produce evidence the backend expected. Checking anyway would score
+  // grounded claims unsupported; a missing panel is the honest failure.
+  if (sources.length !== trigger.sourceIds.length) return null;
+  const answer = answerTextOf(message);
+  if (!answer.trim()) return null;
+  return {
+    question,
+    answer,
+    sources,
+    agent: agentId,
+    ...(session ? { session, messageId: message.id } : {}),
+    locale,
+  };
+}
+
 export function useChatSession({
   agent,
   initialSession,
@@ -200,6 +238,7 @@ export function useChatSession({
   const t = useTranslations("chat");
   const configContext = React.useContext(ConfigContext);
   const { user } = React.useContext(UserContext);
+  const { locale } = useLanguage();
 
   // --- errors ---------------------------------------------------------------
   const [error, setError] = React.useState<string | null>(null);
@@ -965,6 +1004,87 @@ export function useChatSession({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedIdsCount]);
 
+  // --- claim check (spec §5): fired once per finished assistant message, never
+  // during the stream. Keyed by message id so a re-render cannot re-fire it. --
+  const [claimChecks, setClaimChecks] = React.useState<Record<string, ClaimCheckState>>({});
+  const claimCheckFired = React.useRef<Set<string>>(new Set());
+  // A dedicated prev-status ref (not prevStatusRef above — that effect reads
+  // *and* writes it in the same tick, so sharing it would make whichever
+  // effect runs second always see "no transition"). Seeded with the mount-time
+  // status so a session opened already "ready" (a reload) never reads as a
+  // stream that "just ended" — only a live streaming/submitted -> ready change
+  // observed *during this component's lifetime* counts. Without this, every
+  // reload of a session whose last answer still carries the trigger fragment
+  // would re-post the check — exactly the ~8 provider calls a reload must not
+  // repeat, and the reason rehydration exists at all.
+  const claimCheckPrevStatusRef = React.useRef<ChatStatus>(status as ChatStatus);
+
+  React.useEffect(() => {
+    const prev = claimCheckPrevStatusRef.current;
+    claimCheckPrevStatusRef.current = status as ChatStatus;
+    if (prev !== "streaming" && prev !== "submitted") return; // no transition into "ready" this render
+    if (status !== "ready") return;
+    if (!messages || messages.length === 0) return;
+    const lastAssistant = messages[messages.length - 1];
+    if (!lastAssistant || lastAssistant.role !== "assistant") return;
+    if (claimCheckFired.current.has(lastAssistant.id)) return;
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    if (!lastUser) return;
+    const session = currentSessionRef.current;
+    const body = claimCheckRequestFor({
+      message: lastAssistant,
+      question: answerTextOf(lastUser),
+      session: session && session.id !== "new" ? session.id : undefined,
+      agentId: agent.id,
+      locale,
+    });
+    if (!body) return;
+    claimCheckFired.current.add(lastAssistant.id);
+    setClaimChecks((prevChecks) => ({ ...prevChecks, [lastAssistant.id]: { status: "running" } }));
+    (async () => {
+      try {
+        const result = await postClaimCheck(body);
+        setClaimChecks((prevChecks) => ({ ...prevChecks, [lastAssistant.id]: { status: "done", result } }));
+      } catch {
+        setClaimChecks((prevChecks) => ({ ...prevChecks, [lastAssistant.id]: { status: "failed" } }));
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, messages]);
+
+  // Rehydrate stored checks when a session is opened — a reload must not
+  // re-spend the provider calls a completed check already paid for. A check
+  // with no stored row (never finished server-side) simply never gets an
+  // entry here, which is the point: no entry means `ClaimCheck` renders
+  // nothing for it, rather than a "running" state stuck forever.
+  React.useEffect(() => {
+    const id = currentSession?.id;
+    if (!id || id === "new") return;
+    let cancelled = false;
+    (async () => {
+      // getSessionClaimChecks never throws (it swallows every failure into an
+      // empty map), so there is no second error-handling layer to add here.
+      const stored = await getSessionClaimChecks(id);
+      if (cancelled) return;
+      const ids = Object.keys(stored);
+      if (ids.length === 0) return;
+      for (const msgId of ids) claimCheckFired.current.add(msgId);
+      setClaimChecks((prevChecks) => {
+        const next = { ...prevChecks };
+        for (const msgId of ids) {
+          // Never clobber a check this session itself started and is still
+          // running — only backfill messages with no local state yet.
+          if (next[msgId]?.status === "running") continue;
+          next[msgId] = { status: "done", result: stored[msgId]! };
+        }
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentSession?.id]);
+
   return {
     agent,
     session: currentSession,
@@ -1018,6 +1138,7 @@ export function useChatSession({
     contextState,
     compacting,
     compactConversation,
+    claimChecks,
   };
 }
 

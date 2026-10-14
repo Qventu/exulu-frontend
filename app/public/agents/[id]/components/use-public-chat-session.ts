@@ -273,6 +273,9 @@ export function usePublicChatSession({
     contextState: "ok" as ContextState,
     compacting: false,
     compactConversation: async () => false,
+    // claim check — a licensed, bearer-authenticated feature (see hooks.ts);
+    // guests never trigger or see it.
+    claimChecks: {},
   } satisfies ChatSessionController;
 
   return { controller, clearConversation, startNewSession, resumeSession };
