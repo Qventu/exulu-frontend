@@ -92,14 +92,26 @@ function QuietLine({
  * not_checked: selection aborted"), so they get a localised heading and a
  * muted, small block rather than being dressed up as a sentence addressed to
  * the reader. Nothing renders when the engine reported none.
+ *
+ * ONE note is withheld: `claim check failed internally: <err.message>`
+ * (`ee/claim-check/run.ts`'s catch-all) carries a raw exception message, which
+ * belongs in a log and not in front of whoever reads the answer — this
+ * component has no `guestMode` effect, so an external-role user sees the panel
+ * too. Nothing is lost by withholding it: the n/a branch's incomplete line
+ * already tells the reader the check did not finish, and the full note is on
+ * the server and in the stored payload for whoever is debugging. Matched by
+ * prefix, since the message itself is arbitrary.
  */
+const INTERNAL_FAILURE_NOTE = "claim check failed internally:";
+
 function EngineNotes({ notes, title }: { notes: string[]; title: string }) {
-  if (notes.length === 0) return null;
+  const shown = notes.filter((note) => !note.startsWith(INTERNAL_FAILURE_NOTE));
+  if (shown.length === 0) return null;
   return (
     <div className="text-xs text-muted-foreground">
       <p className="font-medium">{title}</p>
       <ul className="mt-0.5 list-disc space-y-0.5 pl-4">
-        {notes.map((note, i) => (
+        {shown.map((note, i) => (
           <li key={i}>{note}</li>
         ))}
       </ul>

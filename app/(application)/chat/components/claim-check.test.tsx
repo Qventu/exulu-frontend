@@ -157,7 +157,9 @@ describe("ClaimCheck", () => {
     expect(screen.queryByText(/0 von 0/i)).toBeNull();
   });
 
-  // The real reason is in `notes`, which was never rendered anywhere.
+  // The real reason is in `notes`, which was never rendered anywhere. (The
+  // one note that is NOT shown — the raw internal-failure message — has its
+  // own cases below.)
   it("shows the engine's notes for an n/a partial, where the reason actually is", () => {
     show({
       status: "done",
@@ -165,10 +167,10 @@ describe("ClaimCheck", () => {
         status: "partial",
         score: { claims: 0, supported: 0, contradicted: 0, unsupported: 0, unsupportedShare: 0, label: "n/a" },
         claims: [],
-        notes: ["claim check failed internally: boom"],
+        notes: ["decomposition did not report an outcome for 3 sentence(s)"],
       }),
     });
-    expect(screen.getByText("claim check failed internally: boom")).toBeDefined();
+    expect(screen.getByText("decomposition did not report an outcome for 3 sentence(s)")).toBeDefined();
   });
 
   it("shows the engine's notes inside the expanded panel of a scored check", async () => {
@@ -181,6 +183,57 @@ describe("ClaimCheck", () => {
     const trigger = container.querySelector("[data-claim-check-trigger]") as HTMLElement;
     trigger.click();
     expect(await screen.findByText("12 sentence(s) marked not_checked: selection aborted")).toBeDefined();
+  });
+
+  // One of the engine's notes is `claim check failed internally: ${err.message}`
+  // (ee/claim-check/run.ts), i.e. a raw exception message. That is a log line,
+  // not something to put in front of whoever reads the answer — this
+  // component ignores guestMode, so external-role users see the panel too.
+  // The incomplete line already tells the reader the check did not finish.
+  it("never shows the engine's internal-failure note to a reader", () => {
+    show({
+      status: "done",
+      result: result({
+        status: "partial",
+        score: { claims: 0, supported: 0, contradicted: 0, unsupported: 0, unsupportedShare: 0, label: "n/a" },
+        claims: [],
+        notes: ["claim check failed internally: Cannot read properties of undefined (reading 'id')"],
+      }),
+    });
+    expect(screen.getByText(/nicht vollständig geprüft/i)).toBeDefined();
+    expect(screen.queryByText(/failed internally/)).toBeNull();
+    expect(screen.queryByText(/Cannot read properties/)).toBeNull();
+    // No heading either: the only note there was is gone, so the block is empty.
+    expect(screen.queryByText(de.chat.claimCheckNotesTitle)).toBeNull();
+  });
+
+  it("keeps the reader-facing notes alongside a filtered internal-failure one", () => {
+    show({
+      status: "done",
+      result: result({
+        status: "partial",
+        score: { claims: 0, supported: 0, contradicted: 0, unsupported: 0, unsupportedShare: 0, label: "n/a" },
+        claims: [],
+        notes: [
+          "12 sentence(s) marked not_checked: selection aborted",
+          "claim check failed internally: boom",
+        ],
+      }),
+    });
+    expect(screen.getByText("12 sentence(s) marked not_checked: selection aborted")).toBeDefined();
+    expect(screen.queryByText(/failed internally/)).toBeNull();
+  });
+
+  it("filters the internal-failure note inside the expanded panel too", async () => {
+    const { container } = show({
+      status: "done",
+      result: result({ status: "partial", notes: ["claim check failed internally: boom"] }),
+    });
+    const trigger = container.querySelector("[data-claim-check-trigger]") as HTMLElement;
+    trigger.click();
+    await screen.findByText("Die FST-2XT wiegt 12 kg.");
+    expect(screen.queryByText(/failed internally/)).toBeNull();
+    expect(screen.queryByText(de.chat.claimCheckNotesTitle)).toBeNull();
   });
 
   it("renders no notes block when the engine reported none", async () => {

@@ -17,7 +17,7 @@
  * `agentic_context_search` tool's `knowledge_bases` entry, whose value is
  * `JSON.stringify(Record<contextId, { enabled }>)` per
  * `agents/edit/[id]/components/knowledge-search/config-schema.ts`
- * (`serializeWizardConfig`, the "13-entry serialisation contract"). This is a
+ * (`serializeWizardConfig`, the "16-entry serialisation contract"). This is a
  * light, defensive read of that contract's on-the-wire shape — not an import
  * of the agents feature's code (feature isolation), and any parse failure or
  * shape drift just falls back to "attach only" rather than crashing.
