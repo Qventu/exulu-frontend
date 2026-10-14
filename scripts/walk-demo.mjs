@@ -627,6 +627,36 @@ async function advance(page, expectedTitle) {
   }
 }
 
+/**
+ * Waits for a step's scripted chat exchange to finish: the tour types the
+ * question (composer fills), sends it (composer empties), and streams the
+ * answer (conversation text grows, then holds still). Advancing before that
+ * — the composer ring is up within a second, so the geometry loop alone
+ * would — leaves a half-typed question in the composer and lands the next
+ * step on the scrollback with the chat parked at the bottom, which is not
+ * what a prospect who read the answer sees. Resolves true on completion,
+ * false on timeout (the step then reports whatever it finds).
+ */
+async function waitForScriptedExchange(page, timeoutMs = 25000) {
+  const t0 = Date.now();
+  let phase = "waiting-for-typing";
+  let lastChars = -1;
+  let stableSince = Date.now();
+  while (Date.now() - t0 < timeoutMs) {
+    const s = await page.evaluate(() => {
+      const ta = document.querySelector('[data-demo-id="chat-composer"] textarea');
+      const conv = document.querySelector('[data-demo-id="chat-messages"]');
+      return { composer: ta ? ta.value.length : -1, chars: conv ? conv.innerText.length : 0 };
+    });
+    if (phase === "waiting-for-typing" && s.composer > 0) phase = "typing";
+    else if (phase === "typing" && s.composer === 0) phase = "sent";
+    if (s.chars !== lastChars) { lastChars = s.chars; stableSince = Date.now(); }
+    if (phase === "sent" && Date.now() - stableSince > 1500) return true;
+    await page.waitForTimeout(250);
+  }
+  return false;
+}
+
 async function main() {
   const { chromium } = resolvePlaywright();
   const steps = loadSteps();
@@ -670,6 +700,12 @@ async function main() {
         continue;
       }
       row.transitionOk = true;
+    }
+
+    // The two steps that type and send a question (techdoc.0, memory.1) are
+    // only "arrived at" once their exchange has played out.
+    if (step.anchor === "chat-composer") {
+      row.exchangeCompleted = await waitForScriptedExchange(page);
     }
 
     // Poll rather than a flat sleep: most steps settle in well under a
