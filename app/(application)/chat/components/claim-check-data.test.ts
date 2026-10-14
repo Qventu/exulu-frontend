@@ -182,6 +182,130 @@ describe("collectSources — knowledge_base", () => {
     expect(collectSources(empty, [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }])).toEqual([]);
   });
 
+  // Fix round 3, Critical 3. Several retrieval calls per turn are designed
+  // and normal (`max_searches`), and each call serialises only its OWN
+  // chunks. The backend names `{knowledge_base, i1, toolCallId: call_1}`
+  // once — first-seen wins — so reading only `call_1`'s part lost every
+  // passage `call_2` returned for the same handbook while the answer rested
+  // on them, and the coverage guard was satisfied, so the check ran and
+  // scored a grounded claim `unsupported`. Stage 3 pooled chunks across all
+  // retrieval parts; this is the regression Stage 4 introduced.
+  it("unions an item's chunks across every retrieval call the manifest names, not only the entry's own", () => {
+    const twoCalls = {
+      parts: [
+        {
+          type: "tool-Context_Search",
+          toolCallId: "call_1",
+          output: {
+            result: JSON.stringify({
+              chunks: [{ item_id: "i1", item_name: "handbuch.pdf", chunk_content: "Die FST-2XT arbeitet mit 230 Volt." }],
+            }),
+          },
+        },
+        {
+          type: "tool-Context_Search",
+          toolCallId: "call_2",
+          output: {
+            result: JSON.stringify({
+              chunks: [{ item_id: "i1", item_name: "handbuch.pdf", chunk_content: "Wartungsintervall: jährlich." }],
+            }),
+          },
+        },
+      ],
+    } as unknown as UIMessage;
+    // One manifest entry, carrying the FIRST call's id as provenance.
+    expect(collectSources(twoCalls, [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }])).toEqual([
+      {
+        id: "i1",
+        name: "handbuch.pdf",
+        type: "knowledge_base",
+        content: "Die FST-2XT arbeitet mit 230 Volt.\n\nWartungsintervall: jährlich.",
+      },
+    ]);
+  });
+
+  // The pooling filter is the ITEM ID, which is what keeps attribution
+  // correct without any tool-name knowledge: a chunk carrying this item's id
+  // is a passage of this item, and a chunk carrying another item's id is
+  // never folded into it (that item has its own manifest entry and its own
+  // source).
+  it("never folds another item's passages into this entry, however many calls ran", () => {
+    const twoItems = {
+      parts: [
+        {
+          type: "tool-Context_Search",
+          toolCallId: "call_1",
+          output: { result: JSON.stringify({ chunks: [{ item_id: "i1", item_name: "h.pdf", chunk_content: "Aus dem Handbuch." }] }) },
+        },
+        {
+          type: "tool-Context_Search",
+          toolCallId: "call_2",
+          output: { result: JSON.stringify({ chunks: [{ item_id: "i2", item_name: "ticket.txt", chunk_content: "Aus dem Ticket." }] }) },
+        },
+      ],
+    } as unknown as UIMessage;
+    expect(collectSources(twoItems, [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }])).toEqual([
+      { id: "i1", name: "h.pdf", type: "knowledge_base", content: "Aus dem Handbuch." },
+    ]);
+  });
+
+  // A session-items search nests its chunks one level deeper (an array of
+  // per-context responses), so `chunksOf` reads nothing from it and it can
+  // never leak into a knowledge-base source — it has its own arm and its own
+  // manifest entry.
+  it("reads nothing from a session-items part, whose chunks are nested per context", () => {
+    const mixed = {
+      parts: [
+        {
+          type: "tool-Context_Search",
+          toolCallId: "call_1",
+          output: { result: JSON.stringify({ chunks: [{ item_id: "i1", item_name: "h.pdf", chunk_content: "Aus der Wissensbasis." }] }) },
+        },
+        {
+          type: "tool-session_items_information_context_search",
+          toolCallId: "call_5",
+          output: {
+            result: JSON.stringify([
+              { context: { id: "ctx_1" }, chunks: [{ item_id: "i1", item_name: "h.pdf", chunk_content: "Aus den angehefteten Elementen." }] },
+            ]),
+          },
+        },
+      ],
+    } as unknown as UIMessage;
+    expect(collectSources(mixed, [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }])).toEqual([
+      { id: "i1", name: "h.pdf", type: "knowledge_base", content: "Aus der Wissensbasis." },
+    ]);
+  });
+
+  it("does not repeat a passage both calls returned", () => {
+    const twoCalls = {
+      parts: [
+        {
+          type: "tool-Context_Search",
+          toolCallId: "call_1",
+          output: { result: JSON.stringify({ chunks: [{ chunk_id: "k1", item_id: "i1", item_name: "h.pdf", chunk_content: "230 Volt." }] }) },
+        },
+        {
+          type: "tool-Context_Search",
+          toolCallId: "call_2",
+          output: {
+            result: JSON.stringify({
+              chunks: [
+                { chunk_id: "k1", item_id: "i1", item_name: "h.pdf", chunk_content: "230 Volt." },
+                { chunk_id: "k2", item_id: "i1", item_name: "h.pdf", chunk_content: "Jährliche Wartung." },
+              ],
+            }),
+          },
+        },
+      ],
+    } as unknown as UIMessage;
+    expect(
+      collectSources(twoCalls, [
+        { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+      ])[0]!.content,
+    ).toBe("230 Volt.\n\nJährliche Wartung.");
+  });
+
   it("deduplicates a repeated id in the fragment into one source entry", () => {
     expect(
       collectSources(message, [

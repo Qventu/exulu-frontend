@@ -137,23 +137,63 @@ function chunksOf(part: Record<string, unknown>): Record<string, unknown>[] {
 }
 
 /**
- * A knowledge-base entry: the retrieval part named by `toolCallId`, filtered
- * to this entry's `item_id`. Several chunks of the same item are concatenated
- * so the source arrives whole — the check's containment and evidence
- * selection both read continuous text.
+ * A knowledge-base entry: this item's passages, pooled from **every** part of
+ * the message that carries a chunk with this `item_id`, in message order and
+ * concatenated — the check's containment and evidence selection both read
+ * continuous text.
+ *
+ * Pooling across calls, rather than reading only the part named by the
+ * entry's `toolCallId`, is fix round 3's Critical 3. Several retrieval calls
+ * per turn are designed and normal (`max_searches`), and each call serialises
+ * only its own chunks. When two searches both return item `i1` with DIFFERENT
+ * passages — "voltage of the FST-2XT", then "maintenance interval of the
+ * FST-2XT", same handbook — the backend names that item ONCE (it dedupes by
+ * item id, first-seen wins), so reading one call's part dropped every passage
+ * the other returned while the answer rested on them. The coverage guard was
+ * satisfied, so the check ran and scored a grounded claim `unsupported`; the
+ * endpoint's duplicate-id 400 rules out naming the item twice as a
+ * workaround. Default-on `suppress_duplicate_passages` makes it likelier, not
+ * rarer: it frees result slots for DIFFERENT passages of an item already
+ * seen. Stage 3 pooled across every retrieval part, so this is a Stage 4
+ * regression.
+ *
+ * `entry.toolCallId` is therefore provenance, not the lookup key — and the
+ * lookup needs no tool name either, which is what Stage 4 bought: the filter
+ * is `item_id === entry.id`, and a chunk carrying this item's id IS a passage
+ * of this item whichever call produced it, so attribution stays correct by
+ * construction. One source per item id is preserved, so
+ * `evidence[].sourceId` still resolves to exactly one document.
+ *
+ * NOTE (fix round 3, reported to the coordinator): the brief ruled this as
+ * "every part whose `toolCallId` appears on any `knowledge_base` manifest
+ * entry". That set is narrower than this, and it does not fix the brief's own
+ * example: a second search that returns ONLY items already named contributes
+ * no manifest entry, so its call id appears nowhere and its passages stay
+ * lost — which is precisely the two-searches-over-one-handbook case. Widening
+ * the scan to the whole message closes that; narrowing it back is one added
+ * `callIds.has(part.toolCallId)` condition.
  */
 function knowledgeBaseSource(message: UIMessage, entry: ClaimCheckManifestEntry): ClaimCheckSource | undefined {
-  if (!entry.toolCallId) return undefined;
-  const part = partByToolCallId(message, entry.toolCallId);
-  if (!part) return undefined;
-  const mine = chunksOf(part).filter((c) => c.item_id === entry.id);
-  if (mine.length === 0) return undefined;
-  const name = typeof mine[0]!.item_name === "string" ? (mine[0]!.item_name as string) : undefined;
-  const content = mine
-    .map((c) => (typeof c.chunk_content === "string" ? c.chunk_content : ""))
-    .filter(Boolean)
-    .join("\n\n");
-  return { id: entry.id, name, type: "knowledge_base", content };
+  let name: string | undefined;
+  const texts: string[] = [];
+  const seen = new Set<string>();
+  for (const part of (message.parts ?? []) as unknown[]) {
+    if (!isRecord(part)) continue;
+    for (const chunk of chunksOf(part)) {
+      if (chunk.item_id !== entry.id) continue;
+      if (name === undefined && typeof chunk.item_name === "string") name = chunk.item_name;
+      const text = typeof chunk.chunk_content === "string" ? chunk.chunk_content : "";
+      if (!text) continue;
+      // A passage both calls returned is one passage, not two: repeating it
+      // adds no evidence and skews the engine's passage-level IDF.
+      const key = typeof chunk.chunk_id === "string" ? chunk.chunk_id : text;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      texts.push(text);
+    }
+  }
+  if (texts.length === 0) return undefined;
+  return { id: entry.id, name, type: "knowledge_base", content: texts.join("\n\n") };
 }
 
 /**
