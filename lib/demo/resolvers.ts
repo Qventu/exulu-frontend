@@ -339,6 +339,39 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
     },
   }),
 
+  // The list page reads FINISHED recordings from the Transkripte knowledge
+  // base (TranscriptItems), not from the jobs: mergeTranscriptRows drops
+  // every saved job and expects its item instead. Unmapped, this answered
+  // {} and the fourteen saved meetings were absent from the screen while
+  // chapter 10 spoke of twenty. One item per saved job, newest first; the
+  // page's `archived` filter is always false here and `name` is the
+  // search box.
+  TranscriptItems: (_world, variables) => {
+    const needle = filterValue(variables, "name");
+    const items = ALGI_MEETINGS.filter((m) => m.status === "saved")
+      .filter((m) => !needle || m.title.toLowerCase().includes(needle.toLowerCase()))
+      .map((m) => ({
+        id: `transcript-${m.id}`,
+        name: m.title.trim(),
+        recording_source: m.source,
+        job_id: m.id,
+        recorded_at: m.createdAt,
+        duration_seconds: m.duration_seconds,
+        speaker_count: null,
+        project_id: null,
+        rights_mode: "public",
+        created_by: DEMO_USER_ID,
+        post_processing: null,
+      }))
+      .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at));
+    return {
+      transcriptions_itemsPagination: {
+        pageInfo: { itemCount: items.length, hasNextPage: false },
+        items,
+      },
+    };
+  },
+
   GetTranscriptionJob: (_world, variables) => {
     const meeting =
       ALGI_MEETINGS.find((m) => m.id === variables.id) ?? ALGI_MEETINGS[0];

@@ -6,7 +6,7 @@ import {
 } from "@/lib/demo/fixtures/chapter-meetings";
 import { runDemoQueryThroughCache } from "@/lib/demo/test-support";
 
-import { GET_TRANSCRIPTION_JOB, GET_TRANSCRIPTION_JOBS } from "./queries";
+import { GET_TRANSCRIPT_ITEMS, GET_TRANSCRIPTION_JOB, GET_TRANSCRIPTION_JOBS } from "./queries";
 import { transcriptPublishState } from "./types";
 
 /**
@@ -132,5 +132,35 @@ describe("the review page's guards", () => {
     expect(["awaiting_review", "reviewed"]).toContain(job.status);
     expect(job.saved_item_id).toBeNull();
     expect(transcriptPublishState(job as never)).toBe("draft");
+  });
+});
+
+describe("the saved recordings", () => {
+  // The list page reads finished recordings from the Transkripte knowledge
+  // base (TranscriptItems), not from the jobs. Unmapped, that query answered
+  // {} and the fourteen saved meetings were simply absent from the screen
+  // while the chapter spoke of twenty.
+  it("are listed as transcript items, one per saved job", async () => {
+    const data = await runDemoQueryThroughCache(GET_TRANSCRIPT_ITEMS, { page: 1, limit: 50 }, at);
+    const page = data.transcriptions_itemsPagination as {
+      pageInfo: { itemCount: number; hasNextPage: boolean };
+      items: { id: string; name: string; job_id: string | null; recorded_at: string; duration_seconds: number | null }[];
+    };
+    const saved = ALGI_MEETINGS.filter((m) => m.status === "saved");
+    expect(page.items).toHaveLength(saved.length);
+    expect(page.pageInfo.itemCount).toBe(saved.length);
+    expect(new Set(page.items.map((i) => i.job_id))).toEqual(new Set(saved.map((m) => m.id)));
+    expect(page.items.every((i) => i.name.trim().length > 0 && typeof i.recorded_at === "string")).toBe(true);
+  });
+
+  it("honours the search box", async () => {
+    const data = await runDemoQueryThroughCache(
+      GET_TRANSCRIPT_ITEMS,
+      { page: 1, limit: 50, filters: [{ name: { contains: "Produktionsbesprechung" } }] },
+      at,
+    );
+    const items = (data.transcriptions_itemsPagination as { items: { name: string }[] }).items;
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.every((i) => i.name.includes("Produktionsbesprechung"))).toBe(true);
   });
 });
