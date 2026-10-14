@@ -64,11 +64,11 @@ The tour must survive its own navigation.
 
 **Content by default (D1).** `tour-panel.tsx` renders, in order: chapter header, chapter rail, title, optional lead, `StepPanel` content, footer. `expanded`/`menuOpen` state for content goes; the chapter menu keeps a toggle. Panel width 420 px collapsed; the 380/560 triplication in `tour-panel.tsx`, `globals.css` `--tour-panel-w` and the `data-demo-panel-expanded` attribute collapses to one width.
 
-**Chapter rail.** Twelve segments under the header, the current one in `--primary`, past ones in `--muted-foreground`, each a button that jumps to that chapter (replacing the hidden menu as the primary affordance; the text menu stays for titles). Below the rail, the chapter's goal in one line from a new `DemoChapter.goal?: string` (German, drafted by implementer, signed off).
+**Chapter rail.** Twelve segments under the header, the current one in `--primary`, past ones in `--muted-foreground`, each a button that jumps to that chapter (replacing the hidden menu as the primary affordance; the text menu stays for titles). Below the rail, the chapter's goal in one line from a new `DemoChapter.goal: string` (required; all twelve ship with the panel; German, drafted by implementer, signed off).
 
 **Reveal.** The title-and-content block is a `motion.div` keyed on `position`, `initial {opacity 0, y 6}`, `animate {opacity 1, y 0}`, 250 ms, disabled under `prefers-reduced-motion`.
 
-**Keyboard.** In demo mode `app/(application)/layout.tsx` sets `inert` on `<main>` and the sidebar root so Tab reaches the panel first; `ContentInert` stays.
+**Keyboard.** The tour overlay is rendered before `<main>` in `app/(application)/layout.tsx` and placed last by `order-last` on the panel, so Tab reaches the panel first; `ContentInert` stays. (Amended 2026-10-14 from `inert` on `<main>`: an inert subtree is excluded from hit-testing, which would stop the chat's inner scroller from responding to the wheel.)
 
 **Register.** The panel's header carries the OPEN wordmark line; callouts and the active rail segment use `--primary`; a step's figure renders at the top of the content column at full panel width.
 

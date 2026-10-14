@@ -160,16 +160,11 @@ export default async function RootLayout({
                 //
                 // --tour-panel-w (how much of the right edge the docked panel
                 // actually occupies) is deliberately NOT set here as an inline
-                // style. It depends on the panel's responsive width (0 below
-                // md, since the panel docks at the bottom there instead of the
-                // right — see tour-panel.tsx) and its client-only `expanded`
-                // state (380 vs 560), neither of which this server component
-                // can see. Both live in app/globals.css instead, right next to
-                // the media query and the data-demo-panel-expanded attribute
-                // (set on this same <body> from tour-panel.tsx) that resolve
-                // them, so the two things that determine the value sit next to
-                // each other rather than split across a server render and a
-                // stylesheet.
+                // style: it is 0 below md, where the panel docks at the bottom
+                // instead of the right (see tour-panel.tsx), and 420px above —
+                // a media query in app/globals.css, next to the inset rule
+                // that consumes it, rather than a value split across a server
+                // render and a stylesheet.
                 data-demo-tour={demoMode ? "active" : undefined}
             >
                 <ConfigContextProvider config={config}>
@@ -189,6 +184,13 @@ export default async function RootLayout({
                             forcedTheme={demoMode ? "dark" : undefined}
                             disableTransitionOnChange>
                             <div className="flex min-h-0 grow w-full flex-col md:flex-row">
+                                {/* Before <main> in DOM order, last in layout
+                                    (tour-panel.tsx's `order-last`): Tab reaches
+                                    Zurück and Weiter in three presses instead of
+                                    walking the inert sidebar and product first.
+                                    Chapters end on product routes in this group,
+                                    so the panel has to live here. */}
+                                {demoMode && <TourOverlay />}
                                 {/* The ONE <main> landmark (a11y fix M11) — every
                                     inner content wrapper below this is a div. */}
                                 <main className="grow flex min-w-0 w-full">
@@ -215,11 +217,6 @@ export default async function RootLayout({
                                         </Authenticated>
                                     </div>
                                 </main>
-                                {/* Chapters 3 and 4 end on product routes, which
-                                    live in this group rather than under /demo.
-                                    Without the panel here the tour sends the
-                                    visitor here and strands them with no way on. */}
-                                {demoMode && <TourOverlay />}
                             </div>
                             <SonnerToaster />
                         </ThemeProvider>
