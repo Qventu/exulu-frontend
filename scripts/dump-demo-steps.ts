@@ -1,6 +1,6 @@
 /**
  * Prints every tour step, in order, as JSON: `{ pos, chapterId, chapterTitle,
- * step, stepId, route, anchor, href, scrollBlock }[]`.
+ * step, stepId, title, route, anchor, href, scrollBlock }[]`.
  *
  * The one and only source of the step list for scripts/walk-demo.mjs. That
  * script shells out to this one (`npx tsx scripts/dump-demo-steps.ts`) rather
@@ -23,6 +23,7 @@ const steps = CHAPTERS.flatMap((chapter) =>
     chapterTitle: chapter.title,
     step: index,
     stepId: step.id,
+    title: step.title,
     route: step.route,
     anchor: step.anchor,
     href: hrefFor({ chapter: chapter.id, step: index }, CHAPTERS),

@@ -65,6 +65,12 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "..");
 
 const BASE_URL = process.env.DEMO_BASE_URL ?? "http://localhost:3111";
+// "next" (default) walks the tour the way a prospect does: load the first
+// step, then click Weiter and wait for the NEXT step's title in the panel.
+// "direct" loads every step by URL — faster, and blind to every bug that
+// lives in the transition (a redirect that drops ?tour=, a same-route step
+// that never refetches, a tab that only follows the URL on reload).
+const WALK_MODE = process.env.WALK_MODE ?? "next";
 const PLAYWRIGHT_DIR = process.env.PLAYWRIGHT_DIR ?? process.cwd();
 const OUT_DIR = process.env.WALK_OUT_DIR ?? path.join(PLAYWRIGHT_DIR, "walk-demo-out");
 
@@ -125,6 +131,15 @@ function assertGeometry(anchor) {
   const m = main.getBoundingClientRect();
   const ring = document.querySelector('[data-demo-id="tour-ring"]');
   const anchorEl = anchor ? document.querySelector(`[data-demo-id="${anchor}"]`) : null;
+  // A ring drawn around a hidden anchor is an 8x8 box at the viewport
+  // corner (evals.2 on 2026-10-14). Require real size and some overlap with
+  // the viewport.
+  const ringSane = (() => {
+    if (!ring) return null;
+    const r = ring.getBoundingClientRect();
+    const onScreen = r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
+    return r.width >= 16 && r.height >= 16 && onScreen;
+  })();
   // The ring is drawn 4px outside its anchor on every side (tour-ring.tsx).
   // "On the anchor" therefore means exactly that offset, with a px of slack
   // for subpixel layout — NOT "roughly near it": the bug this catches put it
@@ -150,6 +165,7 @@ function assertGeometry(anchor) {
     overlapsContent: p.left < m.right && p.right > m.left && p.top < m.bottom && p.bottom > m.top,
     ringPresent: !!ring,
     ringOnAnchor,
+    ringSane,
     // Scoped to elements that could actually TAKE the panel over: a portalled
     // Radix dialog or backdrop. The tour's own ring is excluded — it is
     // pointer-events: none, so it cannot intercept anything, and it is sized
@@ -577,6 +593,30 @@ async function readSettledGeometry(page, anchor, tries = 6) {
 
 // ── Main ───────────────────────────────────────────────────────────────────
 
+/**
+ * Clicks Weiter and waits until the panel's <h2> reads `expectedTitle`.
+ * Resolves to null on success, or a message naming what the panel showed.
+ */
+async function advance(page, expectedTitle) {
+  const weiter = page.locator('[data-demo-id="tour-panel"] button', { hasText: /^Weiter$/ });
+  if ((await weiter.count()) === 0) return "no Weiter button on the previous step";
+  await weiter.first().click();
+  try {
+    await page.waitForFunction(
+      (title) => document.querySelector('[data-demo-id="tour-panel"] h2')?.textContent?.trim() === title,
+      expectedTitle,
+      { timeout: 20000 },
+    );
+    return null;
+  } catch {
+    const got = await page.evaluate(() => ({
+      title: document.querySelector('[data-demo-id="tour-panel"] h2')?.textContent?.trim() ?? null,
+      url: location.pathname + location.search,
+    }));
+    return `panel shows ${JSON.stringify(got.title)} at ${got.url}, expected ${JSON.stringify(expectedTitle)}`;
+  }
+}
+
 async function main() {
   const { chromium } = resolvePlaywright();
   const steps = loadSteps();
@@ -598,13 +638,28 @@ async function main() {
     const url = BASE_URL + step.href;
     const row = { pos: step.pos, chapterTitle: step.chapterTitle, stepId: step.stepId, route: step.route, anchor: step.anchor, href: step.href };
 
-    try {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
-    } catch (err) {
-      row.error = `navigation failed: ${String(err).split("\n")[0]}`;
-      results.push(row);
-      console.log(`${step.pos.padEnd(18)} NAV FAIL ${row.error}`);
-      continue;
+    const isFirst = results.length === 0;
+    if (WALK_MODE === "direct" || isFirst) {
+      try {
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+      } catch (err) {
+        row.error = `navigation failed: ${String(err).split("\n")[0]}`;
+        results.push(row);
+        console.log(`${step.pos.padEnd(18)} NAV FAIL ${row.error}`);
+        continue;
+      }
+    } else {
+      const problem = await advance(page, step.title);
+      if (problem) {
+        row.error = `Weiter did not reach this step: ${problem}`;
+        row.transitionOk = false;
+        results.push(row);
+        console.log(`${step.pos.padEnd(18)} TRANSITION FAIL ${row.error}`);
+        // Recover by URL so the rest of the walk still reports per step.
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
+        continue;
+      }
+      row.transitionOk = true;
     }
 
     // Poll rather than a flat sleep: most steps settle in well under a
@@ -652,7 +707,7 @@ async function main() {
     // "ringPresent" happily reported true the whole time.
     row.ringOk =
       geometry.ringPresent === row.ringExpected &&
-      (!row.ringExpected || geometry.ringOnAnchor === true);
+      (!row.ringExpected || (geometry.ringOnAnchor === true && geometry.ringSane === true));
     row.panelRect = geometry.panelRect;
     row.mainRect = geometry.mainRect;
     // Not one of the brief's 5 assertions (and not part of row.allPass below)
@@ -687,6 +742,7 @@ async function main() {
     row.scroll = scrollResult;
 
     row.allPass =
+      row.transitionOk !== false &&
       row.panelVisible === true &&
       row.overlapsContent === false &&
       row.coveringPanel === false &&
