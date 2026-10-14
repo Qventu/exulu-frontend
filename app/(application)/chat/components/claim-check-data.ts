@@ -61,11 +61,21 @@ function chunksOf(message: UIMessage): Record<string, unknown>[] {
  * The named sources, with their text, in the order the metadata named them.
  * Several chunks of one document are concatenated so the source arrives whole —
  * the check's containment and evidence selection both read continuous text.
+ *
+ * Two omissions, both deliberate:
+ * - A duplicated id in the fragment produces one source, not one per mention.
+ * - An id whose chunks are all missing or empty `chunk_content` is dropped,
+ *   not emitted as `{ content: "" }`. A source with no text is indistinguishable
+ *   from a fabricated one: the backend would score every claim citing it
+ *   against nothing and report those claims `unsupported` — a false
+ *   hallucination alarm about the user's own answer. This module's contract is
+ *   never invent, never pad; the caller (Task F4) is responsible for refusing
+ *   to run a check whose evidence came back incomplete.
  */
 export function collectSources(message: UIMessage, sourceIds: string[]): ClaimCheckSource[] {
   const chunks = chunksOf(message);
   const out: ClaimCheckSource[] = [];
-  for (const id of sourceIds) {
+  for (const id of [...new Set(sourceIds)]) {
     const mine = chunks.filter((c) => c.item_id === id);
     if (mine.length === 0) continue;
     const name = typeof mine[0]!.item_name === "string" ? (mine[0]!.item_name as string) : undefined;
@@ -73,6 +83,7 @@ export function collectSources(message: UIMessage, sourceIds: string[]): ClaimCh
       .map((c) => (typeof c.chunk_content === "string" ? c.chunk_content : ""))
       .filter(Boolean)
       .join("\n\n");
+    if (!content) continue;
     out.push(name ? { id, name, content } : { id, content });
   }
   return out;

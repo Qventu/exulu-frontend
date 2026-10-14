@@ -42,6 +42,25 @@ describe("parseClaimCheckTrigger", () => {
     expect(parseClaimCheckTrigger({ claimCheck: { enabled: true } })).toBeNull(); // no sourceIds
     expect(parseClaimCheckTrigger({ claimCheck: { enabled: true, sourceIds: [] } })).toBeNull();
   });
+
+  it("requires enabled to be the boolean true, not merely truthy — a false positive fires a paid check for an agent whose admin left it off", () => {
+    expect(parseClaimCheckTrigger({ claimCheck: { enabled: "true", sourceIds: ["i1"] } })).toBeNull();
+    expect(parseClaimCheckTrigger({ claimCheck: { enabled: 1, sourceIds: ["i1"] } })).toBeNull();
+  });
+
+  it("returns null when claimCheck itself is not an object", () => {
+    expect(parseClaimCheckTrigger({ claimCheck: "yes" })).toBeNull();
+    expect(parseClaimCheckTrigger({ claimCheck: null })).toBeNull();
+    expect(parseClaimCheckTrigger({ claimCheck: true })).toBeNull();
+  });
+
+  it("filters non-string entries out of sourceIds and toolCallIds rather than passing them through", () => {
+    expect(
+      parseClaimCheckTrigger({
+        claimCheck: { enabled: true, sourceIds: ["i1", 42, null, "i2"], toolCallIds: ["call_1", 7, undefined] },
+      }),
+    ).toEqual({ enabled: true, sourceIds: ["i1", "i2"], toolCallIds: ["call_1"] });
+  });
 });
 
 describe("collectSources", () => {
@@ -80,6 +99,36 @@ describe("collectSources", () => {
 
   it("skips an id the message does not carry rather than inventing an empty source", () => {
     expect(collectSources(message, ["i1", "nope"]).map((s) => s.id)).toEqual(["i1"]);
+  });
+
+  it("drops an id whose chunks are all missing or empty chunk_content, rather than emitting a source with no text", () => {
+    // A source with no text is indistinguishable from a fabricated one: the
+    // backend would score every claim citing it against nothing and report
+    // those claims `unsupported` — a false hallucination alarm about the
+    // user's own answer. This is a different branch than "no matching chunk":
+    // here the id DOES have chunks, they just carry no usable text.
+    const empty = {
+      parts: [
+        {
+          type: "tool-Context_Search",
+          output: {
+            result: JSON.stringify({
+              chunks: [
+                { item_id: "i1", item_name: "blank.pdf", chunk_content: "" },
+                { item_id: "i1", item_name: "blank.pdf" }, // chunk_content absent entirely
+              ],
+            }),
+          },
+        },
+      ],
+    } as unknown as UIMessage;
+    expect(collectSources(empty, ["i1"])).toEqual([]);
+  });
+
+  it("deduplicates a repeated id in the fragment into one source entry", () => {
+    expect(collectSources(message, ["i1", "i1"])).toEqual([
+      { id: "i1", name: "handbuch.pdf", content: "Die FST-2XT arbeitet mit 230 Volt." },
+    ]);
   });
 });
 
