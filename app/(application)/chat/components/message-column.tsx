@@ -184,7 +184,9 @@ function makeUntypedToolPart(
       <Tool key={callId} className="mt-3" defaultOpen={false} data-demo-id="chat-tool-trace">
         <ToolHeader
           title={toolTitle}
-          className="capitalize"
+          // The product title-cases a tool name ("Context Search"); a German
+          // label is a phrase and must keep its own casing.
+          className={isDemoMode() ? undefined : "capitalize"}
           type={styleToolName as `tool-${string}`}
           state={untypedToolPart.state}
         />
