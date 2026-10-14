@@ -48,4 +48,72 @@ describe("makeClaimCheck", () => {
     );
     expect(container.firstChild).toBeNull();
   });
+
+  // Guards against a factory that looks up state by something other than
+  // the rendered message's own id (e.g. an off-by-one keying bug, or one
+  // that ignores the id and just reads "the" entry) — state keyed to a
+  // DIFFERENT message id must render nothing for this message.
+  it("renders nothing when the state belongs to a different message", () => {
+    const Component = makeClaimCheck({ msg_2: { status: "running" } }, false);
+    const { container } = render(
+      <NextIntlClientProvider locale="de" messages={de as never}>
+        <Component message={message} agent={agent} />
+      </NextIntlClientProvider>,
+    );
+    expect(container.firstChild).toBeNull();
+  });
+
+  // The one thing this task adds beyond wiring: the factory derives
+  // sourceNames from the message's own retrieval tool part via
+  // collectSources(message, trigger.sourceIds), so an evidence quote is
+  // attributed to its document rather than shown as an anonymous snippet.
+  it("names the evidence source from the message's retrieval part", async () => {
+    const messageWithSource = {
+      id: "msg_named",
+      role: "assistant",
+      metadata: { claimCheck: { enabled: true, sourceIds: ["i1"], toolCallIds: [] } },
+      parts: [
+        {
+          type: "tool-Context_Search",
+          output: {
+            result: JSON.stringify({
+              chunks: [{ item_id: "i1", item_name: "handbuch.pdf", chunk_content: "Das Gerät arbeitet mit 230 Volt." }],
+            }),
+          },
+        },
+      ],
+    } as never;
+    const result = {
+      status: "ok",
+      score: { claims: 1, supported: 1, contradicted: 0, unsupported: 0, unsupportedShare: 0, label: "ok" },
+      sentences: [{ index: 0, start: 0, end: 34, state: "checked", claimIds: ["c1"] }],
+      claims: [
+        {
+          id: "c1",
+          sentenceIndex: 0,
+          text: "Das Gerät arbeitet mit 230 Volt.",
+          inferred: false,
+          verdict: "supported",
+          evidence: [{ sourceId: "i1", quote: "arbeitet mit 230 Volt" }],
+          rationale: "Die Quelle nennt 230 Volt.",
+          rechecked: false,
+        },
+      ],
+      usage: { calls: 1, inputTokens: 1, outputTokens: 1 },
+      timings: {},
+      limits: { truncated: false, sentencesSkipped: 0 },
+      notes: [],
+    } as never;
+    const Component = makeClaimCheck({ msg_named: { status: "done", result } }, false);
+    const { container } = render(
+      <NextIntlClientProvider locale="de" messages={de as never}>
+        <Component message={messageWithSource} agent={agent} />
+      </NextIntlClientProvider>,
+    );
+    const trigger = container.querySelector("[data-claim-check-trigger]") as HTMLElement;
+    trigger.click();
+    expect(await screen.findByText(/handbuch\.pdf.*arbeitet mit 230 Volt/)).toBeDefined();
+    // The id itself must never reach a reader as a stand-in for the name.
+    expect(screen.queryByText(/i1/)).toBeNull();
+  });
 });
