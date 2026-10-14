@@ -221,10 +221,19 @@ export function claimCheckRequestFor({ message, question, session, agentId, loca
   // unclaimed and the resumed turn gets its check.
   if (hasPendingToolApproval(message)) return null;
   const sources = collectSources(message, trigger.sources);
-  // Fewer sources than the fragment named means the client can no longer
-  // produce evidence the backend expected. Checking anyway would score
-  // grounded claims unsupported; a missing panel is the honest failure.
-  if (sources.length !== trigger.sources.length) return null;
+  // One manifest entry can yield several sources — a web search cites
+  // several pages, a session item has several chunks (claim-check-data.ts) —
+  // so a length comparison is wrong: a fully-covered turn can recover MORE
+  // sources than the manifest has entries. What must hold is that EVERY
+  // entry contributed something. An entry that produced nothing means the
+  // answer may rest on evidence this client cannot send, and verifying
+  // against part of the evidence scores grounded claims unsupported — a
+  // false "your answer was unfounded" about the reader's own answer, the
+  // worst output this system can produce. Multi-source ids are namespaced
+  // `${entryId}#<suffix>`, so splitting on "#" maps a source back to the
+  // entry that produced it.
+  const covered = new Set(sources.map((s) => (s.id ?? "").split("#")[0]));
+  if (trigger.sources.some((entry) => !covered.has(entry.id))) return null;
   const answer = answerTextOf(message);
   if (!answer.trim()) return null;
   return {

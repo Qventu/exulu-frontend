@@ -47,6 +47,7 @@ import Logo from "@/components/logo";
 import { MessageRenderer } from "@/components/message-renderer";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { ClaimCheckSourceType } from "@/lib/api/claim-check";
 import { can } from "@/lib/rights";
 import { cn } from "@/lib/utils";
 import type { Agent } from "@/types/models/agent";
@@ -231,20 +232,24 @@ function makeRecalledMemories(guestMode: boolean) {
  * same way makeRecalledMemories does — MessageRenderer's component props are a
  * frozen shape and take only { message, agent }.
  *
- * Also derives `sourceNames` (id -> name) from the message's own retrieval
- * parts: `collectSources` (F2) re-reads the same tool output the message
- * already carries, so this costs nothing extra. An id whose source carries no
- * name is skipped rather than falling back to the id itself — a raw source id
- * must never reach the panel, which already falls back to the quote alone
- * when a name is absent.
+ * Also derives `sourceNames` (id -> name) and `sourceTypes` (id -> type) from
+ * the message's own retrieval parts: `collectSources` (F2) re-reads the same
+ * tool output the message already carries, so this costs nothing extra. An
+ * id whose source carries no name is skipped rather than falling back to the
+ * id itself — a raw source id must never reach the panel, which already
+ * falls back to the quote alone when a name is absent. `sourceTypes` is what
+ * lets the panel say "memory" or "web" instead of implying every source is a
+ * knowledge-base document (F3).
  */
 export function makeClaimCheck(claimChecks: Record<string, ClaimCheckState>, guestMode: boolean) {
   const ClaimCheckForColumn = ({ message }: { message: UIMessage; agent: Agent }) => {
     const trigger = parseClaimCheckTrigger(message.metadata);
     const sourceNames: Record<string, string> = {};
+    const sourceTypes: Record<string, ClaimCheckSourceType> = {};
     if (trigger) {
       for (const source of collectSources(message, trigger.sources)) {
         if (source.name && source.id) sourceNames[source.id] = source.name;
+        if (source.id && source.type) sourceTypes[source.id] = source.type;
       }
     }
     return (
@@ -252,6 +257,7 @@ export function makeClaimCheck(claimChecks: Record<string, ClaimCheckState>, gue
         state={claimChecks[message.id] ?? null}
         guestMode={guestMode}
         sourceNames={sourceNames}
+        sourceTypes={sourceTypes}
       />
     );
   };

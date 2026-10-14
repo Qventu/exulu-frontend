@@ -19,7 +19,115 @@ const base = {
 
 const args = { message: base, question: "Womit?", session: "s1", agentId: "a1", locale: "de" };
 
+// A web entry can cite several pages and so yield several sources from one
+// manifest entry — the shape that broke a plain `sources.length ===
+// trigger.sources.length` comparison. Two manifest entries (web, knowledge
+// base) recover three sources (two cited pages + one chunk), and every
+// entry contributed something, so the guard must still run the check.
+const webAndKbMessage = {
+  id: "msg_web_kb",
+  role: "assistant",
+  metadata: {
+    claimCheck: {
+      enabled: true,
+      sources: [
+        { type: "web", id: "tool:call_9", toolCallId: "call_9" },
+        { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+      ],
+    },
+  },
+  parts: [
+    {
+      type: "tool-Internet_Search",
+      toolCallId: "call_9",
+      output: {
+        result: JSON.stringify({
+          content: "Die Anlage läuft mit 230 Volt.",
+          search_results: [
+            { url: "https://example.com/a", title: "Anlagen A", snippet: "230 Volt." },
+            { url: "https://example.com/b", title: "Anlagen B", snippet: "Wartung jährlich." },
+          ],
+        }),
+      },
+    },
+    {
+      type: "tool-Context_Search",
+      toolCallId: "call_1",
+      output: { result: JSON.stringify({ chunks: [{ item_id: "i1", item_name: "h.pdf", chunk_content: "230 Volt." }] }) },
+    },
+    { type: "text", text: "Die Anlage arbeitet mit 230 Volt." },
+  ],
+} as unknown as UIMessage;
+
+// The spec's §8 end-to-end case: a memory entry (metadata, no toolCallId)
+// alongside a knowledge-base entry — the turn that produced NOTHING before
+// Stage 4 taught the client to read `recalledMemories`.
+const memoryAndKbMessage = {
+  id: "msg_mem_kb",
+  role: "assistant",
+  metadata: {
+    claimCheck: {
+      enabled: true,
+      sources: [
+        { type: "memory", id: "memory:m_7" },
+        { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+      ],
+    },
+    recalledMemories: [{ id: "m_7", title: "Sprache", information: "Der Kunde bevorzugt Deutsch." }],
+  },
+  parts: [
+    {
+      type: "tool-Context_Search",
+      toolCallId: "call_1",
+      output: { result: JSON.stringify({ chunks: [{ item_id: "i1", item_name: "h.pdf", chunk_content: "230 Volt." }] }) },
+    },
+    { type: "text", text: "Die FST-2XT arbeitet mit 230 Volt." },
+  ],
+} as unknown as UIMessage;
+
+// Two entries named, only one recoverable — across DIFFERENT types, not the
+// same-type mismatch the earlier tests already pin. The document entry
+// recovers; the web entry's tool output does not parse, so `webSources`
+// returns zero sources for it and the manifest-entry id is never covered.
+const oneMissingMessage = {
+  id: "msg_one_missing",
+  role: "assistant",
+  metadata: {
+    claimCheck: {
+      enabled: true,
+      sources: [
+        { type: "document", id: "tool:call_4", toolCallId: "call_4" },
+        { type: "web", id: "tool:call_9", toolCallId: "call_9" },
+      ],
+    },
+  },
+  parts: [
+    { type: "tool-read_session_file", toolCallId: "call_4", input: { filename: "wartung.pdf" }, output: { content: "230 Volt." } },
+    { type: "tool-Internet_Search", toolCallId: "call_9", output: { result: "<<not json>>" } },
+    { type: "text", text: "Die FST-2XT arbeitet mit 230 Volt." },
+  ],
+} as unknown as UIMessage;
+
 describe("claimCheckRequestFor", () => {
+  it("runs the check when every manifest entry produced at least one source", () => {
+    // A web entry yields two sources, so a count comparison would wrongly refuse.
+    const body = claimCheckRequestFor({ message: webAndKbMessage, question: "q", session: "s", agentId: "a", locale: "de" });
+    expect(body?.sources).toHaveLength(3);
+  });
+
+  // The spec's §8 end-to-end case: the turn that produced NOTHING before Stage 4.
+  it("builds a complete request for a memory turn with retrieval", () => {
+    const body = claimCheckRequestFor({ message: memoryAndKbMessage, question: "q", session: "s", agentId: "a", locale: "de" });
+    expect(body?.sources.map((s) => s.type)).toEqual(["memory", "knowledge_base"]);
+    expect(body?.sources.every((s) => s.content.trim().length > 0)).toBe(true);
+  });
+
+  it("refuses when a manifest entry produced nothing", () => {
+    // Two entries named, only one recoverable: the answer may rest on evidence we
+    // cannot send, and a partial check reports grounded claims unsupported.
+    expect(claimCheckRequestFor({ message: oneMissingMessage, question: "q", session: "s", agentId: "a", locale: "de" })).toBeNull();
+  });
+
   it("builds the exact body for a triggered message", () => {
     expect(claimCheckRequestFor(args)).toEqual({
       question: "Womit?",
