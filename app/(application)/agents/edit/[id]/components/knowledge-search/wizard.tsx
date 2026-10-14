@@ -7,6 +7,7 @@
  * serializes to config entries via onApply. Never talks to the backend.
  */
 
+import { isDemoMode } from "@/lib/demo/flag";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
@@ -86,7 +87,20 @@ export function KnowledgeSearchWizard({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-hidden sm:max-w-2xl">
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col gap-0 overflow-hidden sm:max-w-2xl"
+        // Radix dismisses on any pointerdown outside the layer, and the
+        // docked tour panel is outside it: pressing Weiter closed the sheet
+        // and the next step's ?wizard= reopened it, a slide-out and -in on
+        // every step of chapter 7. The panel is not "outside" for the tour.
+        onInteractOutside={(event) => {
+          const target = event.detail.originalEvent.target;
+          if (isDemoMode() && target instanceof Element && target.closest('[data-demo-id="tour-panel"]')) {
+            event.preventDefault();
+          }
+        }}
+      >
         <SheetHeader className="border-b pb-3">
           <SheetTitle>{t("editor.knowledge.wizard.title")}</SheetTitle>
           <SheetDescription>

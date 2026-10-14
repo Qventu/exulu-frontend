@@ -530,6 +530,18 @@ body[data-demo-tour="active"] [data-slot="sheet-overlay"] {
   margin-right: var(--tour-panel-w, 0px);
 }
 
+/* The agent-editor wizard (knowledge-search/wizard.tsx) has its own
+ * "← Zurück / Weiter →" footer and a close button. In the tour both are
+ * inert, and two Zurück/Weiter pairs on one screen was the most confusing
+ * frame of the walkthrough. The footer is the step body's next sibling
+ * (the body carries data-demo-id="agent-wizard-<step>"); the close is the
+ * Sheet primitive's last child button. Scoped to the tour, so no
+ * deployment loses a control. */
+body[data-demo-tour="active"] [data-demo-id^="agent-wizard-"] + div,
+body[data-demo-tour="active"] [role="dialog"] > button:last-child {
+  display: none;
+}
+
 /* The inset above fixes what the eye and the mouse both hit-test as
  * "on top", but a modal Radix Dialog also sets pointer-events: none
  * directly on <body> for as long as it's open — its actual modality
