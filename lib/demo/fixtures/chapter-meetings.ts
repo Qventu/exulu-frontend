@@ -1,10 +1,13 @@
 import RAW_MEETINGS from "./algi-meetings.json";
+import { meetingTally } from "./meeting-tally";
 
 /**
  * Chapter 7 — what was said in the room.
  *
  * ALGI records their internal meetings with a bot and keeps the transcripts.
- * Twenty-eight of them, seventeen hours, in ./algi-meetings.json — real
+ * Twenty of them, about thirteen hours (eight test, untitled and catch-up rows
+ * were removed on 2026-10-14; the two agent-training sessions stay — ALFREDO is
+ * ALGI's own agent, chapter 9), in ./algi-meetings.json — real
  * titles, durations, languages and statuses, and nothing else. See
  * scripts/build-algi-meetings-fixture.py for what was dropped and why.
  *
@@ -41,6 +44,9 @@ export interface MeetingRecording {
 }
 
 export const ALGI_MEETINGS = RAW_MEETINGS as MeetingRecording[];
+
+/** The counts chapter 10 states on screen, read from the list it describes. */
+export const ALGI_MEETING_TALLY = meetingTally(ALGI_MEETINGS);
 
 /** The production meeting chapter 7 opens: Bausatz Kabine, 30 minutes. */
 export const ALGI_MEETING_ID = "000cf053-e361-47b2-8f53-536ff29d912d";

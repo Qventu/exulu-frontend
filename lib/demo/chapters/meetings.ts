@@ -1,5 +1,6 @@
 import type { DemoChapter } from "../tour";
-import { ALGI_MEETING_ID } from "../fixtures/chapter-meetings";
+import { ALGI_MEETING_ID, ALGI_MEETING_TALLY as T } from "../fixtures/chapter-meetings";
+import { capitalise, germanCount } from "../fixtures/meeting-tally";
 
 /**
  * The review PAGE, not the old `?review=` sheet. /transcriptions redirects
@@ -20,12 +21,12 @@ export const meetingsChapter: DemoChapter = {
       id: "meetings-list",
       route: "/transcriptions",
       anchor: "transcriptions",
-      title: "Siebzehn Stunden, die niemand nachhören wird",
+      title: `${capitalise(germanCount(T.hours))} Stunden, die niemand nachhören wird`,
       content: [
         { kind: "figure", src: "/demo/ch7-meetings.webp", alt: "Von der Aufzeichnung zur Arbeitsanweisung" },
         {
           kind: "paragraph",
-          text: "28 Besprechungen, aufgezeichnet von einem Bot, der einfach mitkommt — Produktionsplanung, Service, Schulung. Drei abgebrochen, eine fehlgeschlagen.",
+          text: `${T.count} Besprechungen, aufgezeichnet von einem Bot, der einfach mitkommt — Produktionsplanung, Service, Schulung. ${capitalise(germanCount(T.cancelled, true))} abgebrochen, ${germanCount(T.failed, true)} fehlgeschlagen.`,
         },
       ],
     },

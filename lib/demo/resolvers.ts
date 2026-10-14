@@ -168,8 +168,8 @@ const transcriptionJob = (meeting: MeetingRecording) => ({
   recall_recording_id: null,
   bot_status: meeting.bot_status,
   // Scheduled join time for a bot that has not dialled in yet. Null for every
-  // recording here because all 28 have already run — and omitting it cost one
-  // Apollo error per row, 28 on first paint, which is how this was found.
+  // recording here because all twenty have already run — and omitting it cost one
+  // Apollo error per row, twenty on first paint, which is how this was found.
   join_at: null,
   post_processing_prompts: [],
   // Only the meeting chapter 7 opens carries a generated document. The other
@@ -596,6 +596,30 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // the mean of all six results — while the per-case cells still looked right.
   GetJobResults: (_world, variables) => {
     const needle = filterValue(variables, "label");
+    // The routines list asks for the newest job whose label carries the
+    // routine id (useLastRunForPage). Answer it from the real runs; the
+    // row read "Noch nie ausgeführt" above twenty-five of them.
+    if (needle === ALGI_ROUTINE.id) {
+      const newest = [...ALGI_RUNS].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+      return {
+        job_resultsPagination: {
+          pageInfo: page(1),
+          items: [
+            {
+              id: `lastrun-${newest.id}`,
+              job_id: newest.id,
+              state: newest.state,
+              error: null,
+              label: `routine:${ALGI_ROUTINE.id}`,
+              result: null,
+              metadata: null,
+              createdAt: newest.createdAt,
+              updatedAt: newest.createdAt,
+            },
+          ],
+        },
+      };
+    }
     const items = needle
       ? EVAL_JOB_RESULTS.filter((row) => row.label.includes(needle))
       : EVAL_JOB_RESULTS;

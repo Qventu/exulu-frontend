@@ -16,17 +16,17 @@ const now = "2026-08-27T09:00:00.000Z";
 export const EVAL_SETS = [
   {
     id: "evalset-techdoc-regression",
-    name: "Technical documentation regression",
+    name: "Regression Technische Dokumentation",
     description:
-      "Fault codes, parameters and terminal assignments an engineer must get right first time.",
+      "Fehlercodes, Parameter und Klemmenbelegungen, die ein Techniker auf Anhieb richtig bekommen muss.",
     createdAt: now,
     updatedAt: now,
   },
   {
     id: "evalset-regulatory",
-    name: "Standards & regulations",
+    name: "Normen & Vorschriften",
     description:
-      "Questions answerable only from EN/DIN/VDI sources, to catch answers drifting to product docs.",
+      "Fragen, die nur aus EN-, DIN- und VDI-Quellen beantwortet werden dürfen — fängt Antworten ab, die in Produktdokumente abdriften.",
     createdAt: now,
     updatedAt: now,
   },
@@ -58,21 +58,21 @@ const testCase = (
 export const TEST_CASES = [
   testCase(
     "case-nothalt-cop",
-    "Nothalt COP in the FST fault memory",
+    "Nothalt COP im FST-Fehlerspeicher",
     'was bedeutet "Nothalt COP" im FST Fehlerspeicher?',
     "Identifies COP as the Car Operating Panel and the entry as the in-car emergency stop being pressed while stationary with doors open. Mentions V0188 naming and Elevision 4.0.",
     ["software_documentation_context", "support_tickets_context"],
   ),
   testCase(
     "case-lsu-reset",
-    "LSU start-up fault on automatic reset",
+    "LSU-Anlauffehler bei automatischem Reset",
     "Kann ich den Fehler LSU-Anfahrproblem auf automatischen Reset stellen?",
     "Explains LSU (Laufzeitüberwachung) and whether automatic reset is permissible for this fault class.",
     ["tech_doc_context"],
   ),
   testCase(
     "case-fst2xt-fahrkurve",
-    "FST-2XT parameters affecting the travel curve",
+    "FST-2XT-Parameter mit Einfluss auf die Fahrkurve",
     "Welche Parameter in der FST-2XT beeinflussen die Fahrkurve?",
     "Lists the relevant FST-2XT parameters with their menu paths.",
     ["tech_doc_context"],
@@ -141,7 +141,7 @@ export const EVAL_JOB_RESULTS = [
 export const EVAL_RUNS = [
   {
     id: "evalrun-2026-08-27",
-    name: "Nightly — gemini-3.1-pro",
+    name: "Nachtlauf — gemini-3.1-pro",
     eval_set_id: "evalset-techdoc-regression",
     agent_id: "demo-agent-newton",
     eval_functions: ["llm_as_judge"],
@@ -160,7 +160,7 @@ export const EVAL_RUNS = [
   },
   {
     id: "evalrun-2026-08-20",
-    name: "Baseline — before vocabulary tuning",
+    name: "Basislinie — vor der Fachvokabular-Pflege",
     eval_set_id: "evalset-techdoc-regression",
     agent_id: "demo-agent-newton",
     eval_functions: ["llm_as_judge"],
