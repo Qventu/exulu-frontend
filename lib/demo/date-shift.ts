@@ -1,7 +1,8 @@
 /**
  * Keeps the demo's timestamps recent.
  *
- * The fixtures were captured around 2026-08-27 and every relative date on
+ * The fixtures were captured up to midday 2026-08-28 (the epoch sits just
+ * past the latest stamp — fixture-dates.test.ts pins that) and every relative date on
  * screen ("vor 7 Monaten", "letzten Monat", "jetzt") drifts as the demo
  * outlives them. The demo link shifts every timestamp it returns by the
  * distance between that capture day and now, so the story stays internally
@@ -17,7 +18,7 @@
  * and would otherwise land weeks in the future. A stamp from later on the
  * capture day than now's time of day is clamped to a minute before now.
  */
-export const DEMO_EPOCH = "2026-08-27T09:00:00.000Z";
+export const DEMO_EPOCH = "2026-08-28T12:00:00.000Z";
 
 const EPOCH_MS = Date.parse(DEMO_EPOCH);
 const CUTOFF_MS = EPOCH_MS + 2 * 86_400_000;
@@ -36,13 +37,19 @@ function normaliseZone(zone: string): string {
   return `${zone.slice(0, 3)}:${zone.slice(3)}`;
 }
 
-export function shiftTimestamp(value: string, offsetMs: number): string {
+/** Milliseconds for a fixture timestamp in any of the three formats, or null. */
+export function parseTimestamp(value: string): number | null {
   const m = STAMP.exec(value);
-  if (!m) return value;
+  if (!m) return null;
   const [, day, time, fraction = "", zone] = m;
   const ms = fraction ? fraction.slice(1, 4).padEnd(3, "0") : "000";
   const parsed = Date.parse(`${day}T${time}.${ms}${normaliseZone(zone)}`);
-  if (Number.isNaN(parsed) || parsed === 0 || parsed >= CUTOFF_MS) return value;
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+export function shiftTimestamp(value: string, offsetMs: number): string {
+  const parsed = parseTimestamp(value);
+  if (parsed === null || parsed === 0 || parsed >= CUTOFF_MS) return value;
   // offset = now − epoch, so a stamp from later on the capture day would land
   // later than now ("in 23 Std." on the transcripts list). Nothing in the
   // demo's past may read as future: clamp to a minute before now, which is

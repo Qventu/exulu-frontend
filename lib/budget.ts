@@ -7,6 +7,8 @@
  * entity that is on track to exceed its budget before the window resets.
  */
 
+import { spendCurrency } from "@/lib/spend-currency";
+
 export type BudgetEntityType = "user" | "role" | "team" | "project" | "agent" | "routine";
 
 export const BUDGET_ENTITY_TYPES: {
@@ -233,5 +235,5 @@ export function defaultResetDate(duration: BudgetDuration, now: Date = new Date(
   }
   // "1d" → next UTC midnight
   return new Date(Date.UTC(y, mo, d + 1));
-}import { spendCurrency } from "@/lib/spend-currency";
+}
 
