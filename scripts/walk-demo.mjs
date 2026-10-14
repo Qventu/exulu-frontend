@@ -822,12 +822,34 @@ async function main() {
       [...document.querySelectorAll('[data-demo-id="tour-panel"] button')].some((b) => b.textContent.trim() === "Mehr"),
     ));
 
+    // Known English and developer leaks the overlays exist to remove. A
+    // guard against regression, not a proof of German: any match fails the
+    // step and names the snippet.
+    const LEAKS = [
+      /\b(Completed|Running|Pending|Awaiting Approval|Responded|Denied)\b/,
+      /\b(deinem|deinen|deiner|deine|dein)\b/,
+      /Doku ansehen/,
+      /Create Newton Memory Item/,
+      /software documentation context|support tickets context|tech doc context/i,
+      /Technical documentation regression|Standards & regulations|Nightly —|Baseline —/,
+      /Untitled transcript|Unbenanntes Transkript|Test Bild/,
+      /\$\s?\d/,
+      /Noch nie ausgeführt/,
+    ];
+    row.leaks = await page.evaluate((patterns) => {
+      const text = (document.querySelector("main")?.innerText ?? "").replace(/\s+/g, " ");
+      return patterns
+        .map((p) => new RegExp(p.source, p.flags).exec(text)?.[0] ?? null)
+        .filter(Boolean);
+    }, LEAKS.map((r) => ({ source: r.source, flags: r.flags })));
+
 
     // Computed LAST: contentVisible and noMehr above are part of it.
     row.allPass =
       row.transitionOk !== false &&
       row.contentVisible !== false &&
       row.noMehr === true &&
+      row.leaks.length === 0 &&
       row.panelVisible === true &&
       row.overlapsContent === false &&
       row.coveringPanel === false &&
@@ -840,7 +862,7 @@ async function main() {
     results.push(row);
     const flag = row.allPass ? "PASS" : "FAIL";
     console.log(
-      `${step.pos.padEnd(18)} ${flag} panel=${row.panelVisible} overlap=${row.overlapsContent} covering=${row.coveringPanel} ring=${row.ringPresent}/${row.ringExpected}${row.ringExpected ? `@anchor=${row.ringOnAnchor}` : ""} click=${clickResult.pass} scroll=${scrollResult.applicable ? scrollResult.pass : "n/a"}${row.panelScrolledAway ? " [panel-scrolled-away]" : ""} content=${row.contentVisible ?? "n/a"} mehr=${row.noMehr ? "none" : "PRESENT"}`,
+      `${step.pos.padEnd(18)} ${flag} panel=${row.panelVisible} overlap=${row.overlapsContent} covering=${row.coveringPanel} ring=${row.ringPresent}/${row.ringExpected}${row.ringExpected ? `@anchor=${row.ringOnAnchor}` : ""} click=${clickResult.pass} scroll=${scrollResult.applicable ? scrollResult.pass : "n/a"}${row.panelScrolledAway ? " [panel-scrolled-away]" : ""} content=${row.contentVisible ?? "n/a"} mehr=${row.noMehr ? "none" : "PRESENT"} leaks=${row.leaks.length ? JSON.stringify(row.leaks) : "none"}`,
     );
   }
 
