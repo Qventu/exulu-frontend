@@ -77,6 +77,7 @@ import type { DemoChapter } from "../tour";
 export const kostenChapter: DemoChapter = {
   id: "kosten",
   title: "Was es kostet",
+  goal: "Verbrauch sichtbar, Limits im Betrieb, keine Einsparung versprochen.",
   steps: [
     {
       id: "kosten-verbrauch",

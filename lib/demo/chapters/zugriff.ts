@@ -18,6 +18,7 @@ const ITEM = `/data/${SOFTWARE_DOC_CONTEXT_ID}/items/${SOFTWARE_DOC_ITEM_ID}`;
 export const zugriffChapter: DemoChapter = {
   id: "zugriff",
   title: "Zugriff",
+  goal: "Wer lesen darf, bestimmt auch, was die Antwort enthält.",
   steps: [
     {
       id: "zugriff-item",

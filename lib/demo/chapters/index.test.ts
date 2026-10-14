@@ -114,6 +114,17 @@ describe("chapter integrity", () => {
       }
     }
   });
+
+  // The docked panel shows the chapter's goal under its title on every step
+  // (sub-project 2). One line, Sie-form, a full sentence: it is read 37 times.
+  it("gives every chapter a one-line goal", () => {
+    for (const chapter of CHAPTERS) {
+      expect(chapter.goal, `${chapter.id} has no goal`).toBeTruthy();
+      const words = chapter.goal.trim().split(/\s+/).length;
+      expect(words, `${chapter.id} goal is ${words} words`).toBeLessThanOrEqual(14);
+      expect(chapter.goal.trim().endsWith("."), `${chapter.id} goal is not a sentence`).toBe(true);
+    }
+  });
 });
 
 describe("the narrative arc", () => {

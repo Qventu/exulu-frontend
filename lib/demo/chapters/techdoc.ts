@@ -4,6 +4,7 @@ import { TECHDOC_CHAT } from "../routes";
 export const techdocChapter: DemoChapter = {
   id: "techdoc",
   title: "Eine schwierige Frage",
+  goal: "Eine Technikerfrage, live beantwortet und mit Quellen belegt.",
   steps: [
     {
       // No illustration, and the reason is no longer geometric: the panel is

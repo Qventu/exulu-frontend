@@ -14,6 +14,7 @@ export const meetingsChapter: DemoChapter = {
   // work instruction in the last step is the one artefact the product did
   // not produce, and the body says so on screen.
   title: "Festhalten, was besprochen wurde",
+  goal: "Aus Besprechungen werden Dokumente, die jemand liest.",
   steps: [
     {
       id: "meetings-list",

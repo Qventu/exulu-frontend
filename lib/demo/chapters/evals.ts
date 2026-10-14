@@ -5,6 +5,7 @@ export const evalsChapter: DemoChapter = {
   // The questions and suite structure are real; the SCORES are illustrative
   // and the evals-matrix body says so on screen. See fixtures/evals.ts.
   title: "Belegen statt behaupten",
+  goal: "Antwortqualität wird gemessen, nicht behauptet.",
   steps: [
     {
       id: "evals-suites",

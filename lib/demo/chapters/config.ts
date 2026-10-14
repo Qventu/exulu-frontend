@@ -5,6 +5,7 @@ export const configChapter: DemoChapter = {
   // Runs on the product's real agent editor; `?wizard=` is a genuine deep
   // link into the retrieval wizard, not demo scaffolding.
   title: "Anpassen ohne Code",
+  goal: "Der Assistent ist Konfiguration, die Ihr eigenes Team bedient.",
   steps: [
     {
       id: "config-overview",

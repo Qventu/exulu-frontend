@@ -4,6 +4,7 @@ import { MEMORY_CHAT } from "../routes";
 export const memoryChapter: DemoChapter = {
   id: "memory",
   title: "Korrigieren",
+  goal: "Eine Korrektur im Chat wird zu Wissen für alle Kollegen.",
   steps: [
     {
       id: "memory-miss",

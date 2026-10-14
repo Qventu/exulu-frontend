@@ -7,6 +7,7 @@ export const contactChapter: DemoChapter = {
   // generalized-but-realistic data with no attribution, and the one place
   // names are allowed is next to the ask, where references belong.
   title: "Sprechen Sie mit uns",
+  goal: "Wer damit arbeitet, und wie es bei Ihnen weitergeht.",
   steps: [
     {
       id: "contact-references",

@@ -7,6 +7,7 @@ export const emailChapter: DemoChapter = {
   // switch is that a prospect stops watching one company's clever setup and
   // starts seeing a product that runs in more than one place.
   title: "Arbeitet, während Sie schlafen",
+  goal: "Dasselbe Produkt bearbeitet Ersatzteilanfragen, ohne dass jemand fragt.",
   steps: [
     {
       id: "email-routine",

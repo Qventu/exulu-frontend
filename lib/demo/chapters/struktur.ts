@@ -19,6 +19,7 @@ import type { DemoChapter } from "../tour";
 export const strukturChapter: DemoChapter = {
   id: "struktur",
   title: "Struktur",
+  goal: "Wissen bekommt einen Ort: eine Basis je Wissensart.",
   steps: [
     {
       id: "struktur-empty",

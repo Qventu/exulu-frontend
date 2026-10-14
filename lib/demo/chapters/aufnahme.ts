@@ -27,6 +27,7 @@ const CTX = `/data/${SOFTWARE_DOC_CONTEXT_ID}`;
 export const aufnahmeChapter: DemoChapter = {
   id: "aufnahme",
   title: "Aufnahme",
+  goal: "Aus Dateien werden durchsuchbare Passagen, jede mit ihrer Herkunft.",
   steps: [
     {
       id: "aufnahme-empty",

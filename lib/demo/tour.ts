@@ -62,6 +62,12 @@ export interface DemoStep {
 export interface DemoChapter {
   id: DemoChapterId;
   title: string;
+  /**
+   * The chapter's aim in one sentence, shown under the chapter title in the
+   * docked panel on every step of the chapter. Visitor-facing German —
+   * drafted by the implementer, signed off by the copy owners.
+   */
+  goal: string;
   steps: DemoStep[];
 }
 
