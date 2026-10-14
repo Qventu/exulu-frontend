@@ -1219,7 +1219,7 @@
     "claimCheckSourceDocument": "Document",
     "claimCheckSourceMemory": "Memory",
     "claimCheckSourceWeb": "Web",
-    "claimCheckSourceSessionItem": "Attached item",
+    "claimCheckSourceSessionItem": "Pinned item",
     "claimCheckSourceOther": "Source",
     "runBanner": {
       "label": "Routine run — {name}",
