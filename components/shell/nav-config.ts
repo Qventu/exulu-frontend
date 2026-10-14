@@ -37,6 +37,8 @@ import {
   Workflow,
 } from "lucide-react";
 
+import { isDemoMode } from "@/lib/demo/flag";
+import { DEMO_NAV_ROUTES } from "@/lib/demo/nav-routes";
 import { can, type Requirement, type RightsUser } from "@/lib/rights";
 
 /**
@@ -414,10 +416,15 @@ export function flagEnabled(config: NavConfig, flag?: NavConfigFlag): boolean {
 export function visibleEntries(
   user: RightsUser,
   config: NavConfig,
+  // Demo mode: only the areas the tour visits (lib/demo/nav-routes.ts).
+  // A parameter so tests can exercise it without the build-time flag.
+  allow: ReadonlySet<string> | undefined = isDemoMode() ? DEMO_NAV_ROUTES : undefined,
 ): NavEntry[] {
   return NAV_ENTRIES.filter(
     (entry) =>
-      can(user, entry.requires) && flagEnabled(config, entry.configFlag),
+      can(user, entry.requires) &&
+      flagEnabled(config, entry.configFlag) &&
+      (!allow || allow.has(entry.route)),
   );
 }
 
