@@ -79,19 +79,21 @@ export function collectSources(message: UIMessage, sourceIds: string[]): ClaimCh
 }
 
 /**
- * The answer exactly as the check must see it: the text parts joined in order.
- * `sentences[].start/end` index into THIS string, so any transformation here
- * would silently move every highlight. Parts can be split by an interrupting
- * tool call rather than by a real paragraph break, so this concatenates raw —
- * unlike `messageMarkdown` in `components/message-renderer.tsx`, which joins
- * with blank lines for display/copy readability. Same source parts, two
- * different purposes: this one must agree with what the backend segmented.
+ * The answer exactly as the check must see it: the text parts joined with
+ * blank lines, matching `messageMarkdown` in `components/message-renderer.tsx`
+ * — the two must stay in sync. Two reasons: the string we check should be the
+ * string the user actually read (what the renderer displays and copy produces),
+ * and a raw join can fuse two sentences across a tool-call interruption —
+ * "...230 Volt." + "Sie braucht..." becomes "...230 Volt.Sie braucht...", and
+ * the backend's `Intl.Segmenter` needs whitespace after the period to see two
+ * sentences there, not one. `sentences[].start/end` index into THIS string, so
+ * a join mismatch here silently moves every highlight.
  */
 export function answerTextOf(message: UIMessage): string {
   return ((message.parts ?? []) as unknown[])
     .filter((p): p is { type: "text"; text: string } => isRecord(p) && p.type === "text" && typeof p.text === "string")
     .map((p) => p.text)
-    .join("");
+    .join("\n\n");
 }
 
 export function summarise(result: ClaimCheckResult): {

@@ -22,7 +22,7 @@ const message = {
         }),
       },
     },
-    { type: "text", text: "Die FST-2XT arbeitet mit 230 Volt. " },
+    { type: "text", text: "Die FST-2XT arbeitet mit 230 Volt." },
     { type: "text", text: "Die Tür wurde getauscht." },
   ],
 } as unknown as UIMessage;
@@ -85,11 +85,28 @@ describe("collectSources", () => {
 
 describe("answerTextOf", () => {
   it("joins the text parts in order, which is the string the offsets index into", () => {
-    expect(answerTextOf(message)).toBe("Die FST-2XT arbeitet mit 230 Volt. Die Tür wurde getauscht.");
+    expect(answerTextOf(message)).toBe("Die FST-2XT arbeitet mit 230 Volt.\n\nDie Tür wurde getauscht.");
   });
 
   it("is empty for a message with no text parts", () => {
     expect(answerTextOf({ parts: [{ type: "step-start" }] } as unknown as UIMessage)).toBe("");
+  });
+
+  it("joins with blank lines rather than raw concatenation, so a tool call interrupting the answer cannot fuse two sentences into one", () => {
+    // A raw join here would read "...230 Volt.Sie braucht..." — no whitespace
+    // after the period — and the backend's Intl.Segmenter needs that
+    // whitespace to see two sentences rather than one. Matches
+    // messageMarkdown's separator in components/message-renderer.tsx.
+    const interrupted = {
+      parts: [
+        { type: "text", text: "Die Anlage läuft mit 230 Volt." },
+        { type: "tool-Context_Search", toolCallId: "call_2", output: { result: JSON.stringify({ chunks: [] }) } },
+        { type: "text", text: "Sie braucht einen Trenntransformator." },
+      ],
+    } as unknown as UIMessage;
+    expect(answerTextOf(interrupted)).toBe(
+      "Die Anlage läuft mit 230 Volt.\n\nSie braucht einen Trenntransformator.",
+    );
   });
 });
 
