@@ -67,6 +67,32 @@ function QuietLine({ icon: Icon, children }: { icon: ComponentType<{ className?:
 }
 
 /**
+ * The engine's own diagnostics (`result.notes`) — the only place the REASON
+ * for an incomplete or empty check is recorded. They were never rendered
+ * anywhere, which is what made `label: "n/a"` indistinguishable from an
+ * engine failure to a reader (see the n/a branch below).
+ *
+ * Deliberately presented as engine detail, not product prose: the backend
+ * writes them in English and in its own vocabulary ("12 sentence(s) marked
+ * not_checked: selection aborted"), so they get a localised heading and a
+ * muted, small block rather than being dressed up as a sentence addressed to
+ * the reader. Nothing renders when the engine reported none.
+ */
+function EngineNotes({ notes, title }: { notes: string[]; title: string }) {
+  if (notes.length === 0) return null;
+  return (
+    <div className="text-xs text-muted-foreground">
+      <p className="font-medium">{title}</p>
+      <ul className="mt-0.5 list-disc space-y-0.5 pl-4">
+        {notes.map((note, i) => (
+          <li key={i}>{note}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
  * "Checked the answer" panel under an assistant message (spec §5, §5.1).
  * Reuses the `Sources` collapsible `RecalledMemories` uses, so it sits
  * visually beside the existing source badge — collapsed by default, since a
@@ -74,8 +100,12 @@ function QuietLine({ icon: Icon, children }: { icon: ComponentType<{ className?:
  * acceptable (spec §5.1 / task brief).
  *
  * Three things this panel must never get wrong (task brief):
- *  1. `label: "n/a"` means no checkable claims were made — it reads as
- *     "nothing to check here", never a 0% score.
+ *  1. `label: "n/a"` is never a 0% score. It also does not always mean "no
+ *     checkable claims were made": the backend returns it for an internal
+ *     failure and for claims that no usable passage could judge, and those
+ *     read as "could not be checked in full" plus the engine's own notes,
+ *     never as "there was nothing to check" — which would be a false
+ *     statement about the reader's answer.
  *  2. `contradicted` and `unsupported` are different findings and are never
  *     merged into one count or colour.
  *  3. `status: "partial"` means the score covers only part of the answer,
@@ -129,15 +159,25 @@ export function ClaimCheck({
   const summary = summarise(result);
 
   if (summary.label === "n/a") {
+    // The backend returns "n/a" for THREE different things: genuinely nothing
+    // checkable, an internal failure, and claims that were never judged
+    // because no passage was usable (`scoreClaims([])` is reached on the
+    // catch-all path too). Only the first means "no checkable statements in
+    // this answer" — saying it for the other two tells the reader something
+    // false about their own answer, which is the direction of error this
+    // feature must never take. `status: "partial"` is what separates them:
+    // the engine sets it whenever it gave up on something.
     return (
       <div>
-        <QuietLine icon={Shield}>{t("claimCheckNoClaims")}</QuietLine>
-        {summary.partial && (
-          <p className="mb-4 flex items-center gap-2 text-xs text-warning">
-            <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
-            {t("claimCheckPartial")}
-          </p>
+        {summary.partial ? (
+          <QuietLine icon={ShieldQuestion}>{t("claimCheckIncomplete")}</QuietLine>
+        ) : (
+          <QuietLine icon={Shield}>{t("claimCheckNoClaims")}</QuietLine>
         )}
+        {/* There is no collapsible here (nothing was scored), so the reason
+            goes straight under the line — it is the only thing this panel
+            has to say. */}
+        <EngineNotes notes={result.notes} title={t("claimCheckNotesTitle")} />
       </div>
     );
   }
@@ -167,6 +207,7 @@ export function ClaimCheck({
         <ChevronDownIcon className="h-4 w-4" />
       </SourcesTrigger>
       <SourcesContent className="w-full gap-3">
+        <EngineNotes notes={result.notes} title={t("claimCheckNotesTitle")} />
         <ol className="space-y-3">
           {result.claims.map((claim) => (
             <ClaimRow key={claim.id} claim={claim} sourceNames={sourceNames} t={t} />

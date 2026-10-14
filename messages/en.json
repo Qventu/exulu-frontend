@@ -1202,6 +1202,8 @@
     "claimCheckRunning": "Checking the answer …",
     "claimCheckFailed": "The check could not be completed.",
     "claimCheckNoClaims": "No checkable statements in this answer.",
+    "claimCheckIncomplete": "The answer could not be checked in full.",
+    "claimCheckNotesTitle": "Notes from the check",
     "claimCheckSummary": "{supported} of {checked} statements supported",
     "claimCheckContradicted": "{count} contradicted",
     "claimCheckUnsupported": "{count} without evidence",

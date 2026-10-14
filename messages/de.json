@@ -1202,6 +1202,8 @@
     "claimCheckRunning": "Antwort wird geprüft …",
     "claimCheckFailed": "Die Prüfung konnte nicht abgeschlossen werden.",
     "claimCheckNoClaims": "Keine überprüfbaren Aussagen in dieser Antwort.",
+    "claimCheckIncomplete": "Die Antwort konnte nicht vollständig geprüft werden.",
+    "claimCheckNotesTitle": "Hinweise der Prüfung",
     "claimCheckSummary": "{supported} von {checked} Aussagen belegt",
     "claimCheckContradicted": "{count} widersprochen",
     "claimCheckUnsupported": "{count} ohne Belegstelle",

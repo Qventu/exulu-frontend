@@ -117,6 +117,61 @@ describe("ClaimCheck", () => {
     expect(screen.queryByText(/0 von 0/i)).toBeNull();
   });
 
+  // I2: the backend returns `label: "n/a"` for three different things —
+  // genuinely nothing checkable, an internal failure, and claims that were
+  // never judged because no passage was usable. Only the first means "no
+  // checkable statements in this answer"; saying it for the other two tells
+  // the reader something false about their own answer. `status: "partial"`
+  // is what separates them.
+  it("says the check could not be completed, not that nothing was checkable, when n/a is partial", () => {
+    show({
+      status: "done",
+      result: result({
+        status: "partial",
+        score: { claims: 0, supported: 0, contradicted: 0, unsupported: 0, unsupportedShare: 0, label: "n/a" },
+        claims: [],
+        notes: ["claim check failed internally: boom"],
+      }),
+    });
+    expect(screen.getByText(/nicht vollständig geprüft/i)).toBeDefined();
+    expect(screen.queryByText(/Keine überprüfbaren Aussagen/i)).toBeNull();
+    expect(screen.queryByText(/0 von 0/i)).toBeNull();
+  });
+
+  // The real reason is in `notes`, which was never rendered anywhere.
+  it("shows the engine's notes for an n/a partial, where the reason actually is", () => {
+    show({
+      status: "done",
+      result: result({
+        status: "partial",
+        score: { claims: 0, supported: 0, contradicted: 0, unsupported: 0, unsupportedShare: 0, label: "n/a" },
+        claims: [],
+        notes: ["claim check failed internally: boom"],
+      }),
+    });
+    expect(screen.getByText("claim check failed internally: boom")).toBeDefined();
+  });
+
+  it("shows the engine's notes inside the expanded panel of a scored check", async () => {
+    const { container } = show({
+      status: "done",
+      result: result({ status: "partial", notes: ["12 sentence(s) marked not_checked: selection aborted"] }),
+    });
+    // Collapsed: a diagnostic line must not crowd the summary bar.
+    expect(screen.queryByText(/marked not_checked/)).toBeNull();
+    const trigger = container.querySelector("[data-claim-check-trigger]") as HTMLElement;
+    trigger.click();
+    expect(await screen.findByText("12 sentence(s) marked not_checked: selection aborted")).toBeDefined();
+  });
+
+  it("renders no notes block when the engine reported none", async () => {
+    const { container } = show({ status: "done", result: result() });
+    const trigger = container.querySelector("[data-claim-check-trigger]") as HTMLElement;
+    trigger.click();
+    await screen.findByText("Die FST-2XT wiegt 12 kg.");
+    expect(screen.queryByText(de.chat.claimCheckNotesTitle)).toBeNull();
+  });
+
   // Review Focus 4
   it("warns that the check is incomplete when the status is partial", () => {
     show({ status: "done", result: result({ status: "partial", notes: ["selection aborted"] }) });
