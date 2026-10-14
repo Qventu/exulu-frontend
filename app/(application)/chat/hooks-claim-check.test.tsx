@@ -116,6 +116,25 @@ const triggeredAssistantMessage = (id: string, text: string): UIMessage =>
     ],
   }) as unknown as UIMessage;
 
+/** The same message mid-turn: paused on an approval-gated tool, so the
+ *  answer so far is only the first fragment. The SDK reports `ready` here —
+ *  the backend emitted `finish` — which is exactly the trap. */
+const pausedAssistantMessage = (id: string, text: string, state: string): UIMessage =>
+  ({
+    id,
+    role: "assistant",
+    metadata: { claimCheck: { enabled: true, sourceIds: ["i1"], toolCallIds: ["call_1"] } },
+    parts: [
+      {
+        type: "tool-Context_Search",
+        toolCallId: "call_1",
+        output: { result: JSON.stringify({ chunks: [{ item_id: "i1", item_name: "h.pdf", chunk_content: "230 Volt." }] }) },
+      },
+      { type: "text", text },
+      { type: "tool-jira_create", toolCallId: "call_2", state },
+    ],
+  }) as unknown as UIMessage;
+
 const STUB_RESULT: ClaimCheckResult = {
   status: "ok",
   score: { claims: 1, supported: 1, contradicted: 0, unsupported: 0, unsupportedShare: 0, label: "ok" },
@@ -303,6 +322,70 @@ describe("useChatSession — claim check wiring (F4)", () => {
 
     expect(mockPostClaimCheck).toHaveBeenCalledTimes(1);
   });
+
+  // I1: a turn that pauses for tool approval emits `finish` and the SDK sets
+  // status "ready", so the effect fired a paid check on the half-answer —
+  // and because the SDK resumes the SAME assistant message id, the fired-set
+  // then blocked the real check. The panel under the complete answer carried
+  // a score computed over its first fragment, with `status: "ok"` and no
+  // incompleteness marker; a claim whose supporting retrieval happened after
+  // the pause can read `unsupported`, which the stored row then makes
+  // permanent.
+  it.each(["approval-requested", "approval-responded"])(
+    "does not fire while the turn is paused on a %s tool part, and checks the complete answer once it resumes",
+    async (pausedState) => {
+      const user = userMessage("msg_0", "Womit und bitte ein Ticket?");
+      const paused = pausedAssistantMessage("msg_1", "Die FST-2XT arbeitet mit 230 Volt.", pausedState);
+
+      mockUseChat.mockReturnValue(chatReturn([user, paused], "streaming"));
+      const { result, rerender } = renderHook(
+        () =>
+          useChatSession({
+            agent: AGENT,
+            initialSession: SESSION,
+            initialMessages: [user, paused],
+            beginLazyCreate: () => () => {},
+          }),
+        { wrapper: Wrapper },
+      );
+
+      // The backend's `finish` arrives with the approval still outstanding:
+      // streaming -> ready, but the turn is not over.
+      mockUseChat.mockReturnValue(chatReturn([user, paused], "ready"));
+      await act(async () => {
+        rerender();
+      });
+      await act(async () => {});
+      expect(mockPostClaimCheck).not.toHaveBeenCalled();
+      expect(result.current.claimChecks.msg_1).toBeUndefined();
+
+      // The user answers; `sendAutomaticallyWhen` resumes the turn on the
+      // same message id.
+      mockUseChat.mockReturnValue(chatReturn([user, paused], "streaming"));
+      await act(async () => {
+        rerender();
+      });
+
+      // The turn really finishes: the approved tool has its output and the
+      // answer has its second half.
+      const complete = triggeredAssistantMessage("msg_1", "Die FST-2XT arbeitet mit 230 Volt.");
+      (complete.parts as unknown[]).push(
+        { type: "tool-jira_create", toolCallId: "call_2", state: "output-available", output: { ok: true } },
+        { type: "text", text: "Das Ticket ist angelegt." },
+      );
+      mockUseChat.mockReturnValue(chatReturn([user, complete], "ready"));
+      await act(async () => {
+        rerender();
+      });
+
+      await waitFor(() => expect(mockPostClaimCheck).toHaveBeenCalledTimes(1));
+      // The body is the WHOLE answer, not the fragment that was on screen
+      // when the approval card appeared.
+      expect(mockPostClaimCheck.mock.calls[0]![0]!.answer).toBe(
+        "Die FST-2XT arbeitet mit 230 Volt.\n\nDas Ticket ist angelegt.",
+      );
+    },
+  );
 
   it("rehydrates a stored check on session open without re-posting it", async () => {
     const user = userMessage("msg_0", "Womit?");

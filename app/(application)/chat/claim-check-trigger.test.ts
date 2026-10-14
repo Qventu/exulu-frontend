@@ -46,6 +46,45 @@ describe("claimCheckRequestFor", () => {
     expect(claimCheckRequestFor({ ...args, message: noText })).toBeNull();
   });
 
+  // A turn that pauses for tool approval is not over: the backend emits
+  // `finish` (with the trigger, if retrieval already ran) and the SDK sets
+  // status "ready", so the fire effect would pay for a check of the
+  // half-answer and the fired-set would then block the real one — the SDK
+  // continues the SAME assistant message id after the approval. The panel
+  // under the complete answer would carry a score over its first fragment
+  // with no incompleteness marker, and a claim whose supporting retrieval
+  // happens after the pause can read `unsupported`, the worst output this
+  // system produces. Refusing here (rather than in the effect) keeps the
+  // fired-set untouched, so the resumed turn gets its real check.
+  it("returns null while the turn is paused on an approval-requested tool part", () => {
+    const paused = {
+      ...base,
+      parts: [...base.parts!, { type: "tool-jira_create", toolCallId: "call_2", state: "approval-requested" }],
+    } as unknown as UIMessage;
+    expect(claimCheckRequestFor({ ...args, message: paused })).toBeNull();
+  });
+
+  it("returns null while the approval is answered but the turn has not resumed", () => {
+    const responded = {
+      ...base,
+      parts: [...base.parts!, { type: "tool-jira_create", toolCallId: "call_2", state: "approval-responded" }],
+    } as unknown as UIMessage;
+    expect(claimCheckRequestFor({ ...args, message: responded })).toBeNull();
+  });
+
+  it("checks the resumed turn once the approved tool has its output", () => {
+    const resumed = {
+      ...base,
+      parts: [
+        ...base.parts!,
+        { type: "tool-jira_create", toolCallId: "call_2", state: "output-available", output: { ok: true } },
+        { type: "text", text: "Das Ticket ist angelegt." },
+      ],
+    } as unknown as UIMessage;
+    const body = claimCheckRequestFor({ ...args, message: resumed });
+    expect(body?.answer).toBe("Die FST-2XT arbeitet mit 230 Volt.\n\nDas Ticket ist angelegt.");
+  });
+
   it("omits session and messageId when there is no session, so an unsaved chat still checks", () => {
     const body = claimCheckRequestFor({ ...args, session: undefined });
     expect(body?.session).toBeUndefined();

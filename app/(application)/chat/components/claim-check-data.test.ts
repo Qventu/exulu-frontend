@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { UIMessage } from "ai";
 
-import { answerTextOf, collectSources, parseClaimCheckTrigger, summarise } from "./claim-check-data";
+import { answerTextOf, collectSources, hasPendingToolApproval, parseClaimCheckTrigger, summarise } from "./claim-check-data";
 
 const message = {
   id: "msg_1",
@@ -183,5 +183,52 @@ describe("summarise", () => {
     } as never;
     expect(summarise(nothingToCheck).label).toBe("n/a");
     expect(summarise(nothingToCheck).partial).toBe(false);
+  });
+});
+
+describe("hasPendingToolApproval", () => {
+  const msg = (parts: unknown[]) => ({ id: "m", role: "assistant", parts }) as never;
+
+  // When a turn stops to ask for tool approval the backend emits `finish`
+  // (with the trigger, if retrieval ran) and the SDK sets status "ready" —
+  // so a status-only guard fires a paid check on the half-answer, and the
+  // fired-set then blocks the real check when the turn resumes on the SAME
+  // assistant message id. The panel under the complete answer would show a
+  // score computed over its first fragment, with `status: "ok"` and no
+  // incompleteness marker, and claims whose supporting retrieval happened
+  // after the pause could read `unsupported`.
+  it("is true while a tool part waits for an answer", () => {
+    expect(hasPendingToolApproval(msg([{ type: "tool-jira_create", state: "approval-requested" }]))).toBe(true);
+  });
+
+  it("is true once the approval is answered but the turn has not resumed", () => {
+    expect(hasPendingToolApproval(msg([{ type: "tool-jira_create", state: "approval-responded" }]))).toBe(true);
+  });
+
+  it("is true when the pending part sits behind a finished one", () => {
+    expect(
+      hasPendingToolApproval(
+        msg([
+          { type: "tool-Context_Search", state: "output-available" },
+          { type: "text", text: "Teilantwort." },
+          { type: "tool-jira_create", state: "approval-requested" },
+        ]),
+      ),
+    ).toBe(true);
+  });
+
+  it("is false for a finished turn, whatever its parts", () => {
+    expect(
+      hasPendingToolApproval(
+        msg([
+          { type: "tool-Context_Search", state: "output-available" },
+          { type: "tool-jira_create", state: "output-available" },
+          { type: "text", text: "Antwort." },
+        ]),
+      ),
+    ).toBe(false);
+    expect(hasPendingToolApproval(msg([{ type: "tool-x", state: "output-error" }]))).toBe(false);
+    expect(hasPendingToolApproval(msg([]))).toBe(false);
+    expect(hasPendingToolApproval({ id: "m", role: "assistant" } as never)).toBe(false);
   });
 });

@@ -38,6 +38,43 @@ export function parseClaimCheckTrigger(metadata: unknown): ClaimCheckTrigger | n
   return { enabled: true, sourceIds, toolCallIds };
 }
 
+/**
+ * The AI SDK's tool-part states that mean "this turn has stopped, waiting on
+ * the user". `approval-requested` is the question; `approval-responded` is
+ * the answer recorded but the turn not yet resumed.
+ */
+const PAUSED_TOOL_STATES = new Set(["approval-requested", "approval-responded"]);
+
+/**
+ * True while this assistant message is a turn paused on a tool approval —
+ * i.e. an answer that is not finished even though the SDK says `ready`.
+ *
+ * When a turn stops to ask for approval, the backend emits `finish` (carrying
+ * the claim-check trigger, if retrieval already ran) and the SDK sets
+ * `status: "ready"`. A fire effect keyed on `streaming -> ready` alone
+ * therefore pays for a check of the HALF-answer. Worse, the user then
+ * approves and the SDK continues **the same assistant message id**, so the
+ * fired-set blocks the real check on the second `streaming -> ready`: the
+ * panel under the complete answer shows a score computed over its first
+ * fragment, with `status: "ok"` and no incompleteness marker, and a claim
+ * whose supporting retrieval happened after the pause can read
+ * `unsupported` — the worst output this system can produce (spec §2.4). The
+ * stored row makes it permanent, and the endpoint's cache is keyed on
+ * (session, messageId, user), so even a re-fire would return the stale
+ * partial. `useChatSession` configures
+ * `sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses`,
+ * so this flow is live for any agent pairing knowledge search with an
+ * approval-gated tool.
+ */
+export function hasPendingToolApproval(message: UIMessage): boolean {
+  for (const part of (message.parts ?? []) as unknown[]) {
+    if (isRecord(part) && typeof part.state === "string" && PAUSED_TOOL_STATES.has(part.state)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /** Every retrieved chunk on this message, flattened; never throws. */
 function chunksOf(message: UIMessage): Record<string, unknown>[] {
   const out: Record<string, unknown>[] = [];

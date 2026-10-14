@@ -69,7 +69,7 @@ import {
   type ContextState,
 } from "./lib/context-budget";
 import { savedIdsFromMessages } from "./components/memory-panel-data";
-import { answerTextOf, collectSources, parseClaimCheckTrigger } from "./components/claim-check-data";
+import { answerTextOf, collectSources, hasPendingToolApproval, parseClaimCheckTrigger } from "./components/claim-check-data";
 import type { ClaimCheckState } from "./components/claim-check";
 
 // ---------------------------------------------------------------------------
@@ -212,6 +212,14 @@ export function claimCheckRequestFor({ message, question, session, agentId, loca
 }): ClaimCheckRequest | null {
   const trigger = parseClaimCheckTrigger(message.metadata);
   if (!trigger) return null;
+  // The turn is not over. A pause for tool approval emits `finish` and sets
+  // the SDK status to "ready", so without this the check runs on the
+  // half-answer; and because the SDK resumes the SAME assistant message id,
+  // the caller's fired-set would then block the real check. Refusing here
+  // rather than in the effect is deliberate: the effect adds to
+  // `claimCheckFired` only AFTER this returns a body, so a null keeps the id
+  // unclaimed and the resumed turn gets its check.
+  if (hasPendingToolApproval(message)) return null;
   const sources = collectSources(message, trigger.sourceIds);
   // Fewer sources than the fragment named means the client can no longer
   // produce evidence the backend expected. Checking anyway would score
