@@ -976,3 +976,8 @@ git commit -m "docs(demo): record the rails walk result
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
+
+## Verification
+
+- 2026-10-14 — production demo build of `4324e96` (built and served by Daniel, `next start -p 3111`), walker at `9db9b3d` in Weiter mode, 1440 × 900: **37/37 steps pass all assertions**, 36/36 transitions reached by clicking Weiter, both scripted chat exchanges completed before advancing. Spot checks on the same build: chapter 2 fills 0 → 3 → 7 bases and chapter 3 fills 0 → 4 documents via Weiter; `evals.2` opens the Testfälle tab with a 747 × 256 ring; `config.0`'s ring lands in view (top 364) within 0.8 s with no re-scroll on reader scrolling; `meetings.1`/`.2` keep `?tour=` on `/transcriptions/review/<id>` and the `meeting-guide` ring attaches to the rendered document; `contact.1` offers only Zurück. Unit: vitest demo filter 39 files / 402 tests; `tsc --noEmit` clean at `8f78a22` (the later ring commits were type-checked by the build).
+- Fresh-context review (fable) on `596186d..8f78a22`: 0 Critical, 2 Important (both resolved: the ring re-scroll predicate in `413e944`/`4324e96`; the green walk above), 5 Minor deferred — see the branch's final message.
