@@ -349,12 +349,42 @@ describe("collectSources — memory", () => {
     expect(collectSources(message, [{ type: "memory", id: "memory:m_7" }])).toEqual([]);
   });
 
-  it("omits a memory whose information is empty", () => {
+  // Fix round 3, Important 5. The prompt block the model read is
+  // `- {item_name: "<title>", item_id: …} <information> (saved by …)`
+  // (backend buildMemoryPromptBlock), so with blank `information` the TITLE
+  // is still real evidence in the system prompt — and a hand-created memory
+  // row with only a name is an ordinary shape. Dropping it discarded
+  // evidence the model was shown, so a claim resting on it scored
+  // `unsupported`.
+  it("falls back to the title as the content when the information is blank", () => {
     const message = {
-      metadata: { recalledMemories: [{ id: "m_7", title: "Sprache", information: "   " }] },
+      metadata: { recalledMemories: [{ id: "m_7", title: "Kunde bevorzugt Deutsch", information: "   " }] },
+      parts: [],
+    } as unknown as UIMessage;
+    expect(collectSources(message, [{ type: "memory", id: "memory:m_7" }])).toEqual([
+      { id: "memory:m_7", name: "Kunde bevorzugt Deutsch", type: "memory", content: "Kunde bevorzugt Deutsch" },
+    ]);
+  });
+
+  it("omits a memory whose title and information are both blank", () => {
+    const message = {
+      metadata: { recalledMemories: [{ id: "m_7", title: "  ", information: "   " }] },
       parts: [],
     } as unknown as UIMessage;
     expect(collectSources(message, [{ type: "memory", id: "memory:m_7" }])).toEqual([]);
+  });
+
+  // Normalised at the source, not by two downstream falsiness checks (the
+  // message column's `source.name &&` and the panel's `name ?`): a blank
+  // title is no name at all.
+  it("reports a blank title as no name rather than an empty string", () => {
+    const message = {
+      metadata: { recalledMemories: [{ id: "m_7", title: "   ", information: "Der Kunde bevorzugt Deutsch." }] },
+      parts: [],
+    } as unknown as UIMessage;
+    expect(collectSources(message, [{ type: "memory", id: "memory:m_7" }])).toEqual([
+      { id: "memory:m_7", name: undefined, type: "memory", content: "Der Kunde bevorzugt Deutsch." },
+    ]);
   });
 });
 

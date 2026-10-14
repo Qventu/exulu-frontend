@@ -201,6 +201,18 @@ function knowledgeBaseSource(message: UIMessage, entry: ClaimCheckManifestEntry)
  * metadata — the same list the memories panel renders — never from a tool
  * part, which is why a memory entry carries no `toolCallId`. The manifest id
  * is `memory:<id>`; the metadata list's own ids have no prefix.
+ *
+ * With blank `information` the content falls back to the TITLE (fix round 3,
+ * Important 5). The prompt block the model read is
+ * `- {item_name: "<title>", item_id: …} <information> (saved by …)`
+ * (backend `buildMemoryPromptBlock`), so a title-only row — an ordinary
+ * shape for a hand-created memory — is still real evidence in the system
+ * prompt. Dropping it discarded evidence the model was shown, and a claim
+ * resting on it then scored `unsupported`.
+ *
+ * A blank title normalises to `undefined` here, at the source, rather than
+ * leaning on the two downstream falsiness checks (the message column's
+ * `source.name &&` and the panel's `name ?`): an empty string is no name.
  */
 function memorySource(message: UIMessage, entry: ClaimCheckManifestEntry): ClaimCheckSource | undefined {
   const metadata = isRecord(message.metadata) ? message.metadata : undefined;
@@ -208,10 +220,11 @@ function memorySource(message: UIMessage, entry: ClaimCheckManifestEntry): Claim
   const memoryId = entry.id.startsWith("memory:") ? entry.id.slice("memory:".length) : entry.id;
   const memory = memories.find((m) => isRecord(m) && m.id === memoryId);
   if (!isRecord(memory)) return undefined;
-  const content = typeof memory.information === "string" ? memory.information : "";
+  const information = typeof memory.information === "string" ? memory.information : "";
+  const title = typeof memory.title === "string" && memory.title.trim() ? memory.title : undefined;
+  const content = information.trim() ? information : (title ?? "");
   if (!content.trim()) return undefined;
-  const name = typeof memory.title === "string" ? memory.title : undefined;
-  return { id: entry.id, name, type: "memory", content };
+  return { id: entry.id, name: title, type: "memory", content };
 }
 
 /**
