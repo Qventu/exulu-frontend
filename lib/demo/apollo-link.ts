@@ -1,4 +1,5 @@
 import { ApolloLink, Observable } from "@apollo/client/core";
+import { demoDateOffsetMs, shiftDemoDates } from "./date-shift";
 import { resolverFor } from "./resolvers";
 import type { DemoWorld } from "./types";
 
@@ -28,7 +29,9 @@ export function createDemoLink(
         return;
       }
       observer.next({
-        data: resolver(getWorldForNow(), operation.variables ?? {}),
+        // Every timestamp the fixtures carry is shifted to "now minus the
+        // same distance", so relative dates stay recent — see date-shift.ts.
+        data: shiftDemoDates(resolver(getWorldForNow(), operation.variables ?? {}), demoDateOffsetMs()),
       });
       observer.complete();
     });

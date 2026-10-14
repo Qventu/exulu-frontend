@@ -1,3 +1,4 @@
+import { demoDateOffsetMs, shiftDemoDates } from "@/lib/demo/date-shift";
 import { headers } from "next/headers";
 import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -40,7 +41,7 @@ export async function fetchGraphQLServerSide(query: string, variables: any) {
       const position =
         parsePosition((await headers()).get("x-demo-tour")) ??
         getCurrentPosition();
-      return resolver(getWorld(position), variables ?? {});
+      return shiftDemoDates(resolver(getWorld(position), variables ?? {}), demoDateOffsetMs());
     }
 
     const authOptions = await getAuthOptions();
