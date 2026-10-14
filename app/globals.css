@@ -454,58 +454,29 @@
   border-radius: 0.4rem;
 }
 
-/* Capped on purpose, and NOT redundant with `height: auto`. Every generated
-   asset is 800x534 (scripts/generate-demo-image.py), so `height: auto` alone
-   renders one ~232px tall in the collapsed 380px panel and ~513px tall in a
-   scene page's 768px column — in the panel that is more vertical space than
-   the step's own words get, and the figure is the aside, not the argument.
-   12rem (192px) holds it to about a fifth of the panel's height on a
-   900px screen.
+/* Capped on purpose. Every generated asset is 800x534
+   (scripts/generate-demo-image.py); in the 420px panel 16rem lets the figure
+   fill the column at its natural height (~259px) while still bounding the
+   768px scene column, whose figures sub-project 4 enlarges separately.
+   object-fit: contain letterboxes rather than distorts. */
+.demo-block-figure { display: block; width: 100%; height: auto; max-height: 16rem; object-fit: contain; border-radius: 0.5rem; }
 
-   The rule is shared by both mounts of components/demo/step-panel.tsx on
-   purpose (the docked panel at 380/560px, and app/(application)/demo/szene/
-   [id]/page.tsx's 768px column), so on a scene page the image letterboxes to
-   ~288px wide rather than filling the column. That is the trade: each of the
-   three scene figures has a sequence, stat or callout under it that should
-   still be on screen with it.
-
-   object-fit: contain is what makes the cap letterbox rather than distort —
-   without it the browser stretches the image to a height its aspect ratio
-   does not agree with. */
-.demo-block-figure { display: block; width: 100%; height: auto; max-height: 12rem; object-fit: contain; border-radius: 0.5rem; }
-
-/* --tour-panel-w: how much of the right edge is currently occupied by the
- * docked tour panel (components/demo/tour-panel.tsx), so portalled dialogs
- * below can stay clear of it. Defined here with a media query — not as an
- * inline style from app/(application)/layout.tsx — because the value isn't
- * a function of demoMode alone: the panel is a flex sibling of <main> only
- * at md and above (below md the row becomes a column and the panel docks
- * at the bottom, full width, occupying none of the right edge), and even
- * at md+ it can be 380px or 560px depending on tour-panel.tsx's client-only
- * `expanded` state, which a server component can't see. Keeping the
- * breakpoint and both widths here, next to each other, is what makes this
- * derivable in one place instead of split across a server render and a
- * stylesheet.
+/* --tour-panel-w: how much of the right edge the docked tour panel
+ * (components/demo/tour-panel.tsx) occupies, so portalled dialogs below can
+ * stay clear of it. Defined here with a media query — not inline from the
+ * layout — because below md the row becomes a column and the panel docks at
+ * the bottom, occupying none of the right edge.
  *
- * KEEP IN SYNC: 380 and 560 below must match tour-panel.tsx's
- * md:w-[380px]/md:w-[560px] classes, and 768px must match Tailwind's `md`
- * breakpoint (tailwind.config.js only overrides `2xl`, so `md` is still
- * the default 768px) — Tailwind's arbitrary values can't read a shared
- * constant at build time, so this triplication is deliberate, not an
- * oversight. If you change one of the three, change all three, or a
- * portalled dialog will overlap the panel again. data-demo-panel-expanded
- * is set on this same <body> by the effect in tour-panel.tsx.
+ * KEEP IN SYNC: 420 must match tour-panel.tsx's md:w-[420px], and 768px
+ * must match Tailwind's `md` breakpoint (tailwind.config.js only overrides
+ * `2xl`). Tailwind arbitrary values cannot read a shared constant.
  */
 body[data-demo-tour="active"] {
-  /* Below md: the panel docks at the bottom, not the right edge. */
   --tour-panel-w: 0px;
 }
 @media (min-width: 768px) {
   body[data-demo-tour="active"] {
-    --tour-panel-w: 380px; /* must match tour-panel.tsx's collapsed md:w-[380px] */
-  }
-  body[data-demo-tour="active"][data-demo-panel-expanded="true"] {
-    --tour-panel-w: 560px; /* must match tour-panel.tsx's expanded md:w-[560px] */
+    --tour-panel-w: 420px; /* must match tour-panel.tsx's md:w-[420px] */
   }
 }
 

@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 
 import { footerControls } from "@/lib/demo/panel-controls";
+import { railSegments } from "@/lib/demo/panel-rail";
 import { nextPosition } from "@/lib/demo/tour";
 
 import { StepPanel } from "./step-panel";
@@ -17,88 +19,98 @@ import { useTour } from "./tour-provider";
  * from a modal <body>, a collision probe walking a floating bubble up the
  * screen — stops being possible rather than being fixed again.
  *
- * The chapter menu lives in here for the same reason: as a separate floating
- * element it was the thing that broke against the agent wizard's dialog.
+ * ONE width, and the step's copy always on screen. The first docked version
+ * hid every explanation behind a "Mehr" toggle and showed a headline over
+ * 700px of nothing on 33 of 37 steps; a visitor who only pressed Weiter —
+ * the visitor the tour is built for — read 37 titles and nothing else.
+ *
+ * The chapter menu lives in here for the same reason as the panel itself:
+ * as a separate floating element it was the thing that broke against the
+ * agent wizard's dialog. The rail above it is the visible version of the
+ * same information — where you are, what is left — and each segment jumps.
+ *
+ * DOM order: the panel is rendered BEFORE <main> (app/(application)/
+ * layout.tsx) and placed last by `order-last`, so Tab reaches Zurück and
+ * Weiter in a few presses instead of walking the inert sidebar and product
+ * first. The rail segments are tabIndex -1 for the same reason — the text
+ * menu is the keyboard route to a chapter.
  */
 export function TourPanel() {
   const { position, step, chapters, next, prev, jumpTo } = useTour();
-  const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // Detail is asked for per step, not switched on once. Collapsing on
-  // navigation keeps the default state short, which is the point of the split.
-  useEffect(() => {
-    setExpanded(false);
-    setMenuOpen(false);
-  }, [position.chapter, position.step]);
-
-  // Mirrors `expanded` onto <body> as a data attribute. app/globals.css's
-  // --tour-panel-w (how much of the right edge portalled dialogs, e.g. the
-  // chapter-7 wizard, must stay clear of) needs to grow from 380px to
-  // 560px whenever this panel is expanded, and this client-only useState
-  // has no way to reach that server-rendered <body> or its stylesheet
-  // without being reflected onto the DOM explicitly like this.
-  //
-  // KEEP IN SYNC: 380/560 appear three times — here (conceptually, via
-  // this attribute), in the md:w-[380px]/md:w-[560px] classes on the
-  // <aside> below, and in app/globals.css's --tour-panel-w rule. Tailwind
-  // arbitrary values can't read a shared constant at build/runtime, so
-  // this duplication is unavoidable — if you change one of the three,
-  // change all three, or a portalled dialog will overlap the panel again.
-  useEffect(() => {
-    document.body.setAttribute("data-demo-panel-expanded", String(expanded));
-  }, [expanded]);
+  const reduceMotion = useReducedMotion();
 
   if (!step) return null;
 
   const index = chapters.findIndex((c) => c.id === position.chapter);
   const chapter = chapters[index];
-  const hasDetail = step.content.length > 0;
+  const segments = railSegments(chapters, position);
   const controls = footerControls({
     hasCta: !!step.cta,
     isLast: nextPosition(chapters, position) === null,
   });
+  const positionKey = `${position.chapter}.${position.step}`;
 
   return (
     <aside
       data-demo-id="tour-panel"
-      // KEEP IN SYNC with app/globals.css's --tour-panel-w rule (380/560)
-      // and the data-demo-panel-expanded effect above — see its comment.
+      // KEEP IN SYNC with app/globals.css's --tour-panel-w rule (420px) —
+      // Tailwind arbitrary values cannot read a shared constant.
       //
       // Sticky, in both directions, because the panel is a flex sibling of
       // <main> in normal flow: nothing pins it. The row's height is
-      // content-driven (SidebarProvider is min-h-svh, not h-svh), so a tall
-      // page scrolls the DOCUMENT and takes the panel with it — "Weiter"
-      // ends up above the viewport on 13 of the 37 steps.
+      // content-driven, so a tall page scrolls the DOCUMENT and would take
+      // the panel with it. md and up: `top-12` clears the fixed h-12 TopBar,
+      // and the explicit height plus self-start is what makes sticky bite.
+      // Below md the row is a column and `order-last` puts the panel after
+      // the content; `bottom-0` docks it to the bottom edge.
       //
-      // md and up: `top-12` clears the fixed h-12 TopBar
-      // (components/shell/top-bar.tsx, md:flex only), and the explicit
-      // height plus self-start is what makes sticky bite at all — under the
-      // row's default `align-items: stretch` the panel is exactly as tall as
-      // its containing block, and an element that fills its container has
-      // nowhere to stick.
-      //
-      // Below md the row is a column and the panel comes AFTER the content,
-      // so on a tall page it starts off-screen entirely; `bottom-0` docks it
-      // to the bottom edge, which is what the spec asks for there.
-      //
-      // z-40 puts the panel above the spotlight ring (z-30, tour-ring.tsx),
-      // which is `position: fixed` and sized from a product anchor: a tall
-      // anchor's outline crossed the bottom-docked panel on mobile, and a
-      // full-width one put its right edge 4px inside the panel's border on
-      // desktop. Still below Radix's z-50 portal layer, which is inset clear
-      // of the panel by app/globals.css instead.
-      className={`sticky bottom-0 z-40 flex shrink-0 flex-col border-t bg-card md:bottom-auto md:top-12 md:h-[calc(100svh-3rem)] md:self-start md:border-l md:border-t-0 ${
-        expanded ? "md:w-[560px]" : "md:w-[380px]"
-      } max-h-[45vh] w-full overflow-y-auto md:max-h-none`}
+      // z-40: above the spotlight ring (z-30), below Radix's z-50 portals,
+      // which app/globals.css insets by --tour-panel-w instead.
+      className="order-last sticky bottom-0 z-40 flex max-h-[45vh] w-full shrink-0 flex-col overflow-y-auto border-t bg-card md:bottom-auto md:top-12 md:h-[calc(100svh-3rem)] md:max-h-none md:w-[420px] md:self-start md:border-l md:border-t-0"
     >
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <button type="button" onClick={() => setMenuOpen((v) => !v)} className="text-xs font-medium text-muted-foreground">
-          Kapitel {index + 1} von {chapters.length} · {chapter?.title}
+      <div className="border-b px-4 pb-3 pt-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            OPEN IMP · Geführte Tour
+          </span>
+          <span className="text-xs tabular-nums text-muted-foreground">
+            Kapitel {index + 1} von {chapters.length} · Schritt {position.step + 1}/{chapter.steps.length}
+          </span>
+        </div>
+
+        <ol className="mt-3 flex gap-1" aria-label="Kapitel">
+          {segments.map((s) => (
+            <li key={s.id} className="flex-1">
+              <button
+                type="button"
+                tabIndex={-1}
+                title={`${s.index + 1}. ${s.title}`}
+                aria-label={`${s.index + 1}. ${s.title}`}
+                aria-current={s.state === "current" ? "step" : undefined}
+                onClick={() => jumpTo(s.id)}
+                className={`block h-1.5 w-full rounded-sm transition-colors ${
+                  s.state === "current"
+                    ? "bg-primary"
+                    : s.state === "past"
+                      ? "bg-muted-foreground/60"
+                      : "bg-muted"
+                }`}
+              />
+            </li>
+          ))}
+        </ol>
+
+        <button
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-expanded={menuOpen}
+          className="mt-3 flex w-full items-baseline justify-between gap-2 text-left"
+        >
+          <span className="text-sm font-medium">{chapter.title}</span>
+          <span className="text-xs text-muted-foreground">{menuOpen ? "Schließen" : "Alle Kapitel"}</span>
         </button>
-        <span className="text-xs text-muted-foreground">
-          {position.step + 1}/{chapter?.steps.length}
-        </span>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{chapter.goal}</p>
       </div>
 
       {menuOpen && (
@@ -107,7 +119,10 @@ export function TourPanel() {
             <li key={c.id}>
               <button
                 type="button"
-                onClick={() => jumpTo(c.id)}
+                onClick={() => {
+                  setMenuOpen(false);
+                  jumpTo(c.id);
+                }}
                 className={`w-full px-4 py-2 text-left text-sm hover:bg-accent ${i === index ? "font-medium" : ""}`}
               >
                 {i + 1}. {c.title}
@@ -117,16 +132,20 @@ export function TourPanel() {
         </ul>
       )}
 
-      <div className="flex grow flex-col gap-4 p-4">
-        <h2 className="text-lg font-semibold">{step.title}</h2>
+      {/* Keyed on the position so each step enters fresh: a 250ms rise-and-
+          fade is what turns a hard cut into a sequence. `initial={false}`
+          under reduced motion renders the resting state immediately. */}
+      <motion.div
+        key={positionKey}
+        className="flex grow flex-col gap-4 p-4"
+        initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+      >
+        <h2 className="text-lg font-semibold leading-snug">{step.title}</h2>
         {step.lead && <p className="text-sm text-muted-foreground">{step.lead}</p>}
-        {expanded && hasDetail && <StepPanel content={step.content} />}
-        {hasDetail && (
-          <button type="button" onClick={() => setExpanded((v) => !v)} className="self-start text-sm underline">
-            {expanded ? "Weniger" : "Mehr"}
-          </button>
-        )}
-      </div>
+        {step.content.length > 0 && <StepPanel content={step.content} />}
+      </motion.div>
 
       <div className="flex items-center justify-end gap-2 border-t p-4">
         {controls.includes("back") && (
