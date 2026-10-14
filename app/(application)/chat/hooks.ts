@@ -220,11 +220,11 @@ export function claimCheckRequestFor({ message, question, session, agentId, loca
   // `claimCheckFired` only AFTER this returns a body, so a null keeps the id
   // unclaimed and the resumed turn gets its check.
   if (hasPendingToolApproval(message)) return null;
-  const sources = collectSources(message, trigger.sourceIds);
+  const sources = collectSources(message, trigger.sources);
   // Fewer sources than the fragment named means the client can no longer
   // produce evidence the backend expected. Checking anyway would score
   // grounded claims unsupported; a missing panel is the honest failure.
-  if (sources.length !== trigger.sourceIds.length) return null;
+  if (sources.length !== trigger.sources.length) return null;
   const answer = answerTextOf(message);
   if (!answer.trim()) return null;
   return {

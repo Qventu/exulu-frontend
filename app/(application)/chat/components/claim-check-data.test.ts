@@ -6,7 +6,15 @@ import { answerTextOf, collectSources, hasPendingToolApproval, parseClaimCheckTr
 const message = {
   id: "msg_1",
   role: "assistant",
-  metadata: { claimCheck: { enabled: true, sourceIds: ["i1", "i2"], toolCallIds: ["call_1"] } },
+  metadata: {
+    claimCheck: {
+      enabled: true,
+      sources: [
+        { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+        { type: "knowledge_base", id: "i2", toolCallId: "call_1" },
+      ],
+    },
+  },
   parts: [
     { type: "step-start" },
     {
@@ -28,24 +36,26 @@ const message = {
 } as unknown as UIMessage;
 
 describe("parseClaimCheckTrigger", () => {
-  it("reads the fragment the backend emits", () => {
+  it("reads the manifest the backend emits", () => {
     expect(parseClaimCheckTrigger(message.metadata)).toEqual({
       enabled: true,
-      sourceIds: ["i1", "i2"],
-      toolCallIds: ["call_1"],
+      sources: [
+        { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+        { type: "knowledge_base", id: "i2", toolCallId: "call_1" },
+      ],
     });
   });
 
   it("returns null when there is no fragment, which is the backend's off switch", () => {
     expect(parseClaimCheckTrigger({})).toBeNull();
     expect(parseClaimCheckTrigger(undefined)).toBeNull();
-    expect(parseClaimCheckTrigger({ claimCheck: { enabled: true } })).toBeNull(); // no sourceIds
-    expect(parseClaimCheckTrigger({ claimCheck: { enabled: true, sourceIds: [] } })).toBeNull();
+    expect(parseClaimCheckTrigger({ claimCheck: { enabled: true } })).toBeNull(); // no sources
+    expect(parseClaimCheckTrigger({ claimCheck: { enabled: true, sources: [] } })).toBeNull();
   });
 
   it("requires enabled to be the boolean true, not merely truthy — a false positive fires a paid check for an agent whose admin left it off", () => {
-    expect(parseClaimCheckTrigger({ claimCheck: { enabled: "true", sourceIds: ["i1"] } })).toBeNull();
-    expect(parseClaimCheckTrigger({ claimCheck: { enabled: 1, sourceIds: ["i1"] } })).toBeNull();
+    expect(parseClaimCheckTrigger({ claimCheck: { enabled: "true", sources: [{ type: "knowledge_base", id: "i1" }] } })).toBeNull();
+    expect(parseClaimCheckTrigger({ claimCheck: { enabled: 1, sources: [{ type: "knowledge_base", id: "i1" }] } })).toBeNull();
   });
 
   it("returns null when claimCheck itself is not an object", () => {
@@ -54,20 +64,49 @@ describe("parseClaimCheckTrigger", () => {
     expect(parseClaimCheckTrigger({ claimCheck: true })).toBeNull();
   });
 
-  it("filters non-string entries out of sourceIds and toolCallIds rather than passing them through", () => {
+  it("filters invalid entries out of sources rather than passing them through", () => {
     expect(
       parseClaimCheckTrigger({
-        claimCheck: { enabled: true, sourceIds: ["i1", 42, null, "i2"], toolCallIds: ["call_1", 7, undefined] },
+        claimCheck: {
+          enabled: true,
+          sources: [
+            { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+            { type: "knowledge_base", id: 42 }, // non-string id
+            { type: "knowledge_base" }, // missing id
+            "garbage",
+            { type: "memory", id: "memory:m_1", toolCallId: 7 }, // non-string toolCallId
+          ],
+        },
       }),
-    ).toEqual({ enabled: true, sourceIds: ["i1", "i2"], toolCallIds: ["call_1"] });
+    ).toEqual({ enabled: true, sources: [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }] });
+  });
+
+  it("accepts a manifest and rejects the Stage 3 shape", () => {
+    expect(parseClaimCheckTrigger({ claimCheck: { enabled: true, sources: [{ type: "memory", id: "memory:m_7" }] } }))
+      .toEqual({ enabled: true, sources: [{ type: "memory", id: "memory:m_7" }] });
+    // The old shape carries no `sources`, so it must read as "nothing to do"
+    // rather than as an empty check.
+    expect(parseClaimCheckTrigger({ claimCheck: { enabled: true, sourceIds: ["i1"], toolCallIds: ["call_1"] } })).toBeNull();
+  });
+
+  it("drops an entry with an unknown type rather than trusting it", () => {
+    const out = parseClaimCheckTrigger({
+      claimCheck: { enabled: true, sources: [{ type: "memory", id: "memory:m_1" }, { type: "guesswork", id: "x" }] },
+    });
+    expect(out?.sources).toEqual([{ type: "memory", id: "memory:m_1" }]);
   });
 });
 
-describe("collectSources", () => {
-  it("takes only the named ids, with their content, deduplicated and in metadata order", () => {
-    expect(collectSources(message, ["i2", "i1"])).toEqual([
-      { id: "i2", name: "ticket.txt", content: "Die Tür wurde getauscht." },
-      { id: "i1", name: "handbuch.pdf", content: "Die FST-2XT arbeitet mit 230 Volt." },
+describe("collectSources — knowledge_base", () => {
+  it("finds each named id's chunks via its tool call, in manifest order", () => {
+    expect(
+      collectSources(message, [
+        { type: "knowledge_base", id: "i2", toolCallId: "call_1" },
+        { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+      ]),
+    ).toEqual([
+      { id: "i2", name: "ticket.txt", type: "knowledge_base", content: "Die Tür wurde getauscht." },
+      { id: "i1", name: "handbuch.pdf", type: "knowledge_base", content: "Die FST-2XT arbeitet mit 230 Volt." },
     ]);
   });
 
@@ -76,6 +115,7 @@ describe("collectSources", () => {
       parts: [
         {
           type: "tool-Context_Search",
+          toolCallId: "call_1",
           output: {
             result: JSON.stringify({
               chunks: [
@@ -87,18 +127,25 @@ describe("collectSources", () => {
         },
       ],
     } as unknown as UIMessage;
-    expect(collectSources(multi, ["i1"])).toEqual([
-      { id: "i1", name: "h.pdf", content: "Erster Teil.\n\nZweiter Teil." },
+    expect(collectSources(multi, [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }])).toEqual([
+      { id: "i1", name: "h.pdf", type: "knowledge_base", content: "Erster Teil.\n\nZweiter Teil." },
     ]);
   });
 
   it("returns an empty array when the tool output cannot be parsed", () => {
-    const broken = { parts: [{ type: "tool-Context_Search", output: { result: "<<not json>>" } }] } as unknown as UIMessage;
-    expect(collectSources(broken, ["i1"])).toEqual([]);
+    const broken = {
+      parts: [{ type: "tool-Context_Search", toolCallId: "call_1", output: { result: "<<not json>>" } }],
+    } as unknown as UIMessage;
+    expect(collectSources(broken, [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }])).toEqual([]);
   });
 
   it("skips an id the message does not carry rather than inventing an empty source", () => {
-    expect(collectSources(message, ["i1", "nope"]).map((s) => s.id)).toEqual(["i1"]);
+    expect(
+      collectSources(message, [
+        { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+        { type: "knowledge_base", id: "nope", toolCallId: "call_1" },
+      ]).map((s) => s.id),
+    ).toEqual(["i1"]);
   });
 
   it("drops an id whose chunks are all missing or empty chunk_content, rather than emitting a source with no text", () => {
@@ -111,6 +158,7 @@ describe("collectSources", () => {
       parts: [
         {
           type: "tool-Context_Search",
+          toolCallId: "call_1",
           output: {
             result: JSON.stringify({
               chunks: [
@@ -122,13 +170,58 @@ describe("collectSources", () => {
         },
       ],
     } as unknown as UIMessage;
-    expect(collectSources(empty, ["i1"])).toEqual([]);
+    expect(collectSources(empty, [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }])).toEqual([]);
   });
 
   it("deduplicates a repeated id in the fragment into one source entry", () => {
-    expect(collectSources(message, ["i1", "i1"])).toEqual([
-      { id: "i1", name: "handbuch.pdf", content: "Die FST-2XT arbeitet mit 230 Volt." },
-    ]);
+    expect(
+      collectSources(message, [
+        { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+        { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+      ]),
+    ).toEqual([{ id: "i1", name: "handbuch.pdf", type: "knowledge_base", content: "Die FST-2XT arbeitet mit 230 Volt." }]);
+  });
+});
+
+describe("collectSources — knowledge_base by tool call id", () => {
+  it("finds the retrieval part by its tool call id, whatever the tool is named", () => {
+    const message = {
+      metadata: { claimCheck: { enabled: true, sources: [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }] } },
+      parts: [{
+        type: "tool-Something_Renamed", // deliberately not the production name
+        toolCallId: "call_1",
+        output: { result: JSON.stringify({ chunks: [{ item_id: "i1", item_name: "h.pdf", chunk_content: "230 Volt." }] }) },
+      }],
+    } as unknown as UIMessage;
+    expect(collectSources(message, [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }]))
+      .toEqual([{ id: "i1", name: "h.pdf", type: "knowledge_base", content: "230 Volt." }]);
+  });
+});
+
+describe("collectSources — memory", () => {
+  it("takes a memory's information out of the turn's metadata", () => {
+    const message = {
+      metadata: {
+        claimCheck: { enabled: true, sources: [{ type: "memory", id: "memory:m_7" }] },
+        recalledMemories: [{ id: "m_7", title: "Sprache", information: "Der Kunde bevorzugt Deutsch." }],
+      },
+      parts: [],
+    } as unknown as UIMessage;
+    expect(collectSources(message, [{ type: "memory", id: "memory:m_7" }]))
+      .toEqual([{ id: "memory:m_7", name: "Sprache", type: "memory", content: "Der Kunde bevorzugt Deutsch." }]);
+  });
+
+  it("omits a memory the metadata does not carry, rather than inventing one", () => {
+    const message = { metadata: { recalledMemories: [] }, parts: [] } as unknown as UIMessage;
+    expect(collectSources(message, [{ type: "memory", id: "memory:m_7" }])).toEqual([]);
+  });
+
+  it("omits a memory whose information is empty", () => {
+    const message = {
+      metadata: { recalledMemories: [{ id: "m_7", title: "Sprache", information: "   " }] },
+      parts: [],
+    } as unknown as UIMessage;
+    expect(collectSources(message, [{ type: "memory", id: "memory:m_7" }])).toEqual([]);
   });
 });
 

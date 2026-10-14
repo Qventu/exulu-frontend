@@ -6,7 +6,7 @@ import { claimCheckRequestFor } from "./hooks";
 const base = {
   id: "msg_1",
   role: "assistant",
-  metadata: { claimCheck: { enabled: true, sourceIds: ["i1"], toolCallIds: ["call_1"] } },
+  metadata: { claimCheck: { enabled: true, sources: [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }] } },
   parts: [
     {
       type: "tool-Context_Search",
@@ -24,7 +24,7 @@ describe("claimCheckRequestFor", () => {
     expect(claimCheckRequestFor(args)).toEqual({
       question: "Womit?",
       answer: "Die FST-2XT arbeitet mit 230 Volt.",
-      sources: [{ id: "i1", name: "h.pdf", content: "230 Volt." }],
+      sources: [{ id: "i1", name: "h.pdf", type: "knowledge_base", content: "230 Volt." }],
       agent: "a1",
       session: "s1",
       messageId: "msg_1",
@@ -53,7 +53,15 @@ describe("claimCheckRequestFor", () => {
   it("returns null when SOME of the named sources are recovered but not all", () => {
     const partial = {
       ...base,
-      metadata: { claimCheck: { enabled: true, sourceIds: ["i1", "i2"], toolCallIds: ["call_1"] } },
+      metadata: {
+        claimCheck: {
+          enabled: true,
+          sources: [
+            { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+            { type: "knowledge_base", id: "i2", toolCallId: "call_1" },
+          ],
+        },
+      },
       parts: [
         {
           type: "tool-Context_Search",
@@ -75,7 +83,15 @@ describe("claimCheckRequestFor", () => {
   it("checks when every named source is recovered, two of two included", () => {
     const both = {
       ...base,
-      metadata: { claimCheck: { enabled: true, sourceIds: ["i1", "i2"], toolCallIds: ["call_1"] } },
+      metadata: {
+        claimCheck: {
+          enabled: true,
+          sources: [
+            { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+            { type: "knowledge_base", id: "i2", toolCallId: "call_1" },
+          ],
+        },
+      },
       parts: [
         {
           type: "tool-Context_Search",
@@ -93,8 +109,8 @@ describe("claimCheckRequestFor", () => {
       ],
     } as unknown as UIMessage;
     expect(claimCheckRequestFor({ ...args, message: both })?.sources).toEqual([
-      { id: "i1", name: "h.pdf", content: "230 Volt." },
-      { id: "i2", name: "w.pdf", content: "18 kg." },
+      { id: "i1", name: "h.pdf", type: "knowledge_base", content: "230 Volt." },
+      { id: "i2", name: "w.pdf", type: "knowledge_base", content: "18 kg." },
     ]);
   });
 
@@ -104,7 +120,15 @@ describe("claimCheckRequestFor", () => {
   it("returns null when a named source's only chunk has no text", () => {
     const empty = {
       ...base,
-      metadata: { claimCheck: { enabled: true, sourceIds: ["i1", "i2"], toolCallIds: ["call_1"] } },
+      metadata: {
+        claimCheck: {
+          enabled: true,
+          sources: [
+            { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+            { type: "knowledge_base", id: "i2", toolCallId: "call_1" },
+          ],
+        },
+      },
       parts: [
         {
           type: "tool-Context_Search",

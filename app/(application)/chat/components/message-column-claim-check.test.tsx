@@ -65,16 +65,17 @@ describe("makeClaimCheck", () => {
 
   // The one thing this task adds beyond wiring: the factory derives
   // sourceNames from the message's own retrieval tool part via
-  // collectSources(message, trigger.sourceIds), so an evidence quote is
+  // collectSources(message, trigger.sources), so an evidence quote is
   // attributed to its document rather than shown as an anonymous snippet.
   it("names the evidence source from the message's retrieval part", async () => {
     const messageWithSource = {
       id: "msg_named",
       role: "assistant",
-      metadata: { claimCheck: { enabled: true, sourceIds: ["i1"], toolCallIds: [] } },
+      metadata: { claimCheck: { enabled: true, sources: [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }] } },
       parts: [
         {
           type: "tool-Context_Search",
+          toolCallId: "call_1",
           output: {
             result: JSON.stringify({
               chunks: [{ item_id: "i1", item_name: "handbuch.pdf", chunk_content: "Das Gerät arbeitet mit 230 Volt." }],

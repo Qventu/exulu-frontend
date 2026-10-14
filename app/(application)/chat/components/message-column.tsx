@@ -243,8 +243,8 @@ export function makeClaimCheck(claimChecks: Record<string, ClaimCheckState>, gue
     const trigger = parseClaimCheckTrigger(message.metadata);
     const sourceNames: Record<string, string> = {};
     if (trigger) {
-      for (const source of collectSources(message, trigger.sourceIds)) {
-        if (source.name) sourceNames[source.id] = source.name;
+      for (const source of collectSources(message, trigger.sources)) {
+        if (source.name && source.id) sourceNames[source.id] = source.name;
       }
     }
     return (
