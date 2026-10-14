@@ -14,7 +14,8 @@
  * epoch sentinel (resolvers.ts uses new Date(0) for "unknown"), and anything
  * already within two days of the capture day or later — a resolver that
  * stamps `new Date()` (chapter-memory.ts, the correction) is already "now"
- * and would otherwise land weeks in the future.
+ * and would otherwise land weeks in the future. A stamp from later on the
+ * capture day than now's time of day is clamped to a minute before now.
  */
 export const DEMO_EPOCH = "2026-08-27T09:00:00.000Z";
 
@@ -42,7 +43,12 @@ export function shiftTimestamp(value: string, offsetMs: number): string {
   const ms = fraction ? fraction.slice(1, 4).padEnd(3, "0") : "000";
   const parsed = Date.parse(`${day}T${time}.${ms}${normaliseZone(zone)}`);
   if (Number.isNaN(parsed) || parsed === 0 || parsed >= CUTOFF_MS) return value;
-  return new Date(parsed + offsetMs).toISOString();
+  // offset = now − epoch, so a stamp from later on the capture day would land
+  // later than now ("in 23 Std." on the transcripts list). Nothing in the
+  // demo's past may read as future: clamp to a minute before now, which is
+  // epoch + offset.
+  const nowMs = EPOCH_MS + offsetMs;
+  return new Date(Math.min(parsed + offsetMs, nowMs - 60_000)).toISOString();
 }
 
 export function shiftDemoDates<T>(value: T, offsetMs: number): T {

@@ -49,3 +49,21 @@ describe("demoDateOffsetMs", () => {
     expect(demoDateOffsetMs(Date.parse(DEMO_EPOCH) + 10 * DAY)).toBe(10 * DAY);
   });
 });
+
+describe("shiftTimestamp never lands in the future", () => {
+  it("clamps a capture-day timestamp later than now's time of day to just before now", () => {
+    // The transcripts list read "in 23 Std." for recordings made a few hours
+    // after the 09:00 epoch: offset = now − epoch, so anything stamped after
+    // the epoch shifted to after now.
+    const now = Date.parse(DEMO_EPOCH) + 30 * DAY;
+    const afterEpoch = new Date(Date.parse(DEMO_EPOCH) + 5 * 3_600_000).toISOString();
+    const shifted = Date.parse(shiftTimestamp(afterEpoch, demoDateOffsetMs(now)));
+    expect(shifted).toBeLessThan(now);
+    expect(now - shifted).toBeLessThanOrEqual(60_000);
+  });
+
+  it("leaves an earlier timestamp exactly shifted", () => {
+    const now = Date.parse(DEMO_EPOCH) + 30 * DAY;
+    expect(shiftTimestamp("2026-08-20T10:00:00.000Z", demoDateOffsetMs(now))).toBe("2026-09-19T10:00:00.000Z");
+  });
+});
