@@ -835,6 +835,8 @@ async function main() {
       /Untitled transcript|Unbenanntes Transkript|Test Bild/,
       /\$\s?\d/,
       /Noch nie ausgeführt/,
+      // English absolute dates ("Oct 6, 2026", "Sep 30") from a formatter without a locale.
+      /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}(, \d{4})?\b/,
     ];
     row.leaks = await page.evaluate((patterns) => {
       const text = (document.querySelector("main")?.innerText ?? "").replace(/\s+/g, " ");
