@@ -95,6 +95,16 @@ describe("parseClaimCheckTrigger", () => {
     expect(parseClaimCheckTrigger({ claimCheck: { enabled: true, sourceIds: ["i1"], toolCallIds: ["call_1"] } })).toBeNull();
   });
 
+  // The backend never emits `other` — its own types call it request-only —
+  // and before this it parsed here and then failed at the coverage guard
+  // instead: two silent-refusal paths for one condition, in the module whose
+  // rule is to fail closed in ONE place.
+  it("refuses a manifest naming the request-only `other` type, which the backend never emits", () => {
+    expect(
+      parseClaimCheckTrigger({ claimCheck: { enabled: true, sources: [{ type: "other", id: "tool:call_1", toolCallId: "call_1" }] } }),
+    ).toBeNull();
+  });
+
   // Same reasoning as above: an unknown type names evidence this client
   // cannot produce, so the manifest must fail closed rather than drop that
   // one entry and let the rest look like a complete manifest.
@@ -407,7 +417,7 @@ describe("collectSources — document", () => {
 });
 
 describe("collectSources — web", () => {
-  it("makes one source per cited page, named by its url", () => {
+  it("makes one source per cited page, named by its title", () => {
     const parsed = {
       content: "Die Anlage läuft mit 230 Volt.",
       search_results: [
@@ -419,10 +429,25 @@ describe("collectSources — web", () => {
       parts: [{ type: "tool-Internet_Search", toolCallId: "call_9", output: { result: JSON.stringify(parsed) } }],
     } as unknown as UIMessage;
     const out = collectSources(message, [{ type: "web", id: "tool:call_9", toolCallId: "call_9" }]);
-    expect(out.filter((s) => s.id.includes("#"))).toHaveLength(2);
+    expect(out.filter((s) => (s.id ?? "").includes("#"))).toHaveLength(2);
+    // `title ?? url`, not the other way round: the panel renders names as
+    // prose beside a quote ("Webseite – Anlagen A: „230 Volt“"), where a
+    // bare URL reads worse than a headline.
     expect(out.find((s) => s.id === "tool:call_9#0")).toEqual({
-      id: "tool:call_9#0", name: "https://example.com/a", type: "web", content: "Anlagen A\n\n230 Volt.",
+      id: "tool:call_9#0", name: "Anlagen A", type: "web", content: "Anlagen A\n\n230 Volt.",
     });
+  });
+
+  it("falls back to the url when a cited page has no title", () => {
+    const message = {
+      parts: [{
+        type: "tool-Internet_Search",
+        toolCallId: "call_9",
+        output: { result: JSON.stringify({ search_results: [{ url: "https://example.com/a", snippet: "230 Volt." }] }) },
+      }],
+    } as unknown as UIMessage;
+    const out = collectSources(message, [{ type: "web", id: "tool:call_9", toolCallId: "call_9" }]);
+    expect(out[0]!.name).toBe("https://example.com/a");
   });
 
   // Fix round 3, Critical 1. The snippets are a sentence or two each; the

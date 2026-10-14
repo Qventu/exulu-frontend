@@ -10,6 +10,23 @@ import { NextIntlClientProvider } from "next-intl";
 // Stubbed here since this suite only exercises makeClaimCheck.
 vi.mock("@/components/lottie", () => ({ default: () => null }));
 
+// Spies on the real `collectSources` so the test below can assert it is not
+// called at all for a message with no check state — the ~89,000-character
+// parse this component used to pay on every render of every triggered
+// message (the AI SDK hands back a new `messages` array on nearly every
+// streamed tick).
+const { collectSpy } = vi.hoisted(() => ({ collectSpy: vi.fn() }));
+vi.mock("./claim-check-data", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./claim-check-data")>();
+  return {
+    ...actual,
+    collectSources: (...a: Parameters<typeof actual.collectSources>) => {
+      collectSpy(...a);
+      return actual.collectSources(...a);
+    },
+  };
+});
+
 import { makeClaimCheck } from "./message-column";
 import de from "@/messages/de.json";
 
@@ -21,6 +38,20 @@ afterEach(cleanup);
 const message = { id: "msg_1", role: "assistant", parts: [], metadata: {} } as never;
 const agent = { id: "a1", name: "Agent" } as never;
 
+/** A triggered message whose retrieval part is the expensive thing to parse. */
+const triggeredMessage = {
+  id: "msg_triggered",
+  role: "assistant",
+  metadata: { claimCheck: { enabled: true, sources: [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }] } },
+  parts: [
+    {
+      type: "tool-Context_Search",
+      toolCallId: "call_1",
+      output: { result: JSON.stringify({ chunks: [{ item_id: "i1", item_name: "h.pdf", chunk_content: "230 Volt." }] }) },
+    },
+  ],
+} as never;
+
 describe("makeClaimCheck", () => {
   // `@testing-library/jest-dom` is not a project dependency (confirmed by
   // claim-check.test.tsx: no other *.test.tsx uses `toBeInTheDocument`). The
@@ -28,6 +59,41 @@ describe("makeClaimCheck", () => {
   // matches — with `.toBeDefined()`, and a `container.firstChild` /
   // `.toBeNull()` check for absence, rather than jest-dom's
   // `toBeInTheDocument()` / `toBeEmptyDOMElement()` from the brief's snippet.
+
+  // Fix round 3, minor: the labels are derived from the message's own tool
+  // output, which means re-parsing ~89,000 characters — and this component
+  // re-renders constantly, because the AI SDK hands back a new `messages`
+  // array on nearly every streamed tick. A message with no check state has
+  // no panel and nothing to label, so the work must not happen at all.
+  it("does not parse the message's tool output when there is no check for it", () => {
+    collectSpy.mockClear();
+    const Component = makeClaimCheck({}, false);
+    render(
+      <NextIntlClientProvider locale="de" messages={de as never}>
+        <Component message={triggeredMessage} agent={agent} />
+      </NextIntlClientProvider>,
+    );
+    expect(collectSpy).not.toHaveBeenCalled();
+  });
+
+  it("parses it once, not once per render, for a message that does have a check", () => {
+    collectSpy.mockClear();
+    const Component = makeClaimCheck({ msg_triggered: { status: "running" } }, false);
+    const ui = (
+      <NextIntlClientProvider locale="de" messages={de as never}>
+        <Component message={triggeredMessage} agent={agent} />
+      </NextIntlClientProvider>
+    );
+    const { rerender } = render(ui);
+    // A fresh message object with the same id, as the SDK hands back on
+    // every streamed tick.
+    rerender(
+      <NextIntlClientProvider locale="de" messages={de as never}>
+        <Component message={{ ...(triggeredMessage as object) } as never} agent={agent} />
+      </NextIntlClientProvider>,
+    );
+    expect(collectSpy).toHaveBeenCalledTimes(1);
+  });
 
   it("renders the panel for a message that has state", () => {
     const Component = makeClaimCheck({ msg_1: { status: "running" } }, false);

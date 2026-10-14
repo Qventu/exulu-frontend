@@ -24,8 +24,17 @@ export type ClaimCheckManifestEntry = {
 
 export type ClaimCheckTrigger = { enabled: true; sources: ClaimCheckManifestEntry[] };
 
+/**
+ * The manifest types this client can act on. `other` is deliberately NOT
+ * among them: it exists for third-party callers of POST /claims/check (the
+ * backend's own types call it request-only) and `manifestFor` never emits
+ * it, so an entry naming it would parse here and then fail at
+ * `claimCheckRequestFor`'s coverage guard instead — two silent-refusal paths
+ * for one condition, in the module whose whole rule is to fail closed in ONE
+ * place.
+ */
 const SOURCE_TYPES = new Set<ClaimCheckSourceType>([
-  "knowledge_base", "document", "memory", "web", "session_item", "other",
+  "knowledge_base", "document", "memory", "web", "session_item",
 ]);
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
@@ -306,7 +315,10 @@ function webSources(part: Record<string, unknown>, entry: ClaimCheckManifestEntr
     const snippet = typeof r.snippet === "string" ? r.snippet : "";
     const content = [title, snippet].filter(Boolean).join("\n\n");
     if (!content.trim()) return [];
-    return [{ id: `${entry.id}#${i}`, name: url ?? title, type: "web" as const, content }];
+    // `title ?? url`: the panel renders a name as prose beside a quote
+    // ("Webseite – Anlagen A: „230 Volt“"), where a bare URL reads worse
+    // than a headline.
+    return [{ id: `${entry.id}#${i}`, name: title ?? url, type: "web" as const, content }];
   });
   const raw = typeof parsed.content === "string" ? parsed.content : "";
   const body = raw.trim() ? restoreCitationMarkers(raw, results) : "";

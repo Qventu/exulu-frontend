@@ -243,18 +243,34 @@ function makeRecalledMemories(guestMode: boolean) {
  */
 export function makeClaimCheck(claimChecks: Record<string, ClaimCheckState>, guestMode: boolean) {
   const ClaimCheckForColumn = ({ message }: { message: UIMessage; agent: Agent }) => {
-    const trigger = parseClaimCheckTrigger(message.metadata);
-    const sourceNames: Record<string, string> = {};
-    const sourceTypes: Record<string, ClaimCheckSourceType> = {};
-    if (trigger) {
-      for (const source of collectSources(message, trigger.sources)) {
-        if (source.name && source.id) sourceNames[source.id] = source.name;
-        if (source.id && source.type) sourceTypes[source.id] = source.type;
+    const state = claimChecks[message.id] ?? null;
+    // `collectSources` re-parses this turn's tool outputs — ~89,000
+    // characters on a real turn — and this component re-renders constantly,
+    // because the AI SDK hands back a NEW `messages` array on nearly every
+    // streamed tick. Two guards: no check state means no panel and so
+    // nothing to label (the common case, and every message during a
+    // stream), and for the one message that does have a check the labels are
+    // memoised on its id. Keyed on `message.id` rather than `message`
+    // precisely because the object identity churns while the tool parts a
+    // FINISHED turn carries never change — and a check only exists once the
+    // turn finished.
+    const { sourceNames, sourceTypes } = useMemo(() => {
+      const names: Record<string, string> = {};
+      const types: Record<string, ClaimCheckSourceType> = {};
+      if (!state) return { sourceNames: names, sourceTypes: types };
+      const trigger = parseClaimCheckTrigger(message.metadata);
+      if (trigger) {
+        for (const source of collectSources(message, trigger.sources)) {
+          if (source.name && source.id) names[source.id] = source.name;
+          if (source.id && source.type) types[source.id] = source.type;
+        }
       }
-    }
+      return { sourceNames: names, sourceTypes: types };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [message.id, state]);
     return (
       <ClaimCheck
-        state={claimChecks[message.id] ?? null}
+        state={state}
         guestMode={guestMode}
         sourceNames={sourceNames}
         sourceTypes={sourceTypes}

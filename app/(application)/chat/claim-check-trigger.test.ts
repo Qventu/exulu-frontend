@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { UIMessage } from "ai";
 
 import { claimCheckRequestFor } from "./hooks";
@@ -368,5 +368,40 @@ describe("claimCheckRequestFor", () => {
     expect(body?.session).toBeUndefined();
     expect(body?.messageId).toBeUndefined();
     expect(body?.answer).toBe("Die FST-2XT arbeitet mit 230 Volt.");
+  });
+
+  // Fix round 3, minor: this branch adds several silent-refusal paths, and an
+  // admin asking "why is there no panel on this answer" had no signal at all
+  // — not a log line, not an error. One dev-only `console.debug` naming the
+  // entries that produced nothing. No user-visible change.
+  describe("diagnosability", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+    });
+
+    it("names the uncovered entry ids when it refuses, in development", () => {
+      vi.stubEnv("NODE_ENV", "development");
+      const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+      expect(claimCheckRequestFor({ ...args, message: oneMissingMessage })).toBeNull();
+      expect(debug).toHaveBeenCalledTimes(1);
+      const logged = debug.mock.calls[0]!.join(" ");
+      expect(logged).toContain("tool:call_9"); // the web entry that recovered nothing
+      expect(logged).not.toContain("tool:call_4"); // the document entry that did
+    });
+
+    it("stays silent in production", () => {
+      vi.stubEnv("NODE_ENV", "production");
+      const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+      expect(claimCheckRequestFor({ ...args, message: oneMissingMessage })).toBeNull();
+      expect(debug).not.toHaveBeenCalled();
+    });
+
+    it("says nothing on a turn it does check", () => {
+      vi.stubEnv("NODE_ENV", "development");
+      const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+      expect(claimCheckRequestFor(args)).not.toBeNull();
+      expect(debug).not.toHaveBeenCalled();
+    });
   });
 });

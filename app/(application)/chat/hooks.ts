@@ -243,7 +243,22 @@ export function claimCheckRequestFor({ message, question, session, agentId, loca
   // with no error and nothing in the logs.
   const contributedBy = (entryId: string) =>
     sources.some((s) => s.id === entryId || (s.id ?? "").startsWith(`${entryId}#`));
-  if (trigger.sources.some((entry) => !contributedBy(entry.id))) return null;
+  const uncovered = trigger.sources.filter((entry) => !contributedBy(entry.id));
+  if (uncovered.length > 0) {
+    // The one signal this branch was missing. Refusing is correct and
+    // deliberate, but it is also silent: an admin asking "why is there no
+    // panel on this answer" had nothing to look at — no log line, no error,
+    // no user-visible difference from "the agent has the check off". Dev
+    // only, so nothing changes for a reader.
+    if (process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line no-console
+      console.debug(
+        "[claim-check] no check: the manifest named sources this message could not produce:",
+        uncovered.map((entry) => `${entry.type}:${entry.id}`).join(", "),
+      );
+    }
+    return null;
+  }
   const answer = answerTextOf(message);
   if (!answer.trim()) return null;
   return {

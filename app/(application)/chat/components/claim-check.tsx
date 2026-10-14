@@ -341,8 +341,15 @@ function ClaimRow({
                 {/* A dash, not a colon: `claimCheckEvidenceNamed` already
                     reads "{source}: „{quote}“", so a colon here would stack
                     two colons in one line ("Erinnerung: Sprache: „…“") and
-                    read as a mistake. */}
-                {typeLabel && <span className="not-italic font-medium">{typeLabel} – </span>}
+                    read as a mistake. The dash and its spacing live in the
+                    message files (`claimCheckEvidenceSourceType`, "{label} – ")
+                    so a locale can change both — German uses the en dash its
+                    own `claimCheckPartial` does, English the em dash. */}
+                {typeLabel && (
+                  <span className="not-italic font-medium">
+                    {t("claimCheckEvidenceSourceType", { label: typeLabel })}
+                  </span>
+                )}
                 {name
                   ? t("claimCheckEvidenceNamed", { source: name, quote: evidence.quote })
                   : t("claimCheckEvidenceQuote", { quote: evidence.quote })}

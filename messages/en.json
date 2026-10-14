@@ -1218,9 +1218,10 @@
     "claimCheckSourceKnowledgeBase": "Knowledge base",
     "claimCheckSourceDocument": "Document",
     "claimCheckSourceMemory": "Memory",
-    "claimCheckSourceWeb": "Web",
+    "claimCheckSourceWeb": "Web page",
     "claimCheckSourceSessionItem": "Pinned item",
     "claimCheckSourceOther": "Source",
+    "claimCheckEvidenceSourceType": "{label} — ",
     "runBanner": {
       "label": "Routine run — {name}",
       "fallbackName": "Routine",
