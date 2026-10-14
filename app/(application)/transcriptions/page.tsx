@@ -67,6 +67,7 @@ import {
   type TranscriptRow,
   type TranscriptTab,
 } from "./types";
+import { reviewHref } from "./review-href";
 
 type SourceFilter = "all" | JobSource;
 type DateFilter = "all" | "today" | "week" | "month";
@@ -133,11 +134,14 @@ function TranscriptionsPageInner() {
     [router, pathname],
   );
 
-  // The review sheet became a page (spec §1.2); keep old links working.
+  // The review sheet became a page (spec §1.2); keep old links working,
+  // carrying every other param with them (the demo tour's `?tour=` included).
   const legacyReviewId = searchParams.get("review");
   React.useEffect(() => {
-    if (legacyReviewId) router.replace(`/transcriptions/review/${legacyReviewId}`);
-  }, [legacyReviewId, router]);
+    if (legacyReviewId) {
+      router.replace(reviewHref(legacyReviewId, new URLSearchParams(searchParams)));
+    }
+  }, [legacyReviewId, router, searchParams]);
 
   const [query, setQuery] = React.useState("");
   const [tab, setTab] = React.useState<TranscriptTab>("all");
