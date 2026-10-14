@@ -217,6 +217,20 @@ describe("hasPendingToolApproval", () => {
     ).toBe(true);
   });
 
+  // The SDK's terminal states for an answered approval are output-available
+  // (ran) and output-denied (declined). Matching output-denied too would
+  // suppress claim checking permanently for any turn the user said no in.
+  it("is false once a declined tool has resolved to output-denied", () => {
+    expect(
+      hasPendingToolApproval(
+        msg([
+          { type: "tool-jira_create", state: "output-denied", approval: { id: "a", approved: false } },
+          { type: "text", text: "Dann nicht." },
+        ]),
+      ),
+    ).toBe(false);
+  });
+
   it("is false for a finished turn, whatever its parts", () => {
     expect(
       hasPendingToolApproval(

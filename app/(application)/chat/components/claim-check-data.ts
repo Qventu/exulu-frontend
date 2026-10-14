@@ -42,6 +42,12 @@ export function parseClaimCheckTrigger(metadata: unknown): ClaimCheckTrigger | n
  * The AI SDK's tool-part states that mean "this turn has stopped, waiting on
  * the user". `approval-requested` is the question; `approval-responded` is
  * the answer recorded but the turn not yet resumed.
+ *
+ * Exactly these two, and no more. The SDK's terminal states for an answered
+ * approval are `output-available` (ran) and `output-denied` (declined), so
+ * neither outcome leaves a message stuck here — a declined tool resolves and
+ * the resumed turn gets its check. Including `output-denied` would suppress
+ * claim checking permanently for any turn in which the user said no.
  */
 const PAUSED_TOOL_STATES = new Set(["approval-requested", "approval-responded"]);
 
