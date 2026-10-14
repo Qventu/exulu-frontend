@@ -164,6 +164,15 @@ interface MessageRendererProps {
     message: UIMessage
     agent: Agent
   }>
+  // Claim-check panel under an assistant answer (spec §5, §5.1), rendered
+  // directly after the recalled-memories block so the two sit together.
+  // Optional — when absent, nothing renders (no behavior change for other
+  // consumers). The factory in message-column.tsx closes over the
+  // per-message claimChecks state, same shape as RecalledMemoriesComponent.
+  ClaimCheckComponent?: React.ComponentType<{
+    message: UIMessage
+    agent: Agent
+  }>
   addToContext?: (item: any) => void
   writeAccess?: boolean
   AgentVisualComponent?: React.ComponentType<any>
@@ -195,6 +204,7 @@ export function MessageRenderer({
   UntypedToolPartComponent,
   MemoryStackComponent,
   RecalledMemoriesComponent,
+  ClaimCheckComponent,
   addToContext,
   writeAccess = true,
   AgentVisualComponent,
@@ -621,6 +631,7 @@ export function MessageRenderer({
             UntypedToolPartComponent={UntypedToolPartComponent}
             MemoryStackComponent={MemoryStackComponent}
             RecalledMemoriesComponent={RecalledMemoriesComponent}
+            ClaimCheckComponent={ClaimCheckComponent}
             AgentVisualComponent={AgentVisualComponent}
           />
         );
@@ -671,6 +682,7 @@ interface MessageItemProps {
   UntypedToolPartComponent?: MessageRendererProps["UntypedToolPartComponent"]
   MemoryStackComponent?: MessageRendererProps["MemoryStackComponent"]
   RecalledMemoriesComponent?: MessageRendererProps["RecalledMemoriesComponent"]
+  ClaimCheckComponent?: MessageRendererProps["ClaimCheckComponent"]
   AgentVisualComponent?: React.ComponentType<any>
 }
 
@@ -720,6 +732,7 @@ const MessageItem = memo(function MessageItem({
   UntypedToolPartComponent,
   MemoryStackComponent,
   RecalledMemoriesComponent,
+  ClaimCheckComponent,
   AgentVisualComponent,
 }: MessageItemProps) {
   // Parsed tool-part data keyed by toolCallId + state: the SDK deep-clones
@@ -1281,6 +1294,10 @@ const MessageItem = memo(function MessageItem({
 
               {message.role === 'assistant' && RecalledMemoriesComponent && agent && (
                 <RecalledMemoriesComponent message={message} agent={agent} />
+              )}
+
+              {message.role === 'assistant' && ClaimCheckComponent && agent && (
+                <ClaimCheckComponent message={message} agent={agent} />
               )}
 
               {(
