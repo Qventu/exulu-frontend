@@ -24,7 +24,9 @@ import { useMutation, useQuery } from "@apollo/client";
 import { MoreHorizontal, Play, Plus, X, Pencil } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useParams, useSearchParams } from "next/navigation";
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
+
+import { tabFromParam, type EvalSetTab } from "./tab-param";
 import { toast } from "sonner";
 
 import { UserContext } from "@/app/(application)/authenticated";
@@ -79,13 +81,15 @@ export default function EvalSetEditorPage() {
   const hasEvalsAccess = can(user, { area: "evals", level: "read" });
   const canWrite = can(user, { area: "evals", level: "write" });
 
-  // Deep link: ?tab=testCases opens the cases tab on arrival. Read once as
-  // the DEFAULT, not synced — switching tabs by hand must not fight the URL.
-  const requestedTab = useSearchParams().get("tab");
-  const initialTab = requestedTab === "testCases" ? "testCases" : "results";
-  const [activeTab, setActiveTab] = useState<"results" | "testCases">(
-    initialTab,
-  );
+  // Deep link: ?tab=testCases opens the cases tab. Followed on every CHANGE
+  // of the param, not only on arrival — the demo tour deep-links tab by tab
+  // on one route without a reload. Manual tab switches are not fought: the
+  // effect runs only when the param itself changes.
+  const requestedTab = tabFromParam(useSearchParams().get("tab"));
+  const [activeTab, setActiveTab] = useState<EvalSetTab>(requestedTab);
+  useEffect(() => {
+    setActiveTab(requestedTab);
+  }, [requestedTab]);
   const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -305,7 +309,7 @@ export default function EvalSetEditorPage() {
 
       <Tabs
         value={activeTab}
-        onValueChange={(v) => setActiveTab(v as "results" | "testCases")}
+        onValueChange={(v) => setActiveTab(v as EvalSetTab)}
         className="flex flex-col gap-6"
       >
         <TabsList className="grid w-full max-w-md grid-cols-2">
