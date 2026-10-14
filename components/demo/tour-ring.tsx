@@ -170,7 +170,7 @@ export function TourRing() {
     const onScroll = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => measure("scroll")); };
     const onLayout = () => measure();
     window.addEventListener("scroll", onScroll, true);
-    window.addEventListener("resize", measure);
+    window.addEventListener("resize", onLayout);
     for (const t of ANIMATION_END) document.addEventListener(t, onLayout, true);
 
     const detach = () => {
@@ -233,7 +233,7 @@ export function TourRing() {
       if (giveUpTimer) clearTimeout(giveUpTimer);
       detach();
       window.removeEventListener("scroll", onScroll, true);
-      window.removeEventListener("resize", measure);
+      window.removeEventListener("resize", onLayout);
       for (const t of ANIMATION_END) document.removeEventListener(t, onLayout, true);
       cancelAnimationFrame(raf);
     };
