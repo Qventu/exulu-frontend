@@ -74,3 +74,20 @@ describe("isDemoSupported", () => {
     expect(new Set(DEMO_SUPPORTED_ROUTES).size).toBe(DEMO_SUPPORTED_ROUTES.length);
   });
 });
+
+describe("tour routes against product redirects", () => {
+  // The product redirects the legacy `?review=` param to its own route and
+  // drops every other param — including `?tour=`. A step must never depend
+  // on a parameter the product rewrites.
+  it("never navigates with the legacy review query parameter", () => {
+    for (const chapter of CHAPTERS) {
+      for (const step of chapter.steps) {
+        const params = new URL(step.route, "http://demo.invalid").searchParams;
+        expect(
+          params.has("review"),
+          `${chapter.id}.${step.id} uses ?review=, which /transcriptions redirects away`,
+        ).toBe(false);
+      }
+    }
+  });
+});

@@ -23,6 +23,7 @@ import {
   GET_MEMORY_USAGE,
   GET_MEMORY_USAGE_BY_IDS,
 } from "@/app/(application)/memory/queries";
+import { GET_PROJECTS } from "@/app/(application)/projects/queries";
 import { ROUTINE_RUNS_ATTENTION_COUNT } from "@/lib/routine-runs/queries";
 import { ALGI_RUNS_NEEDING_ATTENTION } from "./fixtures/chapter-email";
 import { runDemoOperation as run } from "./test-support";
@@ -228,5 +229,14 @@ describe("/memory page operations", () => {
   it("answers WorkbenchMemoryConflictCounts with an object carrying open", async () => {
     const data = await run(gql`query WorkbenchMemoryConflictCounts($contextId: ID!) { memoryConflictCounts(contextId: $contextId) { open memoriesInvolved lastScanAt } }`, { contextId: "newton_memory_context" });
     expect(typeof (data.memoryConflictCounts as { open: number }).open).toBe("number");
+  });
+});
+
+describe("/transcriptions/review/[jobId] operations", () => {
+  it("answers GetProjects with an empty page (the review page's project picker)", async () => {
+    const data = await run(GET_PROJECTS, { page: 1, limit: 50 }, { chapter: "meetings", step: 1 });
+    const page = data.projectsPagination as { items: unknown[]; pageInfo: { itemCount: number } };
+    expect(page.items).toEqual([]);
+    expect(page.pageInfo.itemCount).toBe(0);
   });
 });

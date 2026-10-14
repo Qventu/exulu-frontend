@@ -916,6 +916,12 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   }),
   GetUsersByIds: () => ({ userByIds: [] }),
   GetProjectsByIds: () => ({ projectByIds: [] }),
+  // The review page's TranscriptDocument offers a project picker on load. No
+  // projects exist in the tour, and an unmapped operation renders the page
+  // blank rather than empty.
+  GetProjects: () => ({
+    projectsPagination: { pageInfo: page(0), items: [] },
+  }),
   GetRolesByIds: () => ({ rolesPagination: { items: [] } }),
   GetRoutinesByIds: () => ({ workflow_templatesPagination: { items: [] } }),
 

@@ -7,6 +7,7 @@ import {
 import { runDemoQueryThroughCache } from "@/lib/demo/test-support";
 
 import { GET_TRANSCRIPTION_JOB, GET_TRANSCRIPTION_JOBS } from "./queries";
+import { transcriptPublishState } from "./types";
 
 /**
  * Chapter 7's list screen.
@@ -111,5 +112,25 @@ describe("opening one recording", () => {
     ]) {
       expect(job[field], `${field} should never reach the bundle`).toBeNull();
     }
+  });
+});
+
+describe("the review page's guards", () => {
+  // review/[jobId]/page.tsx returns null for a `saved` job and rejects
+  // anything but awaiting_review/reviewed. The sheet this chapter was built
+  // on had no such guard, and the walk of 2026-10-14 found a blank page.
+  it("accepts the meeting the chapter opens", async () => {
+    const data = await runDemoQueryThroughCache(
+      GET_TRANSCRIPTION_JOB,
+      { id: ALGI_MEETING_ID },
+      at,
+    );
+    const job = data.transcription_jobById as {
+      status: "awaiting_review" | "reviewed" | "saved" | string;
+      saved_item_id: string | null;
+    };
+    expect(["awaiting_review", "reviewed"]).toContain(job.status);
+    expect(job.saved_item_id).toBeNull();
+    expect(transcriptPublishState(job as never)).toBe("draft");
   });
 });
