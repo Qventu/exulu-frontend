@@ -32,7 +32,9 @@ describe("DEMO_NAV_ROUTES", () => {
     const config = demoConfig();
     const entries = visibleEntries(user, config, DEMO_NAV_ROUTES);
     expect(entries.map((e) => e.route).sort()).toEqual([...DEMO_NAV_ROUTES].sort());
-    // and without the allowlist the super-admin sees the whole product
+    // and without an allowlist (the default resolves to undefined here,
+    // because vitest runs without the build-time demo flag) the super-admin
+    // sees the whole product
     expect(visibleEntries(user, config, undefined).length).toBeGreaterThan(entries.length);
     expect(NAV_ENTRIES.length).toBeGreaterThan(entries.length);
   });

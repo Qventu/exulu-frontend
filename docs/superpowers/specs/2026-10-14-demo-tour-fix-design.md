@@ -90,7 +90,7 @@ The tour must survive its own navigation.
 
 **Streaming markers.** `components/ai-elements/response.tsx` `parseIncompleteMarkdown` strips a trailing `{item_name:` fragment without a closing brace.
 
-**Acceptance.** No English string on any of the 37 screens except product names and file names; `€` on `/analytics` and `/budgets`; the wizard shows one Zurück/Weiter pair; `/transcriptions` lists 18 recordings and the copy matches; relative dates on `/data` read "vor N Tagen" with N < 60.
+**Acceptance.** No English string on any of the 37 screens except product names and file names; `€` on `/analytics` and `/budgets`; the wizard shows one Zurück/Weiter pair; `/transcriptions` lists the 20 recordings the copy counts (16 rows plus the in-progress and failed strips; the cancelled one is counted, not listed); relative dates on `/data` read "vor N Tagen" with N < 60.
 
 ## Sub-project 4 — Motion
 

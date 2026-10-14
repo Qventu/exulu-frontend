@@ -9,8 +9,13 @@ describe("stripIncompleteCitation", () => {
     );
   });
 
-  it("drops the first characters of one, including a lone brace", () => {
-    expect(stripIncompleteCitation("Fahrkorbtableau) {")).toBe("Fahrkorbtableau) ");
+  it("drops the first characters of one, but not a lone brace", () => {
+    // A lone trailing "{" could be a JSON block or a code line that has not
+    // streamed its next character yet — and this parser also runs on
+    // completed text, where a stripped brace would be gone for good. One
+    // chunk (~18 ms) of a bare "{" in the demo stream is invisible.
+    expect(stripIncompleteCitation("Fahrkorbtableau) {")).toBe("Fahrkorbtableau) {");
+    expect(stripIncompleteCitation("Fahrkorbtableau) { i")).toBe("Fahrkorbtableau) ");
     expect(stripIncompleteCitation("Fahrkorbtableau) { item_na")).toBe("Fahrkorbtableau) ");
   });
 
