@@ -128,3 +128,13 @@ Browser (`scripts/walk-demo.mjs`, Playwright outside the repo): Weiter mode is t
 - The approval-card part shape is the one unverified assumption; its task starts with a read of a stored message.
 - Date shifting changes absolute dates on the evals matrix headers and the routine trigger ("Zuletzt empfangen"); they stay internally consistent.
 - Copy sign-off is a dependency on people; every new German string is listed in the plan's final task for one review pass.
+
+## Clarifications 2026-10-14 (sub-project 3)
+
+- D4 (sidebar and palette allowlist) was implemented in sub-project 3, not 5. The allowlist is a static set in `lib/demo/nav-routes.ts`, tested against `CHAPTERS` in both directions, so the shell never imports the chapter modules; sub-project 5 extends it when `/memory` and `/models` get chapters.
+- `EMPTY_STATES` covers the two empty states that render on the Weiter path (knowledge library on `struktur.0`, knowledge items on `aufnahme.0`). The evals list and routine runs are populated by fixtures since sub-project 1.
+- The agent editor's "0 Wissensdatenbanken" was already "7 Wissensdatenbanken" on the current build (October's `EditorContexts` resolver); no change was needed.
+- Tool-card status labels are hardcoded English in `components/ai-elements/tool.tsx` with no i18n key; the demo shows a German table (`TOOL_STATUS_LABELS`). Translating them product-wide is a follow-up outside this programme.
+- "Schulung Alfredo" and "KI Agent - Schulung Alfredo" stay in the meeting list: ALFREDO is ALGI's own spare-parts agent (chapter 9). Eight rows were removed (test, untitled, catch-up), not ten; chapter 10's title and count sentence are computed from the fixture (`meetingTally`).
+- German retrieval trace lines belong to sub-project 4 with the search beat.
+- Also fixed here, beyond the section's list: the routine row's last run (`GetJobResults` answers the routines list's label filter from the real runs) and an outside-click guard so the wizard sheet survives a click into the tour panel.

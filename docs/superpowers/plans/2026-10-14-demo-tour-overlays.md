@@ -1412,3 +1412,38 @@ git commit -m "docs(demo): record the overlays walk and list the copy for sign-o
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
+
+## Verification
+
+2026-10-14 — Daniel's production demo builds (final: 6026bcf, BUILD_ID zKRVqmGyzFo9IvcgAazO5), `next start -p 3111`, walked and probed with Playwright at 1440×900.
+
+- Walker in Weiter mode: **37/37**, 36/36 transitions, `leaks=none` on every step, copy visible on all 33 non-scene steps, **3 Tabs to Weiter**. Earlier builds on this branch found and fixed: the evals click probe's English set name (harness), "Gedächtnis-Eintrag Gespeichert" (the product's `capitalize` class), fixtures dated months before the capture day (re-dated), English month names on the analytics axis (date-fns locale), the fourteen saved recordings missing from `/transcriptions` (`TranscriptItems` resolver), and shifted timestamps landing in the future ("in 23 Std.", clamp).
+- `/analytics` and `/budgets`: amounts read `213,19 €`, `208 € / 250 €`; no `$` anywhere; axis `1. Okt. … 14. Okt.`.
+- Wizard (`config.1`): one Weiter and one Zurück visible, the Sheet's close hidden, `[role="dialog"]` still present after a click in the panel.
+- Editor (`config.0`): "7 Wissensdatenbanken · 5 Routing-Regeln · Gedächtnis aktiv", Langzeitgedächtnis shows "Assistenten-Gedächtnis".
+- `/transcriptions`: 16 rows in "Diese Woche"/"Früher" (14 saved + 2 awaiting review) plus the "2 in Bearbeitung" strip and "Fehlgeschlagen 1"; the cancelled twentieth is counted in the copy ("Eine abgebrochen") and, as in the product, not listed. Panel: "Dreizehn Stunden, die niemand nachhören wird" / "20 Besprechungen … Eine abgebrochen, eine fehlgeschlagen." No test, untitled or catch-up rows.
+- Relative dates: `/data/[ctx]` items "gestern" / "letzte Woche"; transcripts "vorgestern" … "letzten Monat"; routine "Fehler vor 23 Std."; no row anywhere reads "in …".
+- Chat (`techdoc.0-2`): retrieval card "Suchergebnisse: Software-Dokumentation"; chips "Software-Dokumentation - …", "Support-Tickets - …"; the answer text sampled every 100 ms during the stream never contained `{item_name`; no English status badge. `memory.2`: "Gedächtnis-Eintrag gespeichert · Abgeschlossen".
+- Knowledge pages: `/data` header "Die Wissensbasen, aus denen Ihre Assistenten antworten." / "Jede Basis hat eigene Regeln …"; `struktur.0` "Noch keine Wissensbasis angelegt"; no "Doku ansehen", no du-form.
+- Sidebar: Start, Chat, Transkripte, Agenten, Wissen, Routinen, Evaluationen, and under Administration only Budgets and Analytik. The ⌘K palette could not be opened headlessly; it filters through the same `visibleEntries()` and is covered by `lib/demo/nav-routes.test.ts`.
+- Unit: full suite 123 files / 1,251 tests at the eight-task point; demo filter re-run green after every later fix.
+
+## Copy for sign-off
+
+New visitor-facing German introduced by this plan (implementer drafts; Daniel + Doro sign off per the 2026-10-14 decision).
+
+`lib/demo/overlays.ts`:
+
+| Where | Text |
+|---|---|
+| Tool card title (`Context_Search`) | Wissenssuche |
+| Tool card title (`Create_Newton_Memory_Item`) | Gedächtnis-Eintrag gespeichert |
+| Tool status badges | Wartet · Läuft · Freigabe erforderlich · Beantwortet · Abgeschlossen · Fehler · Abgelehnt |
+| `/data` header description | Die Wissensbasen, aus denen Ihre Assistenten antworten. |
+| `/data` header hint | Jede Basis hat eigene Regeln für Aufnahme, Suche und Zugriff. |
+| `/data` empty state (struktur.0) | **Noch keine Wissensbasis angelegt** — Jede Wissensart bekommt ihre eigene Basis mit eigenen Regeln. Im nächsten Schritt werden die ersten angelegt. |
+| `/data/[ctx]` empty state (aufnahme.0) | **Noch keine Dokumente in dieser Wissensbasis** — Dokumente kommen aus Ihren Ablagen — per Freigabe, Laufwerk oder Anbindung. Im nächsten Schritt läuft die Aufnahme. |
+
+`lib/demo/fixtures/evals.ts`: "Regression Technische Dokumentation" — "Fehlercodes, Parameter und Klemmenbelegungen, die ein Techniker auf Anhieb richtig bekommen muss."; "Normen & Vorschriften" — "Fragen, die nur aus EN-, DIN- und VDI-Quellen beantwortet werden dürfen — fängt Antworten ab, die in Produktdokumente abdriften."; cases "Nothalt COP im FST-Fehlerspeicher", "LSU-Anlauffehler bei automatischem Reset", "FST-2XT-Parameter mit Einfluss auf die Fahrkurve"; runs "Nachtlauf — gemini-3.1-pro", "Basislinie — vor der Fachvokabular-Pflege".
+
+`lib/demo/chapters/meetings.ts` (computed from the fixture; current rendering): title "Dreizehn Stunden, die niemand nachhören wird"; paragraph "20 Besprechungen, aufgezeichnet von einem Bot, der einfach mitkommt — Produktionsplanung, Service, Schulung. Eine abgebrochen, eine fehlgeschlagen."
