@@ -106,8 +106,8 @@ export const TECHDOC_TURNS: ScriptedTurn[] = [
                 item_external_id:
                   "FST/Software/fuer_FST-2XT/FST2XTchanges-customer-DE.docx",
                 item_name: "FST2XTchanges-customer-DE.docx",
-                item_created_at: "2026-02-23T01:24:45.861Z",
-                item_updated_at: "2026-02-23T01:24:45.861Z",
+                item_created_at: "2026-08-27T01:24:45.861Z",
+                item_updated_at: "2026-08-27T01:24:45.861Z",
                 context: {
                   name: "software_documentation_context",
                   id: "software_documentation_context",

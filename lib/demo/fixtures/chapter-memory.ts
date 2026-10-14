@@ -54,19 +54,19 @@ const EXISTING_MEMORIES: Item[] = [
     "bee835c0-9af3-4f1b-896f-31f6bf01bd2b",
     "FST-2XT Endschaltertest blockiert durch Endhaltestellensperre",
     "Die Endhaltestellen können über I/O-Ports, über Kartenleser oder über das FST-Menü gesperrt sein, wodurch der Endschaltertest im Testmenü blockiert wird.",
-    "2026-01-08T15:14:07.639Z",
+    "2026-08-24T15:14:07.639Z",
   ),
   memoryItem(
     "c9111a66-2b30-412d-a2db-1831c1d9de7f",
     "Statistical Information in Zendesk Tickets",
     "Statistical data regarding elevators in Europe, including existing units and new installations per country, can be found in Zendesk tickets, specifically referencing reports from the ELA (European Lift Association). For example, Zendesk Ticket #2065 contains such a report.",
-    "2026-01-09T08:29:43.582Z",
+    "2026-08-25T08:29:43.582Z",
   ),
   memoryItem(
     "f75b3fd4-28cd-4ba6-b109-e1a9e9b5dfec",
     "LSU-Motor-Fehler Eigenschaft",
     "Der LSU-Motor-Fehler ist nicht selbsthaltend.",
-    "2026-01-15T08:28:55.792Z",
+    "2026-08-26T08:28:55.792Z",
   ),
 ];
 
@@ -75,7 +75,7 @@ export const CORRECTION_MEMORY: Item = memoryItem(
   "2f78a38c-3ba9-4c78-9053-0517065c5e2d",
   "FST-2XT Kalibrierfahrt Menüpunkt",
   "Der Menüpunkt zum Starten der Kalibrierfahrt bei der FST-2XT lautet: HAUPTMENUE/Konfig/Inbetriebnahme/Kalibrierfahrt.",
-  "2026-01-06T08:27:50.756Z",
+  "2026-08-23T08:27:50.756Z",
 );
 
 /**
@@ -96,8 +96,8 @@ const SESSION: AgentSession = {
   created_by: 0,
   session_items: [],
   rights_mode: "private",
-  createdAt: "2026-01-06T08:20:37.386Z",
-  updatedAt: "2026-01-06T08:27:50.756Z",
+  createdAt: "2026-08-23T08:20:37.386Z",
+  updatedAt: "2026-08-23T08:27:50.756Z",
 };
 
 export function memoryWorld(step: number): DemoWorld {
