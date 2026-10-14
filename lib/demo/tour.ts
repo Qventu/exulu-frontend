@@ -33,7 +33,9 @@ export interface DemoStep {
    */
   content: ContentBlock[];
   /**
-   * The one sentence always visible in the panel; `content` sits behind "Mehr".
+   * A one-sentence subtitle between the title and the content. The content
+   * is always visible too (sub-project 2 removed the "Mehr" toggle); the lead
+   * is the short form a visitor reads first.
    *
    * Optional ONLY because this German is written by Daniel and OPEN's
    * marketing lead, never here. A step without one renders its title alone.

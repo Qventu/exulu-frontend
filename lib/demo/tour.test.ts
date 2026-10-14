@@ -227,13 +227,14 @@ describe("the reading load", () => {
     // measured a geometry that no longer exists: 45 was three lines at a
     // 480px Shepherd popover, and the 90 was "a scene replaces the screen
     // full-bleed, so it gets double". Both are gone — every step renders the
-    // same way, into a 380/560px panel or a 768px scene column, with the
-    // panel's own `overflow-y: auto` handling length.
+    // same way, into a 420px panel or a 768px scene column, with the panel's
+    // body scrolling if a step runs long.
     //
     // 90 is still a real ceiling, for the reason the 45 was: copy grows back
     // if nothing stops it, and this suite is the only thing that reads the
-    // whole tour at once. The TIGHT constraint moved to `lead` — the one
-    // sentence always visible before a visitor presses "Mehr" — which
+    // whole tour at once. More so since sub-project 2: every word is on
+    // screen without a click, so the cap IS the reading load. The TIGHT
+    // constraint is `lead` — the one-sentence subtitle — which
     // lib/demo/chapters/index.test.ts caps at 20 words.
     const CAP = 90;
     for (const chapter of CHAPTERS) {

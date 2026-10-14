@@ -8,9 +8,8 @@ import type { DemoStep } from "./tour";
  * Most steps carry their own `content`. The four scene steps do not: their
  * blocks moved to lib/demo/scenes.ts when scenes became real pages, because
  * a scene renders its copy full-width in the content area and leaving the
- * blocks on the step as well would make the panel offer "Mehr" showing the
- * very content already on screen beside it. `step.content` is `[]` for those
- * four.
+ * blocks on the step as well would make the panel repeat the very content
+ * already on screen beside it. `step.content` is `[]` for those four.
  *
  * So anything that reads `step.content` directly silently skips a ninth of
  * the tour — which is exactly what happened to two checks in

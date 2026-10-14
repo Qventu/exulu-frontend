@@ -16,9 +16,10 @@
  * sheet like everything else. A scene's TITLE is not a special case: it is
  * the step's title, the same single field every other step has.
  *
- * `Kurzfassung` is `lead` — the one sentence always visible in the panel,
- * `content` behind "Mehr" (see lib/demo/tour.ts's DemoStep.lead). No step has
- * one yet; every step therefore also gets an explicit Kurzfassung row with an
+ * `Kurzfassung` is `lead` — a one-sentence subtitle under the title; the
+ * content below it is always visible too (see lib/demo/tour.ts's
+ * DemoStep.lead). No step has one yet; every step therefore also gets an
+ * explicit Kurzfassung row with an
  * empty "Text (aktuell)", which is the row a reviewer fills in with the new
  * sentence rather than a rewrite of something that already exists.
  *

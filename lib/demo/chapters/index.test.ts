@@ -16,8 +16,8 @@ describe("chapter integrity", () => {
     for (const { chapter, step } of everyStep) {
       // A scene step's own `content` is legitimately empty — its blocks
       // render full-width in the content area from lib/demo/scenes.ts, and
-      // leaving them on the step as well would make the panel offer "Mehr"
-      // showing the very content already on screen beside it.
+      // leaving them on the step as well would make the panel repeat the
+      // very content already on screen beside it.
       expect(
         isEmptyContent(contentOf(step)),
         `${chapter.id}/${step.id} has no copy`,

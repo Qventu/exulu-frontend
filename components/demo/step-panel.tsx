@@ -45,7 +45,7 @@ function Block({ block }: { block: ContentBlock }) {
       // inside step-content-host's detached createRoot, outside the Next
       // tree) died with that file. Kept deliberately all the same: every
       // figure is a build-time asset under /public at a fixed 800x534,
-      // rendered into a 380/560px panel or a 768px scene column and capped
+      // rendered into a 420px panel or a 768px scene column and capped
       // by .demo-block-figure's max-height, so there is no layout shift to
       // reserve against and nothing for the optimiser to save. Switching it
       // would buy a demo-only route an image-optimisation round trip on a
