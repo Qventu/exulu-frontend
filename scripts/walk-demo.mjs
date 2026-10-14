@@ -671,8 +671,7 @@ async function main() {
   const page = await context.newPage();
 
   const results = [];
-  let expandedCheckDone = false;
-  let expandedCheckResult = null;
+  let tabsToWeiter = null;
 
   for (const step of steps) {
     const url = BASE_URL + step.href;
@@ -789,6 +788,8 @@ async function main() {
 
     row.allPass =
       row.transitionOk !== false &&
+      row.contentVisible !== false &&
+      row.noMehr === true &&
       row.panelVisible === true &&
       row.overlapsContent === false &&
       row.coveringPanel === false &&
@@ -798,54 +799,55 @@ async function main() {
       // real n/a rather than a rotted selector — see runScrollProbe.
       (scrollResult.pass === true || scrollResult.pass === null);
 
-    // One-off bonus check (not part of the per-step 5, see task-8-report.md):
-    // expand the panel to 560px on the first step that has "Mehr" content,
-    // and re-run the geometry assertion, so the property is also confirmed
-    // at the wider of the panel's two docked widths, not only its default
-    // collapsed 380px.
-    if (!expandedCheckDone) {
-      const hasMehr = await page.evaluate(() => !!document.querySelector('[data-demo-id="tour-panel"] button'));
-      if (hasMehr) {
-        const clicked = await page.evaluate(() => {
-          const btns = [...document.querySelectorAll('[data-demo-id="tour-panel"] button')];
-          const mehr = btns.find((b) => b.textContent.trim() === "Mehr");
-          if (!mehr) return false;
-          mehr.click();
-          return true;
-        });
-        if (clicked) {
-          await page.waitForTimeout(400);
-          await settleAnimations(page);
-          const expandedGeometry = await page.evaluate(assertGeometry, step.anchor);
-          expandedCheckResult = { pos: step.pos, ...expandedGeometry };
-          expandedCheckDone = true;
-          const shotPath2 = path.join(OUT_DIR, `${step.pos.replace(/\./g, "-")}-expanded.png`);
-          await page.screenshot({ path: shotPath2, fullPage: false }).catch(() => {});
-        }
+    // The panel shows each step's copy without a click (sub-project 2).
+    // For a step with panel copy, its first paragraph must be in the panel's
+    // text; and no "Mehr" toggle may exist anywhere in the panel.
+    const panelText = await page.evaluate(() =>
+      (document.querySelector('[data-demo-id="tour-panel"]')?.innerText ?? "").replace(/\s+/g, " "),
+    );
+    row.contentVisible = step.firstParagraph
+      ? panelText.includes(step.firstParagraph.slice(0, 40))
+      : null;
+    row.noMehr = !(await page.evaluate(() =>
+      [...document.querySelectorAll('[data-demo-id="tour-panel"] button')].some((b) => b.textContent.trim() === "Mehr"),
+    ));
+
+    // One-off: on the first step, count Tab presses until Weiter has focus.
+    // The panel is rendered before <main>, so this must be small; it used to
+    // take 38 presses through the inert sidebar and product.
+    if (tabsToWeiter === null) {
+      await page.evaluate(() => { (document.activeElement instanceof HTMLElement) && document.activeElement.blur(); });
+      let presses = 0;
+      let reached = false;
+      for (let i = 0; i < 12; i++) {
+        await page.keyboard.press("Tab");
+        presses++;
+        reached = await page.evaluate(() => document.activeElement?.textContent?.trim() === "Weiter");
+        if (reached) break;
       }
+      tabsToWeiter = reached ? presses : Infinity;
+      await page.evaluate(() => { (document.activeElement instanceof HTMLElement) && document.activeElement.blur(); });
     }
 
     results.push(row);
     const flag = row.allPass ? "PASS" : "FAIL";
     console.log(
-      `${step.pos.padEnd(18)} ${flag} panel=${row.panelVisible} overlap=${row.overlapsContent} covering=${row.coveringPanel} ring=${row.ringPresent}/${row.ringExpected}${row.ringExpected ? `@anchor=${row.ringOnAnchor}` : ""} click=${clickResult.pass} scroll=${scrollResult.applicable ? scrollResult.pass : "n/a"}${row.panelScrolledAway ? " [panel-scrolled-away]" : ""}`,
+      `${step.pos.padEnd(18)} ${flag} panel=${row.panelVisible} overlap=${row.overlapsContent} covering=${row.coveringPanel} ring=${row.ringPresent}/${row.ringExpected}${row.ringExpected ? `@anchor=${row.ringOnAnchor}` : ""} click=${clickResult.pass} scroll=${scrollResult.applicable ? scrollResult.pass : "n/a"}${row.panelScrolledAway ? " [panel-scrolled-away]" : ""} content=${row.contentVisible ?? "n/a"} mehr=${row.noMehr ? "none" : "PRESENT"}`,
     );
   }
 
   await browser.close();
 
   const resultsPath = path.join(OUT_DIR, "results.json");
-  fs.writeFileSync(resultsPath, JSON.stringify({ results, expandedCheckResult }, null, 2));
+  fs.writeFileSync(resultsPath, JSON.stringify({ results, tabsToWeiter }, null, 2));
 
   const failCount = results.filter((r) => r.allPass === false || r.error).length;
   console.log(`\n${results.length - failCount}/${results.length} steps passed all assertions.`);
   console.log(`Full results: ${resultsPath}`);
   console.log(`Screenshots: ${OUT_DIR}`);
-  if (expandedCheckResult) {
-    console.log(
-      `Expanded-panel spot check (${expandedCheckResult.pos}, 560px): overlapsContent=${expandedCheckResult.overlapsContent} coveringPanel=${expandedCheckResult.coveringPanel}`,
-    );
-  }
+  const keyboardOk = tabsToWeiter !== null && tabsToWeiter <= 4;
+  console.log(`Keyboard: ${tabsToWeiter === Infinity ? "Weiter not reached in 12 Tabs" : `${tabsToWeiter} Tab(s) to Weiter`} — ${keyboardOk ? "ok" : "FAIL (must be ≤ 4)"}`);
+  if (!keyboardOk) process.exitCode = 1;
 
   process.exitCode = failCount > 0 ? 1 : 0;
 }

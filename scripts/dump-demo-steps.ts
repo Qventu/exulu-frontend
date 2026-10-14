@@ -1,6 +1,6 @@
 /**
  * Prints every tour step, in order, as JSON: `{ pos, chapterId, chapterTitle,
- * step, stepId, title, route, anchor, href, scrollBlock }[]`.
+ * step, stepId, title, firstParagraph, route, anchor, href, scrollBlock }[]`.
  *
  * The one and only source of the step list for scripts/walk-demo.mjs. That
  * script shells out to this one (`npx tsx scripts/dump-demo-steps.ts`) rather
@@ -24,6 +24,11 @@ const steps = CHAPTERS.flatMap((chapter) =>
     step: index,
     stepId: step.id,
     title: step.title,
+    // The first paragraph of the PANEL's copy (step.content, not contentOf:
+    // a scene step's words render in the content area). The walker asserts
+    // it is visible in the panel without a click.
+    firstParagraph:
+      step.content.find((block) => block.kind === "paragraph")?.text ?? null,
     route: step.route,
     anchor: step.anchor,
     href: hrefFor({ chapter: chapter.id, step: index }, CHAPTERS),
