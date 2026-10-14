@@ -256,4 +256,28 @@ describe("claim_check", () => {
   it("falls back to the default on a malformed blob instead of throwing", () => {
     expect(parseWizardConfig([{ name: "claim_check", variable: "{not json", type: "json" }]).claimCheck.enabled).toBe(false);
   });
+
+  // The backend declares thresholds.warn/alert as z.number().min(0).max(1)
+  // and its jsonVal falls back to the ENTIRE schema default — enabled: false
+  // included — on any validation failure. An admin reading "Warnschwelle"
+  // as a percentage and typing 20 therefore saved a blob the backend threw
+  // away wholesale: no check ever ran, and the wizard still showed 20 and
+  // "active". Declaring the same bounds here makes the wizard show what the
+  // backend will actually do with the blob, and keeps the wizard from
+  // authoring one the backend rejects.
+  it("mirrors the backend and rejects an out-of-range threshold blob wholesale", () => {
+    const cfg = parseWizardConfig([
+      { name: "claim_check", variable: '{"enabled":true,"thresholds":{"warn":20,"alert":40}}', type: "json" },
+    ]);
+    expect(cfg.claimCheck.thresholds).toEqual({ warn: 0.1, alert: 0.3 });
+    expect(cfg.claimCheck.enabled).toBe(false);
+  });
+
+  it("accepts the in-range boundaries 0 and 1", () => {
+    const cfg = parseWizardConfig([
+      { name: "claim_check", variable: '{"enabled":true,"thresholds":{"warn":0,"alert":1}}', type: "json" },
+    ]);
+    expect(cfg.claimCheck.thresholds).toEqual({ warn: 0, alert: 1 });
+    expect(cfg.claimCheck.enabled).toBe(true);
+  });
 });

@@ -646,8 +646,9 @@
             "claimCheckFidelityFast": "Fast",
             "claimCheckFidelityPaper": "Thorough",
             "claimCheckThresholds": "Thresholds",
-            "claimCheckThresholdWarnLabel": "Warn threshold",
-            "claimCheckThresholdAlertLabel": "Alert threshold",
+            "claimCheckThresholdsHint": "Share of the checked statements that are refuted or without evidence. From the warn threshold the answer is marked yellow, from the alert threshold red. The warn threshold always stays at or below the alert threshold.",
+            "claimCheckThresholdWarnLabel": "Warn threshold: {percent}%",
+            "claimCheckThresholdAlertLabel": "Alert threshold: {percent}%",
             "claimCheckReRetrieve": "Re-search when evidence is missing",
             "claimCheckShowExternal": "Also show to external users and guests"
           },

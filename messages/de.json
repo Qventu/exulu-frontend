@@ -646,8 +646,9 @@
             "claimCheckFidelityFast": "Schnell",
             "claimCheckFidelityPaper": "Gründlich",
             "claimCheckThresholds": "Schwellenwerte",
-            "claimCheckThresholdWarnLabel": "Warnschwelle",
-            "claimCheckThresholdAlertLabel": "Alarmschwelle",
+            "claimCheckThresholdsHint": "Anteil der geprüften Aussagen, die widerlegt oder ohne Belegstelle sind. Ab der Warnschwelle wird die Antwort gelb markiert, ab der Alarmschwelle rot. Die Warnschwelle liegt immer bei oder unter der Alarmschwelle.",
+            "claimCheckThresholdWarnLabel": "Warnschwelle: {percent}%",
+            "claimCheckThresholdAlertLabel": "Alarmschwelle: {percent}%",
             "claimCheckReRetrieve": "Bei fehlender Belegstelle erneut suchen",
             "claimCheckShowExternal": "Auch externen Nutzern und Gästen anzeigen"
           },

@@ -237,10 +237,17 @@ const knowledgeBasesSchema = z
 
 // completions and caps carry no UI control (schema-only, round-tripped so an
 // operator who tuned them through the API does not lose them on a save).
+// Bounds mirror the backend's `claimCheckSchema` exactly
+// (`ee/agentic-retrieval/pipeline/config.ts`): both are a SHARE, 0..1. The
+// backend's `jsonVal` falls back to the whole schema default — `enabled:
+// false` included — on any validation failure, so a blob holding `warn: 20`
+// disables claim check server-side while a frontend that accepted the value
+// kept showing it as active. Declaring the same bounds here means the wizard
+// can neither author such a blob nor misrepresent a stored one.
 const claimCheckThresholdsSchema = z
   .object({
-    warn: z.number().default(CLAIM_CHECK_DEFAULTS.thresholds.warn),
-    alert: z.number().default(CLAIM_CHECK_DEFAULTS.thresholds.alert),
+    warn: z.number().min(0).max(1).default(CLAIM_CHECK_DEFAULTS.thresholds.warn),
+    alert: z.number().min(0).max(1).default(CLAIM_CHECK_DEFAULTS.thresholds.alert),
   })
   .passthrough()
   .default(CLAIM_CHECK_DEFAULTS.thresholds);
