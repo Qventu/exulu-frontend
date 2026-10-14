@@ -15,6 +15,7 @@
 
 import { spendCurrency } from "@/lib/spend-currency";
 import { eachDayOfInterval, format, parseISO, startOfDay } from "date-fns";
+import { de, enUS } from "date-fns/locale";
 import { useReducedMotion } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
 import * as React from "react";
@@ -49,6 +50,10 @@ const SPEND_CURRENCY = spendCurrency().currency;
 export function TrendChartCard({ lens }: TrendChartCardProps) {
   const t = useTranslations("analytics");
   const locale = useLocale();
+  // date-fns formats month names in English unless told otherwise; a German
+  // chart read "Oct 14" on a German screen.
+  const dateLocale = locale.startsWith("de") ? de : enUS;
+  const tickPattern = locale.startsWith("de") ? "d. MMM" : "MMM dd";
   // Honour prefers-reduced-motion (analytics.md §3 Motion; CLAUDE.md a11y).
   // Recharts respects isAnimationActive so the toggle disables the area
   // tween entirely under reduce.
@@ -71,10 +76,10 @@ export function TrendChartCard({ lens }: TrendChartCardProps) {
     return days.map((date) => ({
       date: date.getTime(),
       value: dataMap.get(format(date, "yyyy-MM-dd")) ?? 0,
-      formattedDate: format(date, "MMM dd"),
+      formattedDate: format(date, tickPattern, { locale: dateLocale }),
       dateObj: date,
     }));
-  }, [rows, lens.measure, range.current.from, range.current.to]);
+  }, [rows, lens.measure, range.current.from, range.current.to, dateLocale, tickPattern]);
 
   const totalValue = React.useMemo(
     () => chartData.reduce((sum, row) => sum + (row.value ?? 0), 0),
@@ -146,7 +151,7 @@ export function TrendChartCard({ lens }: TrendChartCardProps) {
               cursor={false}
               labelFormatter={(label: string, payload) => {
                 const row = Array.isArray(payload) && payload[0]?.payload;
-                if (row?.dateObj) return format(row.dateObj as Date, "PPP");
+                if (row?.dateObj) return format(row.dateObj as Date, "PPP", { locale: dateLocale });
                 return label;
               }}
               content={
