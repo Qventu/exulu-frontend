@@ -1111,7 +1111,10 @@ export function TranscriptDocument({
             )}
 
             {contentOutputs.length > 0 && (
-              <section className="space-y-4">
+              // The demo tour anchors here: this is where the generated work
+              // instruction is READ. It used to anchor the results list below,
+              // which is collapsed by default and so had nothing to ring.
+              <section className="space-y-4" data-demo-id="meeting-guide">
                 <p className="text-sm font-medium">{t("document.summaryHeading")}</p>
                 {contentOutputs.map((output, index) => (
                   <div key={index} className="space-y-1">

@@ -215,10 +215,7 @@ export function PostProcessingResults({
         </p>
       ) : null}
       {outputs.length > 0 ? (
-        <div className="space-y-2" data-demo-id="meeting-guide">
-          {/* The demo tour anchors here: the step about the generated work
-              instruction used to point at nothing, so the sheet showed only the
-              transcript above it and the narrated document was below the fold. */}
+        <div className="space-y-2">
           {outputs.map((output, index) => {
             const key = `${output.prompt_id}:${output.agent_id}`;
             const running = runningKey === key;

@@ -166,6 +166,14 @@ function assertGeometry(anchor) {
     ringPresent: !!ring,
     ringOnAnchor,
     ringSane,
+    // Where the anchor and the ring ARE right now. readSettledGeometry keys
+    // on this so a smooth scroll in progress (the ring re-scrolling an anchor
+    // the page pushed off screen; the chat parking the question at the top)
+    // is never accepted as "settled" just because two mid-scroll reads both
+    // said ringOnAnchor=false.
+    motion: anchorEl
+      ? [Math.round(anchorEl.getBoundingClientRect().top), Math.round(anchorEl.getBoundingClientRect().left), ring ? ring.style.top : null, ring ? ring.style.left : null]
+      : null,
     // Scoped to elements that could actually TAKE the panel over: a portalled
     // Radix dialog or backdrop. The tour's own ring is excluded — it is
     // pointer-events: none, so it cannot intercept anything, and it is sized
@@ -376,11 +384,13 @@ const CLICK_PROBES = {
   "email.0": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="routine-runs"] button[role="combobox"]' }, describe: "the 'Alle Status' filter combobox — would open its dropdown" }] },
   "email.1": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="routine-email-trigger"] button[role="switch"]' }, describe: "the trigger's enabled Switch — would toggle it off" }] },
   "email.2": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="routine-runs"] button[role="combobox"]' }, describe: "the 'Alle Status' filter combobox — would open its dropdown" }] },
-  "meetings.0": { attempts: [{ spec: { kind: "text", containerSelector: '[data-demo-id="transcriptions"]', tag: "button", textIncludes: "Bearbeiten" }, describe: "'Bearbeiten' on a transcript row — would open its editor" }] },
-  "meetings.1": { attempts: [{ spec: { kind: "text", containerSelector: '[data-demo-id="transcriptions"]', tag: "button", textIncludes: "Bearbeiten" }, describe: "'Bearbeiten' on a transcript row — would open its editor" }] },
+  // The transcripts list is rows of links now (the review sheet became a
+  // page), and the review page's operable controls are its review actions.
+  "meetings.0": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="transcriptions"] a[href^="/transcriptions/review/"]' }, describe: "a transcript row link — would navigate to its review page" }] },
+  "meetings.1": { attempts: [{ spec: { kind: "text", containerSelector: "main", tag: "button", textIncludes: "Als geprüft markieren" }, describe: "'Als geprüft markieren' — would run the mark-reviewed mutation" }] },
   "meetings.2": { attempts: [
-    { spec: { kind: "text", containerSelector: '[data-demo-id="meeting-guide"]', tag: "button", textIncludes: "Erneut ausführen" }, describe: "'Erneut ausführen' on a generated work instruction — would re-run it and show a loading spinner" },
-    { spec: { kind: "text", containerSelector: '[data-demo-id="transcriptions"]', tag: "button", textIncludes: "Bearbeiten" }, describe: "fallback: 'Bearbeiten' on a transcript row" },
+    { spec: { kind: "text", containerSelector: "main", tag: "button", textIncludes: "Als geprüft markieren" }, describe: "'Als geprüft markieren' — would run the mark-reviewed mutation" },
+    { spec: { kind: "text", containerSelector: "main", tag: "button", textIncludes: "In Wissensdatenbank veröffentlichen" }, describe: "fallback: 'In Wissensdatenbank veröffentlichen' — would finalize the job" },
   ] },
   "kosten.0": { attempts: [{ spec: { kind: "tab", containerSelector: "main" }, describe: "a non-active Radix tab (range preset or measure) — would switch the selected view" }] },
   "kosten.1": { attempts: [{ spec: { kind: "tab", containerSelector: "main" }, describe: "a non-active budget-scope tab (Benutzer/Rollen/...) — would switch the budgets view away from Teams" }] },
@@ -576,9 +586,9 @@ async function settleAnimations(page, timeoutMs = 2000) {
  * last read rather than looping, so a page that genuinely never settles fails
  * on its real geometry instead of hanging.
  */
-async function readSettledGeometry(page, anchor, tries = 6) {
+async function readSettledGeometry(page, anchor, tries = 10) {
   const key = (g) =>
-    JSON.stringify([g.panelVisible, g.overlapsContent, g.coveringPanel, g.ringPresent, g.ringOnAnchor, g.panelRect]);
+    JSON.stringify([g.panelVisible, g.overlapsContent, g.coveringPanel, g.ringPresent, g.ringOnAnchor, g.panelRect, g.motion]);
   await settleAnimations(page);
   let previous = await page.evaluate(assertGeometry, anchor);
   for (let i = 0; i < tries; i++) {
