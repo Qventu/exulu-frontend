@@ -732,3 +732,5 @@ New visitor-facing German introduced by this plan (implementer drafts, Daniel + 
 | Sprechen Sie mit uns | Wer damit arbeitet, und wie es bei Ihnen weitergeht. |
 
 Panel chrome, `components/demo/tour-panel.tsx`: "OPEN IMP · Geführte Tour" (eyebrow), "Kapitel {n} von 12 · Schritt {n}/{m}" (counter), "Alle Kapitel" / "Schließen" (menu toggle, also its accessible name), "Kapitel" (rail `aria-label`), "{n}. {Kapiteltitel}" (rail segment title and `aria-label`).
+
+**Post-review build** (6de613e, BUILD_ID 6UJvvOzYP-sGJF_iufUK_): walker 37/37 in Weiter mode, 3 Tabs to Weiter, keyboard gate now wired into the exit code. Pinned footer verified on the four figure steps at 1366×768, 1280×720 and 1440×900 (Weiter in view on all; only `kosten.0` scrolls its body, 570 px in 520/472 px) and at 390×844 (panel 380 px tall, Weiter in view, body scrolls 553 px in 163 px). Chapter menu closes on Weiter, Zurück and a rail segment; toggle carries `aria-controls="demo-chapter-menu"` and reads "Alle Kapitel"/"Schließen"; rail targets are 22 px tall.
