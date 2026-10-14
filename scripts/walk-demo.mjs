@@ -780,6 +780,26 @@ async function main() {
       row.screenshot = null;
     }
 
+    // One-off: on the first step, count Tab presses until Weiter has focus.
+    // The panel is rendered before <main>, so this must be small; it used to
+    // take 38 presses through the inert sidebar and product. Runs BEFORE the
+    // click probe: a click inside the product moves the sequential-focus
+    // starting point there, and a visitor who has just arrived starts at the
+    // top of the document.
+    if (tabsToWeiter === null) {
+      await page.evaluate(() => { (document.activeElement instanceof HTMLElement) && document.activeElement.blur(); });
+      let presses = 0;
+      let reached = false;
+      for (let i = 0; i < 12; i++) {
+        await page.keyboard.press("Tab");
+        presses++;
+        reached = await page.evaluate(() => document.activeElement?.textContent?.trim() === "Weiter");
+        if (reached) break;
+      }
+      tabsToWeiter = reached ? presses : Infinity;
+      await page.evaluate(() => { (document.activeElement instanceof HTMLElement) && document.activeElement.blur(); });
+    }
+
     const clickResult = await runClickProbe(page, step.pos);
     row.click = clickResult;
 
@@ -800,22 +820,6 @@ async function main() {
       [...document.querySelectorAll('[data-demo-id="tour-panel"] button')].some((b) => b.textContent.trim() === "Mehr"),
     ));
 
-    // One-off: on the first step, count Tab presses until Weiter has focus.
-    // The panel is rendered before <main>, so this must be small; it used to
-    // take 38 presses through the inert sidebar and product.
-    if (tabsToWeiter === null) {
-      await page.evaluate(() => { (document.activeElement instanceof HTMLElement) && document.activeElement.blur(); });
-      let presses = 0;
-      let reached = false;
-      for (let i = 0; i < 12; i++) {
-        await page.keyboard.press("Tab");
-        presses++;
-        reached = await page.evaluate(() => document.activeElement?.textContent?.trim() === "Weiter");
-        if (reached) break;
-      }
-      tabsToWeiter = reached ? presses : Infinity;
-      await page.evaluate(() => { (document.activeElement instanceof HTMLElement) && document.activeElement.blur(); });
-    }
 
     // Computed LAST: contentVisible and noMehr above are part of it.
     row.allPass =
