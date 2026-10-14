@@ -37,7 +37,10 @@ import { useTour } from "./tour-provider";
  */
 export function TourPanel() {
   const { position, step, chapters, next, prev, jumpTo } = useTour();
-  const [menuOpen, setMenuOpen] = useState(false);
+  // The position the menu was opened AT. Deriving `menuOpen` from it means
+  // any navigation — Weiter, Zurück, a rail segment, a menu item — closes the
+  // menu without an effect: the key no longer matches.
+  const [menuOpenAt, setMenuOpenAt] = useState<string | null>(null);
   const reduceMotion = useReducedMotion();
 
   if (!step) return null;
@@ -50,6 +53,7 @@ export function TourPanel() {
     isLast: nextPosition(chapters, position) === null,
   });
   const positionKey = `${position.chapter}.${position.step}`;
+  const menuOpen = menuOpenAt === positionKey;
 
   return (
     <aside
@@ -65,11 +69,17 @@ export function TourPanel() {
       // Below md the row is a column and `order-last` puts the panel after
       // the content; `bottom-0` docks it to the bottom edge.
       //
+      // overflow-hidden here, overflow-y-auto on the BODY below: the header
+      // and the Zurück/Weiter footer stay put and only the step's copy
+      // scrolls. With the whole aside scrolling, a figure step at 1366×768
+      // (~815px of panel against 720px available) pushed Weiter below the
+      // fold, and below md every content step did.
+      //
       // z-40: above the spotlight ring (z-30), below Radix's z-50 portals,
       // which app/globals.css insets by --tour-panel-w instead.
-      className="order-last sticky bottom-0 z-40 flex max-h-[45vh] w-full shrink-0 flex-col overflow-y-auto border-t bg-card md:bottom-auto md:top-12 md:h-[calc(100svh-3rem)] md:max-h-none md:w-[420px] md:self-start md:border-l md:border-t-0"
+      className="order-last sticky bottom-0 z-40 flex max-h-[45vh] w-full shrink-0 flex-col overflow-hidden border-t bg-card md:bottom-auto md:top-12 md:h-[calc(100svh-3rem)] md:max-h-none md:w-[420px] md:self-start md:border-l md:border-t-0"
     >
-      <div className="border-b px-4 pb-3 pt-3">
+      <div className="shrink-0 border-b px-4 pb-3 pt-3">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
             OPEN IMP · Geführte Tour
@@ -79,9 +89,11 @@ export function TourPanel() {
           </span>
         </div>
 
-        <ol className="mt-3 flex gap-1" aria-label="Kapitel">
+        <ol className="mt-1 flex gap-1" aria-label="Kapitel">
           {segments.map((s) => (
             <li key={s.id} className="flex-1">
+              {/* The bar is the visual; the button around it is the target.
+                  A 6px-tall button was too fiddly to hit with a mouse. */}
               <button
                 type="button"
                 tabIndex={-1}
@@ -89,23 +101,29 @@ export function TourPanel() {
                 aria-label={`${s.index + 1}. ${s.title}`}
                 aria-current={s.state === "current" ? "step" : undefined}
                 onClick={() => jumpTo(s.id)}
-                className={`block h-1.5 w-full rounded-sm transition-colors ${
-                  s.state === "current"
-                    ? "bg-primary"
-                    : s.state === "past"
-                      ? "bg-muted-foreground/60"
-                      : "bg-muted"
-                }`}
-              />
+                className="block w-full py-2"
+              >
+                <span
+                  className={`block h-1.5 w-full rounded-sm transition-colors ${
+                    s.state === "current"
+                      ? "bg-primary"
+                      : s.state === "past"
+                        ? "bg-muted-foreground/60"
+                        : "bg-muted"
+                  }`}
+                />
+              </button>
             </li>
           ))}
         </ol>
 
         <button
           type="button"
-          onClick={() => setMenuOpen((v) => !v)}
+          onClick={() => setMenuOpenAt(menuOpen ? null : positionKey)}
           aria-expanded={menuOpen}
-          className="mt-3 flex w-full items-baseline justify-between gap-2 text-left"
+          aria-controls="demo-chapter-menu"
+          aria-label={menuOpen ? "Schließen" : "Alle Kapitel"}
+          className="mt-1 flex w-full items-baseline justify-between gap-2 text-left"
         >
           <span className="text-sm font-medium">{chapter.title}</span>
           <span className="text-xs text-muted-foreground">{menuOpen ? "Schließen" : "Alle Kapitel"}</span>
@@ -113,14 +131,15 @@ export function TourPanel() {
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{chapter.goal}</p>
       </div>
 
+      <div className="flex min-h-0 grow flex-col overflow-y-auto">
       {menuOpen && (
-        <ul className="border-b">
+        <ul id="demo-chapter-menu" className="shrink-0 border-b">
           {chapters.map((c, i) => (
             <li key={c.id}>
               <button
                 type="button"
                 onClick={() => {
-                  setMenuOpen(false);
+                  setMenuOpenAt(null);
                   jumpTo(c.id);
                 }}
                 className={`w-full px-4 py-2 text-left text-sm hover:bg-accent ${i === index ? "font-medium" : ""}`}
@@ -137,7 +156,7 @@ export function TourPanel() {
           under reduced motion renders the resting state immediately. */}
       <motion.div
         key={positionKey}
-        className="flex grow flex-col gap-4 p-4"
+        className="flex flex-col gap-4 p-4"
         initial={reduceMotion ? false : { opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
@@ -146,8 +165,9 @@ export function TourPanel() {
         {step.lead && <p className="text-sm text-muted-foreground">{step.lead}</p>}
         {step.content.length > 0 && <StepPanel content={step.content} />}
       </motion.div>
+      </div>
 
-      <div className="flex items-center justify-end gap-2 border-t p-4">
+      <div className="flex shrink-0 items-center justify-end gap-2 border-t p-4">
         {controls.includes("back") && (
           <button type="button" onClick={prev} className="demo-button demo-button-secondary">Zurück</button>
         )}

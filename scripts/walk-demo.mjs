@@ -813,8 +813,10 @@ async function main() {
     const panelText = await page.evaluate(() =>
       (document.querySelector('[data-demo-id="tour-panel"]')?.innerText ?? "").replace(/\s+/g, " "),
     );
+    // Both sides whitespace-normalised: the panel text is, and a paragraph
+    // with a double space or a line break must not false-fail.
     row.contentVisible = step.firstParagraph
-      ? panelText.includes(step.firstParagraph.slice(0, 40))
+      ? panelText.includes(step.firstParagraph.replace(/\s+/g, " ").trim().slice(0, 40))
       : null;
     row.noMehr = !(await page.evaluate(() =>
       [...document.querySelectorAll('[data-demo-id="tour-panel"] button')].some((b) => b.textContent.trim() === "Mehr"),
@@ -853,9 +855,8 @@ async function main() {
   console.log(`Screenshots: ${OUT_DIR}`);
   const keyboardOk = tabsToWeiter !== null && tabsToWeiter <= 4;
   console.log(`Keyboard: ${tabsToWeiter === Infinity ? "Weiter not reached in 12 Tabs" : `${tabsToWeiter} Tab(s) to Weiter`} — ${keyboardOk ? "ok" : "FAIL (must be ≤ 4)"}`);
-  if (!keyboardOk) process.exitCode = 1;
 
-  process.exitCode = failCount > 0 ? 1 : 0;
+  process.exitCode = failCount > 0 || !keyboardOk ? 1 : 0;
 }
 
 main().catch((err) => {
