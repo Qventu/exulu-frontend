@@ -707,3 +707,7 @@ git commit -m "docs(demo): record the panel walk result and the copy for sign-of
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
+
+## Verification
+
+2026-10-14 — Daniel's production demo build of d1c4e2a (BUILD_ID J97shs3WC3eGImwwpI7sM), `next start -p 3111`. Walker in Weiter mode: **37/37 steps passed**, 36/36 transitions, `contentVisible` true on all 33 steps with panel copy (n/a on the 4 scene steps), no "Mehr" on any step, **3 Tabs to Weiter**. Spot checks (Playwright, 1440×900 / 1024×768 / 390×844): panel 420 px with `--tour-panel-w: 420px`; 12 rail segments, `aria-current="step"` on the current one, all `tabIndex -1`; scene step renders title only (no `.demo-step-panel`); `prefers-reduced-motion: reduce` keeps opacity at 1 and transform `none` through the step change, while the default reveal animates opacity 0→1 and a 6 px rise; chapter menu opens over chapter 7's wizard (12 items) and closes on choice (`aria-expanded`); wizard dialog clear of the panel at 1440 and 1024; below md the panel docks at the bottom with Weiter visible; the longest-copy step (contact.0, with figure at 256 px) fits without internal scroll. Unit filter 40 files / 411 tests; walker-only fixes after the first walk: `allPass` computed after the panel assertions (e8f77d2), keyboard check moved before the click probe (76178f2). Pre-existing, deferred: any click in the panel dismisses the wizard Sheet (no Radix outside-click guard; the next step's `?wizard=` reopens it).
