@@ -786,18 +786,6 @@ async function main() {
     const scrollResult = await runScrollProbe(page);
     row.scroll = scrollResult;
 
-    row.allPass =
-      row.transitionOk !== false &&
-      row.contentVisible !== false &&
-      row.noMehr === true &&
-      row.panelVisible === true &&
-      row.overlapsContent === false &&
-      row.coveringPanel === false &&
-      row.ringOk === true &&
-      clickResult.pass === true &&
-      // scroll is the one probe where null ("no scroller on this step") is a
-      // real n/a rather than a rotted selector — see runScrollProbe.
-      (scrollResult.pass === true || scrollResult.pass === null);
 
     // The panel shows each step's copy without a click (sub-project 2).
     // For a step with panel copy, its first paragraph must be in the panel's
@@ -828,6 +816,20 @@ async function main() {
       tabsToWeiter = reached ? presses : Infinity;
       await page.evaluate(() => { (document.activeElement instanceof HTMLElement) && document.activeElement.blur(); });
     }
+
+    // Computed LAST: contentVisible and noMehr above are part of it.
+    row.allPass =
+      row.transitionOk !== false &&
+      row.contentVisible !== false &&
+      row.noMehr === true &&
+      row.panelVisible === true &&
+      row.overlapsContent === false &&
+      row.coveringPanel === false &&
+      row.ringOk === true &&
+      clickResult.pass === true &&
+      // scroll is the one probe where null ("no scroller on this step") is a
+      // real n/a rather than a rotted selector — see runScrollProbe.
+      (scrollResult.pass === true || scrollResult.pass === null);
 
     results.push(row);
     const flag = row.allPass ? "PASS" : "FAIL";
