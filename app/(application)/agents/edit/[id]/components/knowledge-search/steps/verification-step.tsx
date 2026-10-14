@@ -12,7 +12,8 @@
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
-import { Input } from "@/components/ui/input";
+import { AgentModelSelector } from "@/app/(application)/agents/components/agent-model-selector";
+import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -117,10 +118,35 @@ export function VerificationStep({
         <p className="text-xs text-muted-foreground">
           {t("editor.knowledge.wizard.verification.claimCheckModelHelp")}
         </p>
-        <Input
-          value={draft.claimCheck.model}
-          onChange={(e) => setClaimCheck({ model: e.target.value })}
+        {/* The picker, not a free-text Input: an unresolvable model id makes
+            the endpoint answer 400 by design, which renders as "Die Prüfung
+            konnte nicht abgeschlossen werden." under every answer of that
+            agent, forever, with nothing pointing the admin at the typo.
+            AgentModelSelector is the control this same agent-edit screen
+            already uses for the agent's own model (sections/basics.tsx), and
+            it surfaces a value the catalogue does not know as a red `stale`
+            entry instead of accepting it silently. Empty is a meaningful
+            value here (fall back to the agent's utility model, then its own)
+            and Radix Select has no empty option, so it is passed as
+            `undefined` and the reset button is the way back to it —
+            following data/components/entity-types.tsx, which has the same
+            optional-model shape. `utility_model` keeps its own Input; that
+            is a separate change. */}
+        <AgentModelSelector
+          value={draft.claimCheck.model || undefined}
+          onSelect={(id) => setClaimCheck({ model: id })}
         />
+        {draft.claimCheck.model ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={() => setClaimCheck({ model: "" })}
+          >
+            {t("editor.knowledge.wizard.verification.claimCheckModelReset")}
+          </Button>
+        ) : null}
       </div>
 
       <div className="space-y-1">

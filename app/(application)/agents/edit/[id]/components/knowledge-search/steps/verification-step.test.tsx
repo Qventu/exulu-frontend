@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { MockedProvider, type MockedResponse } from "@apollo/client/testing";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import * as React from "react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -122,5 +122,44 @@ describe("VerificationStep thresholds", () => {
   it("says what the number is a share of", () => {
     renderStep();
     expect(screen.getByText(/Anteil der geprüften Aussagen/)).toBeDefined();
+  });
+});
+
+describe("VerificationStep model field", () => {
+  // A free-text Input let a typo become a permanent failure line: an
+  // unresolvable model id makes the endpoint answer 400 by design, so
+  // "Die Prüfung konnte nicht abgeschlossen werden." renders under every
+  // answer of that agent, forever, with nothing pointing at the typo.
+  it("offers the model catalogue instead of a free-text field", async () => {
+    renderStep();
+    // No textbox at all in this step — the picker's own search field lives
+    // inside the (closed) dropdown content.
+    expect(screen.queryAllByRole("textbox")).toHaveLength(0);
+    // AgentModelSelector renders a Radix Select trigger (role combobox).
+    expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("marks a model id the catalogue does not know as stale", async () => {
+    renderStep((cfg) => {
+      cfg.claimCheck.model = "vertex-gemini-3-flsah";
+    });
+    // `staleLabel` is the selector's own red "not in the catalogue" entry —
+    // the admin sees the typo instead of a silent 400 under every answer.
+    await waitFor(() =>
+      expect(screen.getByText(de.agents.modelSelector.staleLabel.replace("{value}", "vertex-gemini-3-flsah"))).toBeDefined(),
+    );
+  });
+
+  // Empty is a meaningful value (fall back to the agent's utility model, then
+  // its own) and Radix Select has no empty option, so the reset button is the
+  // only way back to it once a model is picked.
+  it("offers a reset only while a model is chosen", () => {
+    const { unmount } = renderStep();
+    expect(screen.queryByText("Modellauswahl zurücksetzen")).toBeNull();
+    unmount();
+    renderStep((cfg) => {
+      cfg.claimCheck.model = "vertex-gemini-3-flash";
+    });
+    expect(screen.getByText("Modellauswahl zurücksetzen")).toBeDefined();
   });
 });

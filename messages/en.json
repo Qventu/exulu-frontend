@@ -641,7 +641,8 @@
           "verification": {
             "claimCheckEnabled": "Enable verification",
             "claimCheckModel": "Model for verification",
-            "claimCheckModelHelp": "A fast, cheap model is enough. Empty = first the agent's utility model, then its own model.",
+            "claimCheckModelHelp": "A fast, cheap model is enough. With nothing selected, the agent's utility model is used first, then its own model.",
+            "claimCheckModelReset": "Reset model choice",
             "claimCheckFidelity": "Check depth",
             "claimCheckFidelityFast": "Fast",
             "claimCheckFidelityPaper": "Thorough",

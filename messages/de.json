@@ -641,7 +641,8 @@
           "verification": {
             "claimCheckEnabled": "Antwortprüfung aktivieren",
             "claimCheckModel": "Modell für die Prüfung",
-            "claimCheckModelHelp": "Ein schnelles, günstiges Modell genügt. Leer = zuerst das Hilfsmodell des Agenten, sonst dessen eigenes Modell.",
+            "claimCheckModelHelp": "Ein schnelles, günstiges Modell genügt. Ohne Auswahl wird zuerst das Hilfsmodell des Agenten verwendet, sonst dessen eigenes Modell.",
+            "claimCheckModelReset": "Modellauswahl zurücksetzen",
             "claimCheckFidelity": "Prüftiefe",
             "claimCheckFidelityFast": "Schnell",
             "claimCheckFidelityPaper": "Gründlich",
