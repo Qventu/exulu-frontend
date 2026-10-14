@@ -33,6 +33,8 @@
  * does not call getTranslations (i18n trap, rule 6 of the work item).
  */
 
+import { isDemoMode } from "@/lib/demo/flag";
+import { KNOWLEDGE_LIBRARY } from "@/lib/demo/overlays";
 import { CircleAlert, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
@@ -86,10 +88,12 @@ export function ContextLibrary() {
     <PageShell variant="content">
       <PageHeader
         title={t("library.title")}
-        description={t("library.description")}
+        // The product addresses the developer who defines contexts in code
+        // (du-form, "Backend"); the tour addresses a buyer.
+        description={isDemoMode() ? KNOWLEDGE_LIBRARY.description : t("library.description")}
         meta={
           <span className="inline-flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
-            <span>{t("library.backendHint")}</span>
+            <span>{isDemoMode() ? KNOWLEDGE_LIBRARY.hint : t("library.backendHint")}</span>
           </span>
         }
       />

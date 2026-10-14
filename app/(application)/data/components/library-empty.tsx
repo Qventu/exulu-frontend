@@ -13,6 +13,8 @@
  * empty state per page). No phantom CTA.
  */
 
+import { isDemoMode } from "@/lib/demo/flag";
+import { EMPTY_STATES } from "@/lib/demo/overlays";
 import { Database } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
@@ -26,16 +28,18 @@ export interface LibraryEmptyProps {
 
 export function LibraryEmpty({ docsHref = "/explorer" }: LibraryEmptyProps) {
   const t = useTranslations("knowledge");
-
+  // struktur.0 opens on this screen under "Wissen braucht einen Ort". The
+  // product's copy ("Kontexte werden im Code … definiert", "Doku ansehen")
+  // is for a developer; the demo tells the visitor what happens next and
+  // offers no link out of the tour.
+  const copy = isDemoMode()
+    ? { ...EMPTY_STATES.knowledgeLibrary, action: undefined }
+    : {
+        title: t("library.empty.title"),
+        description: t("library.empty.description"),
+        action: { label: t("library.empty.viewDocs"), href: docsHref },
+      };
   return (
-    <EmptyState
-      icon={Database}
-      title={t("library.empty.title")}
-      description={t("library.empty.description")}
-      action={{
-        label: t("library.empty.viewDocs"),
-        href: docsHref,
-      }}
-    />
+    <EmptyState icon={Database} title={copy.title} description={copy.description} action={copy.action} />
   );
 }
