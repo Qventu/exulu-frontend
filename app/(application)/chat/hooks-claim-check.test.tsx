@@ -17,7 +17,7 @@
  * stubbed too — the GraphQL side of `useChatSession` is untouched by this
  * task and irrelevant to what's under test here.
  */
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UIMessage } from "ai";
@@ -153,6 +153,13 @@ function chatReturn(messages: UIMessage[], status: ChatReturn["status"]): ChatRe
 }
 
 afterEach(() => {
+  // vitest.config.ts sets no `test.globals`, so testing-library's implicit
+  // afterEach(cleanup) registration never fires here. renderHook mounts
+  // through render() under the hood, so without this each case's
+  // useChatSession tree — and its live effects — stays attached to
+  // document.body for the rest of the file (see claim-check.test.tsx, which
+  // already does this for the same reason).
+  cleanup();
   vi.clearAllMocks();
 });
 
@@ -162,6 +169,58 @@ beforeEach(() => {
 });
 
 describe("useChatSession — claim check wiring (F4)", () => {
+  it("does not get stuck at \"running\" when an incidental re-render (new messages reference, same status) happens while the post is still in flight", async () => {
+    const user = userMessage("msg_0", "Womit?");
+    const assistant = triggeredAssistantMessage("msg_1", "Die FST-2XT arbeitet mit 230 Volt.");
+
+    let resolvePost: ((v: ClaimCheckResult) => void) | undefined;
+    mockPostClaimCheck.mockImplementationOnce(
+      () =>
+        new Promise<ClaimCheckResult>((resolve) => {
+          resolvePost = resolve;
+        }),
+    );
+
+    mockUseChat.mockReturnValue(chatReturn([user, assistant], "streaming"));
+    const { result, rerender } = renderHook(
+      () =>
+        useChatSession({
+          agent: AGENT,
+          initialSession: SESSION,
+          initialMessages: [user, assistant],
+          beginLazyCreate: () => () => {},
+        }),
+      { wrapper: Wrapper },
+    );
+
+    // Stream ends — fires, and the post is now pending (not yet resolved).
+    mockUseChat.mockReturnValue(chatReturn([user, assistant], "ready"));
+    await act(async () => {
+      rerender();
+    });
+    await waitFor(() => expect(mockPostClaimCheck).toHaveBeenCalledTimes(1));
+    expect(result.current.claimChecks.msg_1).toEqual({ status: "running" });
+
+    // An incidental re-render — status unchanged, but `messages` is a new
+    // array (the AI SDK recreates it on almost every tick) — happens *while*
+    // the post is still in flight. This must not be mistaken for "this
+    // instance is gone, discard the eventual result": nothing about the
+    // session or the component changed, so the cancellation guard here must
+    // be tied to a longer-lived signal than this effect's own dependency
+    // array (see `aliveRef`, not a per-run `cancelled` closure).
+    mockUseChat.mockReturnValue(chatReturn([{ ...user }, { ...assistant }], "ready"));
+    await act(async () => {
+      rerender();
+    });
+
+    // Now the post resolves.
+    await act(async () => {
+      resolvePost?.(STUB_RESULT);
+    });
+
+    expect(result.current.claimChecks.msg_1).toEqual({ status: "done", result: STUB_RESULT });
+  });
+
   it("fires the check exactly once when the stream ends, and a later re-render does not re-fire it", async () => {
     const user = userMessage("msg_0", "Womit?");
     const assistant = triggeredAssistantMessage("msg_1", "Die FST-2XT arbeitet mit 230 Volt.");

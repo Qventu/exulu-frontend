@@ -1041,11 +1041,23 @@ export function useChatSession({
     if (!body) return;
     claimCheckFired.current.add(lastAssistant.id);
     setClaimChecks((prevChecks) => ({ ...prevChecks, [lastAssistant.id]: { status: "running" } }));
+    // Guard against a post-unmount write, but deliberately NOT via this
+    // effect's own cleanup: `messages` churns on almost every render (the AI
+    // SDK hands back a new array on nearly every tick) long after this fires,
+    // so a `cancelled` flag tied to *this* effect's re-execution would flip
+    // true on the very next incidental re-render — while the request is
+    // still genuinely in flight — and leave `claimChecks` stuck at "running"
+    // forever. `aliveRef` only turns false on a real unmount (its own effect
+    // has `[]` deps), so it is the correct signal here; the rehydrate effect
+    // below correctly uses its own cleanup instead, because its dependency
+    // (`currentSession?.id`) only changes on an actual session switch.
     (async () => {
       try {
         const result = await postClaimCheck(body);
+        if (!aliveRef.current) return;
         setClaimChecks((prevChecks) => ({ ...prevChecks, [lastAssistant.id]: { status: "done", result } }));
       } catch {
+        if (!aliveRef.current) return;
         setClaimChecks((prevChecks) => ({ ...prevChecks, [lastAssistant.id]: { status: "failed" } }));
       }
     })();
