@@ -37,21 +37,33 @@ const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "obj
  * The Stage 3 shape (`sourceIds`/`toolCallIds`, no `sources` array) reads as
  * "nothing to do" rather than as an empty check: the two halves of this
  * feature deploy together, and a stray old-shaped fragment must not be
- * mistaken for a worked example of the new one. Likewise an entry of an
- * unrecognised `type`, or one missing a string `id`, is dropped rather than
- * trusted — a manifest is the backend's own output, but a value this module
- * cannot act on is not evidence this module can send.
+ * mistaken for a worked example of the new one.
+ *
+ * An entry this client cannot validate — a non-string/missing `id`, a
+ * non-string `toolCallId` when present, or a `type` outside the known set —
+ * fails the WHOLE manifest closed (returns `null`) rather than being dropped
+ * and the rest returned. Ruled 2026-10-14, addendum to the F1 brief: dropping
+ * just that entry would leave `trigger.sources` shorter than the backend's
+ * actual manifest, so `claimCheckRequestFor`'s completeness guard in
+ * `hooks.ts` — which compares what this module recovers against
+ * `trigger.sources` — would agree with the shrunken list and run the check
+ * anyway. That verifies the answer against part of its evidence and reports
+ * grounded claims `unsupported`, the exact failure every other rule in this
+ * module exists to prevent. A manifest is the backend's own output, but an
+ * entry this module cannot act on means the backend knows about evidence
+ * this client cannot produce — the missing panel is the safe failure, not a
+ * partial one.
  */
 export function parseClaimCheckTrigger(metadata: unknown): ClaimCheckTrigger | null {
   if (!isRecord(metadata)) return null;
   const fragment = metadata.claimCheck;
   if (!isRecord(fragment) || fragment.enabled !== true || !Array.isArray(fragment.sources)) return null;
-  const sources = fragment.sources.filter(
-    (s): s is ClaimCheckManifestEntry =>
-      isRecord(s) && typeof s.id === "string" && !!s.id &&
-      typeof s.type === "string" && SOURCE_TYPES.has(s.type as ClaimCheckSourceType) &&
-      (s.toolCallId === undefined || typeof s.toolCallId === "string"),
-  );
+  const isValidEntry = (s: unknown): s is ClaimCheckManifestEntry =>
+    isRecord(s) && typeof s.id === "string" && !!s.id &&
+    typeof s.type === "string" && SOURCE_TYPES.has(s.type as ClaimCheckSourceType) &&
+    (s.toolCallId === undefined || typeof s.toolCallId === "string");
+  if (!fragment.sources.every(isValidEntry)) return null;
+  const sources = fragment.sources;
   return sources.length > 0 ? { enabled: true, sources } : null;
 }
 
@@ -163,20 +175,138 @@ function memorySource(message: UIMessage, entry: ClaimCheckManifestEntry): Claim
 }
 
 /**
- * Dispatches a manifest entry to its type's handler. `document`, `web` and
- * `session_item` are added in Task F2 — until then an entry of one of those
- * types simply recovers nothing, which `collectSources`' never-invent rule
- * already handles by omitting it, exactly as it does for any other source
- * this client fails to recover.
+ * `read_session_file` and `parse_document` both answer `{ content, … }` on
+ * success and `{ error }` on failure, so one arm serves both. The error
+ * branch matters: an error string is not evidence, and sending it would have
+ * the check verify the answer against a failure message.
  */
-function sourceFor(message: UIMessage, entry: ClaimCheckManifestEntry): ClaimCheckSource | undefined {
+function documentSource(part: Record<string, unknown>, entry: ClaimCheckManifestEntry): ClaimCheckSource | undefined {
+  const output = isRecord(part.output) ? part.output : undefined;
+  const content = typeof output?.content === "string" ? output.content : "";
+  if (!content.trim()) return undefined;
+  const input = isRecord(part.input) ? part.input : undefined;
+  const name = typeof input?.filename === "string" ? input.filename : undefined;
+  return { id: entry.id, name, type: "document", content };
+}
+
+/**
+ * Perplexity answers `{ result: JSON.stringify({ content, citations,
+ * search_results }) }`. Each `search_results` entry becomes its own source so
+ * a verdict can cite the page it came from; with none, the search's own
+ * answer text becomes a single source — zero sources would make the caller
+ * refuse the whole check, which would silence every search turn. The
+ * produced ids are namespaced `${entry.id}#<index>` so several sources can
+ * come from one manifest entry.
+ */
+function webSources(part: Record<string, unknown>, entry: ClaimCheckManifestEntry): ClaimCheckSource[] {
+  const output = isRecord(part.output) ? part.output : undefined;
+  if (typeof output?.result !== "string") return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(output.result);
+  } catch {
+    return [];
+  }
+  if (!isRecord(parsed)) return [];
+  const results = Array.isArray(parsed.search_results) ? parsed.search_results : [];
+  const cited = results.flatMap((r, i) => {
+    if (!isRecord(r)) return [];
+    const url = typeof r.url === "string" ? r.url : undefined;
+    const title = typeof r.title === "string" ? r.title : undefined;
+    const snippet = typeof r.snippet === "string" ? r.snippet : "";
+    const content = [title, snippet].filter(Boolean).join("\n\n");
+    if (!content.trim()) return [];
+    return [{ id: `${entry.id}#${i}`, name: url ?? title, type: "web" as const, content }];
+  });
+  if (cited.length > 0) return cited;
+  const answer = typeof parsed.content === "string" ? parsed.content : "";
+  return answer.trim() ? [{ id: entry.id, name: undefined, type: "web", content: answer }] : [];
+}
+
+/**
+ * Session-items search answers `{ result: JSON.stringify(results.flat()) }`
+ * where `results` holds one `context.search(...)` call per context
+ * referenced in the session (`session-items-retrieval-tool.ts`, backend
+ * repo).
+ *
+ * Measured, not guessed: `context.search` (`src/exulu/context.ts`) forwards
+ * to `vectorSearch` (`src/graphql/resolvers/vector-search.ts`), whose return
+ * type is a WHOLE per-context response — `{ itemFilters, chunkFilters,
+ * query, keywords, method, context: { name, id, embedder }, chunks:
+ * VectorSearchChunkResult[], entityInsights? }` — not a bare chunk. So each
+ * element of the flattened array nests its chunks one level deeper than the
+ * knowledge-base tool's output: `element.chunks[].item_id` /
+ * `.item_name` / `.chunk_content`, not `element.item_id` directly. A context
+ * with no embedder configured contributes a bare string (its
+ * "embedder not configured" message, returned by the tool's own catch
+ * branch) instead of a response object; that string is not retrieved
+ * evidence and is skipped like any other non-object element.
+ *
+ * One source per item, its chunks joined — same grouping as the
+ * knowledge-base arm — so a quote is attributable to a file rather than to a
+ * fragment number. Ids are namespaced `${entry.id}#<itemId>`.
+ */
+function sessionItemSources(part: Record<string, unknown>, entry: ClaimCheckManifestEntry): ClaimCheckSource[] {
+  const output = isRecord(part.output) ? part.output : undefined;
+  if (typeof output?.result !== "string") return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(output.result);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  const byItem = new Map<string, { name?: string; chunks: string[] }>();
+  for (const el of parsed) {
+    if (!isRecord(el)) continue; // the embedder-not-configured error string
+    const chunks = Array.isArray(el.chunks) ? el.chunks : [];
+    for (const row of chunks) {
+      if (!isRecord(row) || typeof row.item_id !== "string") continue;
+      const text = typeof row.chunk_content === "string" ? row.chunk_content : "";
+      if (!text.trim()) continue;
+      const bucket = byItem.get(row.item_id) ?? { name: typeof row.item_name === "string" ? row.item_name : undefined, chunks: [] };
+      bucket.chunks.push(text);
+      byItem.set(row.item_id, bucket);
+    }
+  }
+  return [...byItem].map(([itemId, { name, chunks }]) => ({
+    id: `${entry.id}#${itemId}`,
+    name,
+    type: "session_item" as const,
+    content: chunks.join("\n\n"),
+  }));
+}
+
+/**
+ * Dispatches a manifest entry to its type's handler(s). Every arm returns an
+ * array so a `web` or `session_item` entry can legitimately yield several
+ * sources (a web search cites several pages; a session item has several
+ * chunks) without a separate code path.
+ */
+function sourceFor(message: UIMessage, entry: ClaimCheckManifestEntry): ClaimCheckSource[] {
   switch (entry.type) {
-    case "memory":
-      return memorySource(message, entry);
-    case "knowledge_base":
-      return knowledgeBaseSource(message, entry);
+    case "memory": {
+      const source = memorySource(message, entry);
+      return source ? [source] : [];
+    }
+    case "knowledge_base": {
+      const source = knowledgeBaseSource(message, entry);
+      return source ? [source] : [];
+    }
+    case "document":
+    case "web":
+    case "session_item": {
+      if (!entry.toolCallId) return [];
+      const part = partByToolCallId(message, entry.toolCallId);
+      if (!part) return [];
+      if (entry.type === "document") {
+        const source = documentSource(part, entry);
+        return source ? [source] : [];
+      }
+      return entry.type === "web" ? webSources(part, entry) : sessionItemSources(part, entry);
+    }
     default:
-      return undefined;
+      return [];
   }
 }
 
@@ -198,10 +328,10 @@ export function collectSources(message: UIMessage, manifest: ClaimCheckManifestE
   const seen = new Set<string>();
   for (const entry of manifest) {
     if (seen.has(entry.id)) continue;
-    const source = sourceFor(message, entry);
-    if (!source || !source.content.trim()) continue;
+    const sources = sourceFor(message, entry).filter((s) => s.content.trim());
+    if (sources.length === 0) continue;
     seen.add(entry.id);
-    out.push(source);
+    out.push(...sources);
   }
   return out;
 }

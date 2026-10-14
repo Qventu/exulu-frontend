@@ -64,7 +64,13 @@ describe("parseClaimCheckTrigger", () => {
     expect(parseClaimCheckTrigger({ claimCheck: true })).toBeNull();
   });
 
-  it("filters invalid entries out of sources rather than passing them through", () => {
+  // Addendum (2026-10-14), ruled against the F1 brief: dropping just the bad
+  // entries and returning the rest would leave `trigger.sources` shorter than
+  // the backend's actual manifest, so the length-based completeness guard in
+  // hooks.ts would agree with what's left and run the check anyway —
+  // verifying the answer against part of its evidence. A malformed entry is
+  // a reason to distrust the whole manifest, not to silently shrink it.
+  it("refuses the whole manifest when any entry fails validation, rather than silently shrinking it", () => {
     expect(
       parseClaimCheckTrigger({
         claimCheck: {
@@ -78,7 +84,7 @@ describe("parseClaimCheckTrigger", () => {
           ],
         },
       }),
-    ).toEqual({ enabled: true, sources: [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }] });
+    ).toBeNull();
   });
 
   it("accepts a manifest and rejects the Stage 3 shape", () => {
@@ -89,11 +95,14 @@ describe("parseClaimCheckTrigger", () => {
     expect(parseClaimCheckTrigger({ claimCheck: { enabled: true, sourceIds: ["i1"], toolCallIds: ["call_1"] } })).toBeNull();
   });
 
-  it("drops an entry with an unknown type rather than trusting it", () => {
+  // Same reasoning as above: an unknown type names evidence this client
+  // cannot produce, so the manifest must fail closed rather than drop that
+  // one entry and let the rest look like a complete manifest.
+  it("refuses the whole manifest when it carries a type this client does not understand", () => {
     const out = parseClaimCheckTrigger({
       claimCheck: { enabled: true, sources: [{ type: "memory", id: "memory:m_1" }, { type: "guesswork", id: "x" }] },
     });
-    expect(out?.sources).toEqual([{ type: "memory", id: "memory:m_1" }]);
+    expect(out).toBeNull();
   });
 });
 
@@ -222,6 +231,116 @@ describe("collectSources — memory", () => {
       parts: [],
     } as unknown as UIMessage;
     expect(collectSources(message, [{ type: "memory", id: "memory:m_7" }])).toEqual([]);
+  });
+});
+
+describe("collectSources — document", () => {
+  it("takes a document tool's content and names it from the tool's input filename", () => {
+    const message = {
+      parts: [{ type: "tool-read_session_file", toolCallId: "call_4", input: { filename: "wartung.pdf" }, output: { content: "230 Volt." } }],
+    } as unknown as UIMessage;
+    expect(collectSources(message, [{ type: "document", id: "tool:call_4", toolCallId: "call_4" }]))
+      .toEqual([{ id: "tool:call_4", name: "wartung.pdf", type: "document", content: "230 Volt." }]);
+  });
+
+  // Review Focus 2
+  it("never sends a tool error as evidence", () => {
+    const message = {
+      parts: [{ type: "tool-read_session_file", toolCallId: "call_4", output: { error: "Could not read session file \"x\"." } }],
+    } as unknown as UIMessage;
+    expect(collectSources(message, [{ type: "document", id: "tool:call_4", toolCallId: "call_4" }])).toEqual([]);
+  });
+});
+
+describe("collectSources — web", () => {
+  it("makes one source per cited page, named by its url", () => {
+    const parsed = {
+      content: "Die Anlage läuft mit 230 Volt.",
+      search_results: [
+        { url: "https://example.com/a", title: "Anlagen A", snippet: "230 Volt." },
+        { url: "https://example.com/b", title: "Anlagen B", snippet: "Wartung jährlich." },
+      ],
+    };
+    const message = {
+      parts: [{ type: "tool-Internet_Search", toolCallId: "call_9", output: { result: JSON.stringify(parsed) } }],
+    } as unknown as UIMessage;
+    const out = collectSources(message, [{ type: "web", id: "tool:call_9", toolCallId: "call_9" }]);
+    expect(out).toHaveLength(2);
+    expect(out[0]).toEqual({ id: "tool:call_9#0", name: "https://example.com/a", type: "web", content: "Anlagen A\n\n230 Volt." });
+  });
+
+  // Review Focus 3 — zero sources here would trip the completeness guard and
+  // silently kill the check on every search turn.
+  it("falls back to one source for the search itself when there are no citations", () => {
+    const message = {
+      parts: [{ type: "tool-Internet_Search", toolCallId: "call_9", output: { result: JSON.stringify({ content: "Die Anlage läuft mit 230 Volt." }) } }],
+    } as unknown as UIMessage;
+    const out = collectSources(message, [{ type: "web", id: "tool:call_9", toolCallId: "call_9" }]);
+    expect(out).toEqual([{ id: "tool:call_9", name: undefined, type: "web", content: "Die Anlage läuft mit 230 Volt." }]);
+  });
+
+  it("omits the entry entirely when the payload will not parse", () => {
+    const message = {
+      parts: [{ type: "tool-Internet_Search", toolCallId: "call_9", output: { result: "<<not json>>" } }],
+    } as unknown as UIMessage;
+    expect(collectSources(message, [{ type: "web", id: "tool:call_9", toolCallId: "call_9" }])).toEqual([]);
+  });
+});
+
+describe("collectSources — session_item", () => {
+  // Measured shape (not the brief's guessed one): the tool returns
+  // `{ result: JSON.stringify(results.flat()) }` where `results` is one
+  // `context.search(...)` call per context referenced in the session.
+  // `context.search` (src/exulu/context.ts) returns a whole vectorSearch
+  // response — `{ ..., chunks: VectorSearchChunkResult[], ... }` — not a bare
+  // chunk, so each flattened element nests its chunks under `.chunks` and
+  // carries `item_id`/`item_name`/`chunk_content` one level deeper than the
+  // knowledge-base tool's output. A context with no embedder configured
+  // contributes a bare string (its error message) instead of a response
+  // object — not evidence, so it must not surface as a source.
+  it("finds each item's chunks nested under a per-context search response, joining a multi-chunk item", () => {
+    const message = {
+      parts: [{
+        type: "tool-session_items_information_context_search",
+        toolCallId: "call_5",
+        output: {
+          result: JSON.stringify([
+            {
+              context: { name: "Handbücher", id: "ctx_1" },
+              chunks: [
+                { item_id: "i1", item_name: "wartung.pdf", chunk_content: "230 Volt." },
+                { item_id: "i1", item_name: "wartung.pdf", chunk_content: "Jährliche Wartung." },
+              ],
+            },
+          ]),
+        },
+      }],
+    } as unknown as UIMessage;
+    expect(collectSources(message, [{ type: "session_item", id: "tool:call_5", toolCallId: "call_5" }])).toEqual([
+      { id: "tool:call_5#i1", name: "wartung.pdf", type: "session_item", content: "230 Volt.\n\nJährliche Wartung." },
+    ]);
+  });
+
+  it("skips a context's bare embedder-not-configured error string rather than sending it as evidence", () => {
+    const message = {
+      parts: [{
+        type: "tool-session_items_information_context_search",
+        toolCallId: "call_5",
+        output: { result: JSON.stringify(["Embedder not configured for context ctx_2."]) },
+      }],
+    } as unknown as UIMessage;
+    expect(collectSources(message, [{ type: "session_item", id: "tool:call_5", toolCallId: "call_5" }])).toEqual([]);
+  });
+
+  it("returns an empty array when there are no chunks to recover", () => {
+    const message = {
+      parts: [{
+        type: "tool-session_items_information_context_search",
+        toolCallId: "call_5",
+        output: { result: JSON.stringify([{ context: { name: "Leer", id: "ctx_1" }, chunks: [] }]) },
+      }],
+    } as unknown as UIMessage;
+    expect(collectSources(message, [{ type: "session_item", id: "tool:call_5", toolCallId: "call_5" }])).toEqual([]);
   });
 });
 
