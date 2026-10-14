@@ -1,6 +1,6 @@
 "use client"
 
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import { DynamicToolUIPart, UIMessage } from "ai"
 import { isDemoMode } from "@/lib/demo/flag"
 import { Message, MessageContent } from '@/components/ai-elements/message'
@@ -1840,12 +1840,14 @@ const ContextSearchResults = ({
 
 const SearchResultItem = ({ item }: { item: ItemWithChunks }) => {
   const t = useTranslations("chat")
+  // The document date is shown in the UI locale; en-US here read "Aug 27, 2026" on a German screen.
+  const locale = useLocale();
   const router = useRouter();
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return null;
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   return (<Card className="group relative overflow-hidden hover:shadow-md transition-all duration-200 hover:border-primary/50 cursor-pointer" onClick={() => {
