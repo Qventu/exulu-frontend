@@ -1,5 +1,6 @@
 "use client"
 
+import { SEARCHING_LABEL } from "@/lib/demo/overlays";
 import { useLocale, useTranslations } from "next-intl"
 import { DynamicToolUIPart, UIMessage } from "ai"
 import { isDemoMode } from "@/lib/demo/flag"
@@ -1745,11 +1746,32 @@ const ContextSearchResults = ({
   const uniqueContexts = new Set(items.map(item => item.context.name));
   const displayItems = showAllItems ? items : items.slice(0, 3);
 
+  // The demo transport holds the stream after the tool call goes out
+  // (lib/demo/chat-transport.ts). The product renders nothing until the
+  // turn ends; the tour says "watch it search", so the demo shows the card
+  // in a searching state during the hold, and shows the result as soon as
+  // it lands rather than when the stream closes.
+  const demo = isDemoMode();
+  const searching = demo && state !== "output-available" && state !== "output-error";
+  const showResults = demo
+    ? state === "output-available" && items?.length > 0
+    : state === "output-available" && items?.length > 0 && !streaming;
+
   return (
     <>
+      {searching && (
+        <div className="my-3 border rounded-lg overflow-hidden bg-card" data-demo-id="chat-retrieval-searching">
+          <div className="flex items-center gap-3 p-4">
+            <div className="p-2 rounded-md bg-primary/10">
+              <Search className="h-4 w-4 text-primary animate-pulse" />
+            </div>
+            <Shimmer as="span" className="text-sm font-medium">{SEARCHING_LABEL}</Shimmer>
+          </div>
+        </div>
+      )}
 
       {
-        state === "output-available" && items?.length > 0 && !streaming && (
+        showResults && (
           <div
             className="my-3 border rounded-lg overflow-hidden bg-card"
             data-demo-id="chat-retrieval"

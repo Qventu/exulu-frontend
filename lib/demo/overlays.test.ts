@@ -5,6 +5,7 @@ import {
   contextDisplayName,
   EMPTY_STATES,
   KNOWLEDGE_LIBRARY,
+  SEARCHING_LABEL,
   TOOL_STATUS_LABELS,
   toolLabel,
 } from "./overlays";
@@ -49,5 +50,12 @@ describe("the German tables", () => {
       expect(sie(e.title) && sie(e.description)).toBe(true);
     }
     expect(sie(KNOWLEDGE_LIBRARY.description) && sie(KNOWLEDGE_LIBRARY.hint)).toBe(true);
+  });
+});
+
+describe("SEARCHING_LABEL", () => {
+  it("is a German, Sie-form phrase ending in an ellipsis", () => {
+    expect(SEARCHING_LABEL).toMatch(/^Durchsucht .* …$/);
+    expect(SEARCHING_LABEL).not.toMatch(/\b(du|dein)\b/i);
   });
 });

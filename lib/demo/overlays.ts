@@ -53,6 +53,9 @@ export const TOOL_STATUS_LABELS: Record<ToolState, string> = {
   "output-denied": "Abgelehnt",
 };
 
+/** The retrieval card while the demo transport holds the tool call (chat-transport.ts). */
+export const SEARCHING_LABEL = "Durchsucht sieben Wissensbasen …";
+
 /** The two empty states a Weiter-only visitor meets: struktur.0 and aufnahme.0. */
 export const EMPTY_STATES = {
   knowledgeLibrary: {
