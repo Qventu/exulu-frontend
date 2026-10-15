@@ -21,14 +21,32 @@ const FST_CHUNK = RAW_FST_CHUNKS[0];
  * chunks, which the tool card does not display and which are omitted.
  */
 
-const RETRIEVAL_STEPS = [
-  "Classified the request as: technical because: The user is asking for the meaning of a specific error code (Nothalt COP) in a technical system (FST error log).",
-  "Main contexts: tech_doc_context, Fallback contexts: new_servicedb_context, support_tickets_context, custom_documents_context, software_documentation_context",
-  "Detected Product names in the question: FST",
-  "Reranking 321 chunks",
-  "Rerank_score min: 0.5979366, Rerank_score max: 0.8704211",
-  "Using fallback search in new_servicedb_context, support_tickets_context, custom_documents_context, software_documentation_context",
-  "Memory prioritizes specific document(s); pinning 2 file(s) into the search: FST2XTchanges-customer-DE.docx, MIPA_FST-3_DE.pdf",
+/**
+ * The retrieval trace the visitor reads step by step while the answer
+ * streams. `text` is what renders (ReasoningVisualisation shows it
+ * verbatim); `source` is the production log line it was translated from,
+ * kept so the fixture stays checkable against the real pipeline.
+ */
+export const RETRIEVAL_STEPS: { text: string; source: string }[] = [
+  {
+    text: "Frage als technische Frage erkannt: ein konkreter Fehlercode (Nothalt COP) in einem bestimmten System (FST-Fehlerspeicher).",
+    source: "Classified the request as: technical because: The user is asking for the meaning of a specific error code (Nothalt COP) in a technical system (FST error log).",
+  },
+  {
+    text: "Zuerst in der Technischen Dokumentation suchen; Ausweichquellen: Servicedatenbank, Support-Tickets, Eigene Dokumente, Software-Dokumentation.",
+    source: "Main contexts: tech_doc_context, Fallback contexts: new_servicedb_context, support_tickets_context, custom_documents_context, software_documentation_context",
+  },
+  { text: "Produktname in der Frage erkannt: FST", source: "Detected Product names in the question: FST" },
+  { text: "321 Passagen nach Relevanz neu bewertet", source: "Reranking 321 chunks" },
+  { text: "Relevanz der Treffer zwischen 0,60 und 0,87", source: "Rerank_score min: 0.5979366, Rerank_score max: 0.8704211" },
+  {
+    text: "Ausweichsuche in Servicedatenbank, Support-Tickets, Eigenen Dokumenten und Software-Dokumentation",
+    source: "Using fallback search in new_servicedb_context, support_tickets_context, custom_documents_context, software_documentation_context",
+  },
+  {
+    text: "Das Gedächtnis bevorzugt zwei Dokumente und nimmt sie in die Suche auf: FST2XTchanges-customer-DE.docx, MIPA_FST-3_DE.pdf",
+    source: "Memory prioritizes specific document(s); pinning 2 file(s) into the search: FST2XTchanges-customer-DE.docx, MIPA_FST-3_DE.pdf",
+  },
 ];
 
 const CITE_SWDOC =
@@ -90,7 +108,7 @@ export const TECHDOC_TURNS: ScriptedTurn[] = [
         // Zendesk one is not going to be invented to balance the card.
         output: {
           result: JSON.stringify({
-            reasoning: RETRIEVAL_STEPS.map((text) => ({ text, tools: [] })),
+            reasoning: RETRIEVAL_STEPS.map(({ text }) => ({ text, tools: [] })),
             text: [],
             tools: [],
             chunks: [
