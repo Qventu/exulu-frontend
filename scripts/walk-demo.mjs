@@ -637,7 +637,7 @@ async function advance(page, expectedTitle) {
  * what a prospect who read the answer sees. Resolves true on completion,
  * false on timeout (the step then reports whatever it finds).
  */
-async function waitForScriptedExchange(page, timeoutMs = 25000) {
+async function waitForScriptedExchange(page, timeoutMs = 30000) {
   const t0 = Date.now();
   let phase = "waiting-for-typing";
   let lastChars = -1;
@@ -651,7 +651,10 @@ async function waitForScriptedExchange(page, timeoutMs = 25000) {
     if (phase === "waiting-for-typing" && s.composer > 0) phase = "typing";
     else if (phase === "typing" && s.composer === 0) phase = "sent";
     if (s.chars !== lastChars) { lastChars = s.chars; stableSince = Date.now(); }
-    if (phase === "sent" && Date.now() - stableSince > 1500) return true;
+    // Must exceed the transport's search hold (lib/demo/chat-transport.ts,
+    // holdAfterToolInputMs 1800): during it the conversation text is still,
+    // and a 1.5s window declared the exchange over mid-search.
+    if (phase === "sent" && Date.now() - stableSince > 2500) return true;
     await page.waitForTimeout(250);
   }
   return false;
