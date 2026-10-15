@@ -91,7 +91,7 @@ export const kostenChapter: DemoChapter = {
       id: "kosten-verbrauch",
       route: "/analytics?dimension=teams",
       anchor: null,
-      title: "Jede Anfrage hat einen Preis — und einen Absender",
+      title: "Mach die KI-Nutzung sichtbar",
       content: [
         {
           kind: "figure",
@@ -100,7 +100,7 @@ export const kostenChapter: DemoChapter = {
         },
         {
           kind: "paragraph",
-          text: "Verbrauch wird laufend erfasst — pro Team, Nutzer und Assistent. Du siehst, wofür ausgegeben wurde, nicht nur wie viel.",
+          text: "Welches Team, welches Projekt, welcher Nutzer die KI am meisten nutzt, welche Modelle am besten funktionieren und wie sich das über die Zeit entwickelt — laufend erfasst, in einer Auswertung.",
         },
         {
           kind: "callout",

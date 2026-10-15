@@ -1,8 +1,10 @@
 import type { DemoChapter } from "../tour";
-import { ALGI_MEETING_ID, ALGI_MEETING_TALLY as T } from "../fixtures/chapter-meetings";
-import { capitalise, germanCount } from "../fixtures/meeting-tally";
+import { ALGI_MEETING_ID } from "../fixtures/chapter-meetings";
 
 /**
+ * Sub-project 8: the list step states the platform (Teams, Meet, Zoom,
+ * on-site audio, rights); the tally stays available for other copy.
+ *
  * The review PAGE, not the old `?review=` sheet. /transcriptions redirects
  * the legacy param to this route and drops everything else in the query —
  * the tour position included — so the chapter goes straight there.
@@ -21,12 +23,12 @@ export const meetingsChapter: DemoChapter = {
       id: "meetings-list",
       route: "/transcriptions",
       anchor: "transcriptions",
-      title: `${capitalise(germanCount(T.hours))} Stunden Aufzeichnungen, die niemand nachhören wird`,
+      title: "Besprechungen, die zu Wissen werden",
       content: [
         { kind: "figure", src: "/demo/ch7-meetings.webp", alt: "Von der Aufzeichnung zur Arbeitsanweisung" },
         {
           kind: "paragraph",
-          text: `${T.count} Besprechungen, aufgezeichnet von einem Bot, der einfach mitkommt — Produktionsplanung, Service, Schulung. ${capitalise(germanCount(T.cancelled, true))} abgebrochen, ${germanCount(T.failed, true)} fehlgeschlagen.`,
+          text: "OPEN IMP vereint euer Wissen, Besprechungen eingeschlossen: Transkripte aus Teams, Google Meet und Zoom, Audioaufnahmen aus Vor-Ort-Terminen mit Sprecherzuordnung — und ein Rechtemanagement, das ein Transkript nur den richtigen Personen zeigt.",
         },
       ],
     },
@@ -41,7 +43,7 @@ export const meetingsChapter: DemoChapter = {
       content: [
         {
           kind: "paragraph",
-          text: "Dieselbe Besprechung als Arbeitsanweisung: Freigabe prüfen, Lüftung nicht aus der Kabinentür ableiten, offene Punkte benennen. Alles Entschiedene, nichts vom Rauschen. Dieses eine Dokument entstand von Hand — der Kunde hat den Schritt noch nicht ausgeführt.",
+          text: "Dieselbe Besprechung als Arbeitsanweisung: Freigabe prüfen, Lüftung nicht aus der Kabinentür ableiten, offene Punkte benennen. Ein Transkript lässt sich automatisch an einen eurer Assistenten geben: zusammenfassen, Follow-up-Mails verschicken, Tickets anlegen und mehr. Dieses eine Dokument entstand noch von Hand — der Kunde hat den Schritt nicht ausgeführt.",
         },
       ],
     },

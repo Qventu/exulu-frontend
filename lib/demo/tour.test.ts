@@ -354,6 +354,20 @@ describe("the chapters that show something invented", () => {
     expect(bodies("kosten")).toMatch(/Beispielwerte/i);
   });
 
+  it("states the platform in chapter 10 and keeps the hand-made document honest", () => {
+    expect(bodies("meetings")).toMatch(/Teams, Google Meet und Zoom/);
+    expect(bodies("meetings")).toMatch(/Sprecherzuordnung/);
+    expect(bodies("meetings")).toMatch(/Follow-up-Mails/);
+    expect(bodies("meetings")).toMatch(/von Hand/i);
+  });
+
+  it("frames chapter 11's first step as making usage visible", () => {
+    const first = CHAPTERS.find((c) => c.id === "kosten")!.steps[0];
+    expect(first.title).toBe("Mach die KI-Nutzung sichtbar");
+    expect(contentText(first.content)).toMatch(/welche Modelle am besten funktionieren/);
+    expect(contentText(first.content)).toMatch(/Beispielwerte/);
+  });
+
   it("never claims the cost chapter proves a return", () => {
     // kosten's own honest disclaimer reads "Wir behaupten hier keine
     // Einsparung" — a denial, not a claim, and it contains the word
