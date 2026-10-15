@@ -108,7 +108,12 @@ export function ChatQuestionIntoView() {
       const which = questionToAlign(resolveStep(CHAPTERS, position) ?? undefined);
       if (which === null) return;
       const question = which === "first" ? questions[0] : questions[questions.length - 1];
-      if (!(question instanceof HTMLElement)) return;
+      if (!(question instanceof HTMLElement)) {
+        // The scroller can be stable before the messages have rendered (a
+        // fresh mount of the chat route): keep polling until they have.
+        settleTimer = setTimeout(tick, POLL_MS);
+        return;
+      }
 
       // Offset arithmetic rather than scrollIntoView: the latter walks every
       // scrollable ancestor, and the page behind the chat has its own. This
