@@ -1290,6 +1290,8 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Unit: full suite 139 files / 1,447 tests at 9fcc67f.
 - Known, deferred: on a hard load of a chat step the anchor sits ~28 px above the viewport top (scrollIntoView also scrolls an overflow-hidden ancestor); pre-existing on `memory.2`, absent in the Weiter flow.
 
+**Post-review build** (37fe81f, BUILD_ID q5WwtMOfELpgbftvwVPdz): the fresh review found one critical (the model detail sheet printed `$1.25 / 1M` once the shared formatter returned a currency string) and one important (ALFREDO's history rail said "Noch keine Unterhaltungen" beside the open conversation). Both fixed with a test that failed first; on the build the rail lists "WG: Price and delivery time 2658446". The sheet cannot be opened inside the demo (content stays on rails), so its fix is covered by `format.test.ts`'s caller scan and USD assertion. Full suite 139 files / 1,448 tests at 37fe81f.
+
 ## Copy for sign-off
 
 New visitor-facing German introduced by this plan (implementer drafts; Daniel + Doro sign off).
