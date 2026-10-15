@@ -13,7 +13,13 @@ import { useTour } from "./tour-provider";
  * `scrollBlock: "start"`) is about the beginning: chapter 9's "Worum es
  * geht" opens a stored session on its inbound mail.
  */
-export function questionToAlign(step: Pick<DemoStep, "anchor" | "scrollBlock"> | undefined): "first" | "last" {
+export function questionToAlign(
+  step: Pick<DemoStep, "anchor" | "scrollBlock"> | undefined,
+): "first" | "last" | null {
+  // A step anchored on a CARD inside the conversation (a tool trace, the
+  // approval card) gets null: the ring's own scroll must win, or the card
+  // ends up off the screen (found on the sub-project 8 walk, email.4).
+  if (step?.anchor && step.anchor !== "chat-messages") return null;
   return step?.anchor === "chat-messages" && step.scrollBlock === "start" ? "first" : "last";
 }
 
@@ -100,6 +106,7 @@ export function ChatQuestionIntoView() {
 
       const questions = conv.querySelectorAll(".is-user");
       const which = questionToAlign(resolveStep(CHAPTERS, position) ?? undefined);
+      if (which === null) return;
       const question = which === "first" ? questions[0] : questions[questions.length - 1];
       if (!(question instanceof HTMLElement)) return;
 

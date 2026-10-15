@@ -104,6 +104,12 @@ export function RoutineRunsList({
   const [expandedId, setExpandedId] = React.useState<string | null>(
     () => searchParams?.get("run") ?? null,
   );
+  // The param can change while the list stays mounted (a client-side
+  // navigation to the same page with a different `run`): follow it.
+  const runParam = searchParams?.get("run") ?? null;
+  React.useEffect(() => {
+    if (runParam) setExpandedId(runParam);
+  }, [runParam]);
   const [showRawById, setShowRawById] = React.useState<Record<string, boolean>>(
     {},
   );
