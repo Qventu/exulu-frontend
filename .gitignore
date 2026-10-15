@@ -49,3 +49,6 @@ shopify-tokens.json
 
 # superpowers worktrees
 .worktrees/
+
+# superpowers scratch (brainstorm screens, sdd ledgers)
+.superpowers/
