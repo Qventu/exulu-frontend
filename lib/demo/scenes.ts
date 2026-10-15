@@ -6,7 +6,7 @@ import type { ContentBlock } from "./content";
  *
  * They used to render full-bleed over the app, which is half of why the tour
  * felt "stuck together" — the presentation changed mid-story. They are pages
- * now, so the layout is the same on all 37 steps: content area plus the docked
+ * now, so the layout is the same on all 38 steps: content area plus the docked
  * panel. The app shell stays visible here deliberately; hiding it would
  * reintroduce exactly the mode-switch this change exists to remove.
  *

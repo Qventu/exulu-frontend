@@ -438,3 +438,17 @@ describe("startPosition", () => {
     expect(resolveStep(CHAPTERS, startPosition())).toBeDefined();
   });
 });
+
+describe("the tour after sub-project 5", () => {
+  it("runs chapter 10 as list → document, with no raw-transcript step between", () => {
+    const steps = CHAPTERS.find((c) => c.id === "meetings")!.steps;
+    expect(steps.map((s) => s.id)).toEqual(["meetings-list", "meetings-guide"]);
+  });
+
+  it("is 38 steps long — the spec's acceptance count", () => {
+    // 37 before: minus the raw transcript, plus the model catalogue, plus the
+    // approval card. The walker derives its list from CHAPTERS, so this is
+    // the one place the number is written down.
+    expect(CHAPTERS.reduce((n, c) => n + c.steps.length, 0)).toBe(38);
+  });
+});

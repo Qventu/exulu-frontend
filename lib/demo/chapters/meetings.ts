@@ -31,18 +31,6 @@ export const meetingsChapter: DemoChapter = {
       ],
     },
     {
-      id: "meetings-transcript",
-      route: REVIEW,
-      anchor: null,
-      title: "So sieht eine halbe Stunde davon aus",
-      content: [
-        {
-          kind: "paragraph",
-          text: "Vier von sieben Personen im Raum, sie unterbrechen einander, Sätze enden zwei Beiträge später. Fast die Hälfte der Zeilen hat drei Wörter oder weniger — niemand liest das je nach.",
-        },
-      ],
-    },
-    {
       id: "meetings-guide",
       route: REVIEW,
       anchor: "meeting-guide",

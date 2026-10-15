@@ -24,7 +24,7 @@
  *                        why each probe is a real test rather than a no-op.
  *
  * ── Getting the step list ───────────────────────────────────────────────
- * The 37 steps are never hardcoded here. This script shells out to
+ * The 38 steps are never hardcoded here. This script shells out to
  * `npx tsx scripts/dump-demo-steps.ts`, which imports `CHAPTERS` and
  * `hrefFor` straight from lib/demo/tour.ts, so the walker cannot drift out
  * of sync with the chapters — reorder or add a step there and this script
@@ -99,7 +99,7 @@ function resolvePlaywright() {
 }
 
 /**
- * The 37 steps, derived from lib/demo/chapters via scripts/dump-demo-steps.ts
+ * The 38 steps, derived from lib/demo/chapters via scripts/dump-demo-steps.ts
  * — never hardcoded. Spawning `tsx` (rather than importing the .ts file
  * directly into this plain .mjs process) sidesteps needing a TypeScript
  * loader wired into this script itself.
@@ -385,8 +385,7 @@ const CLICK_PROBES = {
   // The transcripts list is rows of links now (the review sheet became a
   // page), and the review page's operable controls are its review actions.
   "meetings.0": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="transcriptions"] a[href^="/transcriptions/review/"]' }, describe: "a transcript row link — would navigate to its review page" }] },
-  "meetings.1": { attempts: [{ spec: { kind: "text", containerSelector: "main", tag: "button", textIncludes: "Als geprüft markieren" }, describe: "'Als geprüft markieren' — would run the mark-reviewed mutation" }] },
-  "meetings.2": { attempts: [
+  "meetings.1": { attempts: [
     { spec: { kind: "text", containerSelector: "main", tag: "button", textIncludes: "Als geprüft markieren" }, describe: "'Als geprüft markieren' — would run the mark-reviewed mutation" },
     { spec: { kind: "text", containerSelector: "main", tag: "button", textIncludes: "In Wissensdatenbank veröffentlichen" }, describe: "fallback: 'In Wissensdatenbank veröffentlichen' — would finalize the job" },
   ] },
