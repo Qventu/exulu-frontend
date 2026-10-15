@@ -49,7 +49,10 @@ const AGENT: Agent = {
 "Du bist ein technischer Dokumentationsassistent eines Herstellers von Aufzugssteuerungen. " +
     "Beantworte Fragen zu Wartung, Fehlercodes und einschlägigen EN/DIN-Normen. " +
     "Belege jede Aussage mit dem Quelldokument.",
-  rights_mode: "public",
+  // Shared with the Techniker role (fixtures/roles.ts): chapter 4 opens the
+  // editor's access section on exactly this. The RBAC entry itself is added
+  // by the AgentEditorById resolver, where the editor reads it.
+  rights_mode: "roles",
 };
 
 // The six real Newlift knowledge bases, with their production ids so that

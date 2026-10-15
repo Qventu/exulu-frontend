@@ -361,7 +361,7 @@ const CLICK_PROBES = {
   "aufnahme.1": { attempts: [{ spec: { kind: "text", containerSelector: "main", tag: "button", textIncludes: "Neues Element" }, describe: "'Neues Element' — would open the create-item dialog" }] },
   "aufnahme.2": { attempts: [{ spec: { kind: "nav-link" }, describe: "sidebar nav link (static scene, no product control)" }] },
   "aufnahme.3": { attempts: [{ spec: { kind: "text", containerSelector: "main", tag: "button", textIncludes: "Neues Element" }, describe: "'Neues Element' — would open the create-item dialog" }] },
-  "zugriff.0": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="item-access"], [data-demo-id="item-access"] button' }, describe: "the item's access-control button — the very control this step spotlights — would open the access-editor popover" }] },
+  "zugriff.0": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="agent-access"] button[role="combobox"]' }, describe: "the access section's visibility combobox — the very control this step spotlights — would open its option list" }] },
   "zugriff.1": { attempts: [{ spec: { kind: "nav-link" }, describe: "sidebar nav link (static scene, no product control)" }] },
   "techdoc.0": COPY_BUTTON,
   "techdoc.1": COPY_BUTTON,

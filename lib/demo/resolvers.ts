@@ -21,6 +21,7 @@ import {
 import { MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
 import { TECHDOC_SESSION_ID } from "./fixtures/chapter-techdoc";
 import { CONTEXTS } from "./fixtures/contexts";
+import { DEMO_ROLES, ROLE_TECHNIKER_ID } from "./fixtures/roles";
 import { scrollbackFor } from "./current-position";
 import {
   EVAL_JOB_RESULTS,
@@ -733,7 +734,9 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
         audio: false,
         video: false,
       },
-      RBAC: { type: "agent", users: [], roles: [] },
+      // One role, read — what chapter 4's access step points at. The roster
+      // the control resolves the id against is GetUserRoles below.
+      RBAC: { type: "agent", users: [], roles: [{ id: ROLE_TECHNIKER_ID, rights: "read" }] },
     },
   }),
 
@@ -968,8 +971,8 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   //
   // GetAgentsByIds (agentByIds) is already mapped above.
   //
-  // Teams is the only roster with entities, matching KOSTEN_ROSTERS in
-  // fixtures/chapter-kosten.ts.
+  // Teams and roles are the rosters with entities: teams match KOSTEN_ROSTERS
+  // in fixtures/chapter-kosten.ts, roles are fixtures/roles.ts (chapter 4).
   GetTeamsByIds: () => ({
     teamsPagination: { items: KOSTEN_TEAMS.map((t) => ({ id: t.id, name: t.name })) },
   }),
@@ -984,7 +987,9 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   GetRolesByIds: () => ({ rolesPagination: { items: [] } }),
   GetRoutinesByIds: () => ({ workflow_templatesPagination: { items: [] } }),
 
-  GetUserRoles: () => ({ rolesPagination: { pageInfo: page(0), items: [] } }),
+  GetUserRoles: () => ({
+    rolesPagination: { pageInfo: page(DEMO_ROLES.length), items: DEMO_ROLES },
+  }),
   GetTeams: () => ({ teamsPagination: { pageInfo: page(0), items: [] } }),
   // The composer's prompt-library picker fires this on every chat render, so
   // it was the one unmapped operation left warning on every page of the tour.

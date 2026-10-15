@@ -54,7 +54,7 @@ export function AccessSection({ editor }: EditorSectionProps) {
   }, [editor.rbac, t]);
 
   return (
-    <section id="access" className="scroll-mt-20 space-y-4">
+    <section id="access" className="scroll-mt-20 space-y-4" data-demo-id="agent-access">
       <div className="space-y-1">
         <h2 className="text-lg font-medium">{t("editor.sections.access")}</h2>
         <p className="text-sm text-muted-foreground">
