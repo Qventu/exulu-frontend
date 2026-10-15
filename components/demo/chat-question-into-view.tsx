@@ -73,8 +73,15 @@ export function ChatQuestionIntoView() {
     window.addEventListener("wheel", takeOver, { passive: true });
     window.addEventListener("touchmove", takeOver, { passive: true });
 
-    let lastHeight = -1;
+    // Stability is height AND position: the conversation's own stick-to-bottom
+    // animates scrollTop for ~1s after mount, and a scroll started while it
+    // runs loses to it silently (found on the sub-project 8 walk: the request
+    // step stayed at the bottom; chapter 5's alignment had only ever moved
+    // part of the way). So wait until nothing moves, then move once, then
+    // check once that it stuck.
+    let lastKey = "";
     let stableFor = 0;
+    let verifies = 0;
     const POLL_MS = 250;
     // Two stable polls. The scripted answer streams in ~250ms chunks, so one
     // is inside the noise; four would keep a finished exchange parked at the
@@ -95,9 +102,9 @@ export function ChatQuestionIntoView() {
         return;
       }
 
-      const height = scroller.scrollHeight;
-      stableFor = height === lastHeight ? stableFor + 1 : 0;
-      lastHeight = height;
+      const key = `${scroller.scrollHeight}:${Math.round(scroller.scrollTop)}`;
+      stableFor = key === lastKey ? stableFor + 1 : 0;
+      lastKey = key;
 
       if (stableFor < NEEDED_STABLE) {
         settleTimer = setTimeout(tick, POLL_MS);
@@ -121,7 +128,14 @@ export function ChatQuestionIntoView() {
       const delta = question.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
       const target = Math.max(0, Math.min(scroller.scrollTop + delta, scroller.scrollHeight - scroller.clientHeight));
       if (Math.abs(target - scroller.scrollTop) > 8) {
-        scroller.scrollTo({ top: target, behavior: "smooth" });
+        scroller.scrollTo({ top: target, behavior: verifies === 0 ? "smooth" : "auto" });
+        // Come back once the smooth scroll has had time to finish; if the view
+        // was pulled away again, re-apply instantly (at most three times).
+        if (verifies < 3) {
+          verifies += 1;
+          stableFor = 0;
+          settleTimer = setTimeout(tick, 900);
+        }
       }
     };
 
