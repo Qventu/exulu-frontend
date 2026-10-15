@@ -138,3 +138,12 @@ Browser (`scripts/walk-demo.mjs`, Playwright outside the repo): Weiter mode is t
 - "Schulung Alfredo" and "KI Agent - Schulung Alfredo" stay in the meeting list: ALFREDO is ALGI's own spare-parts agent (chapter 9). Eight rows were removed (test, untitled, catch-up), not ten; chapter 10's title and count sentence are computed from the fixture (`meetingTally`).
 - German retrieval trace lines belong to sub-project 4 with the search beat.
 - Also fixed here, beyond the section's list: the routine row's last run (`GetJobResults` answers the routines list's label filter from the real runs) and an outside-click guard so the wizard sheet survives a click into the tour panel.
+
+## Clarifications 2026-10-15 (sub-project 4)
+
+- The retrieval card renders only after the whole turn has finished streaming (`!streaming` gate) and `computeContextSearchData` never reads the part's `state`; "searching" is therefore its own branch in `ContextSearchResults`, keyed on `state !== "output-available"`, and the demo also shows the result as soon as it lands rather than when the stream closes. The non-demo expression is unchanged.
+- The "CTA inline" on the closing scene is a new `ContentBlock` kind `cta`, rendered only when `DEMO_BOOKING_URL` is set (still empty — Daniel supplies it); the panel footer's CTA logic is unchanged.
+- The closing scene carries no figure: the tour allows one illustration per chapter and chapter 12's sits on its opening step; the three pilot numbers are the close's visual.
+- `kosten.webp` remains a byte-copy of `ch5-evals.webp`; generating it needs the OpenAI key and is outside this programme's plans.
+- Chapter 6's chat replays no search (only the memory write), so the search beat is a chapter-5 feature.
+- The scene page's side padding is 16 px (was 32 px): beside the 420 px panel the content column is 764 px wide, and the opening figure cleared 480 px only with the narrower gutter.

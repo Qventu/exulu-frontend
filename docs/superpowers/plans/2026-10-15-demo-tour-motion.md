@@ -599,3 +599,33 @@ git commit -m "docs(demo): record the motion walk and list the copy for sign-off
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
+
+## Verification
+
+2026-10-15 — Daniel's production demo builds; final 72f8f78 (BUILD_ID KrCV1HZwBGVIZLQp_5gnU), `next start -p 3111`, Playwright at 1440×900.
+
+- Walker in Weiter mode: **37/37**, zero deny-list leaks (now including raw knowledge-base ids), both scripted exchanges completed inside the widened 2.5 s window, 3 Tabs to Weiter.
+- Search beat (`techdoc.0`, sampled every 100 ms from the send): the searching card is visible for **1,955 ms** before the first answer text; the retrieval card lands at 5.1 s, six seconds before the stream ends at 11.2 s; trace lines contain "321 Passagen" and no English or raw context id.
+- List fills: `struktur.1 → .2` grows 3 → 7 rows with 13 sampled frames of mixed opacity (new rows start at 0); `aufnahme.0 → .1` grows 0 → 4 with 4 mixed frames; with `prefers-reduced-motion: reduce` every row is at opacity 1 at first paint.
+- Scenes: `daten.0` renders figure, stat, paragraph in that order, the figure **488 px** tall (467 px on the first build; the page's side padding was halved), the stat at 56 px. `contact.1` is `/demo/szene/contact-close`: two paragraphs, three stat blocks, no figure, no button (booking URL unset), the panel footer shows Zurück only, the reference names appear.
+- First build (c672ed1…71298ba + fcd83a7, 9055133) found and fixed: two type gaps the unit gate cannot see (the mobile card's `index`, the copy export's `cta` case), the scene padding, and the document card's raw context id.
+- Unit: full suite 134 files / 1,423 tests at 72f8f78.
+
+## Copy for sign-off
+
+New visitor-facing German introduced by this plan (implementer drafts; Daniel + Doro sign off).
+
+| Where | Text |
+|---|---|
+| Retrieval card while searching (`lib/demo/overlays.ts`) | Durchsucht sieben Wissensbasen … |
+| Trace line 1 (`lib/demo/fixtures/techdoc-turns.ts`) | Frage als technische Frage erkannt: ein konkreter Fehlercode (Nothalt COP) in einem bestimmten System (FST-Fehlerspeicher). |
+| Trace line 2 | Zuerst in der Technischen Dokumentation suchen; Ausweichquellen: Servicedatenbank, Support-Tickets, Eigene Dokumente, Software-Dokumentation. |
+| Trace line 3 | Produktname in der Frage erkannt: FST |
+| Trace line 4 | 321 Passagen nach Relevanz neu bewertet |
+| Trace line 5 | Relevanz der Treffer zwischen 0,60 und 0,87 |
+| Trace line 6 | Ausweichsuche in Servicedatenbank, Support-Tickets, Eigenen Dokumenten und Software-Dokumentation |
+| Trace line 7 | Das Gedächtnis bevorzugt zwei Dokumente und nimmt sie in die Suche auf: FST2XTchanges-customer-DE.docx, MIPA_FST-3_DE.pdf |
+| Closing scene, three numbers (`lib/demo/scenes.ts`) | 10 — Ihrer Handbücher · 2 Wochen — echte Fragen Ihres Serviceteams · 30 Minuten — reichen für die Planung |
+| Closing scene button label (renders once the booking URL is set) | 30-Minuten-Termin buchen (unchanged wording, now also inside the scene) |
+
+Moved, not reworded: the references paragraph (contact.0's panel) is repeated in the closing scene; contact.1's "Zehn Ihrer Handbücher …" paragraph moved from the panel into the scene.
