@@ -179,34 +179,36 @@ export function MemoryOverview() {
           </Tabs>
         }
       />
-      <DataTable<MemoryBase>
-        columns={columns}
-        data={rows}
-        loading={bases.loading && !bases.data}
-        error={bases.error ? { message: bases.error.message, onRetry: () => bases.refetch() } : null}
-        onRowClick={(row) => {
-          if (!row.missingFromCode) router.push(`/memory/${row.id}`);
-        }}
-        getRowId={(row) => row.id}
-        empty={{
-          icon: Bookmark,
-          title: t("empty.basesTitle"),
-          description: t("empty.basesDescription"),
-          action: { label: t("empty.basesAction"), href: DOCS_URL },
-        }}
-        mobileCard={(row) => {
-          const muted = isBaseMuted(row);
-          return (
-            <div className="flex flex-col gap-2">
-              <BaseCell base={row} />
-              <AgentChips agents={row.agents} muted={muted} />
-              <span className={cn("text-xs text-muted-foreground", muted && "opacity-70")}>
-                {t("columns.memories")}: {row.stats?.total ?? "—"} · {t("columns.contributors")}: {row.stats?.contributors ?? "—"}
-              </span>
-            </div>
-          );
-        }}
-      />
+      <div data-demo-id="memory-bases">
+        <DataTable<MemoryBase>
+          columns={columns}
+          data={rows}
+          loading={bases.loading && !bases.data}
+          error={bases.error ? { message: bases.error.message, onRetry: () => bases.refetch() } : null}
+          onRowClick={(row) => {
+            if (!row.missingFromCode) router.push(`/memory/${row.id}`);
+          }}
+          getRowId={(row) => row.id}
+          empty={{
+            icon: Bookmark,
+            title: t("empty.basesTitle"),
+            description: t("empty.basesDescription"),
+            action: { label: t("empty.basesAction"), href: DOCS_URL },
+          }}
+          mobileCard={(row) => {
+            const muted = isBaseMuted(row);
+            return (
+              <div className="flex flex-col gap-2">
+                <BaseCell base={row} />
+                <AgentChips agents={row.agents} muted={muted} />
+                <span className={cn("text-xs text-muted-foreground", muted && "opacity-70")}>
+                  {t("columns.memories")}: {row.stats?.total ?? "—"} · {t("columns.contributors")}: {row.stats?.contributors ?? "—"}
+                </span>
+              </div>
+            );
+          }}
+        />
+      </div>
       <p className="text-xs text-muted-foreground">{t("countsNote")}</p>
     </PageShell>
   );

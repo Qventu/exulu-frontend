@@ -369,10 +369,7 @@ const CLICK_PROBES = {
   "memory.0": COPY_BUTTON,
   "memory.1": COPY_BUTTON,
   "memory.2": COPY_BUTTON,
-  "memory.3": { attempts: [
-    { spec: { kind: "text", containerSelector: "main", tag: "button", textIncludes: "Archiviert" }, describe: "'Archiviert' filter toggle — would switch the active/archived item filter" },
-    { spec: { kind: "nav-link" }, describe: "fallback nav link" },
-  ] },
+  "memory.3": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="memory-bases"] tbody tr' }, describe: "the memory base's row — would navigate to /memory/newton_memory_context" }] },
   "config.0": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="agent-agentic-retrieval"] button[role="switch"]' }, describe: "the agentic-retrieval Switch — would toggle it off and flip the Enabled/Disabled badge" }] },
   "config.1": { attempts: [{ spec: { kind: "wizard-tab" }, describe: "a different wizard step tab — would swap the visible wizard panel away from Sources" }] },
   "config.2": { attempts: [{ spec: { kind: "wizard-tab" }, describe: "a different wizard step tab — would swap the visible wizard panel away from Routing" }] },

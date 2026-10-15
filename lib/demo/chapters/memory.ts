@@ -1,4 +1,6 @@
 import type { DemoChapter } from "../tour";
+import { MEMORY_COUNT_AFTER_CORRECTION } from "../fixtures/chapter-memory";
+import { capitalise, germanCount } from "../fixtures/meeting-tally";
 import { MEMORY_CHAT } from "../routes";
 
 export const memoryChapter: DemoChapter = {
@@ -46,14 +48,15 @@ export const memoryChapter: DemoChapter = {
       ],
     },
     {
-      id: "memory-item",
-      route: "/data/newton_memory_context",
-      anchor: null,
-      title: "Und ein Wissenseintrag, der Ihnen gehört",
+      id: "memory-base",
+      route: "/memory",
+      anchor: "memory-bases",
+      title: "Ein Gedächtnis, das Ihnen gehört",
       content: [
         {
           kind: "paragraph",
-          text: "Die Korrektur liegt jetzt als Eintrag in einer eigenen Wissensbasis — einsehbar, änderbar, löschbar. Ab sofort bekommen alle Kollegen die richtige Antwort.",
+          // The count is the fixture's, not typed: the row on screen shows it.
+          text: `${capitalise(germanCount(MEMORY_COUNT_AFTER_CORRECTION))} Einträge, ein Assistent, ein Beitragender — der jüngste ist Ihre Korrektur von eben. Jeder Eintrag ist einsehbar, änderbar, löschbar; ab sofort bekommen alle Kollegen die richtige Antwort.`,
         },
       ],
     },

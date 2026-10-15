@@ -79,6 +79,14 @@ export const CORRECTION_MEMORY: Item = memoryItem(
 );
 
 /**
+ * How many memories the base holds once the correction is written: the
+ * three existing plus the one chapter 6 produces. The overview's row
+ * (resolvers.ts MemoryBases) and the chapter's copy both read this, so the
+ * screen and the sentence beside it cannot disagree.
+ */
+export const MEMORY_COUNT_AFTER_CORRECTION = EXISTING_MEMORIES.length + 1;
+
+/**
  * The step at which the correction has been sent and the memory written.
  * Before this, the memory context must NOT contain it — otherwise the payoff
  * is spoiled before the visitor has done anything.

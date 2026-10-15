@@ -111,14 +111,12 @@ describe("the payoff is not spoiled before the visitor earns it", () => {
 
   it("keeps the reveal step aligned with the step that navigates to it", () => {
     // MEMORY_WRITTEN_AT_STEP and the tour's step list are edited in different
-    // files. If they drift, the knowledge page either spoils the ending or
-    // shows three items where the visitor was just told there are four.
+    // files. If they drift, the overview either spoils the ending or shows
+    // three memories where the visitor was just told there are four.
     const revealIndex = CHAPTERS.find((c) => c.id === "memory")!.steps.findIndex(
-      (s) => s.route.includes(MEMORY_CONTEXT_ID),
+      (s) => s.route === "/memory",
     );
-    expect(revealIndex, "no step opens the memory knowledge base").toBeGreaterThan(
-      -1,
-    );
+    expect(revealIndex, "no step opens the memory overview").toBeGreaterThan(-1);
     expect(revealIndex).toBeGreaterThanOrEqual(MEMORY_WRITTEN_AT_STEP);
   });
 });

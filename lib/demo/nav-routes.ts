@@ -9,8 +9,8 @@
  *
  * Static on purpose, and tested against the chapters in both directions
  * (lib/demo/nav-routes.test.ts): the shell must never import the chapter
- * modules, and the list must never drift from the tour. Sub-project 5
- * adds /memory and /models here when its chapters land.
+ * modules, and the list must never drift from the tour. Sub-project 5 added
+ * /memory (chapter 6) and /models (chapter 11).
  */
 export const DEMO_NAV_ROUTES: ReadonlySet<string> = new Set([
   "/",
@@ -22,4 +22,5 @@ export const DEMO_NAV_ROUTES: ReadonlySet<string> = new Set([
   "/transcriptions",
   "/analytics",
   "/budgets",
+  "/memory",
 ]);

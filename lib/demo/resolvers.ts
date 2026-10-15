@@ -22,7 +22,7 @@ import {
   KOSTEN_MONTHLY_SPEND,
   KOSTEN_TEAMS,
 } from "./fixtures/chapter-kosten";
-import { MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
+import { MEMORY_CONTEXT_ID, MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
 import { TECHDOC_SESSION_ID } from "./fixtures/chapter-techdoc";
 import { CONTEXTS } from "./fixtures/contexts";
 import { DEMO_ROLES, ROLE_TECHNIKER_ID } from "./fixtures/roles";
@@ -719,10 +719,41 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
       world.contexts.find((c) => c.id === variables.id) ?? world.contexts[0],
   }),
 
-  // --- /memory (memory area, sub-project 2) ---------------------------------
-  // No fabricated memories: the overview renders its empty state and the
-  // per-base pages are never reached from it.
-  MemoryBases: () => ({ memoryBases: [] }),
+  // --- /memory (memory area) ------------------------------------------------
+  // The base the correction was written to, as one row with live counts:
+  // chapter 6's last step opens this overview. The counts come from the
+  // world, so the row shows three memories before the correction and four
+  // after — the same threshold the knowledge page honours. Every field the
+  // document selects is present (an absent one is an Apollo cache error).
+  // The per-base pages are never reached from it.
+  MemoryBases: (world) => {
+    const items = world.itemsByContext[MEMORY_CONTEXT_ID] ?? [];
+    const context = CONTEXTS.find((c) => c.id === MEMORY_CONTEXT_ID);
+    const stamps = items.map((item) => item.createdAt ?? "").filter(Boolean).sort();
+    const lastSavedAt = stamps.length ? stamps[stamps.length - 1] : null;
+    return {
+      memoryBases: [
+        {
+          id: MEMORY_CONTEXT_ID,
+          name: context?.name ?? "Assistenten-Gedächtnis",
+          description: context?.description ?? null,
+          valid: true,
+          missing: [],
+          missingFromCode: false,
+          agents: world.agents.map((a) => ({ id: a.id, name: a.name })),
+          stats: {
+            total: items.length,
+            public: items.length,
+            private: 0,
+            contributors: items.length ? 1 : 0,
+            visible: items.length,
+            lastSavedAt,
+            lastSavedBy: lastSavedAt ? { id: DEMO_USER_ID, name: "Demo" } : null,
+          },
+        },
+      ],
+    };
+  },
   MemoryAgentCount: (world) => ({ memoryAgentCount: world.agents.length }),
   MemoryBaseContributors: () => ({ memoryBaseContributors: [] }),
   MemoryUsageByIds: () => ({ memoryUsageByIds: [] }),

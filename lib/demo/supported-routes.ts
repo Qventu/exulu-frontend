@@ -45,6 +45,10 @@ export const DEMO_SUPPORTED_ROUTES = [
   // /analytics for spend attribution, two on /budgets for the controls.
   "/analytics",
   "/budgets",
+  // Chapter 6 ("memory") ends on the memory workbench's overview: the base
+  // the correction was written to, as a row with its counts. The matcher
+  // admits /memory/[ctx] too; the tour never goes there.
+  "/memory",
   // The four former stage steps (daten-pile, daten-problem, aufnahme-page,
   // zugriff-consequence) now live under /demo/szene/[id] — see
   // lib/demo/scenes.ts. The boundary-based matcher below already admits the

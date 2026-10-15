@@ -166,9 +166,9 @@ describe("/agents/edit/[id] operations", () => {
 });
 
 describe("/memory page operations", () => {
-  it("answers MemoryBases with a list (the overview renders its empty state)", async () => {
-    const data = await run(GET_MEMORY_BASES);
-    expect(Array.isArray(data.memoryBases)).toBe(true);
+  it("answers MemoryBases with the assistant's base as a row (chapter 6 ends on it)", async () => {
+    const data = await run(GET_MEMORY_BASES, {}, { chapter: "memory", step: 3 });
+    expect((data.memoryBases as { id: string }[]).map((b) => b.id)).toEqual(["newton_memory_context"]);
   });
 
   it("answers MemoryAgentCount as a bare number, not a pagination wrapper", async () => {
