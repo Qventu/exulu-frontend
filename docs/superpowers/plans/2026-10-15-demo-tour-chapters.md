@@ -1275,7 +1275,22 @@ git commit -m "docs(demo): record the chapters walk and list the copy for sign-o
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
 
-## Copy for sign-off (to be completed in Task 6)
+## Verification
+
+2026-10-15 — Daniel's production demo builds; final 9fcc67f (BUILD_ID lRuPg-7DEEmEpPJlLCfnz), `next start -p 3111`, Playwright at 1440×900.
+
+- Walker in Weiter mode: **38/38**, zero deny-list leaks, 3 Tabs to Weiter, every anchored step `ring=true@anchor=true` (the approval card, the access section, the memory table and the catalogue included).
+- `zugriff.0`: the access section is in view with "Mit 1 Rolle(n) geteilt." and the Techniker role; `techdoc.0` still autotypes (send at 3.3 s) and streams (first growth at 4.9 s) with the role-shared agent.
+- `email.2`: the runs list shows one "Erfordert Aufmerksamkeit" row; `email.3` opens ALFREDO's session titled "WG: Price and delivery time 2658446", the card reads "E-Mail-Versand ausführen?" with the subject summary and the three German buttons, the composer is enabled, no Newton session is listed, both memory tool traces read "Gedächtnis-Eintrag gespeichert", no English status words.
+- `memory.3`: one row "Assistenten-Gedächtnis · Technischer Dokumentationsassistent · 4 · 1 · jetzt"; stat cards 1 / 1 von 1 / 4 / 1; the header description is Sie-form; "Gedächtnis" is in the sidebar.
+- `kosten.1`: four rows, eight cost badges of the form `2,00 €/Mio.`, no dollar sign on the page, EU pill and `europe-west3` tag on every row; "Modelle" is in the sidebar's Administration group.
+- `meetings.0` → Weiter → `meetings.1` lands on the review page with the guide in view.
+- Console pass over the seven checked screens: zero errors after the transcripts settings resolver (the first build showed one Apollo missing-field error on `/transcriptions`).
+- First build (b9bec42) found and fixed: the optional items map in `MemoryBases` (type gate), the memory page's Du-form description (walker leak), the unmapped transcripts settings query (console).
+- Unit: full suite 139 files / 1,447 tests at 9fcc67f.
+- Known, deferred: on a hard load of a chat step the anchor sits ~28 px above the viewport top (scrollIntoView also scrolls an overflow-hidden ancestor); pre-existing on `memory.2`, absent in the Weiter flow.
+
+## Copy for sign-off
 
 New visitor-facing German introduced by this plan (implementer drafts; Daniel + Doro sign off).
 

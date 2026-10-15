@@ -147,3 +147,15 @@ Browser (`scripts/walk-demo.mjs`, Playwright outside the repo): Weiter mode is t
 - `kosten.webp` remains a byte-copy of `ch5-evals.webp`; generating it needs the OpenAI key and is outside this programme's plans.
 - Chapter 6's chat replays no search (only the memory write), so the search beat is a chapter-5 feature.
 - The scene page's side padding is 16 px (was 32 px): beside the 420 px panel the content column is 764 px wide, and the opening figure cleared 480 px only with the narrower gutter.
+
+## Clarifications 2026-10-15 (sub-project 5)
+
+1. **Roles, not teams.** `AGENT_RBAC_TEAMS_SUPPORTED` is `false` because the backend's `RBACData` has no `teams` field; a teams-shared agent would show a capability the product does not have. The assistant is shared with the role "Techniker" (`lib/demo/fixtures/roles.ts`); the section's summary reads "Mit 1 Rolle(n) geteilt."
+2. **The approval step is `email.3`**, appended after the runs step, not swapped in at `email.1`: "einer wartet auf einen Menschen" is the setup and the card is its payoff. 37 − `meetings.1` + `kosten.1` + `email.3` = 38, the acceptance count.
+3. **Which run waits.** The export's waiting run (0ffccf21, "WG: DEMANDE DE DEVIS") and the scripted session's run (f74bb00b, completed) swap *state* in the fixture mapping, so "Sitzung öffnen" on the one waiting run lands on the one session with a pending approval. Every other field stays as exported; the 14/8/2/1 distribution is unchanged.
+4. **The part shape**, confirmed from the AI SDK's `DynamicToolUIPart` union and the session's stored message 9: the pending part (`tool-Send_Email_Reply`, `state: "approval-requested"`, `input`, `approval: { id }`, no `output`) is added to the session's last assistant message — the assistant that just took the third correction asks to send the corrected quote.
+5. **`region: "eu"`**, not `"europe-west3"`: `ProviderLogo` renders its EU pill only for the literal `"eu"`. The Google Cloud region is each row's tag.
+6. **The models cost cell** now uses the existing `models.cost.perMillion` message with the amount from `spendCurrency()`: identical output for the product (`$1.25/M`), `2,00 €/Mio.` in the demo. A product fix, tested for the non-demo string.
+7. **Copy follows the screen.** `zugriff.0` and `memory.3` are reworded because an agent's access section is not an item's and a base row is not an item row; `memory.3`'s count is computed from the fixture.
+8. **No `#access` hash** in the route: `hrefFor` appends `?tour=` to the route string. The anchor plus `scrollBlock: "start"` scrolls, as `config.0` does.
+9. **Off-rails limit, not fixed:** the approval card's buttons send through the demo transport, which replays the techdoc script for a chapter without one. The tour is on rails; ALFREDO has no script.
