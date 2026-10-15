@@ -31,7 +31,7 @@ export function DemoUnavailable() {
       <EmptyState
         icon={Compass}
         title="Dieser Bereich ist nicht Teil der Demo"
-        description="Die Funktion gehört zum Produkt, wird in dieser geführten Demo aber nicht mit Beispieldaten gezeigt. In Ihrer eigenen Umgebung steht sie vollständig zur Verfügung."
+        description="Die Funktion gehört zum Produkt, wird in dieser geführten Demo aber nicht mit Beispieldaten gezeigt. In eurer eigenen Umgebung steht sie vollständig zur Verfügung."
         action={{ label: "Zurück zur Tour", href: hrefFor(startPosition()) }}
       />
     </div>

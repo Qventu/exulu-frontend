@@ -10,8 +10,8 @@ import { CONTEXTS } from "./fixtures/contexts";
  * the shared message catalogues (every deployment would carry it), so it
  * lives here and is read through `isDemoMode()` at the call site.
  *
- * Every string is Sie-form and drafted for sign-off (plan 2026-10-14
- * demo-tour-overlays, "Copy for sign-off").
+ * Every string is du-form (spec, sub-project 6; du for the visitor, euer for
+ * the company) and drafted for sign-off (plan 2026-10-15 demo-tour-du-form).
  */
 
 const CONTEXT_DISPLAY_NAMES: Record<string, string> = Object.fromEntries(
@@ -70,23 +70,13 @@ export const EMPTY_STATES = {
   knowledgeItems: {
     title: "Noch keine Dokumente in dieser Wissensbasis",
     description:
-      "Dokumente kommen aus Ihren Ablagen — per Freigabe, Laufwerk oder Anbindung. Im nächsten Schritt läuft die Aufnahme.",
+      "Dokumente kommen aus euren Ablagen — per Freigabe, Laufwerk oder Anbindung. Im nächsten Schritt läuft die Aufnahme.",
   },
 } as const;
 
 /** /data's page header: the product addresses a developer; the tour addresses a buyer. */
-/**
- * The memory overview's header: messages/de.json addresses the reader as
- * "du" here (and on two other memory strings the tour never shows); the demo
- * is Sie-form throughout, and the walker's deny list catches the slip.
- */
-export const MEMORY_OVERVIEW = {
-  description:
-    "Was Ihre Agenten in Gesprächen gelernt haben. Eine Gedächtnis-Basis kann mehrere Agenten versorgen.",
-};
-
 export const KNOWLEDGE_LIBRARY = {
-  description: "Die Wissensbasen, aus denen Ihre Assistenten antworten.",
+  description: "Die Wissensbasen, aus denen eure Assistenten antworten.",
   hint: "Jede Basis hat eigene Regeln für Aufnahme, Suche und Zugriff.",
 } as const;
 

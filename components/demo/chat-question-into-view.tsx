@@ -13,7 +13,7 @@ import { useTour } from "./tour-provider";
  * stream ends the conversation is parked at the foot of it and the question
  * has scrolled 463px off the top (measured). What is left is a wall of prose
  * with nothing to say what was asked — under a step whose own copy reads
- * "Ein Servicetechniker fragt nach einem Fehlerbild. Sehen Sie zu, wie der
+ * "Ein Servicetechniker fragt nach einem Fehlerbild. Sieh zu, wie der
  * Assistent sucht und antwortet". OPEN's marketing lead, walking the demo on
  * 2026-09-14: "ich sehe jetzt zum Beispiel gar nicht die Frage, die gestellt
  * wurde ... es wäre cool wenn das einfach hier oben startet".

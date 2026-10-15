@@ -7,9 +7,9 @@ import {
   KNOWLEDGE_LIBRARY,
   SEARCHING_LABEL,
   TOOL_STATUS_LABELS,
-  MEMORY_OVERVIEW,
   toolLabel,
 } from "./overlays";
+import { sieFormIn } from "./register";
 
 describe("contextDisplayName", () => {
   it("returns the fixture's German name for every demo context", () => {
@@ -19,13 +19,6 @@ describe("contextDisplayName", () => {
 
   it("humanises an id it does not know instead of leaking underscores", () => {
     expect(contextDisplayName("some_other_context")).toBe("Some other context");
-  });
-});
-
-describe("MEMORY_OVERVIEW", () => {
-  it("replaces the memory page's Du-form description with Sie-form", () => {
-    expect(MEMORY_OVERVIEW.description).toMatch(/Ihre Agenten/);
-    expect(MEMORY_OVERVIEW.description).not.toMatch(/\b(dein|deine|deinem|deinen|deiner)\b/);
   });
 });
 
@@ -46,7 +39,7 @@ describe("toolLabel", () => {
 });
 
 describe("the German tables", () => {
-  const sie = (s: string) => !/\b(du|dein|deine|deinem|deinen|deiner)\b/i.test(s);
+  const duForm = (s: string) => sieFormIn(s) === null;
 
   it("cover every tool state", () => {
     expect(Object.keys(TOOL_STATUS_LABELS).sort()).toEqual([
@@ -55,20 +48,25 @@ describe("the German tables", () => {
     ]);
   });
 
-  it("are Sie-form, non-empty, and end empty-state descriptions with a sentence", () => {
-    for (const s of Object.values(TOOL_STATUS_LABELS)) { expect(s).toBeTruthy(); expect(sie(s)).toBe(true); }
+  it("are du-form, non-empty, and end empty-state descriptions with a sentence", () => {
+    for (const s of Object.values(TOOL_STATUS_LABELS)) { expect(s).toBeTruthy(); expect(duForm(s)).toBe(true); }
     for (const e of Object.values(EMPTY_STATES)) {
       expect(e.title).toBeTruthy();
       expect(e.description.trim().endsWith(".")).toBe(true);
-      expect(sie(e.title) && sie(e.description)).toBe(true);
+      expect(duForm(e.title) && duForm(e.description), e.title).toBe(true);
     }
-    expect(sie(KNOWLEDGE_LIBRARY.description) && sie(KNOWLEDGE_LIBRARY.hint)).toBe(true);
+    expect(duForm(KNOWLEDGE_LIBRARY.description) && duForm(KNOWLEDGE_LIBRARY.hint)).toBe(true);
+  });
+
+  it("address the company as euer, never Sie", () => {
+    expect(KNOWLEDGE_LIBRARY.description).toMatch(/\beure\b/);
+    expect(EMPTY_STATES.knowledgeItems.description).toMatch(/\beuren\b/);
   });
 });
 
 describe("SEARCHING_LABEL", () => {
-  it("is a German, Sie-form phrase ending in an ellipsis", () => {
+  it("is a German, du-form phrase ending in an ellipsis", () => {
     expect(SEARCHING_LABEL).toMatch(/^Durchsucht .* …$/);
-    expect(SEARCHING_LABEL).not.toMatch(/\b(du|dein)\b/i);
+    expect(sieFormIn(SEARCHING_LABEL)).toBeNull();
   });
 });

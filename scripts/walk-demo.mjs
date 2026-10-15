@@ -828,7 +828,6 @@ async function main() {
     // step and names the snippet.
     const LEAKS = [
       /\b(Completed|Running|Pending|Awaiting Approval|Responded|Denied)\b/,
-      /\b(deinem|deinen|deiner|deine|dein)\b/,
       /Doku ansehen/,
       /Create Newton Memory Item/,
       /software documentation context|support tickets context|tech doc context/i,
@@ -847,6 +846,16 @@ async function main() {
         .map((p) => new RegExp(p.source, p.flags).exec(text)?.[0] ?? null)
         .filter(Boolean);
     }, LEAKS.map((r) => ({ source: r.source, flags: r.flags })));
+
+    // The product UI is Sie-form and stays so; the tour's own text — the panel
+    // and the scenes — is du-form (spec, sub-project 6). Same pattern as
+    // lib/demo/register.ts, over that text only.
+    const SIE_FORM = /\b(Sie|Ihnen|Ihr|Ihre|Ihrem|Ihren|Ihrer)\b/;
+    const ownText = await page.evaluate(() =>
+      [document.querySelector('[data-demo-id="tour-panel"]'), document.querySelector(".demo-scene")]
+        .map((n) => n?.innerText ?? "").join(" ").replace(/\s+/g, " "));
+    const sie = SIE_FORM.exec(ownText);
+    if (sie) row.leaks.push(`Sie-form: ${sie[1]}`);
 
 
     // Computed LAST: contentVisible and noMehr above are part of it.
