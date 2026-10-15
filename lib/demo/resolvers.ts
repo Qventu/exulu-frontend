@@ -449,6 +449,28 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // Recording is on, with no cap configured — which is what ALGI runs. A
   // percentage bar climbing toward a limit would imply a metered feature the
   // tour does not otherwise mention.
+  // The transcripts list asks for the workspace's transcription settings on
+  // every visit (transcriptions/hooks.ts); unmapped, it logged an Apollo
+  // missing-field error on chapter 10's first screen (sub-project 5 walk,
+  // console pass). Code defaults throughout — nothing in the tour edits them,
+  // and the settings page that would show them is not part of the tour.
+  GetTranscriptsSettings: () => {
+    const code = <T,>(value: T) => ({ value, source: "code" });
+    return {
+      transcriptsSettings: {
+        botName: code(null),
+        notifyChat: code(null),
+        recordersMayOverrideBot: code(null),
+        defaultRightsMode: code(null),
+        summaryPresets: code([]),
+        videoRetentionHours: code("forever"),
+        storeVideoLocally: code(null),
+        monthlyRecordingLimitMinutes: code("none"),
+        videoStorageCostPerHour: code(null),
+        stalePresets: [],
+      },
+    };
+  },
   GetMeetingRecordingUsage: () => ({
     meetingRecordingUsage: {
       enabled: true,

@@ -24,9 +24,10 @@ import {
   GET_MEMORY_USAGE_BY_IDS,
 } from "@/app/(application)/memory/queries";
 import { GET_PROJECTS } from "@/app/(application)/projects/queries";
+import { GET_TRANSCRIPTS_SETTINGS } from "@/app/(application)/transcriptions/queries";
 import { ROUTINE_RUNS_ATTENTION_COUNT } from "@/lib/routine-runs/queries";
 import { ALGI_RUNS_NEEDING_ATTENTION } from "./fixtures/chapter-email";
-import { runDemoOperation as run } from "./test-support";
+import { runDemoOperation as run, runDemoQueryThroughCache } from "./test-support";
 
 /**
  * Coverage tests: assert the demo link answers the operations the REAL product
@@ -162,6 +163,18 @@ describe("/agents/edit/[id] operations", () => {
   it("answers WorkbenchMemoryBaseUsage with an object carrying used (Insights block)", async () => {
     const data = await run(GET_WORKBENCH_MEMORY_BASE_USAGE, { contextId: "newton_memory_context" });
     expect(typeof (data.memoryBaseUsage as { used: number }).used).toBe("number");
+  });
+});
+
+describe("/transcriptions settings (chapter 10 opens the list)", () => {
+  it("answers GetTranscriptsSettings with every resolved setting the page selects", async () => {
+    // Unmapped, the list page logged an Apollo missing-field error on every
+    // visit (found by the sub-project 5 walk, console pass).
+    const data = await runDemoQueryThroughCache(GET_TRANSCRIPTS_SETTINGS, {}, { chapter: "meetings", step: 0 });
+    const settings = data.transcriptsSettings as Record<string, { value: unknown; source: string }>;
+    expect(settings.botName.source).toBe("code");
+    expect(settings.summaryPresets.value).toEqual([]);
+    expect(settings.videoRetentionHours.value).toBe("forever");
   });
 });
 
