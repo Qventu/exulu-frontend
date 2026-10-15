@@ -25,7 +25,9 @@ import type { DemoChapter } from "../tour";
  * PHRASINGS ("spart Ihnen", "rechnet sich", …), never that bare word, or it
  * would fail on the very sentence that makes the chapter honest.
  *
- * Three steps, not two: /analytics' attribution point and its
+ * Four steps, not two (sub-project 5 put the model catalogue between
+ * attribution and the budget: where the spend goes before who caps it).
+ * Originally three, not two: /analytics' attribution point and its
  * example-figures disclosure fit one step; /budgets carries both the
  * control point (a limit enforced in operation) AND the closing
  * no-savings-claim disclaimer, and the two together overran the popover
@@ -102,6 +104,18 @@ export const kostenChapter: DemoChapter = {
       ],
     },
     {
+      id: "kosten-modelle",
+      route: "/models",
+      anchor: "models-catalog",
+      title: "Welches Modell, wo gehostet",
+      content: [
+        {
+          kind: "paragraph",
+          text: "Vier Modelle stehen zur Wahl, alle in Frankfurt gehostet — welches ein Assistent nutzt, ist eine Einstellung, keine Bindung an einen Anbieter. Die Preise je Million Token stehen daneben; auch sie sind hier Beispielwerte.",
+        },
+      ],
+    },
+    {
       id: "kosten-kontrolle",
       route: "/budgets?type=team",
       anchor: null,
@@ -113,7 +127,7 @@ export const kostenChapter: DemoChapter = {
         },
         {
           kind: "paragraph",
-          text: "Der Zeitraum in der Analyse eben war frei wählbar; dieses Limit läuft fest pro Abrechnungsmonat.",
+          text: "Der Zeitraum in der Analyse vorhin war frei wählbar; dieses Limit läuft fest pro Abrechnungsmonat.",
         },
       ],
     },

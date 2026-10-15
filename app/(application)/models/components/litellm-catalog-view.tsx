@@ -68,7 +68,7 @@ export function LiteLLMCatalogView() {
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="space-y-4">
+      <div className="space-y-4" data-demo-id="models-catalog">
         <div className="flex items-start gap-2 text-sm text-muted-foreground">
           <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <p className="min-w-0 flex-1">
@@ -234,12 +234,12 @@ function ModelRow({
         <div className="flex flex-wrap gap-1">
           {entry.input_cost_per_million_tokens != null && (
             <Badge variant="outline">
-              ${formatCostPerMillion(entry.input_cost_per_million_tokens)}/M
+              {t("cost.perMillion", { amount: formatCostPerMillion(entry.input_cost_per_million_tokens) })}
             </Badge>
           )}
           {entry.output_cost_per_million_tokens != null && (
             <Badge variant="outline">
-              ${formatCostPerMillion(entry.output_cost_per_million_tokens)}/M
+              {t("cost.perMillion", { amount: formatCostPerMillion(entry.output_cost_per_million_tokens) })}
             </Badge>
           )}
         </div>
@@ -294,11 +294,11 @@ function ModelCard({
         {hasCost ? (
           <p className="text-xs text-muted-foreground">
             {entry.input_cost_per_million_tokens != null
-              ? `$${formatCostPerMillion(entry.input_cost_per_million_tokens)}/M`
+              ? t("cost.perMillion", { amount: formatCostPerMillion(entry.input_cost_per_million_tokens) })
               : "—"}
             {" · "}
             {entry.output_cost_per_million_tokens != null
-              ? `$${formatCostPerMillion(entry.output_cost_per_million_tokens)}/M`
+              ? t("cost.perMillion", { amount: formatCostPerMillion(entry.output_cost_per_million_tokens) })
               : "—"}
           </p>
         ) : null}

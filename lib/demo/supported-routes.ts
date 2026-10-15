@@ -49,6 +49,9 @@ export const DEMO_SUPPORTED_ROUTES = [
   // the correction was written to, as a row with its counts. The matcher
   // admits /memory/[ctx] too; the tour never goes there.
   "/memory",
+  // Chapter 11's second step: the LiteLLM catalogue, read-only, with the four
+  // models this deployment names and where they are hosted.
+  "/models",
   // The four former stage steps (daten-pile, daten-problem, aufnahme-page,
   // zugriff-consequence) now live under /demo/szene/[id] — see
   // lib/demo/scenes.ts. The boundary-based matcher below already admits the

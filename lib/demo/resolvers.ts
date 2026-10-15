@@ -108,37 +108,59 @@ const KOSTEN_TEAM_SPEND = allocateSpend(
 );
 
 /**
- * One row of the LiteLLM catalogue, with every field GetAgentLiteLLMCatalog
- * selects (agents/queries.ts:268). All of them, because Apollo does not fail an
- * incomplete cache write — it logs a console.error per missing field and falls
- * back to the raw network result, so a partial row is silent breakage.
+ * One row of the LiteLLM catalogue, with every field GetLiteLLMCatalog and
+ * GetAgentLiteLLMCatalog select (queries/queries.ts GetLiteLLMCatalog and
+ * agents/queries.ts:268 — the same set). All of them, because Apollo does
+ * not fail an incomplete cache write — it logs a console.error per missing
+ * field and falls back to the raw network result, so a partial row is silent
+ * breakage.
  *
- * Capabilities and limits are the published ones for these models; costs are
- * left null rather than guessed, since nothing in the tour renders them.
+ * Capabilities and limits are the published ones. Costs are per million
+ * tokens and EXAMPLE figures — chapter 11 says so on screen — because /models
+ * renders them from sub-project 5 on. `region` is the literal "eu" because
+ * ProviderLogo's EU pill keys on that; the Google Cloud region the deployment
+ * runs in is each row's tag.
  */
 const litellmModel = (
   name: string,
   upstream: string,
   brand: string,
+  cost: { input: number; output: number },
+  limits: { input: number; output: number } = { input: 1048576, output: 65536 },
 ): Record<string, unknown> => ({
   __typename: "LiteLLMModel",
   model_name: name,
   active: true,
   upstream_model: upstream,
   type: "chat",
-  tags: [],
+  tags: ["europe-west3"],
   brand,
   region: "eu",
-  max_tokens: 65536,
-  max_input_tokens: 1048576,
-  max_output_tokens: 65536,
+  max_tokens: limits.output,
+  max_input_tokens: limits.input,
+  max_output_tokens: limits.output,
   supports_vision: true,
   supports_function_calling: true,
   supports_pdf_input: true,
   supports_audio_input: false,
-  input_cost_per_million_tokens: null,
-  output_cost_per_million_tokens: null,
+  input_cost_per_million_tokens: cost.input,
+  output_cost_per_million_tokens: cost.output,
 });
+
+/**
+ * The four models this deployment names: the agent's own and the eval judge
+ * (fixtures/evals.ts), the small Gemini, and a Mistral — all served from
+ * Vertex AI in europe-west3 (Frankfurt), which is what chapter 11's models
+ * step is about. One list for both catalogue operations, so the agent
+ * editor's selector and /models cannot disagree. The agent's model has to be
+ * IN it or the selector marks it stale and renders it in destructive red.
+ */
+const LITELLM_CATALOGUE = [
+  litellmModel("gemini-3.1-pro", "vertex_ai/gemini-3.1-pro", "Google", { input: 2, output: 12 }),
+  litellmModel("gemini-3.1-flash", "vertex_ai/gemini-3.1-flash", "Google", { input: 0.3, output: 2.5 }),
+  litellmModel("mistral-medium-3", "vertex_ai/mistral-medium-3", "Mistral", { input: 0.4, output: 2 }, { input: 131072, output: 8192 }),
+  litellmModel("claude-sonnet-4-6", "vertex_ai/claude-sonnet-4-6", "Anthropic", { input: 3, output: 15 }, { input: 200000, output: 64000 }),
+];
 
 /**
  * A recording as /transcriptions selects it. The nulls are the fields dropped
@@ -913,30 +935,11 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // demo-editor.test.ts, which only asserted the operations the agentic
   // retrieval card needs.
   //
-  // Empty is accurate rather than expedient: the tour has no LiteLLM
-  // deployment behind it, and no roles or teams. An empty ARRAY is a complete
-  // answer for the catalogue however many fields the selection lists, since
-  // there is no element to be missing one.
   // Two documents select the same `litellmCatalog` root under two operation
-  // names — the chat surface's and the agent editor's — and the resolver table
-  // is keyed by OPERATION, so mapping one leaves the other unmapped. Mapping
-  // GetLiteLLMCatalog alone silenced chat and left the editor still erroring.
-  GetLiteLLMCatalog: () => ({ litellmCatalog: [] }),
-  // The agent's model has to be IN this catalogue or the selector marks it
-  // stale and renders "gemini-3.1-pro — unavailable" in destructive red, on the
-  // screen that claims to be a live production setup. An empty catalogue and a
-  // set model is the one combination that looks broken — worse than the "Select
-  // a model" placeholder this replaced, because red reads as an error rather
-  // than as something merely unconfigured.
-  //
-  // Only the models this deployment actually names: the agent's own, and the
-  // judge the eval runs use (fixtures/evals.ts).
-  GetAgentLiteLLMCatalog: () => ({
-    litellmCatalog: [
-      litellmModel("gemini-3.1-pro", "vertex_ai/gemini-3.1-pro", "Google"),
-      litellmModel("claude-sonnet-4-6", "anthropic/claude-sonnet-4-6", "Anthropic"),
-    ],
-  }),
+  // names — the chat surface's and the agent editor's — and the resolver
+  // table is keyed by OPERATION, so both must be mapped. Same list for both.
+  GetLiteLLMCatalog: () => ({ litellmCatalog: LITELLM_CATALOGUE }),
+  GetAgentLiteLLMCatalog: () => ({ litellmCatalog: LITELLM_CATALOGUE }),
   // Five operations the reviewer's console pass surfaced as unmapped noise.
   // GetQueue POLLS — the routine page asks every few seconds, so unmapped it
   // warned continuously. Values are an idle queue, which is the truth of a

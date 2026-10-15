@@ -23,4 +23,5 @@ export const DEMO_NAV_ROUTES: ReadonlySet<string> = new Set([
   "/analytics",
   "/budgets",
   "/memory",
+  "/models",
 ]);
