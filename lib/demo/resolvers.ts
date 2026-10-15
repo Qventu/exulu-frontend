@@ -749,7 +749,7 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // document selects is present (an absent one is an Apollo cache error).
   // The per-base pages are never reached from it.
   MemoryBases: (world) => {
-    const items = world.itemsByContext[MEMORY_CONTEXT_ID] ?? [];
+    const items = world.itemsByContext?.[MEMORY_CONTEXT_ID] ?? [];
     const context = CONTEXTS.find((c) => c.id === MEMORY_CONTEXT_ID);
     const stamps = items.map((item) => item.createdAt ?? "").filter(Boolean).sort();
     const lastSavedAt = stamps.length ? stamps[stamps.length - 1] : null;
