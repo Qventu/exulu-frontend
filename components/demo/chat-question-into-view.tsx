@@ -2,7 +2,20 @@
 
 import { useEffect } from "react";
 
+import { CHAPTERS, resolveStep, type DemoStep } from "@/lib/demo/tour";
+
 import { useTour } from "./tour-provider";
+
+/**
+ * Which question to put at the top once the exchange has settled. The last
+ * one by default — the exchange the step is about, question above answer. A
+ * step that anchors the conversation at its START (`anchor: "chat-messages"`,
+ * `scrollBlock: "start"`) is about the beginning: chapter 9's "Worum es
+ * geht" opens a stored session on its inbound mail.
+ */
+export function questionToAlign(step: Pick<DemoStep, "anchor" | "scrollBlock"> | undefined): "first" | "last" {
+  return step?.anchor === "chat-messages" && step.scrollBlock === "start" ? "first" : "last";
+}
 
 /**
  * Brings the QUESTION back on screen once a chat exchange has finished.
@@ -86,7 +99,8 @@ export function ChatQuestionIntoView() {
       }
 
       const questions = conv.querySelectorAll(".is-user");
-      const question = questions[questions.length - 1];
+      const which = questionToAlign(resolveStep(CHAPTERS, position) ?? undefined);
+      const question = which === "first" ? questions[0] : questions[questions.length - 1];
       if (!(question instanceof HTMLElement)) return;
 
       // Offset arithmetic rather than scrollIntoView: the latter walks every
@@ -106,6 +120,7 @@ export function ChatQuestionIntoView() {
       window.removeEventListener("wheel", takeOver);
       window.removeEventListener("touchmove", takeOver);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- position is read by chapter and step
   }, [position.chapter, position.step]);
 
   return null;
