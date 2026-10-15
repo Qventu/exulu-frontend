@@ -838,6 +838,8 @@ async function main() {
       /Untitled transcript|Unbenanntes Transkript|Test Bild/,
       /\$\s?\d/,
       /Noch nie ausgeführt/,
+      // A raw knowledge-base id ("software_documentation_context") anywhere on screen.
+      /\b[a-z]+(?:_[a-z]+)*_context\b/,
       // English absolute dates ("Oct 6, 2026", "Sep 30") from a formatter without a locale.
       /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}(, \d{4})?\b/,
     ];
