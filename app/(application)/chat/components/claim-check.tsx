@@ -7,7 +7,7 @@ import type { ComponentType, ReactNode } from "react";
 import { Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/sources";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { ClaimCheckClaim, ClaimCheckResult, ClaimVerdict, ScoreLabel } from "@/lib/api/claim-check";
+import type { ClaimCheckClaim, ClaimCheckResult, ClaimCheckSourceType, ClaimVerdict, ScoreLabel } from "@/lib/api/claim-check";
 
 import { summarise } from "./claim-check-data";
 
@@ -54,6 +54,30 @@ const VERDICT_KEY: Record<ClaimVerdict, "claimCheckVerdictSupported" | "claimChe
   supported: "claimCheckVerdictSupported",
   contradicted: "claimCheckVerdictContradicted",
   unsupported: "claimCheckVerdictUnsupported",
+};
+
+/**
+ * Every source type the manifest can name, each to its own copy key — the
+ * panel must never say "document" for a web page or a recalled memory. A
+ * type outside this map (absent, or some value this client does not
+ * recognise) has no entry here, which is the signal for the evidence line to
+ * fall back to its plain name+quote rendering rather than guess a label.
+ */
+const SOURCE_TYPE_KEY: Record<
+  ClaimCheckSourceType,
+  | "claimCheckSourceKnowledgeBase"
+  | "claimCheckSourceDocument"
+  | "claimCheckSourceMemory"
+  | "claimCheckSourceWeb"
+  | "claimCheckSourceSessionItem"
+  | "claimCheckSourceOther"
+> = {
+  knowledge_base: "claimCheckSourceKnowledgeBase",
+  document: "claimCheckSourceDocument",
+  memory: "claimCheckSourceMemory",
+  web: "claimCheckSourceWeb",
+  session_item: "claimCheckSourceSessionItem",
+  other: "claimCheckSourceOther",
 };
 
 /**
@@ -165,6 +189,7 @@ export function ClaimCheck(props: {
   state: ClaimCheckState;
   guestMode?: boolean;
   sourceNames?: Record<string, string>;
+  sourceTypes?: Record<string, ClaimCheckSourceType>;
 }) {
   if (props.state === null) return null;
   // One stable live region around every state this panel can be in.
@@ -192,10 +217,12 @@ function ClaimCheckBody({
   state,
   guestMode: _guestMode = false,
   sourceNames,
+  sourceTypes,
 }: {
   state: ClaimCheckState;
   guestMode?: boolean;
   sourceNames?: Record<string, string>;
+  sourceTypes?: Record<string, ClaimCheckSourceType>;
 }) {
   const t = useTranslations("chat");
 
@@ -270,7 +297,7 @@ function ClaimCheckBody({
         <EngineNotes notes={result.notes} title={t("claimCheckNotesTitle")} />
         <ol className="space-y-3">
           {result.claims.map((claim) => (
-            <ClaimRow key={claim.id} claim={claim} sourceNames={sourceNames} t={t} />
+            <ClaimRow key={claim.id} claim={claim} sourceNames={sourceNames} sourceTypes={sourceTypes} t={t} />
           ))}
         </ol>
       </SourcesContent>
@@ -281,10 +308,12 @@ function ClaimCheckBody({
 function ClaimRow({
   claim,
   sourceNames,
+  sourceTypes,
   t,
 }: {
   claim: ClaimCheckClaim;
   sourceNames?: Record<string, string>;
+  sourceTypes?: Record<string, ClaimCheckSourceType>;
   t: ReturnType<typeof useTranslations>;
 }) {
   return (
@@ -300,8 +329,27 @@ function ClaimRow({
         <ul className="mt-1 space-y-0.5">
           {claim.evidence.map((evidence, i) => {
             const name = sourceNames?.[evidence.sourceId];
+            // A type outside SOURCE_TYPE_KEY (absent, or a value this client
+            // does not recognise) renders no label at all — the plain
+            // name+quote line the panel has always had — rather than ever
+            // showing the raw type string or the raw source id.
+            const sourceType = sourceTypes?.[evidence.sourceId];
+            const typeKey = sourceType ? SOURCE_TYPE_KEY[sourceType] : undefined;
+            const typeLabel = typeKey ? t(typeKey) : undefined;
             return (
               <li key={i} className="text-xs italic text-muted-foreground">
+                {/* A dash, not a colon: `claimCheckEvidenceNamed` already
+                    reads "{source}: „{quote}“", so a colon here would stack
+                    two colons in one line ("Erinnerung: Sprache: „…“") and
+                    read as a mistake. The dash and its spacing live in the
+                    message files (`claimCheckEvidenceSourceType`, "{label} – ")
+                    so a locale can change both — German uses the en dash its
+                    own `claimCheckPartial` does, English the em dash. */}
+                {typeLabel && (
+                  <span className="not-italic font-medium">
+                    {t("claimCheckEvidenceSourceType", { label: typeLabel })}
+                  </span>
+                )}
                 {name
                   ? t("claimCheckEvidenceNamed", { source: name, quote: evidence.quote })
                   : t("claimCheckEvidenceQuote", { quote: evidence.quote })}
