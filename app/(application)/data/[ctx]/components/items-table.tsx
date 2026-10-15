@@ -13,6 +13,9 @@
  * Below md the table renders as a card list (responsive.md T1).
  */
 
+import { motion, useReducedMotion } from "framer-motion";
+
+import { isDemoMode } from "@/lib/demo/flag";
 import { useApolloClient, useMutation } from "@apollo/client";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import {
@@ -41,6 +44,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+// TableRow forwards its ref, so framer-motion can drive it as a <tr>.
+const MotionTableRow = motion.create(TableRow);
 import { BulkAccessDialog } from "@/components/widgets/bulk-access-dialog";
 import { ItemsActionBar } from "@/components/widgets/items-action-bar";
 import { cn } from "@/lib/utils";
@@ -99,6 +105,9 @@ export function ItemsTable({
   viewSwitch,
 }: ItemsTableProps) {
   const t = useTranslations("knowledge");
+  const reduceMotion = useReducedMotion();
+  // The mobile list's staggered entrance (the table rows carry their own).
+  const demoEntrance = isDemoMode() && !reduceMotion;
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -353,12 +362,13 @@ export function ItemsTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((item) => {
+                {items.map((item, index) => {
                   const id = item.id ?? "";
                   const globalId = itemGlobalId(context.id, id);
                   return (
                     <ItemRow
                       key={id}
+                      index={index}
                       item={item}
                       selected={selection.has(id)}
                       active={selectedItemId === id}
@@ -375,11 +385,16 @@ export function ItemsTable({
 
           {/* Mobile card list (T1) */}
           <ul className="flex flex-col gap-2 md:hidden">
-            {items.map((item) => {
+            {items.map((item, index) => {
               const id = item.id ?? "";
               const globalId = itemGlobalId(context.id, id);
               return (
-                <li key={id}>
+                <motion.li
+                  key={id}
+                  initial={demoEntrance ? { opacity: 0, y: 6 } : false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.24, delay: index * 0.06, ease: "easeOut" }}
+                >
                   <ItemCard
                     item={item}
                     selected={selection.has(id)}
@@ -389,7 +404,7 @@ export function ItemsTable({
                     favorited={isFavorite(globalId)}
                     onToggleFavorite={() => handleToggleFavorite(globalId)}
                   />
-                </li>
+                </motion.li>
               );
             })}
           </ul>
@@ -451,6 +466,8 @@ export function ItemsTable({
 // ---------------------------------------------------------------------------
 
 interface RowProps {
+  /** Position in the list, for the demo's staggered entrance. */
+  index: number;
   item: Item;
   selected: boolean;
   active: boolean;
@@ -462,6 +479,7 @@ interface RowProps {
 
 function ItemRow({
   item,
+  index,
   selected,
   active,
   onToggle,
@@ -470,6 +488,11 @@ function ItemRow({
   onToggleFavorite,
 }: RowProps) {
   const t = useTranslations("knowledge");
+  const reduceMotion = useReducedMotion();
+  // Demo only: chapter 3's list fills under "Die Aufnahme läuft"; rows
+  // enter one after another instead of all at once. Off outside the demo
+  // and under reduced motion.
+  const demoEntrance = isDemoMode() && !reduceMotion;
   const rawTags: unknown = item.tags;
   const tags: string[] = Array.isArray(rawTags)
     ? (rawTags as string[])
@@ -480,12 +503,15 @@ function ItemRow({
     typeof item.chunks_count === "number" ? item.chunks_count : 0;
 
   return (
-    <TableRow
+    <MotionTableRow
       data-state={selected ? "selected" : undefined}
       className={cn(
         "cursor-pointer transition-colors",
         active && "bg-accent/50",
       )}
+      initial={demoEntrance ? { opacity: 0, y: 6 } : false}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.24, delay: index * 0.06, ease: "easeOut" }}
     >
       <TableCell onClick={(e) => e.stopPropagation()}>
         <Checkbox
@@ -537,7 +563,7 @@ function ItemRow({
           }
         />
       </TableCell>
-    </TableRow>
+    </MotionTableRow>
   );
 }
 

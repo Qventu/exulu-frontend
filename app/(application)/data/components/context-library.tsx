@@ -162,9 +162,10 @@ export function ContextLibrary() {
         {rows.length > 0 && (
           <div className="rounded-md border" data-demo-id="knowledge-contexts">
             <ul className="divide-y divide-border">
-              {rows.map((row) => (
+              {rows.map((row, index) => (
                 <LibraryRow
                   key={row.id}
+                index={index}
                   row={row}
                   icon={icons[row.id]}
                   canEdit={canEditIcons}

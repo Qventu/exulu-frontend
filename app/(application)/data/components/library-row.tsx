@@ -28,6 +28,9 @@
  * vertical padding).
  */
 
+import { motion, useReducedMotion } from "framer-motion";
+
+import { isDemoMode } from "@/lib/demo/flag";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import * as React from "react";
@@ -52,10 +55,14 @@ export interface LibraryRowProps {
   canEdit?: boolean;
   /** Persist (or clear, with `null`) this context's icon. */
   onSetIcon?: (contextId: string, name: string | null) => void;
+  /** Position in the list, for the demo's staggered entrance. */
+  index: number;
 }
 
-export function LibraryRow({ row, icon, canEdit, onSetIcon }: LibraryRowProps) {
+export function LibraryRow({ row, icon, canEdit, onSetIcon, index }: LibraryRowProps) {
   const t = useTranslations("knowledge");
+  const reduceMotion = useReducedMotion();
+  const demoEntrance = isDemoMode() && !reduceMotion;
 
   const showMeta = KNOWLEDGE_CONTEXT_AGGREGATES_SUPPORTED;
   const showHealth = KNOWLEDGE_CONTEXT_HEALTH_SUPPORTED;
@@ -111,7 +118,17 @@ export function LibraryRow({ row, icon, canEdit, onSetIcon }: LibraryRowProps) {
     );
 
   return (
-    <li className="group relative transition-colors hover:bg-accent/50">
+    <motion.li
+      className="group relative transition-colors hover:bg-accent/50"
+      // Demo only: chapter 2's list grows 0 → 3 → 7 across three steps and
+      // the step says the bases are being created; rows that pop in all at
+      // once read as a reload. Keyed by id, so a refetch that grows the list
+      // animates only the new rows. Off outside the demo and under reduced
+      // motion (initial={false} renders the resting state).
+      initial={demoEntrance ? { opacity: 0, y: 6 } : false}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.24, delay: index * 0.06, ease: "easeOut" }}
+    >
       {/* Stretched link: covers the whole row for navigation, sits behind the
           content so the picker button (pointer-events-auto) stays clickable. */}
       <Link
@@ -166,6 +183,6 @@ export function LibraryRow({ row, icon, canEdit, onSetIcon }: LibraryRowProps) {
           </div>
         )}
       </div>
-    </li>
+    </motion.li>
   );
 }
