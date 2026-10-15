@@ -15,6 +15,16 @@ interface DemoChatTransportOptions {
   turns: ScriptedTurn[] | (() => ScriptedTurn[]);
   /** Pause between chunks, in ms. Tuned for realism, not speed. */
   delayMs?: number;
+  /**
+   * The search beat. Tool chunks are built back to back, so without these
+   * the assistant "searched" for 36 ms — the retrieval card appeared after
+   * the answer, and the step that says "watch it search" had nothing to
+   * watch. The first hold is the search itself (the card shows a searching
+   * state meanwhile, components/message-renderer.tsx); the second lets the
+   * trace lines land before the first sentence.
+   */
+  holdAfterToolInputMs?: number;
+  holdAfterToolOutputMs?: number;
   /** Injected so tests run instantly and deterministically. */
   sleep?: (ms: number) => Promise<void>;
 }
@@ -30,17 +40,27 @@ const realSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 export class DemoChatTransport implements ChatTransport<UIMessage> {
   private readonly resolveTurns: () => ScriptedTurn[];
   private readonly delayMs: number;
+  private readonly holdAfterToolInputMs: number;
+  private readonly holdAfterToolOutputMs: number;
   private readonly sleep: (ms: number) => Promise<void>;
   private cursor = 0;
   /** The script the cursor is counting through, to notice a chapter change. */
   private playing: ScriptedTurn[] | null = null;
 
-  constructor({ turns, delayMs = 18, sleep = realSleep }: DemoChatTransportOptions) {
+  constructor({
+    turns,
+    delayMs = 18,
+    holdAfterToolInputMs = 1800,
+    holdAfterToolOutputMs = 600,
+    sleep = realSleep,
+  }: DemoChatTransportOptions) {
     if (Array.isArray(turns) && turns.length === 0) {
       throw new Error("DemoChatTransport needs at least one turn to replay.");
     }
     this.resolveTurns = typeof turns === "function" ? turns : () => turns;
     this.delayMs = delayMs;
+    this.holdAfterToolInputMs = holdAfterToolInputMs;
+    this.holdAfterToolOutputMs = holdAfterToolOutputMs;
     this.sleep = sleep;
   }
 
@@ -67,7 +87,7 @@ export class DemoChatTransport implements ChatTransport<UIMessage> {
     this.cursor += 1;
 
     const chunks = buildChunks(turn);
-    const { sleep, delayMs } = this;
+    const { sleep, delayMs, holdAfterToolInputMs, holdAfterToolOutputMs } = this;
     const signal = options?.abortSignal;
 
     return new ReadableStream<UIMessageChunk>({
@@ -76,6 +96,11 @@ export class DemoChatTransport implements ChatTransport<UIMessage> {
           if (signal?.aborted) break;
           controller.enqueue(chunk);
           await sleep(delayMs);
+          const hold =
+            chunk.type === "tool-input-available" ? holdAfterToolInputMs
+            : chunk.type === "tool-output-available" ? holdAfterToolOutputMs
+            : 0;
+          if (hold > 0 && !signal?.aborted) await sleep(hold);
         }
         controller.close();
       },
