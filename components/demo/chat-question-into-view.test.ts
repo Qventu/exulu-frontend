@@ -5,6 +5,9 @@ import { questionToAlign } from "./chat-question-into-view";
 describe("questionToAlign", () => {
   it("aligns the LAST question by default — a finished exchange, the question above its answer", () => {
     expect(questionToAlign({ anchor: "chat-messages" })).toBe("last");
+    // Chapter 5 asks the question from the composer; the step's anchor is the
+    // composer, and the exchange above it is what the alignment is for.
+    expect(questionToAlign({ anchor: "chat-composer" })).toBe("last");
     expect(questionToAlign({ anchor: null })).toBe("last");
     expect(questionToAlign(undefined)).toBe("last");
   });
@@ -15,6 +18,8 @@ describe("questionToAlign", () => {
     // sub-project 8 walk, email.4).
     expect(questionToAlign({ anchor: "chat-tool-approval" })).toBeNull();
     expect(questionToAlign({ anchor: "chat-tool-trace", scrollBlock: "start" })).toBeNull();
+    expect(questionToAlign({ anchor: "chat-retrieval" })).toBeNull();
+    expect(questionToAlign({ anchor: "chat-citation" })).toBeNull();
   });
 
   it("aligns the FIRST question when a step anchors the conversation at its start", () => {

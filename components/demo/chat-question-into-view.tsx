@@ -19,7 +19,8 @@ export function questionToAlign(
   // A step anchored on a CARD inside the conversation (a tool trace, the
   // approval card) gets null: the ring's own scroll must win, or the card
   // ends up off the screen (found on the sub-project 8 walk, email.4).
-  if (step?.anchor && step.anchor !== "chat-messages") return null;
+  const anchor = step?.anchor ?? null;
+  if (anchor && anchor !== "chat-messages" && anchor !== "chat-composer") return null;
   return step?.anchor === "chat-messages" && step.scrollBlock === "start" ? "first" : "last";
 }
 
