@@ -450,13 +450,14 @@ describe("the tour after sub-project 5", () => {
     expect(steps.map((s) => s.id)).toEqual(["meetings-list", "meetings-guide"]);
   });
 
-  it("is 36 steps long", () => {
+  it("is 37 steps long", () => {
     // 37 before: minus the raw transcript, plus the model catalogue, plus the
     // approval card. The walker derives its list from CHAPTERS, so this is
     // the one place the number is written down.
     // Then minus chapter 11's disclaimer step and chapter 12's chat-screen
     // step (marketing, 2026-10-15).
-    expect(CHAPTERS.reduce((n, c) => n + c.steps.length, 0)).toBe(36);
+    // Plus chapter 9's request step (sub-project 8).
+    expect(CHAPTERS.reduce((n, c) => n + c.steps.length, 0)).toBe(37);
   });
 });
 

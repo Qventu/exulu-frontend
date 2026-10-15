@@ -1,6 +1,6 @@
 import type { DemoChapter } from "../tour";
 import { ALGI_ROUTINE_ID } from "../fixtures/chapter-email";
-import { ALGI_CHAT } from "../routes";
+import { ALGI_CHAT, ALGI_RUNS_OPEN } from "../routes";
 
 export const emailChapter: DemoChapter = {
   id: "email",
@@ -37,16 +37,27 @@ export const emailChapter: DemoChapter = {
     },
     {
       id: "email-runs",
-      route: `/workflows/${ALGI_ROUTINE_ID}`,
-      anchor: "routine-runs",
-      // "start" for the same reason as the chunks step: the anchor heads the
-      // runs list, and the step is about the runs.
+      route: ALGI_RUNS_OPEN,
+      anchor: "routine-run-open",
       scrollBlock: "start",
-      title: "Auch schiefgegangene Läufe bleiben sichtbar",
+      title: "Fünfundzwanzig Anfragen, von selbst bearbeitet",
       content: [
         {
           kind: "paragraph",
-          text: "In diesem Beispiel gibt es 25 Läufe: 14 erledigt, 8 fehlgeschlagen, einer wartet auf einen Menschen, zwei wurden abgewiesen. Ein Verkäufer korrigiert die Entwürfe, und jede Korrektur wandert sofort ins Gedächtnis.",
+          text: "In zwei Wochen sind hier 25 Anfragen eingegangen und ohne Zutun bearbeitet worden. Eine ist geöffnet: eine Ersatzteilanfrage per Mail, mit Absender und Betreff. Was daraus wurde, siehst du im nächsten Schritt.",
+        },
+      ],
+    },
+    {
+      id: "email-request",
+      route: ALGI_CHAT,
+      anchor: "chat-messages",
+      scrollBlock: "start",
+      title: "Worum es geht",
+      content: [
+        {
+          kind: "paragraph",
+          text: "Die Mail oben ist die Anfrage: ein Dichtungssatz für einen Hydraulikheber, Kommissionsnummer dabei. Der Assistent hat den Katalog durchsucht und einen Angebotsentwurf geschrieben — drei Positionen, Preise, Empfehlung. Ein Verkäufer hat ihn dreimal korrigiert; jede Korrektur ist ins Gedächtnis gewandert.",
         },
       ],
     },

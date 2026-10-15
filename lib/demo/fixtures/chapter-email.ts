@@ -134,7 +134,7 @@ export const ALGI_EMAIL_TRIGGER = {
  * the distribution the comment above describes is unchanged. Done in the
  * mapping, not in algi-runs.json, so the export stays the export.
  */
-const APPROVAL_RUN_ID = "f74bb00b-fd2f-4a7f-8d51-7215a35bc8c2";
+export const APPROVAL_RUN_ID = "f74bb00b-fd2f-4a7f-8d51-7215a35bc8c2";
 const EXPORTED_WAITING_RUN_ID = "0ffccf21-78c0-42fe-9c63-3b613ab96d4a";
 
 const shownState = (run: RoutineRun): string =>

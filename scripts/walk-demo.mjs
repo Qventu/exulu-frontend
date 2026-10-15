@@ -380,8 +380,9 @@ const CLICK_PROBES = {
   "evals.2": { attempts: [{ spec: { kind: "text", containerSelector: "main", tag: "button", textIncludes: "Ergebnisse" }, describe: "the 'Ergebnisse' tab — would swap the test-cases panel back for the results matrix" }] },
   "email.0": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="routine-runs"] button[role="combobox"]' }, describe: "the 'Alle Status' filter combobox — would open its dropdown" }] },
   "email.1": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="routine-email-trigger"] button[role="switch"]' }, describe: "the trigger's enabled Switch — would toggle it off" }] },
-  "email.2": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="routine-runs"] button[role="combobox"]' }, describe: "the 'Alle Status' filter combobox — would open its dropdown" }] },
+  "email.2": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="routine-run-open"] a[href^="/chat/"]' }, describe: "the open run's 'Unterhaltung öffnen' link — would navigate to the session" }] },
   "email.3": COPY_BUTTON,
+  "email.4": COPY_BUTTON,
   // The transcripts list is rows of links now (the review sheet became a
   // page), and the review page's operable controls are its review actions.
   "meetings.0": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="transcriptions"] a[href^="/transcriptions/review/"]' }, describe: "a transcript row link — would navigate to its review page" }] },

@@ -25,6 +25,7 @@ import {
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
@@ -97,7 +98,12 @@ export function RoutineRunsList({
     needsAttention: defaultNeedsAttention,
   });
   const [searchInput, setSearchInput] = React.useState("");
-  const [expandedId, setExpandedId] = React.useState<string | null>(null);
+  // `?run=<id>` opens that row on load — a deep link for a notification or a
+  // guided walk. Read once; the user's clicks own the state afterwards.
+  const searchParams = useSearchParams();
+  const [expandedId, setExpandedId] = React.useState<string | null>(
+    () => searchParams?.get("run") ?? null,
+  );
   const [showRawById, setShowRawById] = React.useState<Record<string, boolean>>(
     {},
   );
@@ -638,7 +644,7 @@ function RunRow({
       </div>
 
       {expanded ? (
-        <div className="space-y-3 border-t bg-muted/10 px-3 py-3">
+        <div className="space-y-3 border-t bg-muted/10 px-3 py-3" data-demo-id="routine-run-open">
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
             {run.trigger_metadata?.from ? (
               <>

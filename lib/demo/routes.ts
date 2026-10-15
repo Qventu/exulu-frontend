@@ -7,7 +7,7 @@
  */
 import { DEMO_AGENT_ID, TECHDOC_SESSION_ID } from "./fixtures/chapter-techdoc";
 import { MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
-import { ALGI_AGENT_ID, ALGI_SESSION_ID } from "./fixtures/chapter-email";
+import { ALGI_AGENT_ID, ALGI_ROUTINE_ID, ALGI_SESSION_ID, APPROVAL_RUN_ID } from "./fixtures/chapter-email";
 
 /**
  * The chat chapters run on the product's own route, not a demo-only one.
@@ -27,6 +27,9 @@ export const MEMORY_CHAT = `/chat/${DEMO_AGENT_ID}/${MEMORY_SESSION_ID}`;
 
 /** Chapter 9's last step: ALFREDO's stored session, ending on an approval card. */
 export const ALGI_CHAT = `/chat/${ALGI_AGENT_ID}/${ALGI_SESSION_ID}`;
+
+/** Chapter 9's runs step: the routine's runs with the waiting run expanded (`?run=`). */
+export const ALGI_RUNS_OPEN = `/workflows/${ALGI_ROUTINE_ID}?run=${APPROVAL_RUN_ID}`;
 
 /**
  * The closing step's booking link — a HubSpot meetings URL.

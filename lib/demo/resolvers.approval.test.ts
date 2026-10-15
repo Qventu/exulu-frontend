@@ -17,7 +17,7 @@ import {
   ALGI_SESSION_ID,
   quoteDraftFrom,
 } from "./fixtures/chapter-email";
-import { ALGI_CHAT } from "./routes";
+import { ALGI_CHAT, ALGI_RUNS_OPEN } from "./routes";
 import { runDemoOperation as run, runDemoQueryThroughCache } from "./test-support";
 import { CHAPTERS } from "./tour";
 
@@ -79,10 +79,14 @@ describe("chapter 9 opens the waiting run's session on a pending approval", () =
     expect(quoteDraftFrom("no rule")).toBe("no rule");
   });
 
-  it("is the chapter's last step, after the runs list that announces it", () => {
+  it("shows the run, then what it is about, then the approval", () => {
     const steps = CHAPTERS.find((c) => c.id === "email")!.steps;
-    expect(steps.map((s) => s.id)).toEqual(["email-routine", "email-trigger", "email-runs", "email-approval"]);
+    expect(steps.map((s) => s.id)).toEqual(["email-routine", "email-trigger", "email-runs", "email-request", "email-approval"]);
+    expect(steps[2].route).toBe(ALGI_RUNS_OPEN);
+    expect(steps[2].anchor).toBe("routine-run-open");
     expect(steps[3].route).toBe(ALGI_CHAT);
-    expect(steps[3].anchor).toBe("chat-tool-approval");
+    expect(steps[3].anchor).toBe("chat-messages");
+    expect(steps[3].scrollBlock).toBe("start");
+    expect(steps[4].anchor).toBe("chat-tool-approval");
   });
 });
