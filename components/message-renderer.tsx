@@ -1,6 +1,6 @@
 "use client"
 
-import { SEARCHING_LABEL } from "@/lib/demo/overlays";
+import { contextDisplayName, SEARCHING_LABEL } from "@/lib/demo/overlays";
 import { useLocale, useTranslations } from "next-intl"
 import { DynamicToolUIPart, UIMessage } from "ai"
 import { isDemoMode } from "@/lib/demo/flag"
@@ -1904,7 +1904,7 @@ const SearchResultItem = ({ item }: { item: ItemWithChunks }) => {
 
       {item.external_id && (
         <small className="text-xs text-muted-foreground">
-          {item.context.name} {item.external_id && `| ${item.external_id}`} | {item.id}
+          {isDemoMode() ? contextDisplayName(item.context.name) : item.context.name} {item.external_id && `| ${item.external_id}`} | {item.id}
         </small>
       )}
 
