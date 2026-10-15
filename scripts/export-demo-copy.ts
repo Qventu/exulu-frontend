@@ -84,7 +84,9 @@ function fieldsOfBlock(block: ContentBlock): Array<{ feld: string; text: string 
     case "figure":
       return block.alt ? [{ feld: "Bild-Alt", text: block.alt }] : [];
     case "sequence":
-      return block.steps.map((text, i) => ({ feld: `Sequenzschritt ${i + 1}`, text }));
+      return block.steps.map((text, i) => ({ feld: `Sequenzschritt `, text }));
+    case "cta":
+      return [{ feld: "Schaltfläche", text: block.label }];
     default: {
       const unhandled: never = block;
       return unhandled;
