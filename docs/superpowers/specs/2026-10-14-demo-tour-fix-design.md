@@ -159,3 +159,26 @@ Browser (`scripts/walk-demo.mjs`, Playwright outside the repo): Weiter mode is t
 7. **Copy follows the screen.** `zugriff.0` and `memory.3` are reworded because an agent's access section is not an item's and a base row is not an item row; `memory.3`'s count is computed from the fixture.
 8. **No `#access` hash** in the route: `hrefFor` appends `?tour=` to the route string. The anchor plus `scrollBlock: "start"` scrolls, as `config.0` does.
 9. **Off-rails limit, not fixed:** the approval card's buttons send through the demo transport, which replays the techdoc script for a chapter without one. The tour is on rails; ALFREDO has no script.
+
+## Sub-project 6 — Du-Form und Marketing-Feedback (2026-10-15)
+
+**Decision (Daniel, 2026-10-15):** the tour addresses the visitor as *du*. Marketing's review of the 6 October texts (`OPEN-IMP-Demo-Texte.docx`, 37 steps, 135 fields) is adopted as the baseline wording; the earlier rule "German, Sie-form" (Goals, SP3 overlays) is superseded by this section for every string the demo owns. Product UI strings in `messages/de.json` are a product matter and stay as they are (mixed; mostly Sie).
+
+**Register.**
+- The visitor as a person: *du / dein / dir / dich*, lowercase. Imperatives in du-form: "Sieh zu", "Öffne", "Schau".
+- The visitor's company and what belongs to it: *euer / eure* ("euer Posteingang", "eure Mitarbeiter", "eure Handbücher", "euer Serviceteam", "eure Zahlen"). *dein* only for what the visitor does or sees in the tour ("deine Korrektur", "dein Team" when the visitor is addressed as the one who configures).
+- Never *Sie / Ihnen / Ihr(e)* in a tour string. Real product data (chat answers, transcripts, run rows) is untouched, as the review document's own rules say.
+
+**Which texts change.**
+- Every field with a "Neuer Text" in marketing's document is applied, adjusted to the register above. Five are corrected where they contradict the screen, each with the reason recorded in the plan: 5.1 (the replay is paced — "ein echter Austausch, so wie er stattfand", not "Real-Geschwindigkeit"); 6.2 (the stored answer is an honest miss, so "unvollständig", not "falsch"); 7.5 (a setting, not learning); 9.3 ("Läufe", shown, not "Routinen gespeichert"); 4.2 ("ohne dass" without the comma).
+- Every field marketing left empty keeps its wording but switches register where it contains Sie-form.
+- Steps rewritten since 6 October (4.1 access section, 6.4 memory base, 9.4 approval card, 10.1 computed counts, 11.2 models, 12.2 closing scene) get du-form versions of their current copy.
+- The 12 chapter goals (SP2), the five scenes (`lib/demo/scenes.ts`), the three overlay strings with Sie-form (`KNOWLEDGE_LIBRARY.description`, `EMPTY_STATES.knowledgeItems.description`, and the "nicht Teil der Demo" notice in `components/demo/demo-unavailable.tsx`) switch register. `MEMORY_OVERVIEW` (SP5's Sie overlay of a du-form product string) is removed with its test.
+- Decided with the register: 1.1 says "technischen Unternehmen"; 12.2 reads "zwei Wochen Setup-Zeit" (stat label "Setup-Zeit", not "echte Fragen eures Serviceteams"); 7.1 and 7.2 drop the counts as marketing wrote them; 10.1 keeps its computed counts and the failed recordings (the chapter's credibility device) under marketing's softer title.
+- Cross-references ("Kapitel 5/6/7") are re-checked against the order; numbers that fixtures determine stay computed (`germanCount`, `meetingTally`, `MEMORY_COUNT_AFTER_CORRECTION`).
+
+**Automated rules.** The walker's du-form deny rule is removed; a Sie-form check over the panel's and the scenes' text replaces it (`Ihnen|Ihrer|Ihrem|Ihren|Ihre`, and `Sie` anywhere but sentence-initial). `lib/demo/chapters/index.test.ts` gains the same check over every title, goal, content block and scene block; `overlays.test.ts` asserts du-form instead of Sie-form. The honesty register in `tour.test.ts` (Beispielwerte, keine Einsparung, no claim phrasings, no client names outside chapter 12) is unchanged.
+
+**Sign-off.** The copy export (`scripts/export-demo-copy.ts`) after the change is the sign-off sheet for Daniel, Doro and marketing; the plan lists only the deviations from marketing's wording.
+
+**Acceptance.** Walker 38/38 on Daniel's build with the new Sie-check and zero leaks; suite green; no tour string contains Sie-form; every "Neuer Text" from the document is either applied or listed as a deviation with its reason.
