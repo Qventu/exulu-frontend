@@ -94,7 +94,7 @@ export const kostenChapter: DemoChapter = {
         },
         {
           kind: "paragraph",
-          text: "Verbrauch wird laufend erfasst — pro Team, Nutzer und Assistent. Sie sehen, wofür ausgegeben wurde, nicht nur wie viel.",
+          text: "Verbrauch wird laufend erfasst — pro Team, Nutzer und Assistent. Du siehst, wofür ausgegeben wurde, nicht nur wie viel.",
         },
         {
           kind: "callout",
@@ -139,7 +139,7 @@ export const kostenChapter: DemoChapter = {
       content: [
         {
           kind: "paragraph",
-          text: "Wer wie viel ausgeben darf, entscheiden Sie. Wir behaupten hier keine Einsparung — was die Einführung wert ist, hängt von Ihren Zahlen ab, nicht von unseren.",
+          text: "Wer wie viel ausgeben darf, entscheidet ihr. Wir behaupten hier keine Einsparung — was die Einführung wert ist, hängt von euren Zahlen ab, nicht von unseren.",
         },
       ],
     },

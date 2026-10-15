@@ -110,14 +110,14 @@ export const DEMO_SCENES: Record<string, { content: ContentBlock[] }> = {
     content: [
       {
         kind: "paragraph",
-        text: "NEW Lift Steuerungsbau (technische Dokumentation und Service) und ALGI Hydraulic (Angebots- und Ersatzteilprozesse) arbeiten produktiv mit OPEN IMP. Alles, was Sie eben gesehen haben, ist daraus abgeleitet — verallgemeinert, aber realistisch.",
+        text: "Die Unternehmen NEW Lift Steuerungsbau (technische Dokumentation und Service) und ALGI Hydraulic (Angebots- und Ersatzteilprozesse) arbeiten bereits jetzt produktiv mit OPEN IMP. Alles, was du eben gesehen hast, ist daraus abgeleitet — aus Datenschutzgründen verallgemeinert, aber realistisch.",
       },
-      { kind: "stat", value: "10", label: "Ihrer Handbücher" },
-      { kind: "stat", value: "2 Wochen", label: "echte Fragen Ihres Serviceteams" },
+      { kind: "stat", value: "10", label: "eurer Handbücher" },
+      { kind: "stat", value: "2 Wochen", label: "Setup-Zeit" },
       { kind: "stat", value: "30 Minuten", label: "reichen für die Planung" },
       {
         kind: "paragraph",
-        text: "Zehn Ihrer Handbücher, zwei Wochen, echte Fragen Ihres Serviceteams — auf genau dem, was Sie eben gesehen haben. Dreißig Minuten reichen für die Planung.",
+        text: "Zehn eurer Handbücher, zwei Wochen Setup-Zeit, echte Fragen eures Serviceteams — genau auf der Plattform, die du gerade gesehen hast. 30 Minuten reichen für die Planung völlig aus.",
       },
       ...(DEMO_BOOKING_URL ? [{ kind: "cta" as const, label: "30-Minuten-Termin buchen", href: DEMO_BOOKING_URL }] : []),
     ],

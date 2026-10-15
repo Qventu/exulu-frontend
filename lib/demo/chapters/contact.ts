@@ -7,19 +7,19 @@ export const contactChapter: DemoChapter = {
   // The case studies live HERE, not on the demo data: the premise is
   // generalized-but-realistic data with no attribution, and the one place
   // names are allowed is next to the ask, where references belong.
-  title: "Sprechen Sie mit uns",
-  goal: "Wer damit arbeitet, und wie es bei Ihnen weitergeht.",
+  title: "Sprich mit uns",
+  goal: "Wer damit arbeitet, und wie es bei euch weitergeht.",
   steps: [
     {
       id: "contact-references",
       route: TECHDOC_CHAT,
       anchor: null,
-      title: "Wer damit arbeitet",
+      title: "Wer jetzt schon mit OPEN IMP arbeitet",
       content: [
         { kind: "figure", src: "/demo/structure.webp", alt: "Anlagen unserer Referenzkunden" },
         {
           kind: "paragraph",
-          text: "NEW Lift Steuerungsbau (technische Dokumentation und Service) und ALGI Hydraulic (Angebots- und Ersatzteilprozesse) arbeiten produktiv mit OPEN IMP. Alles, was Sie eben gesehen haben, ist daraus abgeleitet — verallgemeinert, aber realistisch.",
+          text: "Die Unternehmen NEW Lift Steuerungsbau (technische Dokumentation und Service) und ALGI Hydraulic (Angebots- und Ersatzteilprozesse) arbeiten bereits jetzt produktiv mit OPEN IMP. Alles, was du eben gesehen hast, ist daraus abgeleitet — aus Datenschutzgründen verallgemeinert, aber realistisch.",
         },
       ],
     },
@@ -31,7 +31,7 @@ export const contactChapter: DemoChapter = {
       // lib/demo/scenes.ts like every scene's.
       route: sceneRoute("contact-close"),
       anchor: null,
-      title: "Mit Ihren eigenen Dokumenten",
+      title: "Eine Demo mit euren eigenen Dokumenten",
       content: [],
       ...(DEMO_BOOKING_URL
         ? { cta: { label: "30-Minuten-Termin buchen", href: DEMO_BOOKING_URL } }

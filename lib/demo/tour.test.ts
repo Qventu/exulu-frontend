@@ -394,7 +394,7 @@ describe("the closing call to action", () => {
     // proposes something specific — ten manuals, two weeks, their own service
     // team's questions — while the close used to invent a vaguer ask than the
     // one they had already been made.
-    expect(closing()).toMatch(/Zehn Ihrer Handbücher/i);
+    expect(closing()).toMatch(/Zehn eurer Handbücher/i);
     expect(closing()).toMatch(/zwei Wochen/i);
   });
 

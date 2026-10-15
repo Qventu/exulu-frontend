@@ -16,7 +16,7 @@ export const evalsChapter: DemoChapter = {
         { kind: "figure", src: "/demo/ch5-evals.webp", alt: "Testreihen für die Antwortqualität" },
         {
           kind: "paragraph",
-          text: "Eine gute Antwort kann jeder zeigen. Die Frage ist, was mit allen anderen passiert. Zwei Testreihen: eine für die technische Dokumentation, eine für Fragen, die aus Normen beantwortet werden müssen.",
+          text: "Eine gute Antwort kann jeder zeigen. Die Frage ist, was mit allen anderen passiert. Wir zeigen dir hier zwei Testreihen: eine für die technische Dokumentation, eine für Fragen, die aus Normen beantwortet werden müssen.",
         },
       ],
     },
@@ -28,7 +28,7 @@ export const evalsChapter: DemoChapter = {
       content: [
         {
           kind: "paragraph",
-          text: "Zeilen sind echte Technikerfragen, Spalten sind Läufe. Fällt eine Antwort unter die Schwelle, wird die Zelle rot — eine Änderung, die eine Frage verbessert und eine andere verschlechtert, bleibt sichtbar. Die Werte hier sind beispielhaft.",
+          text: "Zeilen sind echte Technikerfragen, Spalten sind Läufe. Fällt eine Antwort unter die Schwelle, wird die Zelle rot. Eine Änderung, die eine Frage verbessert und eine andere verschlechtert, bleibt sichtbar. Die Werte hier sind beispielhaft.",
         },
       ],
     },
@@ -40,7 +40,7 @@ export const evalsChapter: DemoChapter = {
       content: [
         {
           kind: "paragraph",
-          text: "Ein Testfall kann neben der richtigen Antwort die richtige Quelle verlangen — eine Normfrage muss aus EN und DIN beantwortet werden, nicht aus einem Produkthandbuch. Richtig klingen und richtig sein werden getrennt bewertet.",
+          text: "Ein Testfall kann neben der richtigen Antwort die richtige Quelle verlangen: eine Normfrage muss in diesem Beispiel aus EN und DIN beantwortet werden, nicht aus einem Produkthandbuch. Richtig klingen und richtig sein werden getrennt bewertet.",
         },
       ],
     },

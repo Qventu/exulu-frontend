@@ -21,7 +21,7 @@ export const meetingsChapter: DemoChapter = {
       id: "meetings-list",
       route: "/transcriptions",
       anchor: "transcriptions",
-      title: `${capitalise(germanCount(T.hours))} Stunden, die niemand nachhören wird`,
+      title: `${capitalise(germanCount(T.hours))} Stunden Aufzeichnungen, die niemand nachhören wird`,
       content: [
         { kind: "figure", src: "/demo/ch7-meetings.webp", alt: "Von der Aufzeichnung zur Arbeitsanweisung" },
         {
@@ -37,7 +37,7 @@ export const meetingsChapter: DemoChapter = {
       // The outputs render at the BOTTOM of the review sheet's scroll;
       // "start" brings the document itself on screen, not just its header.
       scrollBlock: "start",
-      title: "Also wird ein Dokument daraus",
+      title: "Hier wird ein lesbares Dokument daraus",
       content: [
         {
           kind: "paragraph",
