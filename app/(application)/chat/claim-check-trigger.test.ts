@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { UIMessage } from "ai";
 
 import { claimCheckRequestFor } from "./hooks";
@@ -6,7 +6,7 @@ import { claimCheckRequestFor } from "./hooks";
 const base = {
   id: "msg_1",
   role: "assistant",
-  metadata: { claimCheck: { enabled: true, sourceIds: ["i1"], toolCallIds: ["call_1"] } },
+  metadata: { claimCheck: { enabled: true, sources: [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }] } },
   parts: [
     {
       type: "tool-Context_Search",
@@ -19,12 +19,183 @@ const base = {
 
 const args = { message: base, question: "Womit?", session: "s1", agentId: "a1", locale: "de" };
 
+// A web entry can cite several pages and so yield several sources from one
+// manifest entry — the shape that broke a plain `sources.length ===
+// trigger.sources.length` comparison. Two manifest entries (web, knowledge
+// base) recover three sources (two cited pages + one chunk), and every
+// entry contributed something, so the guard must still run the check.
+const webAndKbMessage = {
+  id: "msg_web_kb",
+  role: "assistant",
+  metadata: {
+    claimCheck: {
+      enabled: true,
+      sources: [
+        { type: "web", id: "tool:call_9", toolCallId: "call_9" },
+        { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+      ],
+    },
+  },
+  parts: [
+    {
+      type: "tool-Internet_Search",
+      toolCallId: "call_9",
+      output: {
+        result: JSON.stringify({
+          content: "Die Anlage läuft mit 230 Volt.",
+          search_results: [
+            { url: "https://example.com/a", title: "Anlagen A", snippet: "230 Volt." },
+            { url: "https://example.com/b", title: "Anlagen B", snippet: "Wartung jährlich." },
+          ],
+        }),
+      },
+    },
+    {
+      type: "tool-Context_Search",
+      toolCallId: "call_1",
+      output: { result: JSON.stringify({ chunks: [{ item_id: "i1", item_name: "h.pdf", chunk_content: "230 Volt." }] }) },
+    },
+    { type: "text", text: "Die Anlage arbeitet mit 230 Volt." },
+  ],
+} as unknown as UIMessage;
+
+// The spec's §8 end-to-end case: a memory entry (metadata, no toolCallId)
+// alongside a knowledge-base entry — the turn that produced NOTHING before
+// Stage 4 taught the client to read `recalledMemories`.
+const memoryAndKbMessage = {
+  id: "msg_mem_kb",
+  role: "assistant",
+  metadata: {
+    claimCheck: {
+      enabled: true,
+      sources: [
+        { type: "memory", id: "memory:m_7" },
+        { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+      ],
+    },
+    recalledMemories: [{ id: "m_7", title: "Sprache", information: "Der Kunde bevorzugt Deutsch." }],
+  },
+  parts: [
+    {
+      type: "tool-Context_Search",
+      toolCallId: "call_1",
+      output: { result: JSON.stringify({ chunks: [{ item_id: "i1", item_name: "h.pdf", chunk_content: "230 Volt." }] }) },
+    },
+    { type: "text", text: "Die FST-2XT arbeitet mit 230 Volt." },
+  ],
+} as unknown as UIMessage;
+
+// Two entries named, only one recoverable — across DIFFERENT types, not the
+// same-type mismatch the earlier tests already pin. The document entry
+// recovers; the web entry's tool output does not parse, so `webSources`
+// returns zero sources for it and the manifest-entry id is never covered.
+const oneMissingMessage = {
+  id: "msg_one_missing",
+  role: "assistant",
+  metadata: {
+    claimCheck: {
+      enabled: true,
+      sources: [
+        { type: "document", id: "tool:call_4", toolCallId: "call_4" },
+        { type: "web", id: "tool:call_9", toolCallId: "call_9" },
+      ],
+    },
+  },
+  parts: [
+    { type: "tool-read_session_file", toolCallId: "call_4", input: { filename: "wartung.pdf" }, output: { content: "230 Volt." } },
+    { type: "tool-Internet_Search", toolCallId: "call_9", output: { result: "<<not json>>" } },
+    { type: "text", text: "Die FST-2XT arbeitet mit 230 Volt." },
+  ],
+} as unknown as UIMessage;
+
+// The regression a future "simplification" would reintroduce: a memory
+// entry with no matching `recalledMemories` item (unrecoverable) alongside a
+// web entry whose payload cites TWO pages. That recovers exactly two
+// sources for two manifest entries, so `sources.length ===
+// trigger.sources.length` AGREES and would run the check — while the memory
+// entry contributed nothing and the answer may rest on evidence never sent.
+// Every other fixture in this file happens to have total-count and coverage
+// disagree together; this one is the single case that tells them apart, so
+// reverting the per-entry check back to a bare length comparison fails only
+// here.
+const memoryMaskedByOverContributingWebMessage = {
+  id: "msg_mem_masked",
+  role: "assistant",
+  metadata: {
+    claimCheck: {
+      enabled: true,
+      sources: [
+        { type: "memory", id: "memory:m_9" },
+        { type: "web", id: "tool:call_9", toolCallId: "call_9" },
+      ],
+    },
+    recalledMemories: [],
+  },
+  parts: [
+    {
+      type: "tool-Internet_Search",
+      toolCallId: "call_9",
+      output: {
+        result: JSON.stringify({
+          search_results: [
+            { url: "https://example.com/a", title: "Anlagen A", snippet: "230 Volt." },
+            { url: "https://example.com/b", title: "Anlagen B", snippet: "Wartung jährlich." },
+          ],
+        }),
+      },
+    },
+    { type: "text", text: "Die FST-2XT arbeitet mit 230 Volt." },
+  ],
+} as unknown as UIMessage;
+
 describe("claimCheckRequestFor", () => {
+  it("runs the check when every manifest entry produced at least one source", () => {
+    // A web entry yields THREE sources — the answer body plus its two cited
+    // pages (fix round 3, Critical 1) — so a count comparison would wrongly
+    // refuse this fully-covered turn.
+    const body = claimCheckRequestFor({ message: webAndKbMessage, question: "q", session: "s", agentId: "a", locale: "de" });
+    expect(body?.sources).toHaveLength(4);
+    // The prose answer the assistant paraphrased has to be in there, not
+    // just the one-sentence snippets.
+    expect(body?.sources.map((s) => s.content)).toContain("Die Anlage läuft mit 230 Volt.");
+  });
+
+  // The spec's §8 end-to-end case: the turn that produced NOTHING before Stage 4.
+  it("builds a complete request for a memory turn with retrieval", () => {
+    const body = claimCheckRequestFor({ message: memoryAndKbMessage, question: "q", session: "s", agentId: "a", locale: "de" });
+    expect(body?.sources.map((s) => s.type)).toEqual(["memory", "knowledge_base"]);
+    expect(body?.sources.every((s) => s.content.trim().length > 0)).toBe(true);
+  });
+
+  it("refuses when a manifest entry produced nothing", () => {
+    // Two entries named, only one recoverable: the answer may rest on evidence we
+    // cannot send, and a partial check reports grounded claims unsupported.
+    expect(claimCheckRequestFor({ message: oneMissingMessage, question: "q", session: "s", agentId: "a", locale: "de" })).toBeNull();
+  });
+
+  // The fixture a count comparison cannot tell apart from a covered turn:
+  // two sources recovered for two entries (counts agree), but both sources
+  // came from the web entry and the memory entry contributed zero. A guard
+  // that only checked `sources.length !== trigger.sources.length` would run
+  // this check and let a claim grounded in nothing from the missing memory
+  // score as `unsupported` — refusing here is the only thing standing
+  // between a "simplify the guard" edit and that regression.
+  it("refuses when one entry contributed nothing, even though another entry's extra sources make the totals match", () => {
+    const body = claimCheckRequestFor({
+      message: memoryMaskedByOverContributingWebMessage,
+      question: "q",
+      session: "s",
+      agentId: "a",
+      locale: "de",
+    });
+    expect(body).toBeNull();
+  });
+
   it("builds the exact body for a triggered message", () => {
     expect(claimCheckRequestFor(args)).toEqual({
       question: "Womit?",
       answer: "Die FST-2XT arbeitet mit 230 Volt.",
-      sources: [{ id: "i1", name: "h.pdf", content: "230 Volt." }],
+      sources: [{ id: "i1", name: "h.pdf", type: "knowledge_base", content: "230 Volt." }],
       agent: "a1",
       session: "s1",
       messageId: "msg_1",
@@ -53,7 +224,15 @@ describe("claimCheckRequestFor", () => {
   it("returns null when SOME of the named sources are recovered but not all", () => {
     const partial = {
       ...base,
-      metadata: { claimCheck: { enabled: true, sourceIds: ["i1", "i2"], toolCallIds: ["call_1"] } },
+      metadata: {
+        claimCheck: {
+          enabled: true,
+          sources: [
+            { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+            { type: "knowledge_base", id: "i2", toolCallId: "call_1" },
+          ],
+        },
+      },
       parts: [
         {
           type: "tool-Context_Search",
@@ -75,7 +254,15 @@ describe("claimCheckRequestFor", () => {
   it("checks when every named source is recovered, two of two included", () => {
     const both = {
       ...base,
-      metadata: { claimCheck: { enabled: true, sourceIds: ["i1", "i2"], toolCallIds: ["call_1"] } },
+      metadata: {
+        claimCheck: {
+          enabled: true,
+          sources: [
+            { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+            { type: "knowledge_base", id: "i2", toolCallId: "call_1" },
+          ],
+        },
+      },
       parts: [
         {
           type: "tool-Context_Search",
@@ -93,8 +280,8 @@ describe("claimCheckRequestFor", () => {
       ],
     } as unknown as UIMessage;
     expect(claimCheckRequestFor({ ...args, message: both })?.sources).toEqual([
-      { id: "i1", name: "h.pdf", content: "230 Volt." },
-      { id: "i2", name: "w.pdf", content: "18 kg." },
+      { id: "i1", name: "h.pdf", type: "knowledge_base", content: "230 Volt." },
+      { id: "i2", name: "w.pdf", type: "knowledge_base", content: "18 kg." },
     ]);
   });
 
@@ -104,7 +291,15 @@ describe("claimCheckRequestFor", () => {
   it("returns null when a named source's only chunk has no text", () => {
     const empty = {
       ...base,
-      metadata: { claimCheck: { enabled: true, sourceIds: ["i1", "i2"], toolCallIds: ["call_1"] } },
+      metadata: {
+        claimCheck: {
+          enabled: true,
+          sources: [
+            { type: "knowledge_base", id: "i1", toolCallId: "call_1" },
+            { type: "knowledge_base", id: "i2", toolCallId: "call_1" },
+          ],
+        },
+      },
       parts: [
         {
           type: "tool-Context_Search",
@@ -173,5 +368,40 @@ describe("claimCheckRequestFor", () => {
     expect(body?.session).toBeUndefined();
     expect(body?.messageId).toBeUndefined();
     expect(body?.answer).toBe("Die FST-2XT arbeitet mit 230 Volt.");
+  });
+
+  // Fix round 3, minor: this branch adds several silent-refusal paths, and an
+  // admin asking "why is there no panel on this answer" had no signal at all
+  // — not a log line, not an error. One dev-only `console.debug` naming the
+  // entries that produced nothing. No user-visible change.
+  describe("diagnosability", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+    });
+
+    it("names the uncovered entry ids when it refuses, in development", () => {
+      vi.stubEnv("NODE_ENV", "development");
+      const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+      expect(claimCheckRequestFor({ ...args, message: oneMissingMessage })).toBeNull();
+      expect(debug).toHaveBeenCalledTimes(1);
+      const logged = debug.mock.calls[0]!.join(" ");
+      expect(logged).toContain("tool:call_9"); // the web entry that recovered nothing
+      expect(logged).not.toContain("tool:call_4"); // the document entry that did
+    });
+
+    it("stays silent in production", () => {
+      vi.stubEnv("NODE_ENV", "production");
+      const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+      expect(claimCheckRequestFor({ ...args, message: oneMissingMessage })).toBeNull();
+      expect(debug).not.toHaveBeenCalled();
+    });
+
+    it("says nothing on a turn it does check", () => {
+      vi.stubEnv("NODE_ENV", "development");
+      const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+      expect(claimCheckRequestFor(args)).not.toBeNull();
+      expect(debug).not.toHaveBeenCalled();
+    });
   });
 });

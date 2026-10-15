@@ -3,7 +3,20 @@
 // verdicts; the session route rehydrates panels after a reload.
 import { request } from "@/lib/api/client";
 
-export type ClaimCheckSource = { id: string; name?: string; content: string };
+/**
+ * The manifest's — and the panel's — vocabulary for where a source came from.
+ * `other` is the engine's catch-all for a type the client cannot otherwise
+ * label; it is never acted on specially, only shown.
+ */
+export type ClaimCheckSourceType = "knowledge_base" | "document" | "memory" | "web" | "session_item" | "other";
+
+/**
+ * `content` is the only field the engine needs; `id`, `name` and `type` are
+ * for attribution and the panel. `id` is optional here because a caller with
+ * no IMP knowledge base may post a source with none — the endpoint assigns a
+ * positional one — but this client's own `collectSources` always supplies it.
+ */
+export type ClaimCheckSource = { content: string; name?: string; type?: ClaimCheckSourceType; id?: string };
 
 export type ClaimVerdict = "supported" | "contradicted" | "unsupported";
 export type ScoreLabel = "ok" | "warn" | "alert" | "n/a";

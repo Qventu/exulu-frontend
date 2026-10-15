@@ -108,7 +108,7 @@ const triggeredAssistantMessage = (id: string, text: string): UIMessage =>
   ({
     id,
     role: "assistant",
-    metadata: { claimCheck: { enabled: true, sourceIds: ["i1"], toolCallIds: ["call_1"] } },
+    metadata: { claimCheck: { enabled: true, sources: [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }] } },
     parts: [
       {
         type: "tool-Context_Search",
@@ -126,7 +126,7 @@ const pausedAssistantMessage = (id: string, text: string, state: string): UIMess
   ({
     id,
     role: "assistant",
-    metadata: { claimCheck: { enabled: true, sourceIds: ["i1"], toolCallIds: ["call_1"] } },
+    metadata: { claimCheck: { enabled: true, sources: [{ type: "knowledge_base", id: "i1", toolCallId: "call_1" }] } },
     parts: [
       {
         type: "tool-Context_Search",

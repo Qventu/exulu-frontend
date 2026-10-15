@@ -220,11 +220,45 @@ export function claimCheckRequestFor({ message, question, session, agentId, loca
   // `claimCheckFired` only AFTER this returns a body, so a null keeps the id
   // unclaimed and the resumed turn gets its check.
   if (hasPendingToolApproval(message)) return null;
-  const sources = collectSources(message, trigger.sourceIds);
-  // Fewer sources than the fragment named means the client can no longer
-  // produce evidence the backend expected. Checking anyway would score
-  // grounded claims unsupported; a missing panel is the honest failure.
-  if (sources.length !== trigger.sourceIds.length) return null;
+  const sources = collectSources(message, trigger.sources);
+  // One manifest entry can yield several sources — a web search cites
+  // several pages, a session item has several chunks (claim-check-data.ts) —
+  // so a length comparison is wrong: a fully-covered turn can recover MORE
+  // sources than the manifest has entries (and, with the wrong fixture, a
+  // turn where one entry contributed nothing can still match on COUNT if
+  // another entry over-contributes — see the trigger test fixture named for
+  // exactly that). What must hold is that EVERY entry contributed
+  // something. An entry that produced nothing means the answer may rest on
+  // evidence this client cannot send, and verifying against part of the
+  // evidence scores grounded claims unsupported — a false "your answer was
+  // unfounded" about the reader's own answer, the worst output this system
+  // can produce.
+  //
+  // Multi-source ids are namespaced `${entryId}#<suffix>`, so a source
+  // belongs to an entry when its id either equals the entry's id or starts
+  // with `${entryId}#`. Anchored on the known entry id rather than split on
+  // "#" and compared: nothing forbids an entry's own id (an `item_id`, say)
+  // from containing a literal "#", and splitting it would look the entry up
+  // under a truncated key — a silent false refusal on a fully covered turn,
+  // with no error and nothing in the logs.
+  const contributedBy = (entryId: string) =>
+    sources.some((s) => s.id === entryId || (s.id ?? "").startsWith(`${entryId}#`));
+  const uncovered = trigger.sources.filter((entry) => !contributedBy(entry.id));
+  if (uncovered.length > 0) {
+    // The one signal this branch was missing. Refusing is correct and
+    // deliberate, but it is also silent: an admin asking "why is there no
+    // panel on this answer" had nothing to look at — no log line, no error,
+    // no user-visible difference from "the agent has the check off". Dev
+    // only, so nothing changes for a reader.
+    if (process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line no-console
+      console.debug(
+        "[claim-check] no check: the manifest named sources this message could not produce:",
+        uncovered.map((entry) => `${entry.type}:${entry.id}`).join(", "),
+      );
+    }
+    return null;
+  }
   const answer = answerTextOf(message);
   if (!answer.trim()) return null;
   return {

@@ -1215,6 +1215,13 @@
     "claimCheckRechecked": "nachgeprüft",
     "claimCheckEvidenceQuote": "„{quote}“",
     "claimCheckEvidenceNamed": "{source}: „{quote}“",
+    "claimCheckSourceKnowledgeBase": "Wissensbasis",
+    "claimCheckSourceDocument": "Dokument",
+    "claimCheckSourceMemory": "Erinnerung",
+    "claimCheckSourceWeb": "Webseite",
+    "claimCheckSourceSessionItem": "Angeheftetes Element",
+    "claimCheckSourceOther": "Quelle",
+    "claimCheckEvidenceSourceType": "{label} – ",
     "runBanner": {
       "label": "Routine-Lauf — {name}",
       "fallbackName": "Routine",

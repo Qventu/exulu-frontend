@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 
 import { ClaimCheck, type ClaimCheckState } from "./claim-check";
+import type { ClaimCheckSourceType } from "@/lib/api/claim-check";
 import de from "@/messages/de.json";
 
 // vitest.config.ts does not set `test.globals: true`, so testing-library's
@@ -14,7 +15,10 @@ import de from "@/messages/de.json";
 // quote via two different `show()` calls).
 afterEach(cleanup);
 
-const show = (state: ClaimCheckState, extra: { guestMode?: boolean; sourceNames?: Record<string, string> } = {}) =>
+const show = (
+  state: ClaimCheckState,
+  extra: { guestMode?: boolean; sourceNames?: Record<string, string>; sourceTypes?: Record<string, ClaimCheckSourceType> } = {},
+) =>
   render(
     <NextIntlClientProvider locale="de" messages={de as never}>
       <ClaimCheck state={state} {...extra} />
@@ -54,6 +58,26 @@ const result = (over: Partial<Record<string, unknown>> = {}) =>
     notes: [],
     ...over,
   }) as never;
+
+// A single scored claim whose one piece of evidence points at the given
+// source id — just enough to exercise the per-evidence type label without
+// dragging in the rest of `result()`'s two-claim fixture.
+const resultWithEvidence = ({ sourceId }: { sourceId: string }) =>
+  result({
+    score: { claims: 1, supported: 1, contradicted: 0, unsupported: 0, unsupportedShare: 0, label: "ok" },
+    claims: [
+      {
+        id: "c1",
+        sentenceIndex: 0,
+        text: "Der Kunde bevorzugt Deutsch.",
+        inferred: false,
+        verdict: "supported",
+        evidence: [{ sourceId, quote: "bevorzugt Deutsch" }],
+        rationale: "Die Quelle nennt die Sprachpräferenz.",
+        rechecked: false,
+      },
+    ],
+  });
 
 describe("ClaimCheck", () => {
   // `@testing-library/jest-dom` is not a project dependency (confirmed:
@@ -286,6 +310,56 @@ describe("ClaimCheck", () => {
     // No sourceNames entry anywhere names a raw id — only the quote and,
     // when known, the given name ever reach the reader.
     expect(screen.queryByText(/i1/)).toBeNull();
+  });
+
+  // The guard in hooks.ts now accepts turns whose evidence is a recalled
+  // memory, a web page, a session item — not only a knowledge-base chunk —
+  // so the panel must say which kind of source backs a quote. Without this,
+  // every source reads as though it came from the knowledge base, which is
+  // a false statement about a web page or a memory.
+  it("labels a memory source as a memory, not as a document", async () => {
+    const { container } = show(
+      { status: "done", result: resultWithEvidence({ sourceId: "memory:m_7" }) },
+      { sourceNames: { "memory:m_7": "Sprache" }, sourceTypes: { "memory:m_7": "memory" } },
+    );
+    const trigger = container.querySelector("[data-claim-check-trigger]") as HTMLElement;
+    trigger.click();
+    expect(await screen.findByText(/Erinnerung/i)).toBeDefined();
+  });
+
+  // `claimCheckEvidenceNamed` is already "{source}: „{quote}“", so a colon
+  // after the type label would stack two colons in one line
+  // ("Erinnerung: Sprache: „…“") and read as a mistake. Pins the exact
+  // rendered line — a dash between the label and the name, one colon
+  // total — since no test asserted the concatenated string before this.
+  it("puts a dash, not a second colon, between the type label and the named source", async () => {
+    const { container } = show(
+      { status: "done", result: resultWithEvidence({ sourceId: "memory:m_7" }) },
+      { sourceNames: { "memory:m_7": "Sprache" }, sourceTypes: { "memory:m_7": "memory" } },
+    );
+    const trigger = container.querySelector("[data-claim-check-trigger]") as HTMLElement;
+    trigger.click();
+    // The type label is its own sibling <span>, so the evidence <li>'s own
+    // direct text node is only "Sprache: „bevorzugt Deutsch“" — matched
+    // here — while its full `textContent` (span + text node) is the exact
+    // line a reader sees.
+    const evidenceLine = await screen.findByText(/Sprache: „bevorzugt Deutsch“/);
+    expect(evidenceLine.textContent).toBe("Erinnerung – Sprache: „bevorzugt Deutsch“");
+  });
+
+  // A type this client does not recognise (or has no entry for) must never
+  // surface as a raw key or a raw source id — it falls back to the same
+  // plain name+quote line the panel has always rendered.
+  it("falls back to the plain quote when the source's type is unrecognised", async () => {
+    const { container } = show(
+      { status: "done", result: resultWithEvidence({ sourceId: "weird:1" }) },
+      { sourceNames: { "weird:1": "mystery.pdf" }, sourceTypes: { "weird:1": "not_a_real_type" as ClaimCheckSourceType } },
+    );
+    const trigger = container.querySelector("[data-claim-check-trigger]") as HTMLElement;
+    trigger.click();
+    expect(await screen.findByText(/mystery\.pdf.*bevorzugt Deutsch/)).toBeDefined();
+    expect(screen.queryByText(/not_a_real_type/)).toBeNull();
+    expect(screen.queryByText(/weird:1/)).toBeNull();
   });
 
   it("renders a claim with no evidence without a quote block, rather than an empty one or a crash", async () => {
