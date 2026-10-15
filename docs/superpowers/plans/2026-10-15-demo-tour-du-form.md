@@ -858,6 +858,8 @@ git add docs/superpowers/plans/2026-10-15-demo-tour-du-form.md docs/superpowers/
 git commit -m "docs(demo): record the du-form walk and export the copy for sign-off"
 ```
 
+**Post-review build** (3f6608b, BUILD_ID Tvp1wHqpVe-smbxsiryiS): the fresh review found no critical and four important gaps in the new guard rails (the genitive "Ihres" missing from the Sie pattern; the savings-claim prohibition knowing only "spart Ihnen"; the auto-router's brand "OPEN IMP" requesting a logo file that does not exist, and capitalised brands that would 404 on a case-sensitive host; the tour-wide register test skipping the logos block). All four fixed with a test that failed first. On the build: 16 rows, 30 logo images, none broken, the router row shows the fallback icon; walker 36/36, zero leaks, 3 Tabs. Full suite 140 files / 1,458 tests at 3f6608b.
+
 ## Deviations from marketing's document
 
 | Field | Marketing wrote | Applied | Why |
