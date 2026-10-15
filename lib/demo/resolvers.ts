@@ -22,7 +22,8 @@ import {
   KOSTEN_MONTHLY_SPEND,
   KOSTEN_TEAMS,
 } from "./fixtures/chapter-kosten";
-import { MEMORY_CONTEXT_ID, MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
+import { MEMORY_CONTEXT_ID, MEMORY_CONTRIBUTORS, MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
+import { memoryMapPoints, MEMORY_TOPICS, topicOf } from "./fixtures/memory-examples";
 import { TECHDOC_SESSION_ID } from "./fixtures/chapter-techdoc";
 import { CONTEXTS } from "./fixtures/contexts";
 import { DEMO_ROLES, ROLE_TECHNIKER_ID } from "./fixtures/roles";
@@ -811,7 +812,7 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
             total: items.length,
             public: items.length,
             private: 0,
-            contributors: items.length ? 1 : 0,
+            contributors: items.length ? MEMORY_CONTRIBUTORS.length : 0,
             visible: items.length,
             lastSavedAt,
             lastSavedBy: lastSavedAt ? { id: DEMO_USER_ID, name: "Demo" } : null,
@@ -821,7 +822,73 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
     };
   },
   MemoryAgentCount: (world) => ({ memoryAgentCount: world.agents.length }),
-  MemoryBaseContributors: () => ({ memoryBaseContributors: [] }),
+  MemoryBaseContributors: () => ({ memoryBaseContributors: MEMORY_CONTRIBUTORS }),
+  // --- /memory/[ctx]: the base page and its map (chapter 6, last step) -----
+  MemoryBaseById: (_world, variables) => {
+    const context =
+      CONTEXTS.find((c) => c.id === variables.id) ?? CONTEXTS.find((c) => c.id === MEMORY_CONTEXT_ID)!;
+    const fields = context.fields ?? [];
+    return {
+      contextById: {
+        id: context.id,
+        name: context.name,
+        description: context.description ?? null,
+        fields,
+        configuration: context.configuration ?? null,
+        memoryBase: checkMemoryBase({ fields }),
+      },
+    };
+  },
+  MemorySourceSession: (world, variables) => ({
+    agent_sessionById: world.sessions.find((s) => s.id === variables.id) ?? world.sessions[0],
+  }),
+  MemorySourceMessages: () => ({ agent_messagesPagination: { items: [] } }),
+  // The map: positions are fixture data (fixtures/memory-examples.ts), one
+  // point per memory, clustered around four topic centres; fitted, so the
+  // card draws instead of showing "not mapped".
+  ContextProjectionStatus: (world, variables) => {
+    const items = world.itemsByContext?.[String(variables.contextId)] ?? [];
+    return {
+      contextProjectionStatus: {
+        fitted: true,
+        fittedAt: "2026-08-27T06:00:00.000Z",
+        residual: 0.12,
+        mappedChunks: items.length,
+        totalChunks: items.length,
+      },
+    };
+  },
+  ContextMapTopics: (world, variables) => {
+    const items = world.itemsByContext?.[String(variables.contextId)] ?? [];
+    return {
+      contextMapTopics: MEMORY_TOPICS.map((t) => ({
+        ...t,
+        count: items.filter((i) => topicOf(i).id === t.id).length,
+      })),
+    };
+  },
+  ContextMapPoints: (world, variables) => {
+    const items = world.itemsByContext?.[String(variables.contextId)] ?? [];
+    const points = memoryMapPoints(items);
+    return { contextMapPoints: { points, total: points.length, sampled: false } };
+  },
+  ContextMapEdges: () => ({ contextMapEdges: [] }),
+  ContextMapItem: (world, variables) => {
+    const item = (world.itemsByContext?.[String(variables.contextId)] ?? []).find((i) => i.id === variables.itemId);
+    return {
+      contextMapItem: item
+        ? {
+            id: item.id,
+            name: item.name,
+            chunks: 1,
+            textLength: ((item as { information?: string }).information ?? "").length,
+            source: null,
+            createdAt: item.createdAt ?? null,
+            updatedAt: item.updatedAt ?? item.createdAt ?? null,
+          }
+        : null,
+    };
+  },
   MemoryUsageByIds: () => ({ memoryUsageByIds: [] }),
   MemoryUsage: () => ({ memoryUsage: { count: 0, lastUsedAt: null, recent: [] } }),
   MemoryBaseUsage: () => ({ memoryBaseUsage: { used: 0, neverUsed: 0, stale: 0, mostUsed: [], newPerWeek: [] } }),
@@ -1202,6 +1269,35 @@ function dynamicResolver(operationName: string): DemoResolver | undefined {
   // resolver so far (GetAgentById, GetAgents, RoutineRunsNeedingAttentionCount).
   // Silencing it to save a few lines would be a bad trade.
   const isContext = (id: string) => KNOWN_CONTEXT_IDS.has(id);
+
+  // The memory workbench's list: `<ctx>MemoriesPagination` → `<ctx>_itemsPagination`,
+  // paged, newest first (the document's default sort).
+  const memoriesMatch = /^([a-z0-9_]+)MemoriesPagination$/.exec(operationName);
+  if (memoriesMatch && isContext(memoriesMatch[1])) {
+    const ctx = memoriesMatch[1];
+    return (world, variables) => {
+      const all = [...(world.itemsByContext?.[ctx] ?? [])].sort((a, b) =>
+        (b.createdAt ?? "").localeCompare(a.createdAt ?? ""),
+      );
+      const pageNo = Number(variables.page ?? 1);
+      const limit = Number(variables.limit ?? 20);
+      const items = all.slice((pageNo - 1) * limit, pageNo * limit).map((item) => ({
+        rights_mode: "public",
+        created_by: 0,
+        description: null,
+        source_session: null,
+        updatedAt: item.createdAt ?? null,
+        ...item,
+      }));
+      const pageCount = Math.max(1, Math.ceil(all.length / limit));
+      return {
+        [`${ctx}_itemsPagination`]: {
+          pageInfo: { ...page(all.length), currentPage: pageNo, pageCount, hasPreviousPage: pageNo > 1, hasNextPage: pageNo < pageCount },
+          items,
+        },
+      };
+    };
+  }
 
   const paginationMatch = /^([a-z0-9_]+)Pagination$/.exec(operationName);
   if (paginationMatch && isContext(paginationMatch[1])) {

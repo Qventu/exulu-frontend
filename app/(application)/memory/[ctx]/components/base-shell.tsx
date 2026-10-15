@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import { EmptyState } from "@/components/primitives/empty-state";
+import { isDemoMode } from "@/lib/demo/flag";
 import { OverflowMenu } from "@/components/primitives/overflow-menu";
 import { PageHeader } from "@/components/primitives/page-header";
 import { PageShell } from "@/components/primitives/page-shell";
@@ -183,6 +184,7 @@ export function BaseShell({
               // memory was added answers a real question here. The knowledge
               // workspace does not pass this: those bases ingest in one batch.
               timeline
+              timelineAutoplayMs={isDemoMode() ? 6000 : undefined}
             />
           ) : (
             <>

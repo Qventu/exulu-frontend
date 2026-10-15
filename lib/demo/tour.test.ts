@@ -350,6 +350,10 @@ describe("the chapters that show something invented", () => {
     expect(bodies("meetings")).toMatch(/von Hand/i);
   });
 
+  it("tells the visitor chapter 6's memory cloud is made of example entries", () => {
+    expect(bodies("memory")).toMatch(/Beispieleinträge/);
+  });
+
   it("tells the visitor the cost figures are examples, not measurements", () => {
     expect(bodies("kosten")).toMatch(/Beispielwerte/i);
   });
@@ -450,14 +454,14 @@ describe("the tour after sub-project 5", () => {
     expect(steps.map((s) => s.id)).toEqual(["meetings-list", "meetings-guide"]);
   });
 
-  it("is 37 steps long", () => {
+  it("is 38 steps long", () => {
     // 37 before: minus the raw transcript, plus the model catalogue, plus the
     // approval card. The walker derives its list from CHAPTERS, so this is
     // the one place the number is written down.
     // Then minus chapter 11's disclaimer step and chapter 12's chat-screen
     // step (marketing, 2026-10-15).
-    // Plus chapter 9's request step (sub-project 8).
-    expect(CHAPTERS.reduce((n, c) => n + c.steps.length, 0)).toBe(37);
+    // Plus chapter 9's request step and chapter 6's memory map (sub-project 8).
+    expect(CHAPTERS.reduce((n, c) => n + c.steps.length, 0)).toBe(38);
   });
 });
 

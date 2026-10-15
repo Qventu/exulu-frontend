@@ -51,6 +51,7 @@ import {
   withinWindow,
 } from "./map-data";
 import { MapPanel } from "./map-panel";
+import { sweepFrames } from "./sweep";
 
 /**
  * three.js is ~600 KB and the file that imports it also opens a WebGL context,
@@ -146,6 +147,12 @@ export interface ContextMapCardProps {
    * actually spans more than one day — see `timeBounds`.
    */
   timeline?: boolean;
+  /**
+   * Sweep the time window once from the first day to the last over this many
+   * milliseconds when the data arrives — the guided demo's "watch it grow".
+   * Skipped under prefers-reduced-motion; the window clears afterwards.
+   */
+  timelineAutoplayMs?: number;
 }
 
 export function ContextMapCard({
@@ -155,6 +162,7 @@ export function ContextMapCard({
   itemHref,
   titleKey,
   timeline = false,
+  timelineAutoplayMs,
 }: ContextMapCardProps) {
   const t = useTranslations("map");
   const locale = useLocale();
@@ -466,6 +474,25 @@ export function ContextMapCard({
   const blocked = unsupported || notMapped || pointsFailed || statusUnknown;
   /** True once there is a cloud on screen, which is what the rows below read. */
   const drawn = !blocked && !loadingCloud && points.length > 0;
+
+  // A one-time sweep (guided demo): the window's end walks from the first day
+  // to the last, so a viewer watches the base fill up without touching the
+  // slider; then the window clears to the whole span.
+  React.useEffect(() => {
+    if (!timelineAutoplayMs || bounds === null || !drawn) return;
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const frames = sweepFrames(bounds, timelineAutoplayMs, 80);
+    if (frames.length === 0) return;
+    let i = 0;
+    const id = window.setInterval(() => {
+      setTimeWindow(frames[i] ?? null);
+      i += 1;
+      if (i >= frames.length) window.clearInterval(id);
+    }, 80);
+    return () => window.clearInterval(id);
+    // boundsKey stands in for bounds; drawn gates on the first paint.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timelineAutoplayMs, boundsKey, drawn]);
   /**
    * Whether the links control is on screen — and therefore whether the web it
    * governs may be drawn. One value read in both places, not two expressions
@@ -522,6 +549,7 @@ export function ContextMapCard({
       ref={rootRef}
       className="flex flex-col gap-4 lg:flex-row"
       data-testid="context-map-card"
+      data-demo-id="memory-map"
     >
       <ChartCard
         className="min-w-0 flex-1"

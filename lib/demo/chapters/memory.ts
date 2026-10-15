@@ -1,5 +1,5 @@
 import type { DemoChapter } from "../tour";
-import { MEMORY_COUNT_AFTER_CORRECTION } from "../fixtures/chapter-memory";
+import { MEMORY_CONTEXT_ID, MEMORY_CONTRIBUTORS, MEMORY_COUNT_AFTER_CORRECTION } from "../fixtures/chapter-memory";
 import { capitalise, germanCount } from "../fixtures/meeting-tally";
 import { MEMORY_CHAT } from "../routes";
 
@@ -56,7 +56,20 @@ export const memoryChapter: DemoChapter = {
         {
           kind: "paragraph",
           // The count is the fixture's, not typed: the row on screen shows it.
-          text: `${capitalise(germanCount(MEMORY_COUNT_AFTER_CORRECTION))} Einträge, ein Assistent, ein Beitragender — der jüngste ist deine Korrektur von eben. Jeder Eintrag ist einsehbar, änderbar, löschbar; ab sofort bekommen alle Kollegen die richtige Antwort.`,
+          text: `${capitalise(germanCount(MEMORY_COUNT_AFTER_CORRECTION))} Einträge, ein Assistent, ${germanCount(MEMORY_CONTRIBUTORS.length)} Beitragende — der jüngste ist deine Korrektur von eben; die meisten sind Beispieleinträge aus acht Wochen Servicealltag. Jeder Eintrag ist einsehbar, änderbar, löschbar.`,
+        },
+      ],
+    },
+    {
+      id: "memory-map",
+      route: `/memory/${MEMORY_CONTEXT_ID}`,
+      anchor: "memory-map",
+      scrollBlock: "start",
+      title: "Ein Gedächtnis, das wächst",
+      content: [
+        {
+          kind: "paragraph",
+          text: "Jeder Punkt ist ein Eintrag, die Farben sind Themen. Der Zeitregler läuft einmal von selbst durch: Sieh zu, wie sich das Gedächtnis über acht Wochen füllt — aus Korrekturen, Hinweisen und Entscheidungen des Serviceteams. Die Einträge hier sind Beispieleinträge; die Mechanik ist die echte.",
         },
       ],
     },

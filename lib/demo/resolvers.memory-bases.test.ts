@@ -6,6 +6,7 @@ import { contentText } from "./content";
 import { DEMO_AGENT_ID } from "./fixtures";
 import {
   MEMORY_CONTEXT_ID,
+  MEMORY_CONTRIBUTORS,
   MEMORY_COUNT_AFTER_CORRECTION,
   MEMORY_WRITTEN_AT_STEP,
 } from "./fixtures/chapter-memory";
@@ -28,7 +29,7 @@ describe("the memory overview (chapter 6, last step)", () => {
     expect(bases[0].name).toBe("Assistenten-Gedächtnis");
     expect(bases[0].agents.map((a) => a.id)).toEqual([DEMO_AGENT_ID]);
     expect(bases[0].stats.total).toBe(MEMORY_COUNT_AFTER_CORRECTION);
-    expect(bases[0].stats.contributors).toBe(1);
+    expect(bases[0].stats.contributors).toBe(MEMORY_CONTRIBUTORS.length);
     expect(bases[0].stats.lastSavedAt).toBeTruthy();
   });
 
@@ -44,12 +45,13 @@ describe("the memory overview (chapter 6, last step)", () => {
     expect(bases[0].stats.total).toBeGreaterThanOrEqual(0);
   });
 
-  it("is what the chapter's last step opens, and the copy counts the same memories", () => {
+  it("is what the chapter's base step opens, and the copy counts the same memories", () => {
     const steps = CHAPTERS.find((c) => c.id === "memory")!.steps;
-    const last = steps[steps.length - 1];
+    // The base row comes before the map (sub-project 8): the fourth step.
+    const last = steps[3];
     expect(last.id).toBe("memory-base");
     expect(last.route).toBe("/memory");
     expect(last.anchor).toBe("memory-bases");
-    expect(contentText(last.content)).toMatch(/^Vier Einträge/);
+    expect(contentText(last.content)).toMatch(/^64 Einträge/);
   });
 });

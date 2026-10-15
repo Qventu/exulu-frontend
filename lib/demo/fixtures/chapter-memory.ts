@@ -5,6 +5,7 @@ import type { DemoWorld } from "../types";
 import { DEMO_AGENT_ID, techdocWorld } from "./chapter-techdoc";
 import { demoItem } from "./item";
 import { MEMORY_SCROLLBACK_ROWS } from "./memory-turns";
+import { MEMORY_EXAMPLES } from "./memory-examples";
 
 /**
  * Chapter 4: correcting the assistant.
@@ -86,7 +87,19 @@ export const CORRECTION_MEMORY: Item = memoryItem(
  * (resolvers.ts MemoryBases) and the chapter's copy both read this, so the
  * screen and the sentence beside it cannot disagree.
  */
-export const MEMORY_COUNT_AFTER_CORRECTION = EXISTING_MEMORIES.length + 1;
+export const MEMORY_COUNT_AFTER_CORRECTION = EXISTING_MEMORIES.length + MEMORY_EXAMPLES.length + 1;
+
+/**
+ * Who wrote to the base: the visitor (the correction) and four technicians
+ * behind the example memories. Invented initials, no real people.
+ */
+export const MEMORY_CONTRIBUTORS = [
+  { id: 0, name: "Demo" },
+  { id: 11, name: "J. Brandt" },
+  { id: 12, name: "L. Hoffmann" },
+  { id: 13, name: "T. Krüger" },
+  { id: 14, name: "N. Weber" },
+];
 
 /**
  * The step at which the correction has been sent and the memory written.
@@ -138,8 +151,9 @@ export function memoryWorld(step: number): DemoWorld {
             embeddings_updated_at: writtenAt,
           },
           ...EXISTING_MEMORIES,
+          ...MEMORY_EXAMPLES,
         ]
-      : EXISTING_MEMORIES;
+      : [...EXISTING_MEMORIES, ...MEMORY_EXAMPLES];
 
   return {
     ...base,
