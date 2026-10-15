@@ -1,10 +1,14 @@
 import { CONTEXT_SEARCH_TOOL, AGENTIC_RETRIEVAL_TOOL } from "./fixtures/agent-editor";
 import {
   ALGI_AGENT,
+  ALGI_AGENT_ID,
+  ALGI_APPROVAL_MESSAGES,
   ALGI_EMAIL_TRIGGER,
   ALGI_ROUTINE,
   ALGI_RUNS,
   ALGI_RUNS_NEEDING_ATTENTION,
+  ALGI_SESSION,
+  ALGI_SESSION_ID,
 } from "./fixtures/chapter-email";
 import {
   ALGI_MEETINGS,
@@ -269,6 +273,19 @@ function scrollbackRows(world: DemoWorld, variables: Record<string, unknown>) {
   // chat route needs to know nothing about the tour. Chapter 1 opens on the
   // techdoc session and chapter 5 on the memory one.
   const sessionId = filterValue(variables, "session");
+
+  // Chapter 9's session is not a scripted exchange but a stored one: fifteen
+  // messages from another deployment, ending on a pending approval. Served
+  // whole, whatever the step.
+  if (sessionId === ALGI_SESSION_ID) {
+    return ALGI_APPROVAL_MESSAGES.map((message, index) => ({
+      id: `${sessionId}-scrollback-${index}`,
+      session: sessionId,
+      createdAt: new Date(0).toISOString(),
+      content: JSON.stringify(message),
+    }));
+  }
+
   const chapter =
     sessionId === MEMORY_SESSION_ID
       ? "memory"
@@ -311,7 +328,12 @@ function scrollbackRows(world: DemoWorld, variables: Record<string, unknown>) {
  * blank one.
  */
 function agentFor(world: DemoWorld, variables: Record<string, unknown>) {
-  return world.agents.find((a) => a.id === variables.id) ?? world.agents[0];
+  return (
+    world.agents.find((a) => a.id === variables.id) ??
+    // ALFREDO belongs to another deployment's world (chapter 9 opens its chat
+    // session): reachable by id only, never listed among Newton's agents.
+    (variables.id === ALGI_AGENT_ID ? ALGI_AGENT : world.agents[0])
+  );
 }
 
 export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
@@ -1032,7 +1054,8 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // Both are server-rendered by the real chat route.
   GetAgentSessionById: (world, variables) => ({
     agent_sessionById:
-      world.sessions.find((s) => s.id === variables.id) ?? world.sessions[0],
+      world.sessions.find((s) => s.id === variables.id) ??
+      (variables.id === ALGI_SESSION_ID ? ALGI_SESSION : world.sessions[0]),
   }),
 
   // The chat sidebar's Recents list. Unmapped it returned nothing, so the panel
@@ -1041,12 +1064,17 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   //
   // Every field the list selects is returned, RBAC included: an absent selected
   // field is an Apollo cache error rather than an empty state.
-  GetAgentSessions: (world) => {
-    const items = world.sessions.map((session) => ({
-      ...session,
-      user: session.created_by,
-      RBAC: { type: session.rights_mode ?? "private", users: [], roles: [] },
-    }));
+  GetAgentSessions: (world, variables) => {
+    // The chat surface asks for the CURRENT agent's sessions (filters.agent.eq);
+    // ALFREDO's page must not list Newton's.
+    const agent = filterValue(variables, "agent");
+    const items = world.sessions
+      .filter((session) => !agent || session.agent === agent)
+      .map((session) => ({
+        ...session,
+        user: session.created_by,
+        RBAC: { type: session.rights_mode ?? "private", users: [], roles: [] },
+      }));
     return {
       agent_sessionsPagination: { pageInfo: page(items.length), items },
     };

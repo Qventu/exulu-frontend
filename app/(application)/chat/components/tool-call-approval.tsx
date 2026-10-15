@@ -21,6 +21,8 @@ import type {
 import { CheckCircle2, ShieldAlert, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { isDemoMode } from "@/lib/demo/flag";
+import { toolLabel } from "@/lib/demo/overlays";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -73,9 +75,13 @@ export const ToolCallApproval = ({
 }: ToolCallApprovalProps) => {
   const t = useTranslations("chat");
 
-  const toolName =
-    (part as { type: string }).type?.replace("tool-", "")?.replace(/_/g, " ") ||
-    "command";
+  const rawToolName =
+    (part as { type: string }).type?.replace("tool-", "") || "command";
+  // The demo shows German tool names (lib/demo/overlays.ts), as the tool
+  // header does in message-column.tsx; the product keeps the spaced raw name.
+  const toolName = isDemoMode()
+    ? toolLabel(rawToolName)
+    : rawToolName.replace(/_/g, " ");
   // The id persisted for pre-approval — byte-identical to today's behavior
   // (the raw part type, e.g. "tool-bash").
   const toolId = (part as { type: string }).type;
@@ -123,7 +129,7 @@ export const ToolCallApproval = ({
     const inputSummary = getInputSummary(part.input);
 
     return (
-      <Card className="mt-3 border-border bg-card">
+      <Card className="mt-3 border-border bg-card" data-demo-id="chat-tool-approval">
         <CardHeader className="pb-3">
           <div className="flex items-start gap-2">
             <ShieldAlert

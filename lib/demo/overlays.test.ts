@@ -27,6 +27,11 @@ describe("toolLabel", () => {
     expect(toolLabel("Create_Newton_Memory_Item")).toBe("Gedächtnis-Eintrag gespeichert");
   });
 
+  it("names the two tools chapter 9's stored session shows", () => {
+    expect(toolLabel("Send_Email_Reply")).toBe("E-Mail-Versand");
+    expect(toolLabel("Create_Agent_Memory_Memory_Item")).toBe("Gedächtnis-Eintrag gespeichert");
+  });
+
   it("humanises an unknown tool name", () => {
     expect(toolLabel("Send_Email")).toBe("Send Email");
   });

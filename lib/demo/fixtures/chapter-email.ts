@@ -3,6 +3,9 @@ import type { UIMessage } from "ai";
 import type { Routine } from "@/app/(application)/workflows/types";
 import type { RoutineRun } from "@/lib/routine-runs/types";
 import type { Agent } from "@/types/models/agent";
+import type { AgentSession } from "@/types/models/agent-session";
+
+import { DEMO_USER_ID } from "../user";
 
 import RAW_RUNS from "./algi-runs.json";
 import RAW_SESSION from "./algi-session.json";
@@ -48,6 +51,10 @@ export const ALGI_AGENT: Agent = {
   description:
     "Beantwortet Ersatzteilanfragen zu ALGI Hydraulikhebern und erstellt " +
     "Angebote aus dem Ersatzteilkatalog.",
+  category: "assistant",
+  model: "gemini-3.1-pro",
+  modelName: "gemini-3.1-pro",
+  providerName: "Google",
   welcomemessage: "",
   active: true,
   defaultagent: false,
@@ -112,19 +119,108 @@ export const ALGI_EMAIL_TRIGGER = {
  * A fixture written by hand would have been all green, and a prospect who has
  * ever run an inbox integration would not have believed it.
  */
+/**
+ * Which run is shown waiting. The export has one run in `waiting_approval`
+ * (0ffccf21, "WG: DEMANDE DE DEVIS"), and the scripted session below belongs
+ * to a different, completed run (f74bb00b, "WG: Price and delivery time
+ * 2658446"). Chapter 9 opens the scripted session on a pending approval, so
+ * the two rows swap STATE here: the session's run is the one waiting, the
+ * French request the one completed. Every other field stays as exported and
+ * the distribution the comment above describes is unchanged. Done in the
+ * mapping, not in algi-runs.json, so the export stays the export.
+ */
+const APPROVAL_RUN_ID = "f74bb00b-fd2f-4a7f-8d51-7215a35bc8c2";
+const EXPORTED_WAITING_RUN_ID = "0ffccf21-78c0-42fe-9c63-3b613ab96d4a";
+
+const shownState = (run: RoutineRun): string =>
+  run.id === APPROVAL_RUN_ID
+    ? "waiting_approval"
+    : run.id === EXPORTED_WAITING_RUN_ID
+      ? "completed"
+      : run.state;
+
 export const ALGI_RUNS: RoutineRun[] = (
   RAW_RUNS as Array<Record<string, unknown>>
-).map((run) => ({
-  ...(run as unknown as RoutineRun),
-  workflow: ALGI_ROUTINE_ID,
-  workflowName: ALGI_ROUTINE.name,
-  agent: ALGI_AGENT_ID,
-}));
+).map((raw) => {
+  const run = raw as unknown as RoutineRun;
+  return {
+    ...run,
+    state: shownState(run),
+    workflow: ALGI_ROUTINE_ID,
+    workflowName: ALGI_ROUTINE.name,
+    agent: ALGI_AGENT_ID,
+  };
+});
 
 /** The scripted-quote session, redacted. See build-algi-session-fixture.py. */
 export const ALGI_SESSION_MESSAGES = RAW_SESSION as unknown as UIMessage[];
 
 export const ALGI_SESSION_ID = "2963f8bc-92e3-4ed9-9e74-80603227f9d8";
+
+/** The scripted session as the chat route's GetAgentSessionById sees it. */
+export const ALGI_SESSION: AgentSession = {
+  id: ALGI_SESSION_ID,
+  agent: ALGI_AGENT_ID,
+  project: "demo-project",
+  // The inbound mail's subject — the first thing on screen above the thread.
+  title: "WG: Price and delivery time 2658446",
+  metadata: null,
+  // The routine ran as user 11, but the composer goes read-only for anyone
+  // but the creator of a private session (lib/check-chat-session-write-access),
+  // and a read-only notice above an approval card would contradict the card.
+  created_by: DEMO_USER_ID,
+  session_items: [],
+  rights_mode: "private",
+  createdAt: "2026-08-18T07:21:19.544Z",
+  updatedAt: "2026-08-18T09:12:40.000Z",
+};
+
+/**
+ * The part that puts chapter 9 on a pending approval. Shape per the AI SDK's
+ * DynamicToolUIPart union (node_modules/ai/dist/index.d.ts, the member with
+ * state 'approval-requested'): `input` present, no `output`, `approval.id`
+ * set — ToolCallApproval renders nothing without the id. Message 9 of this
+ * session carries the same `approval` object in its responded form.
+ */
+export const ALGI_APPROVAL_TOOL = "Send_Email_Reply";
+export const ALGI_APPROVAL_ID = "aitxt-Q7mVd2sK9pLx0wE4rTn1bYcH";
+
+/** The corrected quote: everything after the first rule in the assistant's last message. */
+export function quoteDraftFrom(text: string): string {
+  const rule = text.indexOf("***");
+  return (rule === -1 ? text : text.slice(rule + 3)).trim();
+}
+
+const lastMessage = ALGI_SESSION_MESSAGES[ALGI_SESSION_MESSAGES.length - 1];
+const lastTextPart = lastMessage.parts.find((part) => part.type === "text");
+const lastText = lastTextPart && "text" in lastTextPart ? lastTextPart.text : "";
+
+export const ALGI_APPROVAL_PART = {
+  type: `tool-${ALGI_APPROVAL_TOOL}`,
+  toolCallId: "call_3104__send_email_reply",
+  state: "approval-requested",
+  // `subject` first: the card's summary shows the first short string value.
+  input: {
+    subject:
+      "RE: Price and delivery time 2658446 - Cylinder packing seal for AZKBZ 110 (Commission No. G47490)",
+    to: "⟨Kundenkontakt⟩",
+    body: quoteDraftFrom(lastText),
+  },
+  approval: { id: ALGI_APPROVAL_ID },
+};
+
+/**
+ * The session as chapter 9 shows it: the assistant that has just taken the
+ * third correction asks to send the corrected quote. The export ends on the
+ * acknowledgement; the ask is the one part added to its last message.
+ */
+export const ALGI_APPROVAL_MESSAGES: UIMessage[] = [
+  ...ALGI_SESSION_MESSAGES.slice(0, -1),
+  {
+    ...lastMessage,
+    parts: [...lastMessage.parts, ALGI_APPROVAL_PART as unknown as UIMessage["parts"][number]],
+  },
+];
 
 /** Runs awaiting a human — what the sidebar's attention badge counts. */
 export const ALGI_RUNS_NEEDING_ATTENTION = ALGI_RUNS.filter(

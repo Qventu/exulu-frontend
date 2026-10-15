@@ -26,6 +26,10 @@ export function contextDisplayName(id: string): string {
 export const TOOL_LABELS: Record<string, string> = {
   Context_Search: "Wissenssuche",
   Create_Newton_Memory_Item: "Gedächtnis-Eintrag gespeichert",
+  // Chapter 9's stored session (ALFREDO): its memory tool, and the send the
+  // approval card asks about — "{tool} ausführen?" wants a noun.
+  Create_Agent_Memory_Memory_Item: "Gedächtnis-Eintrag gespeichert",
+  Send_Email_Reply: "E-Mail-Versand",
 };
 
 /** The tool card's title: a known label, or the name with underscores spaced. */

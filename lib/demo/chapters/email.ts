@@ -1,5 +1,6 @@
 import type { DemoChapter } from "../tour";
 import { ALGI_ROUTINE_ID } from "../fixtures/chapter-email";
+import { ALGI_CHAT } from "../routes";
 
 export const emailChapter: DemoChapter = {
   id: "email",
@@ -46,6 +47,18 @@ export const emailChapter: DemoChapter = {
         {
           kind: "paragraph",
           text: "25 Läufe: 14 erledigt, 8 fehlgeschlagen, einer wartet auf einen Menschen, zwei abgewiesen. Dazwischen korrigiert ein Verkäufer die Entwürfe — und jede Korrektur wandert sofort ins Gedächtnis.",
+        },
+      ],
+    },
+    {
+      id: "email-approval",
+      route: ALGI_CHAT,
+      anchor: "chat-tool-approval",
+      title: "Der eine, der auf einen Menschen wartet",
+      content: [
+        {
+          kind: "paragraph",
+          text: "Das ist der Lauf, der wartet: Der Assistent hat die Anfrage gelesen, den Katalog durchsucht und drei Korrekturen des Verkäufers übernommen — und fragt jetzt, bevor er die Antwort an den Kunden schickt. Gesendet wird erst, wenn ein Mensch es freigibt.",
         },
       ],
     },
