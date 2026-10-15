@@ -370,3 +370,16 @@ Spot (Playwright, scratch directory): `techdoc.0` after the stream — the answe
 - [ ] **Step 5: Record and commit**
 
 Append `## Verification` to this plan. `git add docs/superpowers/plans/2026-10-15-demo-tour-pseudonyms.md && git commit -m "docs(demo): record the pseudonyms walk"`.
+
+## Verification
+
+2026-10-15 — Daniel's production demo build of 39ed8b9 (BUILD_ID 5Wz_kaSRh15cTvI8js4IW), `next start -p 3111`, Playwright at 1440×900.
+
+- Walker in Weiter mode: **36/36**, zero leaks with the two original-identifier patterns in the deny list, 3 Tabs to Weiter.
+- `techdoc.0` after the stream: the answer names KS-2XT; the trace line in the fixture reads "Produktname in der Frage erkannt: KS" (the trace card is collapsed on screen); no original on the screen.
+- `memory.0`: the question reads "Wie wird bei der KS-2 die Kalibrierfahr gestartet?"; the memory items table reads "KS-2XT Kalibrierfahrt Menüpunkt".
+- `aufnahme.3`: the items list shows KSBugFixes.docx, KS2XTchanges-customer-DE.docx, KS-SM2-changes-customer-DE.docx, DPTFT-110_changes.doc.
+- `email.3`: the thread shows HKB 110, HK-110, DS-T-HK-110, DS-SHK-110, article numbers 418112 / 413139 / 434466 and "AHT Hydraulik GmbH".
+- `config.3`, `memory.3`: no original on the screen.
+- Script idempotence: a second run rewrites 0 files. No lib/demo test had pinned an original.
+- Unit: full suite 141 files / 1,505 tests at 42b5b80 (the scan test adds 41 file checks).
