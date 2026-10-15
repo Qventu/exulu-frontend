@@ -49,3 +49,13 @@ describe("a call to action", () => {
     expect(contentText([{ kind: "cta", label: "Termin buchen", href: "https://example.invalid" }])).toBe("Termin buchen");
   });
 });
+
+describe("logos block", () => {
+  it("flattens to the names and captions, so the sign-off export and the tests see them", () => {
+    expect(
+      contentText([
+        { kind: "logos", items: [{ name: "NEW Lift", caption: "Doku" }, { name: "ALGI", caption: "Teile", src: "/demo/logos/algi.svg" }] },
+      ] as ContentBlock[]),
+    ).toBe("NEW Lift — Doku · ALGI — Teile");
+  });
+});

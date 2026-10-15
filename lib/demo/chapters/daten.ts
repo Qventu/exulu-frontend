@@ -23,6 +23,7 @@ export const datenChapter: DemoChapter = {
       route: sceneRoute("daten-pile"),
       anchor: null,
       title: "Das Wissen ist längst da…",
+      lead: "Das Wissen eures Unternehmens ist da, nur verteilt und schwer zu finden.",
       content: [],
     },
     {
@@ -30,6 +31,7 @@ export const datenChapter: DemoChapter = {
       route: sceneRoute("daten-problem"),
       anchor: null,
       title: "…nur findet niemand die Antworten schnell genug",
+      lead: "Ohne Ordnung erfindet eine KI Antworten oder findet die falsche Fassung.",
       content: [],
     },
   ],

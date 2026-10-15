@@ -6,7 +6,7 @@ import type { ContentBlock } from "./content";
  *
  * They used to render full-bleed over the app, which is half of why the tour
  * felt "stuck together" — the presentation changed mid-story. They are pages
- * now, so the layout is the same on all 38 steps: content area plus the docked
+ * now, so the layout is the same on all 36 steps: content area plus the docked
  * panel. The app shell stays visible here deliberately; hiding it would
  * reintroduce exactly the mode-switch this change exists to remove.
  *
@@ -104,13 +104,20 @@ export const DEMO_SCENES: Record<string, { content: ContentBlock[] }> = {
   // Reached only from contact.1 — the one chapter allowed to name the
   // reference customers (lib/demo/chapters/index.test.ts skips it by id).
   "contact-close": {
-    // No figure: the chapter's illustration sits on its opening step
-    // (tour.test.ts, "illustrates chapter openings and nothing else"); here
-    // the three numbers are the visual.
+    // The chapter's only step (marketing, 2026-10-15: the references used to
+    // sit on the chat screen with nothing to point at). The logo cards are
+    // the visual; `src` is added once the logo files are in public/demo/logos.
     content: [
       {
+        kind: "logos",
+        items: [
+          { name: "NEW Lift Steuerungsbau", caption: "Technische Dokumentation und Service" },
+          { name: "ALGI Hydraulic", caption: "Angebots- und Ersatzteilprozesse" },
+        ],
+      },
+      {
         kind: "paragraph",
-        text: "Die Unternehmen NEW Lift Steuerungsbau (technische Dokumentation und Service) und ALGI Hydraulic (Angebots- und Ersatzteilprozesse) arbeiten bereits jetzt produktiv mit OPEN IMP. Alles, was du eben gesehen hast, ist daraus abgeleitet — aus Datenschutzgründen verallgemeinert, aber realistisch.",
+        text: "Beide arbeiten bereits jetzt produktiv mit OPEN IMP. Alles, was du eben gesehen hast, ist daraus abgeleitet — aus Datenschutzgründen verallgemeinert, aber realistisch.",
       },
       { kind: "stat", value: "10", label: "eurer Handbücher" },
       { kind: "stat", value: "2 Wochen", label: "Setup-Zeit" },

@@ -444,6 +444,15 @@
 .demo-stat-value { font-size: 1.9rem; font-weight: 600; line-height: 1; color: hsl(var(--primary)); }
 .demo-stat-label { color: hsl(var(--muted-foreground)); }
 
+/* The closing scene's reference customers (sub-project 6): logo cards, a
+   wordmark where no logo file exists yet. */
+.demo-block-logos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.demo-logo-card { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; padding: 1.25rem 1.5rem; border: 1px solid hsl(var(--border)); border-radius: 0.75rem; background: hsl(var(--card)); }
+.demo-logo-image { max-height: 48px; max-width: 180px; object-fit: contain; }
+.demo-logo-wordmark { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; color: hsl(var(--foreground)); }
+.demo-logo-caption { font-size: 0.95rem; color: hsl(var(--muted-foreground)); }
+.demo-scene .demo-logo-wordmark { font-size: 1.9rem; }
+
 .demo-block-sequence {
   margin: 0; padding: 0; list-style: none;
   display: grid; gap: 0.4rem;

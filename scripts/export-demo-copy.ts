@@ -85,6 +85,8 @@ function fieldsOfBlock(block: ContentBlock): Array<{ feld: string; text: string 
       return block.alt ? [{ feld: "Bild-Alt", text: block.alt }] : [];
     case "sequence":
       return block.steps.map((text, i) => ({ feld: `Sequenzschritt ${i + 1}`, text }));
+    case "logos":
+      return block.items.flatMap((i) => [{ feld: "Logo", text: i.name }, { feld: "Logo-Text", text: i.caption }]);
     case "cta":
       return [{ feld: "Schaltfläche", text: block.label }];
     default: {

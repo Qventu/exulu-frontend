@@ -24,7 +24,7 @@
  *                        why each probe is a real test rather than a no-op.
  *
  * ── Getting the step list ───────────────────────────────────────────────
- * The 38 steps are never hardcoded here. This script shells out to
+ * The 36 steps are never hardcoded here. This script shells out to
  * `npx tsx scripts/dump-demo-steps.ts`, which imports `CHAPTERS` and
  * `hrefFor` straight from lib/demo/tour.ts, so the walker cannot drift out
  * of sync with the chapters — reorder or add a step there and this script
@@ -99,7 +99,7 @@ function resolvePlaywright() {
 }
 
 /**
- * The 38 steps, derived from lib/demo/chapters via scripts/dump-demo-steps.ts
+ * The 36 steps, derived from lib/demo/chapters via scripts/dump-demo-steps.ts
  * — never hardcoded. Spawning `tsx` (rather than importing the .ts file
  * directly into this plain .mjs process) sidesteps needing a TypeScript
  * loader wired into this script itself.
@@ -392,8 +392,7 @@ const CLICK_PROBES = {
   "kosten.0": { attempts: [{ spec: { kind: "tab", containerSelector: "main" }, describe: "a non-active Radix tab (range preset or measure) — would switch the selected view" }] },
   "kosten.1": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="models-catalog"] tbody tr[role="button"]' }, describe: "a model row — would open its detail sheet" }] },
   "kosten.2": { attempts: [{ spec: { kind: "tab", containerSelector: "main" }, describe: "a non-active budget-scope tab (Benutzer/Rollen/...) — would switch the budgets view away from Teams" }] },
-  "contact.0": COPY_BUTTON,
-  "contact.1": COPY_BUTTON,
+  "contact.0": { attempts: [{ spec: { kind: "nav-link" }, describe: "sidebar nav link (closing scene, no product control)" }] },
 };
 
 async function runClickProbe(page, pos) {

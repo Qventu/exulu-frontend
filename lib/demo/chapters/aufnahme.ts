@@ -63,6 +63,7 @@ export const aufnahmeChapter: DemoChapter = {
       route: sceneRoute("aufnahme-page"),
       anchor: null,
       title: "Was mit einer Seite geschieht",
+      lead: "Jede Seite wird angesehen, nicht nur ausgelesen, damit auch Zeichnungen gefunden werden.",
       content: [],
     },
     {

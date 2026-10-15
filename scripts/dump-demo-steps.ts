@@ -4,7 +4,7 @@
  *
  * The one and only source of the step list for scripts/walk-demo.mjs. That
  * script shells out to this one (`npx tsx scripts/dump-demo-steps.ts`) rather
- * than hardcoding 38 URLs, so the walker cannot drift out of sync with
+ * than hardcoding 36 URLs, so the walker cannot drift out of sync with
  * lib/demo/chapters — add, remove or reorder a step there and the walker
  * picks it up on the next run with no edit here.
  *

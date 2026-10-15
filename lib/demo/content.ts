@@ -24,7 +24,10 @@ export type ContentBlock =
   /** An ordered pipeline, rendered as connected stages. */
   | { kind: "sequence"; steps: string[] }
   /** A button inside a scene — the closing ask. The panel footer's CTA is a separate step field. */
-  | { kind: "cta"; label: string; href: string };
+  | { kind: "cta"; label: string; href: string }
+  // The closing scene's reference customers: a logo file when one exists,
+  // the name as a wordmark otherwise (sub-project 6).
+  | { kind: "logos"; items: { name: string; caption: string; src?: string }[] };
 
 /** Every word in a block, for assertions and search. Never renders. */
 export function contentText(blocks: ContentBlock[]): string {
@@ -43,6 +46,8 @@ export function contentText(blocks: ContentBlock[]): string {
           return block.alt ?? "";
         case "sequence":
           return block.steps.join(" ");
+        case "logos":
+          return block.items.map((i) => `${i.name} — ${i.caption}`).join(" · ");
         case "cta":
           return block.label;
         default: {

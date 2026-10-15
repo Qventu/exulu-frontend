@@ -68,6 +68,21 @@ function Block({ block }: { block: ContentBlock }) {
           ))}
         </ol>
       );
+    case "logos":
+      return (
+        <ul className="demo-block-logos">
+          {block.items.map((item) => (
+            <li key={item.name} className="demo-logo-card">
+              {item.src ? (
+                <img className="demo-logo-image" src={item.src} alt={item.name} />
+              ) : (
+                <span className="demo-logo-wordmark">{item.name}</span>
+              )}
+              <span className="demo-logo-caption">{item.caption}</span>
+            </li>
+          ))}
+        </ul>
+      );
     case "cta":
       return (
         <a className="demo-button self-start" href={block.href}>

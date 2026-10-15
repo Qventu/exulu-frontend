@@ -42,6 +42,7 @@ export const zugriffChapter: DemoChapter = {
       route: sceneRoute("zugriff-consequence"),
       anchor: null,
       title: "Die Antwort richtet sich nach dem Fragenden",
+      lead: "Der Assistent nennt nur, was der Fragende lesen darf, bei jedem Suchlauf.",
       content: [],
     },
   ],

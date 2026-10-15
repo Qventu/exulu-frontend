@@ -435,11 +435,31 @@ describe("the tour after sub-project 5", () => {
     expect(steps.map((s) => s.id)).toEqual(["meetings-list", "meetings-guide"]);
   });
 
-  it("is 37 steps long", () => {
+  it("is 36 steps long", () => {
     // 37 before: minus the raw transcript, plus the model catalogue, plus the
     // approval card. The walker derives its list from CHAPTERS, so this is
     // the one place the number is written down.
-    // Then minus chapter 11's disclaimer step (marketing, 2026-10-15).
-    expect(CHAPTERS.reduce((n, c) => n + c.steps.length, 0)).toBe(37);
+    // Then minus chapter 11's disclaimer step and chapter 12's chat-screen
+    // step (marketing, 2026-10-15).
+    expect(CHAPTERS.reduce((n, c) => n + c.steps.length, 0)).toBe(36);
+  });
+});
+
+describe("the closing scene after marketing's second batch", () => {
+  const closingStep = () => CHAPTERS.at(-1)!.steps.at(-1)!;
+
+  it("is one step: the references with logos, the three numbers and the ask, with a lead in the panel", () => {
+    expect(CHAPTERS.at(-1)!.steps).toHaveLength(1);
+    const kinds = contentOf(closingStep()).map((b) => b.kind);
+    expect(kinds).toEqual(["logos", "paragraph", "stat", "stat", "stat", "paragraph", ...(DEMO_BOOKING_URL ? ["cta"] : [])]);
+    expect(closingStep().lead).toBeTruthy();
+  });
+
+  it("gives every scene step a lead, so the panel beside a scene is never bare", () => {
+    for (const chapter of CHAPTERS) {
+      for (const step of chapter.steps) {
+        if (step.route.startsWith("/demo/szene/")) expect(step.lead, step.id).toBeTruthy();
+      }
+    }
   });
 });

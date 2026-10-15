@@ -117,7 +117,7 @@ describe("chapter integrity", () => {
   });
 
   // The docked panel shows the chapter's goal under its title on every step
-  // (sub-project 2). One line, du-form, a full sentence: it is read 38 times.
+  // (sub-project 2). One line, du-form, a full sentence: it is read 36 times.
   it("gives every chapter a one-line goal", () => {
     for (const chapter of CHAPTERS) {
       expect(chapter.goal, `${chapter.id} has no goal`).toBeTruthy();
