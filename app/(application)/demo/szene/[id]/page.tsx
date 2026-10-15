@@ -19,7 +19,10 @@ export default async function ScenePage({ params }: { params: Promise<{ id: stri
   // their own — dropping it would leave the panel holding nothing but a
   // chapter counter and two buttons.
   return (
-    <div className="flex min-h-0 grow items-center justify-center overflow-y-auto p-8">
+    <div // px-4, not p-8: beside the 420px panel the content area is 764px wide, and
+    // 32px of side padding left the 800x534 figure at 467px tall; 16px lets it
+    // stand at ~489px, which is the frame the opening deserves.
+    className="flex min-h-0 grow items-center justify-center overflow-y-auto px-4 py-8">
       <div className="demo-scene w-full max-w-3xl">
         <StepPanel content={scene.content} />
       </div>
