@@ -31,12 +31,12 @@ export const DEMO_SCENES: Record<string, { content: ContentBlock[] }> = {
       {
         kind: "stat",
         value: "10.000+",
-        label: "Dokumente in einem typischen Aufzugsunternehmen",
+        label: "Dokumente in einem typischen technischen Unternehmen",
       },
 
       {
         kind: "paragraph",
-        text: "Handbücher, Datenblätter, Schaltpläne, E-Mails, Support-Tickets, Besprechungsaufzeichnungen. In jedem Unternehmen liegt das Wissen bereits vor — verteilt über Laufwerke, Postfächer und Köpfe.",
+        text: "Handbücher, Datenblätter, Schaltpläne, E-Mails, Support-Tickets, Besprechungsaufzeichnungen, in den Köpfen eurer Mitarbeiter — hier stecken die Antworten auf fast jede technische Frage.",
       },
     ],
   },
@@ -45,19 +45,19 @@ export const DEMO_SCENES: Record<string, { content: ContentBlock[] }> = {
       {
         kind: "bullets",
         items: [
+          "Niemand weiß, welches Dokument das richtige ist",
           "Niemand weiß, welche Fassung die gültige ist",
-          "Dieselbe Frage wird jedes Jahr neu beantwortet",
-          "Wer die Antwort kennt, ist gerade im Urlaub",
+          "Die, die die Antworten kennen, sind in absehbarer Zeit in Rente",
         ],
       },
       {
         kind: "paragraph",
-        text: "Ein Sprachmodell ohne Zugriff auf diese Unterlagen erfindet plausible Antworten. Ein Sprachmodell mit ungeordnetem Zugriff findet die falsche Fassung. Beides ist schlimmer als keine Antwort.",
+        text: "KI kann hier die Lösung sein. Aber ein Sprachmodell ohne Zugriff auf diese Unterlagen erfindet Antworten. Und ein Sprachmodell mit ungeordnetem Zugriff findet die falsche Fassung. Beides ist schlimmer als keine Antwort.",
       },
       {
         kind: "callout",
         tone: "fact",
-        text: "Die nächsten Kapitel zeigen, was dazwischen liegt — und dass es Konfiguration ist, kein Versprechen.",
+        text: "Die nächsten Kapitel zeigen, was dazwischen liegt — und dass es Konfiguration ist, kein leeres Versprechen.",
       },
     ],
   },
@@ -93,11 +93,11 @@ export const DEMO_SCENES: Record<string, { content: ContentBlock[] }> = {
       {
         kind: "callout",
         tone: "fact",
-        text: "Ein Assistent kann nur nennen, was der Fragende lesen darf. Das ist keine Zusicherung im Systemprompt, sondern eine Prüfung bei jedem Suchlauf.",
+        text: "Ein KI-Assistent kann nur nennen, was der Fragende lesen darf. Das ist keine Zusicherung im Systemprompt, sondern eine Prüfung der Nutzer-Berechtigung bei jedem Suchlauf.",
       },
       {
         kind: "paragraph",
-        text: "Derselbe Assistent beantwortet die Frage eines Technikers also anders als die eines externen Gasts — ohne dass jemand dafür einen zweiten Assistenten bauen muss.",
+        text: "Derselbe Assistent beantwortet die Frage eines Technikers also anders als die eines externen Gasts — ohne dass jemand dafür einen zweiten KI-Assistenten bauen muss.",
       },
     ],
   },

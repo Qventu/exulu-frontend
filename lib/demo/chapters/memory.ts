@@ -5,7 +5,7 @@ import { MEMORY_CHAT } from "../routes";
 
 export const memoryChapter: DemoChapter = {
   id: "memory",
-  title: "Korrigieren",
+  title: "Ein Assistent, der mitlernt",
   goal: "Eine Korrektur im Chat wird zu Wissen für alle Kollegen.",
   steps: [
     {
@@ -17,7 +17,7 @@ export const memoryChapter: DemoChapter = {
         { kind: "figure", src: "/demo/ch4-memory.webp", alt: "Aus einer Korrektur wird ein Wissenseintrag" },
         {
           kind: "paragraph",
-          text: "Ein Techniker fragt nach einem exakten Menüpfad. Der Assistent nennt, was die Dokumente hergeben, belegt es — und erfindet nichts dazu.",
+          text: "Ein Techniker fragt nach einem exakten Menüpfad. Der KI-Assistent nennt, was die Dokumente hergeben, belegt es, und erfindet nichts dazu.",
         },
       ],
     },
@@ -25,11 +25,11 @@ export const memoryChapter: DemoChapter = {
       id: "memory-correct",
       route: MEMORY_CHAT,
       anchor: "chat-composer",
-      title: "Der Techniker korrigiert",
+      title: "Fehler gefunden, der Techniker korrigiert",
       content: [
         {
           kind: "paragraph",
-          text: "Der Techniker schickt den richtigen Menüpfad zurück. Sehen Sie, was der Assistent daraus macht.",
+          text: "In diesem Beispiel hat der KI-Assistent den genauen Menüpfad nicht gefunden, nur die Stelle im Handbuch. Der Techniker schickt den richtigen Pfad zurück. Schau, was der KI-Assistent daraus macht.",
         },
       ],
     },
@@ -43,7 +43,7 @@ export const memoryChapter: DemoChapter = {
       content: [
         {
           kind: "paragraph",
-          text: "Das Merken ist ein sichtbarer Werkzeugaufruf, kein verborgener Nebeneffekt. Sie sehen genau, was gespeichert wurde.",
+          text: "Das Merken ist ein sichtbarer Schritt, kein verborgener Nebeneffekt. Du siehst genau, was gespeichert wurde.",
         },
       ],
     },
@@ -51,12 +51,12 @@ export const memoryChapter: DemoChapter = {
       id: "memory-base",
       route: "/memory",
       anchor: "memory-bases",
-      title: "Ein Gedächtnis, das Ihnen gehört",
+      title: "Ein Gedächtnis, das dir gehört",
       content: [
         {
           kind: "paragraph",
           // The count is the fixture's, not typed: the row on screen shows it.
-          text: `${capitalise(germanCount(MEMORY_COUNT_AFTER_CORRECTION))} Einträge, ein Assistent, ein Beitragender — der jüngste ist Ihre Korrektur von eben. Jeder Eintrag ist einsehbar, änderbar, löschbar; ab sofort bekommen alle Kollegen die richtige Antwort.`,
+          text: `${capitalise(germanCount(MEMORY_COUNT_AFTER_CORRECTION))} Einträge, ein Assistent, ein Beitragender — der jüngste ist deine Korrektur von eben. Jeder Eintrag ist einsehbar, änderbar, löschbar; ab sofort bekommen alle Kollegen die richtige Antwort.`,
         },
       ],
     },

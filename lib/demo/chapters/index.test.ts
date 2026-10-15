@@ -4,6 +4,7 @@ import { contentText, isEmptyContent } from "../content";
 // check below that reads copy must go through this or it silently skips the
 // four scene steps. See its docblock.
 import { contentOf } from "../step-content";
+import { sieFormIn } from "../register";
 import { isDemoSupported } from "../supported-routes";
 import { CHAPTERS } from "./index";
 
@@ -116,7 +117,7 @@ describe("chapter integrity", () => {
   });
 
   // The docked panel shows the chapter's goal under its title on every step
-  // (sub-project 2). One line, Sie-form, a full sentence: it is read 38 times.
+  // (sub-project 2). One line, du-form, a full sentence: it is read 38 times.
   it("gives every chapter a one-line goal", () => {
     for (const chapter of CHAPTERS) {
       expect(chapter.goal, `${chapter.id} has no goal`).toBeTruthy();
@@ -227,5 +228,53 @@ describe("the narrative arc", () => {
         `${from} should carry only its one cross-reference ("${expected}"), found: ${refs.join(", ")}`,
       ).toEqual(new Set([expected]));
     }
+  });
+});
+
+describe("the register is du (sub-project 6)", () => {
+  // Every string the tour owns, by field, so a failure names the place.
+  const strings = (): { where: string; text: string }[] => {
+    const out: { where: string; text: string }[] = [];
+    for (const chapter of CHAPTERS) {
+      out.push({ where: `${chapter.id} title`, text: chapter.title });
+      out.push({ where: `${chapter.id} goal`, text: chapter.goal });
+      for (const step of chapter.steps) {
+        out.push({ where: `${step.id} title`, text: step.title });
+        if (step.lead) out.push({ where: `${step.id} lead`, text: step.lead });
+        if (step.cta) out.push({ where: `${step.id} cta`, text: step.cta.label });
+        contentOf(step).forEach((block, i) => {
+          const at = `${step.id} block ${i} (${block.kind})`;
+          switch (block.kind) {
+            case "paragraph":
+            case "callout":
+              out.push({ where: at, text: block.text });
+              break;
+            case "bullets":
+              block.items.forEach((t) => out.push({ where: at, text: t }));
+              break;
+            case "sequence":
+              block.steps.forEach((t) => out.push({ where: at, text: t }));
+              break;
+            case "stat":
+              out.push({ where: at, text: `${block.value} ${block.label}` });
+              break;
+            case "figure":
+              if (block.alt) out.push({ where: at, text: block.alt });
+              break;
+            case "cta":
+              out.push({ where: at, text: block.label });
+              break;
+          }
+        });
+      }
+    }
+    return out;
+  };
+
+  it("has no Sie-form in any title, goal, lead, block or button", () => {
+    const offenders = strings()
+      .map((s) => ({ ...s, token: sieFormIn(s.text) }))
+      .filter((s) => s.token);
+    expect(offenders.map((s) => `${s.where}: "${s.token}"`)).toEqual([]);
   });
 });

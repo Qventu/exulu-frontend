@@ -15,7 +15,7 @@ import { sceneRoute } from "../scenes";
  */
 export const zugriffChapter: DemoChapter = {
   id: "zugriff",
-  title: "Zugriff",
+  title: "Berechtigungen und Zugriff",
   goal: "Wer lesen darf, bestimmt auch, was die Antwort enthält.",
   steps: [
     {

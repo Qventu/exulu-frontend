@@ -39,7 +39,7 @@ export const strukturChapter: DemoChapter = {
         },
         {
           kind: "paragraph",
-          text: "Damit ein Assistent etwas nachschlagen kann, muss es irgendwo liegen — getrennt nach Art des Wissens, nicht in einem einzigen Topf.",
+          text: "Damit ein Assistent etwas nachschlagen kann, darf es nicht irgendwo liegen. Es muss nach Art des Wissens getrennt werden und darf nicht in einem einzigen Topf landen.",
         },
       ],
     },
@@ -65,7 +65,7 @@ export const strukturChapter: DemoChapter = {
       content: [
         {
           kind: "paragraph",
-          text: "Diese sieben laufen in der gezeigten Umgebung. Die Anzahl ist nicht begrenzt — und welche ein Assistent durchsuchen darf, ist eine Einstellung pro Assistent, wie Kapitel 7 zeigt.",
+          text: "Diese sieben Wissensbasen laufen in der hier gezeigten Umgebung. Die Anzahl ist nicht begrenzt, und welche ein Assistent durchsuchen darf, ist eine Einstellung pro Assistent, wie wir in Kapitel 7 zeigen.",
         },
       ],
     },

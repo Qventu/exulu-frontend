@@ -3,8 +3,8 @@ import { TECHDOC_CHAT } from "../routes";
 
 export const techdocChapter: DemoChapter = {
   id: "techdoc",
-  title: "Eine schwierige Frage",
-  goal: "Eine Technikerfrage, live beantwortet und mit Quellen belegt.",
+  title: "Beispiel: Eine schwierige Frage",
+  goal: "Eine echte Technikerfrage, beantwortet und mit Quellen belegt.",
   steps: [
     {
       // No illustration, and the reason is no longer geometric: the panel is
@@ -21,7 +21,7 @@ export const techdocChapter: DemoChapter = {
       content: [
         {
           kind: "paragraph",
-          text: "Ein Servicetechniker fragt nach einem Fehlerbild. Sehen Sie zu, wie der Assistent sucht und antwortet — live, keine Aufzeichnung.",
+          text: "Ein Servicetechniker fragt nach einem Fehlerbild. Sieh zu, wie der Assistent sucht und antwortet — ein echter Austausch, so wie er stattfand.",
         },
       ],
     },
@@ -31,7 +31,7 @@ export const techdocChapter: DemoChapter = {
       id: "techdoc-retrieval",
       route: TECHDOC_CHAT,
       anchor: "chat-retrieval",
-      title: "Die Suche, offen gezeigt",
+      title: "Die Suche, transparent gezeigt",
       content: [
         {
           kind: "paragraph",
@@ -45,11 +45,11 @@ export const techdocChapter: DemoChapter = {
       id: "techdoc-answer",
       route: TECHDOC_CHAT,
       anchor: "chat-citation",
-      title: "Jede Aussage mit Quelle",
+      title: "Jede Aussage mit Quelle belegt",
       content: [
         {
           kind: "paragraph",
-          text: "Die Antwort belegt jede Aussage mit dem Dokument, aus dem sie stammt. Öffnen Sie eine Quelle und prüfen Sie selbst.",
+          text: "Die Antwort belegt jede Aussage mit dem Dokument, aus dem sie stammt. Öffne diese Quelle und schau dir die Informationen selbst an.",
         },
       ],
     },

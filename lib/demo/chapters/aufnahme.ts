@@ -34,7 +34,7 @@ export const aufnahmeChapter: DemoChapter = {
       route: CTX,
       anchor: "knowledge-items",
       scrollBlock: "start",
-      title: "Niemand lädt das von Hand hoch",
+      title: "Kein Hochladen von Hand nötig",
       content: [
         {
           kind: "paragraph",
@@ -51,7 +51,7 @@ export const aufnahmeChapter: DemoChapter = {
       content: [
         {
           kind: "paragraph",
-          text: "Jede Datei durchläuft dieselbe Strecke. Bei tausend Dokumenten dauert das Stunden und niemand sieht dabei zu — hier ist es beschleunigt.",
+          text: "Jede Datei durchläuft dieselbe Strecke. Bei tausenden Dokumenten dauert das Stunden und niemand sieht dabei zu. Hier ist es zu Anschauungszwecken beschleunigt.",
         },
       ],
     },
@@ -74,7 +74,7 @@ export const aufnahmeChapter: DemoChapter = {
       content: [
         {
           kind: "paragraph",
-          text: "Aus jeder Datei sind Passagen geworden, jede mit ihrer Herkunft verknüpft. Das ist es, was die Suche in Kapitel 5 tatsächlich durchsucht — und warum jede Aussage dort eine Quelle nennen kann.",
+          text: "Aus jeder Datei sind Passagen geworden, jede mit ihrer Herkunft verknüpft. Das ist es, was die Suche, die wir später in Kapitel 5 genauer zeigen, tatsächlich durchsucht — und warum jede Aussage dort eine Quelle nennen kann.",
         },
       ],
     },

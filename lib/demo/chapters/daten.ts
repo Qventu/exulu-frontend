@@ -15,21 +15,21 @@ import { sceneRoute } from "../scenes";
  */
 export const datenChapter: DemoChapter = {
   id: "daten",
-  title: "Ihre Daten",
-  goal: "Wo Ihr Wissen heute liegt, und warum eine KI damit nichts anfangen kann.",
+  title: "Eure Daten",
+  goal: "Wo euer Wissen heute liegt, und warum eine KI damit nichts anfangen kann.",
   steps: [
     {
       id: "daten-pile",
       route: sceneRoute("daten-pile"),
       anchor: null,
-      title: "Das Wissen ist längst da",
+      title: "Das Wissen ist längst da…",
       content: [],
     },
     {
       id: "daten-problem",
       route: sceneRoute("daten-problem"),
       anchor: null,
-      title: "Nur nicht in einer Form, mit der eine KI arbeiten kann",
+      title: "…nur findet niemand die Antworten schnell genug",
       content: [],
     },
   ],

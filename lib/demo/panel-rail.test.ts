@@ -10,7 +10,7 @@ describe("railSegments", () => {
     expect(states.filter((s) => s === "past")).toHaveLength(5);
     expect(states.filter((s) => s === "current")).toHaveLength(1);
     expect(states.filter((s) => s === "upcoming")).toHaveLength(6);
-    expect(segments[5]).toMatchObject({ id: "memory", index: 5, title: "Korrigieren", state: "current" });
+    expect(segments[5]).toMatchObject({ id: "memory", index: 5, title: "Ein Assistent, der mitlernt", state: "current" });
   });
 
   it("has nothing past on the first chapter", () => {
