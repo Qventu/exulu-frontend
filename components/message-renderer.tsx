@@ -591,8 +591,20 @@ export function MessageRenderer({
         // Kept verbatim from the legacy body: compared against the UNfiltered
         // messages length, not messagesToRender.
         const isLastMessage = messageIndex === messages.length - 1;
+        // In the demo, the retrieval card carries its own searching state
+        // while the transport holds the tool call (ContextSearchResults);
+        // the rotating placeholder underneath it would be a second, competing
+        // status line in the one beat the tour narrates as "watch it search".
+        const demoSearching =
+          isDemoMode() &&
+          (message.parts ?? []).some(
+            (p: any) =>
+              typeof p?.type === "string" &&
+              p.type.toLowerCase().includes("context_search") &&
+              (p.state === "input-streaming" || p.state === "input-available"),
+          );
         const showsStreamingPlaceholder =
-          status !== "ready" && status !== "error" && isLastMessage && message.role === "assistant";
+          status !== "ready" && status !== "error" && isLastMessage && message.role === "assistant" && !demoSearching;
         return (
           <MessageItem
             key={message.id}
@@ -1752,7 +1764,7 @@ const ContextSearchResults = ({
   // in a searching state during the hold, and shows the result as soon as
   // it lands rather than when the stream closes.
   const demo = isDemoMode();
-  const searching = demo && state !== "output-available" && state !== "output-error";
+  const searching = demo && (state === "input-streaming" || state === "input-available");
   const showResults = demo
     ? state === "output-available" && items?.length > 0
     : state === "output-available" && items?.length > 0 && !streaming;
@@ -1765,7 +1777,10 @@ const ContextSearchResults = ({
             <div className="p-2 rounded-md bg-primary/10">
               <Search className="h-4 w-4 text-primary animate-pulse" />
             </div>
-            <Shimmer as="span" className="text-sm font-medium">{SEARCHING_LABEL}</Shimmer>
+            {/* Plain text, not <Shimmer>: the shimmer paints with colour
+                variables only the placeholder's wrapper defines, and rendered
+                invisible here; the pulsing icon is the motion. */}
+            <span className="text-sm font-medium text-muted-foreground">{SEARCHING_LABEL}</span>
           </div>
         </div>
       )}
