@@ -44,4 +44,7 @@ export const ALGI_RUNS_OPEN = `/workflows/${ALGI_ROUTINE_ID}?run=${APPROVAL_RUN_
  * tour.test.ts asserts that behaviour in both directions, so setting this is
  * the only change needed: the link appears, and the copy comes with it.
  */
-export const DEMO_BOOKING_URL = "";
+export const DEMO_BOOKING_URL = "https://meetings-eu1.hubspot.com/dclaessen/kostenlose-erstberatung-open-imp";
+
+/** What the link opens: HubSpot's "kostenlose Erstberatung" page — one label for the button and the panel link. */
+export const DEMO_BOOKING_LABEL = "Kostenlose Erstberatung buchen";

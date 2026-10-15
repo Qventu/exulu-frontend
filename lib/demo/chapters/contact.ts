@@ -1,5 +1,5 @@
 import type { DemoChapter } from "../tour";
-import { DEMO_BOOKING_URL } from "../routes";
+import { DEMO_BOOKING_LABEL, DEMO_BOOKING_URL } from "../routes";
 import { sceneRoute } from "../scenes";
 
 export const contactChapter: DemoChapter = {
@@ -14,11 +14,11 @@ export const contactChapter: DemoChapter = {
       id: "contact-close",
       route: sceneRoute("contact-close"),
       anchor: null,
-      title: "Eine Demo mit euren eigenen Dokumenten",
-      lead: "Alles, was du gesehen hast, läuft auch mit euren Dokumenten — in zwei Wochen, nach 30 Minuten Planung.",
+      title: "Erst ausprobieren oder gleich richtig?",
+      lead: "Alles, was du gesehen hast, läuft auch mit euren Dokumenten — auf zwei Wegen, beide beginnen mit einem Gespräch.",
       content: [],
       ...(DEMO_BOOKING_URL
-        ? { cta: { label: "30-Minuten-Termin buchen", href: DEMO_BOOKING_URL } }
+        ? { cta: { label: DEMO_BOOKING_LABEL, href: DEMO_BOOKING_URL } }
         : {}),
     },
   ],

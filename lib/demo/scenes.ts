@@ -1,4 +1,4 @@
-import { DEMO_BOOKING_URL } from "./routes";
+import { DEMO_BOOKING_LABEL, DEMO_BOOKING_URL } from "./routes";
 import type { ContentBlock } from "./content";
 
 /**
@@ -104,29 +104,33 @@ export const DEMO_SCENES: Record<string, { content: ContentBlock[] }> = {
   // Reached only from contact.1 — the one chapter allowed to name the
   // reference customers (lib/demo/chapters/index.test.ts skips it by id).
   "contact-close": {
-    // The chapter's only step (marketing, 2026-10-15: the references used to
-    // sit on the chat screen with nothing to point at). The logo cards are
-    // the visual; `src` is added once the logo files are in public/demo/logos.
+    // The chapter's only step. Since sub-project 8 it carries the offer: two
+    // paths side by side, one button. No customer names for now; the `logos`
+    // block kind stays for when the files and the decision exist.
     content: [
       {
-        kind: "logos",
+        kind: "paragraph",
+        text: "Du entscheidest, wie schnell und wie tief. Beide Wege führen zu eurem IMP.",
+      },
+      {
+        kind: "paths",
         items: [
-          { name: "NEW Lift Steuerungsbau", caption: "Technische Dokumentation und Service" },
-          { name: "ALGI Hydraulic", caption: "Angebots- und Ersatzteilprozesse" },
+          {
+            tag: "Ausprobieren · 3 Monate unverbindlich",
+            price: "600 € / Monat, −50 % · Setup in zwei Tagen",
+            text: "Beliebig viele Dokumente, Transkripte und Besprechungsaufnahmen, ohne Systemanbindung. Variable Kosten mit 20 % Aufschlag.",
+          },
+          {
+            tag: "Vollwertig · in drei Schritten",
+            text: "Planungsgespräch → Anbindung an eure Systeme und Import eurer Daten → produktive Instanz innerhalb von zwei Arbeitstagen.",
+          },
         ],
       },
       {
         kind: "paragraph",
-        text: "Beide arbeiten bereits jetzt produktiv mit OPEN IMP. Alles, was du eben gesehen hast, ist daraus abgeleitet — aus Datenschutzgründen verallgemeinert, aber realistisch.",
+        text: "Beide Wege beginnen mit einem Gespräch von 30 Minuten.",
       },
-      { kind: "stat", value: "10", label: "eurer Handbücher" },
-      { kind: "stat", value: "2 Wochen", label: "Setup-Zeit" },
-      { kind: "stat", value: "30 Minuten", label: "reichen für die Planung" },
-      {
-        kind: "paragraph",
-        text: "Zehn eurer Handbücher, zwei Wochen Setup-Zeit, echte Fragen eures Serviceteams — genau auf der Plattform, die du gerade gesehen hast. 30 Minuten reichen für die Planung völlig aus.",
-      },
-      ...(DEMO_BOOKING_URL ? [{ kind: "cta" as const, label: "30-Minuten-Termin buchen", href: DEMO_BOOKING_URL }] : []),
+      ...(DEMO_BOOKING_URL ? [{ kind: "cta" as const, label: DEMO_BOOKING_LABEL, href: DEMO_BOOKING_URL }] : []),
     ],
   },
 };

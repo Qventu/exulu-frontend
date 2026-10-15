@@ -59,3 +59,13 @@ describe("logos block", () => {
     ).toBe("NEW Lift — Doku · ALGI — Teile");
   });
 });
+
+describe("paths block", () => {
+  it("flattens each path's tag, price and text", () => {
+    expect(
+      contentText([
+        { kind: "paths", items: [{ tag: "Weg 1", price: "600 €", text: "Testen." }, { tag: "Weg 2", text: "Richtig." }] },
+      ] as ContentBlock[]),
+    ).toBe("Weg 1 · 600 € · Testen. | Weg 2 · Richtig.");
+  });
+});

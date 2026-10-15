@@ -6,6 +6,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { footerControls } from "@/lib/demo/panel-controls";
 import { railSegments } from "@/lib/demo/panel-rail";
 import { nextPosition } from "@/lib/demo/tour";
+import { DEMO_BOOKING_LABEL, DEMO_BOOKING_URL } from "@/lib/demo/routes";
 
 import { StepPanel } from "./step-panel";
 import { useTour } from "./tour-provider";
@@ -176,6 +177,18 @@ export function TourPanel() {
         )}
         {controls.includes("next") && (
           <button type="button" onClick={next} className="demo-button">Weiter</button>
+        )}
+        {/* The booking link on every step but the last (which has the button).
+            Last in DOM so Tab reaches Weiter in the same three presses; first
+            visually, at the far left (order-first + mr-auto). */}
+        {DEMO_BOOKING_URL && !step.cta && (
+          <a
+            href={DEMO_BOOKING_URL}
+            className="order-first mr-auto text-sm text-primary underline underline-offset-4"
+            data-demo-id="tour-booking-link"
+          >
+            {DEMO_BOOKING_LABEL}
+          </a>
         )}
       </div>
     </aside>

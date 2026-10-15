@@ -453,6 +453,14 @@
 .demo-logo-caption { font-size: 0.95rem; color: hsl(var(--muted-foreground)); }
 .demo-scene .demo-logo-wordmark { font-size: 1.9rem; }
 
+/* The closing scene's two paths (sub-project 8): side by side, equal weight. */
+.demo-block-paths { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
+.demo-path { display: flex; flex-direction: column; gap: 0.4rem; padding: 1.25rem 1.5rem; border: 1px solid hsl(var(--border)); border-radius: 0.75rem; background: hsl(var(--card)); }
+.demo-path-tag { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: hsl(var(--primary)); }
+.demo-path-price { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+.demo-path-text { color: hsl(var(--muted-foreground)); line-height: 1.5; }
+.demo-scene .demo-path-price { font-size: 2rem; }
+
 .demo-block-sequence {
   margin: 0; padding: 0; list-style: none;
   display: grid; gap: 0.4rem;

@@ -87,6 +87,12 @@ function fieldsOfBlock(block: ContentBlock): Array<{ feld: string; text: string 
       return block.steps.map((text, i) => ({ feld: `Sequenzschritt ${i + 1}`, text }));
     case "logos":
       return block.items.flatMap((i) => [{ feld: "Logo", text: i.name }, { feld: "Logo-Text", text: i.caption }]);
+    case "paths":
+      return block.items.flatMap((p) => [
+        { feld: "Weg", text: p.tag },
+        ...(p.price ? [{ feld: "Weg-Preis", text: p.price }] : []),
+        { feld: "Weg-Text", text: p.text },
+      ]);
     case "cta":
       return [{ feld: "Schaltfläche", text: block.label }];
     default: {

@@ -252,8 +252,8 @@ describe("the register is du (sub-project 6)", () => {
     return out;
   };
 
-  it("reads every block kind, the logo captions included", () => {
-    expect(strings().some((s) => s.text.includes("Angebots- und Ersatzteilprozesse"))).toBe(true);
+  it("reads every block kind, the closing scene's paths included", () => {
+    expect(strings().some((s) => s.text.includes("Vollwertig · in drei Schritten"))).toBe(true);
   });
 
   it("has no Sie-form in any title, goal, lead, block or button", () => {

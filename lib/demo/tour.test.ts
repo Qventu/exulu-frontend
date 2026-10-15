@@ -403,8 +403,19 @@ describe("the closing call to action", () => {
     // proposes something specific — ten manuals, two weeks, their own service
     // team's questions — while the close used to invent a vaguer ask than the
     // one they had already been made.
-    expect(closing()).toMatch(/Zehn eurer Handbücher/i);
-    expect(closing()).toMatch(/zwei Wochen/i);
+    // Since sub-project 8 the offer is Daniel's two paths, not the whitepaper's
+    // pilot: three months on trial, or the full IMP in three steps.
+    expect(closing()).toMatch(/3 Monate unverbindlich/);
+    expect(closing()).toMatch(/zwei Arbeitstagen/);
+  });
+
+  it("carries the offer as two paths, no customer name, and the booking link", () => {
+    const text = closing();
+    expect(text).toMatch(/600 €/);
+    expect(text).toMatch(/20 % Aufschlag/);
+    expect(text).not.toMatch(/NEW Lift|ALGI/);
+    expect(closingStep().cta?.label).toBe("Kostenlose Erstberatung buchen");
+    expect(closingStep().cta?.href).toMatch(/^https:\/\/meetings-eu1\.hubspot\.com\//);
   });
 
   it("never renders a dead link or a placeholder", () => {
@@ -468,10 +479,10 @@ describe("the tour after sub-project 5", () => {
 describe("the closing scene after marketing's second batch", () => {
   const closingStep = () => CHAPTERS.at(-1)!.steps.at(-1)!;
 
-  it("is one step: the references with logos, the three numbers and the ask, with a lead in the panel", () => {
+  it("is one step: the two paths and the ask, with a lead in the panel", () => {
     expect(CHAPTERS.at(-1)!.steps).toHaveLength(1);
     const kinds = contentOf(closingStep()).map((b) => b.kind);
-    expect(kinds).toEqual(["logos", "paragraph", "stat", "stat", "stat", "paragraph", ...(DEMO_BOOKING_URL ? ["cta"] : [])]);
+    expect(kinds).toEqual(["paragraph", "paths", "paragraph", ...(DEMO_BOOKING_URL ? ["cta"] : [])]);
     expect(closingStep().lead).toBeTruthy();
   });
 

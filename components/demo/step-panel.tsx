@@ -83,6 +83,18 @@ function Block({ block }: { block: ContentBlock }) {
           ))}
         </ul>
       );
+    case "paths":
+      return (
+        <ul className="demo-block-paths">
+          {block.items.map((p) => (
+            <li key={p.tag} className="demo-path">
+              <span className="demo-path-tag">{p.tag}</span>
+              {p.price && <span className="demo-path-price">{p.price}</span>}
+              <span className="demo-path-text">{p.text}</span>
+            </li>
+          ))}
+        </ul>
+      );
     case "cta":
       return (
         <a className="demo-button self-start" href={block.href}>
