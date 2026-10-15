@@ -75,6 +75,16 @@ export const EMPTY_STATES = {
 } as const;
 
 /** /data's page header: the product addresses a developer; the tour addresses a buyer. */
+/**
+ * The memory overview's header: messages/de.json addresses the reader as
+ * "du" here (and on two other memory strings the tour never shows); the demo
+ * is Sie-form throughout, and the walker's deny list catches the slip.
+ */
+export const MEMORY_OVERVIEW = {
+  description:
+    "Was Ihre Agenten in Gesprächen gelernt haben. Eine Gedächtnis-Basis kann mehrere Agenten versorgen.",
+};
+
 export const KNOWLEDGE_LIBRARY = {
   description: "Die Wissensbasen, aus denen Ihre Assistenten antworten.",
   hint: "Jede Basis hat eigene Regeln für Aufnahme, Suche und Zugriff.",

@@ -17,6 +17,8 @@ import { Toolbar } from "@/components/primitives/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { isDemoMode } from "@/lib/demo/flag";
+import { MEMORY_OVERVIEW } from "@/lib/demo/overlays";
 import { cn } from "@/lib/utils";
 
 import { GET_MEMORY_AGENT_COUNT, GET_MEMORY_BASES } from "../queries";
@@ -155,7 +157,10 @@ export function MemoryOverview() {
 
   return (
     <PageShell>
-      <PageHeader title={t("title")} description={t("description")} />
+      <PageHeader
+        title={t("title")}
+        description={isDemoMode() ? MEMORY_OVERVIEW.description : t("description")}
+      />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label={t("stats.bases")} value={totals.bases} loading={bases.loading && !bases.data} />
         <StatCard

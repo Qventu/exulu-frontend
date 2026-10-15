@@ -7,6 +7,7 @@ import {
   KNOWLEDGE_LIBRARY,
   SEARCHING_LABEL,
   TOOL_STATUS_LABELS,
+  MEMORY_OVERVIEW,
   toolLabel,
 } from "./overlays";
 
@@ -18,6 +19,13 @@ describe("contextDisplayName", () => {
 
   it("humanises an id it does not know instead of leaking underscores", () => {
     expect(contextDisplayName("some_other_context")).toBe("Some other context");
+  });
+});
+
+describe("MEMORY_OVERVIEW", () => {
+  it("replaces the memory page's Du-form description with Sie-form", () => {
+    expect(MEMORY_OVERVIEW.description).toMatch(/Ihre Agenten/);
+    expect(MEMORY_OVERVIEW.description).not.toMatch(/\b(dein|deine|deinem|deinen|deiner)\b/);
   });
 });
 
