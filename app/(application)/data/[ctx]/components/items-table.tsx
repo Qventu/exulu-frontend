@@ -397,6 +397,7 @@ export function ItemsTable({
                 >
                   <ItemCard
                     item={item}
+                    index={index}
                     selected={selection.has(id)}
                     active={selectedItemId === id}
                     onToggle={(v) => toggleOne(id, v)}
