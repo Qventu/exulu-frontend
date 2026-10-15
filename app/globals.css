@@ -481,8 +481,12 @@
 .demo-scene .demo-stat-value { font-size: 3.5rem; }
 .demo-scene .demo-stat-label { font-size: 1.1rem; }
 .demo-scene .demo-block-paragraph,
-.demo-scene .demo-block-bullets,
 .demo-scene .demo-block-callout { font-size: 1.1rem; line-height: 1.6; }
+/* Chapter 1's second screen lists three statements; as a plain bullet list
+   they read as notes (marketing, 2026-10-15). Statement cards instead. */
+.demo-scene .demo-block-bullets { list-style: none; padding: 0; display: grid; gap: 0.75rem; }
+.demo-scene .demo-block-bullets li { position: relative; padding: 1rem 1.25rem 1rem 3rem; border: 1px solid hsl(var(--border)); border-radius: 0.75rem; background: hsl(var(--card)); font-size: 1.2rem; line-height: 1.5; }
+.demo-scene .demo-block-bullets li::before { content: "—"; position: absolute; left: 1.25rem; color: hsl(var(--primary)); font-weight: 600; }
 .demo-scene .demo-block-sequence li { font-size: 1.05rem; padding: 0.6rem 0.9rem; }
 
 /* --tour-panel-w: how much of the right edge the docked tour panel
