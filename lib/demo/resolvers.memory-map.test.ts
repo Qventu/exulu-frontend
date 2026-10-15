@@ -51,6 +51,16 @@ describe("the memory map (chapter 6, last step)", () => {
     expect(again.map((p) => [p.x, p.y, p.z])).toEqual(points.map((p) => [p.x, p.y, p.z]));
   });
 
+  it("keeps the map's time axis inside the demo's shifted window, so the slider spans the eight weeks the copy names", async () => {
+    // shiftDemoDates moves strings only; createdAtMs is a number and must be
+    // shifted at the source (review, 2026-10-15).
+    const points = ((await run(GET_CONTEXT_MAP_POINTS, POINTS_VARS, AT)).contextMapPoints as { points: Point[] }).points;
+    const stamps = points.map((p) => p.createdAtMs as number);
+    const week = 7 * 86_400_000;
+    expect(Math.min(...stamps)).toBeGreaterThanOrEqual(Date.now() - 9 * week);
+    expect(Math.max(...stamps)).toBeLessThanOrEqual(Date.now() + 86_400_000);
+  });
+
   it("answers the base page's own operations", async () => {
     const base = (await run(GET_MEMORY_BASE, { id: MEMORY_CONTEXT_ID }, AT)).contextById as { memoryBase: { ok: boolean } };
     expect(base.memoryBase.ok).toBe(true);

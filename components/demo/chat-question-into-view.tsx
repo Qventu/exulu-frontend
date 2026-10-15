@@ -13,6 +13,11 @@ import { useTour } from "./tour-provider";
  * `scrollBlock: "start"`) is about the beginning: chapter 9's "Worum es
  * geht" opens a stored session on its inbound mail.
  */
+/** Keys that scroll a conversation: pressing one means the visitor has taken over. */
+export function isTakeOverKey(key: string): boolean {
+  return ["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "].includes(key);
+}
+
 export function questionToAlign(
   step: Pick<DemoStep, "anchor" | "scrollBlock"> | undefined,
 ): "first" | "last" | null {
@@ -71,8 +76,17 @@ export function ChatQuestionIntoView() {
     // out from under someone who is reading.
     let taken = false;
     const takeOver = () => { taken = true; };
+    // Scrollbar drags arrive as pointerdown inside the conversation, keyboard
+    // scrolling as keydown: both are the visitor too (review, 2026-10-15).
+    const onPointerDown = (e: PointerEvent) => {
+      const conv = document.querySelector('[data-demo-id="chat-messages"]');
+      if (conv && e.target instanceof Node && conv.contains(e.target)) taken = true;
+    };
+    const onKeyDown = (e: KeyboardEvent) => { if (isTakeOverKey(e.key)) taken = true; };
     window.addEventListener("wheel", takeOver, { passive: true });
     window.addEventListener("touchmove", takeOver, { passive: true });
+    window.addEventListener("pointerdown", onPointerDown, { passive: true });
+    window.addEventListener("keydown", onKeyDown, { passive: true });
 
     // Stability is height AND position: the conversation's own stick-to-bottom
     // animates scrollTop for ~1s after mount, and a scroll started while it
@@ -146,6 +160,8 @@ export function ChatQuestionIntoView() {
       if (settleTimer) clearTimeout(settleTimer);
       window.removeEventListener("wheel", takeOver);
       window.removeEventListener("touchmove", takeOver);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- position is read by chapter and step
   }, [position.chapter, position.step]);

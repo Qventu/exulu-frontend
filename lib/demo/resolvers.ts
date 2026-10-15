@@ -24,6 +24,7 @@ import {
 } from "./fixtures/chapter-kosten";
 import { MEMORY_CONTEXT_ID, MEMORY_CONTRIBUTORS, MEMORY_SESSION_ID } from "./fixtures/chapter-memory";
 import { memoryMapPoints, MEMORY_TOPICS, topicOf } from "./fixtures/memory-examples";
+import { demoDateOffsetMs, shiftTimestamp } from "./date-shift";
 import { TECHDOC_SESSION_ID } from "./fixtures/chapter-techdoc";
 import { CONTEXTS } from "./fixtures/contexts";
 import { DEMO_ROLES, ROLE_TECHNIKER_ID } from "./fixtures/roles";
@@ -869,7 +870,13 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   },
   ContextMapPoints: (world, variables) => {
     const items = world.itemsByContext?.[String(variables.contextId)] ?? [];
-    const points = memoryMapPoints(items);
+    // The link shifts STRING timestamps into the demo's window; createdAtMs
+    // is a number, so shift at the source or the slider spans the fixture's
+    // real dates up to today (review, 2026-10-15).
+    const offset = demoDateOffsetMs();
+    const points = memoryMapPoints(
+      items.map((item) => (item.createdAt ? { ...item, createdAt: shiftTimestamp(item.createdAt, offset) } : item)),
+    );
     return { contextMapPoints: { points, total: points.length, sampled: false } };
   },
   ContextMapEdges: () => ({ contextMapEdges: [] }),
