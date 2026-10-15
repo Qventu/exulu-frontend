@@ -783,3 +783,18 @@ NEXT_PUBLIC_DEMO_MODE=true BACKEND=https://demo.invalid npx next start -p 3111
 ## Copy for sign-off
 
 All new German strings are in Tasks 1–4 above (chapter 9's two steps, chapter 10's two, chapter 11's one, chapter 6's two, the closing scene's paths and lead, the booking label) plus the sixty example memories in `memory-examples.ts`. The CSV export after Task 5 is the sheet.
+
+## Verification
+
+2026-10-15 — Daniel's production demo builds; final 64ROZ6XBsyU-CNSPKKEGX of b3b4e03, `next start -p 3111`, Playwright at 1440×900.
+
+- Walker in Weiter mode: **38/38**, zero leaks, 3 Tabs to Weiter (the persistent booking link sits after Weiter in DOM order). A run with three probes hitting the server at the same time had timed out on chapter 6; alone, the walk is clean.
+- `memory.4`: the map draws (canvas), both slider thumbs present, the "to" thumb sweeps through 13 dates from 02.07.2026 to the correction's day; four topic labels; the panel says Beispieleinträge. `memory.3`: the row reads 64 memories, 5 contributors, saved "jetzt".
+- `email.2`: the waiting run's row is expanded (Von, Betreff, "Unterhaltung öffnen"), in the Weiter flow too (the `?run=` param is followed on client-side navigation). `email.3`: the inbound mail is at the top of the conversation on a deep link (at 4 s) and in the Weiter flow (3.5 s); `email.4`: the approval card is in view.
+- Chapter 5: the question is aligned above its answer after the stream for the first time — the SP2 helper had fired during the chat's own scroll animation and lost to it; it now waits for height and position to settle and verifies once.
+- `meetings.0` "Besprechungen, die zu Wissen werden"; `kosten.0` "Mach die KI-Nutzung sichtbar".
+- `contact.0`: two path cards, the button to the HubSpot page labelled "Kostenlose Erstberatung buchen", no customer name; on every other step the panel footer carries the same link.
+- Console pass over the checked screens, `/memory/newton_memory_context` included: zero errors.
+- Found on the builds and fixed: the run param read only at mount; the question alignment pushing the approval card away; the alignment firing mid-animation (pre-existing); the composer-anchored steps losing their alignment.
+- Unit: full suite 143 files / 1,521 tests at a77d7bd plus the alignment tests (3) at b3b4e03.
+- Sign-off sheet: `docs/superpowers/plans/2026-10-15-demo-tour-growth-copy.csv` (145 rows, 38 steps).
