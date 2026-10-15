@@ -381,7 +381,9 @@ describe("the chapters that show something invented", () => {
 
 describe("the closing call to action", () => {
   const closingStep = () => CHAPTERS.at(-1)!.steps.at(-1)!;
-  const closing = () => contentText(closingStep().content);
+  // Through contentOf: the close is a scene since sub-project 4, so its
+  // copy lives in lib/demo/scenes.ts like every scene's.
+  const closing = () => contentText(contentOf(closingStep()));
 
   it("makes the ask, in the whitepaper's own terms", () => {
     // The tour used to end on a Back button: twelve minutes of someone's

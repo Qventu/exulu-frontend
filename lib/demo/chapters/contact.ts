@@ -1,5 +1,6 @@
 import type { DemoChapter } from "../tour";
 import { DEMO_BOOKING_URL, TECHDOC_CHAT } from "../routes";
+import { sceneRoute } from "../scenes";
 
 export const contactChapter: DemoChapter = {
   id: "contact",
@@ -24,15 +25,14 @@ export const contactChapter: DemoChapter = {
     },
     {
       id: "contact-close",
-      route: TECHDOC_CHAT,
+      // A scene, not the chat: the close deserves a frame of its own — the
+      // references, the three numbers of the pilot and (once the booking
+      // URL exists) the button, full-width. Its copy lives in
+      // lib/demo/scenes.ts like every scene's.
+      route: sceneRoute("contact-close"),
       anchor: null,
       title: "Mit Ihren eigenen Dokumenten",
-      content: [
-        {
-          kind: "paragraph",
-          text: "Zehn Ihrer Handbücher, zwei Wochen, echte Fragen Ihres Serviceteams — auf genau dem, was Sie eben gesehen haben. Dreißig Minuten reichen für die Planung.",
-        },
-      ],
+      content: [],
       ...(DEMO_BOOKING_URL
         ? { cta: { label: "30-Minuten-Termin buchen", href: DEMO_BOOKING_URL } }
         : {}),

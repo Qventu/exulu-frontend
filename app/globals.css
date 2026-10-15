@@ -461,6 +461,21 @@
    object-fit: contain letterboxes rather than distorts. */
 .demo-block-figure { display: block; width: 100%; height: auto; max-height: 16rem; object-fit: contain; border-radius: 0.5rem; }
 
+/* A scene page (app/(application)/demo/szene/[id]/page.tsx) renders a step's
+ * blocks into a 768px column instead of the 420px panel. The shared block
+ * rules above are sized for the panel; here the figure may stand at its
+ * natural height (800x534 → ~512px at 768px wide), the stat is the frame's
+ * headline, and the copy gets reading-size type and room between blocks.
+ * .demo-scene exists only on that page. */
+.demo-scene .demo-step-panel { gap: 1.5rem; }
+.demo-scene .demo-block-figure { max-height: 520px; }
+.demo-scene .demo-stat-value { font-size: 3.5rem; }
+.demo-scene .demo-stat-label { font-size: 1.1rem; }
+.demo-scene .demo-block-paragraph,
+.demo-scene .demo-block-bullets,
+.demo-scene .demo-block-callout { font-size: 1.1rem; line-height: 1.6; }
+.demo-scene .demo-block-sequence li { font-size: 1.05rem; padding: 0.6rem 0.9rem; }
+
 /* --tour-panel-w: how much of the right edge the docked tour panel
  * (components/demo/tour-panel.tsx) occupies, so portalled dialogs below can
  * stay clear of it. Defined here with a media query — not inline from the

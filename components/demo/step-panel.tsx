@@ -68,6 +68,12 @@ function Block({ block }: { block: ContentBlock }) {
           ))}
         </ol>
       );
+    case "cta":
+      return (
+        <a className="demo-button self-start" href={block.href}>
+          {block.label}
+        </a>
+      );
     default: {
       // Adding a ContentBlock kind without handling it here is a compile
       // error, not a silently blank block. tsconfig sets `strict` but not

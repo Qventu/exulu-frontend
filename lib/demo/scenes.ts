@@ -1,3 +1,4 @@
+import { DEMO_BOOKING_URL } from "./routes";
 import type { ContentBlock } from "./content";
 
 /**
@@ -26,14 +27,16 @@ export const DEMO_SCENES: Record<string, { content: ContentBlock[] }> = {
         src: "/demo/daten-pile.webp",
         alt: "Unstrukturierte Dokumente, E-Mails und Zeichnungen",
       },
-      {
-        kind: "paragraph",
-        text: "Handbücher, Datenblätter, Schaltpläne, E-Mails, Support-Tickets, Besprechungsaufzeichnungen. In jedem Unternehmen liegt das Wissen bereits vor — verteilt über Laufwerke, Postfächer und Köpfe.",
-      },
+
       {
         kind: "stat",
         value: "10.000+",
         label: "Dokumente in einem typischen Aufzugsunternehmen",
+      },
+
+      {
+        kind: "paragraph",
+        text: "Handbücher, Datenblätter, Schaltpläne, E-Mails, Support-Tickets, Besprechungsaufzeichnungen. In jedem Unternehmen liegt das Wissen bereits vor — verteilt über Laufwerke, Postfächer und Köpfe.",
       },
     ],
   },
@@ -96,6 +99,27 @@ export const DEMO_SCENES: Record<string, { content: ContentBlock[] }> = {
         kind: "paragraph",
         text: "Derselbe Assistent beantwortet die Frage eines Technikers also anders als die eines externen Gasts — ohne dass jemand dafür einen zweiten Assistenten bauen muss.",
       },
+    ],
+  },
+  // Reached only from contact.1 — the one chapter allowed to name the
+  // reference customers (lib/demo/chapters/index.test.ts skips it by id).
+  "contact-close": {
+    // No figure: the chapter's illustration sits on its opening step
+    // (tour.test.ts, "illustrates chapter openings and nothing else"); here
+    // the three numbers are the visual.
+    content: [
+      {
+        kind: "paragraph",
+        text: "NEW Lift Steuerungsbau (technische Dokumentation und Service) und ALGI Hydraulic (Angebots- und Ersatzteilprozesse) arbeiten produktiv mit OPEN IMP. Alles, was Sie eben gesehen haben, ist daraus abgeleitet — verallgemeinert, aber realistisch.",
+      },
+      { kind: "stat", value: "10", label: "Ihrer Handbücher" },
+      { kind: "stat", value: "2 Wochen", label: "echte Fragen Ihres Serviceteams" },
+      { kind: "stat", value: "30 Minuten", label: "reichen für die Planung" },
+      {
+        kind: "paragraph",
+        text: "Zehn Ihrer Handbücher, zwei Wochen, echte Fragen Ihres Serviceteams — auf genau dem, was Sie eben gesehen haben. Dreißig Minuten reichen für die Planung.",
+      },
+      ...(DEMO_BOOKING_URL ? [{ kind: "cta" as const, label: "30-Minuten-Termin buchen", href: DEMO_BOOKING_URL }] : []),
     ],
   },
 };

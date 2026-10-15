@@ -10,6 +10,7 @@ describe("contentText", () => {
       { kind: "stat", value: "1.000", label: "Dokumente" },
       { kind: "figure", src: "/demo/x.webp", alt: "Schema" },
       { kind: "sequence", steps: ["Lesen", "Zerlegen"] },
+      { kind: "cta", label: "Termin buchen", href: "https://example.invalid" },
     ];
     const text = contentText(blocks);
     for (const fragment of [
@@ -40,5 +41,11 @@ describe("isEmptyContent", () => {
 
   it("is false for real copy", () => {
     expect(isEmptyContent([{ kind: "paragraph", text: "Text" }])).toBe(false);
+  });
+});
+
+describe("a call to action", () => {
+  it("counts as copy by its label only", () => {
+    expect(contentText([{ kind: "cta", label: "Termin buchen", href: "https://example.invalid" }])).toBe("Termin buchen");
   });
 });

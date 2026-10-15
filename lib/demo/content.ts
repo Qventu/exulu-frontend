@@ -22,7 +22,9 @@ export type ContentBlock =
   | { kind: "stat"; value: string; label: string }
   | { kind: "figure"; src: string; alt?: string }
   /** An ordered pipeline, rendered as connected stages. */
-  | { kind: "sequence"; steps: string[] };
+  | { kind: "sequence"; steps: string[] }
+  /** A button inside a scene — the closing ask. The panel footer's CTA is a separate step field. */
+  | { kind: "cta"; label: string; href: string };
 
 /** Every word in a block, for assertions and search. Never renders. */
 export function contentText(blocks: ContentBlock[]): string {
@@ -41,6 +43,8 @@ export function contentText(blocks: ContentBlock[]): string {
           return block.alt ?? "";
         case "sequence":
           return block.steps.join(" ");
+        case "cta":
+          return block.label;
         default: {
           // Adding a ContentBlock kind without handling it here is a compile
           // error, not a silently dropped string. tsconfig sets `strict` but
