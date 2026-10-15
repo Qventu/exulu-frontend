@@ -160,7 +160,7 @@ export function ModelDetailSheet({
                 label={t("detail.inputCost")}
                 value={
                   entry.input_cost_per_million_tokens != null
-                    ? `$${formatCostPerMillion(entry.input_cost_per_million_tokens)} / 1M`
+                    ? `${formatCostPerMillion(entry.input_cost_per_million_tokens)} / 1M`
                     : notSupported
                 }
               />
@@ -168,7 +168,7 @@ export function ModelDetailSheet({
                 label={t("detail.outputCost")}
                 value={
                   entry.output_cost_per_million_tokens != null
-                    ? `$${formatCostPerMillion(entry.output_cost_per_million_tokens)} / 1M`
+                    ? `${formatCostPerMillion(entry.output_cost_per_million_tokens)} / 1M`
                     : notSupported
                 }
               />

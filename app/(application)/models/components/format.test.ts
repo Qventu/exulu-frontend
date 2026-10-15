@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { formatCostPerMillion, formatTokens } from "./format";
@@ -24,5 +27,19 @@ describe("formatTokens", () => {
     expect(formatTokens(1048576)).toBe("1.0M");
     expect(formatTokens(200000)).toBe("200K");
     expect(formatTokens(null)).toBe("—");
+  });
+});
+
+describe("formatCostPerMillion callers", () => {
+  it("never prefix the formatted amount with a currency sign of their own", () => {
+    // The helper returns a currency string since sub-project 5; a caller that
+    // still writes `$${formatCostPerMillion(...)}` prints "$$1.25" (the model
+    // detail sheet did, found in review).
+    const dir = __dirname;
+    const offenders = fs
+      .readdirSync(dir)
+      .filter((name) => name.endsWith(".tsx"))
+      .filter((name) => /\$\$\{formatCostPerMillion/.test(fs.readFileSync(path.join(dir, name), "utf8")));
+    expect(offenders).toEqual([]);
   });
 });

@@ -43,11 +43,13 @@ describe("chapter 9 opens the waiting run's session on a pending approval", () =
     expect((session.agent_sessionById as { id: string; agent: string }).agent).toBe(ALGI_AGENT_ID);
   });
 
-  it("lists each agent's own sessions only", async () => {
-    const alfredo = await sessionsFor(ALGI_AGENT_ID);
-    expect((alfredo.agent_sessionsPagination as { items: unknown[] }).items).toHaveLength(0);
-    const newton = await sessionsFor(DEMO_AGENT_ID);
-    expect((newton.agent_sessionsPagination as { items: unknown[] }).items.length).toBeGreaterThan(0);
+  it("lists each agent's own sessions only — ALFREDO's rail shows the open one, not Newton's", async () => {
+    const ids = (data: Record<string, unknown>) =>
+      (data.agent_sessionsPagination as { items: { id: string }[] }).items.map((s) => s.id);
+    expect(ids(await sessionsFor(ALGI_AGENT_ID))).toEqual([ALGI_SESSION_ID]);
+    const newton = ids(await sessionsFor(DEMO_AGENT_ID));
+    expect(newton.length).toBeGreaterThan(0);
+    expect(newton).not.toContain(ALGI_SESSION_ID);
   });
 
   it("serves the stored session ending on an approval-requested tool part", async () => {

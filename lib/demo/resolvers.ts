@@ -1122,10 +1122,15 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // field is an Apollo cache error rather than an empty state.
   GetAgentSessions: (world, variables) => {
     // The chat surface asks for the CURRENT agent's sessions (filters.agent.eq);
-    // ALFREDO's page must not list Newton's.
+    // ALFREDO's page must not list Newton's. It lists its own open session
+    // instead: the product would hide a run's session from the rail
+    // (run: { eq: null }), but "Noch keine Unterhaltungen" beside a
+    // fifteen-message conversation reads as broken, not as faithful.
     const agent = filterValue(variables, "agent");
-    const items = world.sessions
-      .filter((session) => !agent || session.agent === agent)
+    const own = agent === ALGI_AGENT_ID
+      ? [ALGI_SESSION]
+      : world.sessions.filter((session) => !agent || session.agent === agent);
+    const items = own
       .map((session) => ({
         ...session,
         user: session.created_by,
