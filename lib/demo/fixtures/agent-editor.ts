@@ -232,7 +232,7 @@ const VOCABULARY = {
     },
     {
       term: "KS",
-      meaning: "Feldbussteuerung (das zentrale Steuerungssystem)",
+      meaning: "Kabinensteuerung (das zentrale Steuerungssystem)",
     },
     {
       term: "GB",

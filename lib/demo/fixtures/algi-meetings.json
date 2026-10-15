@@ -155,7 +155,7 @@
   },
   {
     "id": "cc63f410-cf1a-47a8-accc-202cd76daa24",
-    "title": "AZFR SChulung",
+    "title": "HAFR SChulung",
     "status": "saved",
     "language": null,
     "duration_seconds": 3580,
@@ -188,7 +188,7 @@
   },
   {
     "id": "ce0d9668-37f4-4c08-809f-59edc6b822a2",
-    "title": "Einplanung S-Line",
+    "title": "Einplanung E-Line",
     "status": "awaiting_review",
     "language": null,
     "duration_seconds": 1163,
@@ -199,7 +199,7 @@
   },
   {
     "id": "54a8e600-7434-430c-8c78-25ea821b07b9",
-    "title": "Comfort-Line",
+    "title": "C-Line",
     "status": "queued",
     "language": null,
     "duration_seconds": null,

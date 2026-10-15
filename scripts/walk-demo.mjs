@@ -830,8 +830,8 @@ async function main() {
       /Create Newton Memory Item/,
       // The reference customers' real product identifiers (sub-project 7,
       // lib/demo/fixtures/pseudonyms.ts): none may reach a screen.
-      /(?<![A-Za-z])FST-?2XT|(?<![A-Za-z])FST-?[23](?![A-Za-z])|(?<![A-Za-z])FST(?![A-Za-z])|(?<![A-Za-z])fst2|FSM2|EAZ-?TFT/,
-      /(?<![A-Za-z])AZKBZ|(?<![A-Za-z])AZK(?![A-Za-z])|DISA-|Giehl|G47490|\b(134466|118112|113139|140700|105070|105068|105177|120629|118126|114446|113645|113089)\b/,
+      /(?<![A-Za-z])FST-?2XT|(?<![A-Za-z])FST-?[23](?![A-Za-z])|(?<![A-Za-z])FST(?![A-Za-z])|(?<![A-Za-z])FSTBug|(?<![A-Za-z])fst2|EAZ-?TFT/,
+      /(?<![A-Za-z])AZKBZ|(?<![A-Za-z])AZK(?![A-Za-z])|DISA-|(?<![A-Za-z])TAZ(?=[- ]\d)|(?<![A-Za-z])AZ(?=[- ]\d|\/K)|(?<![A-Za-z])(AZFR|AZSTB|AZRS)|(?<![A-Za-z])AZ[MR](?= \d)|\bS-Line\b|\bComfort-Line\b|\bAlgi\b|Giehl|G47490|\b07204739\b|\b(134466|118112|113139|140700|105070|105068|105177|120629|118126|114446|113645|113089)\b/,
       /software documentation context|support tickets context|tech doc context/i,
       /Technical documentation regression|Standards & regulations|Nightly —|Baseline —/,
       /Untitled transcript|Unbenanntes Transkript|Test Bild/,

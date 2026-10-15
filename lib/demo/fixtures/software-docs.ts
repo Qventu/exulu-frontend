@@ -94,9 +94,9 @@ export const SOFTWARE_DOC_ITEMS: Item[] = [
   }),
   demoItem({
     id: "85e3e8fc-d866-4bbc-bbff-15e98d003489",
-    name: "KS-SM2-changes-customer-EN.docx",
+    name: "KS-FSM2-changes-customer-EN.docx",
     source: "google-storage",
-    external_id: "KS/Software/KS-SM2-changes-customer-EN.docx",
+    external_id: "KS/Software/KS-FSM2-changes-customer-EN.docx",
     chunks_count: 2,
     createdAt: "2026-08-20T01:24:45.078Z",
     last_processed_at: "2026-08-25T22:34:59.402Z",
@@ -104,9 +104,9 @@ export const SOFTWARE_DOC_ITEMS: Item[] = [
   }),
   demoItem({
     id: "7d1d0d6e-f4ae-4fe4-aa90-a8b210d3df59",
-    name: "KS-SM2-changes-customer-DE.docx",
+    name: "KS-FSM2-changes-customer-DE.docx",
     source: "google-storage",
-    external_id: "KS/Software/KS-SM2-changes-customer-DE.docx",
+    external_id: "KS/Software/KS-FSM2-changes-customer-DE.docx",
     chunks_count: 2,
     createdAt: "2026-08-20T01:24:44.257Z",
     last_processed_at: "2026-08-25T22:34:58.432Z",

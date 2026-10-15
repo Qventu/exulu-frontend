@@ -1,7 +1,10 @@
 /**
  * One-off: applies lib/demo/fixtures/pseudonyms.ts to the fixture files'
  * string content and renames the chunk export. Comment lines in TS files are
- * left alone (they record provenance). Idempotent; re-running changes nothing.
+ * left alone (they record provenance) — a heuristic: a line inside a template
+ * literal that starts with "*" or "//" is skipped too, so the scan test in
+ * pseudonyms.test.ts, not this script, is the proof of completeness.
+ * Idempotent; re-running changes nothing.
  *
  *   npx tsx scripts/pseudonymise-fixtures.mjs
  *
@@ -23,8 +26,8 @@ for (const name of fs.readdirSync(DIR)) {
   const file = path.join(DIR, name);
   const before = fs.readFileSync(file, "utf8");
   const after = name.endsWith(".json")
-    ? pseudonymise(before)
-    : before.split("\n").map((line) => (isComment(line) ? line : pseudonymise(line))).join("\n");
+    ? pseudonymise(before, name)
+    : before.split("\n").map((line) => (isComment(line) ? line : pseudonymise(line, name))).join("\n");
   if (after !== before) {
     fs.writeFileSync(file, after);
     changed += 1;

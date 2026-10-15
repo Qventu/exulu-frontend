@@ -17,7 +17,7 @@
     "trigger": "email",
     "session": "a7f134a4-0000-4d6f-8ba3-b0faa8523934",
     "tries": 0,
-    "createdAt": "2026-08-17 11:05:30.117798+00",
+    "createdAt": "2026-08-17 11:05:30.417798+00",
     "trigger_metadata": {
       "from": "service@aht-hydraulik.example",
       "subject": "WG: Requestor Case# ⟨Vorgang⟩ & ⟨Kunde⟩ Case# ⟨Vorgang⟩ - Reparaturanfrage 18000240024 SL2: Heberkopfdichtung erneuern. CRM:0256126"
@@ -104,7 +104,7 @@
     "createdAt": "2026-08-19 05:21:27.074662+00",
     "trigger_metadata": {
       "from": "vertrieb@aht-hydraulik.example",
-      "subject": "WG: Angebotsanfrage: Eq. 14918001210 / ZKD / Hydraulik Nummer: 07204739"
+      "subject": "WG: Angebotsanfrage: Eq. 14918001210 / ZKD / AHT-Nummer: 08315840"
     }
   },
   {
@@ -245,7 +245,7 @@
     "trigger": "email",
     "session": "1f9ed299-e581-4946-a605-88bc26e91690",
     "tries": 0,
-    "createdAt": "2026-08-26 09:06:18.173203+00",
+    "createdAt": "2026-08-26 09:06:18.473203+00",
     "trigger_metadata": {
       "from": "info@aht-hydraulik.example",
       "subject": "AW: ⟨Kunde⟩ /AHT quote 26109044"
