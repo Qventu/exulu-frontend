@@ -18,7 +18,9 @@ import { MEMORY_SCROLLBACK_ROWS } from "./memory-turns";
  *
  * All four memory items are real production records, each one created by a
  * real engineer correction in a real session. Their ids are the production
- * ids; 2f78a38c is the one chapter 4's own conversation produces.
+ * ids; 2f78a38c is the one chapter 4's own conversation produces. Product
+ * identifiers in their names and texts are pseudonymised
+ * (lib/demo/fixtures/pseudonyms.ts, sub-project 7).
  */
 
 export const MEMORY_CONTEXT_ID = "newton_memory_context";

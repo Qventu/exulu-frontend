@@ -10,7 +10,9 @@ const KS_CHUNK = RAW_KS_CHUNKS[0];
  * Chapter 1's script is a REAL, positively-rated exchange from the Newlift
  * deployment (session b5597e32, feedback score 1), reproduced with Newlift's
  * approval. The retrieval trace, the answer and its inline citations are all as
- * the production system produced them.
+ * the production system produced them. The FST controller family reads KS
+ * here: product identifiers are pseudonymised by
+ * lib/demo/fixtures/pseudonyms.ts (sub-project 7).
  *
  * Nothing here is invented, and that is the point: the tour's credibility rests
  * on this being a true record rather than a plausible-sounding reconstruction.

@@ -25,6 +25,11 @@ import RAW_SESSION from "./algi-session.json";
  * transforms are committed next to their output so the decisions are
  * reviewable rather than asserted.
  *
+ * A second layer, applied 2026-10-15: product identifiers (cylinder and
+ * seal-kit types, article numbers, the company's legal name inside the
+ * session text) are pseudonymised by lib/demo/fixtures/pseudonyms.ts — the
+ * mapping is the record (sub-project 7).
+ *
  * THE SESSION IS THE CHAPTER. It would have been enough to show mail arriving
  * and a quote leaving, but the real trace is better than that: the assistant
  * searches the parts catalogue, drafts a quote, and is then CORRECTED three
