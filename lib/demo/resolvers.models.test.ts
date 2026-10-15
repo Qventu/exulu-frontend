@@ -12,6 +12,7 @@ import { CHAPTERS } from "./tour";
 
 type Row = {
   model_name: string;
+  type: string;
   region: string;
   tags: string[];
   input_cost_per_million_tokens: number | null;
@@ -19,37 +20,40 @@ type Row = {
 };
 
 const AT = { chapter: "kosten", step: 1 } as const;
+const PROVIDER_TAGS = ["vertex", "bedrock", "azure", "self-hosted", "auto-router"];
 
 describe("the model catalogue (chapter 11, models step)", () => {
-  it("lists four EU-hosted models with prices, every field the table selects", async () => {
-    const data = await run(GET_LITELLM_CATALOG, {}, AT);
-    const rows = data.litellmCatalog as Row[];
-    expect(rows.map((r) => r.model_name)).toEqual([
-      "gemini-3.1-pro",
-      "gemini-3.1-flash",
-      "mistral-medium-3",
-      "claude-sonnet-4-6",
-    ]);
+  it("shows the platform's breadth: sixteen EU rows across providers, utilities and a router", async () => {
+    const rows = (await run(GET_LITELLM_CATALOG, {}, AT)).litellmCatalog as Row[];
+    expect(rows).toHaveLength(16);
     for (const row of rows) {
       expect(row.region, row.model_name).toBe("eu");
-      expect(row.tags, row.model_name).toContain("europe-west3");
-      expect(typeof row.input_cost_per_million_tokens, row.model_name).toBe("number");
-      expect(typeof row.output_cost_per_million_tokens, row.model_name).toBe("number");
+      expect(row.tags.some((t) => PROVIDER_TAGS.includes(t)), row.model_name).toBe(true);
+    }
+    const tags = new Set(rows.flatMap((r) => r.tags));
+    for (const t of PROVIDER_TAGS) expect(tags.has(t), t).toBe(true);
+    expect(new Set(rows.map((r) => r.type))).toEqual(new Set(["chat", "embedding", "ocr", "rerank"]));
+  });
+
+  it("prices every hosted chat model; the router and the self-hosted model carry no price", async () => {
+    const rows = (await run(GET_LITELLM_CATALOG, {}, AT)).litellmCatalog as Row[];
+    for (const row of rows.filter((r) => r.type === "chat")) {
+      const unpriced = row.tags.includes("auto-router") || row.tags.includes("self-hosted");
+      expect(typeof row.input_cost_per_million_tokens === "number", row.model_name).toBe(!unpriced);
     }
   });
 
-  it("is the same list the agent editor's selector sees, and the agent's model is in it", async () => {
-    const editor = await run(GET_AGENT_LITELLM_CATALOG, {}, { chapter: "config", step: 0 });
-    const names = (editor.litellmCatalog as Row[]).map((r) => r.model_name);
-    const agentModel = getWorld({ chapter: "config", step: 0 }).agents[0].model;
-    expect(names).toContain(agentModel);
-    expect(names).toHaveLength(4);
+  it("offers the agent editor the chat rows only, the agent's model and the eval judge among them", async () => {
+    const all = (await run(GET_LITELLM_CATALOG, {}, AT)).litellmCatalog as Row[];
+    const editor = (await run(GET_AGENT_LITELLM_CATALOG, {}, { chapter: "config", step: 0 })).litellmCatalog as Row[];
+    expect(editor.map((r) => r.model_name)).toEqual(all.filter((r) => r.type === "chat").map((r) => r.model_name));
+    expect(editor.map((r) => r.model_name)).toContain(getWorld({ chapter: "config", step: 0 }).agents[0].model);
+    expect(editor.map((r) => r.model_name)).toContain("claude-sonnet-4-6");
   });
 
-  it("is chapter 11's second step, between attribution and the budget", () => {
+  it("is chapter 11's middle step: attribution, models, control", () => {
     const steps = CHAPTERS.find((c) => c.id === "kosten")!.steps;
-    expect(steps.map((s) => s.route.split("?")[0])).toEqual(["/analytics", "/models", "/budgets", "/budgets"]);
-    expect(steps[1].id).toBe("kosten-modelle");
-    expect(steps[1].anchor).toBe("models-catalog");
+    expect(steps.map((s) => s.route.split("?")[0])).toEqual(["/analytics", "/models", "/budgets"]);
+    expect(steps[2].title).toBe("Ihr behaltet die Kontrolle über die Kosten");
   });
 });

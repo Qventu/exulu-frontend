@@ -353,16 +353,6 @@ describe("the chapters that show something invented", () => {
     expect(bodies("kosten")).toMatch(/Beispielwerte/i);
   });
 
-  it("keeps the chapter's own denial that it claims a saving", () => {
-    // An absence assertion (see "never claims the cost chapter proves a
-    // return" below) cannot fail when the sentence carrying the denial is
-    // deleted — deleting the third step would leave that assertion green.
-    // This pins the denial's PRESENCE instead, so removing the step fails
-    // here. "Keine Einsparung wird hier behauptet" is the step's TITLE, not
-    // its body copy, which is why bodies() must fold in `s.title` too.
-    expect(bodies("kosten")).toMatch(/keine Einsparung/i);
-  });
-
   it("never claims the cost chapter proves a return", () => {
     // kosten's own honest disclaimer reads "Wir behaupten hier keine
     // Einsparung" — a denial, not a claim, and it contains the word
@@ -445,10 +435,11 @@ describe("the tour after sub-project 5", () => {
     expect(steps.map((s) => s.id)).toEqual(["meetings-list", "meetings-guide"]);
   });
 
-  it("is 38 steps long — the spec's acceptance count", () => {
+  it("is 37 steps long", () => {
     // 37 before: minus the raw transcript, plus the model catalogue, plus the
     // approval card. The walker derives its list from CHAPTERS, so this is
     // the one place the number is written down.
-    expect(CHAPTERS.reduce((n, c) => n + c.steps.length, 0)).toBe(38);
+    // Then minus chapter 11's disclaimer step (marketing, 2026-10-15).
+    expect(CHAPTERS.reduce((n, c) => n + c.steps.length, 0)).toBe(37);
   });
 });

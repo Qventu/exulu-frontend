@@ -16,7 +16,13 @@ import type { DemoChapter } from "../tour";
  * invented asserts the sentence stays. The evals chapter sets the same
  * precedent for its scores.
  *
- * The argument is attribution and control — never savings. A demo that
+ * The argument is attribution and control — never savings. The chapter
+ * used to END on a step saying so ("Keine Einsparung wird hier behauptet");
+ * marketing read a disclaimer as no benefit (2026-10-15) and the step went.
+ * The rule survives as a prohibition: tour.test.ts forbids claim phrasings
+ * in this chapter.
+ *
+ * (Earlier reasoning, kept for the record:) A demo that
  * claims "cheaper than a headcount" invites an argument it cannot win and
  * spends the credibility the previous ten chapters built. tour.test.ts's
  * register also asserts the NEGATIVE: no step here may claim a return, even
@@ -25,7 +31,7 @@ import type { DemoChapter } from "../tour";
  * PHRASINGS ("spart Ihnen", "rechnet sich", …), never that bare word, or it
  * would fail on the very sentence that makes the chapter honest.
  *
- * Four steps, not two (sub-project 5 put the model catalogue between
+ * Three steps (sub-project 5 put the model catalogue between
  * attribution and the budget: where the spend goes before who caps it).
  * Originally three, not two: /analytics' attribution point and its
  * example-figures disclosure fit one step; /budgets carries both the
@@ -79,7 +85,7 @@ import type { DemoChapter } from "../tour";
 export const kostenChapter: DemoChapter = {
   id: "kosten",
   title: "Was es kostet",
-  goal: "Verbrauch sichtbar, Limits im Betrieb, keine Einsparung versprochen.",
+  goal: "Verbrauch sichtbar, Limits im Betrieb, Kontrolle bei euch.",
   steps: [
     {
       id: "kosten-verbrauch",
@@ -111,7 +117,7 @@ export const kostenChapter: DemoChapter = {
       content: [
         {
           kind: "paragraph",
-          text: "Vier Modelle stehen zur Wahl, alle in Frankfurt gehostet — welches ein Assistent nutzt, ist eine Einstellung, keine Bindung an einen Anbieter. Die Preise je Million Token stehen daneben; auch sie sind hier Beispielwerte.",
+          text: "Google, Anthropic, Mistral und OpenAI, ein selbst gehostetes Open-Source-Modell und ein Auto-Router, der je Anfrage das passende Modell wählt — hier über Vertex AI in Frankfurt, genauso über AWS oder Azure. Welches Modell ein Assistent nutzt, ist eine Einstellung, keine Bindung an einen Anbieter. Die Preise je Million Token sind Beispielwerte.",
         },
       ],
     },
@@ -119,7 +125,7 @@ export const kostenChapter: DemoChapter = {
       id: "kosten-kontrolle",
       route: "/budgets?type=team",
       anchor: null,
-      title: "Ein Limit ist eine Einstellung, kein Versprechen",
+      title: "Ihr behaltet die Kontrolle über die Kosten",
       content: [
         {
           kind: "paragraph",
@@ -128,18 +134,6 @@ export const kostenChapter: DemoChapter = {
         {
           kind: "paragraph",
           text: "Der Zeitraum in der Analyse vorhin war frei wählbar; dieses Limit läuft fest pro Abrechnungsmonat.",
-        },
-      ],
-    },
-    {
-      id: "kosten-entscheidung",
-      route: "/budgets?type=team",
-      anchor: null,
-      title: "Keine Einsparung wird hier behauptet",
-      content: [
-        {
-          kind: "paragraph",
-          text: "Wer wie viel ausgeben darf, entscheidet ihr. Wir behaupten hier keine Einsparung — was die Einführung wert ist, hängt von euren Zahlen ab, nicht von unseren.",
         },
       ],
     },

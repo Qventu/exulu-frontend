@@ -392,7 +392,6 @@ const CLICK_PROBES = {
   "kosten.0": { attempts: [{ spec: { kind: "tab", containerSelector: "main" }, describe: "a non-active Radix tab (range preset or measure) — would switch the selected view" }] },
   "kosten.1": { attempts: [{ spec: { kind: "css", selector: '[data-demo-id="models-catalog"] tbody tr[role="button"]' }, describe: "a model row — would open its detail sheet" }] },
   "kosten.2": { attempts: [{ spec: { kind: "tab", containerSelector: "main" }, describe: "a non-active budget-scope tab (Benutzer/Rollen/...) — would switch the budgets view away from Teams" }] },
-  "kosten.3": { attempts: [{ spec: { kind: "tab", containerSelector: "main" }, describe: "a non-active budget-scope tab — would switch the budgets view away from Teams" }] },
   "contact.0": COPY_BUTTON,
   "contact.1": COPY_BUTTON,
 };
