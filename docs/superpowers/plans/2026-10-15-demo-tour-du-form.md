@@ -881,3 +881,18 @@ git commit -m "docs(demo): record the du-form walk and export the copy for sign-
 | scene steps | (panel bare beside a scene) | one-sentence lead each | Second batch. |
 | 1.2 bullets | (plain list) | statement cards | Second batch. |
 | product references (FST, 2XT, article numbers, AHT/Giehl) | (abstract them) | sub-project 7 | Eleven fixture files, chunk JSON and chat answers; needs its own mapping and tests. |
+
+## Verification
+
+2026-10-15 — Daniel's production demo build of fc8232f (BUILD_ID GxNvaI6qGoz3gNRhYjugb), `next start -p 3111`, Playwright at 1440×900.
+
+- Walker in Weiter mode: **36/36**, zero leaks — the new panel-and-scene Sie check included — 3 Tabs to Weiter.
+- Panel headers with the longer chapter titles ("Berechtigungen und Zugriff", "Beispiel: Eine schwierige Frage", "Ein Assistent, der mitlernt") sit at 115 px; "Arbeitet, während du schläfst" wraps its goal to 135 px. Legible, no overflow.
+- `memory.3`: the page header reads the product's own du-form string again ("Was deine Agenten in Gesprächen gelernt haben.").
+- `contact.0`, the only chapter-12 step: two wordmark cards (NEW Lift Steuerungsbau · Technische Dokumentation und Service; ALGI Hydraulic · Angebots- und Ersatzteilprozesse), the references paragraph, 10 / eurer Handbücher · 2 Wochen / Setup-Zeit · 30 Minuten / reichen für die Planung, the ask; the panel shows the lead under the title; no button (booking URL still unset). Screenshot reviewed.
+- `daten.1`: the three statements render as bordered cards with the primary-coloured dash. Screenshot reviewed.
+- `/data` header "eure Assistenten", the items empty state "euren Ablagen", the off-tour notice "In eurer eigenen Umgebung".
+- `kosten.1`: 16 rows; qwen3-235b, auto-router, vertex-ocr and cohere-rerank-v4 carry no price badge; tags vertex/europe-west3, bedrock/eu-central-1, azure/germanywestcentral, self-hosted/vllm, auto-router all on screen. `kosten.2` is titled "Die Kontrolle über die Kosten bleibt bei euch".
+- Unit: full suite 140 files / 1,455 tests at fc8232f.
+- Sign-off sheet: `docs/superpowers/plans/2026-10-15-demo-tour-du-form-copy.csv` (142 rows, 36 steps).
+- Still open, Daniel's: the logo files (`public/demo/logos/newlift.svg`, `algi.svg`, then `src` on the two logo items), the HubSpot URL in `lib/demo/routes.ts`, and sub-project 7 (product-reference abstraction).
