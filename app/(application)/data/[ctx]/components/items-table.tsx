@@ -45,8 +45,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// TableRow forwards its ref, so framer-motion can drive it as a <tr>.
-const MotionTableRow = motion.create(TableRow);
 import { BulkAccessDialog } from "@/components/widgets/bulk-access-dialog";
 import { ItemsActionBar } from "@/components/widgets/items-action-bar";
 import { cn } from "@/lib/utils";
@@ -61,6 +59,9 @@ import {
 
 import { ItemsEmpty } from "./items-empty";
 import { BULK_UPDATE_ITEM_RBAC, DELETE_ITEM, UPDATE_ITEM } from "../../queries";
+
+// TableRow forwards its ref, so framer-motion can drive it as a <tr>.
+const MotionTableRow = motion.create(TableRow);
 
 export interface ItemsTableProps {
   context: Context;
@@ -393,7 +394,7 @@ export function ItemsTable({
                   key={id}
                   initial={demoEntrance ? { opacity: 0, y: 6 } : false}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.24, delay: index * 0.06, ease: "easeOut" }}
+                  transition={{ duration: 0.24, delay: Math.min(index, 8) * 0.06, ease: "easeOut" }}
                 >
                   <ItemCard
                     item={item}
@@ -512,7 +513,7 @@ function ItemRow({
       )}
       initial={demoEntrance ? { opacity: 0, y: 6 } : false}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.24, delay: index * 0.06, ease: "easeOut" }}
+      transition={{ duration: 0.24, delay: Math.min(index, 8) * 0.06, ease: "easeOut" }}
     >
       <TableCell onClick={(e) => e.stopPropagation()}>
         <Checkbox

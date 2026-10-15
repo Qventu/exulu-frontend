@@ -127,7 +127,7 @@ export function LibraryRow({ row, icon, canEdit, onSetIcon, index }: LibraryRowP
       // motion (initial={false} renders the resting state).
       initial={demoEntrance ? { opacity: 0, y: 6 } : false}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.24, delay: index * 0.06, ease: "easeOut" }}
+      transition={{ duration: 0.24, delay: Math.min(index, 8) * 0.06, ease: "easeOut" }}
     >
       {/* Stretched link: covers the whole row for navigation, sits behind the
           content so the picker button (pointer-events-auto) stays clickable. */}
