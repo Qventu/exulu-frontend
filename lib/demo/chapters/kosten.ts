@@ -28,7 +28,7 @@ import type { DemoChapter } from "../tour";
  * register also asserts the NEGATIVE: no step here may claim a return, even
  * though the chapter's own honest disclaimer ("Wir behaupten hier keine
  * Einsparung") contains the word "Einsparung" — the assertion forbids CLAIM
- * PHRASINGS ("spart Ihnen", "rechnet sich", …), never that bare word, or it
+ * PHRASINGS ("spart euch", "rechnet sich", …), never that bare word, or it
  * would fail on the very sentence that makes the chapter honest.
  *
  * Three steps (sub-project 5 put the model catalogue between

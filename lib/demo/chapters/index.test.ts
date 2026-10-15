@@ -242,34 +242,19 @@ describe("the register is du (sub-project 6)", () => {
         out.push({ where: `${step.id} title`, text: step.title });
         if (step.lead) out.push({ where: `${step.id} lead`, text: step.lead });
         if (step.cta) out.push({ where: `${step.id} cta`, text: step.cta.label });
+        // Through contentText, so every block kind — the ones added later
+        // included — is read; a hand-written switch skipped `logos` (review).
         contentOf(step).forEach((block, i) => {
-          const at = `${step.id} block ${i} (${block.kind})`;
-          switch (block.kind) {
-            case "paragraph":
-            case "callout":
-              out.push({ where: at, text: block.text });
-              break;
-            case "bullets":
-              block.items.forEach((t) => out.push({ where: at, text: t }));
-              break;
-            case "sequence":
-              block.steps.forEach((t) => out.push({ where: at, text: t }));
-              break;
-            case "stat":
-              out.push({ where: at, text: `${block.value} ${block.label}` });
-              break;
-            case "figure":
-              if (block.alt) out.push({ where: at, text: block.alt });
-              break;
-            case "cta":
-              out.push({ where: at, text: block.label });
-              break;
-          }
+          out.push({ where: `${step.id} block ${i} (${block.kind})`, text: contentText([block]) });
         });
       }
     }
     return out;
   };
+
+  it("reads every block kind, the logo captions included", () => {
+    expect(strings().some((s) => s.text.includes("Angebots- und Ersatzteilprozesse"))).toBe(true);
+  });
 
   it("has no Sie-form in any title, goal, lead, block or button", () => {
     const offenders = strings()

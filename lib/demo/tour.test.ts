@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contentText } from "./content";
+import { SAVINGS_CLAIM } from "./register";
 import { getWorld } from "./fixtures";
 // A scene step's own copy (including its figure) lives in lib/demo/scenes.ts,
 // not on the step. contentOf reads from wherever the content actually is, so
@@ -363,9 +364,9 @@ describe("the chapters that show something invented", () => {
     // word: "spart Ihnen", "günstiger als", "amortisiert sich", "rechnet
     // sich" and "zahlt sich aus" all assert a return; "keine Einsparung"
     // asserts the opposite and must keep passing.
-    expect(bodies("kosten")).not.toMatch(
-      /spart Ihnen|günstiger als|amortisiert sich|rechnet sich|zahlt sich aus/i,
-    );
+    // The pattern lives in lib/demo/register.ts and knows every register
+    // ("spart euch" as much as "spart Ihnen"), since the tour is du-form now.
+    expect(bodies("kosten")).not.toMatch(SAVINGS_CLAIM);
   });
 });
 

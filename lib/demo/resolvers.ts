@@ -128,7 +128,10 @@ type CatalogueOptions = {
  * the utilities). `region` is the literal "eu" because ProviderLogo's EU
  * pill keys on that; provider and region are the row's tags.
  */
-const litellmModel = (name: string, upstream: string, brand: string, o: CatalogueOptions): Record<string, unknown> => ({
+// `brand` is the logo file's stem (/public/ai/logos/light/<brand>.png — lowercase,
+// and the demo host's file system is case-sensitive); null renders the
+// Sparkles fallback, which is what the router gets.
+const litellmModel = (name: string, upstream: string, brand: string | null, o: CatalogueOptions): Record<string, unknown> => ({
   __typename: "LiteLLMModel",
   model_name: name,
   active: true,
@@ -163,22 +166,22 @@ const CLAUDE = { vision: true, pdf: true, tools: true, limits: { input: 1048576,
  * agent editor's selector sees the chat rows only.
  */
 const LITELLM_CATALOGUE = [
-  litellmModel("gemini-3.1-pro", "vertex_ai/gemini-3.1-pro", "Google", { ...GEMINI, cost: { input: 2, output: 12 }, tags: VERTEX }),
-  litellmModel("gemini-3.1-flash", "vertex_ai/gemini-3.1-flash", "Google", { ...GEMINI, cost: { input: 0.3, output: 2.5 }, tags: VERTEX }),
-  litellmModel("gemini-3.1-flash-lite", "vertex_ai/gemini-3.1-flash-lite", "Google", { ...GEMINI, cost: { input: 0.25, output: 1.5 }, tags: VERTEX }),
-  litellmModel("gemini-2.5-pro", "vertex_ai/gemini-2.5-pro", "Google", { ...GEMINI, cost: { input: 1.25, output: 10 }, tags: VERTEX }),
-  litellmModel("gemini-2.5-flash", "vertex_ai/gemini-2.5-flash", "Google", { ...GEMINI, audio: false, cost: { input: 0.3, output: 2.5 }, tags: VERTEX }),
-  litellmModel("claude-opus-5", "vertex_ai/claude-opus-5", "Anthropic", { ...CLAUDE, cost: { input: 15, output: 75 }, tags: VERTEX }),
-  litellmModel("claude-sonnet-5", "vertex_ai/claude-sonnet-5", "Anthropic", { ...CLAUDE, cost: { input: 3, output: 15 }, tags: VERTEX }),
-  litellmModel("claude-sonnet-4-6", "vertex_ai/claude-sonnet-4-6", "Anthropic", { ...CLAUDE, limits: { input: 200000, output: 64000 }, cost: { input: 3, output: 15 }, tags: VERTEX }),
-  litellmModel("claude-haiku-4-5", "bedrock/anthropic.claude-haiku-4-5", "Anthropic", { ...CLAUDE, limits: { input: 200000, output: 64000 }, cost: { input: 1, output: 5 }, tags: BEDROCK }),
-  litellmModel("mistral-medium-3", "vertex_ai/mistral-medium-3", "Mistral", { vision: true, pdf: true, tools: true, limits: { input: 131072, output: 8192 }, cost: { input: 0.4, output: 2 }, tags: VERTEX }),
-  litellmModel("gpt-5-mini", "azure/gpt-5-mini", "OpenAI", { vision: true, pdf: true, tools: true, limits: { input: 400000, output: 128000 }, cost: { input: 0.25, output: 2 }, tags: AZURE }),
-  litellmModel("qwen3-235b", "openai/qwen3-235b", "Qwen", { tools: true, limits: { input: 262144, output: 16384 }, tags: ["self-hosted", "vllm"] }),
-  litellmModel("auto-router", "auto", "OPEN IMP", { vision: true, pdf: true, audio: true, tools: true, tags: ["auto-router"] }),
-  litellmModel("gemini-embedding-001", "vertex_ai/gemini-embedding-001", "Google", { type: "embedding", limits: { input: 2048, output: null }, cost: { input: 0.15, output: null }, tags: VERTEX }),
-  litellmModel("vertex-ocr", "vertex_ai/document-ocr", "Google", { type: "ocr", tags: VERTEX }),
-  litellmModel("cohere-rerank-v4", "bedrock/cohere.rerank-v4", "Cohere", { type: "rerank", limits: { input: 32768, output: 32768 }, tags: BEDROCK }),
+  litellmModel("gemini-3.1-pro", "vertex_ai/gemini-3.1-pro", "google", { ...GEMINI, cost: { input: 2, output: 12 }, tags: VERTEX }),
+  litellmModel("gemini-3.1-flash", "vertex_ai/gemini-3.1-flash", "google", { ...GEMINI, cost: { input: 0.3, output: 2.5 }, tags: VERTEX }),
+  litellmModel("gemini-3.1-flash-lite", "vertex_ai/gemini-3.1-flash-lite", "google", { ...GEMINI, cost: { input: 0.25, output: 1.5 }, tags: VERTEX }),
+  litellmModel("gemini-2.5-pro", "vertex_ai/gemini-2.5-pro", "google", { ...GEMINI, cost: { input: 1.25, output: 10 }, tags: VERTEX }),
+  litellmModel("gemini-2.5-flash", "vertex_ai/gemini-2.5-flash", "google", { ...GEMINI, audio: false, cost: { input: 0.3, output: 2.5 }, tags: VERTEX }),
+  litellmModel("claude-opus-5", "vertex_ai/claude-opus-5", "anthropic", { ...CLAUDE, cost: { input: 15, output: 75 }, tags: VERTEX }),
+  litellmModel("claude-sonnet-5", "vertex_ai/claude-sonnet-5", "anthropic", { ...CLAUDE, cost: { input: 3, output: 15 }, tags: VERTEX }),
+  litellmModel("claude-sonnet-4-6", "vertex_ai/claude-sonnet-4-6", "anthropic", { ...CLAUDE, limits: { input: 200000, output: 64000 }, cost: { input: 3, output: 15 }, tags: VERTEX }),
+  litellmModel("claude-haiku-4-5", "bedrock/anthropic.claude-haiku-4-5", "anthropic", { ...CLAUDE, limits: { input: 200000, output: 64000 }, cost: { input: 1, output: 5 }, tags: BEDROCK }),
+  litellmModel("mistral-medium-3", "vertex_ai/mistral-medium-3", "mistral", { vision: true, pdf: true, tools: true, limits: { input: 131072, output: 8192 }, cost: { input: 0.4, output: 2 }, tags: VERTEX }),
+  litellmModel("gpt-5-mini", "azure/gpt-5-mini", "openai", { vision: true, pdf: true, tools: true, limits: { input: 400000, output: 128000 }, cost: { input: 0.25, output: 2 }, tags: AZURE }),
+  litellmModel("qwen3-235b", "openai/qwen3-235b", "qwen", { tools: true, limits: { input: 262144, output: 16384 }, tags: ["self-hosted", "vllm"] }),
+  litellmModel("auto-router", "auto", null, { vision: true, pdf: true, audio: true, tools: true, tags: ["auto-router"] }),
+  litellmModel("gemini-embedding-001", "vertex_ai/gemini-embedding-001", "google", { type: "embedding", limits: { input: 2048, output: null }, cost: { input: 0.15, output: null }, tags: VERTEX }),
+  litellmModel("vertex-ocr", "vertex_ai/document-ocr", "google", { type: "ocr", tags: VERTEX }),
+  litellmModel("cohere-rerank-v4", "bedrock/cohere.rerank-v4", "cohere", { type: "rerank", limits: { input: 32768, output: 32768 }, tags: BEDROCK }),
 ];
 
 /**

@@ -8,7 +8,14 @@
  * "they", so tour copy phrases around it rather than the check allowing it.
  * Lowercase "sie" (she/they), "Sieben", "sieht" do not match.
  */
-export const SIE_FORM = /\b(Sie|Ihnen|Ihr|Ihre|Ihrem|Ihren|Ihrer)\b/;
+export const SIE_FORM = /\b(Sie|Ihnen|Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres|Ihrerseits)\b/;
+
+/**
+ * Phrasings a savings pitch would use, in any register. Chapter 11 may not
+ * claim a return (spec); it may say "keine Einsparung", which this does not
+ * match. tour.test.ts applies it to the chapter's titles and bodies.
+ */
+export const SAVINGS_CLAIM = /spart (Ihnen|euch|dir|Geld|Zeit|Kosten)|günstiger als|amortisiert sich|rechnet sich|zahlt sich aus/i;
 
 /** The first Sie-form token in `text`, or null when the text is du-form. */
 export function sieFormIn(text: string): string | null {

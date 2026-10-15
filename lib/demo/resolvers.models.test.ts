@@ -51,6 +51,16 @@ describe("the model catalogue (chapter 11, models step)", () => {
     expect(editor.map((r) => r.model_name)).toContain("claude-sonnet-4-6");
   });
 
+  it("names brands by their logo file stem, lowercase, and gives the router none", async () => {
+    // ProviderLogo requests /ai/logos/light/<brand>.png verbatim; the files
+    // are lowercase and the demo host's file system is case-sensitive.
+    const rows = (await run(GET_LITELLM_CATALOG, {}, AT)).litellmCatalog as (Row & { brand: string | null })[];
+    for (const row of rows) {
+      if (row.tags.includes("auto-router")) expect(row.brand, row.model_name).toBeNull();
+      else expect(row.brand, row.model_name).toMatch(/^[a-z]+$/);
+    }
+  });
+
   it("is chapter 11's middle step: attribution, models, control", () => {
     const steps = CHAPTERS.find((c) => c.id === "kosten")!.steps;
     expect(steps.map((s) => s.route.split("?")[0])).toEqual(["/analytics", "/models", "/budgets"]);

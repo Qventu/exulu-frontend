@@ -18,7 +18,7 @@
 
 - Register (spec): *du / dein / dir / dich* for the visitor as a person, lowercase; *euer / eure / euch* for the company and what belongs to it; imperatives "Sieh zu", "Öffne", "Schau". Never `Sie`, `Ihnen`, `Ihr(e/em/en/er)` in a tour string — including sentence-initial, so tour copy avoids a sentence-initial "Sie" meaning "they".
 - Numbers a fixture determines stay computed (`germanCount`/`capitalise` from `lib/demo/fixtures/meeting-tally.ts`, `MEMORY_COUNT_AFTER_CORRECTION`, `ALGI_MEETING_TALLY`); never typed.
-- The honesty register in `lib/demo/tour.test.ts` stays satisfied: "Beispielwerte" and "keine Einsparung" in chapter 11, "beispielhaft" in chapter 8, "von Hand" in chapter 10, no claim phrasing, client names only in chapter 12 (`chapters/index.test.ts`).
+- The honesty register in `lib/demo/tour.test.ts` stays satisfied: "Beispielwerte" in chapter 11 (the "keine Einsparung" step is removed in Task 4), "beispielhaft" in chapter 8, "von Hand" in chapter 10, no claim phrasing, client names only in chapter 12 (`chapters/index.test.ts`).
 - Chapter goals: one sentence, ≤ 14 words, ends with "." (`chapters/index.test.ts`); the first step's prose ≤ 32 words (`tour.test.ts`).
 - Cross-references stay as they are: chapter 5 (techdoc), 6 (memory), 7 (config) — the order is unchanged.
 - Daniel runs the production build (`NEXT_PUBLIC_DEMO_MODE=true BACKEND=https://demo.invalid npx next build` / `… npx next start -p 3111`); the executor walks. Per-task gate: `npx vitest run <files>` + `npx eslint --no-warn-ignored <files>`. Commit per task (several commits inside Task 2 are fine); commitlint: lowercase subject, ≤ 100 chars; never push.
@@ -875,7 +875,7 @@ git commit -m "docs(demo): record the du-form walk and export the copy for sign-
 | 4.1, 6.4, 9.4, 11.2 | (pre-date the rewrite) | current copy, register switched | Steps changed in sub-project 5. |
 | 10.2 | (comment: missing transcript) | step removed in sub-project 5 | — |
 | 11.2 (models) | "nur 4 Modelle" | sixteen rows across providers, a router, a self-hosted model, utilities | Second batch: breadth. |
-| 11.3 | "Ein Limit ist eine Einstellung, kein Versprechen" | "Ihr behaltet die Kontrolle über die Kosten" | Second batch: control, not caveat. |
+| 11.3 | "Ein Limit ist eine Einstellung, kein Versprechen" | "Die Kontrolle über die Kosten bleibt bei euch" | Second batch: control, not caveat; the strict register check refuses a sentence-initial "Ihr", so not "Ihr behaltet …". |
 | 11.4 | "Keine Einsparung wird hier behauptet" | step removed | Second batch: a disclaimer is not a benefit; the no-claim rule stays as a prohibition. |
 | 12.1 | "Wer damit arbeitet" on the chat screen | merged into the closing scene with logo cards | Second batch. |
 | scene steps | (panel bare beside a scene) | one-sentence lead each | Second batch. |

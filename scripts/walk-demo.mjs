@@ -848,7 +848,7 @@ async function main() {
     // The product UI is Sie-form and stays so; the tour's own text — the panel
     // and the scenes — is du-form (spec, sub-project 6). Same pattern as
     // lib/demo/register.ts, over that text only.
-    const SIE_FORM = /\b(Sie|Ihnen|Ihr|Ihre|Ihrem|Ihren|Ihrer)\b/;
+    const SIE_FORM = /\b(Sie|Ihnen|Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres|Ihrerseits)\b/;
     const ownText = await page.evaluate(() =>
       [document.querySelector('[data-demo-id="tour-panel"]'), document.querySelector(".demo-scene")]
         .map((n) => n?.innerText ?? "").join(" ").replace(/\s+/g, " "));
