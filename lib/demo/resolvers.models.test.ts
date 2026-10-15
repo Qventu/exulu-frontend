@@ -54,6 +54,6 @@ describe("the model catalogue (chapter 11, models step)", () => {
   it("is chapter 11's middle step: attribution, models, control", () => {
     const steps = CHAPTERS.find((c) => c.id === "kosten")!.steps;
     expect(steps.map((s) => s.route.split("?")[0])).toEqual(["/analytics", "/models", "/budgets"]);
-    expect(steps[2].title).toBe("Ihr behaltet die Kontrolle über die Kosten");
+    expect(steps[2].title).toBe("Die Kontrolle über die Kosten bleibt bei euch");
   });
 });

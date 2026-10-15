@@ -125,7 +125,7 @@ export const kostenChapter: DemoChapter = {
       id: "kosten-kontrolle",
       route: "/budgets?type=team",
       anchor: null,
-      title: "Ihr behaltet die Kontrolle über die Kosten",
+      title: "Die Kontrolle über die Kosten bleibt bei euch",
       content: [
         {
           kind: "paragraph",
