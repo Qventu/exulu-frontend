@@ -1,7 +1,7 @@
 import type { Item } from "@/types/models/item";
 
 import { type DemoChunk, demoItem } from "./item";
-import RAW_CHUNKS from "./chunks-fst2xt-de.json";
+import RAW_CHUNKS from "./chunks-ks2xt-de.json";
 
 /**
  * The real software documentation knowledge base from the Newlift staging
@@ -44,7 +44,7 @@ export const SOFTWARE_DOC_ITEMS: Item[] = [
     id: "9a21d272-d69b-4f20-b237-39efce07dd89",
     name: "CAN-to-LON_EN.pdf",
     source: "google-storage",
-    external_id: "FST/Software/CAN-to-LON_EN.pdf",
+    external_id: "KS/Software/CAN-to-LON_EN.pdf",
     chunks_count: 24,
     createdAt: "2026-08-20T01:24:49.403Z",
     last_processed_at: "2026-08-25T22:35:02.376Z",
@@ -54,7 +54,7 @@ export const SOFTWARE_DOC_ITEMS: Item[] = [
     id: "cd37981e-5582-4ae2-acec-02bfd6cc24f6",
     name: "CAN-to-LON_DE.pdf",
     source: "google-storage",
-    external_id: "FST/Software/CAN-to-LON_DE.pdf",
+    external_id: "KS/Software/CAN-to-LON_DE.pdf",
     chunks_count: 24,
     createdAt: "2026-08-20T01:24:48.659Z",
     last_processed_at: "2026-08-25T22:35:02.372Z",
@@ -62,9 +62,9 @@ export const SOFTWARE_DOC_ITEMS: Item[] = [
   }),
   demoItem({
     id: "14c4db32-f71c-4629-9f56-c6daa41a36a6",
-    name: "FSTBugFixes.docx",
+    name: "KSBugFixes.docx",
     source: "google-storage",
-    external_id: "FST/Software/FSTBugFixes.docx",
+    external_id: "KS/Software/KSBugFixes.docx",
     chunks_count: 5,
     createdAt: "2026-08-20T01:24:48.274Z",
     last_processed_at: "2026-08-25T22:34:58.400Z",
@@ -72,9 +72,9 @@ export const SOFTWARE_DOC_ITEMS: Item[] = [
   }),
   demoItem({
     id: "b581209b-99fa-4879-ab31-f87336c4b6de",
-    name: "FST2XTchanges-customer-EN.docx",
+    name: "KS2XTchanges-customer-EN.docx",
     source: "google-storage",
-    external_id: "FST/Software/fuer_FST-2XT/FST2XTchanges-customer-EN.docx",
+    external_id: "KS/Software/fuer_KS-2XT/KS2XTchanges-customer-EN.docx",
     chunks_count: 84,
     createdAt: "2026-08-20T01:24:46.772Z",
     last_processed_at: "2026-08-25T22:35:00.353Z",
@@ -83,9 +83,9 @@ export const SOFTWARE_DOC_ITEMS: Item[] = [
   // The one chapter 1 answered from.
   demoItem({
     id: SOFTWARE_DOC_ITEM_ID,
-    name: "FST2XTchanges-customer-DE.docx",
+    name: "KS2XTchanges-customer-DE.docx",
     source: "google-storage",
-    external_id: "FST/Software/fuer_FST-2XT/FST2XTchanges-customer-DE.docx",
+    external_id: "KS/Software/fuer_KS-2XT/KS2XTchanges-customer-DE.docx",
     chunks_count: 93,
     createdAt: "2026-08-20T01:24:45.861Z",
     last_processed_at: "2026-08-25T22:35:01.345Z",
@@ -94,9 +94,9 @@ export const SOFTWARE_DOC_ITEMS: Item[] = [
   }),
   demoItem({
     id: "85e3e8fc-d866-4bbc-bbff-15e98d003489",
-    name: "FST-FSM2-changes-customer-EN.docx",
+    name: "KS-SM2-changes-customer-EN.docx",
     source: "google-storage",
-    external_id: "FST/Software/FST-FSM2-changes-customer-EN.docx",
+    external_id: "KS/Software/KS-SM2-changes-customer-EN.docx",
     chunks_count: 2,
     createdAt: "2026-08-20T01:24:45.078Z",
     last_processed_at: "2026-08-25T22:34:59.402Z",
@@ -104,9 +104,9 @@ export const SOFTWARE_DOC_ITEMS: Item[] = [
   }),
   demoItem({
     id: "7d1d0d6e-f4ae-4fe4-aa90-a8b210d3df59",
-    name: "FST-FSM2-changes-customer-DE.docx",
+    name: "KS-SM2-changes-customer-DE.docx",
     source: "google-storage",
-    external_id: "FST/Software/FST-FSM2-changes-customer-DE.docx",
+    external_id: "KS/Software/KS-SM2-changes-customer-DE.docx",
     chunks_count: 2,
     createdAt: "2026-08-20T01:24:44.257Z",
     last_processed_at: "2026-08-25T22:34:58.432Z",
@@ -114,9 +114,9 @@ export const SOFTWARE_DOC_ITEMS: Item[] = [
   }),
   demoItem({
     id: "ac753b77-c055-4581-ab68-a0e9ff637864",
-    name: "EAZTFT-110_changes.doc",
+    name: "DPTFT-110_changes.doc",
     source: "google-storage",
-    external_id: "EAZ/EAZTFT-110_changes.doc",
+    external_id: "EAZ/DPTFT-110_changes.doc",
     chunks_count: 4,
     createdAt: "2026-08-20T01:24:43.663Z",
     last_processed_at: "2026-08-25T22:34:59.457Z",
@@ -124,9 +124,9 @@ export const SOFTWARE_DOC_ITEMS: Item[] = [
   }),
   demoItem({
     id: "a49716ce-20e0-4b09-b2e9-b2d6b3a2ca6e",
-    name: "EAZ-TFT.110_Neuron_Changes.docx",
+    name: "DP-TFT.110_Neuron_Changes.docx",
     source: "google-storage",
-    external_id: "EAZ/EAZ-TFT.110_Neuron_Changes.docx",
+    external_id: "EAZ/DP-TFT.110_Neuron_Changes.docx",
     chunks_count: 6,
     createdAt: "2026-08-20T01:24:42.670Z",
     last_processed_at: "2026-08-25T22:34:58.512Z",

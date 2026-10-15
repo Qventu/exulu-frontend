@@ -49,7 +49,7 @@ export const CONTEXTS: Context[] = [
   context(
     "tech_doc_context",
     "Technische Dokumentation",
-    "Technische Handbücher und Datenblätter für FST-Steuerungen — Fehlercodes, Parameter, Installation.",
+    "Technische Handbücher und Datenblätter für KS-Steuerungen — Fehlercodes, Parameter, Installation.",
   ),
   context(
     "vorschriften_context",

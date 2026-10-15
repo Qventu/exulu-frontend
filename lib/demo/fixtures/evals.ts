@@ -58,8 +58,8 @@ const testCase = (
 export const TEST_CASES = [
   testCase(
     "case-nothalt-cop",
-    "Nothalt COP im FST-Fehlerspeicher",
-    'was bedeutet "Nothalt COP" im FST Fehlerspeicher?',
+    "Nothalt COP im KS-Fehlerspeicher",
+    'was bedeutet "Nothalt COP" im KS Fehlerspeicher?',
     "Identifies COP as the Car Operating Panel and the entry as the in-car emergency stop being pressed while stationary with doors open. Mentions V0188 naming and Elevision 4.0.",
     ["software_documentation_context", "support_tickets_context"],
   ),
@@ -71,10 +71,10 @@ export const TEST_CASES = [
     ["tech_doc_context"],
   ),
   testCase(
-    "case-fst2xt-fahrkurve",
-    "FST-2XT-Parameter mit Einfluss auf die Fahrkurve",
-    "Welche Parameter in der FST-2XT beeinflussen die Fahrkurve?",
-    "Lists the relevant FST-2XT parameters with their menu paths.",
+    "case-ks2xt-fahrkurve",
+    "KS-2XT-Parameter mit Einfluss auf die Fahrkurve",
+    "Welche Parameter in der KS-2XT beeinflussen die Fahrkurve?",
+    "Lists the relevant KS-2XT parameters with their menu paths.",
     ["tech_doc_context"],
   ),
   {
@@ -130,12 +130,12 @@ export const EVAL_JOB_RESULTS = [
   // average below the 80 threshold.
   scoreRow("evalrun-2026-08-20", "case-nothalt-cop", 58, BASELINE_AT),
   scoreRow("evalrun-2026-08-20", "case-lsu-reset", 84, BASELINE_AT),
-  scoreRow("evalrun-2026-08-20", "case-fst2xt-fahrkurve", 79, BASELINE_AT),
+  scoreRow("evalrun-2026-08-20", "case-ks2xt-fahrkurve", 79, BASELINE_AT),
 
   // The later run passes all three.
   scoreRow("evalrun-2026-08-27", "case-nothalt-cop", 92, NIGHTLY_AT),
   scoreRow("evalrun-2026-08-27", "case-lsu-reset", 88, NIGHTLY_AT),
-  scoreRow("evalrun-2026-08-27", "case-fst2xt-fahrkurve", 90, NIGHTLY_AT),
+  scoreRow("evalrun-2026-08-27", "case-ks2xt-fahrkurve", 90, NIGHTLY_AT),
 ];
 
 export const EVAL_RUNS = [
@@ -151,7 +151,7 @@ export const EVAL_RUNS = [
     test_case_ids: [
       "case-nothalt-cop",
       "case-lsu-reset",
-      "case-fst2xt-fahrkurve",
+      "case-ks2xt-fahrkurve",
     ],
     createdAt: now,
     updatedAt: now,
@@ -170,7 +170,7 @@ export const EVAL_RUNS = [
     test_case_ids: [
       "case-nothalt-cop",
       "case-lsu-reset",
-      "case-fst2xt-fahrkurve",
+      "case-ks2xt-fahrkurve",
     ],
     createdAt: "2026-08-20T09:00:00.000Z",
     updatedAt: "2026-08-20T09:00:00.000Z",

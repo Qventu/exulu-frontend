@@ -28,7 +28,7 @@ const KNOWLEDGE_BASES = {
     enabled: true,
     kind: "documents",
     instructions:
-      "Technische Handbücher und Datenblätter für FST-Steuerungen. Bei Fragen zu Produkten, Fehlercodes, Parametern und Installation zuerst hier nachschlagen.",
+      "Technische Handbücher und Datenblätter für KS-Steuerungen. Bei Fragen zu Produkten, Fehlercodes, Parametern und Installation zuerst hier nachschlagen.",
     overrides: {},
   },
   vorschriften_context: {
@@ -231,7 +231,7 @@ const VOCABULARY = {
         "CAN-Modul für FSM (zur Entstörung von Sicherheitskreiseingängen)",
     },
     {
-      term: "FST",
+      term: "KS",
       meaning: "Feldbussteuerung (das zentrale Steuerungssystem)",
     },
     {
@@ -367,8 +367,8 @@ const VOCABULARY = {
     {
       name: "Product names",
       description:
-        "Produkt- und Steuerungsnamen wie FST, ECO, CBM-2. Stamm und volle Form zurückgeben (FST-3 → FST und FST-3).",
-      examples: ["FST", "FST-2XT", "ECO", "CBM-2", "PAM", "EAZ"],
+        "Produkt- und Steuerungsnamen wie KS, ECO, CBM-2. Stamm und volle Form zurückgeben (KS-3 → KS und KS-3).",
+      examples: ["KS", "KS-2XT", "ECO", "CBM-2", "PAM", "EAZ"],
       strategy: "fuzzy",
       contexts: ["tech_doc_context"],
     },

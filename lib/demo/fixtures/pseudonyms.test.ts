@@ -50,3 +50,37 @@ describe("originalIn", () => {
     expect(originalIn("DISABLED budget policy")).toBeNull();
   });
 });
+
+import fs from "node:fs";
+import path from "node:path";
+
+/** TS with its comments removed, so provenance notes may still say "ALGI". */
+const withoutComments = (src: string) =>
+  src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
+
+const listFiles = (dir: string, keep: (name: string) => boolean): string[] =>
+  fs.readdirSync(dir).filter(keep).map((name) => path.join(dir, name));
+
+describe("no original product identifier is left", () => {
+  const fixtures = listFiles(path.join(__dirname), (n) => (n.endsWith(".ts") || n.endsWith(".json")) && !n.endsWith(".test.ts") && n !== "pseudonyms.ts");
+  const copy = [
+    ...listFiles(path.join(__dirname, "..", "chapters"), (n) => n.endsWith(".ts") && !n.endsWith(".test.ts")),
+    path.join(__dirname, "..", "scenes.ts"),
+    path.join(__dirname, "..", "overlays.ts"),
+    path.join(__dirname, "..", "resolvers.ts"),
+    path.join(__dirname, "..", "rest-fixtures.ts"),
+  ];
+
+  it.each([...fixtures, ...copy].map((f) => [path.relative(path.join(__dirname, ".."), f), f]))("%s", (_name, file) => {
+    const raw = fs.readFileSync(file, "utf8");
+    const text = file.endsWith(".json") ? raw : withoutComments(raw);
+    expect(originalIn(text)).toBeNull();
+  });
+
+  it("keeps ALGI out of fixture strings outside the reference chapter", () => {
+    for (const file of fixtures) {
+      const text = file.endsWith(".json") ? fs.readFileSync(file, "utf8") : withoutComments(fs.readFileSync(file, "utf8"));
+      expect(/\bALGI\b/.test(text), path.basename(file)).toBe(false);
+    }
+  });
+});

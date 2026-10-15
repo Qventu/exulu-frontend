@@ -52,8 +52,8 @@ const memoryItem = (
 const EXISTING_MEMORIES: Item[] = [
   memoryItem(
     "bee835c0-9af3-4f1b-896f-31f6bf01bd2b",
-    "FST-2XT Endschaltertest blockiert durch Endhaltestellensperre",
-    "Die Endhaltestellen können über I/O-Ports, über Kartenleser oder über das FST-Menü gesperrt sein, wodurch der Endschaltertest im Testmenü blockiert wird.",
+    "KS-2XT Endschaltertest blockiert durch Endhaltestellensperre",
+    "Die Endhaltestellen können über I/O-Ports, über Kartenleser oder über das KS-Menü gesperrt sein, wodurch der Endschaltertest im Testmenü blockiert wird.",
     "2026-08-24T15:14:07.639Z",
   ),
   memoryItem(
@@ -73,8 +73,8 @@ const EXISTING_MEMORIES: Item[] = [
 /** Written during chapter 4, by the conversation the visitor drives. */
 export const CORRECTION_MEMORY: Item = memoryItem(
   "2f78a38c-3ba9-4c78-9053-0517065c5e2d",
-  "FST-2XT Kalibrierfahrt Menüpunkt",
-  "Der Menüpunkt zum Starten der Kalibrierfahrt bei der FST-2XT lautet: HAUPTMENUE/Konfig/Inbetriebnahme/Kalibrierfahrt.",
+  "KS-2XT Kalibrierfahrt Menüpunkt",
+  "Der Menüpunkt zum Starten der Kalibrierfahrt bei der KS-2XT lautet: HAUPTMENUE/Konfig/Inbetriebnahme/Kalibrierfahrt.",
   "2026-08-23T08:27:50.756Z",
 );
 
@@ -97,7 +97,7 @@ const SESSION: AgentSession = {
   id: MEMORY_SESSION_ID,
   agent: DEMO_AGENT_ID,
   project: "demo-project",
-  title: "Kalibrierfahrt FST-2 / FST-2XT",
+  title: "Kalibrierfahrt KS-2 / KS-2XT",
   metadata: null,
   // Must equal getDemoUser().id, or checkChatSessionWriteAccess denies write
   // and the composer renders read-only. See chapter-techdoc.ts.

@@ -49,7 +49,7 @@ export const ALGI_AGENT: Agent = {
   name: "ALFREDO_2 - Der clevere Ersatzteilspezialist",
   slug: "alfredo-ersatzteile",
   description:
-    "Beantwortet Ersatzteilanfragen zu ALGI Hydraulikhebern und erstellt " +
+    "Beantwortet Ersatzteilanfragen zu AHT Hydraulikhebern und erstellt " +
     "Angebote aus dem Ersatzteilkatalog.",
   category: "assistant",
   model: "gemini-3.1-pro",
@@ -202,7 +202,7 @@ export const ALGI_APPROVAL_PART = {
   // `subject` first: the card's summary shows the first short string value.
   input: {
     subject:
-      "RE: Price and delivery time 2658446 - Cylinder packing seal for AZKBZ 110 (Commission No. G47490)",
+      "RE: Price and delivery time 2658446 - Cylinder packing seal for HKB 110 (Commission No. G58301)",
     to: "⟨Kundenkontakt⟩",
     body: quoteDraftFrom(lastText),
   },

@@ -1,10 +1,10 @@
 import type { UIMessage } from "ai";
 
 import type { ScriptedTurn } from "../script";
-import RAW_FST_CHUNKS from "./chunks-fst2xt-de.json";
+import RAW_KS_CHUNKS from "./chunks-ks2xt-de.json";
 
 /** Chunk 0 of the document chapter 1 cites, verbatim from the deployment. */
-const FST_CHUNK = RAW_FST_CHUNKS[0];
+const KS_CHUNK = RAW_KS_CHUNKS[0];
 
 /**
  * Chapter 1's script is a REAL, positively-rated exchange from the Newlift
@@ -29,14 +29,14 @@ const FST_CHUNK = RAW_FST_CHUNKS[0];
  */
 export const RETRIEVAL_STEPS: { text: string; source: string }[] = [
   {
-    text: "Frage als technische Frage erkannt: ein konkreter Fehlercode (Nothalt COP) in einem bestimmten System (FST-Fehlerspeicher).",
-    source: "Classified the request as: technical because: The user is asking for the meaning of a specific error code (Nothalt COP) in a technical system (FST error log).",
+    text: "Frage als technische Frage erkannt: ein konkreter Fehlercode (Nothalt COP) in einem bestimmten System (KS-Fehlerspeicher).",
+    source: "Classified the request as: technical because: The user is asking for the meaning of a specific error code (Nothalt COP) in a technical system (KS error log).",
   },
   {
     text: "Zuerst in der Technischen Dokumentation suchen; Ausweichquellen: Servicedatenbank, Support-Tickets, Eigene Dokumente, Software-Dokumentation.",
     source: "Main contexts: tech_doc_context, Fallback contexts: new_servicedb_context, support_tickets_context, custom_documents_context, software_documentation_context",
   },
-  { text: "Produktname in der Frage erkannt: FST", source: "Detected Product names in the question: FST" },
+  { text: "Produktname in der Frage erkannt: KS", source: "Detected Product names in the question: KS" },
   { text: "321 Passagen nach Relevanz neu bewertet", source: "Reranking 321 chunks" },
   { text: "Relevanz der Treffer zwischen 0,60 und 0,87", source: "Rerank_score min: 0.5979366, Rerank_score max: 0.8704211" },
   {
@@ -44,22 +44,22 @@ export const RETRIEVAL_STEPS: { text: string; source: string }[] = [
     source: "Using fallback search in new_servicedb_context, support_tickets_context, custom_documents_context, software_documentation_context",
   },
   {
-    text: "Das Gedächtnis bevorzugt zwei Dokumente und nimmt sie in die Suche auf: FST2XTchanges-customer-DE.docx, MIPA_FST-3_DE.pdf",
-    source: "Memory prioritizes specific document(s); pinning 2 file(s) into the search: FST2XTchanges-customer-DE.docx, MIPA_FST-3_DE.pdf",
+    text: "Das Gedächtnis bevorzugt zwei Dokumente und nimmt sie in die Suche auf: KS2XTchanges-customer-DE.docx, MIPA_KS-3_DE.pdf",
+    source: "Memory prioritizes specific document(s); pinning 2 file(s) into the search: KS2XTchanges-customer-DE.docx, MIPA_KS-3_DE.pdf",
   },
 ];
 
 const CITE_SWDOC =
-  "{item_name: FST2XTchanges-customer-DE.docx, item_id: d92dd3f2-2803-41e4-8136-a1a0ccb99e6c, context: software_documentation_context, chunk_id: 02d50a8f-e703-4461-9c0c-5ab6c695cdfd, chunk_index: 0}";
+  "{item_name: KS2XTchanges-customer-DE.docx, item_id: d92dd3f2-2803-41e4-8136-a1a0ccb99e6c, context: software_documentation_context, chunk_id: 02d50a8f-e703-4461-9c0c-5ab6c695cdfd, chunk_index: 0}";
 const CITE_ZENDESK =
-  "{item_name: FST Meldung, item_id: e9e5c0df-d9cb-442e-ae13-85528da96a84, context: support_tickets_context, chunk_id: ce3ecab9-ca4b-4cb0-b646-fccff533a445, chunk_index: 0}";
+  "{item_name: KS Meldung, item_id: e9e5c0df-d9cb-442e-ae13-85528da96a84, context: support_tickets_context, chunk_id: ce3ecab9-ca4b-4cb0-b646-fccff533a445, chunk_index: 0}";
 
 /**
  * The `{item_name: ...}` markers are not noise — message-renderer.tsx parses
  * them into inline citations, so keeping them verbatim is what makes citations
  * render exactly as the product renders them.
  */
-const ANSWER = `Die Meldung **„Nothalt COP“** im FST-Fehlerspeicher bezieht sich auf die Betätigung des Nothalt- bzw. Not-Aus-Schalters direkt im Fahrkorb (COP steht für *Car Operating Panel*, also das Fahrkorbtableau) ${CITE_SWDOC}.
+const ANSWER = `Die Meldung **„Nothalt COP“** im KS-Fehlerspeicher bezieht sich auf die Betätigung des Nothalt- bzw. Not-Aus-Schalters direkt im Fahrkorb (COP steht für *Car Operating Panel*, also das Fahrkorbtableau) ${CITE_SWDOC}.
 
 Hier sind die genauen Hintergründe und Details zu dieser Meldung:
 
@@ -86,11 +86,11 @@ export const TECHDOC_TURNS: ScriptedTurn[] = [
         // renderer discriminates on.
         toolName: "Context_Search",
         input: {
-          userQuery: 'was bedeutet "Nothalt COP" im FST Fehlerspeicher?',
+          userQuery: 'was bedeutet "Nothalt COP" im KS Fehlerspeicher?',
           importantKeyword: "Nothalt COP",
           relevantKeywords: [
             "Nothalt COP",
-            "FST Fehlerspeicher",
+            "KS Fehlerspeicher",
             "Fehlercode",
             "COP",
           ],
@@ -113,17 +113,17 @@ export const TECHDOC_TURNS: ScriptedTurn[] = [
             tools: [],
             chunks: [
               {
-                chunk_content: FST_CHUNK.chunk_content,
-                chunk_index: FST_CHUNK.chunk_index,
-                chunk_id: FST_CHUNK.chunk_id,
-                chunk_source: FST_CHUNK.chunk_source,
+                chunk_content: KS_CHUNK.chunk_content,
+                chunk_index: KS_CHUNK.chunk_index,
+                chunk_id: KS_CHUNK.chunk_id,
+                chunk_source: KS_CHUNK.chunk_source,
                 chunk_metadata: {},
-                chunk_created_at: FST_CHUNK.chunk_created_at,
-                chunk_updated_at: FST_CHUNK.chunk_updated_at,
+                chunk_created_at: KS_CHUNK.chunk_created_at,
+                chunk_updated_at: KS_CHUNK.chunk_updated_at,
                 item_id: "d92dd3f2-2803-41e4-8136-a1a0ccb99e6c",
                 item_external_id:
-                  "FST/Software/fuer_FST-2XT/FST2XTchanges-customer-DE.docx",
-                item_name: "FST2XTchanges-customer-DE.docx",
+                  "KS/Software/fuer_KS-2XT/KS2XTchanges-customer-DE.docx",
+                item_name: "KS2XTchanges-customer-DE.docx",
                 item_created_at: "2026-08-27T01:24:45.861Z",
                 item_updated_at: "2026-08-27T01:24:45.861Z",
                 context: {
@@ -146,7 +146,7 @@ export const TECHDOC_TURNS: ScriptedTurn[] = [
 
 /** The question the engineer actually asked, from the tool call's own input. */
 export const TECHDOC_QUESTION =
-  'was bedeutet "Nothalt COP" im FST Fehlerspeicher?';
+  'was bedeutet "Nothalt COP" im KS Fehlerspeicher?';
 
 /**
  * The same exchange as scrollback — already on screen when chapter 1 opens.

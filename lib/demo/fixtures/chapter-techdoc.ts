@@ -88,7 +88,7 @@ const SESSIONS: AgentSession[] = [
     // range, sitting in the page header above a conversation that is actually
     // about Nothalt COP on the FST-2XT. The title is the first thing on screen
     // in chapter 1 and it contradicted everything under it.
-    title: "Nothalt COP im FST-Fehlerspeicher",
+    title: "Nothalt COP im KS-Fehlerspeicher",
     metadata: null,
     // Must equal getDemoUser().id. checkChatSessionWriteAccess grants write to
     // the session's creator; with rights_mode "private" and no RBAC entries,
