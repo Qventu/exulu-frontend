@@ -629,3 +629,5 @@ New visitor-facing German introduced by this plan (implementer drafts; Daniel + 
 | Closing scene button label (renders once the booking URL is set) | 30-Minuten-Termin buchen (unchanged wording, now also inside the scene) |
 
 Moved, not reworded: the references paragraph (contact.0's panel) is repeated in the closing scene; contact.1's "Zehn Ihrer Handbücher …" paragraph moved from the panel into the scene.
+
+**Post-review build** (d2e05f0, BUILD_ID gV85HCaAAFeBySmW8VN4K): walker **37/37**, zero leaks, 3 Tabs to Weiter. Review fixes verified on screen: a frame captured during the hold shows one status line — the card with the pulsing icon and the visible label "Durchsucht sieben Wissensbasen …" — and no message placeholder beneath it (the first build had shown an empty card over "Denke nach …": the shimmer text needs colour variables only the placeholder's wrapper sets); the searching card stays visible 1,971 ms; the copy export numbers its sequence steps again (Sequenzschritt 1–4); stagger, reduced motion (opacity 1 at first paint), opening figure 488 px and the closing scene unchanged. Full suite 134 files / 1,423 tests at d2e05f0.
