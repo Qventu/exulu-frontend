@@ -23,7 +23,11 @@ export type ContentBlock =
   | { kind: "figure"; src: string; alt?: string }
   /** An ordered pipeline, rendered as connected stages. */
   | { kind: "sequence"; steps: string[] }
-  /** A button inside a scene — the closing ask. The panel footer's CTA is a separate step field. */
+  /**
+   * A button inside a scene. Was the closing ask until the utm change gave
+   * each path its own button (the `paths` items' `cta`); no scene emits it
+   * now, but the kind stays for the next scene that needs one button.
+   */
   | { kind: "cta"; label: string; href: string }
   // The closing scene's reference customers: a logo file when one exists,
   // the name as a wordmark otherwise (sub-project 6).
