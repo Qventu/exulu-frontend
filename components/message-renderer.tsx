@@ -22,7 +22,7 @@ import { trajectoryReuseFromMessage } from "@/app/(application)/chat/components/
 import { groupRememberParts } from "@/app/(application)/chat/components/memory-card-data"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Fragment, memo, useState, useEffect, useContext, useRef } from "react"
+import { Fragment, memo, useState, useEffect, useContext, useMemo, useRef } from "react"
 import { ConfigContext } from "@/components/shell/config-context"
 import { UserContext } from "@/app/(application)/authenticated"
 import { getToken } from "@/lib/api/client"
@@ -56,6 +56,7 @@ import {
   type ToolDataCache,
   type ToolReasoningStep,
 } from "./message-renderer-tool-data"
+import { expandUngroupableUnits, groupRenderUnits, type RenderUnit } from "./message-renderer-tool-groups"
 
 // Only the visible answer (text parts) is exported — reasoning/tool parts
 // stay out of copies and downloads.
@@ -149,6 +150,19 @@ interface MessageRendererProps {
     addToContext: (item: any) => void
     addToolApprovalResponse: ChatAddToolApproveResponseFunction
   }>
+  /**
+   * Renders a run of identical consecutive tool calls as ONE card — the
+   * parallel fan-out case (20 × jira_get_issue in a single step). Optional:
+   * without it every part renders individually, exactly as before.
+   * See message-renderer-tool-groups.ts for the grouping rule.
+   */
+  GroupedToolPartComponent?: React.ComponentType<{
+    agent: Agent
+    toolType: string
+    parts: DynamicToolUIPart[]
+    addToContext: (item: any) => void
+    addToolApprovalResponse: ChatAddToolApproveResponseFunction
+  }>
   // Consecutive pending memory_remember approvals render under one "Save
   // all" bar (spec §4.1, groupRememberParts). Optional — when absent, parts
   // render singly via UntypedToolPartComponent as before (no behavior
@@ -203,6 +217,7 @@ export function MessageRenderer({
   onRegenerate,
   onUpdate,
   UntypedToolPartComponent,
+  GroupedToolPartComponent,
   MemoryStackComponent,
   RecalledMemoriesComponent,
   ClaimCheckComponent,
@@ -642,6 +657,7 @@ export function MessageRenderer({
             onQuestionAnswer={onQuestionAnswer}
             setMessages={setMessages}
             UntypedToolPartComponent={UntypedToolPartComponent}
+            GroupedToolPartComponent={GroupedToolPartComponent}
             MemoryStackComponent={MemoryStackComponent}
             RecalledMemoriesComponent={RecalledMemoriesComponent}
             ClaimCheckComponent={ClaimCheckComponent}
@@ -693,6 +709,7 @@ interface MessageItemProps {
   onQuestionAnswer?: (questionId: string, answerId: string, answerText: string) => void
   setMessages?: MessageRendererProps["setMessages"]
   UntypedToolPartComponent?: MessageRendererProps["UntypedToolPartComponent"]
+  GroupedToolPartComponent?: MessageRendererProps["GroupedToolPartComponent"]
   MemoryStackComponent?: MessageRendererProps["MemoryStackComponent"]
   RecalledMemoriesComponent?: MessageRendererProps["RecalledMemoriesComponent"]
   ClaimCheckComponent?: MessageRendererProps["ClaimCheckComponent"]
@@ -743,6 +760,7 @@ const MessageItem = memo(function MessageItem({
   onQuestionAnswer,
   setMessages,
   UntypedToolPartComponent,
+  GroupedToolPartComponent,
   MemoryStackComponent,
   RecalledMemoriesComponent,
   ClaimCheckComponent,
@@ -753,6 +771,40 @@ const MessageItem = memo(function MessageItem({
   // would never hit. Terminal-state parts are immutable — see
   // message-renderer-tool-data.ts.
   const toolDataCacheRef = useRef<ToolDataCache>(new Map())
+
+  // Runs of identical consecutive tool calls collapse into ONE card — the
+  // parallel fan-out case (20 x jira_get_issue in a single step: 20 approval
+  // clicks, then 20 "Completed" cards to scroll past). A group degrades back
+  // to individual parts when the surface passed no group renderer, or when a
+  // member needs one of the bespoke output-shape renderers below (image
+  // widget / inline image), which a collapsed group card would swallow.
+  // Credential + oauth short-circuits are the group component's fallback,
+  // since only it holds those extractors.
+  //
+  // computeUntypedToolData runs through the shared cache, so a degraded group
+  // costs nothing extra: the main render path hits the same `ut:` entries.
+  const canGroup = !!(
+    GroupedToolPartComponent && agent && addToContext && addToolApprovalResponse
+  )
+  const renderUnits = useMemo<RenderUnit<any>[]>(
+    () =>
+      expandUngroupableUnits<any>(
+        groupRenderUnits<any>(message.parts as any[]),
+        (part, index) => {
+          if (!canGroup) return false
+          // Same key shape as the single-part path below, so a degraded group
+          // reuses those entries instead of computing twice.
+          const data = getCachedToolData(
+            toolDataCacheRef.current,
+            `ut:${part.toolCallId ?? `${message.id}-${index}`}`,
+            part.state,
+            () => computeUntypedToolData(part),
+          )
+          return data.ok && !data.imageWidget && !data.imageInline
+        },
+      ),
+    [message.parts, message.id, canGroup],
+  )
 
   const messageMetadata = message.metadata as any
 
@@ -838,7 +890,34 @@ const MessageItem = memo(function MessageItem({
             key={message.id}
           >
             <MessageContent id={"message_id_" + message.id}>
-              {message.parts?.map((part, i) => {
+              {renderUnits.map((unit) => {
+
+                // A group unit only survives the pre-pass when canGroup held,
+                // so every prop below is present; the guard re-states that for
+                // the type checker rather than asserting non-null.
+                if (unit.kind === 'tool-group') {
+                  if (
+                    !GroupedToolPartComponent ||
+                    !agent ||
+                    !addToContext ||
+                    !addToolApprovalResponse
+                  ) {
+                    return null
+                  }
+                  return (
+                    <GroupedToolPartComponent
+                      key={`tg-${message.id}-${unit.startIndex}`}
+                      agent={agent}
+                      toolType={unit.type}
+                      parts={unit.parts}
+                      addToContext={addToContext}
+                      addToolApprovalResponse={addToolApprovalResponse}
+                    />
+                  )
+                }
+
+                const part = unit.part
+                const i = unit.index
 
                 if (MemoryStackComponent) {
                   if (memoryStackSuppressedIndices.has(i)) return null

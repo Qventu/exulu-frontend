@@ -77,6 +77,9 @@ import { isMemoryToolPart } from "./memory-card-data";
 import { MemoryStack } from "./memory-stack";
 import { RecalledMemories } from "./recalled-memories";
 import { ToolCallApproval } from "./tool-call-approval";
+import { ToolCallApprovalGroup } from "./tool-call-approval-group";
+import { summarizeToolGroup } from "./tool-call-group-data";
+import { ToolCallResultGroup } from "./tool-call-result-group";
 import { findTrajectoryRefForFeedback } from "./trajectory-ref";
 
 export interface MessageColumnProps {
@@ -222,6 +225,73 @@ function makeUntypedToolPart(
 }
 
 /**
+ * Builds the GroupedToolPartComponent handed to MessageRenderer: one card for
+ * a run of identical consecutive tool calls (message-renderer-tool-groups.ts
+ * decides what counts as a run).
+ *
+ * Three outcomes, in order:
+ *  1. a member carries an auth short-circuit (credential form / oauth connect)
+ *     — those need their own actionable card, so the run degrades to the
+ *     per-part renderer. Only this factory can tell: the extractors are
+ *     route-local, which is why the renderer delegates the check here.
+ *  2. anything still awaiting approval — the batch approval card, which
+ *     answers every pending id at once.
+ *  3. otherwise — the collapsed results card.
+ */
+function makeGroupedToolPart(
+  UntypedToolPart: ReturnType<typeof makeUntypedToolPart>,
+  onApproveForChat: (toolId: string) => void,
+) {
+  const GroupedToolPart = ({
+    agent,
+    toolType,
+    parts,
+    addToContext,
+    addToolApprovalResponse,
+  }: {
+    agent: Agent;
+    toolType: string;
+    parts: DynamicToolUIPart[];
+    addToContext: (item: string) => void;
+    addToolApprovalResponse: ChatAddToolApproveResponseFunction;
+  }) => {
+    const summary = summarizeToolGroup(parts);
+
+    if (summary.hasAuthShortCircuit) {
+      return (
+        <>
+          {parts.map((part, index) => (
+            <UntypedToolPart
+              key={part.toolCallId ?? `${toolType}-${index}`}
+              agent={agent}
+              untypedToolPart={part}
+              callId={part.toolCallId ?? `${toolType}-${index}`}
+              addToContext={addToContext}
+              addToolApprovalResponse={addToolApprovalResponse}
+            />
+          ))}
+        </>
+      );
+    }
+
+    if (summary.pendingApprovalIds.length > 0) {
+      return (
+        <ToolCallApprovalGroup
+          parts={parts}
+          toolType={toolType}
+          addToolApprovalResponse={addToolApprovalResponse}
+          onApproveForChat={onApproveForChat}
+        />
+      );
+    }
+
+    return <ToolCallResultGroup parts={parts} toolType={toolType} />;
+  };
+  GroupedToolPart.displayName = "GroupedToolPart";
+  return GroupedToolPart;
+}
+
+/**
  * Threads guestMode into RecalledMemories (final-review finding 4) the same
  * way makeUntypedToolPart closes over it for MemoryCard above —
  * RecalledMemoriesComponent's frozen shape (message-renderer.tsx) has no
@@ -345,6 +415,14 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
       ),
     [controller.approveToolForChat, handleCredentialResume, guestMode],
   );
+  const GroupedToolPartComponent = useMemo(
+    () =>
+      makeGroupedToolPart(
+        UntypedToolPartComponent,
+        controller.approveToolForChat,
+      ),
+    [UntypedToolPartComponent, controller.approveToolForChat],
+  );
   /* eslint-enable react-hooks/refs */
 
   const RecalledMemoriesComponent = useMemo(
@@ -442,6 +520,7 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
                 controller.sendQuestionAnswer(answerText)
               }
               UntypedToolPartComponent={UntypedToolPartComponent}
+              GroupedToolPartComponent={GroupedToolPartComponent}
               // Consecutive pending "remember" approvals render under one
               // "Save all" bar (spec §4.1). Guests never see memory cards —
               // omitting the prop makes MessageRenderer fall back to

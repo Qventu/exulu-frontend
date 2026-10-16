@@ -36,6 +36,12 @@ export type ToolHeaderProps = {
   type: ToolUIPart["type"];
   state: ToolUIPart["state"];
   className?: string;
+  /**
+   * Rendered as a "· N" suffix after the tool name. Set when one header
+   * stands for a run of identical calls (see the grouped tool card); the
+   * state badge then reflects the run as a whole.
+   */
+  count?: number;
 };
 
 const getStatusBadge = (status: ToolUIPart["state"]) => {
@@ -74,6 +80,7 @@ export const ToolHeader = ({
   title,
   type,
   state,
+  count,
   ...props
 }: ToolHeaderProps) => (
   <CollapsibleTrigger
@@ -88,6 +95,11 @@ export const ToolHeader = ({
       <span className="font-medium text-sm">
         {title ?? type.split("-").slice(1).join("-")}
       </span>
+      {typeof count === "number" && count > 1 && (
+        <span className="text-muted-foreground text-sm tabular-nums">
+          · {count}
+        </span>
+      )}
       {getStatusBadge(state)}
     </div>
     <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
