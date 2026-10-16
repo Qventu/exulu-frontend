@@ -68,6 +68,7 @@ import {
   deriveContextState,
   type ContextState,
 } from "./lib/context-budget";
+import { withApprovedTools } from "./approved-tools-body";
 import { savedIdsFromMessages } from "./components/memory-panel-data";
 import { answerTextOf, collectSources, hasPendingToolApproval, parseClaimCheckTrigger } from "./components/claim-check-data";
 import type { ClaimCheckState } from "./components/claim-check";
@@ -499,7 +500,12 @@ export function useChatSession({
             const override = modelOverrideRef.current;
             return {
               body: {
-                ...body,
+                // Every request the transport makes passes through here —
+                // including the automatic re-submit after an approval answer,
+                // which carries no body of its own. Reading the pre-approval
+                // list here is what makes "Allow for this chat" hold for the
+                // rest of the turn instead of only from the next message on.
+                ...withApprovedTools(body as Record<string, unknown> | undefined, session.id),
                 message: messages[messages.length - 1],
                 id: chatId,
                 session: session.id,
