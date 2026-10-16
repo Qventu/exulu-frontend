@@ -21,6 +21,7 @@ import { DEMO_BACKEND_CONFIG } from "@/lib/demo/config";
 import { isDemoMode } from "@/lib/demo/flag";
 import { getDemoUser } from "@/lib/demo/user";
 import { TourOverlay } from "@/components/demo/tour-overlay";
+import { DemoBuildGuard } from "@/components/demo/demo-build-guard";
 import { DemoUnavailable } from "@/components/demo/demo-unavailable";
 import { isDemoSupported } from "@/lib/demo/supported-routes";
 
@@ -190,6 +191,7 @@ export default async function RootLayout({
                                     walking the inert sidebar and product first.
                                     Chapters end on product routes in this group,
                                     so the panel has to live here. */}
+                                {demoMode && <DemoBuildGuard />}
                                 {demoMode && <TourOverlay />}
                                 {/* The ONE <main> landmark (a11y fix M11) — every
                                     inner content wrapper below this is a div. */}

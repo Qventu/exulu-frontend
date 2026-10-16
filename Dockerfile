@@ -45,6 +45,16 @@ ENV NEXT_TELEMETRY_DISABLED 1
 ENV DOCKER=true
 ENV NEXT_PRIVATE_STANDALONE=true
 
+# The demo flag is inlined into the BROWSER bundle by `next build`
+# (lib/demo/flag.ts), so it has to be a build arg, not only a runtime env:
+# an image built without it and run with it serves a half demo — server
+# components say demo, the browser says product ("AI Studio" after hydration,
+# the full nav, "No valid session token available." on /analytics; seen on
+# imp-demo 2026-10-16). Unset for product images: isDemoMode() is strict on
+# the string "true". Pass --build-arg NEXT_PUBLIC_DEMO_MODE=true for the demo.
+ARG NEXT_PUBLIC_DEMO_MODE
+ENV NEXT_PUBLIC_DEMO_MODE=${NEXT_PUBLIC_DEMO_MODE}
+
 RUN npm run build
 
 # If using npm comment out above and use below instead
@@ -62,6 +72,11 @@ ENV NEXT_TELEMETRY_DISABLED 1
 # another Docker network (Dokploy/Traefik 502, ALGI 2026-09-23). Same as the
 # official Next.js Docker example.
 ENV HOSTNAME="0.0.0.0"
+
+# Same value as the builder stage, so the server (which reads the env at
+# runtime) agrees with the bundle (which has it baked in) from one build arg.
+ARG NEXT_PUBLIC_DEMO_MODE
+ENV NEXT_PUBLIC_DEMO_MODE=${NEXT_PUBLIC_DEMO_MODE}
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
