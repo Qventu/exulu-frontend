@@ -91,8 +91,9 @@ function Block({ block }: { block: ContentBlock }) {
               <span className="demo-path-tag">{p.tag}</span>
               {p.price && <span className="demo-path-price">{p.price}</span>}
               <span className="demo-path-text">{p.text}</span>
+              {/* booking-cta: the inert layer lets this one through (components/demo/inert-layer.ts). */}
               {p.cta && (
-                <a className="demo-button demo-path-cta" href={p.cta.href}>
+                <a className="demo-button demo-path-cta" href={p.cta.href} data-demo-id="booking-cta">
                   {p.cta.label}
                 </a>
               )}

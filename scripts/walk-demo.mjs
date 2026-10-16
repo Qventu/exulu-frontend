@@ -397,6 +397,42 @@ const CLICK_PROBES = {
   "contact.0": { attempts: [{ spec: { kind: "nav-link" }, describe: "sidebar nav link (closing scene, no product control)" }] },
 };
 
+/**
+ * The opposite probe: controls inside <main> that the tour OWNS and that must
+ * therefore get past ContentInert — the closing scene's two booking buttons
+ * (data-demo-id="booking-cta", exempted in components/demo/inert-layer.ts).
+ * The former shared button was dead this way from 42d2b88 until the utm
+ * change, and nothing here noticed, because every other probe asserts that
+ * a click does NOTHING.
+ *
+ * Checked with a synthetic, cancelable click rather than a real one: a real
+ * click would leave for HubSpot. A bubble-phase listener on document records
+ * that the event got past the capture-phase inert layer (which stops
+ * propagation when it cancels) and then cancels the event itself, so the
+ * anchor never navigates.
+ */
+const OPERABLE_PROBES = {
+  "contact.0": { selector: '.demo-scene [data-demo-id="booking-cta"]', expectCount: 2, describe: "the two path booking buttons" },
+};
+
+async function runOperableProbe(page, pos) {
+  const spec = OPERABLE_PROBES[pos];
+  if (!spec) return null;
+  const result = await page.evaluate(({ selector, expectCount }) => {
+    const els = [...document.querySelectorAll(selector)];
+    const results = els.map((el) => {
+      let reached = false;
+      const spy = (e) => { reached = true; e.preventDefault(); };
+      document.addEventListener("click", spy, false);
+      el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      document.removeEventListener("click", spy, false);
+      return { text: el.textContent.trim().slice(0, 40), href: el.getAttribute("href"), reached };
+    });
+    return { count: els.length, expectCount, results, pass: els.length === expectCount && results.every((r) => r.reached) };
+  }, spec);
+  return { ...result, describe: spec.describe };
+}
+
 async function runClickProbe(page, pos) {
   const entry = CLICK_PROBES[pos] ?? { attempts: [{ spec: { kind: "nav-link" }, describe: "fallback sidebar nav link" }] };
 
@@ -803,6 +839,7 @@ async function main() {
 
     const clickResult = await runClickProbe(page, step.pos);
     row.click = clickResult;
+    row.operable = await runOperableProbe(page, step.pos);
 
     const scrollResult = await runScrollProbe(page);
     row.scroll = scrollResult;
@@ -873,6 +910,7 @@ async function main() {
       row.coveringPanel === false &&
       row.ringOk === true &&
       clickResult.pass === true &&
+      (row.operable === null || row.operable.pass === true) &&
       // scroll is the one probe where null ("no scroller on this step") is a
       // real n/a rather than a rotted selector — see runScrollProbe.
       (scrollResult.pass === true || scrollResult.pass === null);
@@ -880,7 +918,7 @@ async function main() {
     results.push(row);
     const flag = row.allPass ? "PASS" : "FAIL";
     console.log(
-      `${step.pos.padEnd(18)} ${flag} panel=${row.panelVisible} overlap=${row.overlapsContent} covering=${row.coveringPanel} ring=${row.ringPresent}/${row.ringExpected}${row.ringExpected ? `@anchor=${row.ringOnAnchor}` : ""} click=${clickResult.pass} scroll=${scrollResult.applicable ? scrollResult.pass : "n/a"}${row.panelScrolledAway ? " [panel-scrolled-away]" : ""} content=${row.contentVisible ?? "n/a"} mehr=${row.noMehr ? "none" : "PRESENT"} leaks=${row.leaks.length ? JSON.stringify(row.leaks) : "none"}`,
+      `${step.pos.padEnd(18)} ${flag} panel=${row.panelVisible} overlap=${row.overlapsContent} covering=${row.coveringPanel} ring=${row.ringPresent}/${row.ringExpected}${row.ringExpected ? `@anchor=${row.ringOnAnchor}` : ""} click=${clickResult.pass}${row.operable ? ` operable=${row.operable.pass}` : ""} scroll=${scrollResult.applicable ? scrollResult.pass : "n/a"}${row.panelScrolledAway ? " [panel-scrolled-away]" : ""} content=${row.contentVisible ?? "n/a"} mehr=${row.noMehr ? "none" : "PRESENT"} leaks=${row.leaks.length ? JSON.stringify(row.leaks) : "none"}`,
     );
   }
 
