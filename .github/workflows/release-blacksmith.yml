@@ -147,3 +147,46 @@ jobs:
         # This step uses the identity token to provision an ephemeral certificate
         # against the sigstore community Fulcio instance.
         run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+
+      # ── The demo image ──────────────────────────────────────────────────
+      # NEXT_PUBLIC_DEMO_MODE is inlined into the browser bundle by `next build`
+      # (lib/demo/flag.ts, Dockerfile), so the demo cannot run the product image
+      # with a runtime env — that gives a half demo (imp-demo, 2026-10-16: tour
+      # chrome from the server, "AI Studio" and session-token errors from the
+      # browser). Same Dockerfile, same tags, suffixed -demo, built with the
+      # flag. Dokploy's compose pulls e.g. :latest-demo or :<version>-demo.
+      # A customer instance keeps pulling the unsuffixed product tags.
+      - name: Extract Docker metadata for the demo image
+        id: meta-demo
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            suffix=-demo
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.release.outputs.version }},enable=${{ steps.release.outputs.version != '' }}
+
+      - name: Build and push the demo image
+        id: build-and-push-demo
+        uses: useblacksmith/build-push-action@v2
+        with:
+          context: .
+          platforms: linux/arm64,linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          build-args: |
+            NEXT_PUBLIC_DEMO_MODE=true
+          tags: ${{ steps.meta-demo.outputs.tags }}
+          labels: ${{ steps.meta-demo.outputs.labels }}
+
+      - name: Sign the published demo image
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          TAGS: ${{ steps.meta-demo.outputs.tags }}
+          DIGEST: ${{ steps.build-and-push-demo.outputs.digest }}
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
