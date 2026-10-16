@@ -69,3 +69,20 @@ describe("paths block", () => {
     ).toBe("Weg 1 · 600 € · Testen. | Weg 2 · Richtig.");
   });
 });
+
+describe("paths block with buttons", () => {
+  it("reads each path's button label into contentText, so the register scan sees it", () => {
+    const text = contentText([
+      {
+        kind: "paths",
+        items: [
+          { tag: "Weg 1", text: "Testen.", cta: { label: "Testphase anfragen", href: "https://example.invalid/?utm_campaign=a" } },
+          { tag: "Weg 2", text: "Richtig.", cta: { label: "Planungsgespräch buchen", href: "https://example.invalid/?utm_campaign=b" } },
+        ],
+      },
+    ]);
+    expect(text).toContain("Testphase anfragen");
+    expect(text).toContain("Planungsgespräch buchen");
+    expect(text).not.toContain("example.invalid");
+  });
+});

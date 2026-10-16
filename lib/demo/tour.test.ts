@@ -482,8 +482,31 @@ describe("the closing scene after marketing's second batch", () => {
   it("is one step: the two paths and the ask, with a lead in the panel", () => {
     expect(CHAPTERS.at(-1)!.steps).toHaveLength(1);
     const kinds = contentOf(closingStep()).map((b) => b.kind);
-    expect(kinds).toEqual(["paragraph", "paths", "paragraph", ...(DEMO_BOOKING_URL ? ["cta"] : [])]);
+    // No scene-level button since the utm change: each path carries its own.
+    expect(kinds).toEqual(["paragraph", "paths", "paragraph"]);
     expect(closingStep().lead).toBeTruthy();
+  });
+
+  it("gives each path its own booking button, telling HubSpot which offer was picked", () => {
+    const paths = contentOf(closingStep()).find((b) => b.kind === "paths");
+    if (paths?.kind !== "paths") throw new Error("no paths block");
+    const ctas = paths.items.map((p) => p.cta);
+    if (!DEMO_BOOKING_URL) {
+      expect(ctas.every((c) => c === undefined)).toBe(true);
+      return;
+    }
+    const campaigns = ctas.map((c) => new URL(c!.href).searchParams.get("utm_campaign"));
+    expect(campaigns).toEqual(["probe-3-monate", "vollwertig"]);
+    for (const c of ctas) {
+      const url = new URL(c!.href);
+      expect(`${url.origin}${url.pathname}`).toBe(DEMO_BOOKING_URL);
+      expect(url.searchParams.get("utm_source")).toBe("open-imp-demo");
+      expect(url.searchParams.get("utm_medium")).toBe("kapitel-12-contact-close");
+      expect(c!.label).toBeTruthy();
+    }
+    expect(new Set(ctas.map((c) => c!.label)).size).toBe(2);
+    // The labels are copy: contentText must carry them so the register scan reads them.
+    for (const c of ctas) expect(contentText(contentOf(closingStep()))).toContain(c!.label);
   });
 
   it("gives every scene step a lead, so the panel beside a scene is never bare", () => {

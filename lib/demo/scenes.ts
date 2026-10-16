@@ -1,5 +1,18 @@
-import { DEMO_BOOKING_LABEL, DEMO_BOOKING_URL } from "./routes";
 import type { ContentBlock } from "./content";
+import { bookingUrl, stepMedium } from "./booking";
+
+/**
+ * utm_medium of the closing step's buttons: chapter 12, step "contact-close".
+ * The number is written here because this module cannot see CHAPTERS (the
+ * chapters import it); tour.test.ts asserts it against the real position.
+ */
+const CLOSING_MEDIUM = stepMedium(12, "contact-close");
+
+/** A path's button, or nothing when the booking link is unset (see routes.ts). */
+function pathCta(label: string, campaign: string): { cta?: { label: string; href: string } } {
+  const href = bookingUrl(campaign, CLOSING_MEDIUM);
+  return href ? { cta: { label, href } } : {};
+}
 
 /**
  * The four beats with no product screen behind them.
@@ -105,8 +118,10 @@ export const DEMO_SCENES: Record<string, { content: ContentBlock[] }> = {
   // reference customers (lib/demo/chapters/index.test.ts skips it by id).
   "contact-close": {
     // The chapter's only step. Since sub-project 8 it carries the offer: two
-    // paths side by side, one button. No customer names for now; the `logos`
-    // block kind stays for when the files and the decision exist.
+    // paths side by side, each with its own button to the same booking page —
+    // the utm_campaign tells HubSpot which one was pressed (lib/demo/booking.ts).
+    // No customer names for now; the `logos` block kind stays for when the
+    // files and the decision exist.
     content: [
       {
         kind: "paragraph",
@@ -119,10 +134,12 @@ export const DEMO_SCENES: Record<string, { content: ContentBlock[] }> = {
             tag: "Ausprobieren · 3 Monate unverbindlich",
             price: "600 € / Monat, −50 % · Setup in zwei Tagen",
             text: "Beliebig viele Dokumente, Transkripte und Besprechungsaufnahmen, ohne Systemanbindung. Variable Kosten mit 20 % Aufschlag.",
+            ...pathCta("Testphase anfragen", "probe-3-monate"),
           },
           {
             tag: "Vollwertig · in drei Schritten",
             text: "Planungsgespräch → Anbindung an eure Systeme und Import eurer Daten → produktive Instanz innerhalb von zwei Arbeitstagen.",
+            ...pathCta("Planungsgespräch buchen", "vollwertig"),
           },
         ],
       },
@@ -130,7 +147,6 @@ export const DEMO_SCENES: Record<string, { content: ContentBlock[] }> = {
         kind: "paragraph",
         text: "Beide Wege beginnen mit einem Gespräch von 30 Minuten.",
       },
-      ...(DEMO_BOOKING_URL ? [{ kind: "cta" as const, label: DEMO_BOOKING_LABEL, href: DEMO_BOOKING_URL }] : []),
     ],
   },
 };

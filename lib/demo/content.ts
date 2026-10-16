@@ -29,7 +29,9 @@ export type ContentBlock =
   // the name as a wordmark otherwise (sub-project 6).
   | { kind: "logos"; items: { name: string; caption: string; src?: string }[] }
   // The closing scene's offer: two ways in, side by side (sub-project 8).
-  | { kind: "paths"; items: { tag: string; price?: string; text: string }[] };
+  // Each path may carry its own button: the same booking page, a different
+  // utm_campaign, so HubSpot learns which offer the visitor picked.
+  | { kind: "paths"; items: { tag: string; price?: string; text: string; cta?: { label: string; href: string } }[] };
 
 /** Every word in a block, for assertions and search. Never renders. */
 export function contentText(blocks: ContentBlock[]): string {
@@ -51,7 +53,7 @@ export function contentText(blocks: ContentBlock[]): string {
         case "logos":
           return block.items.map((i) => `${i.name} — ${i.caption}`).join(" · ");
         case "paths":
-          return block.items.map((p) => [p.tag, p.price, p.text].filter(Boolean).join(" · ")).join(" | ");
+          return block.items.map((p) => [p.tag, p.price, p.text, p.cta?.label].filter(Boolean).join(" · ")).join(" | ");
         case "cta":
           return block.label;
         default: {

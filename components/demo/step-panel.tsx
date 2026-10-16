@@ -91,6 +91,11 @@ function Block({ block }: { block: ContentBlock }) {
               <span className="demo-path-tag">{p.tag}</span>
               {p.price && <span className="demo-path-price">{p.price}</span>}
               <span className="demo-path-text">{p.text}</span>
+              {p.cta && (
+                <a className="demo-button demo-path-cta" href={p.cta.href}>
+                  {p.cta.label}
+                </a>
+              )}
             </li>
           ))}
         </ul>

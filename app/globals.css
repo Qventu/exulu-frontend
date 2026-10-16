@@ -459,6 +459,8 @@
 .demo-path-tag { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: hsl(var(--primary)); }
 .demo-path-price { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
 .demo-path-text { color: hsl(var(--muted-foreground)); line-height: 1.5; }
+/* The button sits at the card's foot so the two line up whatever the text above does. */
+.demo-path-cta { margin-top: auto; padding-top: 0.75rem; align-self: flex-start; }
 .demo-scene .demo-path-price { font-size: 2rem; }
 
 .demo-block-sequence {

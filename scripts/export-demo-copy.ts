@@ -92,6 +92,7 @@ function fieldsOfBlock(block: ContentBlock): Array<{ feld: string; text: string 
         { feld: "Weg", text: p.tag },
         ...(p.price ? [{ feld: "Weg-Preis", text: p.price }] : []),
         { feld: "Weg-Text", text: p.text },
+        ...(p.cta ? [{ feld: "Weg-Schaltfläche", text: p.cta.label }] : []),
       ]);
     case "cta":
       return [{ feld: "Schaltfläche", text: block.label }];
