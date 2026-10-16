@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookingUrl, DEMO_UTM_SOURCE, stepMedium } from "./booking";
+import { bookingUrl, DEMO_UTM_SOURCE, panelBookingUrl, stepMedium } from "./booking";
 import { DEMO_BOOKING_URL } from "./routes";
 
 describe("bookingUrl", () => {
@@ -30,5 +30,14 @@ describe("stepMedium", () => {
   it("is the chapter number, two digits, and the step id", () => {
     expect(stepMedium(6, "memory-map")).toBe("kapitel-06-memory-map");
     expect(stepMedium(12, "contact-close")).toBe("kapitel-12-contact-close");
+  });
+});
+
+describe("panelBookingUrl", () => {
+  it("is the campaign 'tour' from the given step: a click that committed to neither offer", () => {
+    const url = new URL(panelBookingUrl(6, "memory-map"));
+    expect(url.searchParams.get("utm_campaign")).toBe("tour");
+    expect(url.searchParams.get("utm_medium")).toBe("kapitel-06-memory-map");
+    expect(url.searchParams.get("utm_source")).toBe(DEMO_UTM_SOURCE);
   });
 });

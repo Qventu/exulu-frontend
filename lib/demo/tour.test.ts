@@ -6,6 +6,7 @@ import { getWorld } from "./fixtures";
 // not on the step. contentOf reads from wherever the content actually is, so
 // the checks below still see a scene's words and figure — see its docblock.
 import { contentOf } from "./step-content";
+import { panelBookingUrl, stepMedium } from "./booking";
 import {
   CHAPTERS,
   DEMO_BOOKING_URL,
@@ -418,6 +419,18 @@ describe("the closing call to action", () => {
     expect(closingStep().cta?.href).toMatch(/^https:\/\/meetings-eu1\.hubspot\.com\//);
   });
 
+  it("sends the panel's button as campaign 'tour' from the closing step's real position", () => {
+    if (!DEMO_BOOKING_URL) return;
+    const chapterNumber = CHAPTERS.findIndex((c) => c.id === "contact") + 1;
+    expect(closingStep().cta?.href).toBe(panelBookingUrl(chapterNumber, closingStep().id));
+    // The scene's buttons hardcode the same position (scenes.ts cannot see CHAPTERS).
+    const paths = contentOf(closingStep()).find((b) => b.kind === "paths");
+    if (paths?.kind !== "paths") throw new Error("no paths block");
+    for (const p of paths.items) {
+      expect(new URL(p.cta!.href).searchParams.get("utm_medium")).toBe(stepMedium(chapterNumber, closingStep().id));
+    }
+  });
+
   it("never renders a dead link or a placeholder", () => {
     // DEMO_BOOKING_URL is empty until the HubSpot meetings link exists. An
     // empty href would render as a button that goes nowhere, and a literal
@@ -434,7 +447,7 @@ describe("the closing call to action", () => {
     // The other direction: setting the constant must be the ONLY change
     // needed. If this ever fails, the link was set and the step did not follow.
     if (DEMO_BOOKING_URL) {
-      expect(closingStep().cta?.href).toBe(DEMO_BOOKING_URL);
+      expect(closingStep().cta?.href.startsWith(DEMO_BOOKING_URL)).toBe(true);
       expect(closingStep().cta?.label).toBeTruthy();
     }
   });

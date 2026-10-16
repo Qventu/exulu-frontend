@@ -29,6 +29,14 @@ export function bookingUrl(campaign: string, medium: string, base: string = DEMO
   return `${base}?${params.toString()}`;
 }
 
+/**
+ * The panel's link and the closing step's button: campaign "tour", because
+ * a click there committed to neither offer; the medium still says where.
+ */
+export function panelBookingUrl(chapterNumber: number, stepId: string): string {
+  return bookingUrl("tour", stepMedium(chapterNumber, stepId));
+}
+
 /** `kapitel-06-memory-map`: the chapter's number (1-based, two digits) and the step's id. */
 export function stepMedium(chapterNumber: number, stepId: string): string {
   return `kapitel-${String(chapterNumber).padStart(2, "0")}-${stepId}`;

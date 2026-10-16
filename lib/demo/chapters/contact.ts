@@ -1,6 +1,15 @@
 import type { DemoChapter } from "../tour";
-import { DEMO_BOOKING_LABEL, DEMO_BOOKING_URL } from "../routes";
+import { DEMO_BOOKING_LABEL } from "../routes";
+import { panelBookingUrl } from "../booking";
 import { sceneRoute } from "../scenes";
+
+/**
+ * This chapter's number for utm_medium — 12, the last. Written here because
+ * the chapter cannot see CHAPTERS (index.ts imports it); tour.test.ts asserts
+ * the number against the real position.
+ */
+const CHAPTER_NUMBER = 12;
+const BOOKING_HREF = panelBookingUrl(CHAPTER_NUMBER, "contact-close");
 
 export const contactChapter: DemoChapter = {
   id: "contact",
@@ -17,9 +26,7 @@ export const contactChapter: DemoChapter = {
       title: "Erst ausprobieren oder gleich richtig?",
       lead: "Alles, was du gesehen hast, läuft auch mit euren Dokumenten — auf zwei Wegen, beide beginnen mit einem Gespräch.",
       content: [],
-      ...(DEMO_BOOKING_URL
-        ? { cta: { label: DEMO_BOOKING_LABEL, href: DEMO_BOOKING_URL } }
-        : {}),
+      ...(BOOKING_HREF ? { cta: { label: DEMO_BOOKING_LABEL, href: BOOKING_HREF } } : {}),
     },
   ],
 };

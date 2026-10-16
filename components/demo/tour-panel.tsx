@@ -6,7 +6,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { footerControls } from "@/lib/demo/panel-controls";
 import { railSegments } from "@/lib/demo/panel-rail";
 import { nextPosition } from "@/lib/demo/tour";
-import { DEMO_BOOKING_LABEL, DEMO_BOOKING_URL } from "@/lib/demo/routes";
+import { DEMO_BOOKING_LABEL } from "@/lib/demo/routes";
+import { panelBookingUrl } from "@/lib/demo/booking";
 
 import { StepPanel } from "./step-panel";
 import { useTour } from "./tour-provider";
@@ -54,6 +55,9 @@ export function TourPanel() {
     isLast: nextPosition(chapters, position) === null,
   });
   const positionKey = `${position.chapter}.${position.step}`;
+  // Empty when the booking link is unset — then no link renders (routes.ts).
+  // The utm_medium names this step, so a booking says where the click came from.
+  const bookingHref = panelBookingUrl(index + 1, step.id);
   const menuOpen = menuOpenAt === positionKey;
 
   return (
@@ -181,9 +185,9 @@ export function TourPanel() {
         {/* The booking link on every step but the last (which has the button).
             Last in DOM so Tab reaches Weiter in the same three presses; first
             visually, at the far left (order-first + mr-auto). */}
-        {DEMO_BOOKING_URL && !step.cta && (
+        {bookingHref && !step.cta && (
           <a
-            href={DEMO_BOOKING_URL}
+            href={bookingHref}
             className="order-first mr-auto text-sm text-primary underline underline-offset-4"
             data-demo-id="tour-booking-link"
           >
