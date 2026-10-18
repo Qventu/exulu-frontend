@@ -5654,6 +5654,7 @@
     "viewerDownloadTitle": "Diese Datei wird nicht eingebettet angezeigt",
     "viewerDownloadDescription": "„{filename}“ hat hier keine Vorschau. Laden Sie die Datei herunter, um sie in ihrer Anwendung zu öffnen.",
     "viewerFrameTitle": "Artefakt {name}",
-    "countOf": "{shown} von {total}"
+    "countOf": "{shown} von {total}",
+    "columnOwner": "Besitzer"
   }
 }

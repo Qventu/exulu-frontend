@@ -2,12 +2,17 @@
 
 /**
  * /artifacts — the Artifacts page: every shared artifact the viewer may
- * open, as a searchable, filterable list with a type badge, the access mode,
+ * open, as a searchable, filterable table with a type badge, the access mode,
  * who published it (mine / shared), when, a favourite star, and the actions
  * (open in the IMP, open the share link in a new tab, copy the link,
  * download). Opening navigates to the in-shell viewer under
  * /artifacts/open/<name>; the published /artifacts/<name> links stay as they
  * are for people outside the IMP.
+ *
+ * A fixed-layout table, not a flex row: badges and dates differ in width
+ * from row to row, and only real columns keep them aligned. Below md the
+ * table keeps the star, the name and the actions; the badge columns are
+ * folded into the name cell.
  */
 
 import {
@@ -41,6 +46,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { ArtifactKind } from "@/lib/artifacts/artifact-type";
 import { cn } from "@/lib/utils";
 
@@ -103,6 +109,10 @@ export function ArtifactsClient() {
     { id: "shared", label: t("filterShared") },
   ];
 
+  const accessIcon = (mode: ArtifactListItem["authMode"]) =>
+    mode === "public" ? <Globe aria-hidden="true" className="size-3" /> : mode === "password" ? <Lock aria-hidden="true" className="size-3" /> : <Users aria-hidden="true" className="size-3" />;
+  const accessLabel = (mode: ArtifactListItem["authMode"]) => (mode === "public" ? t("accessPublic") : mode === "password" ? t("accessPassword") : t("accessLogin"));
+
   return (
     <PageShell>
       <PageHeader
@@ -138,51 +148,88 @@ export function ArtifactsClient() {
       ) : visible.length === 0 ? (
         <EmptyState icon={Search} title={t("emptyFilteredTitle")} description={t("emptyFilteredDescription")} />
       ) : (
-        <ul className="divide-y rounded-lg border" role="list">
-          {visible.map((item) => {
-            const Icon = KIND_ICON[item.type.kind];
-            const favorite = isFavorite(item.name);
-            return (
-              <li key={item.id} className={cn("group flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/50 md:px-4", item.expired && "opacity-60")}>
-                {canFavorite && <FavoriteToggle pressed={favorite} onToggle={() => void toggle(item.name)} label={favorite ? t("unfavorite") : t("favorite")} />}
-                <Link href={item.href} className="flex min-w-0 flex-1 items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md" aria-label={`${t("open")}: ${item.name}`}>
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                    <Icon aria-hidden="true" className="size-4" />
-                  </span>
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate font-medium">{item.name}</span>
-                    <span className="truncate text-xs text-muted-foreground">{item.filename}</span>
-                  </span>
-                </Link>
-                <div className="hidden items-center gap-2 md:flex">
-                  <Badge variant="secondary">{t(item.type.labelKey)}</Badge>
-                  <Badge variant="outline" className="gap-1">
-                    {item.authMode === "public" ? <Globe aria-hidden="true" className="size-3" /> : item.authMode === "password" ? <Lock aria-hidden="true" className="size-3" /> : <Users aria-hidden="true" className="size-3" />}
-                    {item.authMode === "public" ? t("accessPublic") : item.authMode === "password" ? t("accessPassword") : t("accessLogin")}
-                  </Badge>
-                  <Badge variant="outline">{item.mine ? t("mine") : t("shared")}</Badge>
-                  <span className="w-28 text-right text-xs text-muted-foreground">{item.expired ? t("expired") : formatDate(item.createdAt)}</span>
-                </div>
-                <div className="flex shrink-0 items-center gap-1 opacity-100 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:group-focus-within:opacity-100">
-                  <Button type="button" variant="ghost" size="icon" aria-label={t("openInNewTab")} title={t("openInNewTab")} onClick={() => window.open(item.shareUrl, "_blank", "noopener,noreferrer")}>
-                    <ExternalLink aria-hidden="true" className="size-4" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="icon" aria-label={t("copyLink")} title={t("copyLink")} onClick={() => void copyLink(item)}>
-                    <Copy aria-hidden="true" className="size-4" />
-                  </Button>
-                  {!item.type.inline && (
-                    <Button type="button" variant="ghost" size="icon" aria-label={t("download")} title={t("download")} onClick={() => window.open(`${item.shareUrl}/content`, "_blank", "noopener,noreferrer")}>
-                      <Download aria-hidden="true" className="size-4" />
-                    </Button>
-                  )}
-                  <Button type="button" size="sm" variant="outline" className="hidden md:inline-flex" onClick={() => router.push(item.href)}>
-                    {t("open")}
-                  </Button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="overflow-hidden rounded-lg border">
+          <Table className="table-fixed">
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-12">
+                  <span className="sr-only">{t("favorite")}</span>
+                </TableHead>
+                <TableHead>{t("columnName")}</TableHead>
+                <TableHead className="hidden w-32 md:table-cell">{t("columnType")}</TableHead>
+                <TableHead className="hidden w-40 md:table-cell">{t("columnAccess")}</TableHead>
+                <TableHead className="hidden w-28 md:table-cell">{t("columnOwner")}</TableHead>
+                <TableHead className="hidden w-32 md:table-cell">{t("columnCreated")}</TableHead>
+                <TableHead className="w-28 text-right md:w-52">
+                  <span className="sr-only">{t("columnActions")}</span>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visible.map((item) => {
+                const Icon = KIND_ICON[item.type.kind];
+                const favorite = isFavorite(item.name);
+                return (
+                  <TableRow key={item.id} className={cn("group", item.expired && "text-muted-foreground")}>
+                    <TableCell className="py-2">
+                      {canFavorite && <FavoriteToggle pressed={favorite} onToggle={() => void toggle(item.name)} label={favorite ? t("unfavorite") : t("favorite")} />}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Link href={item.href} className="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`${t("open")}: ${item.name}`}>
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                          <Icon aria-hidden="true" className="size-4" />
+                        </span>
+                        <span className="flex min-w-0 flex-col">
+                          <span className={cn("truncate font-medium", !item.expired && "text-foreground")}>{item.name}</span>
+                          <span className="truncate text-xs text-muted-foreground">
+                            {item.filename}
+                            <span className="md:hidden">
+                              {" · "}
+                              {t(item.type.labelKey)}
+                              {" · "}
+                              {accessLabel(item.authMode)}
+                            </span>
+                          </span>
+                        </span>
+                      </Link>
+                    </TableCell>
+                    <TableCell className="hidden py-2 md:table-cell">
+                      <Badge variant="secondary">{t(item.type.labelKey)}</Badge>
+                    </TableCell>
+                    <TableCell className="hidden py-2 md:table-cell">
+                      <Badge variant="outline" className="gap-1 whitespace-nowrap">
+                        {accessIcon(item.authMode)}
+                        {accessLabel(item.authMode)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden py-2 md:table-cell">
+                      <Badge variant="outline">{item.mine ? t("mine") : t("shared")}</Badge>
+                    </TableCell>
+                    <TableCell className="hidden whitespace-nowrap py-2 text-sm tabular-nums text-muted-foreground md:table-cell">{item.expired ? t("expired") : formatDate(item.createdAt)}</TableCell>
+                    <TableCell className="py-2">
+                      <div className="flex items-center justify-end gap-1 md:opacity-0 md:transition-opacity md:group-focus-within:opacity-100 md:group-hover:opacity-100">
+                        <Button type="button" variant="ghost" size="icon" aria-label={t("openInNewTab")} title={t("openInNewTab")} onClick={() => window.open(item.shareUrl, "_blank", "noopener,noreferrer")}>
+                          <ExternalLink aria-hidden="true" className="size-4" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" aria-label={t("copyLink")} title={t("copyLink")} onClick={() => void copyLink(item)}>
+                          <Copy aria-hidden="true" className="size-4" />
+                        </Button>
+                        {!item.type.inline && (
+                          <Button type="button" variant="ghost" size="icon" aria-label={t("download")} title={t("download")} onClick={() => window.open(`${item.shareUrl}/content`, "_blank", "noopener,noreferrer")}>
+                            <Download aria-hidden="true" className="size-4" />
+                          </Button>
+                        )}
+                        <Button type="button" size="sm" variant="outline" className="hidden md:inline-flex" onClick={() => router.push(item.href)}>
+                          {t("open")}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </PageShell>
   );

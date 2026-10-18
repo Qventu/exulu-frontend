@@ -5654,6 +5654,7 @@
     "viewerDownloadTitle": "This file is not shown inline",
     "viewerDownloadDescription": "“{filename}” has no preview here. Download it to open it in its own application.",
     "viewerFrameTitle": "Artifact {name}",
-    "countOf": "{shown} of {total}"
+    "countOf": "{shown} of {total}",
+    "columnOwner": "Owner"
   }
 }
