@@ -34,6 +34,8 @@ export interface ArtifactListItem {
   expiresAt: string | null;
   expired: boolean;
   mine: boolean;
+  /** The creator or a super admin may rename, re-share or delete. */
+  canManage: boolean;
   createdAt: string;
   /** The in-shell viewer. */
   href: string;
@@ -43,9 +45,10 @@ export interface ArtifactListItem {
 
 const LIST_LIMIT = 500;
 
-function toItem(row: SharedArtifactRow, userId: number | undefined, now: Date): ArtifactListItem {
+function toItem(row: SharedArtifactRow, userId: number | undefined, superAdmin: boolean, now: Date): ArtifactListItem {
   const filename = displayFilename(row.s3key);
   const expired = !!row.expires_at && new Date(row.expires_at).getTime() <= now.getTime();
+  const mine = userId !== undefined && row.created_by === userId;
   return {
     id: row.id,
     name: row.name,
@@ -54,7 +57,8 @@ function toItem(row: SharedArtifactRow, userId: number | undefined, now: Date): 
     authMode: row.auth_mode,
     expiresAt: row.expires_at,
     expired,
-    mine: userId !== undefined && row.created_by === userId,
+    mine,
+    canManage: mine || superAdmin,
     createdAt: row.createdAt,
     href: `/artifacts/open/${encodeURIComponent(row.name)}`,
     shareUrl: `/artifacts/${encodeURIComponent(row.name)}`,
@@ -65,6 +69,7 @@ function toItem(row: SharedArtifactRow, userId: number | undefined, now: Date): 
 export function useSharedArtifacts() {
   const { user } = React.useContext(UserContext);
   const userId: number | undefined = typeof user?.id === "number" ? user.id : undefined;
+  const superAdmin = user?.super_admin === true;
   const { data, loading, error, refetch } = useQuery(GET_SHARED_ARTIFACTS, {
     fetchPolicy: "cache-and-network",
     variables: { limit: LIST_LIMIT },
@@ -72,8 +77,8 @@ export function useSharedArtifacts() {
   const items = React.useMemo<ArtifactListItem[]>(() => {
     const rows: SharedArtifactRow[] = data?.shared_artifactsPagination?.items ?? [];
     const now = new Date();
-    return rows.map((row) => toItem(row, userId, now));
-  }, [data, userId]);
+    return rows.map((row) => toItem(row, userId, superAdmin, now));
+  }, [data, userId, superAdmin]);
   return { items, loading: loading && !data, error, refetch };
 }
 
@@ -139,6 +144,30 @@ export function useFavoriteArtifacts() {
     [userId, seed, update],
   );
 
+  /**
+   * After a rename or a delete: the favourite follows the new name, or goes
+   * away. A no-op when the name was never starred.
+   */
+  const replaceFavorite = React.useCallback(
+    async (name: string, next: string | null) => {
+      if (!userId) return;
+      const base = readStore() ?? seed ?? [];
+      if (!base.includes(name)) return;
+      const rest = base.filter((n) => n !== name);
+      const updated = next && !rest.includes(next) ? [...rest, next] : rest;
+      writeStore(updated);
+      togglesInFlight++;
+      try {
+        await update({ variables: { id: userId, favourite_artifacts: updated } });
+      } catch {
+        writeStore(base);
+      } finally {
+        togglesInFlight--;
+      }
+    },
+    [userId, seed, update],
+  );
+
   const isFavorite = React.useCallback((name: string) => favoriteNames.includes(name), [favoriteNames]);
-  return { favoriteNames, isFavorite, toggle, canFavorite: !!userId };
+  return { favoriteNames, isFavorite, toggle, replaceFavorite, canFavorite: !!userId };
 }

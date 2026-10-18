@@ -3,11 +3,11 @@
 /**
  * /artifacts — the Artifacts page: every shared artifact the viewer may
  * open, as a searchable, filterable table with a type badge, the access mode,
- * who published it (mine / shared), when, a favourite star, and the actions
- * (open in the IMP, open the share link in a new tab, copy the link,
- * download). Opening navigates to the in-shell viewer under
- * /artifacts/open/<name>; the published /artifacts/<name> links stay as they
- * are for people outside the IMP.
+ * who published it (mine / shared), when, a favourite star, an Open button
+ * and a row menu (open in new tab, copy link, download; for the creator or a
+ * super admin also rename, sharing and delete). Opening navigates to the
+ * in-shell viewer under /artifacts/open/<name>; the published
+ * /artifacts/<name> links stay as they are for people outside the IMP.
  *
  * A fixed-layout table, not a flex row: badges and dates differ in width
  * from row to row, and only real columns keep them aligned. Below md the
@@ -17,9 +17,6 @@
 
 import {
   AppWindow,
-  Copy,
-  Download,
-  ExternalLink,
   File,
   FileSpreadsheet,
   FileText,
@@ -50,9 +47,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { ArtifactKind } from "@/lib/artifacts/artifact-type";
 import { cn } from "@/lib/utils";
 
+import { DeleteArtifactDialog } from "./components/delete-dialog";
+import { RenameArtifactDialog } from "./components/rename-dialog";
+import { ArtifactRowMenu } from "./components/row-menu";
+import { SharingDialog } from "./components/sharing-dialog";
 import { useFavoriteArtifacts, useSharedArtifacts, type ArtifactListItem } from "./hooks";
 
 type Filter = "all" | "favorites" | "mine" | "shared";
+type DialogState = { kind: "rename" | "sharing" | "delete"; name: string } | null;
 
 const KIND_ICON: Record<ArtifactKind, LucideIcon> = {
   app: AppWindow,
@@ -75,9 +77,10 @@ export function ArtifactsClient() {
   const t = useTranslations("artifacts");
   const router = useRouter();
   const { items, loading, error, refetch } = useSharedArtifacts();
-  const { isFavorite, toggle, canFavorite } = useFavoriteArtifacts();
+  const { isFavorite, toggle, replaceFavorite, canFavorite } = useFavoriteArtifacts();
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<Filter>("all");
+  const [dialog, setDialog] = React.useState<DialogState>(null);
 
   const visible = React.useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -101,6 +104,11 @@ export function ArtifactsClient() {
     },
     [t],
   );
+  const openInNewTab = (item: ArtifactListItem) => window.open(item.shareUrl, "_blank", "noopener,noreferrer");
+  const download = (item: ArtifactListItem) => window.open(`${item.shareUrl}/content`, "_blank", "noopener,noreferrer");
+  const closeDialog = (open: boolean) => {
+    if (!open) setDialog(null);
+  };
 
   const filters: Array<{ id: Filter; label: string }> = [
     { id: "all", label: t("filterAll") },
@@ -160,7 +168,7 @@ export function ArtifactsClient() {
                 <TableHead className="hidden w-40 md:table-cell">{t("columnAccess")}</TableHead>
                 <TableHead className="hidden w-28 md:table-cell">{t("columnOwner")}</TableHead>
                 <TableHead className="hidden w-32 md:table-cell">{t("columnCreated")}</TableHead>
-                <TableHead className="w-28 text-right md:w-52">
+                <TableHead className="w-14 text-right md:w-36">
                   <span className="sr-only">{t("columnActions")}</span>
                 </TableHead>
               </TableRow>
@@ -207,21 +215,19 @@ export function ArtifactsClient() {
                     </TableCell>
                     <TableCell className="hidden whitespace-nowrap py-2 text-sm tabular-nums text-muted-foreground md:table-cell">{item.expired ? t("expired") : formatDate(item.createdAt)}</TableCell>
                     <TableCell className="py-2">
-                      <div className="flex items-center justify-end gap-1 md:opacity-0 md:transition-opacity md:group-focus-within:opacity-100 md:group-hover:opacity-100">
-                        <Button type="button" variant="ghost" size="icon" aria-label={t("openInNewTab")} title={t("openInNewTab")} onClick={() => window.open(item.shareUrl, "_blank", "noopener,noreferrer")}>
-                          <ExternalLink aria-hidden="true" className="size-4" />
-                        </Button>
-                        <Button type="button" variant="ghost" size="icon" aria-label={t("copyLink")} title={t("copyLink")} onClick={() => void copyLink(item)}>
-                          <Copy aria-hidden="true" className="size-4" />
-                        </Button>
-                        {!item.type.inline && (
-                          <Button type="button" variant="ghost" size="icon" aria-label={t("download")} title={t("download")} onClick={() => window.open(`${item.shareUrl}/content`, "_blank", "noopener,noreferrer")}>
-                            <Download aria-hidden="true" className="size-4" />
-                          </Button>
-                        )}
+                      <div className="flex items-center justify-end gap-1">
                         <Button type="button" size="sm" variant="outline" className="hidden md:inline-flex" onClick={() => router.push(item.href)}>
                           {t("open")}
                         </Button>
+                        <ArtifactRowMenu
+                          item={item}
+                          onOpenInNewTab={() => openInNewTab(item)}
+                          onCopyLink={() => void copyLink(item)}
+                          onDownload={() => download(item)}
+                          onRename={() => setDialog({ kind: "rename", name: item.name })}
+                          onSharing={() => setDialog({ kind: "sharing", name: item.name })}
+                          onDelete={() => setDialog({ kind: "delete", name: item.name })}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -231,6 +237,24 @@ export function ArtifactsClient() {
           </Table>
         </div>
       )}
+
+      <RenameArtifactDialog
+        name={dialog?.kind === "rename" ? dialog.name : null}
+        onOpenChange={closeDialog}
+        onRenamed={(from, to) => {
+          void replaceFavorite(from, to);
+          void refetch();
+        }}
+      />
+      <SharingDialog name={dialog?.kind === "sharing" ? dialog.name : null} onOpenChange={closeDialog} onSaved={() => void refetch()} />
+      <DeleteArtifactDialog
+        name={dialog?.kind === "delete" ? dialog.name : null}
+        onOpenChange={closeDialog}
+        onDeleted={(name) => {
+          void replaceFavorite(name, null);
+          void refetch();
+        }}
+      />
     </PageShell>
   );
 }
