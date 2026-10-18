@@ -53,7 +53,7 @@ const ids = (user: RightsUser, config: NavConfig = fullConfig) =>
   visibleEntries(user, config).map((entry) => entry.id);
 
 /** What every authenticated account sees (full config), in table order. */
-const ALL_USER_BODY = ["chat", "projects", "transcripts"];
+const ALL_USER_BODY = ["chat", "projects", "artifacts", "transcripts"];
 const FOOTER = ["send-feedback", "settings"];
 
 describe("the table itself (§1.2)", () => {
@@ -62,6 +62,7 @@ describe("the table itself (§1.2)", () => {
       "home",
       "chat",
       "projects",
+      "artifacts",
       "transcripts",
       "agents",
       "knowledge",
@@ -214,13 +215,13 @@ describe("single-right matrix (Phase 1 exit criterion)", () => {
 });
 
 describe("persona matrix (§1.3)", () => {
-  it("P1-only: 3–5 items, flat sidebar (headers suppressed), NO Home", () => {
+  it("P1-only: 4–6 items, flat sidebar (headers suppressed), NO Home", () => {
     const withFlags = ids(p1User, fullConfig);
-    expect(withFlags).toEqual([...ALL_USER_BODY, ...FOOTER]); // 5
+    expect(withFlags).toEqual([...ALL_USER_BODY, ...FOOTER]); // 6 (Artifacts joined the all-user body, 2026-10)
     expect(withFlags).not.toContain("home");
 
     const withoutFlags = ids(p1User, bareConfig);
-    expect(withoutFlags).toEqual(["chat", "projects", "settings"]); // 3
+    expect(withoutFlags).toEqual(["chat", "projects", "artifacts", "settings"]); // 4
 
     const tree = groupsFor(p1User, fullConfig);
     expect(tree.top).toEqual([]);

@@ -46,11 +46,18 @@ export function ArtifactFrame({
   title,
   artifactName,
   grantIdentity,
+  className = "h-screen w-screen border-0",
 }: {
   html: string;
   title: string;
   artifactName: string;
   grantIdentity: boolean;
+  /**
+   * The share route renders the frame full-screen (the default); the
+   * in-shell viewer under /artifacts/open passes "h-full w-full border-0"
+   * to fill the content region instead.
+   */
+  className?: string;
 }) {
   const ref = useRef<HTMLIFrameElement>(null);
   // At most one request per frame load is answered — a buggy artifact
@@ -153,7 +160,7 @@ export function ArtifactFrame({
       ref={ref}
       srcDoc={html}
       sandbox="allow-scripts allow-popups allow-forms"
-      className="h-screen w-screen border-0"
+      className={className}
       title={title}
       onLoad={() => {
         handledRef.current = false;

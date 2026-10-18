@@ -1,0 +1,189 @@
+"use client";
+
+/**
+ * /artifacts — the Artifacts page: every shared artifact the viewer may
+ * open, as a searchable, filterable list with a type badge, the access mode,
+ * who published it (mine / shared), when, a favourite star, and the actions
+ * (open in the IMP, open the share link in a new tab, copy the link,
+ * download). Opening navigates to the in-shell viewer under
+ * /artifacts/open/<name>; the published /artifacts/<name> links stay as they
+ * are for people outside the IMP.
+ */
+
+import {
+  AppWindow,
+  Copy,
+  Download,
+  ExternalLink,
+  File,
+  FileSpreadsheet,
+  FileText,
+  Globe,
+  Image as ImageIcon,
+  LayoutGrid,
+  Lock,
+  Presentation,
+  Search,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import * as React from "react";
+import { toast } from "sonner";
+
+import { EmptyState } from "@/components/primitives/empty-state";
+import { FavoriteToggle } from "@/components/primitives/favorite-toggle";
+import { PageHeader } from "@/components/primitives/page-header";
+import { PageShell } from "@/components/primitives/page-shell";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { ArtifactKind } from "@/lib/artifacts/artifact-type";
+import { cn } from "@/lib/utils";
+
+import { useFavoriteArtifacts, useSharedArtifacts, type ArtifactListItem } from "./hooks";
+
+type Filter = "all" | "favorites" | "mine" | "shared";
+
+const KIND_ICON: Record<ArtifactKind, LucideIcon> = {
+  app: AppWindow,
+  pdf: FileText,
+  slides: Presentation,
+  sheet: FileSpreadsheet,
+  document: FileText,
+  image: ImageIcon,
+  text: FileText,
+  data: File,
+  file: File,
+};
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+export function ArtifactsClient() {
+  const t = useTranslations("artifacts");
+  const router = useRouter();
+  const { items, loading, error, refetch } = useSharedArtifacts();
+  const { isFavorite, toggle, canFavorite } = useFavoriteArtifacts();
+  const [search, setSearch] = React.useState("");
+  const [filter, setFilter] = React.useState<Filter>("all");
+
+  const visible = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return items.filter((item) => {
+      if (filter === "favorites" && !isFavorite(item.name)) return false;
+      if (filter === "mine" && !item.mine) return false;
+      if (filter === "shared" && item.mine) return false;
+      if (q && !`${item.name} ${item.filename}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [items, search, filter, isFavorite]);
+
+  const copyLink = React.useCallback(
+    async (item: ArtifactListItem) => {
+      try {
+        await navigator.clipboard.writeText(`${window.location.origin}${item.shareUrl}`);
+        toast.success(t("linkCopied"));
+      } catch {
+        // the clipboard is unavailable in some embedded contexts; the link is still visible in the row
+      }
+    },
+    [t],
+  );
+
+  const filters: Array<{ id: Filter; label: string }> = [
+    { id: "all", label: t("filterAll") },
+    { id: "favorites", label: t("filterFavorites") },
+    { id: "mine", label: t("filterMine") },
+    { id: "shared", label: t("filterShared") },
+  ];
+
+  return (
+    <PageShell>
+      <PageHeader
+        title={t("title")}
+        description={t("description")}
+        meta={items.length > 0 ? <span className="text-sm text-muted-foreground">{t("countOf", { shown: visible.length, total: items.length })}</span> : undefined}
+      />
+
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {filters.map((f) => (
+            <Button key={f.id} type="button" size="sm" variant={filter === f.id ? "default" : "outline"} onClick={() => setFilter(f.id)} aria-pressed={filter === f.id}>
+              {f.label}
+            </Button>
+          ))}
+        </div>
+        <div className="relative md:w-80">
+          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("searchPlaceholder")} className="pl-9" aria-label={t("searchPlaceholder")} />
+        </div>
+      </div>
+
+      {error ? (
+        <EmptyState icon={LayoutGrid} title={t("errorTitle")} description={error.message} action={{ label: t("retry"), onClick: () => void refetch() }} />
+      ) : loading ? (
+        <div className="space-y-2" aria-busy="true">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <EmptyState icon={LayoutGrid} title={t("emptyTitle")} description={t("emptyDescription")} />
+      ) : visible.length === 0 ? (
+        <EmptyState icon={Search} title={t("emptyFilteredTitle")} description={t("emptyFilteredDescription")} />
+      ) : (
+        <ul className="divide-y rounded-lg border" role="list">
+          {visible.map((item) => {
+            const Icon = KIND_ICON[item.type.kind];
+            const favorite = isFavorite(item.name);
+            return (
+              <li key={item.id} className={cn("group flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/50 md:px-4", item.expired && "opacity-60")}>
+                {canFavorite && <FavoriteToggle pressed={favorite} onToggle={() => void toggle(item.name)} label={favorite ? t("unfavorite") : t("favorite")} />}
+                <Link href={item.href} className="flex min-w-0 flex-1 items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md" aria-label={`${t("open")}: ${item.name}`}>
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                    <Icon aria-hidden="true" className="size-4" />
+                  </span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate font-medium">{item.name}</span>
+                    <span className="truncate text-xs text-muted-foreground">{item.filename}</span>
+                  </span>
+                </Link>
+                <div className="hidden items-center gap-2 md:flex">
+                  <Badge variant="secondary">{t(item.type.labelKey)}</Badge>
+                  <Badge variant="outline" className="gap-1">
+                    {item.authMode === "public" ? <Globe aria-hidden="true" className="size-3" /> : item.authMode === "password" ? <Lock aria-hidden="true" className="size-3" /> : <Users aria-hidden="true" className="size-3" />}
+                    {item.authMode === "public" ? t("accessPublic") : item.authMode === "password" ? t("accessPassword") : t("accessLogin")}
+                  </Badge>
+                  <Badge variant="outline">{item.mine ? t("mine") : t("shared")}</Badge>
+                  <span className="w-28 text-right text-xs text-muted-foreground">{item.expired ? t("expired") : formatDate(item.createdAt)}</span>
+                </div>
+                <div className="flex shrink-0 items-center gap-1 opacity-100 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                  <Button type="button" variant="ghost" size="icon" aria-label={t("openInNewTab")} title={t("openInNewTab")} onClick={() => window.open(item.shareUrl, "_blank", "noopener,noreferrer")}>
+                    <ExternalLink aria-hidden="true" className="size-4" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" aria-label={t("copyLink")} title={t("copyLink")} onClick={() => void copyLink(item)}>
+                    <Copy aria-hidden="true" className="size-4" />
+                  </Button>
+                  {!item.type.inline && (
+                    <Button type="button" variant="ghost" size="icon" aria-label={t("download")} title={t("download")} onClick={() => window.open(`${item.shareUrl}/content`, "_blank", "noopener,noreferrer")}>
+                      <Download aria-hidden="true" className="size-4" />
+                    </Button>
+                  )}
+                  <Button type="button" size="sm" variant="outline" className="hidden md:inline-flex" onClick={() => router.push(item.href)}>
+                    {t("open")}
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </PageShell>
+  );
+}

@@ -25,6 +25,7 @@ import {
   Inbox,
   Key,
   KeyRound,
+  LayoutGrid,
   ListChecks,
   MessageCircle,
   MessageSquarePlus,
@@ -135,6 +136,15 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     icon: FolderOpen,
     requires: "all",
     aliases: ["/projects/*"],
+  },
+  {
+    id: "artifacts",
+    group: "workspace",
+    route: "/artifacts",
+    i18nKey: "navigation.artifacts",
+    icon: LayoutGrid,
+    requires: "all",
+    aliases: ["/artifacts/*"],
   },
   {
     id: "transcripts",

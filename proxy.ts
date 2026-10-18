@@ -81,8 +81,12 @@ export function buildCsp(): string {
         isDev && 'wss:',
     ].filter(Boolean).join(' ');
 
+    // blob: — the in-shell artifact viewer (/artifacts/open/<name>) shows a
+    // PDF from URL.createObjectURL(); the content route itself cannot be
+    // framed (X-Frame-Options: DENY), and a blob: URL carries no headers.
     const frameSrc = [
         "'self'",
+        'blob:',
         'https://accounts.google.com',
         s3,
     ].filter(Boolean).join(' ');
