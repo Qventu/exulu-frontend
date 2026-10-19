@@ -472,34 +472,63 @@ async function runOperableProbe(page, pos) {
   const spec = OPERABLE_PROBES[pos];
   if (!spec) return null;
   if (spec.kind === "dialog") {
-    const badge = page.locator(spec.selector).first();
-    if ((await badge.count()) === 0) return { pass: false, describe: spec.describe, reason: "no badge found" };
-    await badge.click({ timeout: 3000 }).catch(() => {});
-    let opened = true;
-    await page.waitForSelector(spec.dialog, { timeout: 5000 }).catch(() => { opened = false; });
-    if (!opened) return { pass: false, describe: spec.describe, reason: "dialog did not open" };
-    await page.waitForTimeout(1500); // the chunk query and the open animation
-    const state = await page.evaluate(({ sel, patterns }) => {
-      const d = document.querySelector(sel);
-      const p = document.querySelector('[data-demo-id="tour-panel"]');
-      const dr = d.getBoundingClientRect();
-      const pr = p.getBoundingClientRect();
-      const text = d.innerText.replace(/\s+/g, " ");
-      return {
-        textLength: text.length,
-        unresolved: /not found|Loading/i.test(text),
-        overlapsPanel: dr.right > pr.left + 1,
-        newTabLinks: d.querySelectorAll('a[target="_blank"]').length,
-        closeVisible: [...d.querySelectorAll("button")].some((b) => b.textContent.trim() === "Close" && getComputedStyle(b).display !== "none"),
-        // The dialog portals to <body>, outside the per-step <main> scan.
-        leaks: patterns.map((p) => new RegExp(p.source, p.flags).exec(text)?.[0] ?? null).filter(Boolean),
-      };
-    }, { sel: spec.dialog, patterns: LEAK_PATTERNS });
-    await page.keyboard.press("Escape");
-    let closed = true;
-    await page.waitForSelector(spec.dialog, { state: "detached", timeout: 3000 }).catch(() => { closed = false; });
-    const pass = state.textLength > 80 && !state.unresolved && !state.overlapsPanel && state.newTabLinks === 0 && state.closeVisible && state.leaks.length === 0 && closed;
-    return { pass, describe: spec.describe, ...state, closed };
+    // Every openable badge on the step (the fixtures answer exactly these;
+    // lib/demo/citations.ts), one after the other. A badge the fixtures
+    // cannot answer renders as chat-citation-closed and must not open.
+    const badges = page.locator(spec.selector);
+    const count = await badges.count();
+    if (count === 0) return { pass: false, describe: spec.describe, reason: "no openable badge found" };
+    const dialogs = [];
+    for (let i = 0; i < count; i++) {
+      await badges.nth(i).click({ timeout: 3000 }).catch(() => {});
+      let opened = true;
+      await page.waitForSelector(spec.dialog, { timeout: 5000 }).catch(() => { opened = false; });
+      if (!opened) { dialogs.push({ index: i, opened: false }); continue; }
+      await page.waitForTimeout(1500); // the chunk query and the open animation
+      const state = await page.evaluate(({ sel, patterns }) => {
+        const d = document.querySelector(sel);
+        const p = document.querySelector('[data-demo-id="tour-panel"]');
+        const measure = () => { const dr = d.getBoundingClientRect(); const pr = p.getBoundingClientRect(); return dr.right > pr.left + 1; };
+        const overlapsPanel = measure();
+        // Under the scroll lock's scrollbar compensation too (see gapOverlap).
+        const body = document.body;
+        const prevPad = body.style.paddingRight;
+        const prevVar = body.style.getPropertyValue("--removed-body-scroll-bar-size");
+        body.style.paddingRight = "17px";
+        body.style.setProperty("--removed-body-scroll-bar-size", "17px");
+        const overlapsPanelWithGap = measure();
+        body.style.paddingRight = prevPad;
+        body.style.setProperty("--removed-body-scroll-bar-size", prevVar);
+        const text = d.innerText.replace(/\s+/g, " ");
+        return {
+          textLength: text.length,
+          unresolved: /not found|Loading|nicht hinterlegt|Lädt/i.test(text),
+          overlapsPanel,
+          overlapsPanelWithGap,
+          newTabLinks: d.querySelectorAll('a[target="_blank"]').length,
+          closeVisible: [...d.querySelectorAll("button")].some((b) => b.textContent.trim() === "Close" && getComputedStyle(b).display !== "none"),
+          // English chrome a prospect would read (the table is hidden in the tour).
+          englishChrome: /\b(Field|Value|Item ID|Created at|Updated at)\b/.test(text),
+          // The dialog portals to <body>, outside the per-step <main> scan.
+          leaks: patterns.map((p) => new RegExp(p.source, p.flags).exec(text)?.[0] ?? null).filter(Boolean),
+        };
+      }, { sel: spec.dialog, patterns: LEAK_PATTERNS });
+      await page.keyboard.press("Escape");
+      let closed = true;
+      await page.waitForSelector(spec.dialog, { state: "detached", timeout: 3000 }).catch(() => { closed = false; });
+      dialogs.push({ index: i, opened: true, ...state, closed });
+    }
+    // A closed badge must stay closed under a real click.
+    const closedBadges = page.locator('[data-demo-id="chat-messages"] [data-demo-id="chat-citation-closed"]');
+    const closedCount = await closedBadges.count();
+    let closedStaysClosed = true;
+    if (closedCount > 0) {
+      await closedBadges.first().click({ timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(700);
+      closedStaysClosed = (await page.$('[role="dialog"]')) === null;
+    }
+    const pass = dialogs.every((d) => d.opened && d.textLength > 80 && !d.unresolved && !d.overlapsPanel && !d.overlapsPanelWithGap && d.newTabLinks === 0 && d.closeVisible && !d.englishChrome && d.leaks.length === 0 && d.closed) && closedStaysClosed;
+    return { pass, describe: spec.describe, openable: count, closedBadges: closedCount, closedStaysClosed, dialogs };
   }
   const result = await page.evaluate(({ selector, expectCount }) => {
     const els = [...document.querySelectorAll(selector)];

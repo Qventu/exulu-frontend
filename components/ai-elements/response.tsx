@@ -4,6 +4,7 @@ import { stripIncompleteCitation } from "@/lib/chat/strip-incomplete-citation";
 import { contextDisplayName } from "@/lib/demo/overlays";
 import { chunkPreviewText } from '@/lib/chunk-preview';
 import { isDemoMode } from '@/lib/demo/flag';
+import { demoCitationOpenable } from '@/lib/demo/citations';
 import { cn } from '@/lib/utils';
 import type { ComponentProps, HTMLAttributes } from 'react';
 import { isValidElement, memo, useMemo, useState, useEffect } from 'react';
@@ -456,13 +457,32 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
     }
   }
 
+  const demo = isDemoMode();
+  // In the tour only the citations the fixtures can answer open
+  // (lib/demo/citations.ts); the rest render as plain badges, outside the
+  // inert layer's exemption, exactly as every badge did before the dialog
+  // was let through. "Chunk … not found" behind a badge the tour invites
+  // the visitor to press would be worse than a badge that does not open.
+  if (demo && !demoCitationOpenable(chunkId)) {
+    return (
+      <Badge
+        variant="secondary"
+        className="mx-1 inline-flex items-center gap-1 text-xs font-normal m-1"
+        data-demo-id="chat-citation-closed"
+      >
+        <span className="max-w-[200px] truncate capitalize">{contextLabel} - {itemName}</span>
+        {chunkIndex && <span className="text-muted-foreground">#{parseInt(chunkIndex) + 1}</span>}
+      </Badge>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Badge
           variant="secondary"
           className="mx-1 inline-flex cursor-pointer items-center gap-1 text-xs font-normal hover:bg-secondary/80 m-1"
-          title={`Source: ${itemName} (Chunk ${parseInt(chunkIndex) + 1})`}
+          title={demo ? undefined : `Source: ${itemName} (Chunk ${parseInt(chunkIndex) + 1})`}
           data-demo-id="chat-citation"
         >
           <span className="max-w-[200px] truncate capitalize">{contextLabel} - {itemName}</span>
@@ -488,7 +508,7 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
           </DialogTitle>
         </DialogHeader>
 
-        {loading && <div className="text-sm text-muted-foreground">Loading...</div>}
+        {loading && <div className="text-sm text-muted-foreground">{demo ? "Lädt …" : "Loading..."}</div>}
 
         {chunk && (
           <div className="space-y-4">
@@ -500,6 +520,8 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
               )}
             </div>
 
+            {/* The tour shows the passage alone: this table is English and lists raw ids. */}
+            {!demo && (
             <table className="w-full border-collapse border border-border text-xs text-muted-foreground mt-4">
               <thead>
                 <tr>
@@ -534,13 +556,14 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
                 </tr>
               </tbody>
             </table>
+            )}
           </div>
         )}
 
         {!loading && !chunk && context && (
           <div className="text-md text-muted-foreground">
-            <div className="font-semibold mb-2">Chunk {chunkId} not found in context {context}.</div>
-            {/* Show the data as a table */}
+            <div className="font-semibold mb-2">{demo ? "Diese Passage ist in der Demo nicht hinterlegt." : `Chunk ${chunkId} not found in context ${context}.`}</div>
+            {!demo && (
             <table className="w-full border-collapse border border-border">
               <thead>
                 <tr>
@@ -571,6 +594,7 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
                 </tr>
               </tbody>
             </table>
+            )}
           </div>
         )}
 

@@ -9,10 +9,11 @@
  * "not adjacent to a letter" rather than \b, because file names put the
  * token after an underscore ("mia_fst2-2s") where \b never fires.
  */
-// Not preceded by a letter — unless that letter is the n/r/t of a JSON
-// escape (\n, \r, \t): the exported chunk files keep line breaks as the two
-// characters \ and n, and "FST-2XT" after one survived the script and the
-// scan until the citation dialog opened in the tour (2026-10-19).
+// Not preceded by a letter — unless that letter directly follows a
+// backslash, i.e. is the n/r/t of a JSON escape (\n, \r, \t; the regex does
+// not distinguish the letter): the exported chunk files keep line breaks as
+// the two characters \ and n, and "FST-2XT" after one survived the script
+// and the scan until the citation dialog opened in the tour (2026-10-19).
 const L = "(?<!(?<!\\\\)[A-Za-z])";
 const R = "(?![A-Za-z])"; // not followed by a letter
 
