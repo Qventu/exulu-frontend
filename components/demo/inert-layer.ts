@@ -67,8 +67,28 @@
  * controls above ever got through, and only via a default action.
  */
 
-/** Selector for what the tour owns — see `ownedByTour` in installInertLayer. */
-const TOUR_OWNED = '[data-demo-id="tour-panel"], [data-demo-id="booking-cta"]';
+/**
+ * Selector for what the tour owns — see `ownedByTour` in installInertLayer.
+ *
+ *  - tour-panel: the docked panel.
+ *  - booking-cta: the closing scene's buttons, inside <main>.
+ *  - chat-citation / chat-citation-dialog / dialog-overlay: chapter 5 asks
+ *    the visitor to open a citation and read the passage (a6aa769 made the
+ *    dialog answer from fixtures; the freeze in 628dd13 then caught the
+ *    badge with everything else — a tester's first feedback on the deployed
+ *    demo, 2026-10-19). The dialog portals to <body> with its backdrop as a
+ *    sibling, so all three need naming: the badge to open, the content for
+ *    its close button and Escape, the backdrop for Radix's outside-press
+ *    close. The wizard's sheet uses a different slot (sheet-overlay) and
+ *    stays inert.
+ */
+const TOUR_OWNED = [
+  '[data-demo-id="tour-panel"]',
+  '[data-demo-id="booking-cta"]',
+  '[data-demo-id="chat-citation"]',
+  '[data-demo-id="chat-citation-dialog"]',
+  '[data-slot="dialog-overlay"]',
+].join(", ");
 
 /** input/textarea/select/contenteditable — a field a visitor could type into. */
 function isEditable(node: EventTarget | null): boolean {
