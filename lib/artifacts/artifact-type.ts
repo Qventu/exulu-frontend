@@ -94,3 +94,35 @@ export function artifactType(filename: string, contentType?: string | null): Art
   const resolved: ArtifactKind = kind ?? "file";
   return { kind: resolved, labelKey: label(resolved), inline: INLINE.has(resolved) };
 }
+
+const CONTENT_TYPES: Record<string, string> = {
+  html: "text/html",
+  htm: "text/html",
+  pdf: "application/pdf",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ppt: "application/vnd.ms-powerpoint",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  xls: "application/vnd.ms-excel",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  doc: "application/msword",
+  md: "text/markdown",
+  txt: "text/plain",
+  csv: "text/csv",
+  json: "application/json",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  svg: "image/svg+xml",
+};
+
+/**
+ * The content type to upload and store: the browser's when it knows one,
+ * otherwise by extension, otherwise a plain octet stream. Browsers leave
+ * `File.type` empty for .md and other less common extensions.
+ */
+export function contentTypeFor(filename: string, browserType?: string | null): string {
+  if (browserType && browserType.trim()) return browserType;
+  return CONTENT_TYPES[extensionOf(filename)] ?? "application/octet-stream";
+}

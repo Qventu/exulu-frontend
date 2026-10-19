@@ -5690,6 +5690,19 @@
     "deleteDescription": "Der Freigabelink funktioniert dann für niemanden mehr. Die Datei selbst bleibt im Speicher.",
     "deleteConfirm": "Löschen",
     "deleted": "{name} gelöscht",
-    "deleteFailed": "Löschen fehlgeschlagen"
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "newArtifact": "Neues Artefakt",
+    "createTitle": "Artefakt veröffentlichen",
+    "createDescription": "Datei hochladen, dem Link einen Namen geben und festlegen, wer ihn öffnen darf.",
+    "dropLabel": "Datei hierher ziehen oder auswählen",
+    "dropHint": "HTML-Apps, PDFs und Bilder öffnen sich im IMP, alles andere wird zum Download angeboten.",
+    "changeFile": "Andere Datei wählen",
+    "nameHint": "Der Link lautet {url}",
+    "uploading": "Wird hochgeladen… {percent} %",
+    "publishing": "Wird veröffentlicht…",
+    "publish": "Veröffentlichen",
+    "published": "{name} veröffentlicht",
+    "publishFailed": "Veröffentlichen fehlgeschlagen",
+    "uploadFailed": "Upload fehlgeschlagen"
   }
 }

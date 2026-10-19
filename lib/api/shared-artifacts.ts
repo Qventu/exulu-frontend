@@ -46,7 +46,36 @@ export interface UpdateShareInput {
   rbac?: ShareRbac;
 }
 
+export interface SignedUpload {
+  /** The bare object name (<uuid>-_EXULU_<filename>); the full key comes from the URL. */
+  key: string;
+  url: string;
+  method: string;
+}
+
 export const sharedArtifactsApi = {
+  /**
+   * A presigned PUT for a new object under the caller's own prefix
+   * (user_<id>/<uuid>-_EXULU_<filename>) — the same route the Uppy uploads
+   * use. Derive the stored s3key from the URL with extractS3KeyFromUrl.
+   */
+  signUpload: (filename: string, contentType: string): Promise<SignedUpload> =>
+    request("/s3/sign", "POST", { filename, type: contentType }),
+
+  /** PUT the file to the presigned URL, reporting upload progress in percent. */
+  putToSignedUrl: (url: string, file: File, contentType: string, onProgress?: (percent: number) => void): Promise<void> =>
+    new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", url);
+      xhr.setRequestHeader("Content-Type", contentType);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`S3 upload failed: ${xhr.status}`)));
+      xhr.onerror = () => reject(new Error("S3 upload failed: network error"));
+      xhr.send(file);
+    }),
+
   /** The editable settings of a share (creator or super admin). Throws on failure. */
   getSettings: (name: string): Promise<ShareSettings> =>
     request(`/shared-artifacts/${encodeURIComponent(name)}/settings`, "GET"),

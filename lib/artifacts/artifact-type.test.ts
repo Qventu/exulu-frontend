@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { artifactType, displayFilename, extensionOf } from "./artifact-type";
+import { artifactType, displayFilename, extensionOf, contentTypeFor } from "./artifact-type";
 
 describe("artifactType", () => {
   it("reads the kind from the extension first", () => {
@@ -36,5 +36,19 @@ describe("artifactType", () => {
     expect(extensionOf(".hidden")).toBe("");
     expect(displayFilename("users/42/1234-_EXULU_report.pdf")).toBe("report.pdf");
     expect(displayFilename("shared-artifacts/tender-cockpit/index.html")).toBe("index.html");
+  });
+});
+
+describe("contentTypeFor", () => {
+  it("prefers the browser's type when it has one", () => {
+    expect(contentTypeFor("deck.pptx", "application/vnd.ms-powerpoint")).toBe("application/vnd.ms-powerpoint");
+  });
+  it("falls back to the extension when the browser leaves it empty", () => {
+    expect(contentTypeFor("notes.md", "")).toBe("text/markdown");
+    expect(contentTypeFor("app.html", null)).toBe("text/html");
+    expect(contentTypeFor("Report.PDF")).toBe("application/pdf");
+  });
+  it("ends at an octet stream for unknown extensions", () => {
+    expect(contentTypeFor("archive.xyz", "")).toBe("application/octet-stream");
   });
 });

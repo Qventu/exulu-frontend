@@ -5690,6 +5690,19 @@
     "deleteDescription": "The share link stops working for everyone. The file itself stays in storage.",
     "deleteConfirm": "Delete",
     "deleted": "Deleted {name}",
-    "deleteFailed": "Could not delete"
+    "deleteFailed": "Could not delete",
+    "newArtifact": "New artifact",
+    "createTitle": "Publish an artifact",
+    "createDescription": "Upload a file, give its link a name, and decide who can open it.",
+    "dropLabel": "Drop a file here or browse",
+    "dropHint": "HTML apps, PDFs and images open inside the IMP; everything else is offered for download.",
+    "changeFile": "Choose another file",
+    "nameHint": "The link will be {url}",
+    "uploading": "Uploading… {percent}%",
+    "publishing": "Publishing…",
+    "publish": "Publish",
+    "published": "Published {name}",
+    "publishFailed": "Could not publish",
+    "uploadFailed": "Upload failed"
   }
 }

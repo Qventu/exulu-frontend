@@ -18,6 +18,7 @@
 import {
   AppWindow,
   File,
+  Plus,
   FileSpreadsheet,
   FileText,
   Globe,
@@ -47,6 +48,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { ArtifactKind } from "@/lib/artifacts/artifact-type";
 import { cn } from "@/lib/utils";
 
+import { CreateArtifactDialog } from "./components/create-dialog";
 import { DeleteArtifactDialog } from "./components/delete-dialog";
 import { RenameArtifactDialog } from "./components/rename-dialog";
 import { ArtifactRowMenu } from "./components/row-menu";
@@ -81,6 +83,7 @@ export function ArtifactsClient() {
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<Filter>("all");
   const [dialog, setDialog] = React.useState<DialogState>(null);
+  const [createOpen, setCreateOpen] = React.useState(false);
 
   const visible = React.useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -127,6 +130,12 @@ export function ArtifactsClient() {
         title={t("title")}
         description={t("description")}
         meta={items.length > 0 ? <span className="text-sm text-muted-foreground">{t("countOf", { shown: visible.length, total: items.length })}</span> : undefined}
+        action={
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Plus aria-hidden="true" className="mr-2 size-4" />
+            {t("newArtifact")}
+          </Button>
+        }
       />
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -238,6 +247,7 @@ export function ArtifactsClient() {
         </div>
       )}
 
+      <CreateArtifactDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={() => void refetch()} />
       <RenameArtifactDialog
         name={dialog?.kind === "rename" ? dialog.name : null}
         onOpenChange={closeDialog}
