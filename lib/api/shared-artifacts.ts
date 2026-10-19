@@ -32,6 +32,7 @@ export interface ShareSettings {
   expires_at: string | null;
   rights_mode: string | null;
   content_type: string | null;
+  s3key: string;
   created_by: number | null;
   rbac: ShareRbac;
 }
@@ -39,6 +40,9 @@ export interface ShareSettings {
 /** Every field optional; see the backend's validateUpdateInput for the rules. */
 export interface UpdateShareInput {
   name?: string;
+  /** Re-point the share at another object you uploaded (the file behind the link changes, the link stays). */
+  s3key?: string;
+  content_type?: string | null;
   auth_mode?: ShareAuthMode;
   password?: string;
   expires_at?: string | null;
