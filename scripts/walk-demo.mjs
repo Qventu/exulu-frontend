@@ -419,6 +419,31 @@ const CLICK_PROBES = {
   "contact.0": { attempts: [{ spec: { kind: "nav-link" }, describe: "sidebar nav link (closing scene, no product control)" }] },
 };
 
+// Known English and developer leaks the overlays exist to remove (scanned
+// over <main> on every step, and over the citation dialog when it opens). A
+// guard against regression, not a proof of German: any match fails the
+// step and names the snippet.
+const LEAKS = [
+  /\b(Completed|Running|Pending|Awaiting Approval|Responded|Denied)\b/,
+  /Doku ansehen/,
+  /Create Newton Memory Item/,
+  // The reference customers' real product identifiers (sub-project 7,
+  // lib/demo/fixtures/pseudonyms.ts): none may reach a screen.
+  /(?<![A-Za-z])FST-?2XT|(?<![A-Za-z])FST-?[23](?![A-Za-z])|(?<![A-Za-z])FST(?![A-Za-z])|(?<![A-Za-z])FSTBug|(?<![A-Za-z])fst2|EAZ-?TFT/,
+  /(?<![A-Za-z])AZKBZ|(?<![A-Za-z])AZK(?![A-Za-z])|DISA-|(?<![A-Za-z])TAZ(?=[- ]\d)|(?<![A-Za-z])AZ(?=[- ]\d|\/K)|(?<![A-Za-z])(AZFR|AZSTB|AZRS)|(?<![A-Za-z])AZ[MR](?= \d)|\bS-Line\b|\bComfort-Line\b|\bAlgi\b|Giehl|G47490|\b07204739\b|\b(134466|118112|113139|140700|105070|105068|105177|120629|118126|114446|113645|113089)\b/,
+  /software documentation context|support tickets context|tech doc context/i,
+  /Technical documentation regression|Standards & regulations|Nightly —|Baseline —/,
+  /Untitled transcript|Unbenanntes Transkript|Test Bild/,
+  /\$\s?\d/,
+  /Noch nie ausgeführt/,
+  // A raw knowledge-base id ("software_documentation_context") anywhere on screen.
+  /\b[a-z]+(?:_[a-z]+)*_context\b/,
+  // English absolute dates ("Oct 6, 2026", "Sep 30") from a formatter without a locale.
+  /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}(, \d{4})?\b/,
+];
+
+const LEAK_PATTERNS = LEAKS.map((r) => ({ source: r.source, flags: r.flags }));
+
 /**
  * The opposite probe: controls inside <main> that the tour OWNS and that must
  * therefore get past ContentInert — the closing scene's two booking buttons
@@ -454,7 +479,7 @@ async function runOperableProbe(page, pos) {
     await page.waitForSelector(spec.dialog, { timeout: 5000 }).catch(() => { opened = false; });
     if (!opened) return { pass: false, describe: spec.describe, reason: "dialog did not open" };
     await page.waitForTimeout(1500); // the chunk query and the open animation
-    const state = await page.evaluate((sel) => {
+    const state = await page.evaluate(({ sel, patterns }) => {
       const d = document.querySelector(sel);
       const p = document.querySelector('[data-demo-id="tour-panel"]');
       const dr = d.getBoundingClientRect();
@@ -466,12 +491,14 @@ async function runOperableProbe(page, pos) {
         overlapsPanel: dr.right > pr.left + 1,
         newTabLinks: d.querySelectorAll('a[target="_blank"]').length,
         closeVisible: [...d.querySelectorAll("button")].some((b) => b.textContent.trim() === "Close" && getComputedStyle(b).display !== "none"),
+        // The dialog portals to <body>, outside the per-step <main> scan.
+        leaks: patterns.map((p) => new RegExp(p.source, p.flags).exec(text)?.[0] ?? null).filter(Boolean),
       };
-    }, spec.dialog);
+    }, { sel: spec.dialog, patterns: LEAK_PATTERNS });
     await page.keyboard.press("Escape");
     let closed = true;
     await page.waitForSelector(spec.dialog, { state: "detached", timeout: 3000 }).catch(() => { closed = false; });
-    const pass = state.textLength > 80 && !state.unresolved && !state.overlapsPanel && state.newTabLinks === 0 && state.closeVisible && closed;
+    const pass = state.textLength > 80 && !state.unresolved && !state.overlapsPanel && state.newTabLinks === 0 && state.closeVisible && state.leaks.length === 0 && closed;
     return { pass, describe: spec.describe, ...state, closed };
   }
   const result = await page.evaluate(({ selector, expectCount }) => {
@@ -917,33 +944,12 @@ async function main() {
       [...document.querySelectorAll('[data-demo-id="tour-panel"] button')].some((b) => b.textContent.trim() === "Mehr"),
     ));
 
-    // Known English and developer leaks the overlays exist to remove. A
-    // guard against regression, not a proof of German: any match fails the
-    // step and names the snippet.
-    const LEAKS = [
-      /\b(Completed|Running|Pending|Awaiting Approval|Responded|Denied)\b/,
-      /Doku ansehen/,
-      /Create Newton Memory Item/,
-      // The reference customers' real product identifiers (sub-project 7,
-      // lib/demo/fixtures/pseudonyms.ts): none may reach a screen.
-      /(?<![A-Za-z])FST-?2XT|(?<![A-Za-z])FST-?[23](?![A-Za-z])|(?<![A-Za-z])FST(?![A-Za-z])|(?<![A-Za-z])FSTBug|(?<![A-Za-z])fst2|EAZ-?TFT/,
-      /(?<![A-Za-z])AZKBZ|(?<![A-Za-z])AZK(?![A-Za-z])|DISA-|(?<![A-Za-z])TAZ(?=[- ]\d)|(?<![A-Za-z])AZ(?=[- ]\d|\/K)|(?<![A-Za-z])(AZFR|AZSTB|AZRS)|(?<![A-Za-z])AZ[MR](?= \d)|\bS-Line\b|\bComfort-Line\b|\bAlgi\b|Giehl|G47490|\b07204739\b|\b(134466|118112|113139|140700|105070|105068|105177|120629|118126|114446|113645|113089)\b/,
-      /software documentation context|support tickets context|tech doc context/i,
-      /Technical documentation regression|Standards & regulations|Nightly —|Baseline —/,
-      /Untitled transcript|Unbenanntes Transkript|Test Bild/,
-      /\$\s?\d/,
-      /Noch nie ausgeführt/,
-      // A raw knowledge-base id ("software_documentation_context") anywhere on screen.
-      /\b[a-z]+(?:_[a-z]+)*_context\b/,
-      // English absolute dates ("Oct 6, 2026", "Sep 30") from a formatter without a locale.
-      /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}(, \d{4})?\b/,
-    ];
     row.leaks = await page.evaluate((patterns) => {
       const text = (document.querySelector("main")?.innerText ?? "").replace(/\s+/g, " ");
       return patterns
         .map((p) => new RegExp(p.source, p.flags).exec(text)?.[0] ?? null)
         .filter(Boolean);
-    }, LEAKS.map((r) => ({ source: r.source, flags: r.flags })));
+    }, LEAK_PATTERNS);
 
     // The product UI is Sie-form and stays so; the tour's own text — the panel
     // and the scenes — is du-form (spec, sub-project 6). Same pattern as

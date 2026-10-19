@@ -21,6 +21,20 @@ describe("pseudonymise", () => {
     expect(pseudonymise("EAZTFT-110_changes.doc, EAZ-TFT.110_Neuron_Changes.docx")).toBe("DPTFT-110_changes.doc, DP-TFT.110_Neuron_Changes.docx");
   });
 
+  it("sees through a JSON escape before the token: the n of \\n is not a letter", () => {
+    // chunks-ks2xt-de.json keeps the export's line breaks as the two
+    // characters \ and n. A boundary of "not preceded by a letter" read that
+    // n as a letter, so "FST-2XT" after a line break survived both the
+    // script and the scan — and surfaced the day the citation dialog opened
+    // in the tour (2026-10-19).
+    const raw = String.raw`**Letzte Änderung:**\n\nFST-2XT V2.000-0191`;
+    expect(pseudonymise(raw, "chunks-ks2xt-de.json")).toBe(String.raw`**Letzte Änderung:**\n\nKS-2XT V2.000-0191`);
+    expect(originalIn(raw)).toBe("FST-2XT");
+    expect(pseudonymise(String.raw`  \nFST-Guide-Hilfetext`)).toBe(String.raw`  \nKS-Guide-Hilfetext`);
+    // A real letter before the token still protects it.
+    expect(pseudonymise("unFST")).toBe("unFST");
+  });
+
   it("leaves industry terms and longer words alone", () => {
     // Module abbreviations with descriptive expansions (Fahrkorbsteuermodul,
     // Etagenanzeige, …) are industry vocabulary, not the brand: kept (review).
