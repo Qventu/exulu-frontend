@@ -75,6 +75,8 @@ import { collectSources, parseClaimCheckTrigger } from "./claim-check-data";
 import { MemoryCard } from "./memory-card";
 import { isMemoryToolPart } from "./memory-card-data";
 import { MemoryStack } from "./memory-stack";
+import { SkillCard } from "./skill-card";
+import { isSkillToolPart } from "./skill-card-data";
 import { RecalledMemories } from "./recalled-memories";
 import { ToolCallApproval } from "./tool-call-approval";
 import { ToolCallApprovalGroup } from "./tool-call-approval-group";
@@ -110,6 +112,7 @@ function makeUntypedToolPart(
   onApproveForChat: (toolId: string) => void,
   onCredentialResume: (provider: string, kind?: "credentials" | "oauth") => void,
   guestMode: boolean,
+  sessionId: string,
 ) {
   const UntypedToolPart = ({
     agent: _agent,
@@ -139,6 +142,13 @@ function makeUntypedToolPart(
     // Memory cards (spec §4.1) replace the generic approval card for
     // tool-memory_* parts. No "Allow for this chat" — the card is the
     // consent. Guests never see memory cards.
+    // Skill cards (create / publish a version) work the same way: the card is
+    // the consent, and it carries the visibility choice back to the tool.
+    if (isSkillToolPart(untypedToolPart)) {
+      if (guestMode) return null;
+      return <SkillCard key={callId} part={untypedToolPart} agent={_agent} sessionId={sessionId} addToolApprovalResponse={addToolApprovalResponse} />;
+    }
+
     if (isMemoryToolPart(untypedToolPart)) {
       if (guestMode) return null;
       return (
@@ -412,8 +422,9 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
         controller.approveToolForChat,
         handleCredentialResume,
         guestMode,
+        controller.session?.id ?? "",
       ),
-    [controller.approveToolForChat, handleCredentialResume, guestMode],
+    [controller.approveToolForChat, handleCredentialResume, guestMode, controller.session?.id],
   );
   const GroupedToolPartComponent = useMemo(
     () =>

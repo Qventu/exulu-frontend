@@ -42,6 +42,13 @@ export const sessionFilesApi = {
             key,
         }),
 
+    /**
+     * Re-install the session agent's enabled skills into the live sandbox —
+     * the skill card's "Reload skills" after a skill was created or updated.
+     */
+    reloadSkills: async (sessionId: string): Promise<{ refreshed: number; sandbox: boolean }> =>
+        request(`/sessions/${sessionId}/skills/reload`, "POST", {}),
+
     /** Delete a file from the session's S3 folder. */
     delete: async (sessionId: string, key: string): Promise<{ deleted: true }> =>
         request(

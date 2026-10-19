@@ -58,6 +58,7 @@ capabilities {
   audio
   video
 }
+created_by
 rights_mode
 RBAC {
       type
@@ -671,6 +672,21 @@ export const GET_CONTEXT_BY_ID = gql`
       memoryBase {
         ok
         missing
+      }
+    }
+  }
+`;
+
+/**
+ * The skill card's "enable on this agent": the agent's skills column, with the
+ * new skill appended. Sent stringified like the editor does (hooks.ts).
+ */
+export const ENABLE_SKILL_ON_AGENT = gql`
+  mutation EnableSkillOnAgent($id: ID!, $skills: JSON) {
+    agentsUpdateOneById(id: $id, input: { skills: $skills }) {
+      item {
+        id
+        skills
       }
     }
   }
