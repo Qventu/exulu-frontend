@@ -190,6 +190,28 @@ function assertGeometry(anchor) {
       const r = e.getBoundingClientRect();
       return r.width > 100 && r.left < p.right && r.right > p.left && r.top < p.bottom && r.bottom > p.top;
     }),
+    // On a browser with a classic document scrollbar, a modal Radix dialog's
+    // scroll lock (react-remove-scroll-bar) pads <body> by the scrollbar's
+    // width; the in-flow panel moves left by it, a fixed dialog inset from
+    // the viewport edge does not. Invisible here (macOS overlay scrollbars
+    // are 0px) — ~17px on Windows, where the wizard's sheet sat over the
+    // panel's left edge (tester, 2026-10-19). app/globals.css adds the gap
+    // the library publishes to the inset; this emulates the lock's
+    // compensation for one read and measures what is left.
+    gapOverlap: (() => {
+      const dialog = document.querySelector('[role="dialog"]');
+      if (!dialog) return null;
+      const body = document.body;
+      const prevPad = body.style.paddingRight;
+      const prevVar = body.style.getPropertyValue("--removed-body-scroll-bar-size");
+      body.style.paddingRight = "17px";
+      body.style.setProperty("--removed-body-scroll-bar-size", "17px");
+      const d = dialog.getBoundingClientRect();
+      const pp = panel.getBoundingClientRect();
+      body.style.paddingRight = prevPad;
+      body.style.setProperty("--removed-body-scroll-bar-size", prevVar);
+      return Math.max(0, Math.round(d.right - pp.left));
+    })(),
     panelRect: { left: p.left, right: p.right, top: p.top, bottom: p.bottom, width: p.width, height: p.height },
     mainRect: { left: m.left, right: m.right, top: m.top, bottom: m.bottom, width: m.width, height: m.height },
   };
@@ -413,11 +435,45 @@ const CLICK_PROBES = {
  */
 const OPERABLE_PROBES = {
   "contact.0": { selector: '.demo-scene [data-demo-id="booking-cta"]', expectCount: 2, describe: "the two path booking buttons" },
+  // kind "dialog": a REAL click (nothing to navigate away to), then the
+  // dialog must open with the cited passage, keep clear of the panel, offer
+  // no new-tab link out of the tour, show its close button, and close on
+  // Escape. Chapter 5's "Öffne diese Quelle" — openable since a6aa769,
+  // frozen by 628dd13 until the inert layer learned to let it through.
+  "techdoc.2": { kind: "dialog", selector: '[data-demo-id="chat-messages"] [data-demo-id="chat-citation"]', dialog: '[data-demo-id="chat-citation-dialog"]', describe: "the citation badge — opens the cited passage; Escape closes it" },
 };
 
 async function runOperableProbe(page, pos) {
   const spec = OPERABLE_PROBES[pos];
   if (!spec) return null;
+  if (spec.kind === "dialog") {
+    const badge = page.locator(spec.selector).first();
+    if ((await badge.count()) === 0) return { pass: false, describe: spec.describe, reason: "no badge found" };
+    await badge.click({ timeout: 3000 }).catch(() => {});
+    let opened = true;
+    await page.waitForSelector(spec.dialog, { timeout: 5000 }).catch(() => { opened = false; });
+    if (!opened) return { pass: false, describe: spec.describe, reason: "dialog did not open" };
+    await page.waitForTimeout(1500); // the chunk query and the open animation
+    const state = await page.evaluate((sel) => {
+      const d = document.querySelector(sel);
+      const p = document.querySelector('[data-demo-id="tour-panel"]');
+      const dr = d.getBoundingClientRect();
+      const pr = p.getBoundingClientRect();
+      const text = d.innerText.replace(/\s+/g, " ");
+      return {
+        textLength: text.length,
+        unresolved: /not found|Loading/i.test(text),
+        overlapsPanel: dr.right > pr.left + 1,
+        newTabLinks: d.querySelectorAll('a[target="_blank"]').length,
+        closeVisible: [...d.querySelectorAll("button")].some((b) => b.textContent.trim() === "Close" && getComputedStyle(b).display !== "none"),
+      };
+    }, spec.dialog);
+    await page.keyboard.press("Escape");
+    let closed = true;
+    await page.waitForSelector(spec.dialog, { state: "detached", timeout: 3000 }).catch(() => { closed = false; });
+    const pass = state.textLength > 80 && !state.unresolved && !state.overlapsPanel && state.newTabLinks === 0 && state.closeVisible && closed;
+    return { pass, describe: spec.describe, ...state, closed };
+  }
   const result = await page.evaluate(({ selector, expectCount }) => {
     const els = [...document.querySelectorAll(selector)];
     const results = els.map((el) => {
@@ -779,6 +835,7 @@ async function main() {
     row.panelVisible = geometry.panelVisible;
     row.overlapsContent = geometry.overlapsContent;
     row.coveringPanel = geometry.coveringPanel;
+    row.gapOverlap = geometry.gapOverlap;
     row.ringPresent = geometry.ringPresent;
     row.ringExpected = step.anchor !== null;
     row.ringOnAnchor = geometry.ringOnAnchor;
@@ -908,6 +965,7 @@ async function main() {
       row.panelVisible === true &&
       row.overlapsContent === false &&
       row.coveringPanel === false &&
+      (row.gapOverlap ?? 0) === 0 &&
       row.ringOk === true &&
       clickResult.pass === true &&
       (row.operable === null || row.operable.pass === true) &&
@@ -918,7 +976,7 @@ async function main() {
     results.push(row);
     const flag = row.allPass ? "PASS" : "FAIL";
     console.log(
-      `${step.pos.padEnd(18)} ${flag} panel=${row.panelVisible} overlap=${row.overlapsContent} covering=${row.coveringPanel} ring=${row.ringPresent}/${row.ringExpected}${row.ringExpected ? `@anchor=${row.ringOnAnchor}` : ""} click=${clickResult.pass}${row.operable ? ` operable=${row.operable.pass}` : ""} scroll=${scrollResult.applicable ? scrollResult.pass : "n/a"}${row.panelScrolledAway ? " [panel-scrolled-away]" : ""} content=${row.contentVisible ?? "n/a"} mehr=${row.noMehr ? "none" : "PRESENT"} leaks=${row.leaks.length ? JSON.stringify(row.leaks) : "none"}`,
+      `${step.pos.padEnd(18)} ${flag} panel=${row.panelVisible} overlap=${row.overlapsContent} covering=${row.coveringPanel}${row.gapOverlap !== null && row.gapOverlap !== undefined ? ` gap=${row.gapOverlap}` : ""} ring=${row.ringPresent}/${row.ringExpected}${row.ringExpected ? `@anchor=${row.ringOnAnchor}` : ""} click=${clickResult.pass}${row.operable ? ` operable=${row.operable.pass}` : ""} scroll=${scrollResult.applicable ? scrollResult.pass : "n/a"}${row.panelScrolledAway ? " [panel-scrolled-away]" : ""} content=${row.contentVisible ?? "n/a"} mehr=${row.noMehr ? "none" : "PRESENT"} leaks=${row.leaks.length ? JSON.stringify(row.leaks) : "none"}`,
     );
   }
 

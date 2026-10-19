@@ -564,8 +564,27 @@ body[data-demo-tour="active"] {
  * but doesn't was worse than no rule.
  */
 body[data-demo-tour="active"] [role="dialog"],
-body[data-demo-tour="active"] [data-slot="sheet-overlay"] {
-  margin-right: var(--tour-panel-w, 0px);
+body[data-demo-tour="active"] [data-slot="sheet-overlay"],
+body[data-demo-tour="active"] [data-slot="dialog-overlay"] {
+  /* + the scroll lock's gap: a modal Radix dialog (react-remove-scroll-bar)
+   * hides the document scrollbar and pads <body> by its width so the page
+   * does not jump. The panel is in flow, so it moves left by that width; a
+   * fixed node inset from the viewport edge does not — and on a browser with
+   * a classic scrollbar (Windows; macOS overlays are 0px wide, which is why
+   * neither the walker nor Playwright on a Mac ever saw it) the wizard's
+   * sheet sat ~17px over the panel's left edge (tester, 2026-10-19). The
+   * library publishes the gap it applied as --removed-body-scroll-bar-size
+   * on <body> for exactly this: fixed elements that must keep their place. */
+  margin-right: calc(var(--tour-panel-w, 0px) + var(--removed-body-scroll-bar-size, 0px));
+}
+
+/* The citation dialog (components/ai-elements/response.tsx) is centred with
+ * left:50% + translateX(-50%); margin-right cannot move a node whose left is
+ * set. Centre it in what is left of the viewport beside the panel instead,
+ * and never let it be wider than that space. */
+body[data-demo-tour="active"] [data-demo-id="chat-citation-dialog"] {
+  left: calc((100vw - var(--tour-panel-w, 0px) - var(--removed-body-scroll-bar-size, 0px)) / 2);
+  max-width: min(900px, calc(100vw - var(--tour-panel-w, 0px) - var(--removed-body-scroll-bar-size, 0px) - 2rem));
 }
 
 /* The agent-editor wizard (knowledge-search/wizard.tsx) has its own
@@ -576,7 +595,7 @@ body[data-demo-tour="active"] [data-slot="sheet-overlay"] {
  * Sheet primitive's last child button. Scoped to the tour, so no
  * deployment loses a control. */
 body[data-demo-tour="active"] [data-demo-id^="agent-wizard-"] + div,
-body[data-demo-tour="active"] [role="dialog"] > button:last-child {
+body[data-demo-tour="active"] [role="dialog"]:has([data-demo-id^="agent-wizard-"]) > button:last-child {
   display: none;
 }
 

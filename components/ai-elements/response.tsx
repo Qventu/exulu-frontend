@@ -469,11 +469,14 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
           {chunkIndex && <span className="text-muted-foreground">#{parseInt(chunkIndex) + 1}</span>}
         </Badge>
       </DialogTrigger>
-      <DialogContent className="max-w-[900px] max-h-[80vh] overflow-y-auto">
+      {/* chat-citation-dialog: in the tour, ContentInert lets this dialog operate
+          (components/demo/inert-layer.ts); the item link is omitted there because
+          it would open the knowledge base in a new tab, outside the tour. */}
+      <DialogContent className="max-w-[900px] max-h-[80vh] overflow-y-auto" data-demo-id="chat-citation-dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {(itemId && context) ? (
+              {(itemId && context && !isDemoMode()) ? (
                 <Link className="flex items-center gap-1" href={`/data/${context}?item=${itemId}`} target="_blank">
                   <span className="max-w-[400px] truncate hover:underline cursor-pointer">{itemName}</span>
                   <LinkIcon className="size-4" />
