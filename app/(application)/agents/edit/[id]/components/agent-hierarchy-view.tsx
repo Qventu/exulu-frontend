@@ -301,7 +301,7 @@ export function AgentHierarchyView({
  * Wrapper that fetches per-sub-agent summary via the editor-local query
  * (replaces monolith GET_AGENT_BY_ID — work-item route-colocation rule).
  */
-function AgentToolWithDetails({
+export function AgentToolWithDetails({
   tool,
   isEnabled,
   config,

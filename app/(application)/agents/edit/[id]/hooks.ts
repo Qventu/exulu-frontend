@@ -535,13 +535,9 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
  * ------------------------------------------------------------------------- */
 
 export interface UseEditorReferenceData {
+  /** The whole catalogue (tools and sub-agents), minus this agent itself. The Tools section's picker filters it client-side. */
   tools: ExuluTool[];
-  toolsTotal: number;
   toolsLoading: boolean;
-  toolSearch: string;
-  setToolSearch: (s: string) => void;
-  toolCategory: string;
-  setToolCategory: (c: string) => void;
   categories: string[];
   skills: { id: string; name: string; description?: string }[];
   // Slim shape — combobox renders { id, name, encrypted } only (migrated off
@@ -557,15 +553,6 @@ export interface UseEditorReferenceData {
 }
 
 export function useEditorReferenceData(agentId: string): UseEditorReferenceData {
-  const [toolSearch, setToolSearch] = React.useState("");
-  const [debouncedSearch, setDebouncedSearch] = React.useState("");
-  const [toolCategory, setToolCategory] = React.useState<string>("all");
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(toolSearch), 300);
-    return () => clearTimeout(timer);
-  }, [toolSearch]);
-
   const toolsQuery = useQuery<{
     tools: {
       items: ExuluTool[];
@@ -574,12 +561,9 @@ export function useEditorReferenceData(agentId: string): UseEditorReferenceData 
       limit: number;
     };
   }>(GET_TOOLS_EDITOR, {
-    variables: {
-      search: debouncedSearch || undefined,
-      category: toolCategory === "all" ? undefined : toolCategory,
-      limit: 100,
-      page: 0,
-    },
+    // No server-side search: the enabled-only section needs every enabled
+    // tool's catalogue entry regardless of what the picker is filtering on.
+    variables: { limit: 500, page: 0 },
   });
 
   const categoriesQuery = useQuery<{ toolCategories: string[] }>(
@@ -627,12 +611,7 @@ export function useEditorReferenceData(agentId: string): UseEditorReferenceData 
 
   return {
     tools,
-    toolsTotal: toolsQuery.data?.tools?.total ?? 0,
     toolsLoading: toolsQuery.loading,
-    toolSearch,
-    setToolSearch,
-    toolCategory,
-    setToolCategory,
     categories: categoriesQuery.data?.toolCategories ?? [],
     skills: skillsQuery.data?.skillsPagination?.items ?? [],
     variables: variablesQuery.data?.variablesPagination?.items ?? [],
