@@ -79,8 +79,12 @@ describe("offer block", () => {
     expect(text).not.toContain("example.invalid");
   });
 
-  it("is not empty without a button or a note", () => {
+  it("drops the optional button and note cleanly — no 'undefined' in the text", () => {
     const { cta: _cta, ...rest } = offer as Extract<ContentBlock, { kind: "offer" }>;
+    const text = contentText([{ ...rest, box: { ...rest.box, note: undefined } }]);
+    expect(text).not.toContain("undefined");
+    expect(text).not.toContain("Limitiert.");
+    expect(text).not.toContain("Rabatt sichern");
     expect(isEmptyContent([{ ...rest, box: { ...rest.box, note: undefined } }])).toBe(false);
   });
 });

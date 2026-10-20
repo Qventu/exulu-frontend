@@ -46,5 +46,5 @@ export const ALGI_RUNS_OPEN = `/workflows/${ALGI_ROUTINE_ID}?run=${APPROVAL_RUN_
  */
 export const DEMO_BOOKING_URL = "https://meetings-eu1.hubspot.com/dclaessen/kostenlose-erstberatung-open-imp";
 
-/** What the link opens: HubSpot's "kostenlose Erstberatung" page — one label for the button and the panel link. */
+/** What the panel link opens: HubSpot's "kostenlose Erstberatung" page (the scene's button has marketing's label). */
 export const DEMO_BOOKING_LABEL = "Kostenlose Erstberatung buchen";

@@ -21,8 +21,8 @@
  * listener's scope, which is what lets it stay outside <main> and still work:
  * an event whose target is inside [data-demo-id="tour-panel"] is let through
  * untouched.
- * The same exemption covers [data-demo-id="booking-cta"], the scene's
- * booking buttons — the one thing inside <main> that must operate.
+ * The same exemption covers [data-demo-id="booking-cta"], the closing
+ * scene's booking button — the one thing inside <main> that must operate.
  *
  * ── What is blocked, and what deliberately is not ────────────────────────
  * The list is split by what each event's DEFAULT ACTION actually is, because
@@ -134,9 +134,9 @@ export function installInertLayer(doc: Document): () => void {
 
   /**
    * The tour's own controls, exempt from everything below: the docked panel,
-   * and the closing scene's booking buttons, which render inside <main> like
-   * product controls do and were cancelled with them until the utm change
-   * (components/demo/step-panel.tsx marks them data-demo-id="booking-cta").
+   * and the closing scene's booking button, which renders inside <main> like
+   * product controls do and was cancelled with them until the utm change
+   * (components/demo/step-panel.tsx marks it data-demo-id="booking-cta").
    * `closest` from the target: a click lands on a label <span> as often as
    * on the anchor itself.
    */

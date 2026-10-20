@@ -7,6 +7,7 @@ import { contentOf } from "../step-content";
 import { sieFormIn } from "../register";
 import { isDemoSupported } from "../supported-routes";
 import { CHAPTERS } from "./index";
+import { DEMO_BOOKING_URL } from "../routes";
 
 const everyStep = CHAPTERS.flatMap((chapter) =>
   chapter.steps.map((step, index) => ({ chapter, step, index })),
@@ -254,7 +255,11 @@ describe("the register is du (sub-project 6)", () => {
 
   it("reads every block kind, the closing scene's offer included", () => {
     expect(strings().some((s) => s.text.includes("3-Monats-Testphase zum Vorzugspreis"))).toBe(true);
-    expect(strings().some((s) => s.text.includes("Planungsgespräch buchen & Rabatt sichern"))).toBe(true);
+    // The button exists only with the booking link set (routes.ts) — the
+    // suite must pass in both states.
+    if (DEMO_BOOKING_URL) {
+      expect(strings().some((s) => s.text.includes("Planungsgespräch buchen & Rabatt sichern"))).toBe(true);
+    }
   });
 
   it("has no Sie-form in any title, goal, lead, block or button", () => {

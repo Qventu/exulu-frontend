@@ -182,7 +182,8 @@ export function TourPanel() {
         {controls.includes("next") && (
           <button type="button" onClick={next} className="demo-button">Weiter</button>
         )}
-        {/* The booking link on every step but the last (which has the button).
+        {/* The booking link on every step without a cta — since marketing's
+            offer (2026-10-20) the last step included: its scene carries the ask.
             Last in DOM so Tab reaches Weiter in the same three presses; first
             visually, at the far left (order-first + mr-auto). */}
         {bookingHref && !step.cta && (

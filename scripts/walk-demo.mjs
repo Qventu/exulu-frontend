@@ -446,7 +446,7 @@ const LEAK_PATTERNS = LEAKS.map((r) => ({ source: r.source, flags: r.flags }));
 
 /**
  * The opposite probe: controls inside <main> that the tour OWNS and that must
- * therefore get past ContentInert — the closing scene's two booking buttons
+ * therefore get past ContentInert — the closing scene's booking button
  * (data-demo-id="booking-cta", exempted in components/demo/inert-layer.ts).
  * The former shared button was dead this way from 42d2b88 until the utm
  * change, and nothing here noticed, because every other probe asserts that

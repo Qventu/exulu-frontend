@@ -9,8 +9,8 @@
  * were when they clicked:
  *
  *   utm_source   — always the demo (DEMO_UTM_SOURCE)
- *   utm_campaign — the offer: "probe-3-monate", "vollwertig", or "tour" for
- *                  the panel link that commits to neither
+ *   utm_campaign — "probe-3-monate" for the offer's button in the closing
+ *                  scene, "tour" for the panel link that commits to nothing
  *   utm_medium   — the step the click came from (stepMedium)
  */
 import { DEMO_BOOKING_URL } from "./routes";
@@ -30,8 +30,8 @@ export function bookingUrl(campaign: string, medium: string, base: string = DEMO
 }
 
 /**
- * The panel's link and the closing step's button: campaign "tour", because
- * a click there committed to neither offer; the medium still says where.
+ * The panel's link: campaign "tour", because a click there committed to no
+ * offer; the medium still says where.
  */
 export function panelBookingUrl(chapterNumber: number, stepId: string): string {
   return bookingUrl("tour", stepMedium(chapterNumber, stepId));
