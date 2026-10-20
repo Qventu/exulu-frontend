@@ -6,7 +6,7 @@ import { getWorld } from "./fixtures";
 // not on the step. contentOf reads from wherever the content actually is, so
 // the checks below still see a scene's words and figure — see its docblock.
 import { contentOf } from "./step-content";
-import { panelBookingUrl, stepMedium } from "./booking";
+import { stepMedium } from "./booking";
 import {
   CHAPTERS,
   DEMO_BOOKING_URL,
@@ -239,9 +239,18 @@ describe("the reading load", () => {
     // constraint is `lead` — the one-sentence subtitle — which
     // lib/demo/chapters/index.test.ts caps at 20 words.
     const CAP = 90;
+    // The closing step is marketing's offer page (2026-10-20): a headline, a
+    // box with a price and four points, a button and its micro-copy — scanned
+    // as a page, not read as a paragraph, and word for word theirs. It gets
+    // its own ceiling; the chapter-rail steps keep the one above.
+    const OFFER_CAP = 120;
     for (const chapter of CHAPTERS) {
       for (const step of chapter.steps) {
         const w = words(proseOf(step));
+        if (contentOf(step).some((b) => b.kind === "offer")) {
+          expect(w, `${step.id} is ${w} words — over the offer cap of ${OFFER_CAP}`).toBeLessThanOrEqual(OFFER_CAP);
+          continue;
+        }
         expect(
           w,
           `${step.id} is ${w} words — over the cap of ${CAP}; trim it, split the step, or move the detail behind its Kurzfassung`,
@@ -393,7 +402,8 @@ describe("the closing call to action", () => {
   const closingStep = () => CHAPTERS.at(-1)!.steps.at(-1)!;
   // Through contentOf: the close is a scene since sub-project 4, so its
   // copy lives in lib/demo/scenes.ts like every scene's.
-  const closing = () => contentText(contentOf(closingStep()));
+  // NBSPs (the price and the percentages are kept from wrapping) read as spaces here.
+  const closing = () => contentText(contentOf(closingStep())).replace(/\u00A0/g, " ");
 
   it("makes the ask, in the whitepaper's own terms", () => {
     // The tour used to end on a Back button: twelve minutes of someone's
@@ -404,31 +414,54 @@ describe("the closing call to action", () => {
     // proposes something specific — ten manuals, two weeks, their own service
     // team's questions — while the close used to invent a vaguer ask than the
     // one they had already been made.
-    // Since sub-project 8 the offer is Daniel's two paths, not the whitepaper's
-    // pilot: three months on trial, or the full IMP in three steps.
-    expect(closing()).toMatch(/3 Monate unverbindlich/);
-    expect(closing()).toMatch(/zwei Arbeitstagen/);
-  });
-
-  it("carries the offer as two paths, no customer name, and the booking link", () => {
+    // Since 2026-10-20 the offer is marketing's: the three-month trial at
+    // half price, one box, one ask — word for word as marketing wrote it.
     const text = closing();
-    expect(text).toMatch(/600 €/);
-    expect(text).toMatch(/20 % Aufschlag/);
-    expect(text).not.toMatch(/NEW Lift|ALGI/);
-    expect(closingStep().cta?.label).toBe("Kostenlose Erstberatung buchen");
-    expect(closingStep().cta?.href).toMatch(/^https:\/\/meetings-eu1\.hubspot\.com\//);
+    expect(text).toMatch(/Teste OPEN IMP mit deinen Dokumenten/);
+    expect(text).toMatch(/50 % Rabatt für Schnellstarter/);
+    expect(text).toMatch(/3-Monats-Testphase zum Vorzugspreis/);
+    expect(text).toMatch(/600 € \/ Monat/);
+    expect(text).toMatch(/startklar in zwei Tagen/);
+    expect(text).toMatch(/20 % Servicegebühr/);
+    expect(text).toMatch(/maximal 15 Setup-Plätze/);
+    expect(text).toMatch(/30 Minuten unverbindlicher Austausch/);
   });
 
-  it("sends the panel's button as campaign 'tour' from the closing step's real position", () => {
-    if (!DEMO_BOOKING_URL) return;
-    const chapterNumber = CHAPTERS.findIndex((c) => c.id === "contact") + 1;
-    expect(closingStep().cta?.href).toBe(panelBookingUrl(chapterNumber, closingStep().id));
-    // The scene's buttons hardcode the same position (scenes.ts cannot see CHAPTERS).
-    const paths = contentOf(closingStep()).find((b) => b.kind === "paths");
-    if (paths?.kind !== "paths") throw new Error("no paths block");
-    for (const p of paths.items) {
-      expect(new URL(p.cta!.href).searchParams.get("utm_medium")).toBe(stepMedium(chapterNumber, closingStep().id));
+  it("names no customer and puts no second ask in the panel", () => {
+    expect(closing()).not.toMatch(/NEW Lift|ALGI/);
+    // The scene's button is the one ask; the panel shows the persistent
+    // link like every other step (components/demo/tour-panel.tsx).
+    expect(closingStep().cta).toBeUndefined();
+    expect(closingStep().title).toBe("Dein nächster Schritt");
+  });
+
+  it("sends the offer's button as campaign 'probe-3-monate' from the closing step's real position", () => {
+    const offer = contentOf(closingStep()).find((b) => b.kind === "offer");
+    if (offer?.kind !== "offer") throw new Error("no offer block");
+    if (!DEMO_BOOKING_URL) {
+      expect(offer.cta).toBeUndefined();
+      return;
     }
+    const chapterNumber = CHAPTERS.findIndex((c) => c.id === "contact") + 1;
+    const url = new URL(offer.cta!.href);
+    expect(`${url.origin}${url.pathname}`).toBe(DEMO_BOOKING_URL);
+    expect(url.searchParams.get("utm_source")).toBe("open-imp-demo");
+    expect(url.searchParams.get("utm_campaign")).toBe("probe-3-monate");
+    // The scene hardcodes the position (scenes.ts cannot see CHAPTERS).
+    expect(url.searchParams.get("utm_medium")).toBe(stepMedium(chapterNumber, closingStep().id));
+    expect(offer.cta!.label).toBe("Planungsgespräch buchen & Rabatt sichern");
+    // The label is copy: contentText must carry it so the register scan reads it.
+    expect(closing()).toContain(offer.cta!.label);
+  });
+
+  it("keeps the price and the percentages from wrapping mid-figure", () => {
+    // Marketing, 2026-10-20: at 100 % zoom the old price line broke between
+    // "−50" and "%". Number and unit are joined by NBSP.
+    const offer = contentOf(closingStep()).find((b) => b.kind === "offer");
+    if (offer?.kind !== "offer") throw new Error("no offer block");
+    expect(offer.box.price).toBe("600\u00A0€\u00A0/\u00A0Monat");
+    expect(offer.box.priceNote).toContain("50\u00A0%");
+    expect(offer.box.items.some((i) => i.includes("20\u00A0%"))).toBe(true);
   });
 
   it("never renders a dead link or a placeholder", () => {
@@ -447,8 +480,10 @@ describe("the closing call to action", () => {
     // The other direction: setting the constant must be the ONLY change
     // needed. If this ever fails, the link was set and the step did not follow.
     if (DEMO_BOOKING_URL) {
-      expect(closingStep().cta?.href.startsWith(DEMO_BOOKING_URL)).toBe(true);
-      expect(closingStep().cta?.label).toBeTruthy();
+      const offer = contentOf(closingStep()).find((b) => b.kind === "offer");
+      if (offer?.kind !== "offer") throw new Error("no offer block");
+      expect(offer.cta?.href.startsWith(DEMO_BOOKING_URL)).toBe(true);
+      expect(offer.cta?.label).toBeTruthy();
     }
   });
 });
@@ -492,34 +527,12 @@ describe("the tour after sub-project 5", () => {
 describe("the closing scene after marketing's second batch", () => {
   const closingStep = () => CHAPTERS.at(-1)!.steps.at(-1)!;
 
-  it("is one step: the two paths and the ask, with a lead in the panel", () => {
+  it("is one step: the offer, with a lead in the panel", () => {
     expect(CHAPTERS.at(-1)!.steps).toHaveLength(1);
     const kinds = contentOf(closingStep()).map((b) => b.kind);
-    // No scene-level button since the utm change: each path carries its own.
-    expect(kinds).toEqual(["paragraph", "paths", "paragraph"]);
+    // Hero, box, button and micro-copy are one block (marketing, 2026-10-20).
+    expect(kinds).toEqual(["offer"]);
     expect(closingStep().lead).toBeTruthy();
-  });
-
-  it("gives each path its own booking button, telling HubSpot which offer was picked", () => {
-    const paths = contentOf(closingStep()).find((b) => b.kind === "paths");
-    if (paths?.kind !== "paths") throw new Error("no paths block");
-    const ctas = paths.items.map((p) => p.cta);
-    if (!DEMO_BOOKING_URL) {
-      expect(ctas.every((c) => c === undefined)).toBe(true);
-      return;
-    }
-    const campaigns = ctas.map((c) => new URL(c!.href).searchParams.get("utm_campaign"));
-    expect(campaigns).toEqual(["probe-3-monate", "vollwertig"]);
-    for (const c of ctas) {
-      const url = new URL(c!.href);
-      expect(`${url.origin}${url.pathname}`).toBe(DEMO_BOOKING_URL);
-      expect(url.searchParams.get("utm_source")).toBe("open-imp-demo");
-      expect(url.searchParams.get("utm_medium")).toBe("kapitel-12-contact-close");
-      expect(c!.label).toBeTruthy();
-    }
-    expect(new Set(ctas.map((c) => c!.label)).size).toBe(2);
-    // The labels are copy: contentText must carry them so the register scan reads them.
-    for (const c of ctas) expect(contentText(contentOf(closingStep()))).toContain(c!.label);
   });
 
   it("gives every scene step a lead, so the panel beside a scene is never bare", () => {

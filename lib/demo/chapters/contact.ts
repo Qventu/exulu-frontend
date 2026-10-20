@@ -1,15 +1,5 @@
 import type { DemoChapter } from "../tour";
-import { DEMO_BOOKING_LABEL } from "../routes";
-import { panelBookingUrl } from "../booking";
 import { sceneRoute } from "../scenes";
-
-/**
- * This chapter's number for utm_medium — 12, the last. Written here because
- * the chapter cannot see CHAPTERS (index.ts imports it); tour.test.ts asserts
- * the number against the real position.
- */
-const CHAPTER_NUMBER = 12;
-const BOOKING_HREF = panelBookingUrl(CHAPTER_NUMBER, "contact-close");
 
 export const contactChapter: DemoChapter = {
   id: "contact",
@@ -23,10 +13,13 @@ export const contactChapter: DemoChapter = {
       id: "contact-close",
       route: sceneRoute("contact-close"),
       anchor: null,
-      title: "Erst ausprobieren oder gleich richtig?",
-      lead: "Alles, was du gesehen hast, läuft auch mit euren Dokumenten — auf zwei Wegen, beide beginnen mit einem Gespräch.",
+      // Marketing's hero, box and button live in the scene (lib/demo/scenes.ts).
+      // No `cta` here: the scene's button is the one ask, and the panel's
+      // footer shows the persistent booking link like every other step rather
+      // than a second button with a label that would not fit 420px.
+      title: "Dein nächster Schritt",
+      lead: "Alles, was du gesehen hast, läuft auch mit euren Dokumenten.",
       content: [],
-      ...(BOOKING_HREF ? { cta: { label: DEMO_BOOKING_LABEL, href: BOOKING_HREF } } : {}),
     },
   ],
 };

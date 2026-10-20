@@ -459,7 +459,7 @@ const LEAK_PATTERNS = LEAKS.map((r) => ({ source: r.source, flags: r.flags }));
  * anchor never navigates.
  */
 const OPERABLE_PROBES = {
-  "contact.0": { selector: '.demo-scene [data-demo-id="booking-cta"]', expectCount: 2, describe: "the two path booking buttons" },
+  "contact.0": { selector: '.demo-scene [data-demo-id="booking-cta"]', expectCount: 1, describe: "the offer's booking button" },
   // kind "dialog": a REAL click (nothing to navigate away to), then the
   // dialog must open with the cited passage, keep clear of the panel, offer
   // no new-tab link out of the tour, show its close button, and close on

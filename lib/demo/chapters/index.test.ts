@@ -252,8 +252,9 @@ describe("the register is du (sub-project 6)", () => {
     return out;
   };
 
-  it("reads every block kind, the closing scene's paths included", () => {
-    expect(strings().some((s) => s.text.includes("Vollwertig · in drei Schritten"))).toBe(true);
+  it("reads every block kind, the closing scene's offer included", () => {
+    expect(strings().some((s) => s.text.includes("3-Monats-Testphase zum Vorzugspreis"))).toBe(true);
+    expect(strings().some((s) => s.text.includes("Planungsgespräch buchen & Rabatt sichern"))).toBe(true);
   });
 
   it("has no Sie-form in any title, goal, lead, block or button", () => {

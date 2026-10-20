@@ -87,13 +87,19 @@ function fieldsOfBlock(block: ContentBlock): Array<{ feld: string; text: string 
       return block.steps.map((text, i) => ({ feld: `Sequenzschritt ${i + 1}`, text }));
     case "logos":
       return block.items.flatMap((i) => [{ feld: "Logo", text: i.name }, { feld: "Logo-Text", text: i.caption }]);
-    case "paths":
-      return block.items.flatMap((p) => [
-        { feld: "Weg", text: p.tag },
-        ...(p.price ? [{ feld: "Weg-Preis", text: p.price }] : []),
-        { feld: "Weg-Text", text: p.text },
-        ...(p.cta ? [{ feld: "Weg-Schaltfläche", text: p.cta.label }] : []),
-      ]);
+    case "offer":
+      return [
+        { feld: "Kicker", text: block.kicker },
+        { feld: "Headline", text: block.title },
+        { feld: "Subline", text: block.subtitle },
+        { feld: "Angebot-Titel", text: block.box.title },
+        { feld: "Preis", text: block.box.price },
+        { feld: "Preis-Hinweis", text: block.box.priceNote },
+        ...block.box.items.map((text, i) => ({ feld: `Angebot-Punkt ${i + 1}`, text })),
+        ...(block.box.note ? [{ feld: "Angebot-Hinweis", text: block.box.note }] : []),
+        ...(block.cta ? [{ feld: "Schaltfläche", text: block.cta.label }] : []),
+        { feld: "Micro-Copy", text: block.microCopy },
+      ];
     case "cta":
       return [{ feld: "Schaltfläche", text: block.label }];
     default: {

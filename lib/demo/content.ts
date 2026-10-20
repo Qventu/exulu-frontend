@@ -25,17 +25,26 @@ export type ContentBlock =
   | { kind: "sequence"; steps: string[] }
   /**
    * A button inside a scene. Was the closing ask until the utm change gave
-   * each path its own button (the `paths` items' `cta`); no scene emits it
+   * each path its own button (now the `offer` block's `cta`); no scene emits it
    * now, but the kind stays for the next scene that needs one button.
    */
   | { kind: "cta"; label: string; href: string }
   // The closing scene's reference customers: a logo file when one exists,
   // the name as a wordmark otherwise (sub-project 6).
   | { kind: "logos"; items: { name: string; caption: string; src?: string }[] }
-  // The closing scene's offer: two ways in, side by side (sub-project 8).
-  // Each path may carry its own button: the same booking page, a different
-  // utm_campaign, so HubSpot learns which offer the visitor picked.
-  | { kind: "paths"; items: { tag: string; price?: string; text: string; cta?: { label: string; href: string } }[] };
+  // The closing scene's offer (marketing, 2026-10-20): a hero (kicker,
+  // headline, subline), one box (title, price, its note, points, a note at
+  // the foot), the one button, and the micro-copy under it. One block: the
+  // scene is one unit, and the panel beside it carries the step's title.
+  | {
+      kind: "offer";
+      kicker: string;
+      title: string;
+      subtitle: string;
+      box: { title: string; price: string; priceNote: string; items: string[]; note?: string };
+      cta?: { label: string; href: string };
+      microCopy: string;
+    };
 
 /** Every word in a block, for assertions and search. Never renders. */
 export function contentText(blocks: ContentBlock[]): string {
@@ -56,8 +65,21 @@ export function contentText(blocks: ContentBlock[]): string {
           return block.steps.join(" ");
         case "logos":
           return block.items.map((i) => `${i.name} — ${i.caption}`).join(" · ");
-        case "paths":
-          return block.items.map((p) => [p.tag, p.price, p.text, p.cta?.label].filter(Boolean).join(" · ")).join(" | ");
+        case "offer":
+          return [
+            block.kicker,
+            block.title,
+            block.subtitle,
+            block.box.title,
+            block.box.price,
+            block.box.priceNote,
+            ...block.box.items,
+            block.box.note,
+            block.cta?.label,
+            block.microCopy,
+          ]
+            .filter(Boolean)
+            .join(" ");
         case "cta":
           return block.label;
         default: {

@@ -8,8 +8,8 @@ import { bookingUrl, stepMedium } from "./booking";
  */
 const CLOSING_MEDIUM = stepMedium(12, "contact-close");
 
-/** A path's button, or nothing when the booking link is unset (see routes.ts). */
-function pathCta(label: string, campaign: string): { cta?: { label: string; href: string } } {
+/** The offer's button, or nothing when the booking link is unset (see routes.ts). */
+function offerCta(label: string, campaign: string): { cta?: { label: string; href: string } } {
   const href = bookingUrl(campaign, CLOSING_MEDIUM);
   return href ? { cta: { label, href } } : {};
 }
@@ -117,35 +117,36 @@ export const DEMO_SCENES: Record<string, { content: ContentBlock[] }> = {
   // Reached only from contact.1 — the one chapter allowed to name the
   // reference customers (lib/demo/chapters/index.test.ts skips it by id).
   "contact-close": {
-    // The chapter's only step. Since sub-project 8 it carries the offer: two
-    // paths side by side, each with its own button to the same booking page —
-    // the utm_campaign tells HubSpot which one was pressed (lib/demo/booking.ts).
-    // No customer names for now; the `logos` block kind stays for when the
-    // files and the decision exist.
+    // The chapter's only step: marketing's offer (2026-10-20), word for word
+    // — the three-month trial at half price, one box, one ask. The second
+    // path of sub-project 8 ("Vollwertig") is gone; the utm_campaign stays
+    // "probe-3-monate" (lib/demo/booking.ts). No customer names; the `logos`
+    // block kind stays for when the files and the decision exist.
+    //
+    // \u00A0 joins number and unit: at 100 % zoom the old price line broke
+    // between "−50" and "%" (marketing's screenshot).
+    //
+    // "Bis Ende des Jahres" expires on 2026-12-31 — review the note then.
     content: [
       {
-        kind: "paragraph",
-        text: "Du entscheidest, wie schnell und wie tief. Beide Wege führen zu eurem IMP.",
-      },
-      {
-        kind: "paths",
-        items: [
-          {
-            tag: "Ausprobieren · 3 Monate unverbindlich",
-            price: "600 € / Monat, −50 % · Setup in zwei Tagen",
-            text: "Beliebig viele Dokumente, Transkripte und Besprechungsaufnahmen, ohne Systemanbindung. Variable Kosten mit 20 % Aufschlag.",
-            ...pathCta("Testphase anfragen", "probe-3-monate"),
-          },
-          {
-            tag: "Vollwertig · in drei Schritten",
-            text: "Planungsgespräch → Anbindung an eure Systeme und Import eurer Daten → produktive Instanz innerhalb von zwei Arbeitstagen.",
-            ...pathCta("Planungsgespräch buchen", "vollwertig"),
-          },
-        ],
-      },
-      {
-        kind: "paragraph",
-        text: "Beide Wege beginnen mit einem Gespräch von 30 Minuten.",
+        kind: "offer",
+        kicker: "Dein nächster Schritt",
+        title: "Teste OPEN IMP mit deinen Dokumenten – 50 % Rabatt für Schnellstarter.",
+        subtitle: "Keine Theorie mehr: Erlebe den Mehrwert direkt an deinen eigenen Dateien. Wir übernehmen die Einrichtung für dich.",
+        box: {
+          title: "3-Monats-Testphase zum Vorzugspreis",
+          price: "600 € / Monat",
+          priceNote: "50 % Rabatt auf den regulären Preis",
+          items: [
+            "Produktive Instanz startklar in zwei Tagen",
+            "Unbegrenzte Dokumente, Transkripte und Aufnahmen",
+            "Keine Systemintegration für den Start nötig",
+            "Abrechnung variabler Kosten (Tokens) nach Nutzung, zzgl. 20 % Servicegebühr",
+          ],
+          note: "Limitiertes Onboarding: Bis Ende des Jahres vergeben wir noch maximal 15 Setup-Plätze.",
+        },
+        ...offerCta("Planungsgespräch buchen & Rabatt sichern", "probe-3-monate"),
+        microCopy: "30 Minuten unverbindlicher Austausch: Wir klären offene Fragen und besprechen eure Datenbasis für das Setup.",
       },
     ],
   },

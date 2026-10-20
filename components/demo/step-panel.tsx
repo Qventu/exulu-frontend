@@ -83,23 +83,31 @@ function Block({ block }: { block: ContentBlock }) {
           ))}
         </ul>
       );
-    case "paths":
+    case "offer":
       return (
-        <ul className="demo-block-paths">
-          {block.items.map((p) => (
-            <li key={p.tag} className="demo-path">
-              <span className="demo-path-tag">{p.tag}</span>
-              {p.price && <span className="demo-path-price">{p.price}</span>}
-              <span className="demo-path-text">{p.text}</span>
-              {/* booking-cta: the inert layer lets this one through (components/demo/inert-layer.ts). */}
-              {p.cta && (
-                <a className="demo-button demo-path-cta" href={p.cta.href} data-demo-id="booking-cta">
-                  {p.cta.label}
-                </a>
-              )}
-            </li>
-          ))}
-        </ul>
+        <section className="demo-offer">
+          <span className="demo-offer-kicker">{block.kicker}</span>
+          <h2 className="demo-offer-title">{block.title}</h2>
+          <p className="demo-offer-subtitle">{block.subtitle}</p>
+          <div className="demo-offer-box">
+            <span className="demo-offer-box-title">{block.box.title}</span>
+            <span className="demo-offer-price">{block.box.price}</span>
+            <span className="demo-offer-price-note">{block.box.priceNote}</span>
+            <ul className="demo-offer-items">
+              {block.box.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+            {block.box.note && <span className="demo-offer-note">{block.box.note}</span>}
+          </div>
+          {/* booking-cta: the inert layer lets this one through (components/demo/inert-layer.ts). */}
+          {block.cta && (
+            <a className="demo-button demo-offer-cta" href={block.cta.href} data-demo-id="booking-cta">
+              {block.cta.label}
+            </a>
+          )}
+          <p className="demo-offer-micro">{block.microCopy}</p>
+        </section>
       );
     case "cta":
       return (

@@ -453,15 +453,22 @@
 .demo-logo-caption { font-size: 0.95rem; color: hsl(var(--muted-foreground)); }
 .demo-scene .demo-logo-wordmark { font-size: 1.9rem; }
 
-/* The closing scene's two paths (sub-project 8): side by side, equal weight. */
-.demo-block-paths { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
-.demo-path { display: flex; flex-direction: column; gap: 0.4rem; padding: 1.25rem 1.5rem; border: 1px solid hsl(var(--border)); border-radius: 0.75rem; background: hsl(var(--card)); }
-.demo-path-tag { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: hsl(var(--primary)); }
-.demo-path-price { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
-.demo-path-text { color: hsl(var(--muted-foreground)); line-height: 1.5; }
-/* The button sits at the card's foot so the two line up whatever the text above does. */
-.demo-path-cta { margin-top: auto; align-self: flex-start; }
-.demo-scene .demo-path-price { font-size: 2rem; }
+/* The closing scene's offer (marketing, 2026-10-20): a centred hero, one
+ * box, one button, micro-copy. The price is nowrap on top of its NBSPs. */
+.demo-offer { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1.25rem; width: 100%; max-width: 40rem; margin: 0 auto; }
+.demo-offer-kicker { font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; color: hsl(var(--primary)); }
+.demo-offer-title { margin: 0; font-size: 2rem; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; }
+.demo-offer-subtitle { margin: 0; font-size: 1.1rem; line-height: 1.5; color: hsl(var(--muted-foreground)); text-wrap: balance; }
+.demo-offer-box { width: 100%; display: flex; flex-direction: column; gap: 0.6rem; padding: 1.5rem 1.75rem; text-align: left; border: 1px solid hsl(var(--primary) / 0.5); border-radius: 0.75rem; background: hsl(var(--card)); }
+.demo-offer-box-title { font-size: 1.05rem; font-weight: 600; }
+.demo-offer-price { font-size: 2.25rem; font-weight: 700; line-height: 1.1; white-space: nowrap; }
+.demo-offer-price-note { margin-top: -0.35rem; color: hsl(var(--muted-foreground)); }
+.demo-offer-items { list-style: none; margin: 0.35rem 0 0; padding: 0; display: grid; gap: 0.45rem; }
+.demo-offer-items li { position: relative; padding-left: 1.5rem; line-height: 1.5; }
+.demo-offer-items li::before { content: "—"; position: absolute; left: 0; font-weight: 600; color: hsl(var(--primary)); }
+.demo-offer-note { margin-top: 0.4rem; padding-top: 0.75rem; border-top: 1px solid hsl(var(--border)); font-size: 0.85rem; color: hsl(var(--muted-foreground)); }
+.demo-offer-cta { font-size: 1rem; padding: 0.75rem 1.5rem; }
+.demo-offer-micro { margin: -0.5rem 0 0; max-width: 32rem; font-size: 0.9rem; line-height: 1.5; color: hsl(var(--muted-foreground)); }
 
 .demo-block-sequence {
   margin: 0; padding: 0; list-style: none;

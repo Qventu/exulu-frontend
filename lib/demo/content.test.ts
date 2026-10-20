@@ -60,29 +60,27 @@ describe("logos block", () => {
   });
 });
 
-describe("paths block", () => {
-  it("flattens each path's tag, price and text", () => {
-    expect(
-      contentText([
-        { kind: "paths", items: [{ tag: "Weg 1", price: "600 €", text: "Testen." }, { tag: "Weg 2", text: "Richtig." }] },
-      ] as ContentBlock[]),
-    ).toBe("Weg 1 · 600 € · Testen. | Weg 2 · Richtig.");
-  });
-});
+describe("offer block", () => {
+  const offer: ContentBlock = {
+    kind: "offer",
+    kicker: "Dein nächster Schritt",
+    title: "Teste es",
+    subtitle: "Keine Theorie mehr.",
+    box: { title: "Testphase", price: "600 € / Monat", priceNote: "50 % Rabatt", items: ["Punkt eins", "Punkt zwei"], note: "Limitiert." },
+    cta: { label: "Rabatt sichern", href: "https://example.invalid/?utm_campaign=a" },
+    microCopy: "30 Minuten.",
+  };
 
-describe("paths block with buttons", () => {
-  it("reads each path's button label into contentText, so the register scan sees it", () => {
-    const text = contentText([
-      {
-        kind: "paths",
-        items: [
-          { tag: "Weg 1", text: "Testen.", cta: { label: "Testphase anfragen", href: "https://example.invalid/?utm_campaign=a" } },
-          { tag: "Weg 2", text: "Richtig.", cta: { label: "Planungsgespräch buchen", href: "https://example.invalid/?utm_campaign=b" } },
-        ],
-      },
-    ]);
-    expect(text).toContain("Testphase anfragen");
-    expect(text).toContain("Planungsgespräch buchen");
+  it("reads every word — kicker, hero, box, items, note, button label, micro-copy — but no href", () => {
+    const text = contentText([offer]);
+    for (const s of ["Dein nächster Schritt", "Teste es", "Keine Theorie mehr.", "Testphase", "600 € / Monat", "50 % Rabatt", "Punkt eins", "Punkt zwei", "Limitiert.", "Rabatt sichern", "30 Minuten."]) {
+      expect(text).toContain(s);
+    }
     expect(text).not.toContain("example.invalid");
+  });
+
+  it("is not empty without a button or a note", () => {
+    const { cta: _cta, ...rest } = offer as Extract<ContentBlock, { kind: "offer" }>;
+    expect(isEmptyContent([{ ...rest, box: { ...rest.box, note: undefined } }])).toBe(false);
   });
 });
