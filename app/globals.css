@@ -469,6 +469,19 @@
 .demo-offer-note { margin-top: 0.4rem; padding-top: 0.75rem; border-top: 1px solid hsl(var(--border)); font-size: 0.85rem; color: hsl(var(--muted-foreground)); }
 .demo-offer-cta { font-size: 1rem; padding: 0.75rem 1.5rem; }
 .demo-offer-micro { margin: -0.5rem 0 0; max-width: 32rem; font-size: 0.9rem; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+/* Short viewports (a 1366×768 laptop; 48px header, 32px scene padding): the
+ * hero and the box tighten so the button and its micro-copy stay above the
+ * fold instead of the whole page scrolling to them. Measured 2026-10-20:
+ * 1366×768 fits entirely, 1280×720 keeps the button in view. */
+@media (max-height: 820px) {
+  .demo-offer { gap: 0.9rem; }
+  .demo-offer-title { font-size: 1.6rem; }
+  .demo-offer-subtitle { font-size: 1rem; }
+  .demo-offer-box { padding: 1.1rem 1.4rem; gap: 0.45rem; }
+  .demo-offer-price { font-size: 1.9rem; }
+  .demo-offer-items { gap: 0.3rem; }
+  .demo-offer-micro { margin-top: -0.4rem; }
+}
 
 .demo-block-sequence {
   margin: 0; padding: 0; list-style: none;
