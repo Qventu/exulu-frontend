@@ -14,14 +14,31 @@ import type { ApolloClient } from "@apollo/client";
 import { MockedProvider } from "@apollo/client/testing";
 import { renderHook, act } from "@testing-library/react";
 import { print, type DocumentNode } from "graphql";
+import { NextIntlClientProvider } from "next-intl";
 import * as React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ConfigContext,
   type ConfigContextType,
 } from "@/components/shell/config-context";
 import type { BatchAccess } from "@/lib/import/types";
+import enMessages from "@/messages/en.json";
+
+const sonner = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
+vi.mock("sonner", () => ({ toast: sonner }));
+
+/**
+ * NextIntlClientProvider types `children` as required, which
+ * `React.createElement(Type, props, child)` cannot express — and passing it
+ * as a prop instead trips react/no-children-prop. One cast settles both and
+ * keeps this file the `.ts` the plan names (no JSX).
+ */
+const IntlProvider = NextIntlClientProvider as unknown as React.ComponentType<{
+  locale: string;
+  messages: typeof enMessages;
+  children?: React.ReactNode;
+}>;
 
 import { useServerImport } from "./use-server-import";
 
@@ -55,14 +72,19 @@ const UNLICENSED = {
  * The hook reads `ConfigContext` for the availability guard and calls
  * `useApolloClient()` for its default client — which throws outside an
  * Apollo provider, so the (unused) MockedProvider below stands in for the
- * real one. Every test injects its own fake client.
+ * real one. Every test injects its own fake client. The intl provider is
+ * there for the one piece of copy the hook owns: the cancel-failure toast.
  */
 function wrapperFor(config: ConfigContextType) {
   return function Wrapper({ children }: { children: React.ReactNode }) {
     return React.createElement(
-      ConfigContext.Provider,
-      { value: config },
-      React.createElement(MockedProvider, { mocks: [] }, children),
+      IntlProvider,
+      { locale: "en", messages: enMessages },
+      React.createElement(
+        ConfigContext.Provider,
+        { value: config },
+        React.createElement(MockedProvider, { mocks: [] }, children),
+      ),
     );
   };
 }
@@ -101,6 +123,10 @@ function setup(
 }
 
 const FILE = () => new File(["name\nA\n"], "big.csv", { type: "text/csv" });
+
+beforeEach(() => {
+  sonner.error.mockClear();
+});
 
 describe("useServerImport", () => {
   it("uploads the file, then starts the import with the exact StartImportInput", async () => {
@@ -233,6 +259,68 @@ describe("useServerImport", () => {
     const call = client.mutate.mock.calls[1][0];
     expect(print(call.mutation)).toContain(`${CONTEXT}_itemsCancelImport`);
     expect(call.variables).toEqual({ jobResultId: "job-1" });
+  });
+
+  it("keeps the job running and toasts the reason when a cancel is refused", async () => {
+    // A refused cancel is not a failed import: the job is still going, so
+    // the phase must stay "running" (phase "error" would replace the live
+    // progress with the start-failure panel).
+    const client = {
+      mutate: vi.fn(async ({ mutation }: MutateArgs) => {
+        if (print(mutation).includes("CancelImport")) {
+          throw { graphQLErrors: [{ message: "NOT_AUTHORIZED" }] };
+        }
+        return {
+          data: { [`${CONTEXT}_itemsStartImport`]: { jobResultId: "job-1" } },
+        };
+      }),
+    };
+    const { result } = setup(AVAILABLE, client);
+
+    await act(async () => {
+      await result.current.start({
+        file: FILE(),
+        mapping: MAPPING,
+        access: ACCESS,
+        totalRows: 1000,
+      });
+    });
+    await act(async () => {
+      await result.current.cancel();
+    });
+
+    expect(result.current.phase).toBe("running");
+    expect(result.current.jobResultId).toBe("job-1");
+    expect(result.current.cancelling).toBe(false);
+    expect(result.current.errorCode).toBeNull();
+    expect(sonner.error).toHaveBeenCalledTimes(1);
+    expect(sonner.error).toHaveBeenCalledWith(
+      "Only the person who started the import, or an admin, can cancel it.",
+    );
+  });
+
+  it("toasts the cancel-specific copy when the failure is not a known code", async () => {
+    const client = {
+      mutate: vi.fn(async ({ mutation }: MutateArgs) => {
+        if (print(mutation).includes("CancelImport")) {
+          throw new Error("socket hang up");
+        }
+        return {
+          data: { [`${CONTEXT}_itemsStartImport`]: { jobResultId: "job-1" } },
+        };
+      }),
+    };
+    const { result } = setup(AVAILABLE, client);
+
+    act(() => result.current.adopt("job-1"));
+    await act(async () => {
+      await result.current.cancel();
+    });
+
+    expect(result.current.phase).toBe("running");
+    expect(sonner.error).toHaveBeenCalledWith(
+      "The import couldn't be cancelled: socket hang up",
+    );
   });
 
   it("does not cancel the job when the hook unmounts", async () => {

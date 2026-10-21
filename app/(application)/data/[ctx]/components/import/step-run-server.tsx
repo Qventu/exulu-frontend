@@ -21,10 +21,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { UserContext } from "@/app/(application)/authenticated";
 import { filesApi } from "@/lib/api/files";
 import { GET_IMPORT_JOBS, importJobByIdFilters } from "@/lib/api/imports";
-import { toImportJobView } from "@/lib/import/job-view";
+import {
+  STATE_BADGE,
+  errorReportFileName,
+  toImportJobView,
+} from "@/lib/import/job-view";
 import type { ImportJobRow, ImportJobView } from "@/lib/import/job-view";
+import type { BatchAccess } from "@/lib/import/types";
 
 import type {
   ServerImportErrorCode,
@@ -33,23 +39,6 @@ import type {
 
 /** Live cadence while the job runs; terminal rows stop the polling. */
 const POLL_INTERVAL_MS = 2000;
-
-const STATE_BADGE: Record<
-  ImportJobView["state"],
-  "default" | "secondary" | "success" | "destructive" | "outline"
-> = {
-  waiting: "secondary",
-  active: "default",
-  completed: "success",
-  failed: "destructive",
-  cancelled: "outline",
-  other: "outline",
-};
-
-/** `big.csv` → `big-errors.csv`, the name the error report downloads as. */
-export function errorReportFileName(fileName: string): string {
-  return `${fileName.replace(/\.csv$/i, "")}-errors.csv`;
-}
 
 export interface StepRunServerProps {
   /** The job to follow; null while the upload/start is still in flight. */
@@ -61,8 +50,15 @@ export interface StepRunServerProps {
   errorCode: ServerImportErrorCode | null;
   cancelling: boolean;
   onCancel: () => void;
-  /** Retry the failed rows from the error report the job left behind. */
-  onRetry: (args: { s3Key: string; fileName: string }) => void;
+  /**
+   * Retry the failed rows from the error report the job left behind, with
+   * the access that run was started with (null when the row carries none).
+   */
+  onRetry: (args: {
+    s3Key: string;
+    fileName: string;
+    access: BatchAccess | null;
+  }) => void;
   /** Back to the review step — offered only when the start itself failed. */
   onBack: () => void;
   onClose: () => void;
@@ -97,6 +93,15 @@ export function StepRunServer({
 }: StepRunServerProps) {
   const t = useTranslations("knowledge");
   const [downloading, setDownloading] = React.useState(false);
+  // A retry re-uses this step: while its mutation is in flight the previous
+  // job's report/retry buttons are still on screen, and a second click would
+  // start a second import (IMPORT_ALREADY_RUNNING).
+  const starting = phase === "uploading" || phase === "starting";
+  // Read defensively: UserContext's default is null (outside the app shell),
+  // and then the button stays and the backend decides.
+  const viewer = React.useContext(UserContext) as {
+    user?: { id?: number; super_admin?: boolean };
+  } | null;
 
   // Polling stops as soon as THIS job's row is terminal — a finished import
   // leaves no request on the wire for as long as the dialog stays open. The
@@ -157,6 +162,14 @@ export function StepRunServer({
       setDownloading(false);
     }
   };
+
+  // Only the starter or a super admin may cancel (the backend throws
+  // NOT_AUTHORIZED otherwise), so nobody else is offered the button.
+  const mayCancel =
+    !viewer?.user ||
+    viewer.user.super_admin === true ||
+    view?.startedBy == null ||
+    view.startedBy === viewer.user.id;
 
   const startError = errorCode
     ? t(`workspace.import.server.errors.${errorCode}`)
@@ -271,7 +284,7 @@ export function StepRunServer({
           <Button
             type="button"
             variant="outline"
-            disabled={downloading}
+            disabled={downloading || starting}
             onClick={() => void downloadReport(view.errorReportKey!)}
           >
             <Download aria-hidden="true" className="mr-2 size-4" />
@@ -282,10 +295,12 @@ export function StepRunServer({
         {view?.canRetry && (
           <Button
             type="button"
+            disabled={starting}
             onClick={() =>
               onRetry({
                 s3Key: view.errorReportKey!,
                 fileName: errorReportFileName(view.fileName),
+                access: view.access,
               })
             }
           >
@@ -294,7 +309,7 @@ export function StepRunServer({
           </Button>
         )}
 
-        {view?.isRunning && (
+        {view?.isRunning && mayCancel && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button type="button" variant="outline" disabled={cancelling}>

@@ -98,12 +98,12 @@ export function StepAddData({
         delimiter: parsed.delimiter,
       });
     } catch (e) {
+      // A read failure is not a parse warning — `add.csvErrors` ("parsed
+      // with warnings") would describe a file that was never read.
       onCsvChange(null);
-      toast.error(
-        t("workspace.import.add.csvErrors", {
-          errors: e instanceof Error ? e.message : String(e),
-        }),
-      );
+      toast.error(t("workspace.import.server.readError"), {
+        description: e instanceof Error ? e.message : String(e),
+      });
     } finally {
       setReading(false);
     }

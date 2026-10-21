@@ -5,6 +5,7 @@
  * already-parsed objects or as JSON-encoded strings (schema says `JSON`,
  * drivers vary); every reader goes through `asRecord` below to normalise.
  */
+import type { BatchAccess } from "@/lib/import/types";
 
 /** Raw row shape selected by GET_IMPORT_JOBS — exactly the job_result fields in use. */
 export interface ImportJobRow {
@@ -55,6 +56,13 @@ export interface ImportJobCounters {
 export interface ImportJobView {
   id: string;
   fileName: string;
+  /**
+   * The batch access the run was started with (`trigger_metadata.access`),
+   * null when the row carries none or an unknown rights mode. A retry
+   * re-imports with THIS, not with whatever the wizard currently defaults
+   * to — reopening the dialog resets its own batch access.
+   */
+  access: BatchAccess | null;
   state: ImportJobState;
   progress: number | null;
   counters: ImportJobCounters;
@@ -136,6 +144,62 @@ function readError(raw: unknown): string | null {
   return raw;
 }
 
+const RIGHTS_MODES: readonly BatchAccess["rights_mode"][] = [
+  "private",
+  "users",
+  "roles",
+  "teams",
+  "public",
+];
+
+/** A stored grant list, defaulted to `[]` for the `null` the backend allows. */
+function asGrantList<K extends keyof BatchAccess>(
+  value: unknown,
+): BatchAccess[K] {
+  return (Array.isArray(value) ? value : []) as BatchAccess[K];
+}
+
+/** `trigger_metadata.access` — the access this run created its items with. */
+function readAccess(
+  triggerMetadata: Record<string, unknown>,
+): BatchAccess | null {
+  const access = asRecord(triggerMetadata.access);
+  const mode = access.rights_mode;
+  if (
+    typeof mode !== "string" ||
+    !(RIGHTS_MODES as readonly string[]).includes(mode)
+  ) {
+    return null;
+  }
+  return {
+    rights_mode: mode as BatchAccess["rights_mode"],
+    users: asGrantList<"users">(access.users),
+    roles: asGrantList<"roles">(access.roles),
+    teams: asGrantList<"teams">(access.teams),
+  };
+}
+
+/**
+ * Badge variant per job state — shared by the wizard's run step and the
+ * pipeline tab's imports card so one state never reads as two things.
+ */
+export const STATE_BADGE: Record<
+  ImportJobState,
+  "default" | "secondary" | "success" | "destructive" | "outline"
+> = {
+  waiting: "secondary",
+  active: "default",
+  completed: "success",
+  failed: "destructive",
+  cancelled: "outline",
+  other: "outline",
+};
+
+/** `big.csv` → `big-errors.csv`, the name a retry re-imports under. */
+export function errorReportFileName(fileName: string): string {
+  return `${fileName.replace(/\.csv$/i, "")}-errors.csv`;
+}
+
 function toJobState(state: string): ImportJobState {
   return (KNOWN_STATES as readonly string[]).includes(state)
     ? (state as ImportJobState)
@@ -178,6 +242,7 @@ export function toImportJobView(row: ImportJobRow): ImportJobView {
   return {
     id: row.id,
     fileName,
+    access: readAccess(triggerMetadata),
     state,
     progress,
     counters,

@@ -490,19 +490,27 @@ export function ImportWizardDialog({
    * headers plus `import_error`, which maps to nothing. With no mapping on
    * hand (the wizard was reopened onto someone else's job) it is omitted
    * entirely so the worker auto-maps those same headers.
+   *
+   * `access` comes from the job row (`trigger_metadata.access`): reopening
+   * the wizard resets `batchAccess` to the context default, and using that
+   * would silently re-import the failed rows under a different rights mode.
+   * The dialog's own setting is only the fallback for a row that carries no
+   * access at all.
    */
   const retryFailedRows = ({
     s3Key,
     fileName,
+    access,
   }: {
     s3Key: string;
     fileName: string;
+    access: BatchAccess | null;
   }) => {
     void serverImport.startFromKey({
       s3Key,
       fileName,
       mapping: mapping.length > 0 ? retryMapping(serverMapping()) : undefined,
-      access: batchAccess,
+      access: access ?? batchAccess,
       // The error report is written comma-separated whatever the original
       // file used (run-import.ts's csvLine).
       options: { delimiter: "," },

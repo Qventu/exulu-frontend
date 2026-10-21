@@ -3002,11 +3002,14 @@
             "generic": "Der Import konnte nicht gestartet werden: {message}"
           },
           "previewNote": "Vorschau der ersten {count} von {total} Zeilen — importiert wird die vollständige Datei im Hintergrund.",
+          "readError": "Die Datei konnte nicht gelesen werden.",
           "run": {
             "cancel": "Import abbrechen",
             "cancelConfirmBody": "Bereits importierte Zeilen bleiben erhalten; die restlichen Zeilen werden übersprungen.",
             "cancelConfirmTitle": "Import wirklich abbrechen?",
+            "cancelFailed": "Der Import konnte nicht abgebrochen werden: {message}",
             "cancelKeep": "Weiter importieren",
+            "cancelNotAllowed": "Nur wer den Import gestartet hat oder ein Admin kann ihn abbrechen.",
             "closeHint": "Der Import läuft im Hintergrund weiter.",
             "counters": "{created} erstellt, {updated} aktualisiert, {failed} fehlgeschlagen, {invalid} ungültig",
             "downloadFailed": "Fehlerreport konnte nicht geladen werden",

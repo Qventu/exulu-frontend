@@ -1,7 +1,9 @@
 "use client";
 
 import { useApolloClient, type ApolloClient } from "@apollo/client";
+import { useTranslations } from "next-intl";
 import * as React from "react";
+import { toast } from "sonner";
 
 import { ConfigContext } from "@/components/shell/config-context";
 import {
@@ -27,6 +29,13 @@ export type ServerImportPhase =
  * the one refusal this hook raises itself. `null` with a non-null `error`
  * means "unrecognised" — the raw message is shown instead.
  */
+/** The bare message of whatever was thrown, for copy that quotes it. */
+function messageOf(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return String(error);
+}
+
 export type ServerImportErrorCode =
   | ImportErrorCode
   | "SERVER_IMPORT_UNAVAILABLE";
@@ -103,6 +112,7 @@ export function useServerImport(
   contextId: string,
   deps?: UseServerImportDeps,
 ): UseServerImport {
+  const t = useTranslations("knowledge");
   const defaultClient = useApolloClient();
   const client = deps?.client ?? defaultClient;
   const upload = deps?.upload ?? uploadFileToS3;
@@ -124,14 +134,7 @@ export function useServerImport(
   const fail = React.useCallback((e: unknown) => {
     const code = importErrorCode(e);
     setErrorCode(code);
-    setError(
-      code ??
-        (e instanceof Error
-          ? e.message
-          : typeof e === "string"
-            ? e
-            : String(e)),
-    );
+    setError(code ?? messageOf(e));
     setPhase("error");
   }, []);
 
@@ -234,11 +237,26 @@ export function useServerImport(
       // The row's own state (cancelled) is what the run step renders — it
       // arrives with the next poll, so nothing is set optimistically here.
     } catch (e) {
-      fail(e);
+      // Deliberately NOT `fail(e)`: a refused cancel (NOT_AUTHORIZED is the
+      // common one — only the starter or a super admin may cancel) leaves
+      // the import running, so `phase` stays "running" and the run step
+      // keeps showing live progress. Flipping to "error" would replace it
+      // with the start-failure panel and a Back button into a review step
+      // that no longer holds anything.
+      const code = importErrorCode(e);
+      toast.error(
+        code === "NOT_AUTHORIZED"
+          ? t("workspace.import.server.run.cancelNotAllowed")
+          : code
+            ? t(`workspace.import.server.errors.${code}`)
+            : t("workspace.import.server.run.cancelFailed", {
+                message: messageOf(e),
+              }),
+      );
     } finally {
       setCancelling(false);
     }
-  }, [client, contextId, fail]);
+  }, [client, contextId, t]);
 
   const adopt = React.useCallback((id: string) => {
     setError(null);

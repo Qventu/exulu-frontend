@@ -3002,11 +3002,14 @@
             "generic": "The import couldn't be started: {message}"
           },
           "previewNote": "Preview of the first {count} of {total} rows — the whole file is imported in the background.",
+          "readError": "The file could not be read.",
           "run": {
             "cancel": "Cancel import",
             "cancelConfirmBody": "Rows already imported stay; the remaining rows are skipped.",
             "cancelConfirmTitle": "Cancel this import?",
+            "cancelFailed": "The import couldn't be cancelled: {message}",
             "cancelKeep": "Keep importing",
+            "cancelNotAllowed": "Only the person who started the import, or an admin, can cancel it.",
             "closeHint": "The import keeps running in the background.",
             "counters": "{created} created, {updated} updated, {failed} failed, {invalid} invalid",
             "downloadFailed": "Couldn't download the error report",

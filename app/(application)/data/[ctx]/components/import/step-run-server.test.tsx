@@ -21,6 +21,7 @@ import { NextIntlClientProvider } from "next-intl";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { UserContext } from "@/app/(application)/authenticated";
 import { GET_IMPORT_JOBS, importJobByIdFilters } from "@/lib/api/imports";
 import enMessages from "@/messages/en.json";
 
@@ -58,7 +59,16 @@ const baseRow: Row = {
   type: "import",
   context: "ctx_1",
   trigger: "ui",
-  trigger_metadata: JSON.stringify({ fileName: "big.csv", user: { id: 7 } }),
+  trigger_metadata: JSON.stringify({
+    fileName: "big.csv",
+    user: { id: 7 },
+    access: {
+      rights_mode: "roles",
+      users: [],
+      roles: [{ id: "role-1", rights: "read" }],
+      teams: [],
+    },
+  }),
   metadata: JSON.stringify({
     total: 1000,
     processed: 250,
@@ -84,6 +94,7 @@ const handlers = {
 function renderStep(
   props: Partial<StepRunServerProps>,
   mocks: MockedResponse[] = [],
+  viewer?: { id: number; super_admin?: boolean },
 ) {
   const all: StepRunServerProps = {
     jobResultId: JOB_ID,
@@ -96,12 +107,23 @@ function renderStep(
     ...handlers,
     ...props,
   };
-  return render(
+  const step = (
     <NextIntlClientProvider locale="en" messages={enMessages}>
       <MockedProvider mocks={mocks}>
         <StepRunServer {...all} />
       </MockedProvider>
-    </NextIntlClientProvider>,
+    </NextIntlClientProvider>
+  );
+  // No provider at all = the context's `null` default, which the step has to
+  // survive (it keeps Cancel and lets the backend decide).
+  return render(
+    viewer ? (
+      <UserContext.Provider value={{ user: viewer }}>
+        {step}
+      </UserContext.Provider>
+    ) : (
+      step
+    ),
   );
 }
 
@@ -189,6 +211,9 @@ describe("StepRunServer", () => {
       screen.getByText("The import keeps running in the background."),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Close" })).toBeTruthy();
+    // Back belongs to a failed START only — a running job has a review step
+    // behind it that no longer holds anything.
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
   });
 
   it("asks for confirmation before cancelling", async () => {
@@ -243,10 +268,73 @@ describe("StepRunServer", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Retry failed rows" }));
+    // The access the run was started with travels with the retry; the
+    // wizard's own batchAccess has been reset by then.
     expect(handlers.onRetry).toHaveBeenCalledWith({
       s3Key: REPORT_KEY,
       fileName: "big-errors.csv",
+      access: {
+        rights_mode: "roles",
+        users: [],
+        roles: [{ id: "role-1", rights: "read" }],
+        teams: [],
+      },
     });
+  });
+
+  it("disables the report and retry actions while a retry is starting", async () => {
+    const done: Row = {
+      ...baseRow,
+      state: "completed",
+      metadata: null,
+      result: JSON.stringify({
+        total: 10,
+        processed: 10,
+        created: 9,
+        updated: 0,
+        failed: 1,
+        invalid: 0,
+        errorReportKey: REPORT_KEY,
+      }),
+    };
+    renderStep({ phase: "starting" }, [jobMock(done)]);
+
+    await screen.findByText("Completed");
+    // A second click would start a second import (IMPORT_ALREADY_RUNNING).
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Retry failed rows",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Download error report",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+  });
+
+  it("hides Cancel from a viewer who neither started the job nor is an admin", async () => {
+    // The backend refuses it anyway (NOT_AUTHORIZED); not offering the
+    // button is the honest version. baseRow was started by user 7.
+    renderStep({}, [jobMock(baseRow)], { id: 2 });
+
+    await screen.findByText("Running");
+    expect(screen.queryByRole("button", { name: "Cancel import" })).toBeNull();
+  });
+
+  it("keeps Cancel for the starter and for a super admin", async () => {
+    const { unmount } = renderStep({}, [jobMock(baseRow)], { id: 7 });
+    await screen.findByText("Running");
+    expect(screen.getByRole("button", { name: "Cancel import" })).toBeTruthy();
+    unmount();
+
+    renderStep({}, [jobMock(baseRow)], { id: 2, super_admin: true });
+    await screen.findByText("Running");
+    expect(screen.getByRole("button", { name: "Cancel import" })).toBeTruthy();
   });
 
   it("shows a failed job's backend error verbatim", async () => {

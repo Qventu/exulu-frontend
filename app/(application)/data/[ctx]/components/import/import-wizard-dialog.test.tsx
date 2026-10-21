@@ -29,6 +29,7 @@ import {
 } from "@/components/shell/config-context";
 import {
   GET_IMPORT_JOBS,
+  START_IMPORT,
   importJobByIdFilters,
   importJobFilters,
 } from "@/lib/api/imports";
@@ -71,6 +72,14 @@ const NO_QUEUES = {
   workers: { enabled: true, redisHost: "redis" },
 } as unknown as ConfigContextType;
 
+/** The access the earlier run was started with — NOT the dialog's default. */
+const STORED_ACCESS = {
+  rights_mode: "roles",
+  users: [],
+  roles: [{ id: "role-1", rights: "read" }],
+  teams: [],
+};
+
 const RUNNING_ROW = {
   id: "job-7",
   label: "earlier.csv",
@@ -81,6 +90,7 @@ const RUNNING_ROW = {
   trigger_metadata: JSON.stringify({
     fileName: "earlier.csv",
     user: { id: 1 },
+    access: STORED_ACCESS,
   }),
   metadata: JSON.stringify({
     total: 9000,
@@ -94,6 +104,36 @@ const RUNNING_ROW = {
   error: null,
   createdAt: "2026-10-21T09:00:00.000Z",
   updatedAt: "2026-10-21T09:00:10.000Z",
+};
+
+const REPORT_KEY = "bucket/imports/ctx_1/job-7-errors.csv";
+
+/** The same row as the next poll sees it: finished, with an error report. */
+const FINISHED_ROW = {
+  ...RUNNING_ROW,
+  state: "completed",
+  metadata: null,
+  result: JSON.stringify({
+    total: 9000,
+    processed: 9000,
+    created: 8990,
+    updated: 0,
+    failed: 10,
+    invalid: 0,
+    errorReportKey: REPORT_KEY,
+  }),
+};
+
+const RETRY_ROW = {
+  ...RUNNING_ROW,
+  id: "job-8",
+  label: "earlier-errors.csv",
+  trigger_metadata: JSON.stringify({
+    fileName: "earlier-errors.csv",
+    user: { id: 1 },
+    access: STORED_ACCESS,
+  }),
+  metadata: JSON.stringify({ total: 10, processed: 0 }),
 };
 
 /** The wizard's "is an import already running here?" probe on open. */
@@ -189,6 +229,43 @@ describe("ImportWizardDialog — mode decision", () => {
           .disabled,
       ).toBe(true),
     );
+  });
+
+  it("retries with the access the import was started with, not the dialog default", async () => {
+    // Reopening the wizard resets batchAccess to the context default, so a
+    // retry that used it would silently re-import the failed rows under a
+    // different rights mode. The mutation mock below only matches the
+    // stored access — with anything else the step lands on its error panel.
+    const startMock: MockedResponse = {
+      request: {
+        query: START_IMPORT(CONTEXT_ID),
+        variables: {
+          input: {
+            s3Key: REPORT_KEY,
+            fileName: "earlier-errors.csv",
+            access: STORED_ACCESS,
+            options: { delimiter: "," },
+          },
+        },
+      },
+      result: {
+        data: { [`${CONTEXT_ID}_itemsStartImport`]: { jobResultId: "job-8" } },
+      },
+    };
+
+    renderWizard(QUEUES, [
+      openProbe([RUNNING_ROW]),
+      byIdPoll(FINISHED_ROW),
+      startMock,
+      byIdPoll(RETRY_ROW),
+    ]);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Retry failed rows" }),
+    );
+
+    expect(await screen.findByText("earlier-errors.csv")).toBeTruthy();
+    expect(screen.queryByText(/The import couldn't be started/)).toBeNull();
   });
 
   it("opens on the run step when an import is already running for the context", async () => {

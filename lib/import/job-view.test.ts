@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { toImportJobView } from "@/lib/import/job-view";
-import type { ImportJobRow } from "@/lib/import/job-view";
+import {
+  STATE_BADGE,
+  errorReportFileName,
+  toImportJobView,
+} from "@/lib/import/job-view";
+import type { ImportJobRow, ImportJobState } from "@/lib/import/job-view";
 
 const baseRow: ImportJobRow = {
   id: "job-1",
@@ -229,5 +233,76 @@ describe("toImportJobView", () => {
 
   it("error is null when the row carries none", () => {
     expect(toImportJobView({ ...baseRow }).error).toBeNull();
+  });
+
+  it("maps trigger_metadata.access to the access the run was started with", () => {
+    // A retry must re-import with THIS access, not whatever the wizard
+    // happens to default to after being reopened.
+    const view = toImportJobView({
+      ...baseRow,
+      state: "completed",
+      trigger_metadata: JSON.stringify({
+        fileName: "orders.csv",
+        access: {
+          rights_mode: "roles",
+          users: [],
+          roles: [{ id: "role-1", rights: "read" }],
+          teams: [],
+        },
+      }),
+    });
+    expect(view.access).toEqual({
+      rights_mode: "roles",
+      users: [],
+      roles: [{ id: "role-1", rights: "read" }],
+      teams: [],
+    });
+  });
+
+  it("defaults the access grant lists to arrays and tolerates an object column", () => {
+    const view = toImportJobView({
+      ...baseRow,
+      trigger_metadata: { access: { rights_mode: "public", users: null } },
+    });
+    expect(view.access).toEqual({
+      rights_mode: "public",
+      users: [],
+      roles: [],
+      teams: [],
+    });
+  });
+
+  it("has no access when the row carries none, or an unknown rights mode", () => {
+    expect(toImportJobView({ ...baseRow }).access).toBeNull();
+    expect(
+      toImportJobView({
+        ...baseRow,
+        trigger_metadata: { access: { rights_mode: "everyone" } },
+      }).access,
+    ).toBeNull();
+  });
+});
+
+describe("errorReportFileName", () => {
+  it("names the report after the imported file", () => {
+    expect(errorReportFileName("orders.csv")).toBe("orders-errors.csv");
+    expect(errorReportFileName("ORDERS.CSV")).toBe("ORDERS-errors.csv");
+    expect(errorReportFileName("orders")).toBe("orders-errors.csv");
+  });
+});
+
+describe("STATE_BADGE", () => {
+  it("has a badge variant for every job state", () => {
+    const states: ImportJobState[] = [
+      "waiting",
+      "active",
+      "completed",
+      "failed",
+      "cancelled",
+      "other",
+    ];
+    for (const state of states) {
+      expect(STATE_BADGE[state]).toBeTruthy();
+    }
   });
 });
