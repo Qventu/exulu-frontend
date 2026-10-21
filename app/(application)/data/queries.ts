@@ -210,6 +210,73 @@ export const UPDATE_CONTEXT_ICONS = gql`
 `;
 
 // ---------------------------------------------------------------------------
+// Context folders — admin-managed grouping of knowledge bases on the
+// Knowledge page (work item 2.11 follow-up). Backed by a new core table,
+// `context_folders` (id, name, description, icon, sort_order, context_ids),
+// exposed through the platform's generic CRUD the same way `context_icons`
+// above reuses `platform_configurations` — except this feature gets its own
+// table rather than sharing a key-value row, since a folder has real fields
+// (name, icon, sort order) an admin edits directly rather than a single JSON
+// blob. Generic naming mirrored from that precedent: `<plural>Pagination` /
+// `<plural>CreateOne` / `<plural>UpdateOneById` / `<plural>RemoveOneById`,
+// input type `<singular>Input`.
+//
+// Assumed shapes (no live schema to verify against while the backend is
+// built in parallel — adjust once it lands):
+// - CreateOne returns `{ item { ...fields } }`, matching CREATE_CONTEXT_ICONS
+//   above.
+// - UpdateOneById returns the row directly (no `item` wrapper), per this
+//   feature's task brief. Note this differs from UPDATE_CONTEXT_ICONS just
+//   above (and every other UpdateOneById document in this codebase —
+//   skills, prompts, roles, teams, users, context_presets — all wrap the
+//   row in `item`), so if the generated schema follows that house
+//   convention instead, this document's selection set needs an `item { }`
+//   wrapper added and callers in ./hooks.ts updated to read `.item`.
+// ---------------------------------------------------------------------------
+
+export const CONTEXT_FOLDER_FIELDS = `id name description icon sort_order context_ids`;
+
+export const GET_CONTEXT_FOLDERS = gql`
+  query GetContextFolders {
+    context_foldersPagination(
+      page: 1
+      limit: 200
+      sort: { field: "sort_order", direction: "ASC" }
+    ) {
+      items {
+        ${CONTEXT_FOLDER_FIELDS}
+      }
+    }
+  }
+`;
+
+export const CREATE_CONTEXT_FOLDER = gql`
+  mutation CreateContextFolder($input: context_folderInput!) {
+    context_foldersCreateOne(input: $input) {
+      item {
+        ${CONTEXT_FOLDER_FIELDS}
+      }
+    }
+  }
+`;
+
+export const UPDATE_CONTEXT_FOLDER = gql`
+  mutation UpdateContextFolder($id: ID!, $input: context_folderInput!) {
+    context_foldersUpdateOneById(id: $id, input: $input) {
+      ${CONTEXT_FOLDER_FIELDS}
+    }
+  }
+`;
+
+export const DELETE_CONTEXT_FOLDER = gql`
+  mutation DeleteContextFolder($id: ID!) {
+    context_foldersRemoveOneById(id: $id) {
+      id
+    }
+  }
+`;
+
+// ---------------------------------------------------------------------------
 // Per-user item pins — Favourites + Recently Viewed (cross-context).
 //
 // Both lists live as JSON arrays on the `users` row (favourite_items already
