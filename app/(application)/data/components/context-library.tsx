@@ -35,7 +35,7 @@
 
 import { isDemoMode } from "@/lib/demo/flag";
 import { KNOWLEDGE_LIBRARY } from "@/lib/demo/overlays";
-import { CircleAlert, Search } from "lucide-react";
+import { CircleAlert, FolderCog, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
@@ -44,14 +44,32 @@ import { PageHeader } from "@/components/primitives/page-header";
 import { PageShell } from "@/components/primitives/page-shell";
 import { Toolbar } from "@/components/primitives/toolbar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  groupContexts,
+  readCollapsed,
+  writeCollapsed,
+} from "@/lib/knowledge/folders";
 
 import { UserContext } from "@/app/(application)/authenticated";
 
-import { useContextIcons, useContextLibrary } from "../hooks";
+import {
+  useContextFolders,
+  useContextIcons,
+  useContextLibrary,
+} from "../hooks";
 import { ContextItemFavourites } from "./context-item-favourites";
+import { FolderSection } from "./folder-section";
 import { LibraryEmpty } from "./library-empty";
 import { LibraryRow } from "./library-row";
+import { ManageFoldersDialog } from "./manage-folders-dialog";
+
+/**
+ * Collapse key for the Ungrouped section — it has no folder id, and a real
+ * folder id (a uuid) can never collide with it.
+ */
+const UNGROUPED_COLLAPSE_KEY = "ungrouped";
 
 export function ContextLibrary() {
   const t = useTranslations("knowledge");
@@ -71,7 +89,9 @@ export function ContextLibrary() {
   // icons; only super admins get the picker affordance.
   const { icons, setIcon } = useContextIcons();
   const userCtx = React.useContext(UserContext);
-  const canEditIcons = userCtx?.user?.super_admin === true;
+  // Icons and folders are both platform-wide, admin-managed organisation:
+  // everyone sees them, super admins change them.
+  const isSuperAdmin = userCtx?.user?.super_admin === true;
 
   const handleSetIcon = React.useCallback(
     async (contextId: string, name: string | null) => {
@@ -83,6 +103,66 @@ export function ContextLibrary() {
     },
     [setIcon, t],
   );
+
+  // Admin-managed folders (see lib/knowledge/folders.ts for the grouping).
+  const { folders, createFolder, updateFolder, deleteFolder, moveContext } =
+    useContextFolders();
+  const [manageOpen, setManageOpen] = React.useState(false);
+
+  const [collapsed, setCollapsed] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+
+  // Read the stored collapse state after mount (SSR-safe: the server renders
+  // every section expanded and the preference applies on hydration — the
+  // pattern the chat history rail uses).
+  React.useEffect(() => {
+    const stored = readCollapsed(window.localStorage);
+    if (stored.size > 0) setCollapsed(stored);
+  }, []);
+
+  const toggleSection = React.useCallback((folderId: string | null) => {
+    setCollapsed((previous) => {
+      const next = new Set(previous);
+      const key = folderId ?? UNGROUPED_COLLAPSE_KEY;
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      // Persisting here (rather than in an effect) keeps the write to the one
+      // place the state actually changes.
+      writeCollapsed(window.localStorage, next);
+      return next;
+    });
+  }, []);
+
+  const handleMoveToFolder = React.useCallback(
+    async (contextId: string, folderId: string | null) => {
+      try {
+        await moveContext(contextId, folderId);
+      } catch {
+        toast.error(t("library.folders.moveError"));
+      }
+    },
+    [moveContext, t],
+  );
+
+  // Folders are a browsing aid: the list groups only when it IS the browsing
+  // list — a search term keeps it flat, and so does an installation without
+  // folders (a single "Ungrouped" header over every context is pure noise).
+  const grouped = search === "" && folders.length > 0;
+
+  // Each section carries where its first row sits in the whole list, so the
+  // demo's row entrance keeps staggering across section boundaries.
+  const sections = React.useMemo(() => {
+    if (!grouped) return [];
+    let startIndex = 0;
+    return groupContexts(rows, folders, t("library.folders.ungrouped")).map(
+      (section) => {
+        const entry = { section, startIndex };
+        startIndex += section.rows.length;
+        return entry;
+      },
+    );
+  }, [grouped, rows, folders, t]);
 
   return (
     <PageShell variant="content">
@@ -99,14 +179,28 @@ export function ContextLibrary() {
       />
 
       <div className="flex flex-col gap-4">
-        <Toolbar
-          search={{
-            value: search,
-            onChange: setSearch,
-            placeholder: t("library.searchPlaceholder"),
-            debounceMs: 0, // local filter — instant
-          }}
-        />
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <Toolbar
+            className="md:flex-1"
+            search={{
+              value: search,
+              onChange: setSearch,
+              placeholder: t("library.searchPlaceholder"),
+              debounceMs: 0, // local filter — instant
+            }}
+          />
+          {isSuperAdmin && (
+            <Button
+              type="button"
+              variant="outline"
+              className="self-start md:self-auto"
+              onClick={() => setManageOpen(true)}
+            >
+              <FolderCog aria-hidden="true" className="mr-2 size-4" />
+              {t("library.folders.manage")}
+            </Button>
+          )}
+        </div>
 
         {/* Favourites + Recently Viewed — hidden while filtering contexts. */}
         {search === "" && <ContextItemFavourites contextNames={contextNames} />}
@@ -161,21 +255,56 @@ export function ContextLibrary() {
 
         {rows.length > 0 && (
           <div className="rounded-md border" data-demo-id="knowledge-contexts">
-            <ul className="divide-y divide-border">
-              {rows.map((row, index) => (
-                <LibraryRow
-                  key={row.id}
-                index={index}
-                  row={row}
-                  icon={icons[row.id]}
-                  canEdit={canEditIcons}
-                  onSetIcon={handleSetIcon}
-                />
-              ))}
-            </ul>
+            {grouped ? (
+              <div className="divide-y divide-border">
+                {sections.map(({ section, startIndex }) => {
+                  const key = section.id ?? UNGROUPED_COLLAPSE_KEY;
+                  return (
+                    <FolderSection
+                      key={key}
+                      section={section}
+                      collapsed={collapsed.has(key)}
+                      onToggle={toggleSection}
+                      startIndex={startIndex}
+                      icons={icons}
+                      canEdit={isSuperAdmin}
+                      onSetIcon={handleSetIcon}
+                      folders={isSuperAdmin ? folders : undefined}
+                      onMoveToFolder={
+                        isSuperAdmin ? handleMoveToFolder : undefined
+                      }
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <ul className="divide-y divide-border">
+                {rows.map((row, index) => (
+                  <LibraryRow
+                    key={row.id}
+                    index={index}
+                    row={row}
+                    icon={icons[row.id]}
+                    canEdit={isSuperAdmin}
+                    onSetIcon={handleSetIcon}
+                  />
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </div>
+
+      {isSuperAdmin && (
+        <ManageFoldersDialog
+          open={manageOpen}
+          onOpenChange={setManageOpen}
+          folders={folders}
+          onCreate={createFolder}
+          onUpdate={updateFolder}
+          onDelete={deleteFolder}
+        />
+      )}
     </PageShell>
   );
 }

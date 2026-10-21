@@ -29,6 +29,7 @@
  */
 
 import { motion, useReducedMotion } from "framer-motion";
+import { FolderInput } from "lucide-react";
 
 import { isDemoMode } from "@/lib/demo/flag";
 import { useTranslations } from "next-intl";
@@ -40,6 +41,16 @@ import { ContextIconPicker } from "@/components/primitives/context-icon/context-
 import { RelativeTime } from "@/components/primitives/relative-time";
 import { StatusDot } from "@/components/primitives/status-dot";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { Folder } from "@/lib/knowledge/folders";
 
 import {
   KNOWLEDGE_CONTEXT_AGGREGATES_SUPPORTED,
@@ -57,9 +68,28 @@ export interface LibraryRowProps {
   onSetIcon?: (contextId: string, name: string | null) => void;
   /** Position in the list, for the demo's staggered entrance. */
   index: number;
+  /**
+   * Move targets for the "Move to folder…" menu. Omitted (or without
+   * `onMoveToFolder`, or for a non-admin) → no menu, exactly as before
+   * folders existed.
+   */
+  folders?: Folder[];
+  /** Move this context into a folder, or out of all of them with `null`. */
+  onMoveToFolder?: (contextId: string, folderId: string | null) => void;
 }
 
-export function LibraryRow({ row, icon, canEdit, onSetIcon, index }: LibraryRowProps) {
+/** Radix needs a non-empty value, and `null` is Ungrouped's real id. */
+const UNGROUPED_VALUE = "__ungrouped__";
+
+export function LibraryRow({
+  row,
+  icon,
+  canEdit,
+  onSetIcon,
+  index,
+  folders,
+  onMoveToFolder,
+}: LibraryRowProps) {
   const t = useTranslations("knowledge");
   const reduceMotion = useReducedMotion();
   const demoEntrance = isDemoMode() && !reduceMotion;
@@ -116,6 +146,47 @@ export function LibraryRow({ row, icon, canEdit, onSetIcon, index }: LibraryRowP
     ) : (
       <div className={tileClassName}>{tileInner}</div>
     );
+
+  // "Move to folder…" — admins only, and only where the page knows the
+  // folders. The current folder is read off the membership arrays (the first
+  // one wins, as in `groupContexts`), so the menu also says where the context
+  // sits today.
+  const currentFolderId =
+    folders?.find((folder) => folder.context_ids.includes(row.id))?.id ?? null;
+
+  const moveMenu =
+    canEdit && folders && onMoveToFolder ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={t("library.folders.moveRow", { name: row.name })}
+            className="pointer-events-auto flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-colors hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100 data-[state=open]:opacity-100"
+          >
+            <FolderInput className="size-4" aria-hidden="true" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>{t("library.folders.moveTo")}</DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={currentFolderId ?? UNGROUPED_VALUE}
+            onValueChange={(value) =>
+              onMoveToFolder(row.id, value === UNGROUPED_VALUE ? null : value)
+            }
+          >
+            {folders.map((folder) => (
+              <DropdownMenuRadioItem key={folder.id} value={folder.id}>
+                {folder.name}
+              </DropdownMenuRadioItem>
+            ))}
+            {folders.length > 0 && <DropdownMenuSeparator />}
+            <DropdownMenuRadioItem value={UNGROUPED_VALUE}>
+              {t("library.folders.ungrouped")}
+            </DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : null;
 
   return (
     <motion.li
@@ -182,6 +253,7 @@ export function LibraryRow({ row, icon, canEdit, onSetIcon, index }: LibraryRowP
             )}
           </div>
         )}
+        {moveMenu}
       </div>
     </motion.li>
   );
