@@ -221,17 +221,12 @@ export const UPDATE_CONTEXT_ICONS = gql`
 // `<plural>CreateOne` / `<plural>UpdateOneById` / `<plural>RemoveOneById`,
 // input type `<singular>Input`.
 //
-// Assumed shapes (no live schema to verify against while the backend is
-// built in parallel — adjust once it lands):
-// - CreateOne returns `{ item { ...fields } }`, matching CREATE_CONTEXT_ICONS
-//   above.
-// - UpdateOneById returns the row directly (no `item` wrapper), per this
-//   feature's task brief. Note this differs from UPDATE_CONTEXT_ICONS just
-//   above (and every other UpdateOneById document in this codebase —
-//   skills, prompts, roles, teams, users, context_presets — all wrap the
-//   row in `item`), so if the generated schema follows that house
-//   convention instead, this document's selection set needs an `item { }`
-//   wrapper added and callers in ./hooks.ts updated to read `.item`.
+// Verified against the backend SDL (src/graphql/schemas/index.ts:777,:989):
+// `<plural>CreateOne` and `<plural>UpdateOneById` both return
+// `<singular>MutationPayload { item { … } job }` — so both wrap the row in
+// `item`, matching CREATE_CONTEXT_ICONS / UPDATE_CONTEXT_ICONS above.
+// `<plural>RemoveOneById` returns the row directly, hence `{ id }` below
+// with no wrapper.
 // ---------------------------------------------------------------------------
 
 export const CONTEXT_FOLDER_FIELDS = `id name description icon sort_order context_ids`;
@@ -263,7 +258,9 @@ export const CREATE_CONTEXT_FOLDER = gql`
 export const UPDATE_CONTEXT_FOLDER = gql`
   mutation UpdateContextFolder($id: ID!, $input: context_folderInput!) {
     context_foldersUpdateOneById(id: $id, input: $input) {
-      ${CONTEXT_FOLDER_FIELDS}
+      item {
+        ${CONTEXT_FOLDER_FIELDS}
+      }
     }
   }
 `;
