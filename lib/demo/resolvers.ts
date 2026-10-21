@@ -650,6 +650,14 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
     job_resultsPagination: { items: [] },
   }),
 
+  // The Pipeline tab's imports card (ImportsCard) issues this on every visit,
+  // licensed or not. Empty is the truth — nothing imports in a scripted world
+  // — and answering it keeps the unmapped-operation warning meaningful
+  // instead of firing on a tour-reachable screen every time.
+  ImportJobs: () => ({
+    job_resultsPagination: { items: [] },
+  }),
+
   // Derived from the fixture rather than hardcoded, so the health panel cannot
   // drift from the documents the list is showing. stuck/stale are zero because
   // nothing is stuck or stale in a scripted world — inventing a non-zero count

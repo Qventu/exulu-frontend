@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  IMPORT_CLIENT_MAX_BYTES,
   IMPORT_CLIENT_MAX_ROWS,
   IMPORT_SAMPLE_ROWS,
   decideImportMode,
+  formatImportBytes,
   serverImportAvailable,
 } from "@/lib/import/mode";
 
@@ -68,5 +70,22 @@ describe("IMPORT_SAMPLE_ROWS", () => {
     // whole and the client flow still sees every row.
     expect(IMPORT_SAMPLE_ROWS).toBe(500);
     expect(IMPORT_SAMPLE_ROWS).toBeGreaterThan(IMPORT_CLIENT_MAX_ROWS);
+  });
+});
+
+describe("formatImportBytes", () => {
+  it("reads in bytes, KB and MB with one decimal", () => {
+    expect(formatImportBytes(0)).toBe("0 B");
+    expect(formatImportBytes(999)).toBe("999 B");
+    expect(formatImportBytes(1024)).toBe("1.0 KB");
+    expect(formatImportBytes(1536)).toBe("1.5 KB");
+    expect(formatImportBytes(1024 * 1024)).toBe("1.0 MB");
+    expect(formatImportBytes(3.5 * 1024 * 1024)).toBe("3.5 MB");
+  });
+
+  it("renders the byte threshold itself as 2.0 MB", () => {
+    // The refusal banner quotes this next to the row count, so both facts
+    // are on screen whichever of the two limits the file tripped.
+    expect(formatImportBytes(IMPORT_CLIENT_MAX_BYTES)).toBe("2.0 MB");
   });
 });

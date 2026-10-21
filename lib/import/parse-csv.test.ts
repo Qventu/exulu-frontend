@@ -78,6 +78,24 @@ describe("countCsvRows", () => {
     const content = "a,b\n1,2\n3,4";
     expect(await countCsvRows(new Blob([content]), 4)).toBe(2);
   });
+
+  it("is unaffected by a chunk boundary splitting a multi-byte character", async () => {
+    // "ä" is two UTF-8 bytes and starts at byte 6; chunk 1 therefore ends
+    // mid-character.
+    expect(await countCsvRows(new Blob(["a,b\n1,ä\n2,x\n"]), 7)).toBe(2);
+  });
+
+  it("does not count a whitespace-only line, the way papaparse does not", async () => {
+    // skipEmptyLines: "greedy" drops it, so counting it made totalRows — the
+    // chip, the banner and the worker's progress denominator — larger than
+    // the number of rows that can ever be imported.
+    expect(await countCsvRows(new Blob(["a,b\n1,2\n   \n3,4\n"]))).toBe(2);
+    expect(await countCsvRows(new Blob(["a,b\n1,2\n\t \r\n3,4\n"]))).toBe(2);
+  });
+
+  it("still counts a line whose leading whitespace is followed by content", async () => {
+    expect(await countCsvRows(new Blob(["a,b\n  1,2\n"]))).toBe(1);
+  });
 });
 
 describe("peekCsvFile", () => {
@@ -120,6 +138,26 @@ describe("peekCsvFile", () => {
       ["1", "x"],
       ["2", "y"],
     ]);
+  });
+
+  it("keeps a multi-byte character whole when a chunk boundary splits it", async () => {
+    // Decoding each slice on its own turned the half in each chunk into
+    // U+FFFD, and the sample is what the user maps and reviews — so the
+    // mojibake would have been imported.
+    const twoByte = await peekCsvFile(new Blob(["a,b\n1,ä\n"]), 1, 7);
+    expect(twoByte.rows).toEqual([["1", "ä"]]);
+
+    // "€" is three bytes (6, 7, 8), so both of its split points are covered.
+    for (const chunkBytes of [7, 8]) {
+      const threeByte = await peekCsvFile(
+        new Blob(["a,b\n1,€\n"]),
+        1,
+        chunkBytes,
+      );
+      expect(threeByte.rows, `chunk boundary at ${chunkBytes}`).toEqual([
+        ["1", "€"],
+      ]);
+    }
   });
 
   it("reports the sampled file's delimiter", async () => {

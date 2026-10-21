@@ -46,8 +46,13 @@ export interface StepRunServerProps {
     fileName: string;
     access: BatchAccess | null;
   }) => void;
-  /** Back to the review step — offered only when the start itself failed. */
-  onBack: () => void;
+  /**
+   * Back to the review step — offered only when the start itself failed AND
+   * the caller has a step to go back to. Omitted on the paths that reach this
+   * step without the wizard's own ones (an adopted job, the imports card's
+   * Retry), where Back would land on an empty review grid.
+   */
+  onBack?: () => void;
   onClose: () => void;
   /** Fired once, when the job reaches a terminal state. */
   onFinished?: (view: ImportJobView) => void;
@@ -197,10 +202,16 @@ export function StepRunServer({
         </div>
       )}
 
-      {jobResultId && !view && queryError && (
+      {/* No row to show and nothing in flight: either the read failed, or it
+          succeeded and this id has no row (it is gone, or a poll landed
+          before the worker wrote it). Both are "we can't show you the
+          status", and saying so beats an empty panel. */}
+      {jobResultId && !view && !loading && (
         <p className="text-sm text-destructive">
           {t("workspace.import.server.run.statusUnavailable", {
-            message: queryError.message,
+            message:
+              queryError?.message ??
+              t("workspace.import.server.errors.IMPORT_NOT_FOUND"),
           })}
         </p>
       )}
@@ -231,7 +242,7 @@ export function StepRunServer({
       )}
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        {phase === "error" && (
+        {phase === "error" && onBack && (
           <Button type="button" variant="outline" onClick={onBack}>
             {t("workspace.import.back")}
           </Button>

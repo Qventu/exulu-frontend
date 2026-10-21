@@ -116,21 +116,16 @@ export const importJobByIdFilters = (id: string) => [{ id: { eq: id } }];
 
 /**
  * Backend error codes a failed import mutation can throw (`new Error(code)`
- * — the thrown message IS the code, no wrapping). The UI maps these to copy
- * in a later task; this module only recognises them.
+ * — the thrown message IS the code, no wrapping). The UI maps each to copy at
+ * `knowledge.workspace.import.server.errors.<code>`.
+ *
+ * The list is the declaration and `ImportErrorCode` is derived from it, not
+ * the other way round: the run step builds that message key from the code, so
+ * a new code needs copy in both locales, and import-keys.test.ts walks THIS
+ * array to prove it has some. A second hand-kept union could grow a member
+ * the test never sees.
  */
-export type ImportErrorCode =
-  | "CONTEXT_NOT_FOUND"
-  | "IMPORT_ALREADY_RUNNING"
-  | "IMPORT_S3_KEY_OUTSIDE_BUCKET"
-  | "IMPORT_S3_KEY_NOT_ALLOWED"
-  | "NOT_AUTHORIZED"
-  | "IMPORT_NOT_FOUND"
-  | "INVALID_RIGHTS_MODE"
-  | "INVALID_DELIMITER"
-  | "QUEUES_NOT_LICENSED";
-
-const IMPORT_ERROR_CODES: readonly ImportErrorCode[] = [
+export const IMPORT_ERROR_CODES = [
   "CONTEXT_NOT_FOUND",
   "IMPORT_ALREADY_RUNNING",
   "IMPORT_S3_KEY_OUTSIDE_BUCKET",
@@ -140,7 +135,9 @@ const IMPORT_ERROR_CODES: readonly ImportErrorCode[] = [
   "INVALID_RIGHTS_MODE",
   "INVALID_DELIMITER",
   "QUEUES_NOT_LICENSED",
-];
+] as const;
+
+export type ImportErrorCode = (typeof IMPORT_ERROR_CODES)[number];
 
 function isImportErrorCode(value: string): value is ImportErrorCode {
   return (IMPORT_ERROR_CODES as readonly string[]).includes(value);

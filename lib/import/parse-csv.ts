@@ -38,9 +38,12 @@ export function parseCsvText(text: string): ParsedCsv {
  * back to the same state, correctly treating it as an escaped literal
  * quote). A newline is only a row boundary outside quotes; a bare `\r` is
  * swallowed rather than treated as its own boundary, so both `\r\n` and
- * `\n` are accepted. Blank lines (no content before the newline) are not
- * counted. State carries across chunks so a row split at a chunk boundary
- * is still scanned correctly.
+ * `\n` are accepted. Blank lines are not counted — and neither are
+ * whitespace-only ones, because `skipEmptyLines: "greedy"` drops those too
+ * and a count larger than what papaparse yields leaves the chip, the banner
+ * and the worker's progress denominator promising rows that never arrive.
+ * State carries across chunks so a row split at a chunk boundary is still
+ * scanned correctly.
  */
 interface LineScanState {
   inQuotes: boolean;
@@ -73,6 +76,9 @@ function scanLines(text: string, state: LineScanState): LineScanResult {
       if (lineHasContent) completedLines += 1;
       lineHasContent = false;
       lastBoundaryOffset = i + 1;
+    } else if (!inQuotes && (c === " " || c === "\t")) {
+      // Content only once something else shows up on the line — a line of
+      // nothing but spaces/tabs is an empty line to papaparse.
     } else {
       lineHasContent = true;
     }
@@ -85,10 +91,36 @@ function scanLines(text: string, state: LineScanState): LineScanResult {
 }
 
 /**
+ * Reads `file` in `chunkBytes`-sized slices and decodes them through ONE
+ * `TextDecoder` in streaming mode, yielding each slice's text.
+ *
+ * Decoding every slice on its own (`blob.text()`) is what a 1 MB boundary
+ * does to a multi-byte UTF-8 character that straddles it: both halves become
+ * U+FFFD. A streaming decoder holds the incomplete sequence back until the
+ * next slice completes it; the final `decode()` flushes whatever is left (a
+ * genuinely truncated sequence at EOF still becomes U+FFFD, which is the
+ * honest answer).
+ */
+async function* decodeChunks(
+  file: Blob,
+  chunkBytes: number,
+): AsyncGenerator<string> {
+  const decoder = new TextDecoder();
+  for (let offset = 0; offset < file.size; offset += chunkBytes) {
+    const bytes = await file.slice(offset, offset + chunkBytes).arrayBuffer();
+    const text = decoder.decode(bytes, { stream: true });
+    if (text !== "") yield text;
+  }
+  const tail = decoder.decode();
+  if (tail !== "") yield tail;
+}
+
+/**
  * Counts data rows (header excluded) in a CSV file without loading it into
- * memory at once: reads `chunkBytes`-sized chunks via `file.slice()`,
- * carrying quote state across chunk boundaries so a quoted field (and any
- * newline inside it) spanning two chunks is still scanned correctly.
+ * memory at once: reads `chunkBytes`-sized chunks via `decodeChunks` above,
+ * carrying quote state (and the decoder's) across chunk boundaries so a
+ * quoted field (and any newline inside it) spanning two chunks is still
+ * scanned correctly.
  * `chunkBytes` defaults to 1 MB; callers only override it in tests, to
  * force a boundary at an exact byte offset.
  */
@@ -98,8 +130,7 @@ export async function countCsvRows(
 ): Promise<number> {
   let state: LineScanState = { inQuotes: false, lineHasContent: false };
   let totalLines = 0;
-  for (let offset = 0; offset < file.size; offset += chunkBytes) {
-    const chunkText = await file.slice(offset, offset + chunkBytes).text();
+  for await (const chunkText of decodeChunks(file, chunkBytes)) {
     const scanned = scanLines(chunkText, state);
     totalLines += scanned.completedLines;
     state = scanned.state;
@@ -111,8 +142,8 @@ export async function countCsvRows(
 
 /**
  * Reads just enough of a CSV file to sample `sampleRows` data rows: pulls
- * `chunkBytes`-sized chunks via `file.slice()` (default 1 MB; callers only
- * override it in tests) until that many complete (newline-terminated) rows
+ * `chunkBytes`-sized chunks via `decodeChunks` above (default 1 MB; callers
+ * only override it in tests) until that many complete (newline-terminated) rows
  * past the header are available, or EOF is reached. Because `scanLines`
  * only counts a row once its terminator has been seen, a row split across
  * a chunk boundary is never counted early — another chunk is read instead
@@ -137,9 +168,8 @@ export async function peekCsvFile(
   let text = "";
   let lastBoundary = 0;
   let brokeEarly = false;
-  for (let offset = 0; offset < file.size; offset += chunkBytes) {
+  for await (const chunkText of decodeChunks(file, chunkBytes)) {
     const chunkStart = text.length;
-    const chunkText = await file.slice(offset, offset + chunkBytes).text();
     text += chunkText;
     const scanned = scanLines(chunkText, state);
     totalLines += scanned.completedLines;

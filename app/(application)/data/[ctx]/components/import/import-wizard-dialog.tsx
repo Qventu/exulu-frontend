@@ -111,6 +111,15 @@ export function ImportWizardDialog({
   const [verifying, setVerifying] = React.useState(false);
   const [files, setFiles] = React.useState<File[]>([]);
   const [csv, setCsv] = React.useState<ImportCsvSource | null>(null);
+  // Read by the running-import probe below when its query resolves, which can
+  // be long after it was issued — state captured in that closure would be
+  // whatever the wizard looked like on open.
+  const stepRef = React.useRef(step);
+  stepRef.current = step;
+  const csvRef = React.useRef(csv);
+  csvRef.current = csv;
+  const openRef = React.useRef(open);
+  openRef.current = open;
   const [mapping, setMapping] = React.useState<ColumnMapping[]>([]);
   const [rows, setRows] = React.useState<ImportRow[]>([]);
   const rowsRef = React.useRef(rows);
@@ -187,6 +196,11 @@ export function ImportWizardDialog({
   // run step rather than inviting a second file that the backend would
   // refuse with IMPORT_ALREADY_RUNNING (Review Focus 4 — the job survived
   // the dialog being closed).
+  //
+  // Only while the wizard is still untouched, though: this is a network
+  // round-trip, and adopting the job after the user has dropped a CSV (or
+  // moved on to mapping) would discard that work with no way back — the run
+  // step offers Back only after a failed start.
   React.useEffect(() => {
     if (!open || !serverAvailable) return;
     let cancelled = false;
@@ -198,6 +212,11 @@ export function ImportWizardDialog({
       })
       .then(({ data }) => {
         if (cancelled) return;
+        // Nothing to adopt into: the dialog closed (the effect's cleanup
+        // also covers this; the ref is the belt to its braces), or the user
+        // is already past the empty add step.
+        if (!openRef.current) return;
+        if (stepRef.current !== "add" || csvRef.current !== null) return;
         const row = data?.job_resultsPagination?.items?.[0];
         if (!row) return;
         const view = toImportJobView(row);
@@ -688,7 +707,10 @@ export function ImportWizardDialog({
               cancelling={serverImport.cancelling}
               onCancel={() => void serverImport.cancel()}
               onRetry={retryFailedRows}
-              onBack={() => setStep("review")}
+              // Only the wizard's own flow has a review step behind this
+              // one; an adopted job or the card's Retry would go back to an
+              // empty grid.
+              onBack={csv ? () => setStep("review") : undefined}
               onClose={() => onOpenChange(false)}
               onFinished={handleJobFinished}
             />

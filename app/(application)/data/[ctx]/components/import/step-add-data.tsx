@@ -23,7 +23,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { fileFields } from "@/lib/import/fields";
-import { IMPORT_SAMPLE_ROWS, type ImportMode } from "@/lib/import/mode";
+import {
+  IMPORT_SAMPLE_ROWS,
+  formatImportBytes,
+  type ImportMode,
+} from "@/lib/import/mode";
 import { countCsvRows, peekCsvFile } from "@/lib/import/parse-csv";
 import { buildCsvTemplate } from "@/lib/import/template";
 import type { ImportCsvSource, ImportField } from "@/lib/import/types";
@@ -290,12 +294,20 @@ export function StepAddData({
           )}
 
           {/* Where this file will run. "unavailable" is a refusal, not a
-              hint: the dialog disables Continue with it. */}
+              hint: the dialog disables Continue with it.
+
+              Both copies that mean "too big for the browser" name the rows
+              AND the size, because either limit can be the one that was
+              tripped (decideImportMode: rows > 200 OR bytes > 2 MB) and a
+              row-only sentence states a reason that can be false — 120 rows
+              of long document bodies is exactly the shape a knowledge
+              context is for. */}
           {csv && !reading && mode !== "unavailable" && (
             <p className="text-sm text-muted-foreground">
               {mode === "server"
                 ? t("workspace.import.server.banner.server", {
                     rows: csv.totalRows,
+                    size: formatImportBytes(csv.bytes),
                   })
                 : t("workspace.import.server.banner.client", {
                     rows: csv.totalRows,
@@ -308,6 +320,7 @@ export function StepAddData({
               <AlertDescription>
                 {t("workspace.import.server.banner.unavailable", {
                   rows: csv.totalRows,
+                  size: formatImportBytes(csv.bytes),
                 })}
               </AlertDescription>
             </Alert>

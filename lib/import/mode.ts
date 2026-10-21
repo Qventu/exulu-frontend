@@ -10,6 +10,23 @@ export const IMPORT_CLIENT_MAX_BYTES = 2 * 1024 * 1024;
  */
 export const IMPORT_SAMPLE_ROWS = 500;
 
+/**
+ * The human form of a file's byte count, for the add step's banner — which
+ * names both the rows and the size, so its copy is true whichever of the two
+ * limits above the file tripped.
+ *
+ * Local rather than shared: the repo's only other byte formatter lives in the
+ * chat feature (app/(application)/chat/components/session-files/utils.ts), and
+ * app/(application)/data may not import another feature's folder
+ * (codebase-structure §1.2, enforced by eslint). Locale-independent, like that
+ * one.
+ */
+export function formatImportBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export type ImportMode = "client" | "server" | "unavailable";
 
 /**

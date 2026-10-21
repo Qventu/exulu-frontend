@@ -2986,8 +2986,8 @@
           "banner": {
             "client": "{rows, plural, one {# row} other {# rows}} — imported in your browser",
             "counting": "Reading the file…",
-            "server": "{rows, plural, one {# row} other {# rows}} — imported in the background",
-            "unavailable": "This file has {rows} rows — too many for a browser import. Background imports are not available on this deployment: the queues licence and background workers have to be enabled."
+            "server": "This file is imported in the background ({rows} rows, {size}).",
+            "unavailable": "This file is too large for a browser import ({rows} rows, {size}). Background imports are not available on this deployment: the queues licence and background workers have to be enabled."
           },
           "errors": {
             "CONTEXT_NOT_FOUND": "This context no longer exists.",

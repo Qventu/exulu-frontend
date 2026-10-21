@@ -9,10 +9,14 @@
  * The CSV goes in through the dropzone's real file input, so `countCsvRows`
  * and `peekCsvFile` run for real — jsdom's Blob implements neither `text()`
  * nor `arrayBuffer()`, so the polyfill below bridges them onto FileReader,
- * which jsdom does implement.
+ * which jsdom does implement. (`arrayBuffer` is the one the chunk readers
+ * actually call: they decode the slices through a single streaming
+ * TextDecoder so a multi-byte character on a chunk boundary survives.)
  */
+import { ApolloLink, Observable, type FetchResult } from "@apollo/client";
 import { MockedProvider, type MockedResponse } from "@apollo/client/testing";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -46,6 +50,17 @@ if (typeof Blob.prototype.text !== "function") {
       reader.onload = () => resolve(String(reader.result));
       reader.onerror = () => reject(reader.error);
       reader.readAsText(this);
+    });
+  };
+}
+
+if (typeof Blob.prototype.arrayBuffer !== "function") {
+  Blob.prototype.arrayBuffer = function (this: Blob) {
+    return new Promise<ArrayBuffer>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(this);
     });
   };
 }
@@ -166,16 +181,47 @@ function byIdPoll(row: Record<string, unknown>): MockedResponse {
 function renderWizard(
   config: ConfigContextType,
   mocks: MockedResponse[] = [openProbe([])],
+  link?: ApolloLink,
 ) {
   return render(
     <NextIntlClientProvider locale="en" messages={enMessages}>
       <ConfigContext.Provider value={config}>
-        <MockedProvider mocks={mocks}>
+        <MockedProvider mocks={mocks} link={link}>
           <ImportWizardDialog open onOpenChange={() => {}} context={context} />
         </MockedProvider>
       </ConfigContext.Provider>
     </NextIntlClientProvider>,
   );
+}
+
+/**
+ * A link that answers every import-jobs operation with `row`, but only once
+ * the test releases it. A `delay` would make "the user dropped a CSV while
+ * the probe was still in flight" a race against jsdom's FileReader; this
+ * makes it an ordering the test owns.
+ */
+function heldJobsLink(row: Record<string, unknown>) {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const link = new ApolloLink(
+    () =>
+      new Observable<FetchResult>((observer) => {
+        void held.then(() => {
+          observer.next({ data: { job_resultsPagination: { items: [row] } } });
+          observer.complete();
+        });
+      }),
+  );
+  return { link, release: () => release() };
+}
+
+/** Lets the released link's `.then` chain (and any state update) settle. */
+async function flush() {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 }
 
 function csv(rows: number): File {
@@ -184,6 +230,21 @@ function csv(rows: number): File {
     Array.from({ length: rows }, (_, i) => `Item ${i},T${i}`).join("\n") +
     "\n";
   return new File([text], `rows-${rows}.csv`, { type: "text/csv" });
+}
+
+/**
+ * A CSV with `rows` data rows padded past `bytes` bytes — the shape that
+ * trips the byte limit without coming near the row limit (long `text`/
+ * `markdown` cells, which is what a RAG knowledge context is for).
+ */
+function fatCsv(rows: number, bytes: number): File {
+  const header = "name,body\n";
+  const pad = "x".repeat(Math.ceil(bytes / rows));
+  const text =
+    header +
+    Array.from({ length: rows }, (_, i) => `Item ${i},${pad}`).join("\n") +
+    "\n";
+  return new File([text], `fat-${rows}.csv`, { type: "text/csv" });
 }
 
 function dropCsv(file: File) {
@@ -210,7 +271,11 @@ describe("ImportWizardDialog — mode decision", () => {
     renderWizard(QUEUES);
     dropCsv(csv(201));
 
-    expect(await screen.findByText(/imported in the background/)).toBeTruthy();
+    expect(
+      await screen.findByText(
+        /imported in the background \(201 rows, [\d.]+ KB\)/,
+      ),
+    ).toBeTruthy();
     expect(
       (screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement)
         .disabled,
@@ -221,8 +286,10 @@ describe("ImportWizardDialog — mode decision", () => {
     renderWizard(NO_QUEUES);
     dropCsv(csv(201));
 
+    // The banner names the rows AND the size, so it is true whichever of the
+    // two limits the file tripped — here, the row count.
     expect(
-      await screen.findByText(/too many for a browser import/),
+      await screen.findByText(/too large for a browser import \(201 rows, /),
     ).toBeTruthy();
     await waitFor(() =>
       expect(
@@ -230,6 +297,24 @@ describe("ImportWizardDialog — mode decision", () => {
           .disabled,
       ).toBe(true),
     );
+  });
+
+  it("refuses an oversized but short CSV without claiming it has too many rows", async () => {
+    // 120 rows of long bodies trip the 2 MB limit, not the 200-row one. The
+    // row-only copy used to tell the user 120 rows were too many — a reason
+    // that is false, on a dead end (Continue is disabled) with nothing to act
+    // on.
+    const file = fatCsv(120, 2 * 1024 * 1024 + 1);
+    expect(file.size).toBeGreaterThan(2 * 1024 * 1024);
+    renderWizard(NO_QUEUES);
+    dropCsv(file);
+
+    expect(
+      await screen.findByText(
+        /too large for a browser import \(120 rows, 2\.0 MB\)/,
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/too many for a browser import/)).toBeNull();
   });
 
   it("retries with the access the import was started with, not the dialog default", async () => {
@@ -274,6 +359,72 @@ describe("ImportWizardDialog — mode decision", () => {
 
     expect(await screen.findByText("earlier.csv")).toBeTruthy();
     expect(screen.getByText("Running")).toBeTruthy();
+  });
+
+  it("leaves a dropped CSV alone when the running-import probe resolves late", async () => {
+    // The probe is a network round-trip: on a slow connection it used to
+    // resolve into `adopt(); setStep("run")` whatever the user had done
+    // meanwhile, discarding a dropped (and possibly mapped) file with no way
+    // back — the run step only offers Back after a failed start.
+    const { link, release } = heldJobsLink(RUNNING_ROW);
+    renderWizard(QUEUES, [], link);
+    dropCsv(csv(2));
+
+    // The file is in and the add step has decided where it would run.
+    expect(await screen.findByText(/imported in your browser/)).toBeTruthy();
+
+    release();
+    await flush();
+
+    // Still the add step, with the user's file — not someone else's job.
+    expect(screen.getByText(/rows-2\.csv/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Continue" })).toBeTruthy();
+    expect(screen.queryByText("earlier.csv")).toBeNull();
+    expect(screen.queryByText("Running")).toBeNull();
+  });
+
+  it("offers no Back from a failed retry, because there is no review step behind it", async () => {
+    // The card's Retry (and an adopted job) reach the run step without the
+    // wizard's own steps: `csv` is null and `rows` is empty, so Back used to
+    // land on a blank review grid showing "0 of 0".
+    const refused: MockedResponse = {
+      request: {
+        query: START_IMPORT(CONTEXT_ID),
+        variables: {
+          input: {
+            s3Key: REPORT_KEY,
+            fileName: "earlier-errors.csv",
+            access: STORED_ACCESS,
+            options: { delimiter: "," },
+          },
+        },
+      },
+      error: new Error("IMPORT_ALREADY_RUNNING"),
+    };
+
+    render(
+      <NextIntlClientProvider locale="en" messages={enMessages}>
+        <ConfigContext.Provider value={QUEUES}>
+          <MockedProvider mocks={[openProbe([]), refused]}>
+            <ImportWizardDialog
+              open
+              onOpenChange={() => {}}
+              context={context}
+              retryJob={toImportJobView(FINISHED_ROW)}
+            />
+          </MockedProvider>
+        </ConfigContext.Provider>
+      </NextIntlClientProvider>,
+    );
+
+    expect(
+      await screen.findByText(/An import is already running/),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+    // Close stays the way out (the dialog's own × matches this name too).
+    expect(
+      screen.getAllByRole("button", { name: "Close" }).length,
+    ).toBeGreaterThan(0);
   });
 
   it("opened with a retryJob (the Imports card's Retry action), retries immediately and lands on the run step", async () => {

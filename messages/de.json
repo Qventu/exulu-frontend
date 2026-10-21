@@ -2986,8 +2986,8 @@
           "banner": {
             "client": "{rows, plural, one {# Zeile} other {# Zeilen}} — Import im Browser",
             "counting": "Datei wird gelesen…",
-            "server": "{rows, plural, one {# Zeile} other {# Zeilen}} — Import im Hintergrund",
-            "unavailable": "Diese Datei hat {rows} Zeilen — zu viele für einen Import im Browser. Hintergrund-Importe sind in dieser Installation nicht verfügbar: Die Queues-Lizenz und die Hintergrund-Worker müssen aktiviert sein."
+            "server": "Diese Datei wird im Hintergrund importiert ({rows} Zeilen, {size}).",
+            "unavailable": "Diese Datei ist zu groß für den Import im Browser ({rows} Zeilen, {size}). Hintergrund-Importe sind in dieser Installation nicht verfügbar: Die Queues-Lizenz und die Hintergrund-Worker müssen aktiviert sein."
           },
           "errors": {
             "CONTEXT_NOT_FOUND": "Diesen Kontext gibt es nicht mehr.",

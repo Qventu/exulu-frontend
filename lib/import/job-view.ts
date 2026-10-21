@@ -195,6 +195,17 @@ export const STATE_BADGE: Record<
   other: "outline",
 };
 
+/**
+ * Every `ImportJobState`, derived from `STATE_BADGE` so the union cannot grow
+ * a member that nothing checks: a new state is a type error in STATE_BADGE
+ * (`Record<ImportJobState, …>`) until it is listed there, and
+ * import-keys.test.ts walks this array to prove each state has badge copy at
+ * `knowledge.workspace.import.server.state.<state>` in both locales.
+ */
+export const IMPORT_JOB_STATES = Object.keys(
+  STATE_BADGE,
+) as readonly ImportJobState[];
+
 /** `big.csv` → `big-errors.csv`, the name a retry re-imports under. */
 export function errorReportFileName(fileName: string): string {
   return `${fileName.replace(/\.csv$/i, "")}-errors.csv`;

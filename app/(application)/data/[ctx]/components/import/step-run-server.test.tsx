@@ -52,6 +52,18 @@ function jobMock(row: Row, id: string = JOB_ID): MockedResponse {
   };
 }
 
+/** The same query, answered with no row for that id at all. */
+function emptyJobMock(id: string = JOB_ID): MockedResponse {
+  return {
+    request: {
+      query: GET_IMPORT_JOBS,
+      variables: { filters: importJobByIdFilters(id), limit: 1 },
+    },
+    result: { data: { job_resultsPagination: { items: [] } } },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+  };
+}
+
 const baseRow: Row = {
   id: JOB_ID,
   label: "big.csv",
@@ -184,6 +196,25 @@ describe("StepRunServer", () => {
     });
 
     expect(screen.getByText(/An import is already running/)).toBeTruthy();
+  });
+
+  it("offers Back after a failed start only when the caller has a step to go back to", () => {
+    const failed = {
+      phase: "error",
+      jobResultId: null,
+      errorCode: "IMPORT_ALREADY_RUNNING",
+      error: "IMPORT_ALREADY_RUNNING",
+    } as const;
+
+    const { unmount } = renderStep(failed);
+    expect(screen.getByRole("button", { name: "Back" })).toBeTruthy();
+    unmount();
+
+    // No `onBack` means no review step behind this run (an adopted job, or
+    // the card's Retry): Back would land on an empty grid.
+    renderStep({ ...failed, onBack: undefined });
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Close" })).toBeTruthy();
   });
 
   it("falls back to the raw message for an unknown error", () => {
@@ -414,6 +445,19 @@ describe("StepRunServer", () => {
       screen.queryByRole("button", { name: "Retry failed rows" }),
     ).toBeNull();
     expect(await screen.findByText("EMPTY_FILE")).toBeTruthy();
+  });
+
+  it("says so when the polled job id comes back with no row", async () => {
+    // The query succeeded and returned nothing: `view` stays null, `loading`
+    // is false between polls and there is no query error — which used to
+    // render an empty panel with only the Close button on it.
+    renderStep({}, [emptyJobMock()]);
+
+    expect(
+      await screen.findByText(
+        /Couldn't read the import's status: This import no longer exists\./,
+      ),
+    ).toBeTruthy();
   });
 
   it("reports a finished job once, with its view", async () => {

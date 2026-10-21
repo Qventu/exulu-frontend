@@ -2,6 +2,8 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { IMPORT_ERROR_CODES } from "@/lib/api/imports";
+import { IMPORT_JOB_STATES } from "@/lib/import/job-view";
 import deMessages from "@/messages/de.json";
 import enMessages from "@/messages/en.json";
 
@@ -15,15 +17,21 @@ import enMessages from "@/messages/en.json";
  * `t("workspace.import.server.run.cancel")` resolves at
  * `knowledge.workspace.import.server.run.cancel` in the message files.
  *
- * Only STATIC literals are collected: enum-driven template calls like
- * `t(\`workspace.import.server.errors.${code}\`)` (lib/api/imports.ts's
- * ImportErrorCode) and `t(\`workspace.import.server.state.${view.state}\`)`
- * (the job's RunState) are covered elsewhere — by the error-code map and the
- * run-state fixtures — not by string matching a template expression here.
+ * The source walk only collects STATIC literals — the two call sites that
+ * build a key from a union (`t(\`workspace.import.server.errors.${code}\`)` in
+ * use-server-import.ts / imports-card.tsx / step-run-server.tsx, and
+ * `t(\`workspace.import.server.state.${view.state}\`)` in import-job-row.tsx)
+ * are string-matched by nothing. The second describe below walks the unions
+ * themselves instead: `IMPORT_ERROR_CODES` (which `ImportErrorCode` is derived
+ * from) and `IMPORT_JOB_STATES` (derived from `STATE_BADGE`, which is
+ * `Record<ImportJobState, …>`), so a code or state added to either union
+ * cannot reach a `t()` call without copy in both locales.
  *
- * Today this passes with no changes; it exists so a future rename or typo in
- * either the component or the message files fails loudly instead of
- * shipping a raw "workspace.import.server.run.…" string to users.
+ * It exists so a future rename or typo in either the component or the message
+ * files fails loudly instead of shipping a raw
+ * "workspace.import.server.run.…" string to users — this repo sets no
+ * next-intl `getMessageFallback`/`onError`, so a missing key renders its own
+ * path on the one screen whose job is to explain a failure.
  */
 
 const COMPONENTS_DIR = path.join(
@@ -80,10 +88,49 @@ describe("import i18n key resolution", () => {
   for (const key of [...keys].sort()) {
     const full = `knowledge.${key}`;
     it(`"${full}" resolves in en and de`, () => {
-      expect(resolve(enMessages, full), `messages/en.json is missing ${full}`)
-        .not.toBeUndefined();
-      expect(resolve(deMessages, full), `messages/de.json is missing ${full}`)
-        .not.toBeUndefined();
+      expect(
+        resolve(enMessages, full),
+        `messages/en.json is missing ${full}`,
+      ).not.toBeUndefined();
+      expect(
+        resolve(deMessages, full),
+        `messages/de.json is missing ${full}`,
+      ).not.toBeUndefined();
+    });
+  }
+});
+
+describe("import i18n keys built from a union", () => {
+  it("found both unions to walk (catches a renamed or emptied export)", () => {
+    expect(IMPORT_ERROR_CODES.length).toBeGreaterThan(0);
+    expect(IMPORT_JOB_STATES.length).toBeGreaterThan(0);
+  });
+
+  for (const code of IMPORT_ERROR_CODES) {
+    const full = `knowledge.workspace.import.server.errors.${code}`;
+    it(`"${full}" resolves in en and de`, () => {
+      expect(
+        resolve(enMessages, full),
+        `messages/en.json is missing ${full}`,
+      ).not.toBeUndefined();
+      expect(
+        resolve(deMessages, full),
+        `messages/de.json is missing ${full}`,
+      ).not.toBeUndefined();
+    });
+  }
+
+  for (const state of IMPORT_JOB_STATES) {
+    const full = `knowledge.workspace.import.server.state.${state}`;
+    it(`"${full}" resolves in en and de`, () => {
+      expect(
+        resolve(enMessages, full),
+        `messages/en.json is missing ${full}`,
+      ).not.toBeUndefined();
+      expect(
+        resolve(deMessages, full),
+        `messages/de.json is missing ${full}`,
+      ).not.toBeUndefined();
     });
   }
 });
