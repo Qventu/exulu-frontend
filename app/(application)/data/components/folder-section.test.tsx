@@ -176,6 +176,33 @@ describe("Knowledge folder sections", () => {
     expect(screen.getByText("Product manuals")).toBeTruthy();
   });
 
+  it("keeps the row move menu while a search term is set (admins only)", async () => {
+    // Searching flattens the list, but filing a context you just found is the
+    // natural next click — the rows keep their move menu.
+    const admin = renderLibrary({ super_admin: true });
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "manuals" },
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "Tenders" })).toBeNull();
+    });
+    expect(
+      screen.getAllByRole("button", { name: /to a folder$/ }),
+    ).toHaveLength(3);
+
+    admin.unmount();
+    renderLibrary({ super_admin: false });
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "manuals" },
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "Tenders" })).toBeNull();
+    });
+    expect(
+      screen.queryAllByRole("button", { name: /to a folder$/ }),
+    ).toHaveLength(0);
+  });
+
   it("renders the flat list when no folders exist", () => {
     data.folders = [];
     renderLibrary();

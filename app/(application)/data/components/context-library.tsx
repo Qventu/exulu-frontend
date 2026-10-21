@@ -278,6 +278,9 @@ export function ContextLibrary() {
                 })}
               </div>
             ) : (
+              // Flat (searching, or no folders yet): no section headers, but
+              // the rows keep every affordance they have when grouped —
+              // filing a context you just searched for is the next click.
               <ul className="divide-y divide-border">
                 {rows.map((row, index) => (
                   <LibraryRow
@@ -287,6 +290,10 @@ export function ContextLibrary() {
                     icon={icons[row.id]}
                     canEdit={isSuperAdmin}
                     onSetIcon={handleSetIcon}
+                    folders={isSuperAdmin ? folders : undefined}
+                    onMoveToFolder={
+                      isSuperAdmin ? handleMoveToFolder : undefined
+                    }
                   />
                 ))}
               </ul>
