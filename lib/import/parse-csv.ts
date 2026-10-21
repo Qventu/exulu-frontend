@@ -45,13 +45,23 @@ interface LineScanState {
   lineHasContent: boolean;
 }
 
-function scanLines(
-  text: string,
-  state: LineScanState,
-): { completedLines: number; state: LineScanState } {
+interface LineScanResult {
+  completedLines: number;
+  /**
+   * Offset into the scanned chunk just past the last unquoted-newline
+   * boundary found in this chunk, or -1 if this chunk contains none. Used
+   * by `peekCsvFile` to trim a buffer back to the last safe cut point.
+   */
+  lastBoundaryOffset: number;
+  state: LineScanState;
+}
+
+function scanLines(text: string, state: LineScanState): LineScanResult {
   let { inQuotes, lineHasContent } = state;
   let completedLines = 0;
-  for (const c of text) {
+  let lastBoundaryOffset = -1;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
     if (c === '"') {
       inQuotes = !inQuotes;
       lineHasContent = true;
@@ -60,24 +70,34 @@ function scanLines(
     } else if (!inQuotes && c === "\n") {
       if (lineHasContent) completedLines += 1;
       lineHasContent = false;
+      lastBoundaryOffset = i + 1;
     } else {
       lineHasContent = true;
     }
   }
-  return { completedLines, state: { inQuotes, lineHasContent } };
+  return {
+    completedLines,
+    lastBoundaryOffset,
+    state: { inQuotes, lineHasContent },
+  };
 }
 
 /**
  * Counts data rows (header excluded) in a CSV file without loading it into
- * memory at once: reads 1 MB chunks via `file.slice()`, carrying quote state
- * across chunk boundaries so a quoted field (and any newline inside it)
- * spanning two chunks is still scanned correctly.
+ * memory at once: reads `chunkBytes`-sized chunks via `file.slice()`,
+ * carrying quote state across chunk boundaries so a quoted field (and any
+ * newline inside it) spanning two chunks is still scanned correctly.
+ * `chunkBytes` defaults to 1 MB; callers only override it in tests, to
+ * force a boundary at an exact byte offset.
  */
-export async function countCsvRows(file: Blob): Promise<number> {
+export async function countCsvRows(
+  file: Blob,
+  chunkBytes = CHUNK_BYTES,
+): Promise<number> {
   let state: LineScanState = { inQuotes: false, lineHasContent: false };
   let totalLines = 0;
-  for (let offset = 0; offset < file.size; offset += CHUNK_BYTES) {
-    const chunkText = await file.slice(offset, offset + CHUNK_BYTES).text();
+  for (let offset = 0; offset < file.size; offset += chunkBytes) {
+    const chunkText = await file.slice(offset, offset + chunkBytes).text();
     const scanned = scanLines(chunkText, state);
     totalLines += scanned.completedLines;
     state = scanned.state;
@@ -89,30 +109,50 @@ export async function countCsvRows(file: Blob): Promise<number> {
 
 /**
  * Reads just enough of a CSV file to sample `sampleRows` data rows: pulls
- * 1 MB chunks via `file.slice()` until that many complete (newline-
- * terminated) rows past the header are available, or EOF is reached,
- * then hands the accumulated text to Papa.parse with a matching preview
- * limit. Because `scanLines` only counts a row once its terminator has
- * been seen, a row split across a chunk boundary is never counted early —
- * another chunk is read instead of yielding a truncated sample row.
+ * `chunkBytes`-sized chunks via `file.slice()` (default 1 MB; callers only
+ * override it in tests) until that many complete (newline-terminated) rows
+ * past the header are available, or EOF is reached. Because `scanLines`
+ * only counts a row once its terminator has been seen, a row split across
+ * a chunk boundary is never counted early — another chunk is read instead
+ * of yielding a truncated sample row.
+ *
+ * The accumulated buffer is parsed WITHOUT Papa's `preview` option — preview
+ * counts raw lines, including blank ones, which undercounts data rows when
+ * a blank line sits inside the sample window. Instead: if the loop stopped
+ * before EOF, the buffer is trimmed back to the last complete line boundary
+ * (so any trailing partial row is never parsed as data) before parsing;
+ * at EOF the whole buffer is parsed as-is. The result is then sliced to
+ * exactly `sampleRows` rows.
  */
 export async function peekCsvFile(
   file: Blob,
   sampleRows: number,
+  chunkBytes = CHUNK_BYTES,
 ): Promise<ParsedCsv> {
   const needed = sampleRows + 1; // header + sample data rows
   let state: LineScanState = { inQuotes: false, lineHasContent: false };
   let totalLines = 0;
   let text = "";
-  for (let offset = 0; offset < file.size; offset += CHUNK_BYTES) {
-    const chunkText = await file.slice(offset, offset + CHUNK_BYTES).text();
+  let lastBoundary = 0;
+  let brokeEarly = false;
+  for (let offset = 0; offset < file.size; offset += chunkBytes) {
+    const chunkStart = text.length;
+    const chunkText = await file.slice(offset, offset + chunkBytes).text();
     text += chunkText;
     const scanned = scanLines(chunkText, state);
     totalLines += scanned.completedLines;
     state = scanned.state;
-    if (totalLines >= needed) break;
+    if (scanned.lastBoundaryOffset !== -1) {
+      lastBoundary = chunkStart + scanned.lastBoundaryOffset;
+    }
+    if (totalLines >= needed) {
+      brokeEarly = true;
+      break;
+    }
   }
-  return toParsedCsv(
-    Papa.parse<string[]>(text, { skipEmptyLines: "greedy", preview: needed }),
+  const buffer = brokeEarly ? text.slice(0, lastBoundary) : text;
+  const parsed = toParsedCsv(
+    Papa.parse<string[]>(buffer, { skipEmptyLines: "greedy" }),
   );
+  return { ...parsed, rows: parsed.rows.slice(0, sampleRows) };
 }

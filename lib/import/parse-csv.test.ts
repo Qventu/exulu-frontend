@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { countCsvRows, parseCsvText, peekCsvFile } from "@/lib/import/parse-csv";
+import {
+  countCsvRows,
+  parseCsvText,
+  peekCsvFile,
+} from "@/lib/import/parse-csv";
 
 describe("parseCsvText", () => {
   it("splits headers and rows", () => {
@@ -42,9 +46,29 @@ describe("countCsvRows", () => {
   });
 
   it("is CRLF-aware and ignores blank lines, including a BOM-prefixed header", async () => {
-    expect(
-      await countCsvRows(new Blob(["﻿a,b\r\n1,2\r\n\r\n3,4\r\n"])),
-    ).toBe(2);
+    expect(await countCsvRows(new Blob(["﻿a,b\r\n1,2\r\n\r\n3,4\r\n"]))).toBe(
+      2,
+    );
+  });
+
+  it("is unaffected by a tiny chunk boundary landing inside a quoted field that contains a newline", async () => {
+    const content = 'a,b\n1,"x\ny"\n2,z\n';
+    expect(await countCsvRows(new Blob([content]), 7)).toBe(2);
+  });
+
+  it("counts a \\r\\n terminator once even when the chunk boundary falls between the \\r and the \\n", async () => {
+    const content = "ab\r\n12\r\n";
+    expect(await countCsvRows(new Blob([content]), 7)).toBe(1);
+  });
+
+  it("treats a doubled quote split across a chunk boundary as an escaped quote, not a close", async () => {
+    const content = 'ab\n"x""y"\n3,4\n';
+    expect(await countCsvRows(new Blob([content]), 6)).toBe(2);
+  });
+
+  it("counts a final row with content but no trailing newline, even when chunked", async () => {
+    const content = "a,b\n1,2\n3,4";
+    expect(await countCsvRows(new Blob([content]), 4)).toBe(2);
   });
 });
 
@@ -58,5 +82,35 @@ describe("peekCsvFile", () => {
     expect(sample.headers).toEqual(["a", "b"]);
     expect(sample.rows).toHaveLength(3);
     expect(sample.rows[0]).toEqual(["0", "x\ny"]);
+  });
+
+  it("does not truncate the last sample row when a tiny chunk boundary falls inside its quoted field", async () => {
+    const content = 'a,b\n1,x\n2,"p\nq"\n';
+    const sample = await peekCsvFile(new Blob([content]), 2, 11);
+    expect(sample.rows).toEqual([
+      ["1", "x"],
+      ["2", "p\nq"],
+    ]);
+  });
+
+  it("returns exactly sampleRows rows when a blank line sits inside the sample window", async () => {
+    // Papa's `preview` option counts raw lines (including the blank one),
+    // which previously undercounted data rows in this exact shape.
+    const content = "a,b\n1,x\n\n2,y\n3,z\n4,w\n";
+    const sample = await peekCsvFile(new Blob([content]), 3);
+    expect(sample.rows).toEqual([
+      ["1", "x"],
+      ["2", "y"],
+      ["3", "z"],
+    ]);
+  });
+
+  it("returns all available rows when the file has fewer rows than sampleRows", async () => {
+    const content = "a,b\n1,x\n2,y\n";
+    const sample = await peekCsvFile(new Blob([content]), 5);
+    expect(sample.rows).toEqual([
+      ["1", "x"],
+      ["2", "y"],
+    ]);
   });
 });
