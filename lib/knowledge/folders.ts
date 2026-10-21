@@ -72,9 +72,17 @@ export function normalizeFolder(raw: {
   };
 }
 
-/** Folders in display order: ascending `sort_order` (missing ⇒ 0); stable on ties. */
+/**
+ * Folders in display order: ascending `sort_order` (missing ⇒ 0), then
+ * `name` (locale compare) to break a tie deterministically — two folders
+ * both left at the default `sort_order` must not depend on input order,
+ * since `groupContexts`'s "first folder wins" rule depends on this order.
+ */
 export function sortFolders(folders: Folder[]): Folder[] {
-  return [...folders].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  return [...folders].sort(
+    (a, b) =>
+      (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name),
+  );
 }
 
 /**

@@ -50,6 +50,15 @@ describe("sortFolders", () => {
       "f1",
     ]);
   });
+
+  it("breaks a sort_order tie by name (locale compare)", () => {
+    expect(
+      sortFolders([
+        { id: "z", name: "Zebra", sort_order: 0, context_ids: [] },
+        { id: "a", name: "Apple", sort_order: 0, context_ids: [] },
+      ]).map((f) => f.name),
+    ).toEqual(["Apple", "Zebra"]);
+  });
 });
 
 describe("groupContexts", () => {
@@ -70,6 +79,25 @@ describe("groupContexts", () => {
         icon: undefined,
         rows: [{ id: "c" }, { id: "d" }],
       },
+    ]);
+  });
+
+  it("breaks a sort_order tie by name when assigning a multi-folder context", () => {
+    const zebra: Folder = {
+      id: "fz",
+      name: "Zebra",
+      sort_order: 0,
+      context_ids: ["x"],
+    };
+    const apple: Folder = {
+      id: "fa",
+      name: "Apple",
+      sort_order: 0,
+      context_ids: ["x"],
+    };
+    expect(groupContexts([{ id: "x" }], [zebra, apple], "Ungrouped")).toEqual([
+      { id: "fa", name: "Apple", icon: undefined, rows: [{ id: "x" }] },
+      { id: "fz", name: "Zebra", icon: undefined, rows: [] },
     ]);
   });
 
