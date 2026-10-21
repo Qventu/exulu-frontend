@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { decideImportMode, serverImportAvailable } from "@/lib/import/mode";
+import {
+  IMPORT_CLIENT_MAX_ROWS,
+  IMPORT_SAMPLE_ROWS,
+  decideImportMode,
+  serverImportAvailable,
+} from "@/lib/import/mode";
 
 describe("decideImportMode", () => {
   it("stays client when at the row and byte limits", () => {
@@ -53,5 +58,15 @@ describe("serverImportAvailable", () => {
 
   it("is false for a null config", () => {
     expect(serverImportAvailable(null)).toBe(false);
+  });
+});
+
+describe("IMPORT_SAMPLE_ROWS", () => {
+  it("samples more rows than a client-side import may hold", () => {
+    // The wizard shows the sample as its review grid; because the sample is
+    // larger than the client limit, a client-mode file is always sampled
+    // whole and the client flow still sees every row.
+    expect(IMPORT_SAMPLE_ROWS).toBe(500);
+    expect(IMPORT_SAMPLE_ROWS).toBeGreaterThan(IMPORT_CLIENT_MAX_ROWS);
   });
 });

@@ -2,6 +2,14 @@
 export const IMPORT_CLIENT_MAX_ROWS = 200;
 export const IMPORT_CLIENT_MAX_BYTES = 2 * 1024 * 1024;
 
+/**
+ * Rows the wizard peeks at for mapping and the read-only review preview of a
+ * server-side import. Deliberately larger than `IMPORT_CLIENT_MAX_ROWS`, so a
+ * file that stays in the browser is always sampled in full and the client
+ * flow keeps working off the complete parse.
+ */
+export const IMPORT_SAMPLE_ROWS = 500;
+
 export type ImportMode = "client" | "server" | "unavailable";
 
 /**

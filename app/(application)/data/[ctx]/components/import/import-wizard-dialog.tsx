@@ -7,6 +7,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import { RBACControl } from "@/components/rbac";
+import { ConfigContext } from "@/components/shell/config-context";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,13 +24,22 @@ import {
 } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
 import { filesApi } from "@/lib/api/files";
+import { GET_IMPORT_JOBS, importJobFilters } from "@/lib/api/imports";
 import { coerceValue } from "@/lib/import/coerce";
 import { fileFields, importableFields } from "@/lib/import/fields";
+import type { ImportJobView } from "@/lib/import/job-view";
+import { toImportJobView } from "@/lib/import/job-view";
 import { autoMapColumns } from "@/lib/import/map-columns";
 import type { ColumnMapping } from "@/lib/import/map-columns";
-import type { ParsedCsv } from "@/lib/import/parse-csv";
+import type { ImportMode } from "@/lib/import/mode";
+import {
+  IMPORT_SAMPLE_ROWS,
+  decideImportMode,
+  serverImportAvailable,
+} from "@/lib/import/mode";
 import { classifyRows } from "@/lib/import/resolve-targets";
 import type { ExistingRefs } from "@/lib/import/resolve-targets";
+import { retryMapping } from "@/lib/import/retry";
 import {
   rowIsValid,
   rowsFromCsv,
@@ -42,10 +52,15 @@ import {
   fileKeysOf,
   findMissingFileKeys,
 } from "@/lib/import/verify-files";
-import type { BatchAccess, ImportRow } from "@/lib/import/types";
+import type {
+  BatchAccess,
+  ImportCsvSource,
+  ImportRow,
+} from "@/lib/import/types";
 import type { Context } from "@/types/models/context";
 
 import {
+  GET_ITEMS,
   GET_ITEMS_BY_EXTERNAL_IDS,
   GET_ITEMS_BY_IDS,
   PAGINATION_POSTFIX,
@@ -56,9 +71,11 @@ import { MODE_LABEL_KEY } from "../item-access-section";
 import { StepAddData } from "./step-add-data";
 import { StepMapColumns } from "./step-map-columns";
 import { StepReviewGrid, translateCellError } from "./step-review-grid";
+import { StepRunServer } from "./step-run-server";
 import { useImportRunner } from "./use-import-runner";
+import { useServerImport } from "./use-server-import";
 
-type WizardStep = "add" | "map" | "review";
+type WizardStep = "add" | "map" | "review" | "run";
 
 export interface ImportWizardDialogProps {
   open: boolean;
@@ -76,6 +93,8 @@ export function ImportWizardDialog({
 }: ImportWizardDialogProps) {
   const t = useTranslations("knowledge");
   const client = useApolloClient();
+  const config = React.useContext(ConfigContext);
+  const serverAvailable = serverImportAvailable(config);
   const fields = React.useMemo(() => importableFields(context), [context]);
   const fileTargets = React.useMemo(() => fileFields(fields), [fields]);
 
@@ -83,10 +102,7 @@ export function ImportWizardDialog({
   const [classifying, setClassifying] = React.useState(false);
   const [verifying, setVerifying] = React.useState(false);
   const [files, setFiles] = React.useState<File[]>([]);
-  const [csv, setCsv] = React.useState<{
-    name: string;
-    parsed: ParsedCsv;
-  } | null>(null);
+  const [csv, setCsv] = React.useState<ImportCsvSource | null>(null);
   const [mapping, setMapping] = React.useState<ColumnMapping[]>([]);
   const [rows, setRows] = React.useState<ImportRow[]>([]);
   const rowsRef = React.useRef(rows);
@@ -113,6 +129,23 @@ export function ImportWizardDialog({
   const phaseRef = React.useRef(runner.phase);
   phaseRef.current = runner.phase;
 
+  // Where this import runs. `csv.totalRows`/`csv.bytes` describe the whole
+  // file (not the sample the grid shows), which is what the thresholds are
+  // about. The file flow is always client-side: it has local files to upload.
+  const mode: ImportMode = React.useMemo(
+    () =>
+      csv
+        ? decideImportMode({
+            rows: csv.totalRows,
+            bytes: csv.bytes,
+            serverAvailable,
+          })
+        : "client",
+    [csv, serverAvailable],
+  );
+  const serverMode = mode === "server";
+  const serverImport = useServerImport(context.id);
+
   // Single file field auto-selects; multiple need the add-step dropdown.
   const [fileFieldTarget, setFileFieldTarget] = React.useState<string | null>(
     null,
@@ -131,9 +164,42 @@ export function ImportWizardDialog({
       setFileFieldTarget(null);
       setBatchAccess(defaultBatchAccess());
       runner.reset();
+      serverImport.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // An import already running for this context owns the wizard: open on its
+  // run step rather than inviting a second file that the backend would
+  // refuse with IMPORT_ALREADY_RUNNING (Review Focus 4 — the job survived
+  // the dialog being closed).
+  React.useEffect(() => {
+    if (!open || !serverAvailable) return;
+    let cancelled = false;
+    client
+      .query({
+        query: GET_IMPORT_JOBS,
+        variables: { filters: importJobFilters(context.id), limit: 1 },
+        fetchPolicy: "network-only",
+      })
+      .then(({ data }) => {
+        if (cancelled) return;
+        const row = data?.job_resultsPagination?.items?.[0];
+        if (!row) return;
+        const view = toImportJobView(row);
+        if (!view.isRunning) return;
+        serverImport.adopt(view.id);
+        setStep("run");
+      })
+      .catch((e) => {
+        // Best effort: without it the wizard just starts on the add step.
+        console.warn("[import] could not check for a running import", e);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, serverAvailable, client, context.id]);
 
   // Warn against closing the tab while the import runs.
   React.useEffect(() => {
@@ -218,7 +284,15 @@ export function ImportWizardDialog({
       if (csv) built = rowsFromCsv(csv.parsed, mapping, fields);
       else if (resolvedFileTarget)
         built = rowsFromFiles(files, resolvedFileTarget);
-      setRows(await verifyRows(built));
+      // A server import classifies and verifies on the worker, over the
+      // whole file. Doing it here would cost up to IMPORT_SAMPLE_ROWS id
+      // lookups and one storage HEAD per file cell for rows that are only a
+      // preview — and would still say nothing about the rest of the file.
+      setRows(
+        serverMode
+          ? built.map((row) => validateRow(row, fields))
+          : await verifyRows(built),
+      );
       setStep("review");
     } catch (e) {
       toast.error(t("workspace.import.classifyError"), {
@@ -227,7 +301,16 @@ export function ImportWizardDialog({
     } finally {
       setClassifying(false);
     }
-  }, [csv, files, mapping, fields, resolvedFileTarget, verifyRows, t]);
+  }, [
+    csv,
+    files,
+    mapping,
+    fields,
+    resolvedFileTarget,
+    serverMode,
+    verifyRows,
+    t,
+  ]);
 
   const handleContinueFromAdd = () => {
     if (csv) {
@@ -384,8 +467,66 @@ export function ImportWizardDialog({
     });
   };
 
+  /** Header-based mapping, the shape StartImportInput.mapping takes. */
+  const serverMapping = () =>
+    mapping.map(({ header, fieldName }) => ({ header, fieldName }));
+
+  const startServerImport = () => {
+    if (!csv) return;
+    // Straight to the run step: the upload of a large file is itself the
+    // first thing worth showing progress for.
+    setStep("run");
+    void serverImport.start({
+      file: csv.file,
+      mapping: serverMapping(),
+      access: batchAccess,
+      totalRows: csv.totalRows,
+      options: csv.delimiter ? { delimiter: csv.delimiter } : undefined,
+    });
+  };
+
+  /**
+   * Re-import the worker's error report: its columns are the original
+   * headers plus `import_error`, which maps to nothing. With no mapping on
+   * hand (the wizard was reopened onto someone else's job) it is omitted
+   * entirely so the worker auto-maps those same headers.
+   */
+  const retryFailedRows = ({
+    s3Key,
+    fileName,
+  }: {
+    s3Key: string;
+    fileName: string;
+  }) => {
+    void serverImport.startFromKey({
+      s3Key,
+      fileName,
+      mapping: mapping.length > 0 ? retryMapping(serverMapping()) : undefined,
+      access: batchAccess,
+      // The error report is written comma-separated whatever the original
+      // file used (run-import.ts's csvLine).
+      options: { delimiter: "," },
+    });
+  };
+
+  const handleJobFinished = React.useCallback(
+    (view: ImportJobView) => {
+      if (view.counters.created + view.counters.updated === 0) return;
+      onImported?.();
+      // Same targeted refresh the client runner does — the items table
+      // behind the dialog holds this exact document.
+      Promise.resolve(
+        client.refetchQueries({ include: [GET_ITEMS(context.id, [])] }),
+      ).catch((e) => {
+        console.warn("[import] items list refresh failed", e);
+      });
+    },
+    [client, context.id, onImported],
+  );
+
   const canContinueFromAdd =
-    Boolean(csv) || (files.length > 0 && Boolean(resolvedFileTarget));
+    (Boolean(csv) && mode !== "unavailable") ||
+    (files.length > 0 && Boolean(resolvedFileTarget));
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -407,6 +548,7 @@ export function ImportWizardDialog({
               fields={fields}
               files={files}
               csv={csv}
+              mode={mode}
               fileFieldTarget={resolvedFileTarget}
               onFilesAdded={(added) => setFiles((prev) => [...prev, ...added])}
               onRemoveFile={(i) =>
@@ -427,7 +569,15 @@ export function ImportWizardDialog({
           )}
           {step === "review" && (
             <div className="flex min-h-0 flex-1 flex-col gap-3">
-              {runner.phase !== "edit" && (
+              {serverMode && csv && (
+                <p className="text-sm text-muted-foreground">
+                  {t("workspace.import.server.previewNote", {
+                    count: Math.min(IMPORT_SAMPLE_ROWS, csv.totalRows),
+                    total: csv.totalRows,
+                  })}
+                </p>
+              )}
+              {!serverMode && runner.phase !== "edit" && (
                 <div className="flex items-center gap-3">
                   <Progress
                     className="h-2 flex-1"
@@ -463,11 +613,13 @@ export function ImportWizardDialog({
                   </span>
                 </div>
               )}
-              {runner.phase === "edit" && hasBlankUpdateCells && (
-                <p className="text-sm text-muted-foreground">
-                  {t("workspace.import.review.blankClearsWarning")}
-                </p>
-              )}
+              {!serverMode &&
+                runner.phase === "edit" &&
+                hasBlankUpdateCells && (
+                  <p className="text-sm text-muted-foreground">
+                    {t("workspace.import.review.blankClearsWarning")}
+                  </p>
+                )}
               <StepReviewGrid
                 fields={fields}
                 displayFields={displayFields}
@@ -476,155 +628,186 @@ export function ImportWizardDialog({
                 finished={runner.phase === "done"}
                 rowStates={runner.rowStates}
                 batchAccessMode={batchAccess.rights_mode}
+                readOnly={serverMode}
                 onCellChange={handleCellChange}
                 onKeyCellBlur={handleKeyCellBlur}
                 onRemoveRow={handleRemoveRow}
               />
             </div>
           )}
+          {step === "run" && (
+            <StepRunServer
+              jobResultId={serverImport.jobResultId}
+              fileName={csv?.name ?? ""}
+              phase={serverImport.phase}
+              error={serverImport.error}
+              errorCode={serverImport.errorCode}
+              cancelling={serverImport.cancelling}
+              onCancel={() => void serverImport.cancel()}
+              onRetry={retryFailedRows}
+              onBack={() => setStep("review")}
+              onClose={() => onOpenChange(false)}
+              onFinished={handleJobFinished}
+            />
+          )}
         </div>
 
-        <DialogFooter className="flex-wrap items-center gap-2">
-          {step === "map" && runner.phase === "edit" && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setStep("add")}
-            >
-              {t("workspace.import.back")}
-            </Button>
-          )}
-
-          {step === "add" && (
-            <Button
-              type="button"
-              disabled={!canContinueFromAdd || classifying}
-              onClick={handleContinueFromAdd}
-            >
-              {t("workspace.import.continue")}
-            </Button>
-          )}
-          {step === "map" && (
-            <Button
-              type="button"
-              disabled={classifying}
-              onClick={() => void enterReview()}
-            >
-              {t("workspace.import.continue")}
-            </Button>
-          )}
-
-          {step === "review" && runner.phase === "edit" && (
-            <div className="flex w-full flex-wrap items-center justify-between gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button type="button" variant="outline">
-                    <Lock aria-hidden="true" className="mr-2 size-4" />
-                    {t("workspace.import.review.accessLabel", {
-                      mode: t(
-                        MODE_LABEL_KEY[batchAccess.rights_mode] ??
-                          "workspace.access.modePrivate",
-                      ),
-                    })}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  align="start"
-                  className="max-h-[60vh] w-[420px] overflow-y-auto"
-                >
-                  <div className="space-y-3">
-                    <RBACControl
-                      modalMode
-                      subjectLabel={t("workspace.import.review.accessSubject")}
-                      initialRightsMode={batchAccess.rights_mode}
-                      initialUsers={batchAccess.users}
-                      initialRoles={batchAccess.roles}
-                      initialTeams={batchAccess.teams}
-                      onChange={(rights_mode, users, roles, teams) =>
-                        setBatchAccess({
-                          rights_mode,
-                          users,
-                          roles,
-                          teams: teams ?? [],
-                        })
-                      }
-                    />
-                    {rows.some((r) => r.action === "update") &&
-                      batchAccess.rights_mode !== "private" && (
-                        <p className="text-sm text-muted-foreground">
-                          {t("workspace.import.review.accessHint")}
-                        </p>
-                      )}
-                  </div>
-                </PopoverContent>
-              </Popover>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  {t("workspace.import.review.validCount", {
-                    valid: validRows.length,
-                    total: rows.length,
-                  })}
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setStep(csv ? "map" : "add")}
-                >
-                  {t("workspace.import.back")}
-                </Button>
-                <Button
-                  type="button"
-                  disabled={validRows.length === 0 || verifying}
-                  onClick={startRun}
-                >
-                  {validRows.length === rows.length
-                    ? t("workspace.import.review.importAll", {
-                        count: rows.length,
-                      })
-                    : t("workspace.import.review.importValid", {
-                        count: validRows.length,
-                      })}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {running && (
-            <Button type="button" variant="outline" onClick={runner.cancel}>
-              {t("workspace.import.cancelRun")}
-            </Button>
-          )}
-
-          {runner.phase === "done" && (
-            <>
-              {failedCount > 0 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={downloadErrorReport}
-                >
-                  {t("workspace.import.run.downloadReport")}
-                </Button>
-              )}
-              {remainingCount > 0 && (
-                <Button type="button" onClick={startRun}>
-                  {failedCount > 0
-                    ? t("workspace.import.run.retryFailed")
-                    : t("workspace.import.review.importValid", {
-                        count: remainingCount,
-                      })}
-                </Button>
-              )}
+        {/* The run step carries its own actions, next to the job
+            state they depend on. */}
+        {step !== "run" && (
+          <DialogFooter className="flex-wrap items-center gap-2">
+            {step === "map" && runner.phase === "edit" && (
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={() => setStep("add")}
               >
-                {t("workspace.import.close")}
+                {t("workspace.import.back")}
               </Button>
-            </>
-          )}
-        </DialogFooter>
+            )}
+
+            {step === "add" && (
+              <Button
+                type="button"
+                disabled={!canContinueFromAdd || classifying}
+                onClick={handleContinueFromAdd}
+              >
+                {t("workspace.import.continue")}
+              </Button>
+            )}
+            {step === "map" && (
+              <Button
+                type="button"
+                disabled={classifying}
+                onClick={() => void enterReview()}
+              >
+                {t("workspace.import.continue")}
+              </Button>
+            )}
+
+            {step === "review" && (serverMode || runner.phase === "edit") && (
+              <div className="flex w-full flex-wrap items-center justify-between gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="outline">
+                      <Lock aria-hidden="true" className="mr-2 size-4" />
+                      {t("workspace.import.review.accessLabel", {
+                        mode: t(
+                          MODE_LABEL_KEY[batchAccess.rights_mode] ??
+                            "workspace.access.modePrivate",
+                        ),
+                      })}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    className="max-h-[60vh] w-[420px] overflow-y-auto"
+                  >
+                    <div className="space-y-3">
+                      <RBACControl
+                        modalMode
+                        subjectLabel={t(
+                          "workspace.import.review.accessSubject",
+                        )}
+                        initialRightsMode={batchAccess.rights_mode}
+                        initialUsers={batchAccess.users}
+                        initialRoles={batchAccess.roles}
+                        initialTeams={batchAccess.teams}
+                        onChange={(rights_mode, users, roles, teams) =>
+                          setBatchAccess({
+                            rights_mode,
+                            users,
+                            roles,
+                            teams: teams ?? [],
+                          })
+                        }
+                      />
+                      {rows.some((r) => r.action === "update") &&
+                        batchAccess.rights_mode !== "private" && (
+                          <p className="text-sm text-muted-foreground">
+                            {t("workspace.import.review.accessHint")}
+                          </p>
+                        )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {/* Server mode counts only the sampled rows — the file's
+                        remaining rows are validated by the worker. */}
+                    {serverMode
+                      ? t("workspace.import.server.sampleValidCount", {
+                          valid: validRows.length,
+                          total: rows.length,
+                        })
+                      : t("workspace.import.review.validCount", {
+                          valid: validRows.length,
+                          total: rows.length,
+                        })}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setStep(csv ? "map" : "add")}
+                  >
+                    {t("workspace.import.back")}
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={validRows.length === 0 || verifying}
+                    onClick={serverMode ? startServerImport : startRun}
+                  >
+                    {serverMode
+                      ? t("workspace.import.server.start")
+                      : validRows.length === rows.length
+                        ? t("workspace.import.review.importAll", {
+                            count: rows.length,
+                          })
+                        : t("workspace.import.review.importValid", {
+                            count: validRows.length,
+                          })}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {running && (
+              <Button type="button" variant="outline" onClick={runner.cancel}>
+                {t("workspace.import.cancelRun")}
+              </Button>
+            )}
+
+            {runner.phase === "done" && (
+              <>
+                {failedCount > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={downloadErrorReport}
+                  >
+                    {t("workspace.import.run.downloadReport")}
+                  </Button>
+                )}
+                {remainingCount > 0 && (
+                  <Button type="button" onClick={startRun}>
+                    {failedCount > 0
+                      ? t("workspace.import.run.retryFailed")
+                      : t("workspace.import.review.importValid", {
+                          count: remainingCount,
+                        })}
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  {t("workspace.import.close")}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

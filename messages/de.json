@@ -2982,10 +2982,61 @@
           "summary": "{created} erstellt, {updated} aktualisiert, {failed} fehlgeschlagen",
           "summarySkipped": "{count, plural, one {# Zeile übersprungen} other {# Zeilen übersprungen}}"
         },
+        "server": {
+          "banner": {
+            "client": "{rows, plural, one {# Zeile} other {# Zeilen}} — Import im Browser",
+            "counting": "Datei wird gelesen…",
+            "server": "{rows, plural, one {# Zeile} other {# Zeilen}} — Import im Hintergrund",
+            "unavailable": "Diese Datei hat {rows} Zeilen — zu viele für einen Import im Browser. Hintergrund-Importe sind in dieser Installation nicht verfügbar: Die Queues-Lizenz und die Hintergrund-Worker müssen aktiviert sein."
+          },
+          "errors": {
+            "CONTEXT_NOT_FOUND": "Diesen Kontext gibt es nicht mehr.",
+            "IMPORT_ALREADY_RUNNING": "Für diesen Kontext läuft bereits ein Import. Warte, bis er fertig ist, oder brich ihn zuerst ab.",
+            "IMPORT_NOT_FOUND": "Diesen Import gibt es nicht mehr.",
+            "IMPORT_S3_KEY_NOT_ALLOWED": "Von diesem Speicherort darfst du nicht importieren.",
+            "IMPORT_S3_KEY_OUTSIDE_BUCKET": "Die hochgeladene Datei liegt außerhalb des Speicher-Buckets dieser Installation.",
+            "INVALID_RIGHTS_MODE": "Der gewählte Zugriffsmodus ist ungültig.",
+            "NOT_AUTHORIZED": "In diesen Kontext darfst du nicht importieren.",
+            "QUEUES_NOT_LICENSED": "Hintergrund-Importe sind in dieser Installation nicht lizenziert.",
+            "SERVER_IMPORT_UNAVAILABLE": "Hintergrund-Importe sind in dieser Installation nicht verfügbar: Die Queues-Lizenz und die Hintergrund-Worker müssen aktiviert sein.",
+            "generic": "Der Import konnte nicht gestartet werden: {message}"
+          },
+          "previewNote": "Vorschau der ersten {count} von {total} Zeilen — importiert wird die vollständige Datei im Hintergrund.",
+          "run": {
+            "cancel": "Import abbrechen",
+            "cancelConfirmBody": "Bereits importierte Zeilen bleiben erhalten; die restlichen Zeilen werden übersprungen.",
+            "cancelConfirmTitle": "Import wirklich abbrechen?",
+            "cancelKeep": "Weiter importieren",
+            "closeHint": "Der Import läuft im Hintergrund weiter.",
+            "counters": "{created} erstellt, {updated} aktualisiert, {failed} fehlgeschlagen, {invalid} ungültig",
+            "downloadFailed": "Fehlerreport konnte nicht geladen werden",
+            "downloadReport": "Fehlerreport herunterladen",
+            "duration": "Dauer {seconds}s",
+            "errorTitle": "Der Import konnte nicht gestartet werden",
+            "loadingJob": "Status des Imports wird geladen…",
+            "progress": "{processed} von {total} Zeilen verarbeitet",
+            "progressUnknown": "{processed} Zeilen verarbeitet",
+            "retry": "Fehlgeschlagene Zeilen wiederholen",
+            "starting": "Import wird gestartet…",
+            "statusUnavailable": "Status des Imports konnte nicht geladen werden: {message}",
+            "uploading": "{name} wird hochgeladen…"
+          },
+          "sampleValidCount": "{valid} von {total} Vorschauzeilen bereit",
+          "start": "Import starten",
+          "state": {
+            "active": "Läuft",
+            "cancelled": "Abgebrochen",
+            "completed": "Abgeschlossen",
+            "failed": "Fehlgeschlagen",
+            "other": "Unbekannt",
+            "waiting": "In Warteschlange"
+          }
+        },
         "steps": {
           "add": "Daten hinzufügen",
           "map": "Spalten zuordnen",
-          "review": "Prüfen & importieren"
+          "review": "Prüfen & importieren",
+          "run": "Import"
         },
         "title": "Einträge importieren",
         "trigger": "Importieren"

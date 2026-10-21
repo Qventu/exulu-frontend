@@ -34,6 +34,14 @@ describe("parseCsvText", () => {
       "category",
     ]);
   });
+
+  it("reports the delimiter it detected", () => {
+    // The server-side import hands this to the worker so it parses the
+    // uploaded file exactly the way the browser parsed the sample.
+    expect(parseCsvText("a,b\n1,2\n").delimiter).toBe(",");
+    expect(parseCsvText("a;b\n1;2\n").delimiter).toBe(";");
+    expect(parseCsvText("a\tb\n1\t2\n").delimiter).toBe("\t");
+  });
 });
 
 describe("countCsvRows", () => {
@@ -112,5 +120,10 @@ describe("peekCsvFile", () => {
       ["1", "x"],
       ["2", "y"],
     ]);
+  });
+
+  it("reports the sampled file's delimiter", async () => {
+    const sample = await peekCsvFile(new Blob(["a;b\n1;2\n2;3\n"]), 1);
+    expect(sample.delimiter).toBe(";");
   });
 });

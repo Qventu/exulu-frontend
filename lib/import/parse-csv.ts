@@ -4,6 +4,12 @@ export interface ParsedCsv {
   headers: string[];
   rows: string[][];
   errors: string[];
+  /**
+   * The delimiter papaparse detected (`meta.delimiter`). A server-side import
+   * passes it to the worker in `options.delimiter` so the uploaded file is
+   * parsed exactly the way the browser parsed this sample.
+   */
+  delimiter?: string;
 }
 
 /** Bytes read per `file.slice()` chunk by the streaming helpers below. */
@@ -17,15 +23,11 @@ function toParsedCsv(result: Papa.ParseResult<string[]>): ParsedCsv {
     (e) =>
       `${e.message}${typeof e.row === "number" ? ` (row ${e.row + 1})` : ""}`,
   );
-  return { headers, rows, errors };
+  return { headers, rows, errors, delimiter: result.meta?.delimiter };
 }
 
 export function parseCsvText(text: string): ParsedCsv {
   return toParsedCsv(Papa.parse<string[]>(text, { skipEmptyLines: "greedy" }));
-}
-
-export async function parseCsvFile(file: File): Promise<ParsedCsv> {
-  return parseCsvText(await file.text());
 }
 
 /**

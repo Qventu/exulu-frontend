@@ -35,7 +35,13 @@ export interface StartImportOptionsInput {
 export interface StartImportInput {
   s3Key: string;
   fileName: string;
-  mapping: StartImportMappingInput[];
+  /**
+   * Optional, matching the SDL (`mapping: [StartImportMappingInput!]`):
+   * omitting it tells the worker to auto-map the file's headers, which is
+   * what a retry over an error report needs. An EMPTY array is not the same
+   * thing — it maps every column to "ignore" (NO_MAPPABLE_COLUMNS).
+   */
+  mapping?: StartImportMappingInput[];
   access: StartImportAccessInput;
   options?: StartImportOptionsInput;
   totalRows?: number;

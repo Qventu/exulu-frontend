@@ -67,6 +67,13 @@ export interface StepReviewGridProps {
    * a visual cue that the setting applies to every created item.
    */
   batchAccessMode: BatchAccess["rights_mode"];
+  /**
+   * Server mode: the rows are a SAMPLE of the uploaded file, and the worker
+   * reads that file — not this grid. Editing a cell here would be thrown
+   * away silently, so cells render as text and the per-row actions (remove,
+   * access echo, run state) are gone.
+   */
+  readOnly?: boolean;
   onCellChange: (rowKey: string, fieldName: string, raw: string) => void;
   onKeyCellBlur: () => void;
   onRemoveRow: (rowKey: string) => void;
@@ -105,6 +112,36 @@ function StatusBadge({
       <TooltipTrigger asChild>{badge}</TooltipTrigger>
       <TooltipContent>{title}</TooltipContent>
     </Tooltip>
+  );
+}
+
+/** Server mode's cell: the sampled text, plus its validation error. */
+function ReadOnlyCell({
+  field,
+  row,
+  t,
+}: {
+  field: ImportField;
+  row: ImportRow;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const cell = row.cells[field.name];
+  const errorTitle = cell?.error
+    ? translateCellError(t, cell.error)
+    : undefined;
+  const raw = cell?.raw ?? "";
+  return (
+    <div className="flex flex-col gap-1">
+      <span
+        className={cn(
+          "block max-w-64 truncate text-sm",
+          cell?.error && "text-destructive",
+        )}
+      >
+        {raw.trim() === "" ? t("workspace.import.review.emptyCell") : raw}
+      </span>
+      {errorTitle && <p className="text-xs text-destructive">{errorTitle}</p>}
+    </div>
   );
 }
 
@@ -262,6 +299,7 @@ export function StepReviewGrid({
   finished,
   rowStates,
   batchAccessMode,
+  readOnly = false,
   onCellChange,
   onKeyCellBlur,
   onRemoveRow,
@@ -269,6 +307,20 @@ export function StepReviewGrid({
   const t = useTranslations("knowledge");
 
   const statusFor = (row: ImportRow): React.ReactNode => {
+    if (readOnly) {
+      // A sampled row has no run state and no create/update verdict yet —
+      // the worker classifies it. Only its validation outcome is known.
+      const invalid =
+        row.error || Object.values(row.cells).some((c) => c.error);
+      if (!invalid) return null;
+      return (
+        <StatusBadge
+          label={t("workspace.import.review.statusError")}
+          tone="error"
+          title={row.error ? translateCellError(t, row.error) : undefined}
+        />
+      );
+    }
     const runState = rowStates[row.key]?.state ?? row.runState;
     if (running || runState === "done" || runState === "failed") {
       const tone =
@@ -358,16 +410,19 @@ export function StepReviewGrid({
     const fieldColumns = displayFields.map<ColumnDef<ImportRow>>((field) => ({
       id: field.name,
       header: field.label + (field.required ? " *" : ""),
-      cell: ({ row }) => (
-        <CellEditor
-          field={field}
-          row={row.original}
-          disabled={running}
-          onCellChange={onCellChange}
-          onKeyCellBlur={onKeyCellBlur}
-          t={t}
-        />
-      ),
+      cell: ({ row }) =>
+        readOnly ? (
+          <ReadOnlyCell field={field} row={row.original} t={t} />
+        ) : (
+          <CellEditor
+            field={field}
+            row={row.original}
+            disabled={running}
+            onCellChange={onCellChange}
+            onKeyCellBlur={onKeyCellBlur}
+            t={t}
+          />
+        ),
     }));
     const remove: ColumnDef<ImportRow> = {
       id: "__remove",
@@ -387,6 +442,7 @@ export function StepReviewGrid({
         </Button>
       ),
     };
+    if (readOnly) return [status, ...fieldColumns];
     return [status, access, ...fieldColumns, remove];
     // statusFor closes over rows/rowStates/running/finished — recompute with them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -396,6 +452,7 @@ export function StepReviewGrid({
     finished,
     rowStates,
     batchAccessMode,
+    readOnly,
     onCellChange,
     onKeyCellBlur,
     onRemoveRow,
