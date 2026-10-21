@@ -2995,6 +2995,7 @@
             "IMPORT_NOT_FOUND": "This import no longer exists.",
             "IMPORT_S3_KEY_NOT_ALLOWED": "You're not allowed to import from this storage location.",
             "IMPORT_S3_KEY_OUTSIDE_BUCKET": "The uploaded file is outside this deployment's storage bucket.",
+            "INVALID_DELIMITER": "The delimiter must be a single character.",
             "INVALID_RIGHTS_MODE": "The selected access mode isn't valid.",
             "NOT_AUTHORIZED": "You're not allowed to import into this context.",
             "QUEUES_NOT_LICENSED": "Background imports aren't licensed on this deployment.",

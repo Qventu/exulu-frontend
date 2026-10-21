@@ -127,6 +127,7 @@ export type ImportErrorCode =
   | "NOT_AUTHORIZED"
   | "IMPORT_NOT_FOUND"
   | "INVALID_RIGHTS_MODE"
+  | "INVALID_DELIMITER"
   | "QUEUES_NOT_LICENSED";
 
 const IMPORT_ERROR_CODES: readonly ImportErrorCode[] = [
@@ -137,6 +138,7 @@ const IMPORT_ERROR_CODES: readonly ImportErrorCode[] = [
   "NOT_AUTHORIZED",
   "IMPORT_NOT_FOUND",
   "INVALID_RIGHTS_MODE",
+  "INVALID_DELIMITER",
   "QUEUES_NOT_LICENSED",
 ];
 

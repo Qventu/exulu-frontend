@@ -149,6 +149,12 @@ describe("importErrorCode", () => {
     ).toBe("NOT_AUTHORIZED");
   });
 
+  it("recognises INVALID_DELIMITER", () => {
+    expect(importErrorCode(new Error("INVALID_DELIMITER"))).toBe(
+      "INVALID_DELIMITER",
+    );
+  });
+
   it("returns null for an unrecognised message", () => {
     expect(importErrorCode(new Error("Network request failed"))).toBeNull();
   });

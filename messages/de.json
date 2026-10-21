@@ -2995,6 +2995,7 @@
             "IMPORT_NOT_FOUND": "Diesen Import gibt es nicht mehr.",
             "IMPORT_S3_KEY_NOT_ALLOWED": "Von diesem Speicherort darfst du nicht importieren.",
             "IMPORT_S3_KEY_OUTSIDE_BUCKET": "Die hochgeladene Datei liegt außerhalb des Speicher-Buckets dieser Installation.",
+            "INVALID_DELIMITER": "Das Trennzeichen muss ein einzelnes Zeichen sein.",
             "INVALID_RIGHTS_MODE": "Der gewählte Zugriffsmodus ist ungültig.",
             "NOT_AUTHORIZED": "In diesen Kontext darfst du nicht importieren.",
             "QUEUES_NOT_LICENSED": "Hintergrund-Importe sind in dieser Installation nicht lizenziert.",
