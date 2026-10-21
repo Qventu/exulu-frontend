@@ -6,6 +6,7 @@ import {
   GET_IMPORT_JOBS,
   START_IMPORT,
   importErrorCode,
+  importErrorMessage,
   importJobByIdFilters,
   importJobFilters,
 } from "@/lib/api/imports";
@@ -18,7 +19,8 @@ function rootFieldNames(doc: { definitions: readonly unknown[] }): string[] {
   );
   if (!operation) throw new Error("no operation definition found");
   return operation.selectionSet.selections.map((s) => {
-    if (s.kind !== Kind.FIELD) throw new Error(`unexpected selection ${s.kind}`);
+    if (s.kind !== Kind.FIELD)
+      throw new Error(`unexpected selection ${s.kind}`);
     return s.name.value;
   });
 }
@@ -51,7 +53,11 @@ describe("GET_IMPORT_JOBS", () => {
     const itemsField = paginationField.selectionSet?.selections.find(
       (s) => s.kind === Kind.FIELD && s.name.value === "items",
     );
-    if (!itemsField || itemsField.kind !== Kind.FIELD || !itemsField.selectionSet) {
+    if (
+      !itemsField ||
+      itemsField.kind !== Kind.FIELD ||
+      !itemsField.selectionSet
+    ) {
       throw new Error("expected items selection");
     }
     const fieldNames = itemsField.selectionSet.selections.map((s) => {
@@ -80,9 +86,12 @@ describe("GET_IMPORT_JOBS", () => {
     )!;
     const paginationField = operation.selectionSet.selections[0];
     if (paginationField.kind !== Kind.FIELD) throw new Error("expected field");
-    const sortArg = paginationField.arguments?.find((a) => a.name.value === "sort");
+    const sortArg = paginationField.arguments?.find(
+      (a) => a.name.value === "sort",
+    );
     if (!sortArg) throw new Error("expected a sort argument");
-    if (sortArg.value.kind !== Kind.OBJECT) throw new Error("expected an object value");
+    if (sortArg.value.kind !== Kind.OBJECT)
+      throw new Error("expected an object value");
     const directionField = sortArg.value.fields.find(
       (f) => f.name.value === "direction",
     );
@@ -96,7 +105,9 @@ describe("GET_IMPORT_JOBS", () => {
       expect(directionField.value.value).toBe("DESC");
     }
 
-    const fieldField = sortArg.value.fields.find((f) => f.name.value === "field");
+    const fieldField = sortArg.value.fields.find(
+      (f) => f.name.value === "field",
+    );
     if (!fieldField) throw new Error("expected a field field");
     // The sort key name IS a string (SortBy.field: String!) — only the
     // enum member must stay unquoted.
@@ -146,5 +157,22 @@ describe("importErrorCode", () => {
     expect(importErrorCode(null)).toBeNull();
     expect(importErrorCode(undefined)).toBeNull();
     expect(importErrorCode({})).toBeNull();
+  });
+});
+
+describe("importErrorMessage", () => {
+  it("returns an Error's message", () => {
+    expect(importErrorMessage(new Error("socket hang up"))).toBe(
+      "socket hang up",
+    );
+  });
+
+  it("returns a plain string as-is", () => {
+    expect(importErrorMessage("NOT_AUTHORIZED")).toBe("NOT_AUTHORIZED");
+  });
+
+  it("stringifies anything else", () => {
+    expect(importErrorMessage({ foo: "bar" })).toBe("[object Object]");
+    expect(importErrorMessage(42)).toBe("42");
   });
 });

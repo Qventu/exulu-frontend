@@ -1,37 +1,24 @@
 "use client";
 
 import { useQuery } from "@apollo/client";
-import { AlertCircle, Download, Loader2, RotateCcw } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { UserContext } from "@/app/(application)/authenticated";
 import { filesApi } from "@/lib/api/files";
 import { GET_IMPORT_JOBS, importJobByIdFilters } from "@/lib/api/imports";
-import {
-  STATE_BADGE,
-  errorReportFileName,
-  toImportJobView,
+import { errorReportFileName, toImportJobView } from "@/lib/import/job-view";
+import type {
+  ImportJobRow as ImportJobRowData,
+  ImportJobView,
 } from "@/lib/import/job-view";
-import type { ImportJobRow, ImportJobView } from "@/lib/import/job-view";
 import type { BatchAccess } from "@/lib/import/types";
 
+import { ImportJobRow } from "./import-job-row";
 import type {
   ServerImportErrorCode,
   ServerImportPhase,
@@ -76,6 +63,12 @@ export interface StepRunServerProps {
  * error report only when the worker wrote one) — which only this component
  * sees. Closing the wizard here does NOT cancel the job: the worker keeps
  * going, which is what the Close hint says (Review Focus 4).
+ *
+ * The row's own display (badge, progress, counters, error text, and the
+ * Download/Retry/Cancel actions) is `ImportJobRow` — shared with the
+ * Pipeline tab's Imports card (fix round 1 / F3). This component keeps the
+ * async logic (`downloadReport`, the polling query) and the viewer-specific
+ * `mayCancel` rule; `ImportJobRow` only renders what those produce.
  */
 export function StepRunServer({
   jobResultId,
@@ -124,7 +117,8 @@ export function StepRunServer({
     pollInterval: finished ? 0 : pollIntervalMs,
   });
 
-  const row: ImportJobRow | undefined = data?.job_resultsPagination?.items?.[0];
+  const row: ImportJobRowData | undefined =
+    data?.job_resultsPagination?.items?.[0];
   // Apollo can still hold the previous job's row for a render after a retry
   // swapped the id; rendering it would offer that job's retry button again.
   const view = React.useMemo(
@@ -212,65 +206,28 @@ export function StepRunServer({
       )}
 
       {view && (
-        <section className="flex flex-col gap-3 rounded-lg border border-input p-4">
-          <div className="flex items-center justify-between gap-3">
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">
-              {view.fileName}
-            </span>
-            <Badge variant={STATE_BADGE[view.state]}>
-              {t(`workspace.import.server.state.${view.state}`)}
-            </Badge>
-          </div>
-
-          {view.progress !== null && (
-            <Progress className="h-2" value={view.progress} />
-          )}
-
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-            <span>
-              {view.counters.total !== null
-                ? t("workspace.import.server.run.progress", {
-                    processed: view.counters.processed,
-                    total: view.counters.total,
-                  })
-                : t("workspace.import.server.run.progressUnknown", {
-                    processed: view.counters.processed,
-                  })}
-            </span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {t("workspace.import.server.run.counters", {
-                created: view.counters.created,
-                updated: view.counters.updated,
-                failed: view.counters.failed,
-                invalid: view.counters.invalid,
-              })}
-            </span>
-            {view.durationMs !== null && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span>
-                  {t("workspace.import.server.run.duration", {
-                    seconds: Math.max(1, Math.round(view.durationMs / 1000)),
-                  })}
-                </span>
-              </>
-            )}
-          </div>
-
-          {/* Verbatim: the worker's abort reasons (EMPTY_FILE,
-              NO_MAPPABLE_COLUMNS, IMPORT_RESTARTED_AFTER_STALL: …) are the
-              only explanation a failed job has. */}
-          {view.error && (
-            <p className="break-words text-sm text-destructive">{view.error}</p>
-          )}
-        </section>
-      )}
-
-      {view?.isRunning && (
-        <p className="text-sm text-muted-foreground">
-          {t("workspace.import.server.run.closeHint")}
-        </p>
+        <ImportJobRow
+          view={view}
+          canCancel={mayCancel}
+          busy={{ cancelling, downloading, starting }}
+          onDownload={(key) => void downloadReport(key)}
+          onRetry={(v) =>
+            onRetry({
+              s3Key: v.errorReportKey!,
+              fileName: errorReportFileName(v.fileName),
+              access: v.access,
+            })
+          }
+          onCancel={() => onCancel()}
+          layout="step"
+          hint={
+            view.isRunning ? (
+              <p className="text-sm text-muted-foreground">
+                {t("workspace.import.server.run.closeHint")}
+              </p>
+            ) : undefined
+          }
+        />
       )}
 
       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -278,66 +235,6 @@ export function StepRunServer({
           <Button type="button" variant="outline" onClick={onBack}>
             {t("workspace.import.back")}
           </Button>
-        )}
-
-        {view?.errorReportKey && (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={downloading || starting}
-            onClick={() => void downloadReport(view.errorReportKey!)}
-          >
-            <Download aria-hidden="true" className="mr-2 size-4" />
-            {t("workspace.import.server.run.downloadReport")}
-          </Button>
-        )}
-
-        {view?.canRetry && (
-          <Button
-            type="button"
-            disabled={starting}
-            onClick={() =>
-              onRetry({
-                s3Key: view.errorReportKey!,
-                fileName: errorReportFileName(view.fileName),
-                access: view.access,
-              })
-            }
-          >
-            <RotateCcw aria-hidden="true" className="mr-2 size-4" />
-            {t("workspace.import.server.run.retry")}
-          </Button>
-        )}
-
-        {view?.isRunning && mayCancel && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button type="button" variant="outline" disabled={cancelling}>
-                {t("workspace.import.server.run.cancel")}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {t("workspace.import.server.run.cancelConfirmTitle")}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t("workspace.import.server.run.cancelConfirmBody")}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>
-                  {t("workspace.import.server.run.cancelKeep")}
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={() => onCancel()}
-                >
-                  {t("workspace.import.server.run.cancel")}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         )}
 
         <Button type="button" variant="outline" onClick={onClose}>

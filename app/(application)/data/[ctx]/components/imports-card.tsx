@@ -3,11 +3,10 @@
 /**
  * ImportsCard — the Pipeline tab's list of a context's server-side import
  * jobs (`GET_IMPORT_JOBS`, limit 20, spec docs/superpowers/specs/
- * 2026-10-21-server-side-bulk-import-design.md). Mirrors the wizard's run
- * step (`import/step-run-server.tsx`) for the row's state badge, progress,
- * counters and actions — same view model (`toImportJobView`), same badge
- * map (`STATE_BADGE`), same Cancel-visibility rule, so a job reads the same
- * way whether you're watching it from the wizard or from here.
+ * 2026-10-21-server-side-bulk-import-design.md). Each row is rendered by
+ * the shared `ImportJobRow` (`import/import-job-row.tsx`) — also used by
+ * the wizard's run step — so a job reads the same way whether you're
+ * watching it from the wizard or from here (fix round 1 / F3).
  *
  * Polling discipline (mirrors `ActivityList` in this same tab): the query
  * always fires once; `pollInterval` is 5s ONLY while at least one row is
@@ -21,27 +20,12 @@
  */
 
 import { useMutation, useQuery } from "@apollo/client";
-import { Download, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
 
 import { UserContext } from "@/app/(application)/authenticated";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfigContext } from "@/components/shell/config-context";
 import { filesApi } from "@/lib/api/files";
@@ -49,16 +33,18 @@ import {
   CANCEL_IMPORT,
   GET_IMPORT_JOBS,
   importErrorCode,
+  importErrorMessage,
   importJobFilters,
 } from "@/lib/api/imports";
 import {
-  STATE_BADGE,
   toImportJobView,
-  type ImportJobRow,
+  type ImportJobRow as ImportJobRowData,
   type ImportJobView,
 } from "@/lib/import/job-view";
 import { serverImportAvailable } from "@/lib/import/mode";
 import type { Context } from "@/types/models/context";
+
+import { ImportJobRow } from "./import/import-job-row";
 
 /** Live cadence while any job is still running; terminal-only lists don't poll. */
 const POLL_INTERVAL_MS = 5000;
@@ -70,12 +56,6 @@ export interface ImportsCardProps {
   /** Opens the wizard in retry mode for this job (workspace-shell owns the dialog). */
   onRetryImport?: (job: ImportJobView) => void;
   pollIntervalMs?: number;
-}
-
-function messageOf(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  return String(error);
 }
 
 export function ImportsCard({
@@ -103,7 +83,7 @@ export function ImportsCard({
   // row starts running. Polling is instead driven imperatively below via
   // `startPolling`/`stopPolling`, matching the run step's own `stopPolling()`
   // call in import/step-run-server.tsx.
-  const { data, loading, refetch, startPolling, stopPolling } = useQuery(
+  const { data, loading, error, refetch, startPolling, stopPolling } = useQuery(
     GET_IMPORT_JOBS,
     {
       variables: {
@@ -117,7 +97,7 @@ export function ImportsCard({
 
   const views = React.useMemo(
     () =>
-      ((data?.job_resultsPagination?.items ?? []) as ImportJobRow[]).map(
+      ((data?.job_resultsPagination?.items ?? []) as ImportJobRowData[]).map(
         toImportJobView,
       ),
     [data],
@@ -134,7 +114,6 @@ export function ImportsCard({
     setCancellingId(jobId);
     try {
       await cancelImport({ variables: { jobResultId: jobId } });
-      await refetch();
     } catch (e) {
       // Deliberately not a generic failure path: a refused cancel (most
       // commonly NOT_AUTHORIZED — only the starter or a super admin may
@@ -146,11 +125,21 @@ export function ImportsCard({
           : code
             ? t(`workspace.import.server.errors.${code}`)
             : t("workspace.import.server.run.cancelFailed", {
-                message: messageOf(e),
+                message: importErrorMessage(e),
               }),
       );
-    } finally {
       setCancellingId(null);
+      return;
+    }
+    setCancellingId(null);
+    // The cancel itself already succeeded — a refetch failure here must not
+    // read as a failed cancel (fix round 1 / F2). The row's next poll (it's
+    // still "running" until this refetch lands) self-corrects, so this is
+    // worth a console warning and nothing more user-facing.
+    try {
+      await refetch();
+    } catch (e) {
+      console.warn("[import] refetch after a successful cancel failed", e);
     }
   };
 
@@ -169,7 +158,7 @@ export function ImportsCard({
       window.open(json.url, "_blank");
     } catch (e) {
       toast.error(t("workspace.import.server.run.downloadFailed"), {
-        description: messageOf(e),
+        description: importErrorMessage(e),
       });
     } finally {
       setDownloadingKey(null);
@@ -196,7 +185,16 @@ export function ImportsCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        {loading && views.length === 0 ? (
+        {error && !data ? (
+          // Same copy the run step uses for its own failed poll — one
+          // status message for "couldn't read an import's state", not two
+          // (fix round 1 / F1).
+          <p className="text-sm text-destructive">
+            {t("workspace.import.server.run.statusUnavailable", {
+              message: error.message,
+            })}
+          </p>
+        ) : loading && views.length === 0 ? (
           <div className="flex flex-col gap-2">
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
@@ -208,132 +206,19 @@ export function ImportsCard({
         ) : (
           <ul className="flex flex-col gap-3">
             {views.map((view) => (
-              <li
-                key={view.id}
-                data-testid={`import-row-${view.id}`}
-                className="flex flex-col gap-3 rounded-lg border border-input p-4"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                    {view.fileName}
-                  </span>
-                  <Badge variant={STATE_BADGE[view.state]}>
-                    {t(`workspace.import.server.state.${view.state}`)}
-                  </Badge>
-                </div>
-
-                {view.progress !== null && (
-                  <Progress className="h-2" value={view.progress} />
-                )}
-
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                  <span>
-                    {view.counters.total !== null
-                      ? t("workspace.import.server.run.progress", {
-                          processed: view.counters.processed,
-                          total: view.counters.total,
-                        })
-                      : t("workspace.import.server.run.progressUnknown", {
-                          processed: view.counters.processed,
-                        })}
-                  </span>
-                  <span aria-hidden="true">·</span>
-                  <span>
-                    {t("workspace.import.server.run.counters", {
-                      created: view.counters.created,
-                      updated: view.counters.updated,
-                      failed: view.counters.failed,
-                      invalid: view.counters.invalid,
-                    })}
-                  </span>
-                  {view.startedBy != null && (
-                    <>
-                      <span aria-hidden="true">·</span>
-                      <span>
-                        {t("workspace.pipeline.imports.startedBy", {
-                          id: view.startedBy,
-                        })}
-                      </span>
-                    </>
-                  )}
-                  {view.durationMs !== null && (
-                    <>
-                      <span aria-hidden="true">·</span>
-                      <span>
-                        {t("workspace.import.server.run.duration", {
-                          seconds: Math.max(
-                            1,
-                            Math.round(view.durationMs / 1000),
-                          ),
-                        })}
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {view.error && (
-                  <p className="break-words text-sm text-destructive">
-                    {view.error}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  {view.errorReportKey && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={downloadingKey === view.errorReportKey}
-                      onClick={() => void handleDownload(view.errorReportKey!)}
-                    >
-                      <Download aria-hidden="true" className="mr-2 size-4" />
-                      {t("workspace.import.server.run.downloadReport")}
-                    </Button>
-                  )}
-
-                  {view.canRetry && (
-                    <Button type="button" onClick={() => onRetryImport?.(view)}>
-                      <RotateCcw aria-hidden="true" className="mr-2 size-4" />
-                      {t("workspace.import.server.run.retry")}
-                    </Button>
-                  )}
-
-                  {view.isRunning && mayCancel(view) && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          disabled={cancellingId === view.id}
-                        >
-                          {t("workspace.import.server.run.cancel")}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            {t(
-                              "workspace.import.server.run.cancelConfirmTitle",
-                            )}
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t("workspace.import.server.run.cancelConfirmBody")}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>
-                            {t("workspace.import.server.run.cancelKeep")}
-                          </AlertDialogCancel>
-                          <AlertDialogAction
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            onClick={() => void handleCancel(view.id)}
-                          >
-                            {t("workspace.import.server.run.cancel")}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                </div>
+              <li key={view.id}>
+                <ImportJobRow
+                  view={view}
+                  canCancel={mayCancel(view)}
+                  busy={{
+                    cancelling: cancellingId === view.id,
+                    downloading: downloadingKey === view.errorReportKey,
+                  }}
+                  onCancel={handleCancel}
+                  onDownload={handleDownload}
+                  onRetry={onRetryImport}
+                  layout="card"
+                />
               </li>
             ))}
           </ul>

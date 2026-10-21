@@ -440,4 +440,72 @@ describe("ImportsCard", () => {
 
     expect(await screen.findByText("No imports yet.")).toBeTruthy();
   });
+
+  // F1 (fix round 1): a failed list fetch gets the run step's own status
+  // copy, not a skeleton that never resolves into anything.
+  it("shows the run step's status-unavailable copy instead of a skeleton when the list fetch fails", async () => {
+    const failing: MockedResponse = {
+      request: {
+        query: GET_IMPORT_JOBS,
+        variables: { filters: importJobFilters(CONTEXT_ID), limit: 20 },
+      },
+      error: new Error("Network request failed"),
+    };
+    const { container } = renderCard([failing]);
+
+    expect(
+      await screen.findByText(
+        "Couldn't read the import's status: Network request failed",
+      ),
+    ).toBeTruthy();
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(0);
+  });
+
+  // F2 (fix round 1): a refetch failure after a SUCCESSFUL cancel must not
+  // read as a failed cancel — the cancel already worked.
+  it("does not toast a cancel failure when only the post-cancel refetch fails", async () => {
+    const toastMod = await import("sonner");
+    const errorSpy = vi.spyOn(toastMod.toast, "error");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const cancelMock: MockedResponse = {
+      request: {
+        query: CANCEL_IMPORT(CONTEXT_ID),
+        variables: { jobResultId: "job-1" },
+      },
+      result: { data: { [`${CONTEXT_ID}_itemsCancelImport`]: { ok: true } } },
+    };
+    const refetchFailure: MockedResponse = {
+      request: {
+        query: GET_IMPORT_JOBS,
+        variables: { filters: importJobFilters(CONTEXT_ID), limit: 20 },
+      },
+      error: new Error("Network request failed"),
+    };
+
+    renderCard(
+      [
+        jobsMock([RUNNING_ROW], { maxUsageCount: 1 }),
+        cancelMock,
+        refetchFailure,
+      ],
+      { viewer: { id: 7 } },
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Cancel import" }),
+    );
+    const actions = screen.getAllByRole("button", { name: "Cancel import" });
+    fireEvent.click(actions[actions.length - 1]);
+
+    await waitFor(() =>
+      expect(
+        warnSpy.mock.calls.some(
+          (call) =>
+            typeof call[0] === "string" &&
+            call[0].includes("refetch after a successful cancel failed"),
+        ),
+      ).toBe(true),
+    );
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
 });

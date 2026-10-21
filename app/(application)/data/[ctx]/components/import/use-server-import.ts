@@ -10,6 +10,7 @@ import {
   CANCEL_IMPORT,
   START_IMPORT,
   importErrorCode,
+  importErrorMessage,
   type ImportErrorCode,
   type StartImportInput,
 } from "@/lib/api/imports";
@@ -29,13 +30,6 @@ export type ServerImportPhase =
  * the one refusal this hook raises itself. `null` with a non-null `error`
  * means "unrecognised" — the raw message is shown instead.
  */
-/** The bare message of whatever was thrown, for copy that quotes it. */
-function messageOf(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  return String(error);
-}
-
 export type ServerImportErrorCode =
   | ImportErrorCode
   | "SERVER_IMPORT_UNAVAILABLE";
@@ -134,7 +128,7 @@ export function useServerImport(
   const fail = React.useCallback((e: unknown) => {
     const code = importErrorCode(e);
     setErrorCode(code);
-    setError(code ?? messageOf(e));
+    setError(code ?? importErrorMessage(e));
     setPhase("error");
   }, []);
 
@@ -250,7 +244,7 @@ export function useServerImport(
           : code
             ? t(`workspace.import.server.errors.${code}`)
             : t("workspace.import.server.run.cancelFailed", {
-                message: messageOf(e),
+                message: importErrorMessage(e),
               }),
       );
     } finally {

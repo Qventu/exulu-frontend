@@ -169,3 +169,16 @@ export function importErrorCode(error: unknown): ImportErrorCode | null {
   if (!message) return null;
   return isImportErrorCode(message) ? message : null;
 }
+
+/**
+ * The bare message of whatever was thrown, for copy that quotes it
+ * (unrecognised codes, cancel/download failures, …) — an `Error`'s
+ * `.message`, a raw string as-is, or anything else stringified. Shared by
+ * every import error-toast path (fix round 1 / F4: this used to be a
+ * `messageOf` copy in both `imports-card.tsx` and `use-server-import.ts`).
+ */
+export function importErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return String(error);
+}
