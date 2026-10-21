@@ -29,11 +29,13 @@ export const KNOWLEDGE_ITEM_CHUNKS_PAGINATED_SUPPORTED = false;
 export const KNOWLEDGE_CONTEXT_HEALTH_SUPPORTED = false;
 
 /** When `true`, the `context_folders` core table exists and the Knowledge
- *  list groups contexts into admin-managed folders. Until shipped: no folder
+ *  list groups contexts into admin-managed folders. When `false`: no folder
  *  request is fired and the page renders the flat list exactly as before.
- *  Set to `true` once the backend branch feat/knowledge-folders (table
- *  `context_folders`) is deployed. */
-export const KNOWLEDGE_CONTEXT_FOLDERS_SUPPORTED = false;
+ *  Build-time constant (not an env var): the backend with the
+ *  `context_folders` table (exulu-backend develop ≥ 8ce1333) must be deployed
+ *  before a frontend image built from this value ships. Flip back to `false`
+ *  only to ship a frontend ahead of that backend. */
+export const KNOWLEDGE_CONTEXT_FOLDERS_SUPPORTED = true;
 
 // ---------------------------------------------------------------------------
 // GraphQL field sets — kept in lock-step with queries/queries.ts.
