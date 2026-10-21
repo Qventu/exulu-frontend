@@ -3013,10 +3013,65 @@
           "summary": "{created} erstellt, {updated} aktualisiert, {failed} fehlgeschlagen",
           "summarySkipped": "{count, plural, one {# Zeile übersprungen} other {# Zeilen übersprungen}}"
         },
+        "server": {
+          "banner": {
+            "client": "{rows, plural, one {# Zeile} other {# Zeilen}} — Import im Browser",
+            "counting": "Datei wird gelesen…",
+            "server": "Diese Datei wird im Hintergrund importiert ({rows} Zeilen, {size}).",
+            "unavailable": "Diese Datei ist zu groß für den Import im Browser ({rows} Zeilen, {size}). Hintergrund-Importe sind in dieser Installation nicht verfügbar: Die Queues-Lizenz und die Hintergrund-Worker müssen aktiviert sein."
+          },
+          "errors": {
+            "CONTEXT_NOT_FOUND": "Diesen Kontext gibt es nicht mehr.",
+            "IMPORT_ALREADY_RUNNING": "Für diesen Kontext läuft bereits ein Import. Warte, bis er fertig ist, oder brich ihn zuerst ab.",
+            "IMPORT_NOT_FOUND": "Diesen Import gibt es nicht mehr.",
+            "IMPORT_S3_KEY_NOT_ALLOWED": "Von diesem Speicherort darfst du nicht importieren.",
+            "IMPORT_S3_KEY_OUTSIDE_BUCKET": "Die hochgeladene Datei liegt außerhalb des Speicher-Buckets dieser Installation.",
+            "INVALID_DELIMITER": "Das Trennzeichen muss ein einzelnes Zeichen sein.",
+            "INVALID_RIGHTS_MODE": "Der gewählte Zugriffsmodus ist ungültig.",
+            "NOT_AUTHORIZED": "In diesen Kontext darfst du nicht importieren.",
+            "QUEUES_NOT_LICENSED": "Hintergrund-Importe sind in dieser Installation nicht lizenziert.",
+            "SERVER_IMPORT_UNAVAILABLE": "Hintergrund-Importe sind in dieser Installation nicht verfügbar: Die Queues-Lizenz und die Hintergrund-Worker müssen aktiviert sein.",
+            "generic": "Der Import konnte nicht gestartet werden: {message}"
+          },
+          "previewNote": "Vorschau der ersten {count} von {total} Zeilen — importiert wird die vollständige Datei im Hintergrund.",
+          "readError": "Die Datei konnte nicht gelesen werden.",
+          "run": {
+            "cancel": "Import abbrechen",
+            "cancelConfirmBody": "Bereits importierte Zeilen bleiben erhalten; die restlichen Zeilen werden übersprungen.",
+            "cancelConfirmTitle": "Import wirklich abbrechen?",
+            "cancelFailed": "Der Import konnte nicht abgebrochen werden: {message}",
+            "cancelKeep": "Weiter importieren",
+            "cancelNotAllowed": "Nur wer den Import gestartet hat oder ein Admin kann ihn abbrechen.",
+            "closeHint": "Der Import läuft im Hintergrund weiter.",
+            "counters": "{created} erstellt, {updated} aktualisiert, {failed} fehlgeschlagen, {invalid} ungültig",
+            "downloadFailed": "Fehlerreport konnte nicht geladen werden",
+            "downloadReport": "Fehlerreport herunterladen",
+            "duration": "Dauer {seconds}s",
+            "errorTitle": "Der Import konnte nicht gestartet werden",
+            "loadingJob": "Status des Imports wird geladen…",
+            "progress": "{processed} von {total} Zeilen verarbeitet",
+            "progressUnknown": "{processed} Zeilen verarbeitet",
+            "retry": "Fehlgeschlagene Zeilen wiederholen",
+            "starting": "Import wird gestartet…",
+            "statusUnavailable": "Status des Imports konnte nicht geladen werden: {message}",
+            "uploading": "{name} wird hochgeladen…"
+          },
+          "sampleValidCount": "{valid} von {total} Vorschauzeilen bereit",
+          "start": "Import starten",
+          "state": {
+            "active": "Läuft",
+            "cancelled": "Abgebrochen",
+            "completed": "Abgeschlossen",
+            "failed": "Fehlgeschlagen",
+            "other": "Unbekannt",
+            "waiting": "In Warteschlange"
+          }
+        },
         "steps": {
           "add": "Daten hinzufügen",
           "map": "Spalten zuordnen",
-          "review": "Prüfen & importieren"
+          "review": "Prüfen & importieren",
+          "run": "Import"
         },
         "title": "Einträge importieren",
         "trigger": "Importieren"
@@ -3174,6 +3229,11 @@
         },
         "emptyDescription": "Für diesen Kontext sind keine Quellen, kein Processor und kein Embedder definiert.",
         "emptyTitle": "Keine Pipeline konfiguriert",
+        "imports": {
+          "title": "Importe",
+          "empty": "Noch keine Importe.",
+          "startedBy": "Gestartet von Nutzer {id}"
+        },
         "jobs": "Jobs",
         "processor": {
           "description": "Der Processor transformiert Elemente, bevor sie eingebettet werden.",

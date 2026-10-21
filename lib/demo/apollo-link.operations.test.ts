@@ -25,8 +25,10 @@ import {
 } from "@/app/(application)/memory/queries";
 import { GET_PROJECTS } from "@/app/(application)/projects/queries";
 import { GET_TRANSCRIPTS_SETTINGS } from "@/app/(application)/transcriptions/queries";
+import { GET_IMPORT_JOBS, importJobFilters } from "@/lib/api/imports";
 import { ROUTINE_RUNS_ATTENTION_COUNT } from "@/lib/routine-runs/queries";
 import { ALGI_RUNS_NEEDING_ATTENTION } from "./fixtures/chapter-email";
+import { SOFTWARE_DOC_CONTEXT_ID } from "./fixtures/software-docs";
 import { runDemoOperation as run, runDemoQueryThroughCache } from "./test-support";
 
 /**
@@ -88,6 +90,20 @@ describe("/data page operations", () => {
     const user = data.userById as Record<string, unknown>;
     expect(user).toHaveProperty("favourite_items");
     expect(user).toHaveProperty("recently_viewed_items");
+  });
+
+  it("answers ImportJobs with an empty list (the Pipeline tab's imports card)", async () => {
+    // The card issues this unconditionally, so a tour-reachable screen hit
+    // the unmapped fallback every time — a permanent false positive in the
+    // warning dynamicResolver's comment calls "the diagnostic that has caught
+    // every missing resolver so far". `run` turns that fallback into a
+    // failure. Empty is also the truth: nothing imports in a scripted world.
+    const data = await run(GET_IMPORT_JOBS, {
+      filters: importJobFilters(SOFTWARE_DOC_CONTEXT_ID),
+      limit: 20,
+    });
+    const page = data.job_resultsPagination as { items: unknown[] };
+    expect(page?.items).toEqual([]);
   });
 });
 

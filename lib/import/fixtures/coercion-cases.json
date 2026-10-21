@@ -1,0 +1,78 @@
+[
+  { "field": { "name": "f", "type": "text" }, "raw": "", "expect": { "value": "" } },
+  { "field": { "name": "f", "type": "markdown" }, "raw": "  ", "expect": { "value": "" } },
+  { "field": { "name": "f", "type": "number" }, "raw": "", "expect": { "value": null } },
+  { "field": { "name": "f", "type": "boolean" }, "raw": " ", "expect": { "value": null } },
+
+  { "field": { "name": "f", "type": "number" }, "raw": "1.5", "expect": { "value": 1.5 } },
+  { "field": { "name": "f", "type": "number" }, "raw": "1,5", "expect": { "value": 1.5 } },
+  { "field": { "name": "f", "type": "number" }, "raw": "1,50", "expect": { "value": 1.5 } },
+  {
+    "field": { "name": "f", "type": "number" },
+    "raw": "1,500",
+    "expect": { "error": "numberAmbiguous" }
+  },
+  {
+    "field": { "name": "f", "type": "number" },
+    "raw": "1,234.56",
+    "expect": { "error": "number" }
+  },
+  { "field": { "name": "f", "type": "number" }, "raw": "1.5,2", "expect": { "error": "number" } },
+  { "field": { "name": "f", "type": "number" }, "raw": "abc", "expect": { "error": "number" } },
+
+  { "field": { "name": "f", "type": "boolean" }, "raw": "true", "expect": { "value": true } },
+  { "field": { "name": "f", "type": "boolean" }, "raw": "YES", "expect": { "value": true } },
+  { "field": { "name": "f", "type": "boolean" }, "raw": "ja", "expect": { "value": true } },
+  { "field": { "name": "f", "type": "boolean" }, "raw": "1", "expect": { "value": true } },
+  { "field": { "name": "f", "type": "boolean" }, "raw": "false", "expect": { "value": false } },
+  { "field": { "name": "f", "type": "boolean" }, "raw": "No", "expect": { "value": false } },
+  { "field": { "name": "f", "type": "boolean" }, "raw": "nein", "expect": { "value": false } },
+  { "field": { "name": "f", "type": "boolean" }, "raw": "0", "expect": { "value": false } },
+  { "field": { "name": "f", "type": "boolean" }, "raw": "maybe", "expect": { "error": "boolean" } },
+
+  {
+    "field": { "name": "f", "type": "enum", "enumValues": ["Alpha", "Beta"] },
+    "raw": "alpha",
+    "expect": { "value": "Alpha" }
+  },
+  {
+    "field": { "name": "f", "type": "enum", "enumValues": ["Alpha", "Beta"] },
+    "raw": "gamma",
+    "expect": { "error": "enum" }
+  },
+
+  {
+    "field": { "name": "f", "type": "date" },
+    "raw": "2026-10-21",
+    "expect": { "value": "2026-10-21" }
+  },
+  {
+    "field": { "name": "f", "type": "date" },
+    "raw": "2026-07-15T10:00:00Z",
+    "expect": { "value": "2026-07-15T10:00:00Z" }
+  },
+  { "field": { "name": "f", "type": "date" }, "raw": "03/04/2026", "expect": { "error": "date" } },
+  { "field": { "name": "f", "type": "date" }, "raw": "21.10.2026", "expect": { "error": "date" } },
+  { "field": { "name": "f", "type": "date" }, "raw": "not a date", "expect": { "error": "date" } },
+
+  { "field": { "name": "f", "type": "text" }, "raw": "hello", "expect": { "value": "hello" } },
+  {
+    "field": { "name": "f", "type": "shortText" },
+    "raw": "  spaced  ",
+    "expect": { "value": "  spaced  " }
+  },
+
+  {
+    "field": { "name": "f", "type": "json" },
+    "raw": "{\"a\":1}",
+    "expect": { "value": "{\"a\":1}" }
+  },
+  { "field": { "name": "f", "type": "json" }, "raw": "{nope", "expect": { "error": "json" } },
+
+  {
+    "field": { "name": "f", "type": "uuid" },
+    "raw": "123e4567-e89b-12d3-a456-426614174000",
+    "expect": { "value": "123e4567-e89b-12d3-a456-426614174000" }
+  },
+  { "field": { "name": "f", "type": "uuid" }, "raw": "nope", "expect": { "error": "uuid" } }
+]

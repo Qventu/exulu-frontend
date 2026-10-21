@@ -1,10 +1,18 @@
 "use client";
 
-import { Download, FileSpreadsheet, X } from "lucide-react";
+import {
+  AlertCircle,
+  Download,
+  FileSpreadsheet,
+  Loader2,
+  X,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
+import { toast } from "sonner";
 
 import { Dropzone } from "@/components/primitives/dropzone";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,22 +23,28 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { fileFields } from "@/lib/import/fields";
-import type { ParsedCsv } from "@/lib/import/parse-csv";
-import { parseCsvFile } from "@/lib/import/parse-csv";
+import {
+  IMPORT_SAMPLE_ROWS,
+  formatImportBytes,
+  type ImportMode,
+} from "@/lib/import/mode";
+import { countCsvRows, peekCsvFile } from "@/lib/import/parse-csv";
 import { buildCsvTemplate } from "@/lib/import/template";
-import type { ImportField } from "@/lib/import/types";
+import type { ImportCsvSource, ImportField } from "@/lib/import/types";
 import { cn } from "@/lib/utils";
 
 export interface StepAddDataProps {
   contextId: string;
   fields: ImportField[];
   files: File[];
-  csv: { name: string; parsed: ParsedCsv } | null;
+  csv: ImportCsvSource | null;
+  /** Where the dropped CSV would run — decided by the dialog, shown here. */
+  mode: ImportMode;
   fileFieldTarget: string | null;
   onFilesAdded: (files: File[]) => void;
   onRemoveFile: (index: number) => void;
   onClearFiles: () => void;
-  onCsvChange: (csv: { name: string; parsed: ParsedCsv } | null) => void;
+  onCsvChange: (csv: ImportCsvSource | null) => void;
   onFileFieldTargetChange: (name: string) => void;
 }
 
@@ -39,6 +53,7 @@ export function StepAddData({
   fields,
   files,
   csv,
+  mode,
   fileFieldTarget,
   onFilesAdded,
   onRemoveFile,
@@ -48,6 +63,7 @@ export function StepAddData({
 }: StepAddDataProps) {
   const t = useTranslations("knowledge");
   const fileTargets = fileFields(fields);
+  const [reading, setReading] = React.useState(false);
 
   // The two flows are exclusive: once one zone has content, the other is
   // hidden entirely; clearing the content brings it back.
@@ -61,10 +77,39 @@ export function StepAddData({
     if (dataFiles.length > 0) onFilesAdded(dataFiles);
   };
 
+  /**
+   * Two streaming passes over the dropped file instead of one full parse:
+   * `countCsvRows` is what the mode decision runs on and `peekCsvFile` is
+   * what the mapping and review grid show. A 200 MB CSV never lands in
+   * memory as a string, and because the sample is larger than the
+   * client-side row limit, a browser-mode file is still sampled whole.
+   */
   const handleCsvDrop = async (dropped: File[]) => {
     const csvFile = dropped.find((f) => f.name.toLowerCase().endsWith(".csv"));
-    if (csvFile) {
-      onCsvChange({ name: csvFile.name, parsed: await parseCsvFile(csvFile) });
+    if (!csvFile) return;
+    setReading(true);
+    try {
+      const [totalRows, parsed] = await Promise.all([
+        countCsvRows(csvFile),
+        peekCsvFile(csvFile, IMPORT_SAMPLE_ROWS),
+      ]);
+      onCsvChange({
+        name: csvFile.name,
+        parsed,
+        file: csvFile,
+        totalRows,
+        bytes: csvFile.size,
+        delimiter: parsed.delimiter,
+      });
+    } catch (e) {
+      // A read failure is not a parse warning — `add.csvErrors` ("parsed
+      // with warnings") would describe a file that was never read.
+      onCsvChange(null);
+      toast.error(t("workspace.import.server.readError"), {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      setReading(false);
     }
   };
 
@@ -217,7 +262,7 @@ export function StepAddData({
               <span className="min-w-0 flex-1 truncate">
                 {t("workspace.import.add.csvChip", {
                   name: csv.name,
-                  count: csv.parsed.rows.length,
+                  count: csv.totalRows,
                 })}
               </span>
               <Button
@@ -239,6 +284,46 @@ export function StepAddData({
                 errors: csv.parsed.errors.join("; "),
               })}
             </p>
+          )}
+
+          {reading && (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+              {t("workspace.import.server.banner.counting")}
+            </p>
+          )}
+
+          {/* Where this file will run. "unavailable" is a refusal, not a
+              hint: the dialog disables Continue with it.
+
+              Both copies that mean "too big for the browser" name the rows
+              AND the size, because either limit can be the one that was
+              tripped (decideImportMode: rows > 200 OR bytes > 2 MB) and a
+              row-only sentence states a reason that can be false — 120 rows
+              of long document bodies is exactly the shape a knowledge
+              context is for. */}
+          {csv && !reading && mode !== "unavailable" && (
+            <p className="text-sm text-muted-foreground">
+              {mode === "server"
+                ? t("workspace.import.server.banner.server", {
+                    rows: csv.totalRows,
+                    size: formatImportBytes(csv.bytes),
+                  })
+                : t("workspace.import.server.banner.client", {
+                    rows: csv.totalRows,
+                  })}
+            </p>
+          )}
+          {csv && !reading && mode === "unavailable" && (
+            <Alert variant="destructive">
+              <AlertCircle aria-hidden="true" className="size-4" />
+              <AlertDescription>
+                {t("workspace.import.server.banner.unavailable", {
+                  rows: csv.totalRows,
+                  size: formatImportBytes(csv.bytes),
+                })}
+              </AlertDescription>
+            </Alert>
           )}
         </section>
       )}

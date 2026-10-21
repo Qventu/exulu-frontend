@@ -1,3 +1,5 @@
+import type { ParsedCsv } from "@/lib/import/parse-csv";
+
 /** One importable column: a core item field or a context custom field. */
 export interface ImportField {
   /** GraphQL input key, e.g. "name" or "document_s3key". */
@@ -60,4 +62,22 @@ export interface BatchAccess {
   users: { id: number; rights: "read" | "write" }[];
   roles: { id: string; rights: "read" | "write" }[];
   teams: { id: string; rights: "read" | "write" }[];
+}
+
+/**
+ * The CSV the wizard is working on. `parsed` is a SAMPLE (the first
+ * `IMPORT_SAMPLE_ROWS` rows) — complete for a client-mode file, a preview
+ * for a server-mode one — while `totalRows` and `bytes` describe the whole
+ * file and are what `decideImportMode` runs on. `file` is kept because a
+ * server-side import uploads it untouched.
+ */
+export interface ImportCsvSource {
+  name: string;
+  parsed: ParsedCsv;
+  file: File;
+  /** Data rows in the whole file (header excluded), from `countCsvRows`. */
+  totalRows: number;
+  bytes: number;
+  /** Detected delimiter, forwarded to the worker in `options.delimiter`. */
+  delimiter?: string;
 }

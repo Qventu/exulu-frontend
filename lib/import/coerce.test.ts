@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { coerceValue } from "@/lib/import/coerce";
+import coercionCases from "@/lib/import/fixtures/coercion-cases.json";
 import type { ImportField } from "@/lib/import/types";
 
 const field = (overrides: Partial<ImportField>): ImportField => ({
@@ -147,4 +148,46 @@ describe("coerceValue: json / uuid / file / text", () => {
       "keep me",
     );
   });
+});
+
+/**
+ * `lib/import/fixtures/coercion-cases.json` is a byte-identical copy of the
+ * backend's own `src/exulu/import/fixtures/coercion-cases.json` — both
+ * implementations of "coerce a raw CSV cell" are exercised against the same
+ * cases so they can't quietly drift apart. Comparison mirrors the backend's
+ * own loop over this fixture: a case with `expect.error` only asserts the
+ * cell errored (not which code — the two implementations' error vocabularies
+ * aren't required to match, only their accept/reject behaviour), otherwise
+ * the coerced value must equal `expect.value` exactly.
+ */
+interface CoercionCase {
+  field: { name: string; type: string; enumValues?: string[] };
+  raw: string;
+  expect: { value: string | number | boolean | null } | { error: string };
+}
+
+describe("parity fixture", () => {
+  const cases = coercionCases as CoercionCase[];
+
+  it("loaded cases from the shared fixture (catches a broken fixture copy)", () => {
+    expect(cases.length).toBeGreaterThan(0);
+  });
+
+  for (const c of cases) {
+    it(`${c.field.type} ${JSON.stringify(c.raw)} → ${JSON.stringify(c.expect)}`, () => {
+      const cell = coerceValue(
+        field({
+          name: c.field.name,
+          type: c.field.type,
+          enumValues: c.field.enumValues,
+        }),
+        c.raw,
+      );
+      if ("error" in c.expect) {
+        expect(cell.error).toBeTruthy();
+      } else {
+        expect(cell.value).toEqual(c.expect.value);
+      }
+    });
+  }
 });

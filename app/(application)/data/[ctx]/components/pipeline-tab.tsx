@@ -27,6 +27,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import { StageEmbedder } from "@/components/widgets/stage-embedder";
+import type { ImportJobView } from "@/lib/import/job-view";
 import type { Context } from "@/types/models/context";
 
 import { useEmbedderSettings } from "../../hooks";
@@ -34,15 +35,18 @@ import { GENERATE_CHUNKS } from "../../queries";
 
 import { ActivityList } from "./activity-list";
 import { BulkFilterDialog } from "./bulk-filter-dialog";
+import { ImportsCard } from "./imports-card";
 import { PipelineHealth } from "./pipeline-health";
 import { StageProcessor } from "./stage-processor";
 import { StageSources } from "./stage-sources";
 
 export interface PipelineTabProps {
   context: Context;
+  /** Opens the wizard in retry mode for a job from the Imports card. */
+  onRetryImport?: (job: ImportJobView) => void;
 }
 
-export function PipelineTab({ context }: PipelineTabProps) {
+export function PipelineTab({ context, onRetryImport }: PipelineTabProps) {
   const t = useTranslations("knowledge");
   const router = useRouter();
   const pathname = usePathname();
@@ -55,7 +59,9 @@ export function PipelineTab({ context }: PipelineTabProps) {
   const [generateChunks] = useMutation(GENERATE_CHUNKS(context.id), {
     onCompleted: () => toast.success(t("workspace.bulk.generateScheduled")),
     onError: (e) =>
-      toast.error(t("workspace.bulk.generateError"), { description: e.message }),
+      toast.error(t("workspace.bulk.generateError"), {
+        description: e.message,
+      }),
   });
 
   const goToItems = () => {
@@ -79,8 +85,14 @@ export function PipelineTab({ context }: PipelineTabProps) {
     <div className="flex flex-col gap-8">
       <PipelineHealth context={context} onInspectItems={goToItems} />
       <div className="flex flex-col gap-6">
-        <StageSources context={context} autoOpenJobs={stageParam === "sources"} />
-        <StageProcessor context={context} autoOpenJobs={stageParam === "processor"} />
+        <StageSources
+          context={context}
+          autoOpenJobs={stageParam === "sources"}
+        />
+        <StageProcessor
+          context={context}
+          autoOpenJobs={stageParam === "processor"}
+        />
         <StageEmbedder
           context={context}
           autoOpenJobs={stageParam === "embedder"}
@@ -91,10 +103,13 @@ export function PipelineTab({ context }: PipelineTabProps) {
           onRun={() => setGenerateOpen(true)}
           onDeleteEmbeddings={() => setDeleteOpen(true)}
           onRetryChunk={(itemId) =>
-            void generateChunks({ variables: { where: [{ id: { eq: itemId } }] } })
+            void generateChunks({
+              variables: { where: [{ id: { eq: itemId } }] },
+            })
           }
         />
       </div>
+      <ImportsCard context={context} onRetryImport={onRetryImport} />
       <ActivityList context={context} active={true} />
 
       <BulkFilterDialog

@@ -24,6 +24,7 @@ import { PageShell } from "@/components/primitives/page-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ContextMapCard } from "@/components/widgets/context-map/context-map-card";
+import type { ImportJobView } from "@/lib/import/job-view";
 import type { Context } from "@/types/models/context";
 
 import { ContextEntityTypes } from "../../components/entity-types";
@@ -66,6 +67,9 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
 
   const [newItemOpen, setNewItemOpen] = React.useState(false);
   const [importOpen, setImportOpen] = React.useState(false);
+  // Set by the Pipeline tab's Imports card Retry action; handed to the
+  // wizard so it retries that job's failed rows instead of starting fresh.
+  const [retryJob, setRetryJob] = React.useState<ImportJobView | null>(null);
 
   const setTab = (next: WorkspaceTab) => {
     const url = new URLSearchParams(params?.toString() ?? "");
@@ -120,6 +124,19 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
     router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
   };
 
+  const onRetryImport = (job: ImportJobView) => {
+    setRetryJob(job);
+    setImportOpen(true);
+  };
+
+  const handleImportOpenChange = (next: boolean) => {
+    setImportOpen(next);
+    // The dialog's own effect consumes `retryJob` once per open; clearing it
+    // here (rather than inside the dialog) keeps it this component's state
+    // to own, and stops a stale job from being retried again next open.
+    if (!next) setRetryJob(null);
+  };
+
   return (
     <PageShell variant="full-bleed">
       <div className="flex flex-col gap-6 p-4 md:p-8">
@@ -144,9 +161,7 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as WorkspaceTab)}>
           <TabsList>
-            <TabsTrigger value="items">
-              {t("workspace.tabs.items")}
-            </TabsTrigger>
+            <TabsTrigger value="items">{t("workspace.tabs.items")}</TabsTrigger>
             <TabsTrigger value="pipeline">
               {t("workspace.tabs.pipeline")}
             </TabsTrigger>
@@ -164,7 +179,8 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
             context={context}
             view={searchParams.view === "archived" ? "archived" : "active"}
             page={
-              searchParams.page && !Number.isNaN(parseInt(searchParams.page, 10))
+              searchParams.page &&
+              !Number.isNaN(parseInt(searchParams.page, 10))
                 ? parseInt(searchParams.page, 10)
                 : 1
             }
@@ -174,7 +190,7 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
             onOpenImport={() => setImportOpen(true)}
           />
         ) : tab === "pipeline" ? (
-          <PipelineTab context={context} />
+          <PipelineTab context={context} onRetryImport={onRetryImport} />
         ) : tab === "map" ? (
           <ContextMapCard
             contextId={context.id}
@@ -195,9 +211,10 @@ export function WorkspaceShell({ context, searchParams }: WorkspaceShellProps) {
       />
       <ImportWizardDialog
         open={importOpen}
-        onOpenChange={setImportOpen}
+        onOpenChange={handleImportOpenChange}
         context={context}
         onImported={onImported}
+        retryJob={retryJob}
       />
     </PageShell>
   );

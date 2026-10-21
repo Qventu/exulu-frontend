@@ -3013,10 +3013,65 @@
           "summary": "{created} created, {updated} updated, {failed} failed",
           "summarySkipped": "{count, plural, one {# row skipped} other {# rows skipped}}"
         },
+        "server": {
+          "banner": {
+            "client": "{rows, plural, one {# row} other {# rows}} — imported in your browser",
+            "counting": "Reading the file…",
+            "server": "This file is imported in the background ({rows} rows, {size}).",
+            "unavailable": "This file is too large for a browser import ({rows} rows, {size}). Background imports are not available on this deployment: the queues licence and background workers have to be enabled."
+          },
+          "errors": {
+            "CONTEXT_NOT_FOUND": "This context no longer exists.",
+            "IMPORT_ALREADY_RUNNING": "An import is already running for this context. Wait for it to finish, or cancel it first.",
+            "IMPORT_NOT_FOUND": "This import no longer exists.",
+            "IMPORT_S3_KEY_NOT_ALLOWED": "You're not allowed to import from this storage location.",
+            "IMPORT_S3_KEY_OUTSIDE_BUCKET": "The uploaded file is outside this deployment's storage bucket.",
+            "INVALID_DELIMITER": "The delimiter must be a single character.",
+            "INVALID_RIGHTS_MODE": "The selected access mode isn't valid.",
+            "NOT_AUTHORIZED": "You're not allowed to import into this context.",
+            "QUEUES_NOT_LICENSED": "Background imports aren't licensed on this deployment.",
+            "SERVER_IMPORT_UNAVAILABLE": "Background imports are not available on this deployment: the queues licence and background workers have to be enabled.",
+            "generic": "The import couldn't be started: {message}"
+          },
+          "previewNote": "Preview of the first {count} of {total} rows — the whole file is imported in the background.",
+          "readError": "The file could not be read.",
+          "run": {
+            "cancel": "Cancel import",
+            "cancelConfirmBody": "Rows already imported stay; the remaining rows are skipped.",
+            "cancelConfirmTitle": "Cancel this import?",
+            "cancelFailed": "The import couldn't be cancelled: {message}",
+            "cancelKeep": "Keep importing",
+            "cancelNotAllowed": "Only the person who started the import, or an admin, can cancel it.",
+            "closeHint": "The import keeps running in the background.",
+            "counters": "{created} created, {updated} updated, {failed} failed, {invalid} invalid",
+            "downloadFailed": "Couldn't download the error report",
+            "downloadReport": "Download error report",
+            "duration": "Took {seconds}s",
+            "errorTitle": "The import couldn't be started",
+            "loadingJob": "Loading the import's status…",
+            "progress": "{processed} of {total} rows processed",
+            "progressUnknown": "{processed} rows processed",
+            "retry": "Retry failed rows",
+            "starting": "Starting the import…",
+            "statusUnavailable": "Couldn't read the import's status: {message}",
+            "uploading": "Uploading {name}…"
+          },
+          "sampleValidCount": "{valid} of {total} preview rows ready",
+          "start": "Start import",
+          "state": {
+            "active": "Running",
+            "cancelled": "Cancelled",
+            "completed": "Completed",
+            "failed": "Failed",
+            "other": "Unknown",
+            "waiting": "Queued"
+          }
+        },
         "steps": {
           "add": "Add data",
           "map": "Map columns",
-          "review": "Review & import"
+          "review": "Review & import",
+          "run": "Importing"
         },
         "title": "Import items",
         "trigger": "Import"
@@ -3174,6 +3229,11 @@
         },
         "emptyDescription": "This context has no sources, processor, or embedder defined in code.",
         "emptyTitle": "No pipeline configured",
+        "imports": {
+          "title": "Imports",
+          "empty": "No imports yet.",
+          "startedBy": "Started by user {id}"
+        },
         "jobs": "Jobs",
         "processor": {
           "description": "The processor transforms items before they are embedded.",
