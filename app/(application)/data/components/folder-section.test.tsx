@@ -30,7 +30,17 @@ const data = vi.hoisted(() => ({
     { id: "c3", name: "Product manuals" },
   ],
   folders: [] as Folder[],
+  /** The `context_folders` schema gate (queries.ts). */
+  supported: true,
+  foldersLoading: false,
+  foldersError: undefined as unknown,
   moveContext: vi.fn(),
+}));
+
+const toasts = vi.hoisted(() => ({ error: vi.fn() }));
+
+vi.mock("sonner", () => ({
+  toast: { error: toasts.error, success: vi.fn(), message: vi.fn() },
 }));
 
 vi.mock("../hooks", () => ({
@@ -47,8 +57,9 @@ vi.mock("../hooks", () => ({
   }),
   useContextFolders: () => ({
     folders: data.folders,
-    loading: false,
-    error: undefined,
+    supported: data.supported,
+    loading: data.foldersLoading,
+    error: data.foldersError,
     refetch: vi.fn(),
     createFolder: vi.fn(),
     updateFolder: vi.fn(),
@@ -96,7 +107,11 @@ function renderLibrary(user: { super_admin: boolean } = { super_admin: true }) {
 describe("Knowledge folder sections", () => {
   beforeEach(() => {
     data.folders = FOLDERS;
+    data.supported = true;
+    data.foldersLoading = false;
+    data.foldersError = undefined;
     data.moveContext.mockReset();
+    toasts.error.mockReset();
     window.localStorage.clear();
   });
 
@@ -203,12 +218,85 @@ describe("Knowledge folder sections", () => {
     ).toHaveLength(0);
   });
 
-  it("renders the flat list when no folders exist", () => {
+  it("renders the flat list when no folders exist, with nowhere to move a row", () => {
     data.folders = [];
     renderLibrary();
 
     expect(screen.queryByRole("heading", { name: "Ungrouped" })).toBeNull();
     expect(screen.getByText("Tender documents")).toBeTruthy();
+    // A move menu whose only option is "Ungrouped" moves nothing.
+    expect(
+      screen.queryAllByRole("button", { name: /to a folder$/ }),
+    ).toHaveLength(0);
+    // The way to get the first folder is still one click away.
+    expect(screen.getByRole("button", { name: "Manage folders" })).toBeTruthy();
+  });
+
+  it("paints the list once, already grouped, rather than reflowing into sections", () => {
+    // The contexts are in; the folders are not. A flat list here would
+    // rearrange itself into sections a moment later.
+    data.foldersLoading = true;
+    const loadingView = renderLibrary();
+
+    expect(screen.queryByText("Tender documents")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Tenders" })).toBeNull();
+    expect(document.querySelector('[aria-busy="true"]')).toBeTruthy();
+
+    loadingView.unmount();
+    data.foldersLoading = false;
+    renderLibrary();
+
+    expect(screen.getByRole("heading", { name: "Tenders" })).toBeTruthy();
+    expect(screen.getByText("Tender documents")).toBeTruthy();
+  });
+
+  it("reveals the move trigger the way the OverflowMenu primitive does (T7)", () => {
+    renderLibrary();
+    const [trigger] = screen.getAllByRole("button", { name: /to a folder$/ });
+
+    // Hidden ONLY on hover-capable fine-pointer devices; on touch it stays
+    // visible, and it comes back on row hover, row focus or its own focus.
+    expect(trigger.className).toContain(
+      "[@media(hover:hover)_and_(pointer:fine)]:opacity-0",
+    );
+    expect(trigger.className).toContain("group-hover:opacity-100");
+    expect(trigger.className).toContain("group-focus-within:opacity-100");
+    expect(trigger.className).toContain("focus-visible:opacity-100");
+    expect(trigger.className).toContain("size-8");
+  });
+
+  it("renders exactly as today while the backend has no folders table", () => {
+    // Folders present in the hook's reply, but the schema gate is closed:
+    // the page must not group, manage or move.
+    data.supported = false;
+    renderLibrary({ super_admin: true });
+
+    expect(screen.queryByRole("button", { name: "Manage folders" })).toBeNull();
+    expect(
+      screen.queryAllByRole("button", { name: /to a folder$/ }),
+    ).toHaveLength(0);
+    expect(screen.queryByRole("heading", { name: "Tenders" })).toBeNull();
+    expect(screen.getByText("Tender documents")).toBeTruthy();
+  });
+
+  it("tells a super admin once when the folders could not be loaded", () => {
+    data.foldersError = new Error("context_folders does not exist");
+    const admin = renderLibrary({ super_admin: true });
+
+    expect(toasts.error).toHaveBeenCalledTimes(1);
+    expect(toasts.error).toHaveBeenCalledWith("Folders could not be loaded.");
+
+    // A re-render (typing in the search box) must not toast again.
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "manuals" },
+    });
+    expect(toasts.error).toHaveBeenCalledTimes(1);
+
+    // Everyone else gets the flat list, silently.
+    admin.unmount();
+    toasts.error.mockReset();
+    renderLibrary({ super_admin: false });
+    expect(toasts.error).not.toHaveBeenCalled();
   });
 
   it("gives super admins the manage button and a move menu per row", () => {

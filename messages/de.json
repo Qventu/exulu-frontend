@@ -2818,6 +2818,7 @@
         "deleteConfirm": "Diesen Ordner löschen? Seine Kontexte landen unter „Ohne Ordner“.",
         "moveTo": "In Ordner verschieben…",
         "moveRow": "{name} in einen Ordner verschieben",
+        "loadError": "Ordner konnten nicht geladen werden.",
         "createError": "Ordner konnte nicht erstellt werden",
         "saveError": "Ordner konnte nicht gespeichert werden",
         "deleteError": "Ordner konnte nicht gelöscht werden",

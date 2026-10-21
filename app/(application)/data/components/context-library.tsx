@@ -105,9 +105,28 @@ export function ContextLibrary() {
   );
 
   // Admin-managed folders (see lib/knowledge/folders.ts for the grouping).
-  const { folders, createFolder, updateFolder, deleteFolder, moveContext } =
-    useContextFolders();
+  const {
+    folders,
+    supported: foldersSupported,
+    loading: foldersLoading,
+    error: foldersError,
+    createFolder,
+    updateFolder,
+    deleteFolder,
+    moveContext,
+  } = useContextFolders();
   const [manageOpen, setManageOpen] = React.useState(false);
+
+  // Only a super admin can act on a folder failure, and only they would know
+  // what it means — everyone else just gets the flat list. Keyed on the error
+  // identity so a re-render (typing in the search box) cannot re-toast.
+  const toastedFoldersError = React.useRef<unknown>(null);
+  React.useEffect(() => {
+    if (!isSuperAdmin || !foldersError) return;
+    if (toastedFoldersError.current === foldersError) return;
+    toastedFoldersError.current = foldersError;
+    toast.error(t("library.folders.loadError"));
+  }, [foldersError, isSuperAdmin, t]);
 
   const [collapsed, setCollapsed] = React.useState<Set<string>>(
     () => new Set(),
@@ -145,10 +164,25 @@ export function ContextLibrary() {
     [moveContext, t],
   );
 
+  // Everything folder-shaped hangs off the schema gate: with the table
+  // absent the page is exactly what it was before folders existed.
+  const canManageFolders = isSuperAdmin && foldersSupported;
+  // A move menu needs somewhere to move to — with no folder yet its only
+  // entry would be "Ungrouped", which moves nothing.
+  const rowFolders =
+    canManageFolders && folders.length > 0 ? folders : undefined;
+
   // Folders are a browsing aid: the list groups only when it IS the browsing
   // list — a search term keeps it flat, and so does an installation without
   // folders (a single "Ungrouped" header over every context is pure noise).
-  const grouped = search === "" && folders.length > 0;
+  const grouped = search === "" && foldersSupported && folders.length > 0;
+
+  // The list paints once, already grouped: while the folders query is still
+  // in flight the skeleton stands in, because a flat list that rearranges
+  // itself into sections a moment later reads as a bug. `foldersLoading` is
+  // the first load only, so folder writes refetch without a flash.
+  const showSkeleton =
+    !error && (foldersLoading || (loading && rows.length === 0));
 
   // Each section carries where its first row sits in the whole list, so the
   // demo's row entrance keeps staggering across section boundaries.
@@ -189,7 +223,7 @@ export function ContextLibrary() {
               debounceMs: 0, // local filter — instant
             }}
           />
-          {isSuperAdmin && (
+          {canManageFolders && (
             <Button
               type="button"
               variant="outline"
@@ -215,7 +249,7 @@ export function ContextLibrary() {
           </Alert>
         )}
 
-        {!error && loading && rows.length === 0 && (
+        {showSkeleton && (
           <div className="rounded-md border">
             <ul className="divide-y divide-border" aria-busy="true">
               {Array.from({ length: 6 }).map((_, index) => (
@@ -234,11 +268,11 @@ export function ContextLibrary() {
           </div>
         )}
 
-        {!error && !loading && rows.length === 0 && search === "" && (
+        {!error && !showSkeleton && rows.length === 0 && search === "" && (
           <LibraryEmpty />
         )}
 
-        {!error && !loading && rows.length === 0 && search !== "" && (
+        {!error && !showSkeleton && rows.length === 0 && search !== "" && (
           <div className="rounded-md border px-6 py-12 text-center">
             <Search
               className="mx-auto size-8 text-muted-foreground"
@@ -253,7 +287,7 @@ export function ContextLibrary() {
           </div>
         )}
 
-        {rows.length > 0 && (
+        {!showSkeleton && rows.length > 0 && (
           <div className="rounded-md border" data-demo-id="knowledge-contexts">
             {grouped ? (
               <div className="divide-y divide-border">
@@ -269,9 +303,9 @@ export function ContextLibrary() {
                       icons={icons}
                       canEdit={isSuperAdmin}
                       onSetIcon={handleSetIcon}
-                      folders={isSuperAdmin ? folders : undefined}
+                      folders={rowFolders}
                       onMoveToFolder={
-                        isSuperAdmin ? handleMoveToFolder : undefined
+                        rowFolders ? handleMoveToFolder : undefined
                       }
                     />
                   );
@@ -290,10 +324,8 @@ export function ContextLibrary() {
                     icon={icons[row.id]}
                     canEdit={isSuperAdmin}
                     onSetIcon={handleSetIcon}
-                    folders={isSuperAdmin ? folders : undefined}
-                    onMoveToFolder={
-                      isSuperAdmin ? handleMoveToFolder : undefined
-                    }
+                    folders={rowFolders}
+                    onMoveToFolder={rowFolders ? handleMoveToFolder : undefined}
                   />
                 ))}
               </ul>
@@ -302,7 +334,7 @@ export function ContextLibrary() {
         )}
       </div>
 
-      {isSuperAdmin && (
+      {canManageFolders && (
         <ManageFoldersDialog
           open={manageOpen}
           onOpenChange={setManageOpen}

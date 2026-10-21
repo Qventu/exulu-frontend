@@ -2818,6 +2818,7 @@
         "deleteConfirm": "Delete this folder? Its contexts move to Ungrouped.",
         "moveTo": "Move to folder…",
         "moveRow": "Move {name} to a folder",
+        "loadError": "Folders could not be loaded.",
         "createError": "Couldn't create the folder",
         "saveError": "Couldn't save the folder",
         "deleteError": "Couldn't delete the folder",

@@ -38,9 +38,11 @@ import * as React from "react";
 
 import { ContextIcon } from "@/components/primitives/context-icon/context-icon";
 import { ContextIconPicker } from "@/components/primitives/context-icon/context-icon-picker";
+import { REVEAL_ON_HOVER_CLASSES } from "@/components/primitives/overflow-menu";
 import { RelativeTime } from "@/components/primitives/relative-time";
 import { StatusDot } from "@/components/primitives/status-dot";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +53,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Folder } from "@/lib/knowledge/folders";
+import { cn } from "@/lib/utils";
 
 import {
   KNOWLEDGE_CONTEXT_AGGREGATES_SUPPORTED,
@@ -158,13 +161,22 @@ export function LibraryRow({
     canEdit && folders && onMoveToFolder ? (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button
+          {/* The OverflowMenu primitive's trigger, down to its T7 reveal
+              rule: always visible on touch, faded until row hover or focus
+              on a mouse. `pointer-events-auto` lifts it out of the row's
+              non-interactive content layer (see the stretched link above). */}
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             aria-label={t("library.folders.moveRow", { name: row.name })}
-            className="pointer-events-auto flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-colors hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100 data-[state=open]:opacity-100"
+            className={cn(
+              "pointer-events-auto size-8 shrink-0 text-muted-foreground",
+              REVEAL_ON_HOVER_CLASSES,
+            )}
           >
             <FolderInput className="size-4" aria-hidden="true" />
-          </button>
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>{t("library.folders.moveTo")}</DropdownMenuLabel>

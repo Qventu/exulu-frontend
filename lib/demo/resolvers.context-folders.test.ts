@@ -41,6 +41,30 @@ async function listFolders(): Promise<Folder[]> {
 }
 
 describe("demo knowledge folders", () => {
+  /**
+   * The document the demo link (and the real backend) is handed. `direction`
+   * is the `SortDirection!` enum, so an in-document `sort:` argument has to
+   * spell the value as an unquoted literal — a quoted "ASC" fails GraphQL
+   * validation before any resolver runs, which is why the query carries no
+   * sort at all and `useContextFolders` orders the rows itself.
+   */
+  it("asks for one page of folders and nothing else — no sort argument", () => {
+    const [definition] = GET_CONTEXT_FOLDERS.definitions as unknown as Array<{
+      selectionSet: {
+        selections: Array<{
+          name: { value: string };
+          arguments: Array<{ name: { value: string } }>;
+        }>;
+      };
+    }>;
+    const [field] = definition.selectionSet.selections;
+    expect(field.name.value).toBe("context_foldersPagination");
+    expect(field.arguments.map((argument) => argument.name.value)).toEqual([
+      "page",
+      "limit",
+    ]);
+  });
+
   it("starts empty, so the demo Knowledge page renders exactly as before", async () => {
     expect(await listFolders()).toEqual([]);
   });

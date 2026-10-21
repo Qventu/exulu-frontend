@@ -28,6 +28,13 @@ export const KNOWLEDGE_ITEM_CHUNKS_PAGINATED_SUPPORTED = false;
  *  library rows. Until shipped: status dot stays muted. */
 export const KNOWLEDGE_CONTEXT_HEALTH_SUPPORTED = false;
 
+/** When `true`, the `context_folders` core table exists and the Knowledge
+ *  list groups contexts into admin-managed folders. Until shipped: no folder
+ *  request is fired and the page renders the flat list exactly as before.
+ *  Set to `true` once the backend branch feat/knowledge-folders (table
+ *  `context_folders`) is deployed. */
+export const KNOWLEDGE_CONTEXT_FOLDERS_SUPPORTED = false;
+
 // ---------------------------------------------------------------------------
 // GraphQL field sets — kept in lock-step with queries/queries.ts.
 // ---------------------------------------------------------------------------
@@ -231,13 +238,14 @@ export const UPDATE_CONTEXT_ICONS = gql`
 
 export const CONTEXT_FOLDER_FIELDS = `id name description icon sort_order context_ids`;
 
+// No `sort:` argument on purpose: `SortBy.direction` is the `SortDirection!`
+// enum, and an in-document enum value must be an unquoted literal — a quoted
+// "ASC" fails GraphQL validation before any resolver runs. Ordering is
+// `sortFolders`' job in the hook anyway. `limit: 200` is a practical cap: a
+// knowledge base with more folders than that has a different problem.
 export const GET_CONTEXT_FOLDERS = gql`
   query GetContextFolders {
-    context_foldersPagination(
-      page: 1
-      limit: 200
-      sort: { field: "sort_order", direction: "ASC" }
-    ) {
+    context_foldersPagination(page: 1, limit: 200) {
       items {
         ${CONTEXT_FOLDER_FIELDS}
       }

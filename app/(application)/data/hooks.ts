@@ -44,6 +44,7 @@ import {
   GET_ITEM_BY_ID,
   GET_USER_CONTEXT_ITEM_FAVOURITES,
   KNOWLEDGE_CONTEXT_AGGREGATES_SUPPORTED,
+  KNOWLEDGE_CONTEXT_FOLDERS_SUPPORTED,
   PAGINATION_POSTFIX,
   SET_EMBEDDER,
   UPDATE_CONTEXT_FOLDER,
@@ -209,6 +210,18 @@ interface GetContextFoldersData {
 export interface UseContextFoldersResult {
   /** Normalised, `sortFolders`-ordered folders. Empty until loaded. */
   folders: Folder[];
+  /**
+   * Whether the backend has the `context_folders` table
+   * (KNOWLEDGE_CONTEXT_FOLDERS_SUPPORTED). When false no request is fired,
+   * `folders` stays empty and the page must render as it did before folders
+   * existed.
+   */
+  supported: boolean;
+  /**
+   * The FIRST load only. A refetch after a write deliberately reports
+   * `false`: the page gates its skeleton on this, and flashing the whole
+   * list after every folder change would be worse than a brief staleness.
+   */
   loading: boolean;
   error?: unknown;
   refetch: () => Promise<unknown>;
@@ -257,7 +270,12 @@ export async function applyMoves(
 export function useContextFolders(): UseContextFoldersResult {
   const { data, loading, error, refetch } = useQuery<GetContextFoldersData>(
     GET_CONTEXT_FOLDERS,
-    { fetchPolicy: "cache-first" },
+    {
+      fetchPolicy: "cache-first",
+      // Nothing to ask for until the table exists — and asking would log a
+      // GraphQL error on every visit to /data.
+      skip: !KNOWLEDGE_CONTEXT_FOLDERS_SUPPORTED,
+    },
   );
 
   const [createFolderMutation] = useMutation(CREATE_CONTEXT_FOLDER);
@@ -276,7 +294,12 @@ export function useContextFolders(): UseContextFoldersResult {
       icon?: string | null;
       sort_order?: number;
     }): Promise<void> => {
-      await createFolderMutation({ variables: { input } });
+      // `context_ids` is required on the row (and is what `moveContext`
+      // rewrites later), so a new folder is created with an explicit empty
+      // membership rather than letting the column default decide.
+      await createFolderMutation({
+        variables: { input: { ...input, context_ids: [] } },
+      });
       await refetch();
     },
     [createFolderMutation, refetch],
@@ -320,7 +343,10 @@ export function useContextFolders(): UseContextFoldersResult {
 
   return {
     folders,
-    loading,
+    supported: KNOWLEDGE_CONTEXT_FOLDERS_SUPPORTED,
+    // `!data` keeps this to the first load: a post-write refetch must not
+    // make the page swap its list for a skeleton (see the type above).
+    loading: loading && !data,
     error,
     refetch,
     createFolder,
