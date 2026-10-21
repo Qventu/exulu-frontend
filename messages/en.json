@@ -3197,6 +3197,11 @@
         },
         "emptyDescription": "This context has no sources, processor, or embedder defined in code.",
         "emptyTitle": "No pipeline configured",
+        "imports": {
+          "title": "Imports",
+          "empty": "No imports yet.",
+          "startedBy": "Started by user {id}"
+        },
         "jobs": "Jobs",
         "processor": {
           "description": "The processor transforms items before they are embedded.",

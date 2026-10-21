@@ -28,7 +28,7 @@ import { GET_IMPORT_JOBS, importJobFilters } from "@/lib/api/imports";
 import { coerceValue } from "@/lib/import/coerce";
 import { fileFields, importableFields } from "@/lib/import/fields";
 import type { ImportJobView } from "@/lib/import/job-view";
-import { toImportJobView } from "@/lib/import/job-view";
+import { errorReportFileName, toImportJobView } from "@/lib/import/job-view";
 import { autoMapColumns } from "@/lib/import/map-columns";
 import type { ColumnMapping } from "@/lib/import/map-columns";
 import type { ImportMode } from "@/lib/import/mode";
@@ -83,6 +83,13 @@ export interface ImportWizardDialogProps {
   context: Context;
   /** Fired after a run that created or updated at least one item. */
   onImported?: () => void;
+  /**
+   * Set when the dialog was opened from the Pipeline tab's Imports card
+   * Retry action: skips the wizard steps entirely and retries that job's
+   * failed rows immediately, landing on the run step. The owner
+   * (workspace-shell.tsx) clears this in its `onOpenChange`.
+   */
+  retryJob?: ImportJobView | null;
 }
 
 export function ImportWizardDialog({
@@ -90,6 +97,7 @@ export function ImportWizardDialog({
   onOpenChange,
   context,
   onImported,
+  retryJob,
 }: ImportWizardDialogProps) {
   const t = useTranslations("knowledge");
   const client = useApolloClient();
@@ -153,6 +161,11 @@ export function ImportWizardDialog({
   const resolvedFileTarget =
     fileTargets.length === 1 ? fileTargets[0].name : fileFieldTarget;
 
+  // Guards the retryJob effect below against firing twice for the same
+  // open session (e.g. a re-render that passes a structurally-same but
+  // referentially-new `retryJob`) — reset alongside everything else below.
+  const retryTriggeredRef = React.useRef(false);
+
   // Reset everything on (re)open, mirroring new-item-dialog.tsx.
   React.useEffect(() => {
     if (open) {
@@ -165,6 +178,7 @@ export function ImportWizardDialog({
       setBatchAccess(defaultBatchAccess());
       runner.reset();
       serverImport.reset();
+      retryTriggeredRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -516,6 +530,27 @@ export function ImportWizardDialog({
       options: { delimiter: "," },
     });
   };
+
+  // Opened from the Pipeline tab's Imports card Retry action: skip the
+  // wizard's own steps and retry that job's failed rows immediately, the
+  // same way clicking Retry from the run step does — just triggered from
+  // outside instead of from this dialog's own state. `mapping` is always
+  // empty this early (the reset-on-open effect above just cleared it), so
+  // `retryFailedRows` omits it and lets the worker auto-map the report's
+  // headers, exactly as it does when the wizard is reopened onto someone
+  // else's job.
+  React.useEffect(() => {
+    if (!open || !retryJob || !retryJob.errorReportKey) return;
+    if (retryTriggeredRef.current) return;
+    retryTriggeredRef.current = true;
+    setStep("run");
+    retryFailedRows({
+      s3Key: retryJob.errorReportKey,
+      fileName: errorReportFileName(retryJob.fileName),
+      access: retryJob.access,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, retryJob]);
 
   const handleJobFinished = React.useCallback(
     (view: ImportJobView) => {

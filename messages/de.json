@@ -3197,6 +3197,11 @@
         },
         "emptyDescription": "Für diesen Kontext sind keine Quellen, kein Processor und kein Embedder definiert.",
         "emptyTitle": "Keine Pipeline konfiguriert",
+        "imports": {
+          "title": "Importe",
+          "empty": "Noch keine Importe.",
+          "startedBy": "Gestartet von Nutzer {id}"
+        },
         "jobs": "Jobs",
         "processor": {
           "description": "Der Processor transformiert Elemente, bevor sie eingebettet werden.",

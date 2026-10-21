@@ -33,6 +33,7 @@ import {
   importJobByIdFilters,
   importJobFilters,
 } from "@/lib/api/imports";
+import { toImportJobView } from "@/lib/import/job-view";
 import enMessages from "@/messages/en.json";
 import type { Context } from "@/types/models/context";
 
@@ -273,5 +274,46 @@ describe("ImportWizardDialog — mode decision", () => {
 
     expect(await screen.findByText("earlier.csv")).toBeTruthy();
     expect(screen.getByText("Running")).toBeTruthy();
+  });
+
+  it("opened with a retryJob (the Imports card's Retry action), retries immediately and lands on the run step", async () => {
+    const startMock: MockedResponse = {
+      request: {
+        query: START_IMPORT(CONTEXT_ID),
+        variables: {
+          input: {
+            s3Key: REPORT_KEY,
+            fileName: "earlier-errors.csv",
+            access: STORED_ACCESS,
+            options: { delimiter: "," },
+          },
+        },
+      },
+      result: {
+        data: { [`${CONTEXT_ID}_itemsStartImport`]: { jobResultId: "job-8" } },
+      },
+    };
+
+    render(
+      <NextIntlClientProvider locale="en" messages={enMessages}>
+        <ConfigContext.Provider value={QUEUES}>
+          <MockedProvider
+            mocks={[openProbe([]), startMock, byIdPoll(RETRY_ROW)]}
+          >
+            <ImportWizardDialog
+              open
+              onOpenChange={() => {}}
+              context={context}
+              retryJob={toImportJobView(FINISHED_ROW)}
+            />
+          </MockedProvider>
+        </ConfigContext.Provider>
+      </NextIntlClientProvider>,
+    );
+
+    // Landed on the run step directly — no add-step dropzone, no mapping or
+    // review step in between.
+    expect(await screen.findByText("earlier-errors.csv")).toBeTruthy();
+    expect(screen.queryByText("Import via CSV")).toBeNull();
   });
 });
