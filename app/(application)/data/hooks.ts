@@ -12,6 +12,12 @@ import { useCallback, useMemo, useRef } from "react";
 import { useApolloClient, useMutation, useQuery } from "@apollo/client";
 
 import { UserContext } from "@/app/(application)/authenticated";
+import {
+  nextFoldersAfterMove,
+  normalizeFolder,
+  sortFolders,
+  type Folder,
+} from "@/lib/knowledge/folders";
 import type { Context } from "@/types/models/context";
 import type { Item } from "@EXULU_SHARED/models/item";
 
@@ -24,10 +30,13 @@ import {
 
 import {
   CONTEXT_ICONS_CONFIG_KEY,
+  CREATE_CONTEXT_FOLDER,
   CREATE_CONTEXT_ICONS,
+  DELETE_CONTEXT_FOLDER,
   GET_AVAILABLE_EMBEDDING_MODELS,
   GET_AVAILABLE_QUEUES,
   GET_CONTEXTS,
+  GET_CONTEXT_FOLDERS,
   GET_CONTEXT_ICONS,
   GET_EMBEDDER_INFO,
   GET_ITEMS,
@@ -35,8 +44,10 @@ import {
   GET_ITEM_BY_ID,
   GET_USER_CONTEXT_ITEM_FAVOURITES,
   KNOWLEDGE_CONTEXT_AGGREGATES_SUPPORTED,
+  KNOWLEDGE_CONTEXT_FOLDERS_SUPPORTED,
   PAGINATION_POSTFIX,
   SET_EMBEDDER,
+  UPDATE_CONTEXT_FOLDER,
   UPDATE_CONTEXT_ICONS,
   UPDATE_USER_CONTEXT_ITEM_FAVOURITES,
   UPDATE_USER_RECENTLY_VIEWED_ITEMS,
@@ -174,6 +185,174 @@ export function useContextIcons(): UseContextIconsResult {
     loading,
     saving: createState.loading || updateState.loading,
     setIcon,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Context folders — admin-managed grouping of knowledge bases (see
+// lib/knowledge/folders.ts for the pure grouping/move/sort helpers this hook
+// wraps, and queries.ts for the generic context_folders CRUD documents).
+// ---------------------------------------------------------------------------
+
+interface GetContextFoldersData {
+  context_foldersPagination: {
+    items: Array<{
+      id: string;
+      name: string;
+      description?: unknown;
+      icon?: unknown;
+      sort_order?: unknown;
+      context_ids?: unknown;
+    }>;
+  };
+}
+
+export interface UseContextFoldersResult {
+  /** Normalised, `sortFolders`-ordered folders. Empty until loaded. */
+  folders: Folder[];
+  /**
+   * Whether the backend has the `context_folders` table
+   * (KNOWLEDGE_CONTEXT_FOLDERS_SUPPORTED). When false no request is fired,
+   * `folders` stays empty and the page must render as it did before folders
+   * existed.
+   */
+  supported: boolean;
+  /**
+   * The FIRST load only. A refetch after a write deliberately reports
+   * `false`: the page gates its skeleton on this, and flashing the whole
+   * list after every folder change would be worse than a brief staleness.
+   */
+  loading: boolean;
+  error?: unknown;
+  refetch: () => Promise<unknown>;
+  createFolder: (input: {
+    name: string;
+    description?: string;
+    icon?: string | null;
+    sort_order?: number;
+  }) => Promise<void>;
+  updateFolder: (
+    id: string,
+    input: Partial<{
+      name: string;
+      description: string;
+      icon: string | null;
+      sort_order: number;
+      context_ids: string[];
+    }>,
+  ) => Promise<void>;
+  deleteFolder: (id: string) => Promise<void>;
+  /** Move a context to `targetFolderId` (or to Ungrouped, when `null`). */
+  moveContext: (contextId: string, targetFolderId: string | null) => Promise<void>;
+}
+
+/**
+ * Apply a context's folder updates (as computed by `nextFoldersAfterMove`)
+ * one at a time, awaiting each before starting the next. Stops — and
+ * rethrows — at the first failure, leaving every update before it applied
+ * and every update from it onward un-applied.
+ *
+ * `moveContext` below is this function's only caller: it refetches once
+ * `applyMoves` resolves, and does not refetch when it throws, so a failure
+ * after the first update can briefly leave the UI showing stale folder
+ * membership until the next move corrects it — an accepted tradeoff (see
+ * the design spec), not a bug to fix here.
+ */
+export async function applyMoves(
+  updates: Array<{ id: string; context_ids: string[] }>,
+  update: (id: string, input: { context_ids: string[] }) => Promise<void>,
+): Promise<void> {
+  for (const { id, context_ids } of updates) {
+    await update(id, { context_ids });
+  }
+}
+
+export function useContextFolders(): UseContextFoldersResult {
+  const { data, loading, error, refetch } = useQuery<GetContextFoldersData>(
+    GET_CONTEXT_FOLDERS,
+    {
+      fetchPolicy: "cache-first",
+      // Nothing to ask for until the table exists — and asking would log a
+      // GraphQL error on every visit to /data.
+      skip: !KNOWLEDGE_CONTEXT_FOLDERS_SUPPORTED,
+    },
+  );
+
+  const [createFolderMutation] = useMutation(CREATE_CONTEXT_FOLDER);
+  const [updateFolderMutation] = useMutation(UPDATE_CONTEXT_FOLDER);
+  const [deleteFolderMutation] = useMutation(DELETE_CONTEXT_FOLDER);
+
+  const folders = useMemo<Folder[]>(() => {
+    const items = data?.context_foldersPagination?.items ?? [];
+    return sortFolders(items.map(normalizeFolder));
+  }, [data]);
+
+  const createFolder = useCallback(
+    async (input: {
+      name: string;
+      description?: string;
+      icon?: string | null;
+      sort_order?: number;
+    }): Promise<void> => {
+      // `context_ids` is required on the row (and is what `moveContext`
+      // rewrites later), so a new folder is created with an explicit empty
+      // membership rather than letting the column default decide.
+      await createFolderMutation({
+        variables: { input: { ...input, context_ids: [] } },
+      });
+      await refetch();
+    },
+    [createFolderMutation, refetch],
+  );
+
+  const updateFolder = useCallback(
+    async (
+      id: string,
+      input: Partial<{
+        name: string;
+        description: string;
+        icon: string | null;
+        sort_order: number;
+        context_ids: string[];
+      }>,
+    ): Promise<void> => {
+      await updateFolderMutation({ variables: { id, input } });
+      await refetch();
+    },
+    [updateFolderMutation, refetch],
+  );
+
+  const deleteFolder = useCallback(
+    async (id: string): Promise<void> => {
+      await deleteFolderMutation({ variables: { id } });
+      await refetch();
+    },
+    [deleteFolderMutation, refetch],
+  );
+
+  const moveContext = useCallback(
+    async (contextId: string, targetFolderId: string | null): Promise<void> => {
+      const updates = nextFoldersAfterMove(folders, contextId, targetFolderId);
+      await applyMoves(updates, async (id, input) => {
+        await updateFolderMutation({ variables: { id, input } });
+      });
+      await refetch();
+    },
+    [folders, updateFolderMutation, refetch],
+  );
+
+  return {
+    folders,
+    supported: KNOWLEDGE_CONTEXT_FOLDERS_SUPPORTED,
+    // `!data` keeps this to the first load: a post-write refetch must not
+    // make the page swap its list for a skeleton (see the type above).
+    loading: loading && !data,
+    error,
+    refetch,
+    createFolder,
+    updateFolder,
+    deleteFolder,
+    moveContext,
   };
 }
 

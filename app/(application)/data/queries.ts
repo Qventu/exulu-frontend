@@ -28,6 +28,13 @@ export const KNOWLEDGE_ITEM_CHUNKS_PAGINATED_SUPPORTED = false;
  *  library rows. Until shipped: status dot stays muted. */
 export const KNOWLEDGE_CONTEXT_HEALTH_SUPPORTED = false;
 
+/** When `true`, the `context_folders` core table exists and the Knowledge
+ *  list groups contexts into admin-managed folders. Until shipped: no folder
+ *  request is fired and the page renders the flat list exactly as before.
+ *  Set to `true` once the backend branch feat/knowledge-folders (table
+ *  `context_folders`) is deployed. */
+export const KNOWLEDGE_CONTEXT_FOLDERS_SUPPORTED = false;
+
 // ---------------------------------------------------------------------------
 // GraphQL field sets — kept in lock-step with queries/queries.ts.
 // ---------------------------------------------------------------------------
@@ -205,6 +212,71 @@ export const UPDATE_CONTEXT_ICONS = gql`
       item {
         ${CONTEXT_ICONS_FIELDS}
       }
+    }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// Context folders — admin-managed grouping of knowledge bases on the
+// Knowledge page (work item 2.11 follow-up). Backed by a new core table,
+// `context_folders` (id, name, description, icon, sort_order, context_ids),
+// exposed through the platform's generic CRUD the same way `context_icons`
+// above reuses `platform_configurations` — except this feature gets its own
+// table rather than sharing a key-value row, since a folder has real fields
+// (name, icon, sort order) an admin edits directly rather than a single JSON
+// blob. Generic naming mirrored from that precedent: `<plural>Pagination` /
+// `<plural>CreateOne` / `<plural>UpdateOneById` / `<plural>RemoveOneById`,
+// input type `<singular>Input`.
+//
+// Verified against the backend SDL (src/graphql/schemas/index.ts:777,:989):
+// `<plural>CreateOne` and `<plural>UpdateOneById` both return
+// `<singular>MutationPayload { item { … } job }` — so both wrap the row in
+// `item`, matching CREATE_CONTEXT_ICONS / UPDATE_CONTEXT_ICONS above.
+// `<plural>RemoveOneById` returns the row directly, hence `{ id }` below
+// with no wrapper.
+// ---------------------------------------------------------------------------
+
+export const CONTEXT_FOLDER_FIELDS = `id name description icon sort_order context_ids`;
+
+// No `sort:` argument on purpose: `SortBy.direction` is the `SortDirection!`
+// enum, and an in-document enum value must be an unquoted literal — a quoted
+// "ASC" fails GraphQL validation before any resolver runs. Ordering is
+// `sortFolders`' job in the hook anyway. `limit: 200` is a practical cap: a
+// knowledge base with more folders than that has a different problem.
+export const GET_CONTEXT_FOLDERS = gql`
+  query GetContextFolders {
+    context_foldersPagination(page: 1, limit: 200) {
+      items {
+        ${CONTEXT_FOLDER_FIELDS}
+      }
+    }
+  }
+`;
+
+export const CREATE_CONTEXT_FOLDER = gql`
+  mutation CreateContextFolder($input: context_folderInput!) {
+    context_foldersCreateOne(input: $input) {
+      item {
+        ${CONTEXT_FOLDER_FIELDS}
+      }
+    }
+  }
+`;
+
+export const UPDATE_CONTEXT_FOLDER = gql`
+  mutation UpdateContextFolder($id: ID!, $input: context_folderInput!) {
+    context_foldersUpdateOneById(id: $id, input: $input) {
+      item {
+        ${CONTEXT_FOLDER_FIELDS}
+      }
+    }
+  }
+`;
+
+export const DELETE_CONTEXT_FOLDER = gql`
+  mutation DeleteContextFolder($id: ID!) {
+    context_foldersRemoveOneById(id: $id) {
+      id
     }
   }
 `;

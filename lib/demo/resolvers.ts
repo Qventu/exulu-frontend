@@ -382,6 +382,47 @@ function agentFor(world: DemoWorld, variables: Record<string, unknown>) {
   );
 }
 
+/**
+ * One knowledge folder as the product's `context_folders` CRUD returns it —
+ * exactly the fields `CONTEXT_FOLDER_FIELDS` selects (data/queries.ts), since
+ * the selection set is what Apollo writes to the cache.
+ */
+type DemoFolder = {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  sort_order: number;
+  context_ids: string[];
+};
+
+/** The demo's folder list — empty until a visitor creates one. See below. */
+const demoFolders: DemoFolder[] = [];
+let demoFolderSeq = 0;
+
+/** A mutation's `input` coerced to a full row, over `base` where given. */
+function demoFolderFrom(
+  input: unknown,
+  id: string,
+  base?: DemoFolder,
+): DemoFolder {
+  const submitted = (input ?? {}) as Partial<DemoFolder>;
+  const pick = <K extends keyof DemoFolder>(
+    key: K,
+    fallback: DemoFolder[K],
+  ): DemoFolder[K] =>
+    submitted[key] !== undefined ? (submitted[key] as DemoFolder[K]) : fallback;
+
+  return {
+    id,
+    name: pick("name", base?.name ?? ""),
+    description: pick("description", base?.description ?? null),
+    icon: pick("icon", base?.icon ?? null),
+    sort_order: Number(pick("sort_order", base?.sort_order ?? 0)),
+    context_ids: pick("context_ids", base?.context_ids ?? []),
+  };
+}
+
 export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   // --- app shell (every page) ---------------------------------------------
   // The sidebar polls this on every route, so it is shell-wide rather than
@@ -632,6 +673,60 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
   GetContexts: (world) => ({ contexts: { items: world.contexts } }),
 
   GetContextIcons: () => ({ platform_configurationsPagination: { items: [] } }),
+
+  // Knowledge folders. The demo user is a super admin (user.ts), so the tour
+  // shows "Manage folders" and a visitor can create one with a stray click —
+  // unmapped, the mutations resolved to `{}` and nothing appeared.
+  //
+  // Unlike UpdateAgentEditor above (which echoes and forgets), these four
+  // share one in-memory list: a folder you create has to still be there when
+  // the dialog refetches a moment later, or the feature reads as broken. The
+  // list is per module instance, i.e. per browser tab for the client link —
+  // the server-side table is a different instance and issues no folder
+  // mutation, so nothing a visitor does reaches anyone else's tour. It starts
+  // EMPTY so the demo Knowledge page renders exactly as it did before
+  // folders existed (the page groups only once a folder exists).
+  GetContextFolders: () => ({
+    // Mirrors the real query's `sort: { field: "sort_order", direction: "ASC" }`.
+    context_foldersPagination: {
+      items: [...demoFolders].sort((a, b) => a.sort_order - b.sort_order),
+    },
+  }),
+
+  CreateContextFolder: (_world, variables) => {
+    const folder = demoFolderFrom(
+      variables.input,
+      `demo-folder-${++demoFolderSeq}`,
+    );
+    demoFolders.push(folder);
+    return { context_foldersCreateOne: { item: folder } };
+  },
+
+  UpdateContextFolder: (_world, variables) => {
+    const id = String(variables.id ?? "");
+    const existing = demoFolders.find((folder) => folder.id === id);
+    if (!existing) {
+      // Unknown id (a tab that outlived its list): echo the submitted values
+      // rather than null, so the dialog leaves its saving state and the next
+      // refetch sets it straight.
+      return {
+        context_foldersUpdateOneById: {
+          item: demoFolderFrom(variables.input, id),
+        },
+      };
+    }
+    // Merge: the dialog saves every field, the move menu sends context_ids
+    // alone, and an untouched field must survive either way.
+    Object.assign(existing, demoFolderFrom(variables.input, id, existing));
+    return { context_foldersUpdateOneById: { item: existing } };
+  },
+
+  DeleteContextFolder: (_world, variables) => {
+    const id = String(variables.id ?? "");
+    const index = demoFolders.findIndex((folder) => folder.id === id);
+    if (index >= 0) demoFolders.splice(index, 1);
+    return { context_foldersRemoveOneById: { id } };
+  },
 
   GetUserContextItemFavourites: () => ({
     userById: {

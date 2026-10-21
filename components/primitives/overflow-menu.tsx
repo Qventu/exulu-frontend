@@ -78,6 +78,23 @@ export interface OverflowMenuProps {
   className?: string;
 }
 
+/**
+ * T7 hover→touch visibility for a row-revealed icon trigger: faded out ONLY
+ * under `@media (hover: hover) and (pointer: fine)`, and brought back by row
+ * hover, row focus-within, the trigger's own focus, or an open menu. Requires
+ * a `group` class on the surrounding row.
+ *
+ * Exported so the row triggers that are not this menu (the Knowledge list's
+ * "move to folder" menu) reveal identically instead of re-deriving the rule —
+ * `revealOnHover` below is its first consumer.
+ */
+export const REVEAL_ON_HOVER_CLASSES = [
+  "transition-opacity duration-150 motion-reduce:transition-none",
+  "[@media(hover:hover)_and_(pointer:fine)]:opacity-0",
+  "group-hover:opacity-100 group-focus-within:opacity-100",
+  "focus-visible:opacity-100 data-[state=open]:opacity-100",
+];
+
 const OverflowMenu = React.forwardRef<HTMLButtonElement, OverflowMenuProps>(
   ({ items, align = "end", label, revealOnHover = false, className }, ref) => {
     const t = useTranslations();
@@ -96,14 +113,7 @@ const OverflowMenu = React.forwardRef<HTMLButtonElement, OverflowMenuProps>(
             aria-label={label ?? t("common.actions")}
             className={cn(
               "size-8",
-              revealOnHover && [
-                "transition-opacity duration-150 motion-reduce:transition-none",
-                // Hide only on hover-capable fine-pointer devices (T7) …
-                "[@media(hover:hover)_and_(pointer:fine)]:opacity-0",
-                // … and reveal on row hover/focus, own focus, or open menu.
-                "group-hover:opacity-100 group-focus-within:opacity-100",
-                "focus-visible:opacity-100 data-[state=open]:opacity-100",
-              ],
+              revealOnHover && REVEAL_ON_HOVER_CLASSES,
               className,
             )}
           >
