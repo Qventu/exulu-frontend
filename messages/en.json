@@ -845,6 +845,12 @@
     "emptyTitle": "No agents yet",
     "errorLoading": "Error loading agents",
     "errorLoadingDescription": "There was an error loading your agents. Please try again.",
+    "favourites": {
+      "add": "Add to favourites",
+      "error": "Couldn't update favourites. Please try again.",
+      "remove": "Remove from favourites",
+      "title": "Favourites"
+    },
     "filters": {
       "statusAll": "All statuses",
       "statusLabel": "Status"

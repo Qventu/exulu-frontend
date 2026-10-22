@@ -12,13 +12,13 @@
  *
  * Anatomy (md+): 32px AgentVisual avatar · name (text-sm font-medium) +
  * model name muted · quiet StatusDot (success/muted — item 19, "status is
- * quiet until it isn't") · RelativeTime(updatedAt) · Edit (ghost,
- * write-gated) · Chat (ghost) · OverflowMenu (Details, Duplicate, Copy ID —
- * NO Delete: the single delete entry point is the editor header overflow,
- * ladder item 32).
+ * quiet until it isn't") · RelativeTime(updatedAt) · FavoriteToggle (star,
+ * per-user — hooks.ts useFavouriteAgents) · Edit (ghost, write-gated) · Chat
+ * (ghost) · OverflowMenu (Details, Duplicate, Copy ID — NO Delete: the
+ * single delete entry point is the editor header overflow, ladder item 32).
  *
- * <md (responsive.md T1/T7): avatar + name + dot + chevron; Edit/Chat move
- * INTO the always-visible overflow; all targets ≥44px (size-11 md:size-8).
+ * <md (responsive.md T1/T7): avatar + name + dot + star + chevron; Edit/Chat
+ * move INTO the always-visible overflow; all targets ≥44px (size-11 md:size-8).
  *
  * The row's main click target is a real <button> (opens the detail panel);
  * the action buttons are siblings, never nested interactive elements.
@@ -39,6 +39,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import AgentVisual from "@/components/lottie";
+import { FavoriteToggle } from "@/components/primitives/favorite-toggle";
 import { OverflowMenu, type OverflowMenuItem } from "@/components/primitives/overflow-menu";
 import { RelativeTime } from "@/components/primitives/relative-time";
 import { StatusDot } from "@/components/primitives/status-dot";
@@ -120,6 +121,10 @@ export interface AgentRowProps {
   onSelect: (agent: Agent) => void;
   /** Overflow "Duplicate" (item 33 row share, write-gated). */
   onDuplicate: (agent: Agent) => void;
+  /** Starred by the current user (shared store — hooks.ts useFavouriteAgents). */
+  isFavourite: boolean;
+  /** Star click — the toggle itself never bubbles into the row button. */
+  onToggleFavourite: (agent: Agent) => void;
 }
 
 export function AgentRow({
@@ -128,6 +133,8 @@ export function AgentRow({
   selected = false,
   onSelect,
   onDuplicate,
+  isFavourite,
+  onToggleFavourite,
 }: AgentRowProps) {
   const t = useTranslations("agents");
   const tCommon = useTranslations("common");
@@ -230,6 +237,11 @@ export function AgentRow({
 
       {/* Sibling actions — never nested inside the row button. */}
       <span className="flex shrink-0 items-center gap-1">
+        <FavoriteToggle
+          pressed={isFavourite}
+          label={isFavourite ? t("favourites.remove") : t("favourites.add")}
+          onToggle={() => onToggleFavourite(agent)}
+        />
         {canEdit ? (
           <Button
             asChild
