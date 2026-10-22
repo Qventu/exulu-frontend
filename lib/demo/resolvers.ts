@@ -269,6 +269,24 @@ const page = (itemCount: number) => ({
 });
 
 /**
+ * A fixture agent as an /agents index row: every field the index's
+ * AGENT_LIST_FIELDS selects, defaulted to null where the fixture is silent.
+ */
+const agentListRow = (agent: DemoWorld["agents"][number]) => ({
+  description: null,
+  image: null,
+  animation_idle: null,
+  animation_responding: null,
+  modelName: null,
+  providerName: null,
+  category: null,
+  rights_mode: null,
+  updatedAt: null,
+  ...agent,
+  active: agent.active ?? true,
+});
+
+/**
  * Pulls an eval_set_id out of the product's filter argument shape, which is a
  * list of `{ field: { operator: value } }`-ish entries rather than a flat map.
  * Returns null when unfiltered.
@@ -884,6 +902,59 @@ export const DEMO_RESOLVERS: Record<string, DemoResolver> = {
       items: world.agents,
     },
   }),
+
+  // --- /agents index: Active / Inactive sections + favourites ---------------
+  // The index issues AgentsIndex once per section with an `{ active: { eq } }`
+  // filter entry (plus `{ name: { contains } }` while searching) and renders
+  // starred agents from AgentsFavouritesByIds. Every AGENT_LIST_FIELDS field
+  // is present on each row (an absent one is an Apollo cache miss that empties
+  // the section without an error); a fixture agent with no explicit `active`
+  // counts as active, which is the column's real default.
+  AgentsIndex: (world, variables) => {
+    const filters =
+      (variables.filters as
+        | Array<Record<string, { eq?: unknown; contains?: unknown }>>
+        | undefined) ?? [];
+    let items = world.agents;
+    for (const entry of filters) {
+      const active = entry.active?.eq;
+      if (typeof active === "boolean") {
+        items = items.filter((a) => (a.active ?? true) === active);
+      }
+      const needle = entry.name?.contains;
+      if (typeof needle === "string" && needle.length > 0) {
+        const lower = needle.toLowerCase();
+        items = items.filter((a) => a.name.toLowerCase().includes(lower));
+      }
+    }
+    return {
+      agentsPagination: {
+        pageInfo: page(items.length),
+        items: items.map(agentListRow),
+      },
+    };
+  },
+  GetUserFavouriteAgents: () => ({
+    userById: { id: String(DEMO_USER_ID), favourite_agents: [] },
+  }),
+  UpdateUserFavouriteAgents: (_world, variables) => ({
+    usersUpdateOne: {
+      item: {
+        id: String(DEMO_USER_ID),
+        favourite_agents: Array.isArray(variables.favourite_agents)
+          ? variables.favourite_agents
+          : [],
+      },
+    },
+  }),
+  AgentsFavouritesByIds: (world, variables) => {
+    const ids = (variables.ids as string[] | undefined) ?? [];
+    return {
+      agentByIds: world.agents
+        .filter((a) => ids.includes(a.id))
+        .map(agentListRow),
+    };
+  },
 
   GetContextById: (world, variables) => ({
     contextById:

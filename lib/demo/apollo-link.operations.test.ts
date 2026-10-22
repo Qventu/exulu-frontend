@@ -7,6 +7,12 @@ import {
   GET_MEMORY_BASE_USAGE as GET_WORKBENCH_MEMORY_BASE_USAGE,
 } from "@/app/(application)/agents/edit/[id]/queries";
 import {
+  GET_AGENTS_INDEX,
+  GET_FAVOURITE_AGENTS_BY_IDS,
+  GET_USER_FAVOURITE_AGENTS,
+  UPDATE_USER_FAVOURITE_AGENTS,
+} from "@/app/(application)/agents/queries";
+import {
   GET_CONTEXTS,
   GET_CONTEXT_ICONS,
   GET_USER_CONTEXT_ITEM_FAVOURITES,
@@ -29,7 +35,11 @@ import { GET_IMPORT_JOBS, importJobFilters } from "@/lib/api/imports";
 import { ROUTINE_RUNS_ATTENTION_COUNT } from "@/lib/routine-runs/queries";
 import { ALGI_RUNS_NEEDING_ATTENTION } from "./fixtures/chapter-email";
 import { SOFTWARE_DOC_CONTEXT_ID } from "./fixtures/software-docs";
-import { runDemoOperation as run, runDemoQueryThroughCache } from "./test-support";
+import {
+  runDemoMutationThroughCache,
+  runDemoOperation as run,
+  runDemoQueryThroughCache,
+} from "./test-support";
 
 /**
  * Coverage tests: assert the demo link answers the operations the REAL product
@@ -267,5 +277,87 @@ describe("/transcriptions/review/[jobId] operations", () => {
     const page = data.projectsPagination as { items: unknown[]; pageInfo: { itemCount: number } };
     expect(page.items).toEqual([]);
     expect(page.pageInfo.itemCount).toBe(0);
+  });
+});
+
+describe("/agents page operations", () => {
+  // The index is split into an Active and an Inactive section, each its own
+  // paginated AgentsIndex call with an `{ active: { eq } }` filter entry.
+  it("answers AgentsIndex for the active section with the world's agents", async () => {
+    const data = await runDemoQueryThroughCache(GET_AGENTS_INDEX, {
+      page: 1,
+      limit: 20,
+      filters: [{ active: { eq: true } }],
+      sort: { field: "updatedAt", direction: "DESC" },
+    });
+    const connection = data.agentsPagination as {
+      pageInfo: { pageCount: number; itemCount: number; currentPage: number };
+      items: { id: string; active?: boolean | null }[];
+    };
+    expect(connection.items.length).toBeGreaterThan(0);
+    expect(connection.pageInfo.itemCount).toBe(connection.items.length);
+    expect(connection.items.every((a) => a.active !== false)).toBe(true);
+  });
+
+  it("answers AgentsIndex for the inactive section with an empty page", async () => {
+    const data = await runDemoQueryThroughCache(GET_AGENTS_INDEX, {
+      page: 1,
+      limit: 20,
+      filters: [{ active: { eq: false } }],
+      sort: { field: "updatedAt", direction: "DESC" },
+    });
+    const connection = data.agentsPagination as { items: unknown[] };
+    expect(connection.items).toEqual([]);
+  });
+
+  it("narrows AgentsIndex by the name search filter", async () => {
+    const all = (await run(GET_AGENTS_INDEX, {
+      page: 1,
+      limit: 20,
+      filters: [{ active: { eq: true } }],
+    })) as { agentsPagination: { items: { name: string }[] } };
+    const needle = all.agentsPagination.items[0].name.slice(0, 3);
+    const hits = (await run(GET_AGENTS_INDEX, {
+      page: 1,
+      limit: 20,
+      filters: [{ active: { eq: true } }, { name: { contains: needle } }],
+    })) as { agentsPagination: { items: { name: string }[] } };
+    expect(hits.agentsPagination.items.length).toBeGreaterThan(0);
+    expect(
+      hits.agentsPagination.items.every((a) =>
+        a.name.toLowerCase().includes(needle.toLowerCase()),
+      ),
+    ).toBe(true);
+  });
+
+  it("answers GetUserFavouriteAgents for the demo user", async () => {
+    const data = await run(GET_USER_FAVOURITE_AGENTS, { id: "0" });
+    const user = data.userById as { favourite_agents: unknown };
+    expect(Array.isArray(user.favourite_agents)).toBe(true);
+  });
+
+  it("resolves AgentsFavouritesByIds to the agents asked for", async () => {
+    const all = (await run(GET_AGENTS_INDEX, {
+      page: 1,
+      limit: 20,
+      filters: [{ active: { eq: true } }],
+    })) as { agentsPagination: { items: { id: string }[] } };
+    const wanted = all.agentsPagination.items[0].id;
+    const data = await runDemoQueryThroughCache(GET_FAVOURITE_AGENTS_BY_IDS, {
+      ids: [wanted, "no-such-agent"],
+    });
+    const rows = data.agentByIds as { id: string }[];
+    expect(rows.map((r) => r.id)).toEqual([wanted]);
+  });
+
+  it("echoes the written list back from UpdateUserFavouriteAgents", async () => {
+    const data = await runDemoMutationThroughCache(UPDATE_USER_FAVOURITE_AGENTS, {
+      id: 0,
+      favourite_agents: ["demo-agent-newton"],
+    });
+    const result = data.usersUpdateOne as {
+      item: { favourite_agents: string[] };
+    };
+    expect(result.item.favourite_agents).toEqual(["demo-agent-newton"]);
   });
 });

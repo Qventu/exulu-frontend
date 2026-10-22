@@ -845,6 +845,12 @@
     "emptyTitle": "Noch keine Agenten",
     "errorLoading": "Fehler beim Laden der Agenten",
     "errorLoadingDescription": "Beim Laden Ihrer Agenten ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+    "favourites": {
+      "add": "Zu Favoriten hinzufügen",
+      "error": "Favoriten konnten nicht aktualisiert werden. Bitte erneut versuchen.",
+      "remove": "Aus Favoriten entfernen",
+      "title": "Favoriten"
+    },
     "filters": {
       "statusAll": "Alle Status",
       "statusLabel": "Status"

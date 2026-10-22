@@ -12,6 +12,16 @@
  * rows with real prev/next pagination from pageInfo (kills the legacy
  * limit:100 cap + client-only filter, agents.md review #6).
  *
+ * Grouping (2026-10-22): the list body is three stacked blocks —
+ *   1. Favourites — the user's starred agents as cards (agent-favourites.tsx),
+ *      hidden while a search or status filter is active;
+ *   2. Active — published agents, its own paginated AgentsIndex call;
+ *   3. Inactive — unpublished agents, its own paginated call, below.
+ * Section headings appear only once both halves are on screen (status "all"
+ * with at least one inactive agent) — an install with only active agents sees
+ * exactly the plain list. Starred agents stay in their section too: the cards
+ * are a shortcut, not a third bucket.
+ *
  * detailPresentation="sheet" is REQUIRED here: /agents is a centered content
  * page, where the docked aside is banned (list-detail.tsx JSDoc / keys
  * 2026-06-11 QA decision — newer than agents.md's docked-panel sketch).
@@ -34,6 +44,7 @@ import { EmptyState } from "@/components/primitives/empty-state";
 import { ListDetail } from "@/components/primitives/list-detail";
 import { PageHeader } from "@/components/primitives/page-header";
 import { PageShell } from "@/components/primitives/page-shell";
+import { StatusDot } from "@/components/primitives/status-dot";
 import { Toolbar } from "@/components/primitives/toolbar";
 import { MobileTopbarAction } from "@/components/shell/mobile-topbar";
 import { Button } from "@/components/ui/button";
@@ -48,14 +59,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { can } from "@/lib/rights";
 import type { Agent } from "@/types/models/agent";
 
+import { resolveFavouriteAgents } from "../favourites-utils";
 import {
+  type AgentsSection,
   type AgentsSort,
   type AgentStatusFilter,
   DEFAULT_AGENTS_SORT,
   useAgentsIndex,
   useDuplicateAgent,
+  useFavouriteAgents,
 } from "../hooks";
 import { AgentDetailPanel } from "./agent-detail-panel";
+import { AgentFavourites } from "./agent-favourites";
 import { AgentRow } from "./agent-row";
 import { CreateAgentDialog } from "./create-agent-dialog";
 
@@ -90,12 +105,8 @@ export function AgentsView() {
   const canWrite = can(user, { area: "agents", level: "write" });
 
   const {
-    agents,
-    pageInfo,
-    loading,
-    error,
-    refetch,
-    setPage,
+    active,
+    inactive,
     search,
     setSearch,
     status,
@@ -103,6 +114,7 @@ export function AgentsView() {
     sort,
     setSort,
   } = useAgentsIndex();
+  const { favouriteIds, favourites, toggleFavourite } = useFavouriteAgents();
   const { duplicate } = useDuplicateAgent();
 
   const [createOpen, setCreateOpen] = React.useState(false);
@@ -118,13 +130,53 @@ export function AgentsView() {
     }
   }, [searchParams, router, canWrite]);
 
+  const searching = search.trim().length > 0;
+  const filtered = searching || status !== "all";
+
+  // Favourites (cards): star order, resolved by the by-ids query with
+  // already-loaded index rows filling in while it resolves. Hidden while the
+  // user is looking for something specific (search or status filter).
+  const favouriteRows = React.useMemo(
+    () =>
+      filtered
+        ? []
+        : resolveFavouriteAgents(favouriteIds, favourites, [
+            ...active.agents,
+            ...inactive.agents,
+          ]),
+    [filtered, favouriteIds, favourites, active.agents, inactive.agents],
+  );
+
+  // Flat order backing ListDetail's keyboard navigation + selection — a
+  // starred agent appears in a card AND its section, so de-dupe by id.
+  const allRows = React.useMemo(() => {
+    const seen = new Set<string>();
+    return [...favouriteRows, ...active.agents, ...inactive.agents].filter(
+      (agent) => {
+        if (seen.has(agent.id)) return false;
+        seen.add(agent.id);
+        return true;
+      },
+    );
+  }, [favouriteRows, active.agents, inactive.agents]);
+
   // Selection derives from the live list; a paged-away row closes the panel.
   const selected = React.useMemo(
-    () => agents.find((agent) => agent.id === selectedId) ?? null,
-    [agents, selectedId],
+    () => allRows.find((agent) => agent.id === selectedId) ?? null,
+    [allRows, selectedId],
   );
 
   const openCreate = React.useCallback(() => setCreateOpen(true), []);
+
+  const handleToggleFavourite = React.useCallback(
+    (agent: Agent) => {
+      void toggleFavourite(agent.id).catch(() => {
+        // Optimistic state already reverted in the hook; just say so.
+        toast.error(t("favourites.error"));
+      });
+    },
+    [toggleFavourite, t],
+  );
 
   const handleDuplicate = React.useCallback(
     async (agent: Agent) => {
@@ -141,15 +193,19 @@ export function AgentsView() {
     [duplicate, router, t],
   );
 
-  const searching = search.trim().length > 0;
-  const filtered = searching || status !== "all";
   const activeFilterCount =
     (status !== "all" ? 1 : 0) +
     (sortValueOf(sort) !== "lastUpdated" ? 1 : 0);
 
-  const showSkeleton = loading && agents.length === 0;
-  const showError = !!error && agents.length === 0;
-  const showEmpty = !loading && !showError && agents.length === 0;
+  const rowCount = active.agents.length + inactive.agents.length;
+  const loading = active.loading || inactive.loading;
+  const error = active.error ?? inactive.error;
+  const showSkeleton = loading && rowCount === 0;
+  const showError = !!error && rowCount === 0;
+  const showEmpty = !loading && !showError && rowCount === 0;
+  // Headings only once both halves are on screen — see the header comment.
+  const showSectionHeadings = status === "all" && inactive.agents.length > 0;
+  const sectionIdBase = React.useId();
 
   // Item 13 fix: a real EmptyState for zero agents / zero hits — write users
   // get the create action, read users get ask-your-admin copy.
@@ -174,15 +230,119 @@ export function AgentsView() {
     />
   );
 
+  const renderPagination = (section: AgentsSection) => {
+    const { pageInfo } = section;
+    if (!pageInfo || pageInfo.pageCount <= 1) return null;
+    // Item 1: real prev/next pagination from pageInfo (agent #101 lives).
+    return (
+      <div className="flex items-center justify-end gap-4">
+        <span
+          className="whitespace-nowrap text-sm font-medium"
+          aria-live="polite"
+        >
+          {tCommon("pageOf", {
+            page: pageInfo.currentPage,
+            count: Math.max(pageInfo.pageCount, 1),
+          })}
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-11 md:size-9"
+            onClick={() => section.setPage(pageInfo.currentPage - 1)}
+            disabled={!pageInfo.hasPreviousPage}
+          >
+            <span className="sr-only">{tCommon("goToPreviousPage")}</span>
+            <ChevronLeft aria-hidden="true" className="size-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-11 md:size-9"
+            onClick={() => section.setPage(pageInfo.currentPage + 1)}
+            disabled={!pageInfo.hasNextPage}
+          >
+            <span className="sr-only">{tCommon("goToNextPage")}</span>
+            <ChevronRight aria-hidden="true" className="size-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSection = (section: AgentsSection, kind: "active" | "inactive") => {
+    if (section.agents.length === 0 && !section.error) return null;
+    const headingId = `${sectionIdBase}-${kind}`;
+    const label = kind === "active" ? tCommon("active") : tCommon("inactive");
+    return (
+      <section
+        key={kind}
+        aria-labelledby={showSectionHeadings ? headingId : undefined}
+        className="flex flex-col gap-3"
+      >
+        {showSectionHeadings ? (
+          <div className="flex items-center gap-2">
+            {/* The dot is decorative inside StatusDot; the heading's name is
+                the label alone, so the count sits outside the <h2>. */}
+            <h2 id={headingId} className="text-sm font-medium">
+              <StatusDot
+                status={kind === "active" ? "success" : "muted"}
+                label={label}
+              />
+            </h2>
+            {section.pageInfo ? (
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {section.pageInfo.itemCount}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+        {section.error && section.agents.length === 0 ? (
+          <EmptyState
+            variant="error"
+            title={t("errorLoading")}
+            description={t("errorLoadingDescription")}
+            action={{ label: tCommon("retry"), onClick: () => section.refetch() }}
+          />
+        ) : (
+          <div className="rounded-md border">
+            <ul className="divide-y divide-border">
+              {section.agents.map((agent) => (
+                <AgentRow
+                  key={agent.id}
+                  agent={agent}
+                  canEdit={canWrite}
+                  selected={agent.id === selectedId}
+                  onSelect={(item) => setSelectedId(item.id)}
+                  onDuplicate={handleDuplicate}
+                  isFavourite={favouriteIds.includes(agent.id)}
+                  onToggleFavourite={handleToggleFavourite}
+                />
+              ))}
+            </ul>
+          </div>
+        )}
+        {renderPagination(section)}
+      </section>
+    );
+  };
+
   const list = (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       {showError ? (
         // Item 3: inline error block in PageShell — with Retry, never blank.
         <EmptyState
           variant="error"
           title={t("errorLoading")}
           description={t("errorLoadingDescription")}
-          action={{ label: tCommon("retry"), onClick: () => refetch() }}
+          action={{
+            label: tCommon("retry"),
+            onClick: () => {
+              active.refetch();
+              inactive.refetch();
+            },
+          }}
         />
       ) : showSkeleton ? (
         // Item 2: row-shaped skeletons mirroring the list (no card-grid pulse).
@@ -207,58 +367,17 @@ export function AgentsView() {
       ) : showEmpty ? (
         emptyState
       ) : (
-        <div className="rounded-md border">
-          <ul className="divide-y divide-border">
-            {agents.map((agent) => (
-              <AgentRow
-                key={agent.id}
-                agent={agent}
-                canEdit={canWrite}
-                selected={agent.id === selectedId}
-                onSelect={(item) => setSelectedId(item.id)}
-                onDuplicate={handleDuplicate}
-              />
-            ))}
-          </ul>
-        </div>
+        <>
+          <AgentFavourites
+            agents={favouriteRows}
+            selectedId={selectedId}
+            onSelect={(item) => setSelectedId(item.id)}
+            onToggleFavourite={handleToggleFavourite}
+          />
+          {renderSection(active, "active")}
+          {renderSection(inactive, "inactive")}
+        </>
       )}
-
-      {/* Item 1: real prev/next pagination from pageInfo (agent #101 lives). */}
-      {pageInfo && pageInfo.pageCount > 1 ? (
-        <div className="flex items-center justify-end gap-4">
-          <span
-            className="whitespace-nowrap text-sm font-medium"
-            aria-live="polite"
-          >
-            {tCommon("pageOf", {
-              page: pageInfo.currentPage,
-              count: Math.max(pageInfo.pageCount, 1),
-            })}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-11 md:size-9"
-              onClick={() => setPage(pageInfo.currentPage - 1)}
-              disabled={!pageInfo.hasPreviousPage}
-            >
-              <span className="sr-only">{tCommon("goToPreviousPage")}</span>
-              <ChevronLeft aria-hidden="true" className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-11 md:size-9"
-              onClick={() => setPage(pageInfo.currentPage + 1)}
-              disabled={!pageInfo.hasNextPage}
-            >
-              <span className="sr-only">{tCommon("goToNextPage")}</span>
-              <ChevronRight aria-hidden="true" className="size-4" />
-            </Button>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 
@@ -345,7 +464,7 @@ export function AgentsView() {
 
         <ListDetail<Agent>
           detailPresentation="sheet"
-          items={agents}
+          items={allRows}
           selected={selected}
           onSelect={(item) => setSelectedId(item ? item.id : null)}
           detailTitle={(item) => item.name}

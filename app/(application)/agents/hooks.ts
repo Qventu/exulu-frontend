@@ -5,10 +5,18 @@
  * never call useQuery(GET_X) inline; keys/hooks.ts is the reference pattern).
  *
  * useAgentsIndex owns: server-side name search ({name:{contains}}, 300 ms
- * debounce INSIDE the hook), status filter ({active:{eq}}), sort (SortBy),
- * pagination via pageInfo (PAGE_SIZE 20 — kills the legacy hard limit:100,
- * agents.md review #6), fetch policies, and previousData fallback so a page
- * change never blanks the list.
+ * debounce INSIDE the hook), sort (SortBy), and TWO paginated sections —
+ * Active and Inactive — each its own AgentsIndex call with an {active:{eq}}
+ * filter entry and its own page (PAGE_SIZE 20 — kills the legacy hard
+ * limit:100, agents.md review #6). The list is server-paginated, so the split
+ * cannot be a client-side regroup of one page (page boundaries would mix the
+ * two); the status filter simply skips the section it excludes. Fetch
+ * policies + previousData fallback so a page change never blanks a section.
+ *
+ * useFavouriteAgents owns the per-user star list (users.favourite_agents),
+ * mirroring projects/hooks.ts useFavoriteProjects: one module-scoped store so
+ * every consumer agrees, re-anchored to the backend on mount, optimistic
+ * toggle with a per-id revert, and a by-ids resolve for the cards.
  *
  * The optional category filter from the hook contract is OMITTED:
  * {category:{eq}} has zero existing consumers and could not be
@@ -27,14 +35,19 @@ import { useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
 
+import { UserContext } from "@/app/(application)/authenticated";
 import type { PageInfo } from "@/components/primitives/data-table";
 import type { Agent } from "@/types/models/agent";
 
+import { toggleFavouriteId } from "./favourites-utils";
 import {
   COPY_AGENT_INDEX,
   CREATE_AGENT,
   GET_AGENTS_INDEX,
+  GET_FAVOURITE_AGENTS_BY_IDS,
+  GET_USER_FAVOURITE_AGENTS,
   SET_AGENT_INSTRUCTIONS,
+  UPDATE_USER_FAVOURITE_AGENTS,
 } from "./queries";
 
 export const AGENTS_PAGE_SIZE = 20;
@@ -57,7 +70,8 @@ interface AgentsConnection {
   items: Agent[];
 }
 
-export function useAgentsIndex(): {
+/** One of the two paginated halves of the index (Active / Inactive). */
+export interface AgentsSection {
   agents: Agent[];
   pageInfo: PageInfo | undefined;
   loading: boolean;
@@ -67,61 +81,39 @@ export function useAgentsIndex(): {
   refetch: () => void;
   page: number;
   setPage: (p: number) => void;
-  search: string;
-  setSearch: (s: string) => void;
-  status: AgentStatusFilter;
-  setStatus: (s: AgentStatusFilter) => void;
+}
+
+interface AgentsSectionArgs {
+  active: boolean;
+  term: string;
   sort: AgentsSort;
-  setSort: (s: AgentsSort) => void;
-} {
-  const [page, setPage] = React.useState(1);
-  const [search, setSearchState] = React.useState("");
-  const [debouncedSearch, setDebouncedSearch] = React.useState("");
-  const [status, setStatusState] = React.useState<AgentStatusFilter>("all");
-  const [sort, setSortState] = React.useState<AgentsSort>(DEFAULT_AGENTS_SORT);
+  page: number;
+  setPage: (p: number) => void;
+  /** The status filter excludes this section — no request, no rows. */
+  skip: boolean;
+}
 
-  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
-  React.useEffect(() => () => clearTimeout(debounceRef.current), []);
-
-  // 300 ms debounce lives HERE (the Toolbar consumer passes debounceMs: 0 so
-  // the keystroke is never double-debounced); a new term resets to page 1.
-  const setSearch = React.useCallback((value: string) => {
-    setSearchState(value);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setDebouncedSearch(value);
-      setPage(1);
-    }, SEARCH_DEBOUNCE_MS);
-  }, []);
-
-  // Filter/sort changes also restart at page 1 (a kept page index can point
-  // past the new result set's last page).
-  const setStatus = React.useCallback((value: AgentStatusFilter) => {
-    setStatusState(value);
-    setPage(1);
-  }, []);
-
-  const setSort = React.useCallback((value: AgentsSort) => {
-    setSortState(value);
-    setPage(1);
-  }, []);
-
+function useAgentsSection({
+  active,
+  term,
+  sort,
+  page,
+  setPage,
+  skip,
+}: AgentsSectionArgs): AgentsSection {
   // Filters AND together as array entries (proven shapes only — see queries.ts).
   const filters = React.useMemo(() => {
-    const list: Array<Record<string, unknown>> = [];
-    const term = debouncedSearch.trim();
+    const list: Array<Record<string, unknown>> = [{ active: { eq: active } }];
     if (term) list.push({ name: { contains: term } });
-    if (status !== "all") list.push({ active: { eq: status === "active" } });
     return list;
-  }, [debouncedSearch, status]);
+  }, [active, term]);
 
   const { data, previousData, loading, error, refetch } = useQuery(
     GET_AGENTS_INDEX,
     {
       fetchPolicy: "cache-first",
       nextFetchPolicy: "network-only",
+      skip,
       variables: {
         page,
         limit: AGENTS_PAGE_SIZE,
@@ -131,17 +123,104 @@ export function useAgentsIndex(): {
     },
   );
 
-  const connection: AgentsConnection | undefined =
-    data?.agentsPagination ?? previousData?.agentsPagination;
+  // A skipped section must not leak its previousData back into the view.
+  const connection: AgentsConnection | undefined = skip
+    ? undefined
+    : (data?.agentsPagination ?? previousData?.agentsPagination);
 
   return {
     agents: connection?.items ?? [],
     pageInfo: connection?.pageInfo,
-    loading,
-    error,
+    loading: skip ? false : loading,
+    error: skip ? undefined : error,
     refetch,
     page,
     setPage,
+  };
+}
+
+export function useAgentsIndex(): {
+  active: AgentsSection;
+  inactive: AgentsSection;
+  search: string;
+  setSearch: (s: string) => void;
+  status: AgentStatusFilter;
+  setStatus: (s: AgentStatusFilter) => void;
+  sort: AgentsSort;
+  setSort: (s: AgentsSort) => void;
+} {
+  const [activePage, setActivePage] = React.useState(1);
+  const [inactivePage, setInactivePage] = React.useState(1);
+  const [search, setSearchState] = React.useState("");
+  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  const [status, setStatusState] = React.useState<AgentStatusFilter>("all");
+  const [sort, setSortState] = React.useState<AgentsSort>(DEFAULT_AGENTS_SORT);
+
+  const resetPages = React.useCallback(() => {
+    setActivePage(1);
+    setInactivePage(1);
+  }, []);
+
+  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  React.useEffect(() => () => clearTimeout(debounceRef.current), []);
+
+  // 300 ms debounce lives HERE (the Toolbar consumer passes debounceMs: 0 so
+  // the keystroke is never double-debounced); a new term resets both sections
+  // to page 1.
+  const setSearch = React.useCallback(
+    (value: string) => {
+      setSearchState(value);
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        setDebouncedSearch(value);
+        resetPages();
+      }, SEARCH_DEBOUNCE_MS);
+    },
+    [resetPages],
+  );
+
+  // Filter/sort changes also restart at page 1 (a kept page index can point
+  // past the new result set's last page).
+  const setStatus = React.useCallback(
+    (value: AgentStatusFilter) => {
+      setStatusState(value);
+      resetPages();
+    },
+    [resetPages],
+  );
+
+  const setSort = React.useCallback(
+    (value: AgentsSort) => {
+      setSortState(value);
+      resetPages();
+    },
+    [resetPages],
+  );
+
+  const term = debouncedSearch.trim();
+
+  const active = useAgentsSection({
+    active: true,
+    term,
+    sort,
+    page: activePage,
+    setPage: setActivePage,
+    skip: status === "inactive",
+  });
+  const inactive = useAgentsSection({
+    active: false,
+    term,
+    sort,
+    page: inactivePage,
+    setPage: setInactivePage,
+    skip: status === "active",
+  });
+
+  return {
+    active,
+    inactive,
     search,
     setSearch,
     status,
@@ -149,6 +228,141 @@ export function useAgentsIndex(): {
     sort,
     setSort,
   };
+}
+
+/* ------------------- favourites: ONE shared source of truth ------------------- */
+
+/**
+ * Module-scoped favourites store shared by every `useFavouriteAgents`
+ * instance (projects/hooks.ts precedent). UserContext is a once-per-login
+ * server snapshot with no setter and no Apollo backing, so seeding
+ * component-local state from it would make instances diverge after the first
+ * toggle — and the full-array UPDATE write would then silently wipe stars set
+ * elsewhere. All instances read this one store: seeded from the snapshot,
+ * re-anchored to the backend on mount (GET_USER_FAVOURITE_AGENTS) and
+ * advanced by each toggle.
+ */
+let favouriteIdsStore: string[] | null = null;
+let favouriteTogglesInFlight = 0;
+const favouriteStoreListeners = new Set<() => void>();
+
+function readFavouriteIdsStore(): string[] | null {
+  return favouriteIdsStore;
+}
+
+function writeFavouriteIdsStore(ids: string[]) {
+  favouriteIdsStore = ids;
+  favouriteStoreListeners.forEach((listener) => listener());
+}
+
+function subscribeFavouriteIdsStore(listener: () => void): () => void {
+  favouriteStoreListeners.add(listener);
+  return () => {
+    favouriteStoreListeners.delete(listener);
+  };
+}
+
+/**
+ * Per-user agent favourites. The full-array write is always computed from
+ * the latest shared state (never a stale per-mount seed); a failed mutation
+ * reverts only the toggled agent so a concurrent successful toggle is never
+ * clobbered. `favourites` are the resolved rows (by-ids), client-filtered to
+ * the current ids so un-starring is instant while the query catches up.
+ */
+export function useFavouriteAgents(): {
+  favouriteIds: string[];
+  favourites: Agent[];
+  loading: boolean;
+  toggleFavourite: (agentId: string) => Promise<void>;
+} {
+  const { user } = React.useContext(UserContext);
+  const userId: number | undefined = user?.id;
+  const seed: string[] | undefined = user?.favourite_agents;
+
+  const storeIds = React.useSyncExternalStore(
+    subscribeFavouriteIdsStore,
+    readFavouriteIdsStore,
+    readFavouriteIdsStore,
+  );
+  // Until the store is first written, fall back to the login-time snapshot.
+  const favouriteIds = React.useMemo(
+    () => storeIds ?? seed ?? [],
+    [storeIds, seed],
+  );
+
+  // Re-anchor to the backend on mount: the snapshot can be stale (stars
+  // toggled in another tab — or before this page got its own store writes).
+  // `userId === undefined`, not `!userId`: the demo user's id is 0.
+  const { data: anchor } = useQuery(GET_USER_FAVOURITE_AGENTS, {
+    fetchPolicy: "network-only",
+    variables: { id: userId },
+    skip: userId === undefined,
+  });
+  React.useEffect(() => {
+    const server = anchor?.userById?.favourite_agents;
+    // Never clobber an optimistic toggle that is still in flight.
+    if (Array.isArray(server) && favouriteTogglesInFlight === 0) {
+      writeFavouriteIdsStore(server);
+    }
+  }, [anchor]);
+
+  const { data, previousData, loading } = useQuery(
+    GET_FAVOURITE_AGENTS_BY_IDS,
+    {
+      fetchPolicy: "cache-and-network",
+      variables: { ids: favouriteIds },
+      skip: favouriteIds.length === 0,
+    },
+  );
+
+  const [updateFavourites] = useMutation(UPDATE_USER_FAVOURITE_AGENTS);
+
+  const toggleFavourite = React.useCallback(
+    async (agentId: string) => {
+      if (userId === undefined) return;
+      const base = readFavouriteIdsStore() ?? seed ?? [];
+      const removing = base.includes(agentId);
+      const next = toggleFavouriteId(base, agentId);
+      writeFavouriteIdsStore(next);
+      favouriteTogglesInFlight++;
+      try {
+        const { data: result } = await updateFavourites({
+          variables: { id: userId, favourite_agents: next },
+        });
+        const confirmed = result?.usersUpdateOne?.item?.favourite_agents;
+        // Adopt the server-confirmed array — unless a newer toggle is still
+        // in flight (its optimistic state supersedes this response).
+        if (Array.isArray(confirmed) && favouriteTogglesInFlight === 1) {
+          writeFavouriteIdsStore(confirmed);
+        }
+      } catch (mutationError) {
+        // Revert ONLY this agent; concurrent toggles may have advanced the
+        // store since.
+        const current = readFavouriteIdsStore() ?? [];
+        writeFavouriteIdsStore(
+          removing
+            ? current.includes(agentId)
+              ? current
+              : [...current, agentId]
+            : current.filter((id) => id !== agentId),
+        );
+        throw mutationError;
+      } finally {
+        favouriteTogglesInFlight--;
+      }
+    },
+    [seed, updateFavourites, userId],
+  );
+
+  const fetched: Agent[] | undefined =
+    data?.agentByIds ?? previousData?.agentByIds;
+  // Client filter keeps un-starring instant while the query catches up.
+  const favourites = React.useMemo(
+    () => (fetched ?? []).filter((agent) => favouriteIds.includes(agent.id)),
+    [fetched, favouriteIds],
+  );
+
+  return { favouriteIds, favourites, loading, toggleFavourite };
 }
 
 export function useCreateAgent(): {
