@@ -129,7 +129,7 @@ describe("importJobFilters", () => {
 
 describe("importJobByIdFilters", () => {
   it("filters job_result rows down to a single id", () => {
-    expect(importJobByIdFilters("job-1")).toEqual([{ id: { eq: "job-1" } }]);
+    expect(importJobByIdFilters("job-1")).toEqual([{ job_id: { eq: "job-1" } }]);
   });
 });
 

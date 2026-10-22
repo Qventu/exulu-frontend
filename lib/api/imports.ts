@@ -112,7 +112,10 @@ export const importJobFilters = (contextId: string) => [
 ];
 
 /** Filters GET_IMPORT_JOBS down to a single job by id (polling a running import). */
-export const importJobByIdFilters = (id: string) => [{ id: { eq: id } }];
+/** The generated `FilterJob_result` input only knows the table's declared columns, not
+ *  the core `id`; the backend writes `job_id = id` for every import row, so the job's
+ *  own id is looked up through `job_id`. */
+export const importJobByIdFilters = (id: string) => [{ job_id: { eq: id } }];
 
 /**
  * Backend error codes a failed import mutation can throw (`new Error(code)`
