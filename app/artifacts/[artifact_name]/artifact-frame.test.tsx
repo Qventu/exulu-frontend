@@ -72,8 +72,9 @@ describe("ArtifactFrame", () => {
   test("keeps the sandbox flags and never adds allow-same-origin", () => {
     const { frame } = renderFrame(true);
     expect(frame.getAttribute("sandbox")).toBe(
-      "allow-scripts allow-popups allow-forms",
+      "allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms",
     );
+    expect(frame.getAttribute("sandbox")).not.toContain("allow-same-origin");
   });
 
   // Regression test for the finding: contentWindow is a WindowProxy whose

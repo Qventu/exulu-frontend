@@ -155,11 +155,19 @@ export function ArtifactFrame({
     };
   }, [grantIdentity, artifactName]);
 
+  // `allow-popups-to-escape-sandbox`: a popup opened from a sandboxed frame
+  // otherwise inherits the sandbox — opaque origin, no cookies — so an
+  // artifact linking into the IMP itself (e.g. /chat/<agent>/new?q=…) lands on
+  // a page that cannot read its own session. The popup is a separate top-level
+  // browsing context; it gains nothing over the embedding page, and
+  // `allow-same-origin` stays deliberately absent (see the test).
+  const ARTIFACT_SANDBOX = "allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms";
+
   return (
     <iframe
       ref={ref}
       srcDoc={html}
-      sandbox="allow-scripts allow-popups allow-forms"
+      sandbox={ARTIFACT_SANDBOX}
       className={className}
       title={title}
       onLoad={() => {
