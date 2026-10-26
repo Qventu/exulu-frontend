@@ -1485,7 +1485,10 @@
       "deleteTitle": "Delete file?",
       "download": "Download",
       "downloadNamed": "Download {name}",
+      "dropHint": "The agent can read them on its next turn.",
+      "dropReadOnly": "You can't add files to this session.",
       "dropOrClick": "Drop files or click to upload",
+      "dropTitle": "Drop files to add them to this session",
       "emptyDescription": "Upload a file, or wait for the agent to produce one.",
       "emptyTitle": "No files yet",
       "errorTitle": "Couldn't load files",
@@ -1719,6 +1722,10 @@
       "callCount": "{count} calls",
       "callIndex": "Call {index} of {count}",
       "errors": "{count} failed"
+    },
+    "toolTrace": {
+      "sequence": "Sequence of tool calls",
+      "title": "Tool calls"
     },
     "skillAuthor": {
       "createTitle": "Save this as a skill?",

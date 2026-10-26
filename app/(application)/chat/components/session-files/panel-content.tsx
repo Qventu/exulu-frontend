@@ -37,6 +37,7 @@ import { sessionFilesApi, type SessionFile } from "@/lib/api/session-files";
 
 import { FileRow } from "./file-row";
 import { PreviewPane } from "./preview-pane";
+import { subscribeSessionFilesChanged } from "./upload";
 import { UploadZone } from "./upload-zone";
 
 const POLL_INTERVAL_MS = 5_000;
@@ -96,6 +97,13 @@ export function SessionFilesContent({ sessionId }: SessionFilesContentProps) {
             if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         };
     }, [refresh]);
+
+    // A drop on the conversation (chat-drop-target.tsx) uploads outside this
+    // panel; refresh at once rather than on the next poll tick.
+    useEffect(
+        () => subscribeSessionFilesChanged(sessionId, () => { void refresh(); }),
+        [sessionId, refresh],
+    );
 
     // Keep the preview file's metadata in sync with the polled list — if it
     // was deleted, drop the preview and bail back to the list.

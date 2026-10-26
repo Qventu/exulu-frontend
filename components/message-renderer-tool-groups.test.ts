@@ -4,6 +4,7 @@ import {
   expandUngroupableUnits,
   GROUPING_EXCLUDED_TOOL_TYPES,
   groupRenderUnits,
+  traceRenderUnits,
   type RenderUnit,
 } from "./message-renderer-tool-groups";
 
@@ -22,7 +23,11 @@ const text = (value: string) => ({ type: "text", text: value }) as any;
 /** Shorthand for asserting the shape of a unit list. */
 const shape = (units: RenderUnit[]) =>
   units.map((u) =>
-    u.kind === "part" ? `part:${(u.part as any).type}` : `group:${u.type}x${u.parts.length}`,
+    u.kind === "part"
+      ? `part:${(u.part as any).type}`
+      : u.kind === "tool-group"
+        ? `group:${u.type}x${u.parts.length}`
+        : `trace:${u.parts.length}`,
   );
 
 describe("groupRenderUnits", () => {
@@ -291,5 +296,95 @@ describe("expandUngroupableUnits", () => {
       "part:tool-b",
       "part:tool-b",
     ]);
+  });
+});
+
+/**
+ * The sequential case: an agent loop calls one tool per step — Bash, then a
+ * Hubspot list, then Bash again, then four Hubspot reads — and every call is
+ * its own step, so the same-type grouping above never fires and the user
+ * scrolls past eight stacked "Completed" cards before the answer.
+ */
+describe("traceRenderUnits", () => {
+  const anyPart = () => true;
+  const trace = (parts: any[], isGroupable: (part: any, index: number) => boolean = anyPart) =>
+    traceRenderUnits(groupRenderUnits(parts), isGroupable);
+
+  it("merges consecutive calls of different tools across step boundaries into one trace", () => {
+    const parts = [
+      stepStart(),
+      tool("tool-bash"),
+      stepStart(),
+      tool("tool-hubspot_list_tools"),
+      stepStart(),
+      tool("tool-hubspot_read"),
+      stepStart(),
+      tool("tool-hubspot_read"),
+    ];
+    const units = trace(parts);
+    expect(shape(units)).toEqual(["trace:4"]);
+    const unit = units[0] as Extract<RenderUnit, { kind: "tool-trace" }>;
+    expect(unit.parts.map((p: any) => p.type)).toEqual([
+      "tool-bash",
+      "tool-hubspot_list_tools",
+      "tool-hubspot_read",
+      "tool-hubspot_read",
+    ]);
+    expect(unit.startIndex).toBe(0);
+    expect(unit.endIndex).toBe(7);
+  });
+
+  it("leaves a lone tool call exactly as it was", () => {
+    const parts = [stepStart(), tool("tool-bash"), text("done")];
+    expect(shape(trace(parts))).toEqual(["part:step-start", "part:tool-bash", "part:text"]);
+  });
+
+  it("ends the run at a text part and starts a new one after it", () => {
+    const parts = [tool("tool-a"), tool("tool-b"), text("so far"), tool("tool-c"), tool("tool-d")];
+    expect(shape(trace(parts))).toEqual(["trace:2", "part:text", "trace:2"]);
+  });
+
+  it("ends the run at a reasoning part so the reasoning stays visible in place", () => {
+    const reasoning = { type: "reasoning", text: "thinking" } as any;
+    const parts = [tool("tool-a"), reasoning, tool("tool-b"), tool("tool-c")];
+    expect(shape(trace(parts))).toEqual(["part:tool-a", "part:reasoning", "trace:2"]);
+  });
+
+  it("flattens a same-type parallel group into the trace's calls", () => {
+    const parts = [tool("tool-a"), tool("tool-a"), tool("tool-a"), stepStart(), tool("tool-b")];
+    const units = trace(parts);
+    expect(shape(units)).toEqual(["trace:4"]);
+  });
+
+  it("keeps a pending approval out of the trace and splits around it", () => {
+    const parts = [
+      tool("tool-a"),
+      tool("tool-b", { state: "approval-requested", approval: { id: "ap-1" } }),
+      tool("tool-c"),
+      tool("tool-d"),
+    ];
+    expect(shape(trace(parts))).toEqual(["part:tool-a", "part:tool-b", "trace:2"]);
+  });
+
+  it("never absorbs a tool with a bespoke renderer", () => {
+    const parts = [tool("tool-a"), tool("tool-memory_remember"), tool("tool-b")];
+    expect(shape(trace(parts))).toEqual(["part:tool-a", "part:tool-memory_remember", "part:tool-b"]);
+  });
+
+  it("respects the caller's output-shape check, splitting around the member that fails it", () => {
+    const image = tool("tool-image_generation");
+    const parts = [tool("tool-a"), tool("tool-b"), image, tool("tool-c")];
+    const units = trace(parts, (part) => part !== image);
+    expect(shape(units)).toEqual(["trace:2", "part:tool-image_generation", "part:tool-c"]);
+  });
+
+  it("includes dynamic-tool parts, which the same-type grouping cannot", () => {
+    const parts = [tool("dynamic-tool", { toolName: "bash" }), tool("tool-a")];
+    expect(shape(trace(parts))).toEqual(["trace:2"]);
+  });
+
+  it("passes non-tool units through untouched", () => {
+    const parts = [text("hi"), stepStart(), { type: "file", url: "x" } as any];
+    expect(shape(trace(parts))).toEqual(["part:text", "part:step-start", "part:file"]);
   });
 });

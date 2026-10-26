@@ -82,6 +82,7 @@ import { ToolCallApproval } from "./tool-call-approval";
 import { ToolCallApprovalGroup } from "./tool-call-approval-group";
 import { summarizeToolGroup } from "./tool-call-group-data";
 import { ToolCallResultGroup } from "./tool-call-result-group";
+import { ToolTrace } from "./tool-trace";
 import { findTrajectoryRefForFeedback } from "./trajectory-ref";
 
 export interface MessageColumnProps {
@@ -532,6 +533,9 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
               }
               UntypedToolPartComponent={UntypedToolPartComponent}
               GroupedToolPartComponent={GroupedToolPartComponent}
+              // A run of consecutive tool calls of any kind (the sequential
+              // agent loop) folds into one trace card — tool-trace.tsx.
+              ToolTraceComponent={ToolTrace}
               // Consecutive pending "remember" approvals render under one
               // "Save all" bar (spec §4.1). Guests never see memory cards —
               // omitting the prop makes MessageRenderer fall back to

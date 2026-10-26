@@ -29,19 +29,28 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { getInputSummary, summarizeToolGroup } from "./tool-call-group-data";
 
-/** One call inside the group. Parses its own output, only once opened. */
-const ToolCallRow = ({
+/**
+ * One call inside a collapsed card. Parses its own output, only once opened.
+ * Shared with the tool-trace card (tool-trace.tsx), which names each row by
+ * its tool via `title` — in a same-type group the tool is in the header, so
+ * the row shows the input preview instead.
+ */
+export const ToolCallRow = ({
   part,
   index,
   total,
+  title: titleOverride,
 }: {
   part: DynamicToolUIPart;
   index: number;
   total: number;
+  /** Row label; defaults to the input preview, then "Call i of N". */
+  title?: string;
 }) => {
   const t = useTranslations("chat");
   const summary = getInputSummary(part.input);
-  const title = summary ?? t("toolGroup.callIndex", { index: index + 1, count: total });
+  const title =
+    titleOverride ?? summary ?? t("toolGroup.callIndex", { index: index + 1, count: total });
 
   return (
     <Tool className="mb-0 rounded-none border-0 border-t border-border">
