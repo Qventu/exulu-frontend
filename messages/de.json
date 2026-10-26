@@ -1485,7 +1485,10 @@
       "deleteTitle": "Datei löschen?",
       "download": "Herunterladen",
       "downloadNamed": "{name} herunterladen",
+      "dropHint": "Der Agent kann sie in seiner nächsten Antwort lesen.",
+      "dropReadOnly": "Sie können dieser Sitzung keine Dateien hinzufügen.",
       "dropOrClick": "Dateien hierher ziehen oder klicken zum Hochladen",
+      "dropTitle": "Dateien hier ablegen, um sie dieser Sitzung hinzuzufügen",
       "emptyDescription": "Laden Sie eine Datei hoch oder warten Sie, bis der Agent eine erstellt.",
       "emptyTitle": "Noch keine Dateien",
       "errorTitle": "Dateien konnten nicht geladen werden",
@@ -1719,6 +1722,10 @@
       "callCount": "{count} Aufrufe",
       "callIndex": "Aufruf {index} von {count}",
       "errors": "{count} fehlgeschlagen"
+    },
+    "toolTrace": {
+      "sequence": "Abfolge der Tool-Aufrufe",
+      "title": "Tool-Aufrufe"
     },
     "skillAuthor": {
       "createTitle": "Als Skill speichern?",

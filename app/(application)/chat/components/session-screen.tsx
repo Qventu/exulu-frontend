@@ -14,6 +14,10 @@
  *   SidePanel primitive hosting SessionFilesContent (item 79: resizable ≥lg,
  *   Sheet below — owner of the content: messages)
  *
+ * The quiet column is wrapped in ChatDropTarget: a file dragged anywhere over
+ * it shows a drop overlay, opens the files panel, and uploads into the
+ * session's files on drop (session-files/chat-drop-target.tsx).
+ *
  * Every in-column surface uses CHAT_COLUMN; the Composer owns the safe-area
  * bottom padding on its own root (responsive.md V3) — it is applied exactly
  * once, never re-wrapped here.
@@ -34,6 +38,7 @@ import { ChatHeader } from "./chat-header";
 import { Composer } from "./composer";
 import { MemoryPanelContent } from "./memory-panel";
 import { MessageColumn } from "./message-column";
+import { ChatDropTarget } from "./session-files/chat-drop-target";
 import { SessionFilesContent } from "./session-files/panel-content";
 
 export interface SessionScreenProps {
@@ -80,8 +85,11 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
-      {/* The quiet column */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {/* The quiet column — also the drop target for session files. */}
+      <ChatDropTarget
+        controller={controller}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
+      >
         <ChatHeader controller={controller} />
 
         {/* Conversation — MessageColumn owns the scroll container (V2). */}
@@ -129,7 +137,7 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
         <div className="shrink-0">
           <Composer controller={controller} />
         </div>
-      </div>
+      </ChatDropTarget>
 
       {/* Item 79 — session files: resizable docked panel ≥lg, Sheet below.
           Open state lives in the controller (persisted; auto-creates the

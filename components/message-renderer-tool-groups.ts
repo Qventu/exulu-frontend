@@ -48,7 +48,15 @@ const EXCLUDED = new Set<string>(GROUPING_EXCLUDED_TOOL_TYPES);
  */
 export type RenderUnit<TPart = unknown> =
   | { kind: "part"; part: TPart; index: number }
-  | { kind: "tool-group"; type: string; parts: TPart[]; startIndex: number };
+  | { kind: "tool-group"; type: string; parts: TPart[]; startIndex: number }
+  /**
+   * A run of ≥2 consecutive tool calls of ANY groupable types, spanning
+   * step boundaries — the sequential agent loop (Bash, then a Hubspot list,
+   * then four Hubspot reads, one per step). `parts` are the calls in order;
+   * the absorbed `step-start` parts render nothing anyway. startIndex /
+   * endIndex are the run's bounds in the original part list.
+   */
+  | { kind: "tool-trace"; parts: TPart[]; startIndex: number; endIndex: number };
 
 /**
  * True when a part may take part in a group. `dynamic-tool` is deliberately
@@ -150,4 +158,99 @@ export function expandUngroupableUnits<TPart>(
   }
 
   return expanded;
+}
+
+const isStepStart = (part: unknown): boolean =>
+  (part as { type?: unknown } | null)?.type === "step-start";
+
+/**
+ * True when a part may sit inside a trace. Same bespoke-renderer exclusions as
+ * `isGroupableToolPart`, PLUS `dynamic-tool` (a trace never relies on type
+ * identity, so the shared type is harmless) and MINUS anything mid-approval:
+ * the approval card is interactive and must stay where the user can act on
+ * it, so a pending call splits the run around itself.
+ */
+const isTraceableToolPart = (part: unknown): boolean => {
+  const type = (part as { type?: unknown } | null)?.type;
+  if (typeof type !== "string") return false;
+  if (type !== "dynamic-tool") {
+    if (!type.startsWith("tool-")) return false;
+    const lower = type.toLowerCase();
+    if (EXCLUDED.has(lower)) return false;
+    if (lower.includes("context_search")) return false;
+  }
+  const state = (part as { state?: unknown }).state;
+  return state !== "approval-requested" && state !== "approval-responded";
+};
+
+/**
+ * Third pass, over the output of the two above: collapses a run of ≥2
+ * consecutive tool calls — any mix of tools, across `step-start` boundaries,
+ * same-type groups flattened in — into ONE `tool-trace` unit.
+ *
+ * WHY: the same-type grouping handles the parallel fan-out, but a sequential
+ * agent loop issues one call per step, so eight calls meant eight stacked
+ * "Completed" cards before the answer. A text or reasoning part (anything the
+ * user should read in place) ends the run; so does a call awaiting approval
+ * or one whose output needs its own renderer (`isGroupable`, same contract
+ * as `expandUngroupableUnits`). A run of one call is emitted exactly as it
+ * came in, so a lone call renders bit-for-bit as before.
+ */
+export function traceRenderUnits<TPart>(
+  units: readonly RenderUnit<TPart>[],
+  isGroupable: (part: TPart, index: number) => boolean,
+): RenderUnit<TPart>[] {
+  const out: RenderUnit<TPart>[] = [];
+  let run: RenderUnit<TPart>[] = [];
+
+  const flush = () => {
+    if (run.length === 0) return;
+    const calls: TPart[] = [];
+    for (const unit of run) {
+      if (unit.kind === "tool-group") calls.push(...unit.parts);
+      else if (unit.kind === "part" && !isStepStart(unit.part)) calls.push(unit.part);
+    }
+    if (calls.length >= 2) {
+      const first = run[0];
+      const last = run[run.length - 1];
+      const startIndex = first.kind === "part" ? first.index : first.kind === "tool-group" ? first.startIndex : first.startIndex;
+      const endIndex =
+        last.kind === "part"
+          ? last.index
+          : last.kind === "tool-group"
+            ? last.startIndex + last.parts.length - 1
+            : last.endIndex;
+      out.push({ kind: "tool-trace", parts: calls, startIndex, endIndex });
+    } else {
+      out.push(...run);
+    }
+    run = [];
+  };
+
+  for (const unit of units) {
+    if (unit.kind === "tool-group") {
+      if (unit.parts.every((part, offset) => isTraceableToolPart(part) && isGroupable(part, unit.startIndex + offset))) {
+        run.push(unit);
+      } else {
+        flush();
+        out.push(unit);
+      }
+      continue;
+    }
+    if (unit.kind === "tool-trace") {
+      // Already traced (a caller running the pass twice) — keep as is.
+      flush();
+      out.push(unit);
+      continue;
+    }
+    if (isStepStart(unit.part) || (isTraceableToolPart(unit.part) && isGroupable(unit.part, unit.index))) {
+      run.push(unit);
+      continue;
+    }
+    flush();
+    out.push(unit);
+  }
+  flush();
+
+  return out;
 }

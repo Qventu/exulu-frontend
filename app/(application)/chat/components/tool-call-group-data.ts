@@ -72,7 +72,7 @@ const RUNNING_STATES = new Set<string>([
  * something to approve > something still running > something broke >
  * something refused > all done.
  */
-const aggregateState = (parts: DynamicToolUIPart[]): ToolUIPart["state"] => {
+export const aggregateToolState = (parts: DynamicToolUIPart[]): ToolUIPart["state"] => {
   const states = parts.map((part) => part.state as string);
   if (states.includes("approval-requested")) return "approval-requested";
   if (states.some((state) => RUNNING_STATES.has(state))) return "input-available";
@@ -123,7 +123,7 @@ export function summarizeToolGroup(
     approvedCount,
     deniedCount,
     errorCount,
-    state: aggregateState(parts),
+    state: aggregateToolState(parts),
     inputSummaries: parts.map((part) => getInputSummary(part.input)),
     hasAuthShortCircuit,
   };

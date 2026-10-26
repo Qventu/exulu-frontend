@@ -3,16 +3,10 @@
 /**
  * Drag-drop / browse uploader for the session files panel (chat.md item 83 —
  * flow unchanged). Route-local relocation of
- * components/session-files/upload-zone.tsx. For each file:
- *  1. Calls sessionFilesApi.uploadSign to get a presigned PUT URL.
- *  2. PUTs the file directly to S3.
- *  3. Calls sessionFilesApi.syncToSandbox so the agent sees the file on
- *     its next turn.
- *  4. Triggers a refresh of the file list in the parent.
- *
- * Multi-file uploads run sequentially so we don't slam S3 with parallel
- * PUTs that could exceed quotas; the bottleneck for typical session files
- * (documents, images) is upload bandwidth, not request count.
+ * components/session-files/upload-zone.tsx. The upload itself (sign → PUT →
+ * sync-to-sandbox, sequential, size-checked up front) lives in ./upload.ts,
+ * shared with the conversation-wide drop target; this component owns only
+ * the zone's UI state and triggers the parent's list refresh afterwards.
  *
  * `inputRef` (optional) exposes the hidden file input so the panel's empty
  * EmptyState can use "browse" as its action (item 80a).
@@ -21,10 +15,8 @@
 import { Loader2, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRef, useState, type MutableRefObject } from "react";
-import { toast } from "sonner";
 
-import { sessionFilesApi } from "@/lib/api/session-files";
-
+import { uploadSessionFiles } from "./upload";
 import { formatBytes, MAX_UPLOAD_BYTES } from "./utils";
 
 export function UploadZone({
@@ -44,50 +36,9 @@ export function UploadZone({
     const handleFiles = async (fileList: FileList | null) => {
         if (!fileList || fileList.length === 0) return;
         const files = Array.from(fileList);
-
-        // Pre-validate sizes so we don't kick off a multi-file upload that
-        // will fail partway.
-        const tooBig = files.find((f) => f.size > MAX_UPLOAD_BYTES);
-        if (tooBig) {
-            toast.error(
-                t("files.uploadTooBig", {
-                    name: tooBig.name,
-                    size: formatBytes(tooBig.size),
-                    limit: formatBytes(MAX_UPLOAD_BYTES),
-                }),
-            );
-            return;
-        }
-
         setUploadingCount(files.length);
         try {
-            for (const file of files) {
-                const contentType = file.type || "application/octet-stream";
-                try {
-                    const { uploadUrl, key } = await sessionFilesApi.uploadSign(
-                        sessionId,
-                        file.name,
-                        contentType,
-                    );
-                    await sessionFilesApi.putToSignedUrl(uploadUrl, file, contentType);
-                    try {
-                        await sessionFilesApi.syncToSandbox(sessionId, key);
-                    } catch (syncErr: any) {
-                        // Upload itself succeeded — warn but don't fail the whole flow.
-                        toast.warning(
-                            t("files.uploadSyncWarning", { name: file.name }),
-                        );
-                        console.error("[SESSION-FILES] sync-to-sandbox failed", syncErr);
-                    }
-                } catch (err: any) {
-                    toast.error(
-                        t("files.uploadFailed", {
-                            name: file.name,
-                            message: err.message,
-                        }),
-                    );
-                }
-            }
+            await uploadSessionFiles(sessionId, files, t);
         } finally {
             setUploadingCount(0);
             onUploadComplete();

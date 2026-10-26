@@ -302,8 +302,8 @@ export function computeUntypedToolData(
  *   stable/ref-backed state or is re-captured whenever this item's data props
  *   change (see message-renderer.tsx).
  * - Component-type props (UntypedToolPartComponent, GroupedToolPartComponent,
- *   AgentVisualComponent, MemoryStackComponent, RecalledMemoriesComponent,
- *   ClaimCheckComponent)
+ *   ToolTraceComponent, AgentVisualComponent, MemoryStackComponent,
+ *   RecalledMemoriesComponent, ClaimCheckComponent)
  *   ARE compared — swapping a component type must remount the subtree.
  *   EVERY component-type prop MessageRenderer accepts must be listed below:
  *   the chat surface builds several of them with a `useMemo` over state the
@@ -321,6 +321,7 @@ export function computeUntypedToolData(
 const COMPARED_FUNCTION_PROPS = new Set([
   "UntypedToolPartComponent",
   "GroupedToolPartComponent",
+  "ToolTraceComponent",
   "AgentVisualComponent",
   "MemoryStackComponent",
   "RecalledMemoriesComponent",

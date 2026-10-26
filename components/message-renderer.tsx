@@ -56,7 +56,7 @@ import {
   type ToolDataCache,
   type ToolReasoningStep,
 } from "./message-renderer-tool-data"
-import { expandUngroupableUnits, groupRenderUnits, type RenderUnit } from "./message-renderer-tool-groups"
+import { expandUngroupableUnits, groupRenderUnits, traceRenderUnits, type RenderUnit } from "./message-renderer-tool-groups"
 
 // Only the visible answer (text parts) is exported — reasoning/tool parts
 // stay out of copies and downloads.
@@ -163,6 +163,16 @@ interface MessageRendererProps {
     addToContext: (item: any) => void
     addToolApprovalResponse: ChatAddToolApproveResponseFunction
   }>
+  /**
+   * Renders a run of ≥2 consecutive tool calls of ANY kind — across step
+   * boundaries, the sequential agent loop — as ONE card. Optional: without
+   * it, runs render as before (singles + same-type groups). Pending
+   * approvals and bespoke-output tools never enter a trace
+   * (message-renderer-tool-groups.ts traceRenderUnits).
+   */
+  ToolTraceComponent?: React.ComponentType<{
+    parts: DynamicToolUIPart[]
+  }>
   // Consecutive pending memory_remember approvals render under one "Save
   // all" bar (spec §4.1, groupRememberParts). Optional — when absent, parts
   // render singly via UntypedToolPartComponent as before (no behavior
@@ -218,6 +228,7 @@ export function MessageRenderer({
   onUpdate,
   UntypedToolPartComponent,
   GroupedToolPartComponent,
+  ToolTraceComponent,
   MemoryStackComponent,
   RecalledMemoriesComponent,
   ClaimCheckComponent,
@@ -658,6 +669,7 @@ export function MessageRenderer({
             setMessages={setMessages}
             UntypedToolPartComponent={UntypedToolPartComponent}
             GroupedToolPartComponent={GroupedToolPartComponent}
+            ToolTraceComponent={ToolTraceComponent}
             MemoryStackComponent={MemoryStackComponent}
             RecalledMemoriesComponent={RecalledMemoriesComponent}
             ClaimCheckComponent={ClaimCheckComponent}
@@ -710,6 +722,7 @@ interface MessageItemProps {
   setMessages?: MessageRendererProps["setMessages"]
   UntypedToolPartComponent?: MessageRendererProps["UntypedToolPartComponent"]
   GroupedToolPartComponent?: MessageRendererProps["GroupedToolPartComponent"]
+  ToolTraceComponent?: MessageRendererProps["ToolTraceComponent"]
   MemoryStackComponent?: MessageRendererProps["MemoryStackComponent"]
   RecalledMemoriesComponent?: MessageRendererProps["RecalledMemoriesComponent"]
   ClaimCheckComponent?: MessageRendererProps["ClaimCheckComponent"]
@@ -761,6 +774,7 @@ const MessageItem = memo(function MessageItem({
   setMessages,
   UntypedToolPartComponent,
   GroupedToolPartComponent,
+  ToolTraceComponent,
   MemoryStackComponent,
   RecalledMemoriesComponent,
   ClaimCheckComponent,
@@ -786,24 +800,30 @@ const MessageItem = memo(function MessageItem({
   const canGroup = !!(
     GroupedToolPartComponent && agent && addToContext && addToolApprovalResponse
   )
+  // The trace card needs nothing but the parts — it is read-only (pending
+  // approvals never enter a trace), so it only waits on its own renderer.
+  const canTrace = !!ToolTraceComponent
   const renderUnits = useMemo<RenderUnit<any>[]>(
-    () =>
-      expandUngroupableUnits<any>(
+    () => {
+      // Output-shape check shared by both passes. Same key shape as the
+      // single-part path below, so a degraded group reuses those entries
+      // instead of computing twice.
+      const rendersInline = (part: any, index: number) => {
+        const data = getCachedToolData(
+          toolDataCacheRef.current,
+          `ut:${part.toolCallId ?? `${message.id}-${index}`}`,
+          part.state,
+          () => computeUntypedToolData(part),
+        )
+        return data.ok && !data.imageWidget && !data.imageInline
+      }
+      const grouped = expandUngroupableUnits<any>(
         groupRenderUnits<any>(message.parts as any[]),
-        (part, index) => {
-          if (!canGroup) return false
-          // Same key shape as the single-part path below, so a degraded group
-          // reuses those entries instead of computing twice.
-          const data = getCachedToolData(
-            toolDataCacheRef.current,
-            `ut:${part.toolCallId ?? `${message.id}-${index}`}`,
-            part.state,
-            () => computeUntypedToolData(part),
-          )
-          return data.ok && !data.imageWidget && !data.imageInline
-        },
-      ),
-    [message.parts, message.id, canGroup],
+        (part, index) => canGroup && rendersInline(part, index),
+      )
+      return canTrace ? traceRenderUnits<any>(grouped, rendersInline) : grouped
+    },
+    [message.parts, message.id, canGroup, canTrace],
   )
 
   const messageMetadata = message.metadata as any
@@ -895,6 +915,16 @@ const MessageItem = memo(function MessageItem({
                 // A group unit only survives the pre-pass when canGroup held,
                 // so every prop below is present; the guard re-states that for
                 // the type checker rather than asserting non-null.
+                if (unit.kind === 'tool-trace') {
+                  if (!ToolTraceComponent) return null
+                  return (
+                    <ToolTraceComponent
+                      key={`tt-${message.id}-${unit.startIndex}`}
+                      parts={unit.parts}
+                    />
+                  )
+                }
+
                 if (unit.kind === 'tool-group') {
                   if (
                     !GroupedToolPartComponent ||
