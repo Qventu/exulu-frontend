@@ -78,6 +78,7 @@ vi.mock("@apollo/client", async (importOriginal) => {
 
 import { useChat } from "@ai-sdk/react";
 import { WORKING_POLL_MS } from "@/lib/session-activity";
+import { subscribeToSessionActivity } from "@/lib/session-activity-signal";
 import { useChatSession } from "./hooks";
 
 const mockUseChat = vi.mocked(useChat);
@@ -227,5 +228,86 @@ describe("useChatSession — catching up on an answer finished elsewhere", () =>
     rerender();
 
     await waitFor(() => expect(sessionRowQuery().at(-1)!.options.skip).toBe(true));
+  });
+});
+
+describe("useChatSession — telling the chat lists to re-read", () => {
+  /** Subscribes through the real signal module, so no mock can fake the wiring. */
+  const listen = () => {
+    const heard = vi.fn();
+    const unsubscribe = subscribeToSessionActivity(heard);
+    return { heard, unsubscribe };
+  };
+
+  it("announces once the session has been marked seen, so the unread dot clears", async () => {
+    const { heard, unsubscribe } = listen();
+    try {
+      mount(session());
+
+      // After the mutation resolves, never before: a list re-reading ahead of
+      // the server's write would just load the stale last_seen_at again.
+      await waitFor(() => expect(gqlCalls.markSeen).toHaveBeenCalled());
+      await waitFor(() => expect(heard).toHaveBeenCalled());
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it("announces when a turn starts, so the row can show it working", async () => {
+    const { heard, unsubscribe } = listen();
+    try {
+      mockUseChat.mockReturnValue(chatReturn("ready"));
+      const { rerender } = mount(session());
+      await waitFor(() => expect(gqlCalls.markSeen).toHaveBeenCalled());
+      heard.mockClear();
+
+      mockUseChat.mockReturnValue(chatReturn("streaming"));
+      rerender();
+
+      await waitFor(() => expect(heard).toHaveBeenCalled());
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it("announces when a turn ends, so the row stops showing it working", async () => {
+    const { heard, unsubscribe } = listen();
+    try {
+      mockUseChat.mockReturnValue(chatReturn("streaming"));
+      const { rerender } = mount(session());
+      heard.mockClear();
+
+      mockUseChat.mockReturnValue(chatReturn("ready"));
+      rerender();
+
+      await waitFor(() => expect(heard).toHaveBeenCalled());
+    } finally {
+      unsubscribe();
+    }
+  });
+});
+
+describe("useChatSession — catchingUp is visible to the screen", () => {
+  it("reports catching up when the conversation arrives mid-answer", async () => {
+    const { result } = mount(session({ generating_since: at(-5_000) }));
+
+    await waitFor(() => expect(result.current.catchingUp).toBe(true));
+  });
+
+  it("reports nothing to catch up on an idle conversation", async () => {
+    const { result } = mount(session({ last_answer_at: at(-120_000), last_seen_at: at(-60_000) }));
+
+    await waitFor(() => expect(gqlCalls.markSeen).toHaveBeenCalled());
+    expect(result.current.catchingUp).toBe(false);
+  });
+
+  it("stops reporting it once the answer has landed", async () => {
+    const { result, rerender } = mount(session({ generating_since: at(-5_000) }));
+    await waitFor(() => expect(result.current.catchingUp).toBe(true));
+
+    gqlCalls.sessionRow = { id: "s1", generating_since: null, last_answer_at: at(0) };
+    rerender();
+
+    await waitFor(() => expect(result.current.catchingUp).toBe(false));
   });
 });

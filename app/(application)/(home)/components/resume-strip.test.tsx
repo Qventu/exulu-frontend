@@ -45,25 +45,42 @@ describe("ResumeStrip activity markers", () => {
   it("marks a conversation still being answered", () => {
     show([card({ generating_since: at(-5_000) })]);
 
-    expect(screen.getByLabelText(enMessages.chat.history.working)).toBeTruthy();
+    expect(screen.getByText(enMessages.chat.history.working)).toBeTruthy();
   });
 
   it("marks a conversation holding an answer nobody has read", () => {
     show([card({ last_answer_at: at(-60_000) })]);
 
-    expect(screen.getByLabelText(enMessages.chat.history.unreadAnswer)).toBeTruthy();
+    expect(screen.getByText(enMessages.chat.history.unreadAnswer)).toBeTruthy();
   });
 
   it("leaves a read, idle conversation unmarked", () => {
     show([card({ last_answer_at: at(-120_000), last_seen_at: at(-60_000) })]);
 
-    expect(screen.queryByLabelText(enMessages.chat.history.working)).toBeNull();
-    expect(screen.queryByLabelText(enMessages.chat.history.unreadAnswer)).toBeNull();
+    expect(screen.queryByText(enMessages.chat.history.working)).toBeNull();
+    expect(screen.queryByText(enMessages.chat.history.unreadAnswer)).toBeNull();
   });
 
   it("still shows the conversation title", () => {
     show([card({ last_answer_at: at(-60_000) })]);
 
     expect(screen.getByText("Spare parts")).toBeTruthy();
+  });
+});
+
+describe("ResumeStrip meta line", () => {
+  it("gives the status the timestamp's place while a turn runs", () => {
+    const { container } = show([card({ generating_since: at(-5_000) })]);
+
+    expect(screen.getByText(enMessages.chat.history.working)).toBeTruthy();
+    expect(container.querySelector("time")).toBeNull();
+  });
+
+  it("gives the timestamp back on a quiet card", () => {
+    const { container } = show([
+      card({ last_answer_at: at(-120_000), last_seen_at: at(-60_000) }),
+    ]);
+
+    expect(container.querySelector("time")).toBeTruthy();
   });
 });

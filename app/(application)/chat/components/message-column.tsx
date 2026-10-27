@@ -56,6 +56,7 @@ import type { Agent } from "@/types/models/agent";
 
 import type { ChatSessionController } from "../hooks";
 import { CHAT_COLUMN } from "./chat-shell";
+import { CatchingUpNotice } from "./catching-up-notice";
 import {
   CredentialGuestNotice,
   CredentialRequestCard,
@@ -373,7 +374,7 @@ export function makeClaimCheck(claimChecks: Record<string, ClaimCheckState>, gue
 export function MessageColumn({ controller, guestMode = false }: MessageColumnProps) {
   const t = useTranslations("chat");
   const { user } = useContext(UserContext);
-  const { agent, messages, status } = controller;
+  const { agent, messages, status, catchingUp } = controller;
 
   // Messages-local state: the feedback dialog target (items 57/58).
   const [feedbackTarget, setFeedbackTarget] = useState<FeedbackTarget | null>(
@@ -501,6 +502,10 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
                     </Response>
                   </MessageContent>
                 </Message>
+              ) : catchingUp ? (
+                // The first turn is still running: the greeting would be
+                // telling the viewer to start a conversation already under way.
+                <CatchingUpNotice className="mt-4 text-left" />
               ) : (
                 <EmptyState
                   variant="quiet"
@@ -512,6 +517,11 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
           </div>
         )}
         <ConversationContent className={cn(CHAT_COLUMN, "gap-6")}>
+          {!isEmpty && catchingUp ? (
+            // Stored history is on screen but the running turn is not — not
+            // even the question, which is saved only when the turn finishes.
+            <CatchingUpNotice className="order-last mt-2" />
+          ) : null}
           {!isEmpty ? (
             <MessageRenderer
               messages={messages}

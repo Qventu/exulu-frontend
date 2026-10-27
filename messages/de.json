@@ -1406,6 +1406,8 @@
       "budgetReachedNotice": "Du hast dein Budget für diesen Zeitraum erreicht. Nachrichten sind pausiert, bis es zurückgesetzt wird.",
       "budgetReachedToastDescription": "Du hast dein gesamtes Budget für diesen Zeitraum verbraucht. Nachrichten sind pausiert, bis es zurückgesetzt wird.",
       "budgetReachedToastTitle": "Budget erreicht",
+      "stillAnsweringToastTitle": "Der Agent antwortet noch",
+      "stillAnsweringToastDescription": "Warte, bis diese Antwort fertig ist, bevor du eine weitere Nachricht sendest.",
       "charCount": "{count} / {max} Zeichen",
       "disclaimer": "KI kann Fehler machen. Prüfe wichtige Informationen.",
       "dismissHint": "Ausblenden",
@@ -1536,6 +1538,10 @@
       "untitled": "Unbenannte Unterhaltung",
       "usageAria": "Kontextnutzung {percent} % – Details anzeigen"
     },
+    "catchingUp": {
+      "title": "Der Agent schreibt noch an der Antwort",
+      "description": "Sie erscheint hier, sobald sie fertig ist. Du kannst die Seite verlassen."
+    },
     "history": {
       "createFailed": "Der Chat konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
       "created": "Chat erstellt",
@@ -1565,7 +1571,7 @@
       "sheetDescription": "Durchsuchen, starten und verwalten Sie Ihre Unterhaltungen mit diesem Agenten.",
       "switchAgent": "Agent wechseln",
       "unreadAnswer": "Neue Antwort",
-      "working": "Antwort wird erstellt",
+      "working": "Antwortet…",
       "switchAgentDescription": "Wählen Sie einen Agenten, um einen neuen Chat zu starten.",
       "switchAgentTitle": "Agent wechseln",
       "title": "Chatverlauf",

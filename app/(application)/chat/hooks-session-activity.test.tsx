@@ -8,7 +8,7 @@
  * whole chat feature, so Apollo and the AI SDK transport are stubbed and only
  * the polling wiring is exercised.
  */
-import { cleanup, renderHook } from "@testing-library/react";
+import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@ai-sdk/react", () => ({ useChat: vi.fn() }));
@@ -25,6 +25,7 @@ const apollo = vi.hoisted(() => ({
   items: [] as Record<string, unknown>[],
   startPolling: vi.fn(),
   stopPolling: vi.fn(),
+  refetch: vi.fn(),
 }));
 
 vi.mock("@apollo/client", async (importOriginal) => {
@@ -35,7 +36,7 @@ vi.mock("@apollo/client", async (importOriginal) => {
       data: { agent_sessionsPagination: { items: apollo.items, pageInfo: { itemCount: apollo.items.length } } },
       previousData: undefined,
       loading: false,
-      refetch: vi.fn(),
+      refetch: apollo.refetch,
       startPolling: apollo.startPolling,
       stopPolling: apollo.stopPolling,
     })),
@@ -44,6 +45,7 @@ vi.mock("@apollo/client", async (importOriginal) => {
 });
 
 import { WORKING_POLL_MS } from "@/lib/session-activity";
+import { notifySessionActivityChanged } from "@/lib/session-activity-signal";
 import { useChatSessions } from "./hooks";
 
 const NOW = Date.now();
@@ -53,6 +55,7 @@ beforeEach(() => {
   apollo.items = [];
   apollo.startPolling.mockClear();
   apollo.stopPolling.mockClear();
+  apollo.refetch.mockClear();
 });
 afterEach(cleanup);
 
@@ -83,5 +86,44 @@ describe("useChatSessions polling", () => {
     rerender();
 
     expect(apollo.stopPolling).toHaveBeenCalled();
+  });
+});
+
+describe("useChatSessions refreshing", () => {
+  it("re-reads the list when the chat screen says activity changed", () => {
+    // Without this the list can never notice a turn starting or a session
+    // being read: it fetches once on mount, and polling only begins once it
+    // ALREADY sees something working.
+    renderHook(() => useChatSessions({ agentId: "a1" }));
+    apollo.refetch.mockClear();
+
+    act(() => notifySessionActivityChanged());
+
+    expect(apollo.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-reads the list when the tab becomes visible again", () => {
+    renderHook(() => useChatSessions({ agentId: "a1" }));
+    apollo.refetch.mockClear();
+
+    act(() => {
+      Object.defineProperty(document, "visibilityState", {
+        value: "visible",
+        configurable: true,
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(apollo.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops listening once unmounted", () => {
+    const { unmount } = renderHook(() => useChatSessions({ agentId: "a1" }));
+    unmount();
+    apollo.refetch.mockClear();
+
+    act(() => notifySessionActivityChanged());
+
+    expect(apollo.refetch).not.toHaveBeenCalled();
   });
 });

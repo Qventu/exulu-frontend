@@ -6,6 +6,8 @@ import {
   listPollIntervalMs,
   sessionActivity,
   shouldWatchForAnswer,
+  turnInFlight,
+  visibleSessionActivity,
 } from "./session-activity";
 
 const NOW = Date.parse("2026-10-27T12:00:00.000Z");
@@ -135,5 +137,49 @@ describe("shouldWatchForAnswer", () => {
 
   it("does not watch when there is no session yet", () => {
     expect(shouldWatchForAnswer(null, "ready", NOW)).toBe(false);
+  });
+});
+
+describe("visibleSessionActivity", () => {
+  it("is what sessionActivity says for a row you are not reading", () => {
+    expect(
+      visibleSessionActivity({ last_answer_at: at(-60_000) }, { now: NOW }),
+    ).toBe("unread");
+  });
+
+  it("drops unread for the conversation you have open", () => {
+    expect(
+      visibleSessionActivity({ last_answer_at: at(-60_000) }, { now: NOW, isOpen: true }),
+    ).toBeNull();
+  });
+
+  it("keeps working for the conversation you have open", () => {
+    expect(
+      visibleSessionActivity({ generating_since: at(-5_000) }, { now: NOW, isOpen: true }),
+    ).toBe("working");
+  });
+})
+
+describe("turnInFlight", () => {
+  it("is false on an idle conversation", () => {
+    expect(turnInFlight({ status: "ready", catchingUp: false })).toBe(false);
+  });
+
+  it("is true while this tab is streaming its own turn", () => {
+    expect(turnInFlight({ status: "streaming", catchingUp: false })).toBe(true);
+  });
+
+  it("is true between sending and the first token", () => {
+    expect(turnInFlight({ status: "submitted", catchingUp: false })).toBe(true);
+  });
+
+  it("is true while a turn runs on the server that this tab is not receiving", () => {
+    // The hole this closes: status is "ready" here, so every gate that only
+    // looked at status happily let a second turn go out.
+    expect(turnInFlight({ status: "ready", catchingUp: true })).toBe(true);
+  });
+
+  it("is true even after this tab's own turn errored, while the server runs on", () => {
+    expect(turnInFlight({ status: "error", catchingUp: true })).toBe(true);
   });
 });

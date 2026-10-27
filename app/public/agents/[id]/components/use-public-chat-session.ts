@@ -211,6 +211,11 @@ export function usePublicChatSession({
     // transport (AI SDK passthrough)
     messages: chat.messages,
     status: chat.status,
+    // The public surface has no session-activity watching: there is no chat
+    // list to carry the markers, and a visitor's own tab is the only place a
+    // turn is ever received. Never "catching up", so the composer's
+    // turnInFlight gate reduces to the status it always used here.
+    catchingUp: false,
     sendUserMessage,
     sendQuestionAnswer,
     stop: () => {

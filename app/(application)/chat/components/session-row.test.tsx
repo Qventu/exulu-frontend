@@ -66,25 +66,40 @@ describe("SessionRow activity", () => {
   it("marks a row whose agent is still working", () => {
     show({ generating_since: at(-5_000) });
 
-    expect(screen.getByLabelText(enMessages.chat.history.working)).toBeTruthy();
+    expect(screen.getByText(enMessages.chat.history.working)).toBeTruthy();
   });
 
   it("marks a row holding an answer nobody has read", () => {
     show({ last_answer_at: at(-60_000) });
 
-    expect(screen.getByLabelText(enMessages.chat.history.unreadAnswer)).toBeTruthy();
+    expect(screen.getByText(enMessages.chat.history.unreadAnswer)).toBeTruthy();
   });
 
   it("leaves a read, idle row unmarked", () => {
     show({ last_answer_at: at(-120_000), last_seen_at: at(-60_000) });
 
-    expect(screen.queryByLabelText(enMessages.chat.history.working)).toBeNull();
-    expect(screen.queryByLabelText(enMessages.chat.history.unreadAnswer)).toBeNull();
+    expect(screen.queryByText(enMessages.chat.history.working)).toBeNull();
+    expect(screen.queryByText(enMessages.chat.history.unreadAnswer)).toBeNull();
   });
 
   it("still shows the conversation title alongside the marker", () => {
     show({ last_answer_at: at(-60_000) });
 
     expect(screen.getByText("Spare parts")).toBeTruthy();
+  });
+
+  it("gives the status the meta line, standing in for the timestamp", () => {
+    // Both do not fit a 256px rail, and while something is happening the
+    // status matters more than "2d ago".
+    const { container } = show({ generating_since: at(-5_000) });
+
+    expect(screen.getByText(enMessages.chat.history.working)).toBeTruthy();
+    expect(container.querySelector("time")).toBeNull();
+  });
+
+  it("gives the timestamp back once there is no status to show", () => {
+    const { container } = show({ last_answer_at: at(-120_000), last_seen_at: at(-60_000) });
+
+    expect(container.querySelector("time")).toBeTruthy();
   });
 });

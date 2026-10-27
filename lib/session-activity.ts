@@ -93,3 +93,41 @@ export const shouldWatchForAnswer = (
   if (chatStatus === "streaming" || chatStatus === "submitted") return false;
   return sessionActivity(session, now) === "working";
 };
+
+/**
+ * What a list row should actually SHOW, which is not quite what the stamps
+ * say: the conversation you have open is read by definition, so it never
+ * carries the unread marker. Shared by the badge and by the rows that decide
+ * whether the status takes the place of the timestamp, so the two can never
+ * disagree about whether a row has a status.
+ */
+export const visibleSessionActivity = (
+  session: SessionActivityFields,
+  { now, isOpen = false }: { now?: number; isOpen?: boolean } = {},
+): SessionActivity => {
+  const activity = sessionActivity(session, now);
+  return activity === "unread" && isOpen ? null : activity;
+};
+
+/**
+ * A turn is already running for this conversation, so a second one must not be
+ * started: it would interleave with the first on the same session.
+ *
+ * Two different ways that happens, and the second is the one that used to slip
+ * through: this tab streaming its own turn (`status`), and a turn running on
+ * the server that this tab is not receiving because the viewer came back
+ * mid-answer (`catchingUp`) — where `status` is "ready" and every gate that
+ * only consulted it let the message go.
+ *
+ * One definition rather than the condition rewritten at each gate: the
+ * composer blocks a send in three independent places (the submit funnel, the
+ * Enter key, the send button's disabled state), and a new reason to block has
+ * to reach all three.
+ */
+export const turnInFlight = ({
+  status,
+  catchingUp,
+}: {
+  status: ChatBusyStatus;
+  catchingUp: boolean;
+}): boolean => catchingUp || status === "submitted" || status === "streaming";
