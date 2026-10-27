@@ -529,9 +529,34 @@ export function useProjectConfigDownloads(projectId: string, projectName: string
     triggerDownload(yaml, `continue_config_${slug}.yaml`, "application/yaml");
   }
 
+  async function downloadJunieConfig(): Promise<void> {
+    const token = await getToken();
+    if (!token || !config?.backend) {
+      toast.error(t("detail.downloadFailed"));
+      return;
+    }
+    const slug = toSlug(projectName);
+    const baseUrl = `${config.backend}/litellm/${projectId}/v1/chat/completions`;
+    triggerDownload(
+      JSON.stringify(
+        {
+          baseUrl,
+          id: "vertex_ai/gemini-3.5-flash",
+          apiType: "OpenAICompletion",
+          apiKey: token,
+        },
+        null,
+        2,
+      ),
+      `junie_config_${slug}.json`,
+      "application/json",
+    );
+  }
+
   return {
     downloadCoworkConfig: () => { void downloadCoworkConfig(); },
     downloadClaudeCodeConfig: () => { void downloadClaudeCodeConfig(); },
     downloadContinueDevConfig: () => { void downloadContinueDevConfig(); },
+    downloadJunieConfig: () => { void downloadJunieConfig(); },
   };
 }
