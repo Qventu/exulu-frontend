@@ -1251,8 +1251,10 @@
       "viewRun": "Lauf anzeigen"
     },
     "agentSelect": {
+      "allAgents": "Alle Agenten",
       "clearSearch": "Suche löschen",
       "description": "Wählen Sie den Agenten, mit dem Sie sprechen möchten. Sie können jederzeit wechseln.",
+      "favourites": "Favoriten",
       "noAgentsDescription": "Sie haben noch keinen Zugriff auf Agenten. Bitte wenden Sie sich an Ihre Administration.",
       "noAgentsTitle": "Keine Agenten verfügbar",
       "noResultsDescription": "Versuchen Sie einen anderen Suchbegriff.",
