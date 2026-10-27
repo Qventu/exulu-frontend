@@ -1406,6 +1406,8 @@
       "budgetReachedNotice": "You've reached your budget for this period. Messaging is paused until it resets.",
       "budgetReachedToastDescription": "You've used your full budget for this period. Messaging is paused until it resets.",
       "budgetReachedToastTitle": "Budget reached",
+      "stillAnsweringToastTitle": "The agent is still answering",
+      "stillAnsweringToastDescription": "Wait for this answer to finish before sending another message.",
       "charCount": "{count} / {max} characters",
       "disclaimer": "AI can make mistakes. Check important info.",
       "dismissHint": "Dismiss",
@@ -1535,6 +1537,10 @@
       "toggleHistory": "Conversation history",
       "untitled": "Untitled conversation",
       "usageAria": "Context usage {percent}% — view details"
+    },
+    "catchingUp": {
+      "title": "The agent is still writing the answer",
+      "description": "It will appear here as soon as it is finished. You can leave this page."
     },
     "history": {
       "createFailed": "Couldn't create the chat. Please try again.",

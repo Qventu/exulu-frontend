@@ -286,3 +286,28 @@ describe("useChatSession — telling the chat lists to re-read", () => {
     }
   });
 });
+
+describe("useChatSession — catchingUp is visible to the screen", () => {
+  it("reports catching up when the conversation arrives mid-answer", async () => {
+    const { result } = mount(session({ generating_since: at(-5_000) }));
+
+    await waitFor(() => expect(result.current.catchingUp).toBe(true));
+  });
+
+  it("reports nothing to catch up on an idle conversation", async () => {
+    const { result } = mount(session({ last_answer_at: at(-120_000), last_seen_at: at(-60_000) }));
+
+    await waitFor(() => expect(gqlCalls.markSeen).toHaveBeenCalled());
+    expect(result.current.catchingUp).toBe(false);
+  });
+
+  it("stops reporting it once the answer has landed", async () => {
+    const { result, rerender } = mount(session({ generating_since: at(-5_000) }));
+    await waitFor(() => expect(result.current.catchingUp).toBe(true));
+
+    gqlCalls.sessionRow = { id: "s1", generating_since: null, last_answer_at: at(0) };
+    rerender();
+
+    await waitFor(() => expect(result.current.catchingUp).toBe(false));
+  });
+});

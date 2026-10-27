@@ -6,6 +6,7 @@ import {
   listPollIntervalMs,
   sessionActivity,
   shouldWatchForAnswer,
+  turnInFlight,
   visibleSessionActivity,
 } from "./session-activity";
 
@@ -158,3 +159,27 @@ describe("visibleSessionActivity", () => {
     ).toBe("working");
   });
 })
+
+describe("turnInFlight", () => {
+  it("is false on an idle conversation", () => {
+    expect(turnInFlight({ status: "ready", catchingUp: false })).toBe(false);
+  });
+
+  it("is true while this tab is streaming its own turn", () => {
+    expect(turnInFlight({ status: "streaming", catchingUp: false })).toBe(true);
+  });
+
+  it("is true between sending and the first token", () => {
+    expect(turnInFlight({ status: "submitted", catchingUp: false })).toBe(true);
+  });
+
+  it("is true while a turn runs on the server that this tab is not receiving", () => {
+    // The hole this closes: status is "ready" here, so every gate that only
+    // looked at status happily let a second turn go out.
+    expect(turnInFlight({ status: "ready", catchingUp: true })).toBe(true);
+  });
+
+  it("is true even after this tab's own turn errored, while the server runs on", () => {
+    expect(turnInFlight({ status: "error", catchingUp: true })).toBe(true);
+  });
+});

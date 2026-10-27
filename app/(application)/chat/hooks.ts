@@ -131,6 +131,13 @@ export interface ChatSessionController {
   // transport (AI SDK passthrough)
   messages: UIMessage[];
   status: ChatStatus;
+  /**
+   * A turn is running on the server that this tab is not receiving — the
+   * viewer arrived (or came back) mid-answer. `status` is "ready" throughout,
+   * so anything deciding whether a conversation is busy has to consult this
+   * too (see turnInFlight in lib/session-activity).
+   */
+  catchingUp: boolean;
   sendUserMessage: (text: string) => Promise<void>;
   sendQuestionAnswer: (answerText: string) => void;
   stop: () => void;
@@ -1265,6 +1272,7 @@ export function useChatSession({
     creatorEmail,
     messages,
     status: status as ChatStatus,
+    catchingUp,
     sendUserMessage,
     sendQuestionAnswer,
     stop: () => {

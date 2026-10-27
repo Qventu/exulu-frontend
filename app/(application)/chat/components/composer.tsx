@@ -51,6 +51,7 @@ import { ItemsSelectionModal } from "@/components/items-selection-modal";
 import { getToken } from "@/lib/api/client";
 import { hasFinePointer } from "@/lib/pointer";
 import { cn } from "@/lib/utils";
+import { turnInFlight } from "@/lib/session-activity";
 import { useIncrementPromptUsage } from "@/hooks/use-prompts";
 import { PromptLibrary } from "@/types/models/prompt-library";
 
@@ -101,8 +102,13 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
     suggestions,
     writeAccess,
     contextState,
+    catchingUp,
   } = controller;
   const contextBlocked = contextState === "blocked";
+  // One definition for "a turn is already running", consulted by all three
+  // send gates below. `status` alone is not enough: while catching up on a
+  // turn running elsewhere it reads "ready".
+  const busyWithATurn = turnInFlight({ status, catchingUp });
 
   // ── Composer-local state ────────────────────────────────────────────────
   const [input, setInput] = useState("");
@@ -390,6 +396,15 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
       });
       return;
     }
+    // A second turn on a session that is already answering would interleave
+    // with the first. Every send path funnels through here, so this is the
+    // guarantee; the Enter key and the button below merely stop offering it.
+    if (turnInFlight({ status, catchingUp })) {
+      toast.error(t("composer.stillAnsweringToastTitle"), {
+        description: t("composer.stillAnsweringToastDescription"),
+      });
+      return;
+    }
     if (!input.trim()) return;
 
     const text = input;
@@ -422,7 +437,7 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
     if (autocomplete.onKeyDown(e)) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (status !== "submitted" && status !== "streaming" && input?.trim()) {
+      if (!turnInFlight({ status, catchingUp }) && input?.trim()) {
         void submit();
       }
     }
@@ -743,7 +758,7 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
                 size="icon"
                 type="submit"
                 disabled={
-                  status === "submitted" ||
+                  busyWithATurn ||
                   !input?.trim() ||
                   recordingState !== "idle" ||
                   budgetExceeded ||
