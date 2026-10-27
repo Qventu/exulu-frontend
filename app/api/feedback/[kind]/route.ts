@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/app/api/auth/[...nextauth]/options";
+import { isExternalUser } from "@/lib/rights";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 
 export const dynamic = "force-dynamic";
@@ -27,8 +28,11 @@ export async function POST(
     // This route spends the internal FEEDBACK_TOKEN secret, so it must never be
     // reachable by external (guest/public-agent) users. Resolve the caller's
     // row and reject anything that isn't a confirmed internal user.
+    // isExternalUser, not `type === "external"`: the type column is empty on
+    // every account an admin created by hand, so a role-based external user
+    // could spend the internal token.
     const user = await serverSideAuthCheck();
-    if (!user || user.type === "external") {
+    if (!user || isExternalUser(user)) {
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 

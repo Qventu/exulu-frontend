@@ -8,6 +8,7 @@ import {
   can,
   hasRight,
   isElevated,
+  isExternalUser,
   RIGHT_AREAS,
   type RightArea,
   type RightsUser,
@@ -117,5 +118,50 @@ describe("can", () => {
   it("area requirements: SA bypasses the role check (SA || role.x)", () => {
     expect(can(superAdmin, { area: "api", level: "write" })).toBe(true);
     expect(can({ super_admin: true, role: null }, { area: "api", level: "write" })).toBe(true);
+  });
+});
+
+// Reported from the Newlift deployment: an account with the `external` role
+// signed in on the normal login page and reached the internal shell, where the
+// sidebar still offered Projects, Artifacts and Transcripts. The gate existed
+// but tested `type`, a column that is empty on every account not created by
+// public self-registration.
+describe("isExternalUser", () => {
+  it("is false without a user", () => {
+    expect(isExternalUser(null)).toBe(false);
+    expect(isExternalUser(undefined)).toBe(false);
+  });
+
+  it("recognises the self-registration marker on the row", () => {
+    expect(isExternalUser({ type: "external" })).toBe(true);
+  });
+
+  it("recognises the external ROLE, which is what hand-created accounts carry", () => {
+    expect(isExternalUser({ role: { name: "external" } })).toBe(true);
+  });
+
+  it("recognises an account carrying both markers", () => {
+    expect(isExternalUser({ type: "external", role: { name: "external" } })).toBe(true);
+  });
+
+  it("leaves ordinary internal accounts alone", () => {
+    expect(isExternalUser({ type: "user", role: { name: "admin" } })).toBe(false);
+    expect(isExternalUser({ type: "api", role: { name: "default" } })).toBe(false);
+  });
+
+  it("does NOT treat a rightless internal role as external", () => {
+    // A colleague on a role with no elevated area is still internal: chat,
+    // projects, artifacts and transcripts are theirs. Only the named role is
+    // the external marker.
+    expect(isExternalUser({ role: { name: "default" } })).toBe(false);
+  });
+
+  it("tolerates a role that is still a bare id string", () => {
+    expect(isExternalUser({ role: "2d15ff4c-25ef-46b5-bef0-f8b544bffc25" })).toBe(false);
+  });
+
+  it("tolerates a missing or null role", () => {
+    expect(isExternalUser({})).toBe(false);
+    expect(isExternalUser({ role: null, type: null })).toBe(false);
   });
 });
