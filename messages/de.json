@@ -1564,6 +1564,8 @@
       "seeAllCount": "Alle anzeigen ({count})",
       "sheetDescription": "Durchsuchen, starten und verwalten Sie Ihre Unterhaltungen mit diesem Agenten.",
       "switchAgent": "Agent wechseln",
+      "unreadAnswer": "Neue Antwort",
+      "working": "Antwort wird erstellt",
       "switchAgentDescription": "Wählen Sie einen Agenten, um einen neuen Chat zu starten.",
       "switchAgentTitle": "Agent wechseln",
       "title": "Chatverlauf",

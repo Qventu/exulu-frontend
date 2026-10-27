@@ -1564,6 +1564,8 @@
       "seeAllCount": "See all ({count})",
       "sheetDescription": "Browse, start, and manage your conversations with this agent.",
       "switchAgent": "Switch agent",
+      "unreadAnswer": "New answer",
+      "working": "Working on an answer",
       "switchAgentDescription": "Choose an agent to start a new chat with.",
       "switchAgentTitle": "Switch agent",
       "title": "Chat history",

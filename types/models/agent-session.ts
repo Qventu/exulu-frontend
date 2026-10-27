@@ -14,6 +14,12 @@ export interface AgentSession {
     created_by: string | number;
     session_items: string[];
     rights_mode: ExuluRightsMode
+    // Chat-list activity, stamped by the backend from the SERVER clock (see
+    // exulu/backend src/exulu/session-activity.ts). Null until the session has
+    // run a turn, which is why historical rows show no marker.
+    generating_since?: string | null;
+    last_answer_at?: string | null;
+    last_seen_at?: string | null;
     RBAC?: {
         type?: string;
         // `id` is `ID!` in the SDL, so it deserialises to a **string** even for

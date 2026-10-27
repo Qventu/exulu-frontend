@@ -31,6 +31,14 @@ import type { AgentSession } from "@/types/models/agent-session";
 import type { ClaimCheckResult } from "@/lib/api/claim-check";
 
 vi.mock("@ai-sdk/react", () => ({ useChat: vi.fn() }));
+// useChatSession reads the router to refresh the route when a turn it was not
+// streaming finishes elsewhere (see its chat-list activity block); useRouter
+// throws "app router to be mounted" without this.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/chat/a1/s1",
+  useSearchParams: () => new URLSearchParams(),
+}));
 vi.mock("@apollo/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@apollo/client")>();
   return {
