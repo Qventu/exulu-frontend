@@ -46,6 +46,7 @@ import { useChatShell } from "@/app/(application)/chat/components/chat-shell";
 import { Composer } from "@/app/(application)/chat/components/composer";
 import { MessageColumn } from "@/app/(application)/chat/components/message-column";
 import { Button } from "@/components/ui/button";
+import { useKeyboardInset } from "@/hooks/use-keyboard-inset";
 import type { PublicAgentMeta } from "@/lib/api/public-agents";
 import type { AgentSession } from "@/types/models/agent-session";
 import type { Agent } from "@/types/models/agent";
@@ -133,7 +134,10 @@ function PublicChatBody({
         className={
           authenticated
             ? "flex min-h-0 min-w-0 flex-1 flex-col"
-            : "flex h-dvh min-h-0 flex-col"
+            : // h-dvh-keyboard: anonymous mode owns its own host, so it needs
+              // the keyboard-aware height that PublicChatShell applies in
+              // authenticated mode.
+              "flex h-dvh-keyboard min-h-0 flex-col"
         }
       >
         <header className="flex h-12 shrink-0 items-center gap-3 border-b bg-background px-4">
@@ -255,6 +259,10 @@ export function PublicChatScreen({
   initialMessages?: UIMessage[];
 }) {
   const agent = React.useMemo(() => toAgent(meta), [meta]);
+
+  // Publishes --keyboard-inset for the h-dvh-keyboard hosts below. Mounted at
+  // the screen root so both modes get it from a single listener.
+  useKeyboardInset();
 
   // BOTH modes are wrapped in PublicApolloProvider + SessionProvider: the
   // reused Composer/MessageColumn call Apollo hooks on mount even for guests

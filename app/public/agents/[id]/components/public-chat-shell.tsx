@@ -142,8 +142,12 @@ export function PublicChatShell({
     <ChatShellContext.Provider value={value}>
       {/* Mirror ChatShell's dvh-bounded full-bleed host: the rail docks left at
           ≥lg (it renders itself), the chat column fills the rest. The public
-          page has no app top bar, so the host is the full dvh (no 3rem inset). */}
-      <div className={cn("flex h-dvh min-h-0 w-full overflow-hidden")}>
+          page has no app top bar, so the host is the full dvh (no 3rem inset).
+          h-dvh-keyboard, not h-dvh: iOS keeps 100dvh at full screen height
+          while the keyboard is open, which left the composer behind it. The
+          utility subtracts the measured keyboard strip and is plain h-dvh
+          everywhere that has no keyboard open (globals.css). */}
+      <div className={cn("flex h-dvh-keyboard min-h-0 w-full overflow-hidden")}>
         <HistoryRail
           agent={agent}
           paths={publicPaths}
