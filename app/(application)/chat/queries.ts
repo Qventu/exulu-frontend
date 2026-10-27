@@ -211,6 +211,9 @@ export const GET_AGENT_SESSIONS = gql`
         project
         rights_mode
         session_items
+        generating_since
+        last_answer_at
+        last_seen_at
         RBAC {
           type
           users {
@@ -239,6 +242,9 @@ export const GET_AGENT_SESSION_BY_ID = gql`
       created_by
       rights_mode
       session_items
+      generating_since
+      last_answer_at
+      last_seen_at
       metadata
       project
       RBAC {
@@ -284,6 +290,18 @@ export const GET_AGENT_MESSAGES = gql`
         createdAt
       }
     }
+  }
+`;
+
+/**
+ * Tells the server the viewer has this conversation open, which is what clears
+ * the chat list's "answer waiting" marker. Deliberately NOT the generic
+ * agent_sessionsUpdateOneById: the timestamp has to come from the server
+ * clock, because it is compared against a server-stamped last_answer_at.
+ */
+export const MARK_SESSION_SEEN = gql`
+  mutation AgentSessionMarkSeen($id: ID!) {
+    agentSessionMarkSeen(id: $id)
   }
 `;
 

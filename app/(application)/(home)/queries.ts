@@ -57,6 +57,9 @@ export const GET_AGENT_SESSIONS = gql`
           project
           rights_mode
           session_items
+          generating_since
+          last_answer_at
+          last_seen_at
           RBAC {
             type
             users {

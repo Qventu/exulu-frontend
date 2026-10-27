@@ -66,6 +66,11 @@ export interface ResumeSession {
   agentName: string | null;
   title: string;
   updatedAt: string;
+  // Chat-list activity, so a card can show a turn still running or an answer
+  // nobody has read (see lib/session-activity.ts).
+  generating_since?: string | null;
+  last_answer_at?: string | null;
+  last_seen_at?: string | null;
 }
 
 interface SessionsResult {
@@ -76,6 +81,9 @@ interface SessionsResult {
       updatedAt: string;
       /** The list query may populate `agent` as an id or an object (chat contract). */
       agent?: string | { id?: string; name?: string } | null;
+      generating_since?: string | null;
+      last_answer_at?: string | null;
+      last_seen_at?: string | null;
     }> | null;
   } | null;
 }
@@ -128,6 +136,9 @@ export function useResumeSessions(limit = 4): {
         agentName,
         title: session.title ?? "",
         updatedAt: session.updatedAt,
+        generating_since: session.generating_since ?? null,
+        last_answer_at: session.last_answer_at ?? null,
+        last_seen_at: session.last_seen_at ?? null,
       };
     });
   }, [sessionsQuery.data, agentsQuery.data]);

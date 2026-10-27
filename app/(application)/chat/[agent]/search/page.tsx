@@ -43,6 +43,7 @@ import type { AgentSession } from "@/types/models/agent-session";
 
 import { useChatShell } from "../../components/chat-shell";
 import type { SessionListItem } from "../../components/session-row";
+import { SessionActivityBadge } from "@/components/widgets/session-activity-badge";
 import { useChatSessions, useSessionMutations } from "../../hooks";
 
 /** Same page size as the legacy search page. */
@@ -248,9 +249,14 @@ export default function SearchPage({
                 const isSelected = selected.has(session.id);
                 const rowContent = (
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                      {session.title || t("history.untitled")}
-                    </p>
+                    {/* Same marker as the rail's SessionRow, after the title
+                        so a state change never shifts the text. */}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <p className="truncate text-sm font-medium">
+                        {session.title || t("history.untitled")}
+                      </p>
+                      <SessionActivityBadge session={session} />
+                    </span>
                     {session.updatedAt ? (
                       <RelativeTime
                         date={session.updatedAt}

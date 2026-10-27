@@ -30,6 +30,7 @@ import {
   lastAssistantMessageIsCompleteWithApprovalResponses,
 } from "ai";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -51,11 +52,13 @@ import type { Item } from "@/types/models/item";
 
 import {
   CREATE_AGENT_SESSION,
+  GET_AGENT_SESSION_BY_ID,
   GET_AGENT_SESSIONS,
   GET_LITELLM_CATALOG,
   GET_MY_MEMORIES,
   GET_USER_BY_ID,
   REMOVE_AGENT_SESSION_BY_ID,
+  MARK_SESSION_SEEN,
   UPDATE_AGENT_SESSION_ITEMS,
   UPDATE_AGENT_SESSION_TITLE,
   myMemoriesKey,
@@ -68,6 +71,11 @@ import {
   deriveContextState,
   type ContextState,
 } from "./lib/context-budget";
+import {
+  WORKING_POLL_MS,
+  listPollIntervalMs,
+  shouldWatchForAnswer,
+} from "@/lib/session-activity";
 import { withApprovedTools } from "./approved-tools-body";
 import { savedIdsFromMessages } from "./components/memory-panel-data";
 import { answerTextOf, collectSources, hasPendingToolApproval, parseClaimCheckTrigger } from "./components/claim-check-data";
@@ -78,6 +86,14 @@ import type { ClaimCheckState } from "./components/claim-check";
 // ---------------------------------------------------------------------------
 
 export type ChatStatus = "submitted" | "streaming" | "ready" | "error";
+
+/**
+ * Delay between a turn finishing here and marking the session read. The
+ * backend stamps last_answer_at in its stream onFinish, which runs after the
+ * finish part has already reached this tab — marking immediately would often
+ * land first and leave the row looking unread.
+ */
+const SEEN_AFTER_TURN_MS = 1_500;
 
 export interface TokenCounts {
   totalTokens: number;
@@ -545,6 +561,77 @@ export function useChatSession({
     setServerContextBlocked(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSession, user]);
+
+  // --- chat-list activity: seen marker + catching up (see lib/session-activity) --
+  //
+  // Two jobs, both about a viewer who left mid-answer and came back:
+  //
+  //  1. Having the conversation open means everything in it has been read, so
+  //     the list's "answer waiting" marker clears. Re-marked on tab focus and
+  //     a beat after each finished turn, because the server stamps
+  //     last_answer_at in its onFinish — just AFTER the stream's finish part
+  //     reaches this tab, so marking at that instant would race it.
+  //
+  //  2. A turn that is still running belongs to no stream here: this page was
+  //     rendered from stored messages. So the session row is watched while it
+  //     is working, and once it stops, the route is refreshed — which re-runs
+  //     the server component and feeds the stored turn back in through
+  //     initialMessages, rather than this hook hand-merging messages into a
+  //     transport it does not own.
+  const router = useRouter();
+  const [markSessionSeen] = useMutation(MARK_SESSION_SEEN);
+  const openSessionId = currentSession?.id;
+
+  const markSeen = React.useCallback(() => {
+    if (!openSessionId) return;
+    // A read marker is never worth surfacing an error for, and this is the
+    // one call in the hook whose result nothing waits on — so it swallows
+    // everything, including a mutate that hands back no promise at all.
+    void Promise.resolve(
+      markSessionSeen({ variables: { id: openSessionId } }),
+    ).catch(() => {});
+  }, [openSessionId, markSessionSeen]);
+
+  React.useEffect(() => {
+    if (!openSessionId) return;
+    markSeen();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") markSeen();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [openSessionId, markSeen]);
+
+  React.useEffect(() => {
+    if (!openSessionId || status !== "ready") return;
+    const timer = setTimeout(markSeen, SEEN_AFTER_TURN_MS);
+    return () => clearTimeout(timer);
+  }, [openSessionId, status, markSeen]);
+
+  // Entered on arrival only: "the conversation I just opened was mid-answer".
+  // Driven by initialSession (the server-rendered row) rather than the polled
+  // one, so a finished poll cannot feed itself back in and watch forever.
+  const [catchingUp, setCatchingUp] = React.useState(false);
+  React.useEffect(() => {
+    setCatchingUp(shouldWatchForAnswer(initialSession, status));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSession]);
+
+  const watchedSession = useQuery(GET_AGENT_SESSION_BY_ID, {
+    variables: { id: openSessionId },
+    skip: !catchingUp || !openSessionId,
+    fetchPolicy: "network-only",
+    pollInterval: WORKING_POLL_MS,
+  });
+
+  const watchedRow = watchedSession.data?.agent_sessionById;
+  React.useEffect(() => {
+    if (!catchingUp || !watchedRow) return;
+    if (shouldWatchForAnswer(watchedRow, status)) return; // still going
+    setCatchingUp(false);
+    router.refresh();
+  }, [catchingUp, watchedRow, status, router]);
 
   // --- token accounting (items 27/38) ------------------------------------------
   // Derived with useMemo (not state + effect): the effect variant queued a
@@ -1279,6 +1366,19 @@ export function useChatSessions({
     sessionsQuery?.data?.agent_sessionsPagination?.pageInfo?.itemCount ??
     sessionsQuery?.previousData?.agent_sessionsPagination?.pageInfo?.itemCount ??
     0;
+
+  // A row that says "working" has to be able to stop saying it: a turn ends on
+  // the server, with nothing to tell this list about it. Polling is confined to
+  // exactly that state (see listPollIntervalMs) so an idle rail is silent.
+  const pollMs = listPollIntervalMs(sessions);
+  const { startPolling, stopPolling } = sessionsQuery;
+  React.useEffect(() => {
+    if (pollMs > 0) {
+      startPolling(pollMs);
+      return () => stopPolling();
+    }
+    stopPolling();
+  }, [pollMs, startPolling, stopPolling]);
 
   return {
     sessions,

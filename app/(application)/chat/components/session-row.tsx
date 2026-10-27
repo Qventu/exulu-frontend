@@ -46,6 +46,7 @@ import type { AgentSession } from "@/types/models/agent-session";
 
 import type { UseSessionMutationsResult } from "../hooks";
 import { useChatShell } from "./chat-shell";
+import { SessionActivityBadge } from "@/components/widgets/session-activity-badge";
 
 /**
  * The session list query populates `.agent` as an object (contract:
@@ -71,6 +72,8 @@ export interface SessionRowProps {
    * user on a dead route). Default: current /chat/${agentId}/new.
    */
   newChatHref?: string;
+  /** Injectable clock for the activity marker (tests pass a fixed now). */
+  now?: number;
 }
 
 export function SessionRow({
@@ -81,6 +84,7 @@ export function SessionRow({
   href,
   active: activeProp,
   newChatHref,
+  now,
 }: SessionRowProps) {
   const t = useTranslations("chat");
   const tCommon = useTranslations("common");
@@ -135,7 +139,12 @@ export function SessionRow({
           onClick={() => onNavigate?.()}
           className="flex min-h-11 min-w-0 flex-1 flex-col justify-center gap-0.5 rounded-md px-2 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <span className="truncate text-sm font-medium">{displayTitle}</span>
+          {/* The marker sits after the title rather than before it, so a row
+              changing state never shifts the text sideways. */}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-sm font-medium">{displayTitle}</span>
+            <SessionActivityBadge session={session} now={now} />
+          </span>
           {session.updatedAt ? (
             // Always visible (fixes U6) — text-xs muted per ladder row 13.
             <RelativeTime
