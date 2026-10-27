@@ -5854,6 +5854,8 @@
     "dropLabel": "Drop a file here or browse",
     "dropHint": "HTML apps, PDFs and images open inside the IMP; everything else is offered for download.",
     "changeFile": "Choose another file",
+    "allArtifacts": "All artifacts",
+    "previewTitle": "Preview of {name}",
     "replaceFile": "Replace file…",
     "replaceTitle": "Replace the file behind {name}",
     "replaceDescription": "The link, its name and its sharing settings stay the same. Everyone who has the link will see the new file.",

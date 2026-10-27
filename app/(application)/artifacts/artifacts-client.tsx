@@ -13,23 +13,15 @@
  * from row to row, and only real columns keep them aligned. Below md the
  * table keeps the star, the name and the actions; the badge columns are
  * folded into the name cell.
+ *
+ * Favourites (2026-10-27): with no search and the "All" filter, the starred
+ * artifacts come first as preview cards (components/favourite-cards.tsx —
+ * HTML apps scaled down in a sandbox, images as thumbnails, the rest as
+ * their kind) in star order; the table below still lists everything under
+ * an "All artifacts" heading, the /agents precedent.
  */
 
-import {
-  AppWindow,
-  File,
-  Plus,
-  FileSpreadsheet,
-  FileText,
-  Globe,
-  Image as ImageIcon,
-  LayoutGrid,
-  Lock,
-  Presentation,
-  Search,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { Globe, LayoutGrid, Lock, Plus, Search, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -45,31 +37,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { ArtifactKind } from "@/lib/artifacts/artifact-type";
 import { cn } from "@/lib/utils";
 
 import { CreateArtifactDialog } from "./components/create-dialog";
 import { DeleteArtifactDialog } from "./components/delete-dialog";
+import { FavouriteArtifactCards } from "./components/favourite-cards";
 import { RenameArtifactDialog } from "./components/rename-dialog";
 import { ReplaceFileDialog } from "./components/replace-file-dialog";
 import { ArtifactRowMenu } from "./components/row-menu";
 import { SharingDialog } from "./components/sharing-dialog";
+import { orderFavouriteArtifacts } from "./favourites";
 import { useFavoriteArtifacts, useSharedArtifacts, type ArtifactListItem } from "./hooks";
+import { KIND_ICON } from "./kind-icon";
 
 type Filter = "all" | "favorites" | "mine" | "shared";
 type DialogState = { kind: "rename" | "replace" | "sharing" | "delete"; name: string } | null;
-
-const KIND_ICON: Record<ArtifactKind, LucideIcon> = {
-  app: AppWindow,
-  pdf: FileText,
-  slides: Presentation,
-  sheet: FileSpreadsheet,
-  document: FileText,
-  image: ImageIcon,
-  text: FileText,
-  data: File,
-  file: File,
-};
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -80,7 +62,7 @@ export function ArtifactsClient() {
   const t = useTranslations("artifacts");
   const router = useRouter();
   const { items, loading, error, refetch } = useSharedArtifacts();
-  const { isFavorite, toggle, replaceFavorite, canFavorite } = useFavoriteArtifacts();
+  const { favoriteNames, isFavorite, toggle, replaceFavorite, canFavorite } = useFavoriteArtifacts();
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<Filter>("all");
   const [dialog, setDialog] = React.useState<DialogState>(null);
@@ -96,6 +78,13 @@ export function ArtifactsClient() {
       return true;
     });
   }, [items, search, filter, isFavorite]);
+
+  // Starred artifacts as cards, only in the unfiltered view — a search or a
+  // filter means the user is looking for something specific.
+  const favouriteCards = React.useMemo(
+    () => (filter === "all" && !search.trim() ? orderFavouriteArtifacts(favoriteNames, items) : []),
+    [filter, search, favoriteNames, items],
+  );
 
   const copyLink = React.useCallback(
     async (item: ArtifactListItem) => {
@@ -166,6 +155,9 @@ export function ArtifactsClient() {
       ) : visible.length === 0 ? (
         <EmptyState icon={Search} title={t("emptyFilteredTitle")} description={t("emptyFilteredDescription")} />
       ) : (
+        <div className="flex flex-col gap-6">
+          <FavouriteArtifactCards items={favouriteCards} canFavorite={canFavorite} onUnfavorite={(name) => void toggle(name)} />
+          {favouriteCards.length > 0 ? <h2 className="text-sm font-medium text-muted-foreground">{t("allArtifacts")}</h2> : null}
         <div className="overflow-hidden rounded-lg border">
           <Table className="table-fixed">
             <TableHeader>
@@ -246,6 +238,7 @@ export function ArtifactsClient() {
               })}
             </TableBody>
           </Table>
+        </div>
         </div>
       )}
 
