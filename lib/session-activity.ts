@@ -93,3 +93,18 @@ export const shouldWatchForAnswer = (
   if (chatStatus === "streaming" || chatStatus === "submitted") return false;
   return sessionActivity(session, now) === "working";
 };
+
+/**
+ * What a list row should actually SHOW, which is not quite what the stamps
+ * say: the conversation you have open is read by definition, so it never
+ * carries the unread marker. Shared by the badge and by the rows that decide
+ * whether the status takes the place of the timestamp, so the two can never
+ * disagree about whether a row has a status.
+ */
+export const visibleSessionActivity = (
+  session: SessionActivityFields,
+  { now, isOpen = false }: { now?: number; isOpen?: boolean } = {},
+): SessionActivity => {
+  const activity = sessionActivity(session, now);
+  return activity === "unread" && isOpen ? null : activity;
+};

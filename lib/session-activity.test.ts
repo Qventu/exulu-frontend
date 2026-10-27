@@ -6,6 +6,7 @@ import {
   listPollIntervalMs,
   sessionActivity,
   shouldWatchForAnswer,
+  visibleSessionActivity,
 } from "./session-activity";
 
 const NOW = Date.parse("2026-10-27T12:00:00.000Z");
@@ -137,3 +138,23 @@ describe("shouldWatchForAnswer", () => {
     expect(shouldWatchForAnswer(null, "ready", NOW)).toBe(false);
   });
 });
+
+describe("visibleSessionActivity", () => {
+  it("is what sessionActivity says for a row you are not reading", () => {
+    expect(
+      visibleSessionActivity({ last_answer_at: at(-60_000) }, { now: NOW }),
+    ).toBe("unread");
+  });
+
+  it("drops unread for the conversation you have open", () => {
+    expect(
+      visibleSessionActivity({ last_answer_at: at(-60_000) }, { now: NOW, isOpen: true }),
+    ).toBeNull();
+  });
+
+  it("keeps working for the conversation you have open", () => {
+    expect(
+      visibleSessionActivity({ generating_since: at(-5_000) }, { now: NOW, isOpen: true }),
+    ).toBe("working");
+  });
+})

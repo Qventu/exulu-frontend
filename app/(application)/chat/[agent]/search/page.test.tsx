@@ -93,7 +93,7 @@ describe("chat search page activity markers", () => {
 
     show();
 
-    expect(await screen.findByLabelText(enMessages.chat.history.working)).toBeTruthy();
+    expect(await screen.findByText(enMessages.chat.history.working)).toBeTruthy();
   });
 
   it("marks a conversation holding an unread answer", async () => {
@@ -101,7 +101,7 @@ describe("chat search page activity markers", () => {
 
     show();
 
-    expect(await screen.findByLabelText(enMessages.chat.history.unreadAnswer)).toBeTruthy();
+    expect(await screen.findByText(enMessages.chat.history.unreadAnswer)).toBeTruthy();
   });
 
   it("leaves a read, idle conversation unmarked", async () => {
@@ -110,7 +110,27 @@ describe("chat search page activity markers", () => {
     show();
     await screen.findByText("Spare parts");
 
-    expect(screen.queryByLabelText(enMessages.chat.history.working)).toBeNull();
-    expect(screen.queryByLabelText(enMessages.chat.history.unreadAnswer)).toBeNull();
+    expect(screen.queryByText(enMessages.chat.history.working)).toBeNull();
+    expect(screen.queryByText(enMessages.chat.history.unreadAnswer)).toBeNull();
+  });
+});
+
+describe("chat search page meta line", () => {
+  it("gives the status the timestamp's place while a turn runs", async () => {
+    list.sessions = [row({ generating_since: at(-5_000) })];
+
+    const { container } = show();
+    await screen.findByText(enMessages.chat.history.working);
+
+    expect(container.querySelector("time")).toBeNull();
+  });
+
+  it("gives the timestamp back on a quiet row", async () => {
+    list.sessions = [row({ last_answer_at: at(-120_000), last_seen_at: at(-60_000) })];
+
+    const { container } = show();
+    await screen.findByText("Spare parts");
+
+    expect(container.querySelector("time")).toBeTruthy();
   });
 });

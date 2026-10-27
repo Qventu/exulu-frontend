@@ -12,11 +12,13 @@ afterEach(cleanup);
 
 const NOW = Date.parse("2026-10-27T12:00:00.000Z");
 const at = (offsetMs: number) => new Date(NOW + offsetMs).toISOString();
+const WORKING = enMessages.chat.history.working;
+const UNREAD = enMessages.chat.history.unreadAnswer;
 
-const show = (session: Record<string, unknown>) =>
+const show = (session: Record<string, unknown>, isOpen = false) =>
   render(
     <NextIntlClientProvider locale="en" messages={enMessages}>
-      <SessionActivityBadge session={session as never} now={NOW} />
+      <SessionActivityBadge session={session as never} now={NOW} isOpen={isOpen} />
     </NextIntlClientProvider>,
   );
 
@@ -27,55 +29,61 @@ describe("SessionActivityBadge", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("tells the reader an answer is being written", () => {
+  it("says in words that an answer is being written", () => {
+    // A bare icon was not readable at a glance; the state is now spelled out.
     show({ generating_since: at(-5_000) });
 
-    expect(screen.getByLabelText(enMessages.chat.history.working)).toBeTruthy();
+    expect(screen.getByText(WORKING)).toBeTruthy();
   });
 
-  it("tells the reader an answer is waiting to be read", () => {
+  it("says in words that an answer is waiting", () => {
     show({ last_answer_at: at(-60_000) });
 
-    expect(screen.getByLabelText(enMessages.chat.history.unreadAnswer)).toBeTruthy();
+    expect(screen.getByText(UNREAD)).toBeTruthy();
   });
 
   it("does not say both things at once while a follow-up is running", () => {
     show({ generating_since: at(-5_000), last_answer_at: at(-60_000) });
 
-    expect(screen.getByLabelText(enMessages.chat.history.working)).toBeTruthy();
-    expect(screen.queryByLabelText(enMessages.chat.history.unreadAnswer)).toBeNull();
+    expect(screen.getByText(WORKING)).toBeTruthy();
+    expect(screen.queryByText(UNREAD)).toBeNull();
   });
 
   it("distinguishes the two states by more than colour", () => {
     const { container: working } = show({ generating_since: at(-5_000) });
     const { container: unread } = show({ last_answer_at: at(-60_000) });
 
-    // A spinner for in-progress, a plain dot for waiting — a reader who cannot
-    // tell blue from grey can still tell these apart.
+    // A spinner for in-progress, a plain dot for waiting.
     expect(working.querySelector("svg")).toBeTruthy();
     expect(unread.querySelector("svg")).toBeNull();
   });
-});
 
-describe("SessionActivityBadge on the conversation you are reading", () => {
-  const showOpen = (session: Record<string, unknown>) =>
-    render(
-      <NextIntlClientProvider locale="en" messages={enMessages}>
-        <SessionActivityBadge session={session as never} now={NOW} isOpen />
-      </NextIntlClientProvider>,
-    );
+  it("keeps the spinner out of the accessible name, which the text already carries", () => {
+    const { container } = show({ generating_since: at(-5_000) });
 
-  it("never calls an open conversation unread", () => {
-    // Otherwise the dot flashes onto the row you are looking at for the
-    // moment between the answer landing and the seen marker catching up.
-    showOpen({ last_answer_at: at(-1_000) });
-
-    expect(screen.queryByLabelText(enMessages.chat.history.unreadAnswer)).toBeNull();
+    expect(container.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
   });
 
-  it("still shows an open conversation as working", () => {
-    showOpen({ generating_since: at(-5_000) });
+  it.each([
+    ["working", { generating_since: at(-5_000) }],
+    ["unread", { last_answer_at: at(-60_000) }],
+  ])("does not render the %s state in the muted colour it was lost in", (_name, session) => {
+    const { container } = show(session);
 
-    expect(screen.getByLabelText(enMessages.chat.history.working)).toBeTruthy();
+    expect(container.innerHTML).not.toContain("text-muted-foreground");
+  });
+
+  describe("on the conversation you are reading", () => {
+    it("never calls an open conversation unread", () => {
+      show({ last_answer_at: at(-1_000) }, true);
+
+      expect(screen.queryByText(UNREAD)).toBeNull();
+    });
+
+    it("still shows an open conversation as answering", () => {
+      show({ generating_since: at(-5_000) }, true);
+
+      expect(screen.getByText(WORKING)).toBeTruthy();
+    });
   });
 });

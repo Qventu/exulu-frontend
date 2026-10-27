@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import { SessionActivityBadge } from "@/components/widgets/session-activity-badge";
+import { visibleSessionActivity } from "@/lib/session-activity";
 
 import type { ResumeSession } from "../hooks";
 
@@ -104,18 +105,17 @@ export function ResumeStrip({ sessions, loading, error }: ResumeStripProps) {
                     : "font-medium text-foreground",
                 )}
               >
-                {/* Same marker as the chat history rows, after the title so a
-                    state change never shifts the text. */}
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="min-w-0 truncate">
-                    {session.title || t("resume.untitled")}
-                  </span>
-                  <SessionActivityBadge session={session} />
-                </span>
+                {session.title || t("resume.untitled")}
               </p>
-              <p className="text-xs text-muted-foreground">
-                <RelativeTime date={session.updatedAt} />
-              </p>
+              {/* One meta line, as in the chat history rows: the status
+                  stands in for the timestamp while there is one. */}
+              {visibleSessionActivity(session) ? (
+                <SessionActivityBadge session={session} />
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  <RelativeTime date={session.updatedAt} />
+                </p>
+              )}
             </Link>
           </Card>
         );

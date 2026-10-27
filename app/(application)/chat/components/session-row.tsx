@@ -47,6 +47,7 @@ import type { AgentSession } from "@/types/models/agent-session";
 import type { UseSessionMutationsResult } from "../hooks";
 import { useChatShell } from "./chat-shell";
 import { SessionActivityBadge } from "@/components/widgets/session-activity-badge";
+import { visibleSessionActivity } from "@/lib/session-activity";
 
 /**
  * The session list query populates `.agent` as an object (contract:
@@ -102,6 +103,7 @@ export function SessionRow({
       ? activeProp
       : Boolean(pathname?.includes(session.id));
   const resolvedHref = href ?? `/chat/${agentId}/${session.id}`;
+  const activity = visibleSessionActivity(session, { now, isOpen: active });
   const displayTitle = session.title || t("history.untitled");
 
   const sessionAgentId =
@@ -139,14 +141,19 @@ export function SessionRow({
           onClick={() => onNavigate?.()}
           className="flex min-h-11 min-w-0 flex-1 flex-col justify-center gap-0.5 rounded-md px-2 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          {/* The marker sits after the title rather than before it, so a row
-              changing state never shifts the text sideways. */}
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-sm font-medium">{displayTitle}</span>
-            <SessionActivityBadge session={session} now={now} isOpen={active} />
-          </span>
-          {session.updatedAt ? (
-            // Always visible (fixes U6) — text-xs muted per ladder row 13.
+          <span className="truncate text-sm font-medium">{displayTitle}</span>
+          {/* One meta line, two possible occupants: while something is
+              happening the status matters more than "2d ago", and both do not
+              fit the rail's width. The timestamp comes back when the row goes
+              quiet (it is otherwise always visible — fixes U6). */}
+          {activity ? (
+            <SessionActivityBadge
+              session={session}
+              now={now}
+              isOpen={active}
+              className="self-start"
+            />
+          ) : session.updatedAt ? (
             <RelativeTime
               date={session.updatedAt}
               className="self-start text-xs text-muted-foreground"
