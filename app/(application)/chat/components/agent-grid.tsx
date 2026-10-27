@@ -11,10 +11,17 @@
  * components/agent-selection-dialog.tsx (retired by the projects work item
  * 2.4 — projects now owns its picker at
  * app/(application)/projects/components/new-session-dialog.tsx).
+ *
+ * Favourites (2026-10-27): the agents the user starred on /agents come first
+ * in their own section, in star order (hooks/use-favourite-agents.ts — the
+ * same store as the index, so both surfaces agree), followed by the full
+ * roster under "All agents". Starred agents stay in the roster too — the
+ * section is a shortcut, not a third bucket. While searching, the grid is
+ * the flat filtered list it always was.
  */
 
 import { useQuery } from "@apollo/client";
-import { Search } from "lucide-react";
+import { Search, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import * as React from "react";
@@ -24,9 +31,72 @@ import { EmptyState } from "@/components/primitives/empty-state";
 import { Toolbar } from "@/components/primitives/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useFavouriteAgents } from "@/hooks/use-favourite-agents";
+import { resolveFavouriteAgents } from "@/lib/agents/favourites";
 import type { Agent } from "@/types/models/agent";
 
 import { GET_AGENTS } from "../queries";
+
+const GRID = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3";
+
+function AgentCard({ agent, onSelect }: { agent: Agent; onSelect: (agent: Agent) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(agent)}
+      className="min-h-11 rounded-lg border bg-card p-4 text-left transition-colors duration-150 hover:border-primary/50 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none"
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">
+          <AgentVisual agent={agent} status="ready" className="size-12" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate font-medium">{agent.name}</p>
+          </div>
+          {agent.modelName && (
+            <Badge variant="secondary" className="max-w-full text-xs">
+              <span className="truncate">{agent.modelName}</span>
+            </Badge>
+          )}
+          {agent.description && (
+            <p className="line-clamp-2 text-sm text-muted-foreground">
+              {agent.description}
+            </p>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function AgentSection({
+  id,
+  title,
+  icon,
+  agents,
+  onSelect,
+}: {
+  id: string;
+  title: string;
+  icon?: React.ReactNode;
+  agents: Agent[];
+  onSelect: (agent: Agent) => void;
+}) {
+  return (
+    <section aria-labelledby={id} className="space-y-3">
+      <h2 id={id} className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        {icon}
+        {title}
+      </h2>
+      <div className={GRID}>
+        {agents.map((agent) => (
+          <AgentCard key={agent.id} agent={agent} onSelect={onSelect} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export interface AgentGridProps {
   /** Navigation is the caller's job; the grid NEVER creates a session. */
@@ -50,6 +120,17 @@ export function AgentGrid({ onSelect, autoFocusSearch = false }: AgentGridProps)
     () => data?.agentsPagination?.items || [],
     [data],
   );
+
+  // Starred agents, in star order, resolved against this very roster — the
+  // grid only offers active agents, so a starred inactive one is simply not
+  // here (no extra fetch; the ids are the shared store's).
+  const { favouriteIds } = useFavouriteAgents();
+  const favouriteAgents = React.useMemo(
+    () => resolveFavouriteAgents(favouriteIds, [], agents),
+    [favouriteIds, agents],
+  );
+  const favouritesId = React.useId();
+  const allId = React.useId();
 
   const filteredAgents = React.useMemo(() => {
     if (!search) return agents;
@@ -76,7 +157,7 @@ export function AgentGrid({ onSelect, autoFocusSearch = false }: AgentGridProps)
       />
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={GRID}>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="rounded-lg border p-4">
               <div className="flex items-center gap-3">
@@ -90,37 +171,29 @@ export function AgentGrid({ onSelect, autoFocusSearch = false }: AgentGridProps)
           ))}
         </div>
       ) : filteredAgents.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredAgents.map((agent) => (
-            <button
-              key={agent.id}
-              type="button"
-              onClick={() => onSelect(agent)}
-              className="min-h-11 rounded-lg border bg-card p-4 text-left transition-colors duration-150 hover:border-primary/50 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none"
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">
-                  <AgentVisual agent={agent} status="ready" className="size-12" />
-                </div>
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate font-medium">{agent.name}</p>
-                  </div>
-                  {agent.modelName && (
-                    <Badge variant="secondary" className="max-w-full text-xs">
-                      <span className="truncate">{agent.modelName}</span>
-                    </Badge>
-                  )}
-                  {agent.description && (
-                    <p className="line-clamp-2 text-sm text-muted-foreground">
-                      {agent.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
+        !search && favouriteAgents.length > 0 ? (
+          <div className="space-y-6">
+            <AgentSection
+              id={favouritesId}
+              title={t("chat.agentSelect.favourites")}
+              icon={<Star aria-hidden="true" className="size-4" />}
+              agents={favouriteAgents}
+              onSelect={onSelect}
+            />
+            <AgentSection
+              id={allId}
+              title={t("chat.agentSelect.allAgents")}
+              agents={agents}
+              onSelect={onSelect}
+            />
+          </div>
+        ) : (
+          <div className={GRID}>
+            {filteredAgents.map((agent) => (
+              <AgentCard key={agent.id} agent={agent} onSelect={onSelect} />
+            ))}
+          </div>
+        )
       ) : search ? (
         <EmptyState
           icon={Search}

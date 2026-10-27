@@ -289,48 +289,12 @@ export const GET_AGENT_LITELLM_CATALOG = gql`
 `;
 
 /* -----------------------------------------------------------------------------
- * Favourites (star) — per-user, cross-device, persisted on the user row as
- * `users.favourite_agents` (JSON array of agent ids; backend
- * src/postgres/core-schema.ts — a sibling of `favourite_projects`). Same three
- * documents as /projects (projects/queries.ts) and /data (data/queries.ts):
- * read the array, full-array write via the generic usersUpdateOne, and a
- * by-ids resolve for the cards. Distinct operation names (§3.1).
+ * Favourites (star) — the documents live in lib/graphql/operations/
+ * favourite-agents.ts (shared with /chat's picker); re-exported here so the
+ * index keeps one import surface.
  * -------------------------------------------------------------------------- */
-
-/** Re-anchors the shared favourites store to the backend on mount. */
-export const GET_USER_FAVOURITE_AGENTS = gql`
-  query GetUserFavouriteAgents($id: ID!) {
-    userById(id: $id) {
-      id
-      favourite_agents
-    }
-  }
-`;
-
-/** Full-array write (json fields are JSON-stringified server-side). */
-export const UPDATE_USER_FAVOURITE_AGENTS = gql`
-  mutation UpdateUserFavouriteAgents($id: Float!, $favourite_agents: JSON) {
-    usersUpdateOne(
-      input: { favourite_agents: $favourite_agents }
-      where: { id: { eq: $id } }
-    ) {
-      item {
-        id
-        favourite_agents
-      }
-    }
-  }
-`;
-
-/**
- * Resolves the starred ids to list rows regardless of which index page they
- * sit on — `agentByIds` is the existing batch root (queries/queries.ts
- * GET_AGENTS_BY_IDS), narrowed to AGENT_LIST_FIELDS.
- */
-export const GET_FAVOURITE_AGENTS_BY_IDS = gql`
-  query AgentsFavouritesByIds($ids: [ID!]!) {
-    agentByIds(ids: $ids) {
-      ${AGENT_LIST_FIELDS}
-    }
-  }
-`;
+export {
+  GET_FAVOURITE_AGENTS_BY_IDS,
+  GET_USER_FAVOURITE_AGENTS,
+  UPDATE_USER_FAVOURITE_AGENTS,
+} from "@/lib/graphql/operations/favourite-agents";

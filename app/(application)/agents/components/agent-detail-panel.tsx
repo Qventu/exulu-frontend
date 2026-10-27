@@ -15,10 +15,13 @@
  * description, capability tiles (semantic tokens, never bg-gray-500 — fixes
  * #14; MIME lists in tap-friendly Popovers, responsive.md T7), enabled tools
  * with count badge, Safety (REAL firewall read via GET_AGENT_DETAIL, item 27),
- * Access (real rights_mode labels, no fake "Open" — fixes #16), footer:
- * "Open in chat" → /chat/{id}/new (link, NO session creation) + "Edit agent"
- * → /agents/edit/{id}. Loading renders a panel-shaped skeleton mirroring this
- * layout (item 28a — no centered spinner, philosophy §6).
+ * Access (real rights_mode labels, no fake "Open" — fixes #16). The two
+ * actions — "Open in chat" → /chat/{id}/new (link, NO session creation) +
+ * "Edit agent" → /agents/edit/{id} — sit directly under the identity block,
+ * not in a footer: a long tool list used to push them below the fold, so the
+ * sheet's one reason to exist took a scroll to reach. Loading renders a
+ * panel-shaped skeleton mirroring this layout (item 28a — no centered
+ * spinner, philosophy §6).
  */
 
 import { useQuery } from "@apollo/client";
@@ -60,10 +63,10 @@ import {
 
 export interface AgentDetailPanelProps {
   agentId: string;
-  /** Gate for the "Edit agent" footer action (index passes the RBAC write
+  /** Gate for the "Edit agent" action (index passes the RBAC write
    * predicate; the editor passes true). */
   canEdit: boolean;
-  /** The editor's nested drill-down hides the Open-in-chat/Edit footer. */
+  /** The editor's nested drill-down hides the Open-in-chat/Edit actions. */
   hideActions?: boolean;
 }
 
@@ -249,6 +252,28 @@ export function AgentDetailPanel({
         </div>
       </div>
 
+      {/* Actions (items 20/21) — up here, never below the fold; hidden in
+          the editor drill-down. Same hierarchy as before: Edit is the
+          purple action for the P2 builder, Chat the outline one. */}
+      {!hideActions ? (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button asChild variant="outline" className="sm:flex-1">
+            <Link href={`/chat/${agent.id}/new`}>
+              <MessageCircle aria-hidden="true" className="mr-2 size-4" />
+              {t("openInChat")}
+            </Link>
+          </Button>
+          {canEdit ? (
+            <Button asChild className="sm:flex-1">
+              <Link href={`/agents/edit/${agent.id}`}>
+                <Pencil aria-hidden="true" className="mr-2 size-4" />
+                {t("editAgent")}
+              </Link>
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* Description (item 24) */}
       <section>
         <h4 className="mb-2 text-sm font-medium">
@@ -379,26 +404,6 @@ export function AgentDetailPanel({
           </Badge>
         </div>
       </section>
-
-      {/* Footer actions (items 20/21) — hidden in the editor drill-down. */}
-      {!hideActions ? (
-        <div className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row">
-          <Button asChild variant="outline" className="sm:flex-1">
-            <Link href={`/chat/${agent.id}/new`}>
-              <MessageCircle aria-hidden="true" className="mr-2 size-4" />
-              {t("openInChat")}
-            </Link>
-          </Button>
-          {canEdit ? (
-            <Button asChild className="sm:flex-1">
-              <Link href={`/agents/edit/${agent.id}`}>
-                <Pencil aria-hidden="true" className="mr-2 size-4" />
-                {t("editAgent")}
-              </Link>
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -414,6 +419,10 @@ function PanelSkeleton() {
           <Skeleton className="h-4 w-14" />
           <Skeleton className="h-5 w-24 rounded-full" />
         </div>
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Skeleton className="h-9 w-full sm:flex-1" />
+        <Skeleton className="h-9 w-full sm:flex-1" />
       </div>
       <div className="space-y-2">
         <Skeleton className="h-4 w-24" />
@@ -433,10 +442,6 @@ function PanelSkeleton() {
         {Array.from({ length: 3 }).map((_, index) => (
           <Skeleton key={index} className="h-12 w-full rounded-md" />
         ))}
-      </div>
-      <div className="flex flex-col gap-2 pt-4 sm:flex-row">
-        <Skeleton className="h-9 w-full sm:flex-1" />
-        <Skeleton className="h-9 w-full sm:flex-1" />
       </div>
     </div>
   );

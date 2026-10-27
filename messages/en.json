@@ -1251,8 +1251,10 @@
       "viewRun": "View run"
     },
     "agentSelect": {
+      "allAgents": "All agents",
       "clearSearch": "Clear search",
       "description": "Pick the agent you want to talk to. You can switch at any time.",
+      "favourites": "Favourites",
       "noAgentsDescription": "You don't have access to any agents yet. Please contact your administrator.",
       "noAgentsTitle": "No agents available",
       "noResultsDescription": "Try a different search term.",
