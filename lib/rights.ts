@@ -78,6 +78,47 @@ export function isElevated(user: RightsUser): boolean {
   return RIGHT_AREAS.some((area) => hasRight(user.role, area, "read"));
 }
 
+/**
+ * The role name that marks an account as belonging outside the organisation.
+ * Seeded by the backend and used there as the same gate (`resolve-max-steps`,
+ * `external-rate-limit`), so the two halves of the product agree on who is a
+ * customer and who is a colleague.
+ */
+export const EXTERNAL_MARKER = "external";
+
+/** The two places an account can carry the external marker. */
+export interface ExternalMarkedUser {
+  /** `users.type`, written only by public self-registration. */
+  type?: string | null;
+  /** Either the joined role object or, on some call sites, a bare role id. */
+  role?: { name?: string | null } | string | null;
+}
+
+/**
+ * True for an account that must never enter the internal application: a
+ * customer reaching a published agent, not a colleague.
+ *
+ * Both markers count, and the ROLE is the load-bearing one. The gate in the
+ * (application) layout used to test `type` alone, but that column is written
+ * only by public self-registration — every account an admin creates by hand
+ * leaves it empty, so external accounts walked straight into the internal
+ * shell and were offered Projects, Artifacts and Transcripts.
+ *
+ * Deliberately NOT "a role without rights": an internal colleague on a role
+ * with no elevated area is a normal user who still gets the workspace. Only
+ * the explicit marker makes an account external.
+ */
+export function isExternalUser(
+  user: ExternalMarkedUser | null | undefined,
+): boolean {
+  if (!user) return false;
+  if (user.type === EXTERNAL_MARKER) return true;
+  const role = user.role;
+  return (
+    typeof role === "object" && role !== null && role.name === EXTERNAL_MARKER
+  );
+}
+
 /** The one predicate every surface (nav, guards, palette, Home) consumes. */
 export function can(user: RightsUser, requirement: Requirement): boolean {
   if (requirement === "all") return true;

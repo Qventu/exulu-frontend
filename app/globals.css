@@ -663,3 +663,17 @@ body[data-demo-tour="active"] [data-demo-id="tour-panel"] {
     background-color: hsl(var(--muted-foreground) / 0.35);
   }
 }
+
+/* Full-height host that yields to the on-screen keyboard.
+
+   iOS Safari keeps the layout viewport — and therefore 100dvh — at full screen
+   height while the keyboard is open, so a `h-dvh` chat column keeps its
+   composer in the strip the keyboard covers. `useKeyboardInset` measures that
+   strip from visualViewport and publishes it as --keyboard-inset; the fallback
+   of 0px means this is plain `h-dvh` everywhere else, including every desktop
+   browser and Android, which resize the layout viewport themselves. */
+@layer utilities {
+  .h-dvh-keyboard {
+    height: calc(100dvh - var(--keyboard-inset, 0px));
+  }
+}

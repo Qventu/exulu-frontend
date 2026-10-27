@@ -11,6 +11,7 @@ import { headers } from "next/headers";
 import { ThemeProvider } from "@/components/shell/theme-provider";
 import Authenticated from "@/app/(application)/authenticated";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
+import { isExternalUser } from "@/lib/rights";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 import { ConfigContextProvider } from "@/components/shell/config-context";
 import { mediaFeatureConfig } from "@/lib/config/media-features";
@@ -61,9 +62,14 @@ export default async function RootLayout({
           return u;
         })();
 
-    // External (self-registered) users never enter the internal shell —
-    // public-agents spec §4.4. Everything they may use lives under /public.
-    if (!demoMode && user.type === "external") return redirect("/public/agents");
+    // External users never enter the internal shell — public-agents spec §4.4.
+    // Everything they may use lives under /public. This is the ONE gate for the
+    // whole route group, so it has to catch every external account, not just
+    // the self-registered ones: `users.type` is written only by public
+    // sign-up, so a hand-created account on the `external` role used to pass
+    // straight through and get the full sidebar. isExternalUser checks the
+    // role too, which is the criterion the backend already uses.
+    if (!demoMode && isExternalUser(user)) return redirect("/public/agents");
 
     // `{}` here is what put "Background workers are not configured" on the
     // tour's evals screen — the banner renders whenever workers.enabled is

@@ -49,6 +49,7 @@ import { Loading } from "@/components/primitives/loading";
 import { FileItem } from "@/components/primitives/file-picker";
 import { ItemsSelectionModal } from "@/components/items-selection-modal";
 import { getToken } from "@/lib/api/client";
+import { hasFinePointer } from "@/lib/pointer";
 import { cn } from "@/lib/utils";
 import { useIncrementPromptUsage } from "@/hooks/use-prompts";
 import { PromptLibrary } from "@/types/models/prompt-library";
@@ -107,6 +108,18 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Focus on mount only where a keyboard is already there. This used to be
+  // `autoFocus` on the textarea, which on iOS left the field focused WITHOUT a
+  // keyboard (only a real gesture opens it) — and the user's first tap then
+  // landed on an already-focused field, which iOS answers with the
+  // Paste/AutoFill edit menu instead of the keyboard. Reported from an iPhone
+  // as "sometimes no keyboard appears"; the second tap always worked.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!hasFinePointer(window)) return;
+    inputRef.current?.focus();
+  }, []);
 
   // Shared helper: compact conversation and show a success toast.
   // Declared before useComposerAutocomplete so its onExecuteCommand closure
@@ -656,7 +669,6 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
               />
               <TextareaAutosize
                 autoComplete="off"
-                autoFocus={true}
                 minRows={1}
                 maxLength={maxInputLength}
                 value={input}
