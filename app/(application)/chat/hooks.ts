@@ -76,6 +76,10 @@ import {
   listPollIntervalMs,
   shouldWatchForAnswer,
 } from "@/lib/session-activity";
+import {
+  notifySessionActivityChanged,
+  subscribeToSessionActivity,
+} from "@/lib/session-activity-signal";
 import { withApprovedTools } from "./approved-tools-body";
 import { savedIdsFromMessages } from "./components/memory-panel-data";
 import { answerTextOf, collectSources, hasPendingToolApproval, parseClaimCheckTrigger } from "./components/claim-check-data";
@@ -587,9 +591,13 @@ export function useChatSession({
     // A read marker is never worth surfacing an error for, and this is the
     // one call in the hook whose result nothing waits on — so it swallows
     // everything, including a mutate that hands back no promise at all.
-    void Promise.resolve(
-      markSessionSeen({ variables: { id: openSessionId } }),
-    ).catch(() => {});
+    //
+    // The lists are told AFTER the write lands, never before: re-reading
+    // ahead of it would just load the stale last_seen_at and leave the
+    // unread dot sitting on a conversation that is open on screen.
+    void Promise.resolve(markSessionSeen({ variables: { id: openSessionId } }))
+      .then(() => notifySessionActivityChanged())
+      .catch(() => {});
   }, [openSessionId, markSessionSeen]);
 
   React.useEffect(() => {
@@ -608,6 +616,17 @@ export function useChatSession({
     const timer = setTimeout(markSeen, SEEN_AFTER_TURN_MS);
     return () => clearTimeout(timer);
   }, [openSessionId, status, markSeen]);
+
+  // A turn starting or ending changes what every mounted chat list should
+  // show for this conversation, and nothing else would tell them. Transitions
+  // only — the first render is the list's own fetch, not a change.
+  const lastStatusRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    const previous = lastStatusRef.current;
+    lastStatusRef.current = status;
+    if (previous === null || previous === status) return;
+    notifySessionActivityChanged();
+  }, [status]);
 
   // Entered on arrival only: "the conversation I just opened was mid-answer".
   // Driven by initialSession (the server-rendered row) rather than the polled
@@ -1367,11 +1386,35 @@ export function useChatSessions({
     sessionsQuery?.previousData?.agent_sessionsPagination?.pageInfo?.itemCount ??
     0;
 
-  // A row that says "working" has to be able to stop saying it: a turn ends on
-  // the server, with nothing to tell this list about it. Polling is confined to
-  // exactly that state (see listPollIntervalMs) so an idle rail is silent.
+  // Keeping a row's activity marker honest takes two things, and the poll
+  // alone is NOT enough — it only runs once the list already sees a working
+  // row, so on its own it could never notice a turn starting, nor a session
+  // being read. That was the original bug: the stamps were written correctly
+  // and the list simply never looked again.
+  //
+  //  1. Re-read on the events that change activity: the chat screen says so
+  //     when a turn starts, ends, or is marked read, and the tab coming back
+  //     into view covers anything that happened elsewhere.
+  //  2. Poll while something IS working, because that state ends on the server
+  //     with nothing to announce it.
+  const { refetch, startPolling, stopPolling } = sessionsQuery;
+
+  React.useEffect(() => {
+    const reread = () => {
+      void Promise.resolve(refetch()).catch(() => {});
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") reread();
+    };
+    const unsubscribe = subscribeToSessionActivity(reread);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      unsubscribe();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [refetch]);
+
   const pollMs = listPollIntervalMs(sessions);
-  const { startPolling, stopPolling } = sessionsQuery;
   React.useEffect(() => {
     if (pollMs > 0) {
       startPolling(pollMs);

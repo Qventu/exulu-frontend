@@ -56,3 +56,26 @@ describe("SessionActivityBadge", () => {
     expect(unread.querySelector("svg")).toBeNull();
   });
 });
+
+describe("SessionActivityBadge on the conversation you are reading", () => {
+  const showOpen = (session: Record<string, unknown>) =>
+    render(
+      <NextIntlClientProvider locale="en" messages={enMessages}>
+        <SessionActivityBadge session={session as never} now={NOW} isOpen />
+      </NextIntlClientProvider>,
+    );
+
+  it("never calls an open conversation unread", () => {
+    // Otherwise the dot flashes onto the row you are looking at for the
+    // moment between the answer landing and the seen marker catching up.
+    showOpen({ last_answer_at: at(-1_000) });
+
+    expect(screen.queryByLabelText(enMessages.chat.history.unreadAnswer)).toBeNull();
+  });
+
+  it("still shows an open conversation as working", () => {
+    showOpen({ generating_since: at(-5_000) });
+
+    expect(screen.getByLabelText(enMessages.chat.history.working)).toBeTruthy();
+  });
+});

@@ -24,12 +24,20 @@ export interface SessionActivityBadgeProps {
   className?: string;
   /** Injectable clock — the list re-renders on a poll, tests pass a fixed now. */
   now?: number;
+  /**
+   * The viewer has this conversation open right now. Such a row is read by
+   * definition, so it never shows the unread marker — without this the dot
+   * flashes onto the open row for the moment between the answer landing and
+   * the seen marker catching up with it. "Working" still shows.
+   */
+  isOpen?: boolean;
 }
 
 export function SessionActivityBadge({
   session,
   className,
   now,
+  isOpen = false,
 }: SessionActivityBadgeProps) {
   const t = useTranslations("chat");
   const activity = sessionActivity(session, now);
@@ -47,7 +55,7 @@ export function SessionActivityBadge({
     );
   }
 
-  if (activity === "unread") {
+  if (activity === "unread" && !isOpen) {
     return (
       <span
         role="img"

@@ -143,7 +143,7 @@ export function SessionRow({
               changing state never shifts the text sideways. */}
           <span className="flex min-w-0 items-center gap-1.5">
             <span className="truncate text-sm font-medium">{displayTitle}</span>
-            <SessionActivityBadge session={session} now={now} />
+            <SessionActivityBadge session={session} now={now} isOpen={active} />
           </span>
           {session.updatedAt ? (
             // Always visible (fixes U6) — text-xs muted per ladder row 13.
