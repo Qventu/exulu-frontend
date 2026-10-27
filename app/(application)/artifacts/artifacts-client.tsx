@@ -51,12 +51,13 @@ import { cn } from "@/lib/utils";
 import { CreateArtifactDialog } from "./components/create-dialog";
 import { DeleteArtifactDialog } from "./components/delete-dialog";
 import { RenameArtifactDialog } from "./components/rename-dialog";
+import { ReplaceFileDialog } from "./components/replace-file-dialog";
 import { ArtifactRowMenu } from "./components/row-menu";
 import { SharingDialog } from "./components/sharing-dialog";
 import { useFavoriteArtifacts, useSharedArtifacts, type ArtifactListItem } from "./hooks";
 
 type Filter = "all" | "favorites" | "mine" | "shared";
-type DialogState = { kind: "rename" | "sharing" | "delete"; name: string } | null;
+type DialogState = { kind: "rename" | "replace" | "sharing" | "delete"; name: string } | null;
 
 const KIND_ICON: Record<ArtifactKind, LucideIcon> = {
   app: AppWindow,
@@ -234,6 +235,7 @@ export function ArtifactsClient() {
                           onCopyLink={() => void copyLink(item)}
                           onDownload={() => download(item)}
                           onRename={() => setDialog({ kind: "rename", name: item.name })}
+                          onReplace={() => setDialog({ kind: "replace", name: item.name })}
                           onSharing={() => setDialog({ kind: "sharing", name: item.name })}
                           onDelete={() => setDialog({ kind: "delete", name: item.name })}
                         />
@@ -255,6 +257,11 @@ export function ArtifactsClient() {
           void replaceFavorite(from, to);
           void refetch();
         }}
+      />
+      <ReplaceFileDialog
+        item={dialog?.kind === "replace" ? (items.find((item) => item.name === dialog.name) ?? null) : null}
+        onOpenChange={closeDialog}
+        onReplaced={() => void refetch()}
       />
       <SharingDialog name={dialog?.kind === "sharing" ? dialog.name : null} onOpenChange={closeDialog} onSaved={() => void refetch()} />
       <DeleteArtifactDialog

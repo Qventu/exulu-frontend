@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Download, ExternalLink, MoreHorizontal, Pencil, Share2, Trash2 } from "lucide-react";
+import { Copy, Download, ExternalLink, FileUp, MoreHorizontal, Pencil, Share2, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
@@ -20,15 +20,17 @@ export interface ArtifactRowMenuProps {
   onCopyLink: () => void;
   onDownload: () => void;
   onRename: () => void;
+  /** Upload a new file behind the same link (replace-file-dialog.tsx). */
+  onReplace: () => void;
   onSharing: () => void;
   onDelete: () => void;
 }
 
 /**
  * The per-row "…" menu: the quick actions for everyone, and — for the
- * creator or a super admin — rename, sharing and delete.
+ * creator or a super admin — rename, replace file, sharing and delete.
  */
-export function ArtifactRowMenu({ item, onOpenInNewTab, onCopyLink, onDownload, onRename, onSharing, onDelete }: ArtifactRowMenuProps) {
+export function ArtifactRowMenu({ item, onOpenInNewTab, onCopyLink, onDownload, onRename, onReplace, onSharing, onDelete }: ArtifactRowMenuProps) {
   const t = useTranslations("artifacts");
   return (
     <DropdownMenu>
@@ -58,6 +60,10 @@ export function ArtifactRowMenu({ item, onOpenInNewTab, onCopyLink, onDownload, 
             <DropdownMenuItem onSelect={onRename}>
               <Pencil aria-hidden="true" className="mr-2 size-4" />
               {t("rename")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onReplace}>
+              <FileUp aria-hidden="true" className="mr-2 size-4" />
+              {t("replaceFile")}
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={onSharing}>
               <Share2 aria-hidden="true" className="mr-2 size-4" />
