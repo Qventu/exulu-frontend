@@ -5856,6 +5856,8 @@
     "dropLabel": "Datei hierher ziehen oder auswählen",
     "dropHint": "HTML-Apps, PDFs und Bilder öffnen sich im IMP, alles andere wird zum Download angeboten.",
     "changeFile": "Andere Datei wählen",
+    "allArtifacts": "Alle Artefakte",
+    "previewTitle": "Vorschau von {name}",
     "replaceFile": "Datei ersetzen…",
     "replaceTitle": "Datei hinter {name} ersetzen",
     "replaceDescription": "Link, Name und Freigabe bleiben gleich. Alle, die den Link haben, sehen die neue Datei.",
