@@ -118,6 +118,16 @@ export function StageEmbedder({
 
   const calculateVectors = context.configuration?.calculateVectors;
 
+  // `info.databaseQueue` is only the admin override stored in
+  // platform_configurations. A context that declares its embedder queue in code
+  // has no such row, so gating on it alone hid the queue badge and the whole
+  // Jobs panel for every code-declared context — while the sibling stages stayed
+  // fine, because they read the resolved queue off the context. EmbedderInfo
+  // resolves the model to an `effectiveModel` but has no equivalent for the
+  // queue, so the code-declared value has to come from the context. Override
+  // still wins when one is set.
+  const embedderQueue = info.databaseQueue ?? context.embedder?.queue ?? null;
+
   return (
     <>
       <StageCard
@@ -129,7 +139,7 @@ export function StageEmbedder({
             ? t("workspace.pipeline.embedder.description")
             : t("workspace.pipeline.embedder.notConfigured")
         }
-        queue={info.databaseQueue ?? undefined}
+        queue={embedderQueue ?? undefined}
         primaryAction={
           info.effectiveModel ? (
             <Button type="button" variant="outline" size="sm" onClick={onRun}>
@@ -188,9 +198,9 @@ export function StageEmbedder({
         }
         autoOpenJobs={autoOpenJobs}
         jobs={
-          info.effectiveModel && info.databaseQueue ? (
+          info.effectiveModel && embedderQueue ? (
             <QueuePanel
-              queueName={info.databaseQueue}
+              queueName={embedderQueue}
               displayName={info.effectiveModel ?? undefined}
               embedded
               canWrite={true}
