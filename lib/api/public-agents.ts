@@ -9,6 +9,14 @@ export interface PublicAgentMeta {
   slug: string;
   guest_auth_mode: PublicAgentAuthMode;
   guest_has_cover: boolean;
+  /**
+   * Presence flags, not storage keys (same shape as guest_has_cover). The
+   * Lottie JSON itself comes from /public-agents/:id/animation/:kind, because
+   * the internal path resolves animations through an authenticated
+   * presigned-URL endpoint that a guest cannot call.
+   */
+  guest_has_idle_animation?: boolean;
+  guest_has_responding_animation?: boolean;
 }
 
 const backend = () => process.env.BACKEND || "";

@@ -60,7 +60,7 @@ import {
 } from "./use-public-session-manager";
 
 /** Minimal Agent cast: only fields the chat components actually read. */
-function toAgent(meta: PublicAgentMeta): Agent {
+function toAgent(meta: PublicAgentMeta, animations?: AnimationUrls): Agent {
   return {
     id: meta.id,
     name: meta.name,
@@ -68,7 +68,20 @@ function toAgent(meta: PublicAgentMeta): Agent {
     image: meta.image ?? undefined,
     welcomemessage: meta.welcomemessage,
     slug: meta.slug,
+    // Absolute URLs, not storage keys: AgentVisual resolves a key through an
+    // authenticated presigned-URL endpoint, which a guest cannot call, so it
+    // would fall back to the bundled default sphere. These point at the public
+    // /public-agents/:id/animation/:kind route instead and are built
+    // server-side, where the backend base URL is available.
+    animation_idle: animations?.idle,
+    animation_responding: animations?.responding,
   } as unknown as Agent;
+}
+
+/** Public, already-resolved Lottie URLs built by the server page. */
+export interface AnimationUrls {
+  idle?: string;
+  responding?: string;
 }
 
 /** Mobile-only history trigger (opens the rail's Sheet). Authenticated only —
@@ -249,16 +262,22 @@ export function PublicChatScreen({
   userId,
   initialSession = null,
   initialMessages = [],
+  animations,
 }: {
   meta: PublicAgentMeta;
   mode: "anonymous" | "authenticated";
   userId?: string | number;
+  /** Public Lottie URLs, built server-side (see toAgent). */
+  animations?: AnimationUrls;
   /** Authenticated only: server-loaded session from ?session=<sid>. */
   initialSession?: AgentSession | null;
   /** Authenticated only: server-loaded messages for that session. */
   initialMessages?: UIMessage[];
 }) {
-  const agent = React.useMemo(() => toAgent(meta), [meta]);
+  const agent = React.useMemo(
+    () => toAgent(meta, animations),
+    [meta, animations],
+  );
 
   // Publishes --keyboard-inset for the h-dvh-keyboard hosts below. Mounted at
   // the screen root so both modes get it from a single listener.

@@ -72,6 +72,30 @@ async function loadResumedSession(
 // Terminal-state copy renders client-side in PublicNote.
 export const dynamic = "force-dynamic";
 
+
+/**
+ * Public Lottie URLs for the guest avatar. Built here, like the auth page
+ * builds coverUrl, because the backend base URL is server-only and the chat
+ * screen is a client component. Presence comes from the meta flags; the bytes
+ * are served by the public animation route.
+ */
+function animationUrls(meta: {
+  id: string;
+  guest_has_idle_animation?: boolean;
+  guest_has_responding_animation?: boolean;
+}) {
+  const backend = process.env.BACKEND || "";
+  if (!backend) return undefined;
+  const url = (kind: "idle" | "responding") =>
+    `${backend}/public-agents/${encodeURIComponent(meta.id)}/animation/${kind}`;
+  return {
+    idle: meta.guest_has_idle_animation ? url("idle") : undefined,
+    responding: meta.guest_has_responding_animation
+      ? url("responding")
+      : undefined,
+  };
+}
+
 export default async function PublicAgentPage({
   params,
   searchParams,
@@ -118,6 +142,7 @@ export default async function PublicAgentPage({
     return (
       <PublicChatScreen
         meta={meta}
+        animations={animationUrls(meta)}
         mode="authenticated"
         userId={(user as { id?: string | number }).id}
         initialSession={initialSession}
@@ -126,5 +151,11 @@ export default async function PublicAgentPage({
     );
   }
 
-  return <PublicChatScreen meta={meta} mode="anonymous" />;
+  return (
+    <PublicChatScreen
+      meta={meta}
+      animations={animationUrls(meta)}
+      mode="anonymous"
+    />
+  );
 }

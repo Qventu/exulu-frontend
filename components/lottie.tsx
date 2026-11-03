@@ -52,6 +52,18 @@ const useAnimationData = (cacheKey: string | null, ttlMs: number, fetcher: () =>
   return data;
 };
 
+/**
+ * Agents normally store a storage KEY, resolved through an authenticated
+ * presigned-URL endpoint. The guest chat cannot call that endpoint, so the
+ * public page hands us an already-resolved absolute URL instead (see
+ * app/public/agents/[id]/page.tsx). Treat anything that is already a URL as
+ * final and only presign real keys.
+ */
+const resolveAnimationUrl = (keyOrUrl: string): Promise<string> =>
+  /^https?:\/\//i.test(keyOrUrl)
+    ? Promise.resolve(keyOrUrl)
+    : getPresignedUrl(keyOrUrl);
+
 const LottieVisual = ({ agent, status, className }: { agent: Agent, status: 'submitted' | 'streaming' | 'ready' | 'error', className?: string }) => {
 
   const defaultIdleData = useAnimationData(
@@ -78,7 +90,7 @@ const LottieVisual = ({ agent, status, className }: { agent: Agent, status: 'sub
     5 * 60 * 1000, // 5 minutes
     async () => {
       if (!agent.animation_idle) return null;
-      const url = await getPresignedUrl(agent.animation_idle);
+      const url = await resolveAnimationUrl(agent.animation_idle);
       const response = await fetch(url);
       return response.json();
     },
@@ -89,7 +101,7 @@ const LottieVisual = ({ agent, status, className }: { agent: Agent, status: 'sub
     5 * 60 * 1000, // 5 minutes
     async () => {
       if (!agent.animation_responding) return null;
-      const url = await getPresignedUrl(agent.animation_responding);
+      const url = await resolveAnimationUrl(agent.animation_responding);
       const response = await fetch(url);
       return response.json();
     },

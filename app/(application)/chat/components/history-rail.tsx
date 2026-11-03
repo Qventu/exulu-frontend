@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -99,6 +99,17 @@ export function HistoryRail({
   const tCommon = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Reset key for the new-chat in-flight flag below. It has to carry the query
+  // string: the public/guest shell routes sessions through it (newChat =
+  // `basePath`, session = `basePath?session=…`) and usePathname() strips the
+  // query, so for a guest leaving a session only the search actually changes.
+  const locationKey = `${pathname ?? ""}?${searchParams?.toString() ?? ""}`;
+  // Same location in the shape the rail's hrefs use, so it can be compared
+  // against a resolved target path.
+  const currentLocation = searchParams?.toString()
+    ? `${pathname ?? ""}?${searchParams.toString()}`
+    : (pathname ?? "");
   const { historySheetOpen, setHistorySheetOpen, railCollapsed, startNewChat } =
     useChatShell();
 
@@ -128,12 +139,13 @@ export function HistoryRail({
   // ONE mutations instance, shared with every row (no per-row hook stacks).
   const mutations = useSessionMutations(agent.id);
 
-  // New-chat in-flight state (item 11) — reset when the route changes,
-  // exactly like the legacy sidebar.
+  // New-chat in-flight state (item 11) — reset when the location changes,
+  // exactly like the legacy sidebar. Keyed on locationKey, not pathname: see
+  // the note where it is built.
   const [navigatingToNew, setNavigatingToNew] = React.useState(false);
   React.useEffect(() => {
     setNavigatingToNew(false);
-  }, [pathname]);
+  }, [locationKey]);
 
   const [switcherOpen, setSwitcherOpen] = React.useState(false);
   const [namedOpen, setNamedOpen] = React.useState(false);
@@ -183,7 +195,12 @@ export function HistoryRail({
     ) {
       return;
     }
-    if (!pathname?.includes("/new")) {
+    // Only arm the spinner if this click actually navigates somewhere. The old
+    // check was `pathname.includes("/new")`, which is an internal-only literal:
+    // public newChat paths carry no "/new" segment, so the flag armed even when
+    // the target was the current location, and then had no navigation to clear
+    // it. Comparing against the resolved target covers both shells.
+    if (currentLocation !== resolvedPaths.newChat) {
       setNavigatingToNew(true);
     }
     // The Link alone is not enough: after a lazy session create the router
