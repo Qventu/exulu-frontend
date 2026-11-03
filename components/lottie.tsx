@@ -64,24 +64,40 @@ const resolveAnimationUrl = (keyOrUrl: string): Promise<string> =>
     ? Promise.resolve(keyOrUrl)
     : getPresignedUrl(keyOrUrl);
 
+/**
+ * lottie-web reads `.layers` off whatever it is handed and throws from inside a
+ * render if that is missing — an exception React cannot recover from, which
+ * takes the whole page down. A 404 from the animation route returns a JSON
+ * error body that parses perfectly well, so `response.json()` alone is not a
+ * safety net. Reject here instead: useAnimationData catches rejections and
+ * simply leaves the animation unset, which falls back to the default visual.
+ */
+const fetchLottieDocument = async (url: string): Promise<any> => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(
+      `Animation request failed: ${response.status} ${response.statusText}`,
+    );
+  }
+  const json = await response.json();
+  if (!json || typeof json !== "object" || !Array.isArray((json as any).layers)) {
+    throw new Error("Animation response is not a lottie document");
+  }
+  return json;
+};
+
 const LottieVisual = ({ agent, status, className }: { agent: Agent, status: 'submitted' | 'streaming' | 'ready' | 'error', className?: string }) => {
 
   const defaultIdleData = useAnimationData(
     !agent.animation_idle ? "default:idle" : null,
     60 * 60 * 1000, // 1 hour
-    async () => {
-      const response = await fetch("/agent-idle.json");
-      return response.json();
-    },
+    async () => fetchLottieDocument("/agent-idle.json"),
   );
 
   const defaultRespondingData = useAnimationData(
     !agent.animation_responding ? "default:responding" : null,
     60 * 60 * 1000, // 1 hour
-    async () => {
-      const response = await fetch("/agent-responding.json");
-      return response.json();
-    },
+    async () => fetchLottieDocument("/agent-responding.json"),
   );
 
   // Fetch custom animation data if available
@@ -91,8 +107,7 @@ const LottieVisual = ({ agent, status, className }: { agent: Agent, status: 'sub
     async () => {
       if (!agent.animation_idle) return null;
       const url = await resolveAnimationUrl(agent.animation_idle);
-      const response = await fetch(url);
-      return response.json();
+      return fetchLottieDocument(url);
     },
   );
 
@@ -102,8 +117,7 @@ const LottieVisual = ({ agent, status, className }: { agent: Agent, status: 'sub
     async () => {
       if (!agent.animation_responding) return null;
       const url = await resolveAnimationUrl(agent.animation_responding);
-      const response = await fetch(url);
-      return response.json();
+      return fetchLottieDocument(url);
     },
   );
 
