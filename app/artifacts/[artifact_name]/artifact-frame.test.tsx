@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { ArtifactFrame } from "./artifact-frame";
@@ -24,17 +25,25 @@ function stubFetch(ok = true) {
   return fetchMock;
 }
 
-function renderFrame(grantIdentity: boolean) {
-  const result = render(
+type PanelProp = ComponentProps<typeof ArtifactFrame>["panel"];
+
+function renderFrame(grantIdentity: boolean, panel?: PanelProp) {
+  const frameFor = (nextPanel?: PanelProp) => (
     <ArtifactFrame
       html="<p>hi</p>"
       title="app.html"
       artifactName="my-artifact"
       grantIdentity={grantIdentity}
-    />,
+      panel={nextPanel}
+    />
   );
+  const result = render(frameFor(panel));
   const frame = result.container.querySelector("iframe") as HTMLIFrameElement;
-  return { ...result, frame };
+  // The viewer builds the `panel` object inline, so every parent render hands
+  // the frame a fresh object with unchanged values — which is exactly what
+  // must put no traffic on the port.
+  const rerenderWith = (nextPanel?: PanelProp) => result.rerender(frameFor(nextPanel));
+  return { ...result, frame, rerenderWith };
 }
 
 /**
@@ -63,6 +72,68 @@ const request = (source: MessageEventSource | null, v: number = 1) =>
     data: { type: "exulu:identity:request", v },
     source,
   });
+
+/** Port delivery is queued, never synchronous — let the queue drain. */
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+/**
+ * Resolves on the first port message of a given type.
+ *
+ * The port carries two protocols, and the host's panel announcements are
+ * queued on it ahead of the identity grant, so a test waiting for an identity
+ * answer has to name the message it wants rather than take whatever arrives
+ * first.
+ */
+function nextOfType(port: MessagePort, type: string) {
+  return new Promise<any>((resolve) => {
+    port.onmessage = (event) => {
+      if (event.data?.type === type) resolve(event.data);
+    };
+  });
+}
+
+/**
+ * Drives the handshake the way the artifact does and returns the artifact's
+ * end of the channel, with everything the host posts over it collected in
+ * arrival order.
+ */
+function handshake(frame: HTMLIFrameElement) {
+  const post = spyPost(frame);
+  window.dispatchEvent(request(frame.contentWindow));
+  const port = (post.mock.calls[0]![2] as Transferable[])[0] as MessagePort;
+  const received: any[] = [];
+  port.onmessage = (event) => received.push(event.data);
+  port.start();
+  const ofType = (type: string) => received.filter((message) => message?.type === type);
+  /**
+   * Waits until at least `count` messages of `type` have arrived.
+   *
+   * Port delivery is not bounded to one turn of the loop: under jsdom
+   * MessagePort is Node's, whose delivery is scheduled on the event loop, so
+   * a single flush races under load. Negative assertions ("nothing was sent")
+   * therefore wait on a *later* message as a barrier — the queue is FIFO, so
+   * if that one arrived, anything queued before it has too.
+   */
+  const until = async (type: string, count = 1) => {
+    for (let turn = 0; turn < 200 && ofType(type).length < count; turn += 1) {
+      await flush();
+    }
+    return ofType(type);
+  };
+  return { post, port, ofType, until };
+}
+
+// The agent-panel channel is versioned separately from the identity
+// handshake (CHANNEL_V = 2 vs. v: 1). Spelled out literally here rather than
+// imported: these tests speak the wire as a third-party artifact sees it, and
+// a test that imported the constant could not catch a version change.
+const SLOTS = [{ key: "analyse", label: "Pitch-Agent" }];
+const openRequest = (slot: string, extra: Record<string, unknown> = {}) => ({
+  type: "exulu:panel:open",
+  v: 2,
+  slot,
+  ...extra,
+});
 
 describe("ArtifactFrame", () => {
   beforeEach(() => {
@@ -107,9 +178,7 @@ describe("ArtifactFrame", () => {
     window.dispatchEvent(request(frame.contentWindow));
 
     const port = (post.mock.calls[0]![2] as Transferable[])[0] as MessagePort;
-    const granted = new Promise<any>((resolve) => {
-      port.onmessage = (e) => resolve(e.data);
-    });
+    const granted = nextOfType(port, "exulu:identity:grant");
     port.start();
 
     expect(await granted).toMatchObject({
@@ -176,9 +245,7 @@ describe("ArtifactFrame", () => {
     window.dispatchEvent(request(frame.contentWindow));
 
     const port = (post.mock.calls[0]![2] as Transferable[])[0] as MessagePort;
-    const answer = new Promise<any>((resolve) => {
-      port.onmessage = (e) => resolve(e.data);
-    });
+    const answer = nextOfType(port, "exulu:identity:denied");
     port.start();
 
     expect(await answer).toMatchObject({
@@ -195,15 +262,11 @@ describe("ArtifactFrame", () => {
     window.dispatchEvent(request(frame.contentWindow));
     const port = (post.mock.calls[0]![2] as Transferable[])[0] as MessagePort;
 
-    const first = new Promise<any>((resolve) => {
-      port.onmessage = (e) => resolve(e.data);
-    });
+    const first = nextOfType(port, "exulu:identity:grant");
     port.start();
     await first;
 
-    const refreshed = new Promise<any>((resolve) => {
-      port.onmessage = (e) => resolve(e.data);
-    });
+    const refreshed = nextOfType(port, "exulu:identity:grant");
     port.postMessage({ type: "exulu:identity:refresh", v: 1 });
 
     expect(await refreshed).toMatchObject({
@@ -250,9 +313,7 @@ describe("ArtifactFrame", () => {
     window.dispatchEvent(request(frame.contentWindow));
     const port = (post.mock.calls[0]![2] as Transferable[])[0] as MessagePort;
 
-    const first = new Promise<any>((resolve) => {
-      port.onmessage = (e) => resolve(e.data);
-    });
+    const first = nextOfType(port, "exulu:identity:grant");
     port.start();
     await first;
 
@@ -347,14 +408,266 @@ describe("ArtifactFrame", () => {
     window.dispatchEvent(request(frame.contentWindow));
 
     const port = (post.mock.calls[0]![2] as Transferable[])[0] as MessagePort;
-    const answer = new Promise<any>((resolve) => {
-      port.onmessage = (e) => resolve(e.data);
-    });
+    const answer = nextOfType(port, "exulu:identity:denied");
     port.start();
 
     expect(await answer).toMatchObject({
       type: "exulu:identity:denied",
       v: 1,
     });
+  });
+
+  /* ---------------------------------------------------------------------
+   * The agent-panel channel (CHANNEL_V = 2), riding the same port.
+   * ------------------------------------------------------------------ */
+
+  test("announces host info with panel:false and no slots when no panel prop is given", async () => {
+    stubFetch();
+    const { frame } = renderFrame(true);
+    const { ofType, until } = handshake(frame);
+    await until("exulu:identity:grant");
+
+    // The published share route has its own root layout with none of the app
+    // providers, so it has no panel at all — the artifact must be told, or it
+    // would offer a button that can never work.
+    expect(ofType("exulu:host:info")).toEqual([
+      { type: "exulu:host:info", v: 2, panel: false, slots: [] },
+    ]);
+  });
+
+  test("announces the assigned slots when a panel is present", async () => {
+    stubFetch();
+    const { frame } = renderFrame(true, { slots: SLOTS, onOpenRequest: vi.fn() });
+    const { ofType, until } = handshake(frame);
+    await until("exulu:identity:grant");
+
+    expect(ofType("exulu:host:info")).toEqual([
+      {
+        type: "exulu:host:info",
+        v: 2,
+        panel: true,
+        slots: [{ key: "analyse", label: "Pitch-Agent" }],
+      },
+    ]);
+  });
+
+  // Agent ids never cross this channel; the frame only ever learns {key,label}.
+  test("never puts an agent id on the channel", async () => {
+    stubFetch();
+    const { frame } = renderFrame(true, { slots: SLOTS, onOpenRequest: vi.fn() });
+    const { ofType, until } = handshake(frame);
+    await until("exulu:identity:grant");
+
+    expect(Object.keys(ofType("exulu:host:info")[0].slots[0])).toEqual(["key", "label"]);
+  });
+
+  test("announces the current viewport alongside host info at the handoff", async () => {
+    stubFetch();
+    // A frame that loads while the panel is already open (the artifact
+    // reloaded itself, say) would otherwise never learn its width: the
+    // change-keyed effect only fires on a later change.
+    const { frame } = renderFrame(true, {
+      slots: SLOTS,
+      onOpenRequest: vi.fn(),
+      viewport: { width: 360, open: true },
+    });
+    const { ofType, until } = handshake(frame);
+    await until("exulu:identity:grant");
+
+    expect(ofType("exulu:panel:viewport")).toEqual([
+      { type: "exulu:panel:viewport", v: 2, width: 360, open: true },
+    ]);
+  });
+
+  test("an open request for an assigned slot reaches onOpenRequest and is acked accepted", async () => {
+    stubFetch();
+    const onOpenRequest = vi.fn();
+    const { frame } = renderFrame(true, { slots: SLOTS, onOpenRequest });
+    const { port, until } = handshake(frame);
+    await until("exulu:identity:grant");
+
+    port.postMessage(openRequest("analyse", { prompt: "Summarise the pitch", files: ["f-1"] }));
+
+    expect(await until("exulu:panel:open:ack")).toEqual([
+      { type: "exulu:panel:open:ack", v: 2, slot: "analyse", accepted: true },
+    ]);
+    expect(onOpenRequest).toHaveBeenCalledTimes(1);
+    expect(onOpenRequest).toHaveBeenCalledWith({
+      type: "exulu:panel:open",
+      v: 2,
+      slot: "analyse",
+      prompt: "Summarise the pitch",
+      files: ["f-1"],
+    });
+  });
+
+  // Review Focus 1: the slot allowlist is the trust boundary. Any code inside
+  // the artifact bundle can post on this port, a compromised dependency
+  // included, so a slot nobody assigned must never reach the host.
+  test("an open request for an unassigned slot is NOT forwarded and is acked rejected", async () => {
+    stubFetch();
+    const onOpenRequest = vi.fn();
+    const { frame } = renderFrame(true, { slots: SLOTS, onOpenRequest });
+    const { port, until } = handshake(frame);
+    await until("exulu:identity:grant");
+
+    port.postMessage(openRequest("some-other-agent", { prompt: "exfiltrate" }));
+    const acks = await until("exulu:panel:open:ack");
+
+    expect(onOpenRequest).not.toHaveBeenCalled();
+    expect(acks).toHaveLength(1);
+    expect(acks[0]).toMatchObject({ slot: "some-other-agent", accepted: false });
+    expect(typeof acks[0].reason).toBe("string");
+    expect(acks[0].reason.length).toBeGreaterThan(0);
+  });
+
+  // Review Focus 5: an open request has no retry, and the artifact's button
+  // re-enables on the ack — a dropped request would hang its UI forever.
+  test("an open request that arrives before the panel prop exists is acked rejected, never left pending", async () => {
+    stubFetch();
+    const { frame } = renderFrame(true);
+    const { port, until } = handshake(frame);
+    await until("exulu:identity:grant");
+
+    port.postMessage(openRequest("analyse"));
+    const acks = await until("exulu:panel:open:ack");
+
+    expect(acks).toHaveLength(1);
+    expect(acks[0]).toMatchObject({ slot: "analyse", accepted: false });
+    expect(typeof acks[0].reason).toBe("string");
+  });
+
+  test("a malformed open request is ignored entirely — no ack, no call", async () => {
+    const fetchMock = stubFetch();
+    const onOpenRequest = vi.fn();
+    const { frame } = renderFrame(true, { slots: SLOTS, onOpenRequest });
+    const { port, ofType, until } = handshake(frame);
+    await until("exulu:identity:grant");
+
+    port.postMessage({ type: "exulu:panel:open", v: 1, slot: "analyse" });
+    port.postMessage({ type: "exulu:panel:openz", v: 2, slot: "analyse" });
+    port.postMessage({ type: "exulu:panel:open", v: 2, slot: 7 });
+    port.postMessage({ type: "exulu:panel:open", v: 2 });
+    // A well-formed request last: port delivery is FIFO, so its ack arriving
+    // proves all four above were handled — and ignored.
+    port.postMessage(openRequest("analyse"));
+
+    expect(await until("exulu:panel:open:ack")).toEqual([
+      { type: "exulu:panel:open:ack", v: 2, slot: "analyse", accepted: true },
+    ]);
+    expect(onOpenRequest).toHaveBeenCalledTimes(1);
+    // The identity branch shares this port: a malformed v: 1 message must not
+    // be mistaken for a refresh either.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("open requests arriving over the window instead of the port are ignored", async () => {
+    const fetchMock = stubFetch();
+    const onOpenRequest = vi.fn();
+    const { frame } = renderFrame(true, { slots: SLOTS, onOpenRequest });
+    const post = spyPost(frame);
+
+    // dispatchEvent runs the listener synchronously, so everything the frame
+    // would do about this message has already happened on the next line.
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data: openRequest("analyse"),
+        source: frame.contentWindow,
+      }),
+    );
+    await flush();
+
+    // Only exulu:identity:request is answered at the window, and the answer
+    // is the credential-free channel handoff. Nothing else is posted there.
+    expect(onOpenRequest).not.toHaveBeenCalled();
+    expect(post).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("a viewport change posts panelViewport over the port", async () => {
+    stubFetch();
+    const panel = { slots: SLOTS, onOpenRequest: vi.fn(), viewport: { width: 0, open: false } };
+    const { frame, rerenderWith } = renderFrame(true, panel);
+    const { port, ofType, until } = handshake(frame);
+    await until("exulu:identity:grant");
+    const seeded = ofType("exulu:panel:viewport").length;
+
+    rerenderWith({ ...panel, viewport: { width: 420, open: true } });
+
+    expect((await until("exulu:panel:viewport", seeded + 1)).slice(seeded)).toEqual([
+      { type: "exulu:panel:viewport", v: 2, width: 420, open: true },
+    ]);
+
+    // A re-render with the same values — a fresh object, as the viewer builds
+    // one every render — must put nothing on the port. The open request is a
+    // FIFO barrier: its ack cannot arrive before a viewport message queued by
+    // the re-render would have.
+    rerenderWith({ ...panel, viewport: { width: 420, open: true } });
+    port.postMessage(openRequest("analyse"));
+    expect(await until("exulu:panel:open:ack")).toHaveLength(1);
+    expect(ofType("exulu:panel:viewport")).toHaveLength(seeded + 1);
+  });
+
+  test("a progressNonce bump posts turnProgress once per bump", async () => {
+    stubFetch();
+    const panel = {
+      slots: SLOTS,
+      onOpenRequest: vi.fn(),
+      progressNonce: 0,
+      progressReason: "tool" as const,
+    };
+    const { frame, rerenderWith } = renderFrame(true, panel);
+    const { port, ofType, until } = handshake(frame);
+    expect(await until("exulu:identity:grant")).toHaveLength(1);
+
+    // The handshake itself is not a bump — progress is an event, not state.
+    expect(ofType("exulu:session:progress")).toEqual([]);
+
+    rerenderWith({ ...panel, progressNonce: 1 });
+    expect(await until("exulu:session:progress")).toEqual([
+      { type: "exulu:session:progress", v: 2, reason: "tool" },
+    ]);
+
+    // Same nonce, new object: a re-render alone sends nothing. Barrier as above.
+    rerenderWith({ ...panel, progressNonce: 1 });
+    port.postMessage(openRequest("analyse"));
+    expect(await until("exulu:panel:open:ack")).toHaveLength(1);
+    expect(ofType("exulu:session:progress")).toHaveLength(1);
+
+    // The reason rides along with the nonce.
+    rerenderWith({ ...panel, progressNonce: 2, progressReason: "turn" });
+    expect(await until("exulu:session:progress", 2)).toEqual([
+      { type: "exulu:session:progress", v: 2, reason: "tool" },
+      { type: "exulu:session:progress", v: 2, reason: "turn" },
+    ]);
+  });
+
+  // The port may already be closed — the frame unmounted, or navigated and
+  // dropped port2 — and an announcement is fire-and-forget: it must not
+  // surface an error and must not be retried.
+  test("a progress bump the port can no longer accept does not throw and is not retried", async () => {
+    // Never resolves, so the identity flow's own posts stay out of this.
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    const postMessage = vi.fn(() => {
+      throw new DOMException("InvalidStateError");
+    });
+    vi.stubGlobal(
+      "MessageChannel",
+      class {
+        port1 = { postMessage, close: vi.fn(), onmessage: null };
+        port2 = {};
+      },
+    );
+    const panel = { slots: SLOTS, onOpenRequest: vi.fn(), progressNonce: 0 };
+    const { frame, rerenderWith } = renderFrame(true, panel);
+    spyPost(frame);
+
+    expect(() => window.dispatchEvent(request(frame.contentWindow))).not.toThrow();
+    expect(() => rerenderWith({ ...panel, progressNonce: 1 })).not.toThrow();
+
+    expect(postMessage).toHaveBeenCalled();
+    const attempts = postMessage.mock.calls.length;
+    await flush();
+    expect(postMessage.mock.calls.length).toBe(attempts);
   });
 });

@@ -2,6 +2,25 @@
 
 import { useEffect, useRef } from "react";
 
+import {
+  hostInfo,
+  openPanelAck,
+  panelViewport,
+  parseOpenPanelRequest,
+  turnProgress,
+  type HostInfo,
+  type OpenPanelAck,
+  type OpenPanelRequest,
+  type PanelSlot,
+  type PanelViewport,
+  type TurnProgress,
+} from "@/lib/artifacts/agent-panel-protocol";
+
+/**
+ * The identity handshake's own version. The agent-panel channel that shares
+ * the same port is versioned separately (`CHANNEL_V`), so a message belongs
+ * to exactly one of the two protocols and neither can be read as the other.
+ */
 const V = 1;
 
 type Grant = {
@@ -19,6 +38,27 @@ const denied = (reason: string): Denied => ({
   v: V,
   reason,
 });
+
+/**
+ * Posts one agent-panel message, tolerating a channel that is already gone.
+ *
+ * These messages are fire-and-forget announcements, and the port may have no
+ * peer left — the frame navigated and dropped its end, or was never handed
+ * one at all. A dead channel is not a condition the host can act on, so the
+ * failure is swallowed rather than surfaced, and never retried: the artifact
+ * re-reads host info and the viewport on its next connect anyway.
+ */
+function announce(
+  port: MessagePort | null,
+  message: HostInfo | PanelViewport | TurnProgress | OpenPanelAck,
+) {
+  if (!port) return;
+  try {
+    port.postMessage(message);
+  } catch {
+    // Closed or neutered port. Nothing to do, nothing to report.
+  }
+}
 
 /**
  * Renders a shared artifact, and — only when a platform administrator has
@@ -40,18 +80,44 @@ const denied = (reason: string): Denied => ({
  * before any await can let a navigation intervene. Only the MessagePort
  * transferred over that handoff ever carries the token, and a MessagePort is
  * bound to (and destroyed with) the document that received it.
+ *
+ * That same port then carries the agent-panel channel (see
+ * lib/artifacts/agent-panel-protocol.ts), on its own version: the host
+ * announces whether it has a panel, which slots are assigned, how wide the
+ * artifact's viewport is and when an agent turn made progress, and the
+ * artifact asks for a panel to be opened. Those messages carry no credential
+ * either, and the port stays the only channel — nothing new is aimed at the
+ * window.
  */
 export function ArtifactFrame({
   html,
   title,
   artifactName,
   grantIdentity,
+  panel,
   className = "h-screen w-screen border-0",
 }: {
   html: string;
   title: string;
   artifactName: string;
   grantIdentity: boolean;
+  /**
+   * Present only on a host that actually has an agent panel: the in-shell
+   * viewer (/artifacts/open/[name]) passes it, the published share route has
+   * its own root layout with none of the app providers and passes nothing. An
+   * absent prop is announced as `panel: false` with no slots, which is how an
+   * artifact knows to hide a trigger that could never work there.
+   *
+   * `slots` carries only {key,label} — agent ids never cross this channel —
+   * and doubles as the allowlist every open request is checked against.
+   */
+  panel?: {
+    slots: PanelSlot[];
+    onOpenRequest: (req: OpenPanelRequest) => void;
+    viewport?: { width: number; open: boolean };
+    progressNonce?: number;
+    progressReason?: "tool" | "turn";
+  };
   /**
    * The share route renders the frame full-screen (the default); the
    * in-shell viewer under /artifacts/open passes "h-full w-full border-0"
@@ -66,6 +132,17 @@ export function ArtifactFrame({
   // ports. Reset by the iframe's own `load` event, which fires again on any
   // navigation (including a re-navigation to the same srcDoc).
   const handledRef = useRef(false);
+  // The viewer rebuilds the `panel` object on every render, so the port
+  // handlers read it off a ref instead of closing over it: the identity
+  // effect must not re-subscribe — and so re-arm the handshake — merely
+  // because the parent rendered.
+  const panelRef = useRef(panel);
+  useEffect(() => {
+    panelRef.current = panel;
+  }, [panel]);
+  // The artifact's end of the channel, established by the handshake below.
+  // Until it exists there is nobody to announce anything to.
+  const portRef = useRef<MessagePort | null>(null);
 
   useEffect(() => {
     if (!grantIdentity) return;
@@ -105,6 +182,34 @@ export function ArtifactFrame({
       }
     };
 
+    /**
+     * Answers one `exulu:panel:open` request from the artifact.
+     *
+     * The slot allowlist is the trust boundary and it is checked here, in the
+     * frame, rather than left to the host: any code inside the artifact
+     * bundle can post on this port — a compromised dependency included — so a
+     * slot nobody assigned must never reach `onOpenRequest`.
+     *
+     * Every request is acked, accepted or not. Unlike the identity request,
+     * an open request has no retry, and the artifact's button re-enables on
+     * the ack, so a silently dropped request would hang its UI for good.
+     */
+    const answerOpenRequest = (port: MessagePort, req: OpenPanelRequest) => {
+      const host = panelRef.current;
+      if (!host) {
+        announce(port, openPanelAck(req.slot, false, "no-panel"));
+        return;
+      }
+      if (!host.slots.some((slot) => slot.key === req.slot)) {
+        announce(port, openPanelAck(req.slot, false, "unknown-slot"));
+        return;
+      }
+      // Ack before handing over: the artifact's UI waits on it, and it must
+      // not be lost to a throw from the host's own handler.
+      announce(port, openPanelAck(req.slot, true));
+      host.onOpenRequest(req);
+    };
+
     const onMessage = (event: MessageEvent) => {
       const frame = ref.current;
       // Verification is by window identity, not origin: a sandboxed frame's
@@ -119,14 +224,23 @@ export function ArtifactFrame({
       const target = frame.contentWindow;
       if (!target) return;
 
-      // Synchronous from here through the postMessage call below — same
-      // task as the verification above, so no navigation of the frame can
-      // intervene between checking the sender and hitting the wire. This
-      // message is the only one ever aimed at the window, and it carries no
-      // credential.
+      // Synchronous from here through the handoff and the host
+      // announcements below — same task as the verification above, so no
+      // navigation of the frame can intervene between checking the sender
+      // and hitting the wire. The handoff is the only message ever aimed at
+      // the window, and it carries no credential.
       const channel = new MessageChannel();
       ports.push(channel.port1);
       channel.port1.onmessage = async (portEvent: MessageEvent) => {
+        // Two protocols share this port, so dispatch by shape — and try the
+        // panel channel first, since the identity branch below rejects
+        // anything not stamped v: 1 and a panel message could never survive
+        // it. A message that is neither falls through and is ignored.
+        const open = parseOpenPanelRequest(portEvent.data);
+        if (open) {
+          answerOpenRequest(channel.port1, open);
+          return;
+        }
         if (portEvent.data?.v !== V) return;
         if (portEvent.data?.type !== "exulu:identity:refresh") return;
         const fresh = await fetchGrant();
@@ -139,6 +253,24 @@ export function ArtifactFrame({
       target.postMessage({ type: "exulu:identity:channel", v: V }, "*", [
         channel.port2,
       ]);
+      portRef.current = channel.port1;
+
+      // The agent-panel channel's opening statement, queued on the port with
+      // the handoff rather than sent from an effect: the artifact resolves
+      // its connect on the grant and reads the host it is running in off
+      // these, so they have to be on the wire before the grant it waits for.
+      // The viewport is seeded here for the same reason the host info is —
+      // the change-keyed effect below only carries later changes, so a frame
+      // that loads while the panel is already open would otherwise never
+      // learn its width.
+      const host = panelRef.current;
+      announce(channel.port1, hostInfo(Boolean(host), host?.slots ?? []));
+      if (host?.viewport) {
+        announce(
+          channel.port1,
+          panelViewport(host.viewport.width, host.viewport.open),
+        );
+      }
 
       void (async () => {
         const grant = await fetchGrant();
@@ -151,9 +283,35 @@ export function ArtifactFrame({
     return () => {
       cancelled = true;
       window.removeEventListener("message", onMessage);
+      portRef.current = null;
       for (const port of ports) port.close();
     };
   }, [grantIdentity, artifactName]);
+
+  // Both panel effects are keyed on the values that changed, never on the
+  // `panel` object — the viewer builds a fresh one every render, and a bare
+  // re-render must put nothing on the port. One message per actual change.
+  const viewportWidth = panel?.viewport?.width;
+  const viewportOpen = panel?.viewport?.open;
+  useEffect(() => {
+    if (viewportWidth === undefined || viewportOpen === undefined) return;
+    // No port yet means the artifact has not connected; the handoff above
+    // announces the viewport it finds at that point, so nothing is missed.
+    announce(portRef.current, panelViewport(viewportWidth, viewportOpen));
+  }, [viewportWidth, viewportOpen]);
+
+  const progressNonce = panel?.progressNonce;
+  useEffect(() => {
+    if (progressNonce === undefined) return;
+    // Progress is an event, not state: it is announced on a bump and never
+    // replayed to a newly connected artifact. The reason rides along with the
+    // nonce rather than being keyed on — a reason that changes without a bump
+    // describes no new event — so it is read off the ref.
+    announce(
+      portRef.current,
+      turnProgress(panelRef.current?.progressReason ?? "turn"),
+    );
+  }, [progressNonce]);
 
   // `allow-popups-to-escape-sandbox`: a popup opened from a sandboxed frame
   // otherwise inherits the sandbox — opaque origin, no cookies — so an
