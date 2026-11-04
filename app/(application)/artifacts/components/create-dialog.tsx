@@ -35,7 +35,7 @@ export interface CreateArtifactDialogProps {
 
 type Phase = { kind: "idle" } | { kind: "uploading"; percent: number } | { kind: "publishing" };
 
-const INITIAL_SHARING: SharingValue = { authMode: "regular", password: "", expiry: "never", rightsMode: "private", rbac: EMPTY_RBAC };
+const INITIAL_SHARING: SharingValue = { authMode: "regular", password: "", expiry: "never", rightsMode: "private", rbac: EMPTY_RBAC, agentSlots: [] };
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

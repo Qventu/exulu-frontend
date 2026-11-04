@@ -8,6 +8,12 @@ export interface ShareRbac {
   teams: { id: string; rights: "read" | "write" }[];
 }
 
+/** One agent bound to a named slot that an app artifact's own code opens. */
+export interface AgentSlot {
+  key: string;
+  agentId: string;
+}
+
 export interface CreateShareInput {
   s3key: string;
   name: string;
@@ -35,6 +41,7 @@ export interface ShareSettings {
   s3key: string;
   created_by: number | null;
   rbac: ShareRbac;
+  agent_slots: AgentSlot[];
 }
 
 /** Every field optional; see the backend's validateUpdateInput for the rules. */
@@ -48,6 +55,7 @@ export interface UpdateShareInput {
   expires_at?: string | null;
   rights_mode?: string;
   rbac?: ShareRbac;
+  agent_slots?: AgentSlot[];
 }
 
 export interface SignedUpload {

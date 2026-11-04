@@ -14,7 +14,9 @@ import { RBACControl } from "@/components/rbac";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { ShareAuthMode, ShareRbac } from "@/lib/api/shared-artifacts";
+import type { AgentSlot, ShareAuthMode, ShareRbac } from "@/lib/api/shared-artifacts";
+
+import { AgentSlotsField } from "./agent-slots-field";
 
 export type Expiry = "keep" | 1 | 7 | 30 | "never";
 export type RightsMode = "private" | "users" | "roles" | "teams" | "public";
@@ -37,6 +39,7 @@ export interface SharingValue {
   expiry: Expiry;
   rightsMode: RightsMode;
   rbac: ShareRbac;
+  agentSlots: AgentSlot[];
 }
 
 export const EMPTY_RBAC: ShareRbac = { users: [], roles: [], teams: [] };
@@ -51,9 +54,11 @@ export interface SharingFormProps {
   /** The stored rbac scope the RBACControl starts from. */
   initialRbac?: ShareRbac;
   disabled?: boolean;
+  /** Whether the artifact is an app (HTML) — gates the agent-assignment field. */
+  isApp?: boolean;
 }
 
-export function SharingForm({ value, onChange, hasPassword = false, currentExpiry = null, initialRbac = EMPTY_RBAC, disabled = false }: SharingFormProps) {
+export function SharingForm({ value, onChange, hasPassword = false, currentExpiry = null, initialRbac = EMPTY_RBAC, disabled = false, isApp = false }: SharingFormProps) {
   const t = useTranslations("artifacts");
   const set = (patch: Partial<SharingValue>) => onChange({ ...value, ...patch });
 
@@ -98,19 +103,22 @@ export function SharingForm({ value, onChange, hasPassword = false, currentExpir
       </div>
 
       {value.authMode === "regular" && (
-        <div className="space-y-1.5">
-          <Label>{t("whoLabel")}</Label>
-          <RBACControl
-            allowedModes={RIGHTS_MODES}
-            initialRightsMode={value.rightsMode}
-            initialUsers={initialRbac.users}
-            initialRoles={initialRbac.roles}
-            initialTeams={initialRbac.teams}
-            modalMode={true}
-            subjectLabel="artifact"
-            onChange={(mode, users, roles, teams) => set({ rightsMode: asRightsMode(mode), rbac: { users, roles, teams } })}
-          />
-        </div>
+        <>
+          <div className="space-y-1.5">
+            <Label>{t("whoLabel")}</Label>
+            <RBACControl
+              allowedModes={RIGHTS_MODES}
+              initialRightsMode={value.rightsMode}
+              initialUsers={initialRbac.users}
+              initialRoles={initialRbac.roles}
+              initialTeams={initialRbac.teams}
+              modalMode={true}
+              subjectLabel="artifact"
+              onChange={(mode, users, roles, teams) => set({ rightsMode: asRightsMode(mode), rbac: { users, roles, teams } })}
+            />
+          </div>
+          <AgentSlotsField value={value.agentSlots} onChange={(agentSlots) => set({ agentSlots })} disabled={disabled} isApp={isApp} />
+        </>
       )}
     </div>
   );
@@ -123,6 +131,6 @@ export function sharingPayload(value: SharingValue) {
     auth_mode: value.authMode,
     ...(expires !== undefined ? { expires_at: expires } : {}),
     ...(value.authMode === "password" && value.password ? { password: value.password } : {}),
-    ...(value.authMode === "regular" ? { rights_mode: value.rightsMode, rbac: value.rbac } : {}),
+    ...(value.authMode === "regular" ? { rights_mode: value.rightsMode, rbac: value.rbac, agent_slots: value.agentSlots } : {}),
   };
 }

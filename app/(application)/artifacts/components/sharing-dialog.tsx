@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sharedArtifactsApi, type ShareSettings } from "@/lib/api/shared-artifacts";
+import { artifactType, displayFilename } from "@/lib/artifacts/artifact-type";
 
 import { asRightsMode, EMPTY_RBAC, SharingForm, sharingPayload, type SharingValue } from "./sharing-form";
 
@@ -29,7 +30,7 @@ export function SharingDialog({ name, onOpenChange, onSaved }: SharingDialogProp
   const t = useTranslations("artifacts");
   const [settings, setSettings] = React.useState<ShareSettings | null>(null);
   const [failed, setFailed] = React.useState(false);
-  const [value, setValue] = React.useState<SharingValue>({ authMode: "regular", password: "", expiry: "never", rightsMode: "private", rbac: EMPTY_RBAC });
+  const [value, setValue] = React.useState<SharingValue>({ authMode: "regular", password: "", expiry: "never", rightsMode: "private", rbac: EMPTY_RBAC, agentSlots: [] });
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
@@ -48,6 +49,7 @@ export function SharingDialog({ name, onOpenChange, onSaved }: SharingDialogProp
           expiry: unexpired(s.expires_at) ? "keep" : "never",
           rightsMode: s.auth_mode === "regular" ? asRightsMode(s.rights_mode) : "private",
           rbac: s.rbac,
+          agentSlots: s.agent_slots ?? [],
         });
       })
       .catch(() => {
@@ -60,6 +62,7 @@ export function SharingDialog({ name, onOpenChange, onSaved }: SharingDialogProp
 
   const hasPassword = settings?.auth_mode === "password";
   const needsPassword = value.authMode === "password" && !hasPassword && !value.password;
+  const isApp = settings ? artifactType(displayFilename(settings.s3key), settings.content_type).kind === "app" : false;
 
   const save = async () => {
     if (!name || !settings) return;
@@ -93,7 +96,7 @@ export function SharingDialog({ name, onOpenChange, onSaved }: SharingDialogProp
             <Skeleton className="h-24 w-full" />
           </div>
         ) : (
-          <SharingForm value={value} onChange={setValue} hasPassword={hasPassword} currentExpiry={unexpired(settings.expires_at)} initialRbac={settings.rbac} disabled={saving} />
+          <SharingForm value={value} onChange={setValue} hasPassword={hasPassword} currentExpiry={unexpired(settings.expires_at)} initialRbac={settings.rbac} disabled={saving} isApp={isApp} />
         )}
 
         <DialogFooter>
