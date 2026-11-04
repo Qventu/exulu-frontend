@@ -73,7 +73,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** `undefined` when the value isn't present; the validated array otherwise, else `undefined` as a sentinel for "invalid". */
+/** Sentinel returned by `stringArrayOrUndefined` for "present but malformed" — distinct from `undefined`, which means "not present". */
 const INVALID = Symbol("invalid");
 
 function stringArrayOrUndefined(value: unknown): string[] | undefined | typeof INVALID {

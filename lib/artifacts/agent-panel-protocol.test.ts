@@ -27,7 +27,15 @@ describe("parseOpenPanelRequest", () => {
       items: ["item-1", "item-2"],
       files: ["file-1"],
     };
-    expect(parseOpenPanelRequest(input)).toEqual(input);
+    const result = parseOpenPanelRequest(input);
+    expect(result).toEqual(input);
+    // toEqual is deep-value equality only: it would still pass if the
+    // parser aliased the caller's arrays instead of copying them. Pin the
+    // copy explicitly, since a later `return value` regression (sharing the
+    // sender's array, so a consumer could mutate it after the fact) would
+    // pass every other assertion here silently.
+    expect(result?.items).not.toBe(input.items);
+    expect(result?.files).not.toBe(input.files);
   });
 
   test("rejects a wrong version", () => {
@@ -64,6 +72,20 @@ describe("parseOpenPanelRequest", () => {
     expect(parseOpenPanelRequest(undefined)).toBeNull();
     expect(parseOpenPanelRequest("exulu:panel:open")).toBeNull();
     expect(parseOpenPanelRequest(42)).toBeNull();
+  });
+
+  test("rejects an array, even one carrying schema-shaped own properties", () => {
+    // `typeof [] === "object"` and `[] !== null`, so a bare array would slip
+    // past those two checks alone — only the explicit `Array.isArray` guard
+    // stops it. A structured-clone postMessage can deliver exactly this
+    // shape: an array with extra own string-keyed properties tacked on.
+    expect(parseOpenPanelRequest([])).toBeNull();
+
+    const disguised: unknown[] & { type?: string; v?: number; slot?: string } = [];
+    disguised.type = "exulu:panel:open";
+    disguised.v = 2;
+    disguised.slot = "a";
+    expect(parseOpenPanelRequest(disguised)).toBeNull();
   });
 
   test("rejects a non-string prompt", () => {
