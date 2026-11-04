@@ -206,6 +206,17 @@ function PublicChatBody({
   );
 }
 
+/**
+ * Remounts the conversation when the shell signals a new chat, the same way
+ * session-screen.tsx keys on newChatNonce internally. Must live INSIDE
+ * PublicChatShell — useChatShell() only has a provider there, which is also
+ * why anonymous mode (no shell) does not use it.
+ */
+function NewChatBoundary({ children }: { children: React.ReactNode }) {
+  const { newChatNonce } = useChatShell();
+  return <React.Fragment key={newChatNonce}>{children}</React.Fragment>;
+}
+
 /** Authenticated body — instantiates the Apollo-backed session manager and the
  *  shared HistoryRail (via PublicChatShell). Only rendered inside
  *  PublicApolloProvider (usePublicSessionManager uses Apollo). */
@@ -242,15 +253,18 @@ function AuthenticatedChatBody({
         agent={agent}
         basePath={basePath}
         activeSessionId={sessionManager.currentSession?.id}
+        onNewChat={sessionManager.startNewSession}
       >
-        <PublicChatBody
-          meta={meta}
-          agent={agent}
-          mode="authenticated"
-          userId={userId}
-          sessionManager={sessionManager}
-          initialMessages={initialMessages}
-        />
+        <NewChatBoundary>
+          <PublicChatBody
+            meta={meta}
+            agent={agent}
+            mode="authenticated"
+            userId={userId}
+            sessionManager={sessionManager}
+            initialMessages={initialMessages}
+          />
+        </NewChatBoundary>
       </PublicChatShell>
     </UserContext.Provider>
   );

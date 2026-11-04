@@ -42,6 +42,13 @@ export interface PublicChatShellProps {
   basePath: string;
   /** The rail's active-session highlight (URL-param driven, not pathname). */
   activeSessionId?: string;
+  /**
+   * Clear the caller's session state when a new chat starts. The nonce below
+   * only remounts the conversation BELOW this shell; the session manager lives
+   * above it, so without this the next message would be posted into the
+   * session the user just navigated away from.
+   */
+  onNewChat?: () => void;
   children: React.ReactNode;
 }
 
@@ -49,11 +56,19 @@ export function PublicChatShell({
   agent,
   basePath,
   activeSessionId,
+  onNewChat,
   children,
 }: PublicChatShellProps) {
   const router = useRouter();
 
   const [historySheetOpen, setHistorySheetOpen] = React.useState(false);
+  // Mirrors ChatShell: bumped by startNewChat so the conversation subtree
+  // remounts. The page's `key={sessionParam}` cannot cover every case on its
+  // own — after a lazy session create the URL is swapped with
+  // history.replaceState, which Next's router never sees, so a later
+  // router.push(basePath) is a no-op navigation and the server-side key stays
+  // "new" on both sides of the click.
+  const [newChatNonce, setNewChatNonce] = React.useState(0);
   const [railCollapsed, setRailCollapsedState] = React.useState(false);
 
   // Read the persisted rail state after mount (SSR-safe, mirrors ChatShell).
@@ -99,8 +114,10 @@ export function PublicChatShell({
   // A bare base URL is a fresh chat; also close the mobile sheet.
   const startNewChat = React.useCallback(() => {
     setHistorySheetOpen(false);
+    setNewChatNonce((n) => n + 1);
+    onNewChat?.();
     router.push(basePath);
-  }, [basePath, router]);
+  }, [basePath, onNewChat, router]);
 
   // Inert lazy-create window — public chat never keys on it (see file header).
   const beginLazyCreate = React.useCallback(() => () => {}, []);
@@ -113,7 +130,7 @@ export function PublicChatShell({
       railCollapsed,
       setRailCollapsed,
       toggleHistory,
-      newChatNonce: 0,
+      newChatNonce,
       startNewChat,
       beginLazyCreate,
     }),
@@ -123,6 +140,7 @@ export function PublicChatShell({
       railCollapsed,
       setRailCollapsed,
       toggleHistory,
+      newChatNonce,
       startNewChat,
       beginLazyCreate,
     ],
