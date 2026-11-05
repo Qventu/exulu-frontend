@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 import {
   hostInfo,
@@ -55,8 +55,13 @@ function announce(
   if (!port) return;
   try {
     port.postMessage(message);
-  } catch {
-    // Closed or neutered port. Nothing to do, nothing to report.
+  } catch (error) {
+    // Expected for a closed or neutered port, and nothing the host can act
+    // on. But this catch is wide — a non-cloneable value in a slot would
+    // land here too and leave the artifact silently believing it has no
+    // panel — so leave a trace to find it by. `console.debug` is not an
+    // option: no-console allows only warn/error.
+    console.warn("artifact channel: announcement not delivered", error);
   }
 }
 
@@ -136,13 +141,28 @@ export function ArtifactFrame({
   // handlers read it off a ref instead of closing over it: the identity
   // effect must not re-subscribe — and so re-arm the handshake — merely
   // because the parent rendered.
+  //
+  // Synced in a layout effect, not a passive one: a port message delivered
+  // between a commit that shrank `panel.slots` and a passive flush would be
+  // validated against the previous, wider list.
   const panelRef = useRef(panel);
-  useEffect(() => {
+  useLayoutEffect(() => {
     panelRef.current = panel;
   }, [panel]);
   // The artifact's end of the channel, established by the handshake below.
   // Until it exists there is nobody to announce anything to.
   const portRef = useRef<MessagePort | null>(null);
+  // A port belongs to the document that was handed it, and the frame's own
+  // `load` event is not that port's death notice: an artifact's script runs
+  // during parsing, so the FIRST load always arrives *after* the handoff it
+  // belongs to (verified — see the test), and retiring the port there would
+  // kill the live document's channel. The load after that one is a
+  // self-navigation, and it does retire the port: port2 can outlive the
+  // document that received it (allow-popups is on, and a transferred port
+  // lives with whatever document holds it), while announcements carry slot
+  // keys, viewport and progress — host state a finished document must stop
+  // receiving.
+  const portSawLoadRef = useRef(false);
 
   useEffect(() => {
     if (!grantIdentity) return;
@@ -254,6 +274,7 @@ export function ArtifactFrame({
         channel.port2,
       ]);
       portRef.current = channel.port1;
+      portSawLoadRef.current = false;
 
       // The agent-panel channel's opening statement, queued on the port with
       // the handoff rather than sent from an effect: the artifact resolves
@@ -264,7 +285,19 @@ export function ArtifactFrame({
       // that loads while the panel is already open would otherwise never
       // learn its width.
       const host = panelRef.current;
-      announce(channel.port1, hostInfo(Boolean(host), host?.slots ?? []));
+      // Project every slot down to {key,label} here rather than forwarding
+      // the caller's array: `hostInfo` copies by reference, and TypeScript's
+      // excess-property check does not fire for an array built from a wider
+      // type — so without this, a caller passing its own joined slot shape
+      // would push a whole Agent object into a third-party iframe. The
+      // invariant has to hold regardless of the call site.
+      announce(
+        channel.port1,
+        hostInfo(
+          Boolean(host),
+          (host?.slots ?? []).map((slot) => ({ key: slot.key, label: slot.label })),
+        ),
+      );
       if (host?.viewport) {
         announce(
           channel.port1,
@@ -330,6 +363,13 @@ export function ArtifactFrame({
       title={title}
       onLoad={() => {
         handledRef.current = false;
+        // The second load since the handoff is a navigation: retire the port
+        // (see portSawLoadRef). The first is this document's own.
+        if (portSawLoadRef.current) {
+          portRef.current = null;
+        } else {
+          portSawLoadRef.current = true;
+        }
       }}
     />
   );

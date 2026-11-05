@@ -120,7 +120,7 @@ function handshake(frame: HTMLIFrameElement) {
     }
     return ofType(type);
   };
-  return { post, port, ofType, until };
+  return { post, port, received, ofType, until };
 }
 
 // The agent-panel channel is versioned separately from the identity
@@ -424,7 +424,7 @@ describe("ArtifactFrame", () => {
   test("announces host info with panel:false and no slots when no panel prop is given", async () => {
     stubFetch();
     const { frame } = renderFrame(true);
-    const { ofType, until } = handshake(frame);
+    const { received, ofType, until } = handshake(frame);
     await until("exulu:identity:grant");
 
     // The published share route has its own root layout with none of the app
@@ -433,6 +433,13 @@ describe("ArtifactFrame", () => {
     expect(ofType("exulu:host:info")).toEqual([
       { type: "exulu:host:info", v: 2, panel: false, slots: [] },
     ]);
+    // And it has to be on the wire BEFORE the grant: the artifact-side client
+    // resolves its connect on the grant and reads the host off this message,
+    // so announcing it from an effect (or after the awaited fetch) would
+    // leave that client with no host at all.
+    expect(received.findIndex((m) => m.type === "exulu:host:info")).toBeLessThan(
+      received.findIndex((m) => m.type === "exulu:identity:grant"),
+    );
   });
 
   test("announces the assigned slots when a panel is present", async () => {
@@ -452,13 +459,23 @@ describe("ArtifactFrame", () => {
   });
 
   // Agent ids never cross this channel; the frame only ever learns {key,label}.
+  // The fixture is deliberately WIDER than PanelSlot — the viewer's own join
+  // carries the whole Agent, and TypeScript's excess-property check does not
+  // fire for an array built from a wider type, so the frame has to project
+  // rather than trust its caller.
   test("never puts an agent id on the channel", async () => {
     stubFetch();
-    const { frame } = renderFrame(true, { slots: SLOTS, onOpenRequest: vi.fn() });
+    const joined = [
+      { key: "analyse", label: "Pitch-Agent", agent: { id: "agent-1", name: "Pitch" } },
+    ];
+    const { frame } = renderFrame(true, { slots: joined, onOpenRequest: vi.fn() });
     const { ofType, until } = handshake(frame);
     await until("exulu:identity:grant");
 
-    expect(Object.keys(ofType("exulu:host:info")[0].slots[0])).toEqual(["key", "label"]);
+    const info = ofType("exulu:host:info")[0];
+    expect(info.slots).toEqual([{ key: "analyse", label: "Pitch-Agent" }]);
+    expect(Object.keys(info.slots[0])).toEqual(["key", "label"]);
+    expect(JSON.stringify(info)).not.toContain("agent-1");
   });
 
   test("announces the current viewport alongside host info at the handoff", async () => {
@@ -642,6 +659,60 @@ describe("ArtifactFrame", () => {
     ]);
   });
 
+  // The port's own document loads AFTER it handshakes — an artifact's script
+  // runs during parsing, and the frame really does fire `load` later (this
+  // test waits for the genuine event, it does not synthesise one) — so the
+  // first load must not retire the port, or every announcement after it would
+  // silently go nowhere.
+  test("keeps announcing after the frame's own first load event", async () => {
+    stubFetch();
+    const panel = { slots: SLOTS, onOpenRequest: vi.fn(), viewport: { width: 0, open: false } };
+    const { frame, rerenderWith } = renderFrame(true, panel);
+    const loaded = new Promise<void>((resolve) =>
+      frame.addEventListener("load", () => resolve(), { once: true }),
+    );
+    const { ofType, until } = handshake(frame);
+    await until("exulu:identity:grant");
+    const seeded = ofType("exulu:panel:viewport").length;
+
+    await loaded;
+    rerenderWith({ ...panel, viewport: { width: 420, open: true } });
+
+    expect((await until("exulu:panel:viewport", seeded + 1)).slice(seeded)).toEqual([
+      { type: "exulu:panel:viewport", v: 2, width: 420, open: true },
+    ]);
+  });
+
+  test("announcements stop reaching the previous load's port once the frame navigates", async () => {
+    stubFetch();
+    const panel = { slots: SLOTS, onOpenRequest: vi.fn(), viewport: { width: 0, open: false } };
+    const { frame, rerenderWith } = renderFrame(true, panel);
+    const loaded = new Promise<void>((resolve) =>
+      frame.addEventListener("load", () => resolve(), { once: true }),
+    );
+    const { port, ofType, until } = handshake(frame);
+    await until("exulu:identity:grant");
+    const seeded = ofType("exulu:panel:viewport").length;
+
+    await loaded; // this document's own load
+    fireEvent.load(frame); // a self-navigation: the port is retired
+
+    // The old port2 can outlive the document that was handed it
+    // (allow-popups is on), so host state — slot keys, viewport, progress —
+    // must stop flowing to a finished load's port.
+    rerenderWith({ ...panel, viewport: { width: 420, open: true } });
+    rerenderWith({ ...panel, viewport: { width: 420, open: true }, progressNonce: 1 });
+
+    // Barrier: an open request is answered on the port it arrived on, not via
+    // the retired portRef, so its ack still comes back and proves the queue
+    // drained — anything the re-renders had queued would have arrived first.
+    port.postMessage(openRequest("analyse"));
+    expect(await until("exulu:panel:open:ack")).toHaveLength(1);
+
+    expect(ofType("exulu:panel:viewport")).toHaveLength(seeded);
+    expect(ofType("exulu:session:progress")).toEqual([]);
+  });
+
   // The port may already be closed — the frame unmounted, or navigated and
   // dropped port2 — and an announcement is fire-and-forget: it must not
   // surface an error and must not be retried.
@@ -659,15 +730,23 @@ describe("ArtifactFrame", () => {
       },
     );
     const panel = { slots: SLOTS, onOpenRequest: vi.fn(), progressNonce: 0 };
-    const { frame, rerenderWith } = renderFrame(true, panel);
-    spyPost(frame);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const { frame, rerenderWith } = renderFrame(true, panel);
+      spyPost(frame);
 
-    expect(() => window.dispatchEvent(request(frame.contentWindow))).not.toThrow();
-    expect(() => rerenderWith({ ...panel, progressNonce: 1 })).not.toThrow();
+      expect(() => window.dispatchEvent(request(frame.contentWindow))).not.toThrow();
+      expect(() => rerenderWith({ ...panel, progressNonce: 1 })).not.toThrow();
 
-    expect(postMessage).toHaveBeenCalled();
-    const attempts = postMessage.mock.calls.length;
-    await flush();
-    expect(postMessage.mock.calls.length).toBe(attempts);
+      expect(postMessage).toHaveBeenCalled();
+      const attempts = postMessage.mock.calls.length;
+      await flush();
+      expect(postMessage.mock.calls.length).toBe(attempts);
+      // Swallowed, but not invisible: the catch is wider than the dead-port
+      // case it exists for, so it has to leave something to find.
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
