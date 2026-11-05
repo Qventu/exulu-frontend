@@ -5856,6 +5856,8 @@
     "agentSlotDuplicateKey": "That key is already assigned to an agent.",
     "panelCollapse": "Collapse agent panel",
     "panelExpand": "Expand agent panel",
+    "openAgentPanel": "Open an agent",
+    "openAgentNamed": "Open {name} beside this artifact",
     "sharingSave": "Save",
     "sharingSaved": "Sharing updated",
     "sharingFailed": "Could not update sharing",

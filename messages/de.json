@@ -5856,6 +5856,8 @@
     "agentSlotDuplicateKey": "Dieser Schlüssel ist bereits einem Agenten zugewiesen.",
     "panelCollapse": "Agenten-Panel einklappen",
     "panelExpand": "Agenten-Panel ausklappen",
+    "openAgentPanel": "Agent öffnen",
+    "openAgentNamed": "{name} neben diesem Artefakt öffnen",
     "sharingSave": "Speichern",
     "sharingSaved": "Freigabe aktualisiert",
     "sharingFailed": "Freigabe konnte nicht aktualisiert werden",
