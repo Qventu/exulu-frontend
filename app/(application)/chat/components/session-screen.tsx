@@ -33,7 +33,7 @@ import { Button } from "@/components/ui/button";
 import type { Agent } from "@/types/models/agent";
 import type { AgentSession } from "@/types/models/agent-session";
 import { useChatSession, type ChatSessionController } from "../hooks";
-import { useTurnProgress } from "../use-turn-progress";
+import { useProgressRelay, useTurnProgress } from "../use-turn-progress";
 import { CHAT_COLUMN, useChatShell } from "./chat-shell";
 import { ChatHeader } from "./chat-header";
 import { Composer } from "./composer";
@@ -136,22 +136,16 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
   }, [controller, onController]);
 
   // Task 10: relay tool/turn progress to a host that cannot derive it itself
-  // (see onProgress's doc comment). `useTurnProgress` only bumps its own
-  // `nonce` on a REAL transition, never on a bare re-render — but this effect
-  // still runs once on mount regardless, the same as the `onController` one
-  // above. Without the ref below, that mount run would call `onProgress`
-  // with nonce 0's reason even though nothing has happened yet, and the
-  // viewer counts every call into its own nonce (see viewer-client.tsx) —
-  // one spurious call here would announce one fabricated event to the
-  // artifact. The ref seeds to the hook's own starting value, so only a
-  // nonce that has actually moved since the last commit calls out.
-  const progress = useTurnProgress(controller);
-  const lastProgressNonceRef = React.useRef(progress.nonce);
-  React.useEffect(() => {
-    if (lastProgressNonceRef.current === progress.nonce) return;
-    lastProgressNonceRef.current = progress.nonce;
-    onProgress?.(progress.reason);
-  }, [progress.nonce, progress.reason, onProgress]);
+  // (see onProgress's doc comment). This component is shared by every
+  // `SessionScreen` caller — including the internal /chat/<agent>/<session>
+  // page, which never passes `onProgress` — so `enabled` gates the hook's
+  // work on whether anyone is actually listening: ordinary chat pays for
+  // neither the message scan nor the extra commit. `useProgressRelay` is the
+  // part that turns a bump into exactly one `onProgress` call (never on a
+  // bare mount); both pieces are unit-tested on their own in
+  // use-turn-progress.test.ts, with no controller involved.
+  const progress = useTurnProgress(controller, onProgress !== undefined);
+  useProgressRelay(progress, onProgress);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">

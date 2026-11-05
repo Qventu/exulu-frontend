@@ -463,7 +463,7 @@ describe("AgentPanel", () => {
     ).toBeNull();
   });
 
-  test("accepts onProgress without calling it yet (Task 10 owns the emission)", () => {
+  test("never calls onProgress itself — SessionScreenInner (chat feature) owns that derivation", () => {
     const { props } = show();
 
     expect(props.onProgress).not.toHaveBeenCalled();
