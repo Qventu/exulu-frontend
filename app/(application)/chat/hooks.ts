@@ -115,6 +115,15 @@ export interface UseChatSessionArgs {
    *  prop through SessionScreen rather than read from context here, so the
    *  React.memo around the conversation column keeps holding). */
   beginLazyCreate: () => () => void;
+  /**
+   * Where createSession's URL swap (see below) should land, given the new
+   * session's id. Defaults to the internal /chat/<agent>/<id> route —
+   * byte-identical to the historical hardcoded literal. A host that mounts
+   * SessionScreen somewhere else (e.g. the artifact panel, on
+   * /artifacts/open/<name>) supplies its own destination so the first send
+   * doesn't rewrite that host's URL out from under it.
+   */
+  sessionPath?: (sessionId: string) => string;
 }
 
 /**
@@ -304,6 +313,7 @@ export function useChatSession({
   initialSession,
   initialMessages,
   beginLazyCreate,
+  sessionPath = (id: string) => `/chat/${agent.id}/${id}`,
 }: UseChatSessionArgs): ChatSessionController {
   const t = useTranslations("chat");
   const configContext = React.useContext(ConfigContext);
@@ -678,6 +688,15 @@ export function useChatSession({
   }, [messages]);
 
   // --- lazy session creation (item 34) -----------------------------------------
+  // Latest-value mirror of the sessionPath prop, same reason as
+  // modelOverrideRef/disabledToolsRef above: createSession is async, and must
+  // read whatever destination is current when the mutation resolves, not
+  // whatever was passed in on the render that kicked the create off.
+  const sessionPathRef = React.useRef(sessionPath);
+  React.useEffect(() => {
+    sessionPathRef.current = sessionPath;
+  }, [sessionPath]);
+
   const createSession = async (
     title: string,
   ): Promise<AgentSession | null> => {
@@ -727,7 +746,7 @@ export function useChatSession({
         window.history.replaceState(
           null,
           "",
-          `/chat/${agent.id}/${newSession.id}`,
+          sessionPathRef.current(newSession.id),
         );
 
         return newSession;

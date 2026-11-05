@@ -45,6 +45,9 @@ export interface SessionScreenProps {
   agent: Agent;
   initialSession: AgentSession | null; // null on /new
   initialMessages: UIMessage[];
+  /** Forwarded to useChatSession (see its doc comment) — omit for the
+   *  default internal /chat/<agent>/<id> lazy-create destination. */
+  sessionPath?: (sessionId: string) => string;
 }
 
 export function SessionScreen(props: SessionScreenProps) {
@@ -74,6 +77,7 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
   initialSession,
   initialMessages,
   beginLazyCreate,
+  sessionPath,
 }: SessionScreenProps & { beginLazyCreate: () => () => void }) {
   const t = useTranslations("chat");
   const controller = useChatSession({
@@ -81,6 +85,7 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
     initialSession,
     initialMessages,
     beginLazyCreate,
+    sessionPath,
   });
 
   return (
