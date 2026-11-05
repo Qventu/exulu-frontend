@@ -30,7 +30,7 @@ import { withFragmentNavFix } from "@/lib/artifacts/fragment-nav";
 import { fetchGraphQLServerSide } from "@/lib/graphql/server";
 import { serverSideAuthCheck } from "@/lib/server-side-auth-check";
 import {
-  GET_AGENTS,
+  GET_AGENTS_BY_IDS,
   GET_AGENT_MESSAGES,
   GET_AGENT_SESSION_BY_ID,
 } from "@/queries/queries";
@@ -110,19 +110,26 @@ async function loadPanelData(
     // credentials at all, so slots there would publish agent ids to anyone
     // holding the share name. /panel authenticates and runs the same access
     // check as /content.
-    const [slotsRes, agentsData] = await Promise.all([
-      fetch(`${base}/panel`, { headers: credHeaders, cache: "no-store" }),
-      fetchGraphQLServerSide(GET_AGENTS.loc?.source.body || "", {
-        page: 1,
-        limit: 200,
-        filters: [{ active: { eq: true } }],
-      }),
-    ]);
+    const slotsRes = await fetch(`${base}/panel`, { headers: credHeaders, cache: "no-store" });
     if (!slotsRes.ok) return NO_PANEL;
     const stored = ((await slotsRes.json())?.agent_slots ?? []) as AgentSlot[];
-    // RBAC-scoped, which is what enforces reachability: an agent the viewer
-    // may not see is simply absent here, so resolveSlots drops its slot.
-    const agents = (agentsData?.agentsPagination?.items ?? []) as Agent[];
+    const ids = [...new Set(stored.map((slot) => slot?.agentId).filter(Boolean))];
+    // Most artifacts have no assignments, and this is the branch they take:
+    // no agents query is issued at all.
+    if (ids.length === 0) return NO_PANEL;
+
+    // By id, not the paginated list: `GET_AGENTS` would have to be capped
+    // (the chat page uses 200), and an agent outside that page would make its
+    // slot vanish with no error anywhere. `agentByIds` is RBAC-scoped like
+    // every other generic resolver, so reachability filtering still happens
+    // server-side — an agent the viewer may not read is absent from the
+    // result and resolveSlots drops its slot. It asks for exactly the agents
+    // the slots name, so it cannot be short.
+    const agentsData = await fetchGraphQLServerSide(
+      GET_AGENTS_BY_IDS.loc?.source.body || "",
+      { ids },
+    );
+    const agents = (agentsData?.agentByIds ?? []) as Agent[];
     const slots = resolveSlots(stored, agents);
     if (slots.length === 0) return NO_PANEL;
 

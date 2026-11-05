@@ -33,13 +33,20 @@ export interface ResolvedSlot {
  * The slots the viewer may actually be offered, in the order their owner put
  * them in.
  *
- * `agents` is the result of the RBAC-scoped agents query, so an agent the
- * viewer cannot see is simply absent from it and the slot pointing at that
- * agent is dropped. That is the whole reachability rule, and it is a DROP, not
- * an error: an assignment the current user cannot reach degrades to "no agent
- * is offered here", exactly as the artifact sees it over the channel (the slot
- * is absent from `host.slots`, so the artifact hides its own trigger rather
- * than offering one that would fail).
+ * `agents` is the result of the RBAC-scoped agents query (`agentByIds` applies
+ * access control like every other generic resolver), so an agent the viewer
+ * cannot see is simply absent from it and the slot pointing at that agent is
+ * dropped. That is the whole reachability rule, and it is a DROP, not an
+ * error: an assignment the current user cannot reach degrades to "no agent is
+ * offered here", exactly as the artifact sees it over the channel (the slot is
+ * absent from `host.slots`, so the artifact hides its own trigger rather than
+ * offering one that would fail).
+ *
+ * A deactivated agent is dropped too. The assignment UI only ever offers
+ * active agents, so a slot pointing at an inactive one is an agent that was
+ * switched off after it was assigned — and it is `=== false` rather than
+ * falsy because the field is optional in this hand-maintained type and an
+ * unselected field must not hide every agent.
  *
  * The stored column is json, so a row written before validation existed can
  * hold anything; a slot without both a key and an agent id is dropped for the
@@ -51,7 +58,7 @@ export function resolveSlots(slots: AgentSlot[], agents: Agent[]): ResolvedSlot[
   for (const slot of slots ?? []) {
     if (!slot?.key || !slot?.agentId) continue;
     const agent = byId.get(slot.agentId);
-    if (!agent) continue;
+    if (!agent || agent.active === false) continue;
     // The agent's current name, read at render time rather than stored with
     // the assignment: names are editable free text, and a stale copy in the
     // picker would be worse than none.

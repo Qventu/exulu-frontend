@@ -22,6 +22,7 @@
 import type { UIMessage } from "ai";
 import { ArrowLeft, Bot, Download, ExternalLink, FileWarning, LayoutGrid, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import * as React from "react";
 
@@ -38,8 +39,20 @@ import type { AgentSession } from "@/types/models/agent-session";
 
 import { useFavoriteArtifacts } from "../../hooks";
 
-import { AgentPanel } from "./agent-panel";
 import type { ResolvedSlot } from "./resolve-slots";
+
+/**
+ * Loaded on demand, because the panel is the whole chat surface — the session
+ * controller, Apollo, the AI SDK transport, the uploader — and the artifact
+ * viewer is the page a user opens to look at a PDF. Most artifacts have no
+ * agent assigned at all, and none of them mount this until a slot is chosen,
+ * so none of them should pay for it on first load. `ssr: false` because it is
+ * only ever rendered in response to a click or a URL parameter, never in the
+ * server-rendered first paint.
+ */
+const AgentPanel = dynamic(() => import("./agent-panel").then((module) => module.AgentPanel), {
+  ssr: false,
+});
 
 export type ViewerStatus = "ready" | "notFound" | "expired" | "noAccess" | "password" | "error";
 
@@ -95,15 +108,55 @@ export function ArtifactViewer({
 
   const [activeKey, setActiveKey] = React.useState<string | null>(initialSlotKey);
   const activeSlot = offered.find((slot) => slot.key === activeKey) ?? null;
-
-  // How much width the panel takes away from the artifact, as the panel
-  // measures it (400–720 docked, 32 collapsed, 0 below `lg` where it overlays
-  // instead of squeezing). Only meaningful while a panel is mounted: a closed
-  // one reports nothing, so the announced width is derived below rather than
-  // reset on close — which also means a reopened panel can never announce the
-  // stale number it last reported.
-  const [panelWidth, setPanelWidth] = React.useState(0);
+  const activeSlotKey = activeSlot?.key ?? null;
   const closePanel = React.useCallback(() => setActiveKey(null), []);
+
+  // --- what the artifact is told about its own box -------------------------
+  // The channel carries the ARTIFACT's viewport width, not the panel's, so
+  // that an artifact can decide whether it still has room for three columns
+  // (spec: "the parent posts the artifact's new viewport width over the port
+  // so the artifact can reflow itself"). The panel's own width would not
+  // answer that question without the total.
+  //
+  // Measured off the artifact's own box rather than subtracted from a row
+  // width: it is exactly what the layout gives the frame in every mode —
+  // docked (squeezed), collapsed (nearly full), Sheet (full, because Radix
+  // portals the panel out of this row) — and it stays correct across the
+  // docked → Sheet breakpoint flip, for which no panel report is guaranteed
+  // to arrive at all.
+  const regionRef = React.useRef<HTMLDivElement>(null);
+  const [artifactWidth, setArtifactWidth] = React.useState(0);
+  const measureRef = React.useRef<() => void>(() => {});
+
+  // Re-keyed on the open panel so opening or closing one measures in the same
+  // commit, which puts the new width on the wire with the new `open` flag
+  // rather than a frame behind it. Every other geometry change — a window
+  // resize, the nav collapsing, a resize drag, a breakpoint flip — is the
+  // observer's job.
+  React.useEffect(() => {
+    const element = regionRef.current;
+    if (!element) return;
+    const measure = () => {
+      const width = Math.round(element.getBoundingClientRect().width);
+      setArtifactWidth((previous) => (previous === width ? previous : width));
+    };
+    measureRef.current = measure;
+    measure();
+    // Guarded rather than assumed: an environment without a ResizeObserver
+    // still gets the mount measurement instead of a crash.
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [activeSlotKey]);
+
+  // The panel's own width report. The number is NOT what goes on the wire —
+  // the artifact is told its own width — it is the earliest signal that the
+  // artifact's box has changed, so a collapse re-measures without waiting for
+  // the observer's next frame. Taken through a ref rather than state on
+  // purpose: a resize drag reports every frame, and as a dependency that
+  // would tear down and rebuild the observer above each time.
+  const onPanelWidthChange = React.useCallback(() => measureRef.current(), []);
 
   // Turn and tool progress counted into a nonce for the frame. The chat
   // controller exists only inside AgentPanel, so the panel reports and this
@@ -128,6 +181,44 @@ export function ArtifactViewer({
   // while the URL still names the other one's conversation. A mismatch is a
   // new chat, never someone else's conversation.
   const panelSession = activeSlot && initialSession?.agent === activeSlot.agent.id ? initialSession : null;
+
+  // --- the panel's state lives in the URL ----------------------------------
+  // A reload, or a Back, must land on what the user was looking at: the panel
+  // open on the same slot, and on the same conversation if there is one.
+  //
+  // Written with a raw `replaceState`, not `router.push`: a push re-runs this
+  // page's server component, which re-fetches the artifact's HTML and so
+  // hands the frame a new `srcDoc` — reloading the artifact, discarding
+  // whatever it had on screen and re-running the identity handshake. Losing
+  // the artifact's state is the exact damage this feature exists to avoid.
+  // The chat controller swaps its own session URL the same way, for the same
+  // reason (chat/hooks.ts, createSession).
+  //
+  // Keyed on the panel's state AND on the parameters the server rendered, so
+  // a real navigation that drops `?agent=` — the history rail's New chat
+  // links to the bare artifact URL — is re-synced instead of quietly leaving
+  // an open panel out of the URL.
+  const panelSessionId = panelSession?.id ?? null;
+  const renderedSessionId = initialSession?.id ?? null;
+  React.useEffect(() => {
+    const url = new URL(window.location.href);
+    const next = new URLSearchParams(url.search);
+    if (activeSlotKey) next.set("agent", activeSlotKey);
+    else next.delete("agent");
+    // `session` is only added here, or cleared when the panel closes. The
+    // chat controller writes it itself the moment a lazy session is created,
+    // with a `replaceState` this component never sees — so a rule that
+    // deleted it whenever `panelSession` was null could wipe a live
+    // conversation out of the URL. A stale id left beside a different slot is
+    // harmless: the page discards a session whose agent the addressed slot
+    // does not point at, and the next send overwrites it.
+    if (panelSessionId) next.set("session", panelSessionId);
+    else if (!activeSlotKey) next.delete("session");
+    const search = next.toString();
+    const target = `${url.pathname}${search ? `?${search}` : ""}${url.hash}`;
+    if (target === `${url.pathname}${url.search}${url.hash}`) return;
+    window.history.replaceState(null, "", target);
+  }, [activeSlotKey, panelSessionId, initialSlotKey, renderedSessionId]);
 
   return (
     <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
@@ -162,7 +253,7 @@ export function ArtifactViewer({
           subtree, so it occupies nothing here and the artifact keeps the
           whole row. */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div className="relative min-h-0 flex-1 bg-background">
+        <div ref={regionRef} className="relative min-h-0 flex-1 bg-background">
           {status !== "ready" ? (
             <Problem status={status} onOpenShare={openShare} />
           ) : type.kind === "app" && html !== undefined ? (
@@ -183,7 +274,10 @@ export function ArtifactViewer({
                       // owner-typed slot key.
                       slots: offered.map((slot) => ({ key: slot.key, label: slot.label })),
                       onOpenRequest,
-                      viewport: { width: activeSlot ? panelWidth : 0, open: activeSlot !== null },
+                      // The ARTIFACT's own width, measured above — what it
+                      // needs in order to decide whether to reflow. Never
+                      // the panel's width.
+                      viewport: { width: artifactWidth, open: activeSlot !== null },
                       // Absent until a turn has actually made progress: the
                       // frame announces on every change of this, and a 0 on
                       // mount would announce an event nobody caused.
@@ -216,7 +310,7 @@ export function ArtifactViewer({
             artifactName={name}
             open
             onClose={closePanel}
-            onWidthChange={setPanelWidth}
+            onWidthChange={onPanelWidthChange}
             onProgress={onProgress}
           />
         )}
