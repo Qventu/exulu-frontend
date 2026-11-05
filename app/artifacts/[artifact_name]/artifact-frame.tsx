@@ -40,6 +40,25 @@ const denied = (reason: string): Denied => ({
 });
 
 /**
+ * Posts the one credential-bearing message, tolerating a closed channel.
+ *
+ * Deliberately separate from `announce` below rather than a wider union on
+ * it: that function's parameter type excludes `Grant` and `Denied`, which is
+ * a load-bearing type-level guarantee that the swallowing announcement path
+ * can never be handed a token. This one accepts only those two, so the split
+ * is enforced in both directions. The try/catch is here for the same reason
+ * as the one below — a closed port must not surface an error — except that an
+ * unhandled rejection is what it prevents, since both call sites are async.
+ */
+function postCredential(port: MessagePort, message: Grant | Denied) {
+  try {
+    port.postMessage(message);
+  } catch (error) {
+    console.warn("artifact identity: answer not delivered", error);
+  }
+}
+
+/**
  * Posts one agent-panel message, tolerating a channel that is already gone.
  *
  * These messages are fire-and-forget announcements, and the port may have no
@@ -162,6 +181,21 @@ export function ArtifactFrame({
   // lives with whatever document holds it), while announcements carry slot
   // keys, viewport and progress — host state a finished document must stop
   // receiving.
+  //
+  // KNOWN GAP, deliberate: a document that handshakes *after* its own load
+  // (a click-triggered connect, window.onload, a dynamic import, or a legal
+  // second handshake) has no load of its own still to come, so its port
+  // survives one navigation too long — until the next document handshakes,
+  // which a hostile one will not do. Retiring on the first post-handoff load
+  // instead would close that, but it kills a live document's channel in the
+  // mirror ordering: an artifact that reloads itself handshakes during the
+  // new document's parse, and that document's own load would retire it,
+  // silently, for the rest of the session. Both orderings are pinned by
+  // tests. The two are indistinguishable from here — the host cannot observe
+  // whether a port's holder has already fired its load, and `event.source`
+  // is the same WindowProxy across a navigation by design — so closing the
+  // gap needs the holder to say so: a liveness declaration or a post-load
+  // re-handshake in the artifact-side client (see the channel protocol).
   const portSawLoadRef = useRef(false);
 
   useEffect(() => {
@@ -281,7 +315,14 @@ export function ArtifactFrame({
         // posted here could never be delivered anyway — the page is gone by
         // the time cleanup has run, so there is no consumer to inform.
         if (cancelled) return;
-        channel.port1.postMessage(fresh ?? denied("unavailable"));
+        // Re-checked after the await, not only on receipt at the top of this
+        // handler: `cancelled` covers unmount, and a navigation sets nothing.
+        // A document can post a refresh (passing that gate), navigate itself
+        // in the very next statement, and this post would then put a *fresh*
+        // token on the port a popup it handed port2 to still holds — timing
+        // the attacker controls exactly, not a narrow race.
+        if (portRef.current !== channel.port1) return;
+        postCredential(channel.port1, fresh ?? denied("unavailable"));
       };
       target.postMessage({ type: "exulu:identity:channel", v: V }, "*", [
         channel.port2,
@@ -331,7 +372,7 @@ export function ArtifactFrame({
         // token straight into it. A gate covering only some posting sites is
         // worse than none, because it reads as complete.
         if (portRef.current !== channel.port1) return;
-        channel.port1.postMessage(grant ?? denied("unavailable"));
+        postCredential(channel.port1, grant ?? denied("unavailable"));
       })();
     };
 

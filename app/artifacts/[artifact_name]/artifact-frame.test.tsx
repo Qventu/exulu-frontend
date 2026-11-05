@@ -724,6 +724,40 @@ describe("ArtifactFrame", () => {
     expect(ofType("exulu:session:progress")).toEqual([]);
   });
 
+  // The mirror image of the test above, and the ordering any retirement rule
+  // has to keep working: an artifact that reloads itself (`location.reload()`
+  // on about:srcdoc, or the viewer swapping `html`) produces an earlier load,
+  // then a parse-time handshake from the NEW document, then that document's
+  // own load. Retiring there kills the channel of a live document for the
+  // rest of the session, silently — the same failure mode as retiring on
+  // every load, one generation later.
+  test("a second document that handshakes at parse time keeps its port through its own load", async () => {
+    stubFetch();
+    const panel = { slots: SLOTS, onOpenRequest: vi.fn(), viewport: { width: 0, open: false } };
+    const { frame, rerenderWith } = renderFrame(true, panel);
+    const loaded = loadOnce(frame);
+    const { post, until } = handshake(frame); // document A, during its parse
+    await until("exulu:identity:grant");
+    await loaded; // A's own load
+
+    // A reloads itself. The new document parses and handshakes before its own
+    // load fires — the load event a navigation produces IS the new document's.
+    window.dispatchEvent(request(frame.contentWindow));
+    const second = (post.mock.calls[1]![2] as Transferable[])[0] as MessagePort;
+    const secondReceived: any[] = [];
+    second.onmessage = (event) => secondReceived.push(event.data);
+    second.start();
+    fireEvent.load(frame); // the new document's own load
+
+    rerenderWith({ ...panel, viewport: { width: 420, open: true } });
+    for (let turn = 0; turn < 200 && secondReceived.length === 0; turn += 1) await flush();
+
+    expect(
+      secondReceived.find((m) => m.type === "exulu:panel:viewport" && m.width === 420),
+    ).toBeDefined();
+    second.close();
+  });
+
   /* ---------------------------------------------------------------------
    * A retired port is served nothing at all — not host state, not a token,
    * not a panel open. Pre-existing for the refresh branch (the identity
@@ -811,6 +845,41 @@ describe("ArtifactFrame", () => {
     // Nothing carrying the credential ever reached it, under any type.
     expect(received.find((m) => JSON.stringify(m).includes("jwt-abc"))).toBeUndefined();
     live.close();
+  });
+
+  // The post-unmount refresh test above passes only because cleanup sets
+  // `cancelled`. A navigation sets nothing, so the refresh branch needs its
+  // own re-check after the await: the attacker's sequence is "post refresh,
+  // then set location.href", which passes the gate on receipt and lands the
+  // fresh token after it.
+  test("does not deliver a credential when a refresh resolves after a navigation", async () => {
+    stubFetch();
+    const { frame } = renderFrame(true);
+    const loaded = loadOnce(frame);
+    const { port, ofType, until } = handshake(frame);
+    await until("exulu:identity:grant");
+    await loaded; // this document's own load
+
+    // Positive control: while this document is live, a refresh is answered.
+    port.postMessage({ type: "exulu:identity:refresh", v: 1 });
+    expect(await until("exulu:identity:grant", 2)).toHaveLength(2);
+
+    // Hold the route open so the navigation can land mid-refresh.
+    let release: (value: any) => void = () => {};
+    const fetchMock = vi.fn(() => new Promise((resolve) => { release = resolve; }));
+    vi.stubGlobal("fetch", fetchMock);
+    port.postMessage({ type: "exulu:identity:refresh", v: 1 });
+
+    // Wait until the refresh's fetch is actually in flight — the gate on
+    // receipt has passed by then — or this would pass vacuously.
+    while (fetchMock.mock.calls.length === 0) await flush();
+
+    fireEvent.load(frame); // the document navigates itself: the port retires
+    release({ ok: true, status: 200, json: async () => GRANT_BODY });
+    await settle();
+
+    expect(ofType("exulu:identity:grant")).toHaveLength(2);
+    expect(ofType("exulu:identity:denied")).toEqual([]);
   });
 
   test("a port retired by a navigation cannot open the panel", async () => {
