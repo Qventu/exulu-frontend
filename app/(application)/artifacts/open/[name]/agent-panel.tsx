@@ -26,6 +26,14 @@
  *   stays mounted, so the conversation and its stream survive) and leaves a
  *   thin edge in its place, giving the artifact its width back without ending
  *   the session. Closing unmounts the panel; see `open`.
+ * - **Mid-turn, the close affordances collapse instead.** While the
+ *   controller is `streaming` or `submitted`, the X and Escape route to the
+ *   collapse at `≥ lg` (`handleCloseAffordance`). Unmounting would take
+ *   `useTurnProgress` with it while the backend keeps the turn running, and
+ *   the artifact would go on showing its load-time snapshot after the agent
+ *   had finished writing — the spec's named anti-goal. Below `lg`, where
+ *   there is no collapse to route to, the close is honoured with a toast
+ *   rather than refused, so the panel can never trap the user.
  *
  * Below `lg` `SidePanel` is a Sheet, so the panel overlays the artifact
  * instead of squeezing it and this component occupies no width in the row —
@@ -36,7 +44,8 @@
  * content is portalled out of this subtree, so hiding cannot reach it — the
  * control would have to close the sheet, which Radix unmounts, discarding the
  * conversation a control labelled "collapse" just promised to keep. Below
- * `lg` the X is the right and only affordance.
+ * `lg` the X is the right and only affordance — which is also why a mid-turn
+ * close is told rather than refused there.
  *
  * Must be mounted inside the app shell's `SidebarProvider`: it collapses the
  * nav for as long as it is open, and the hook that does that reads the sidebar
@@ -99,9 +108,11 @@ export interface AgentPanelProps {
   artifactName: string;
   /**
    * Mounted only while true. Closing unmounts the conversation (the turn
-   * itself survives server-side — see the spec on `persistThroughDisconnect`);
-   * to keep it mounted while giving the artifact its width back, the user
-   * collapses the panel instead.
+   * itself survives server-side — see the spec on `persistThroughDisconnect`,
+   * which is exactly why an unmount mid-turn is a staleness trap); to keep it
+   * mounted while giving the artifact its width back, the user collapses the
+   * panel instead — and mid-turn at `≥ lg` this component collapses for them
+   * rather than calling `onClose` (see `handleCloseAffordance`).
    */
   open: boolean;
   onClose: () => void;
@@ -199,12 +210,14 @@ function MountedAgentPanel({
   const basePath = `/artifacts/open/${encodeURIComponent(artifactName)}`;
 
   // --- reaching the controller SessionScreen instantiates below ------------
-  // The only handle this component ever gets on it: SessionScreenInner calls
-  // this every render (see SessionScreenProps.onController's doc comment),
-  // so the ref is always the current instance. A plain ref rather than
-  // state on purpose — updating it must not itself cause a re-render, and
-  // nothing here needs to react to the controller changing, only to read it
-  // when an openRequest arrives.
+  // The only handle this component ever gets on it: SessionScreenInner runs an
+  // effect after every render that calls this with the controller it just
+  // instantiated (session-screen.tsx, the `[controller, onController]` effect
+  // — `controller` is a fresh object literal per render, so the effect does
+  // fire every time), so the ref is always the current instance. A plain ref
+  // rather than state on purpose — updating it must not itself cause a
+  // re-render, and nothing here needs to react to the controller changing,
+  // only to read it on demand.
   const controllerRef = React.useRef<ChatSessionController | null>(null);
   const handleController = React.useCallback(
     (controller: ChatSessionController) => {
@@ -225,9 +238,13 @@ function MountedAgentPanel({
     if (!openRequest) return;
     if (appliedNonceRef.current === openRequest.nonce) return;
     const controller = controllerRef.current;
-    // No handle yet THIS commit — retry on a later render rather than
-    // marking the nonce applied for work that never ran. Should not happen
-    // given the ordering above, but costs nothing to leave recoverable.
+    // Unreachable given the ordering above (SessionScreen is always mounted
+    // whenever this component is, and a child's effects run before its
+    // parent's). Guarded anyway so a missing handle cannot mark the nonce
+    // applied for work that never ran — but NOT as a retry: this effect's
+    // deps are the request, the callback and the translator, none of which
+    // change on an unrelated render, so nothing would re-run it. If this ever
+    // fires, the request is dropped and the fix is the ordering, not a retry.
     if (!controller) return;
     // Marked the moment dispatch is committed to, before the async work
     // below even starts — this is also the signal `onRequestApplied` relays
@@ -271,6 +288,41 @@ function MountedAgentPanel({
   // collapsed on a wide window that is then narrowed past lg comes back as the
   // Sheet rather than vanishing behind an edge that is no longer rendered.
   const collapsedNow = collapsed && !sheetMode;
+
+  // What the X / Escape / a sheet dismissal actually do. Mid-turn they must
+  // not silently end the artifact's refresh feed (see onOpenChange below).
+  //
+  // `≥ lg`: collapse. That is exactly the affordance collapse exists for —
+  // the subtree stays mounted behind `display:none`, so the controller, the
+  // stream and `useTurnProgress` all survive and the artifact keeps filling
+  // in, while the artifact gets its width back.
+  //
+  // Below `lg`: collapse is deliberately NOT offered (the panel is a Sheet
+  // that Radix portals out of this subtree, so hiding cannot reach it, and it
+  // costs the artifact no width in the first place). Refusing the close there
+  // would trap the user behind a panel they cannot dismiss for as long as the
+  // turn runs, so the close is honoured — but never silently: the toast is
+  // what keeps the user from believing the artifact is up to date.
+  //
+  // The status is read off the ref at event time rather than held in state:
+  // `controllerRef` is resynced by an effect after every render of
+  // SessionScreenInner, so it carries the status as of the last commit, and
+  // subscribing to it would re-render this whole host on every chunk.
+  const handleCloseAffordance = React.useCallback(() => {
+    const status = controllerRef.current?.status;
+    const midTurn = status === "streaming" || status === "submitted";
+    if (!midTurn) {
+      onClose();
+      return;
+    }
+    if (!sheetMode) {
+      setCollapsed(true);
+      toast.info(t("panelCollapsedWhileWorking"));
+      return;
+    }
+    toast.warning(t("panelClosedWhileWorking"));
+    onClose();
+  }, [onClose, sheetMode, t]);
 
   // --- what this panel takes from the artifact ------------------------------
   // Measured off this component's own root instead of read out of SidePanel:
@@ -450,8 +502,18 @@ function MountedAgentPanel({
             open
             onOpenChange={(next) => {
               // SidePanel's own close affordances (the header X, Escape, a
-              // sheet dismissal) mean close, not collapse.
-              if (!next) onClose();
+              // sheet dismissal) mean close — EXCEPT while a turn is in
+              // flight, where closing is a silent-staleness trap: unmounting
+              // this component takes `useTurnProgress` with it while the
+              // backend's persistThroughDisconnect keeps the turn running, so
+              // the agent finishes and writes and the artifact goes on showing
+              // its load-time snapshot with nothing on screen to say so. That
+              // is the spec's named anti-goal ("worse than the routine it
+              // replaced, because the user has been given a reason to believe
+              // it worked"), and Escape — one stray keypress — is one of the
+              // doors into it.
+              if (next) return;
+              handleCloseAffordance();
             }}
             title={agent.name}
             resizable

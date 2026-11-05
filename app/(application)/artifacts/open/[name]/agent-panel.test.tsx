@@ -29,7 +29,11 @@ import { UserContext } from "@/app/(application)/authenticated";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import enMessages from "@/messages/en.json";
 
-const toastSpies = vi.hoisted(() => ({ error: vi.fn() }));
+const toastSpies = vi.hoisted(() => ({
+  error: vi.fn(),
+  info: vi.fn(),
+  warning: vi.fn(),
+}));
 vi.mock("sonner", () => ({ toast: toastSpies }));
 
 // HistoryRail imports the agent switcher, which imports the Lottie player —
@@ -83,6 +87,12 @@ vi.mock("@/app/(application)/chat/hooks", () => ({
 // `applyOpenRequest` is ever handed), so it is typed to its own narrow shape
 // rather than the production type or an `as never`/`as any` escape.
 const fakeController = vi.hoisted(() => ({
+  // The one non-method field the panel reads: the close affordances consult
+  // it to decide whether an X/Escape means close or collapse. Mutable so a
+  // test can put a turn in flight. Typed as the real ChatStatus union
+  // (declared here rather than imported — the chat feature's types are behind
+  // the cross-feature tier rule this file deliberately does not widen).
+  status: "ready" as "ready" | "submitted" | "streaming" | "error",
   seedInput: vi.fn(),
   addSessionItems: vi.fn(async () => {}),
   addSessionFiles: vi.fn(async () => {}),
@@ -157,11 +167,14 @@ beforeEach(() => {
   mediaListeners = [];
   desktopViewport = true;
   dockedWidth = 400;
+  fakeController.status = "ready";
   fakeController.seedInput.mockClear();
   fakeController.addSessionItems.mockClear();
   fakeController.addSessionFiles.mockClear();
   fakeController.setFilesPanelOpen.mockClear();
   toastSpies.error.mockClear();
+  toastSpies.info.mockClear();
+  toastSpies.warning.mockClear();
 
   // SidebarProvider/useIsMobile and SidePanel/useMediaQuery both read
   // matchMedia, which jsdom does not implement. Desktop by default: every
@@ -461,6 +474,99 @@ describe("AgentPanel", () => {
     expect(
       screen.queryByLabelText(enMessages.artifacts.panelExpand),
     ).toBeNull();
+  });
+
+  /**
+   * Closing mid-turn is the spec's named anti-goal: unmounting this component
+   * takes `useTurnProgress` with it while the backend's
+   * persistThroughDisconnect keeps the turn running, so the agent finishes and
+   * writes while the artifact goes on showing its load-time snapshot with
+   * nothing on screen to say so. Collapse is the affordance that exists for
+   * exactly this — and Escape is one stray keypress away from the trap.
+   */
+  describe("a close affordance used mid-turn", () => {
+    /** The docked panel's root — where SidePanel binds its Escape handler. */
+    const dockedPanel = (container: HTMLElement) =>
+      container.querySelector("[role='complementary']") as HTMLElement;
+
+    test.each(["streaming", "submitted"] as const)(
+      "the X collapses rather than closes while the turn is %s",
+      (status) => {
+        fakeController.status = status;
+        const { container, props } = show();
+
+        fireEvent.click(screen.getByLabelText(enMessages.common.close));
+
+        expect(props.onClose).not.toHaveBeenCalled();
+        // The session — and so the progress feed the artifact refreshes off —
+        // is still mounted.
+        expect(screen.getByTestId("session-screen")).toBeTruthy();
+        expect(dockedPanel(container)).not.toBeNull();
+        expect(
+          container.querySelector("[data-state='collapsed']"),
+        ).not.toBeNull();
+        expect(toastSpies.info).toHaveBeenCalledWith(
+          enMessages.artifacts.panelCollapsedWhileWorking,
+        );
+      },
+    );
+
+    test("Escape collapses too — it must not be the quiet door out", () => {
+      fakeController.status = "streaming";
+      const { container, props } = show();
+
+      fireEvent.keyDown(dockedPanel(container), { key: "Escape" });
+
+      expect(props.onClose).not.toHaveBeenCalled();
+      expect(
+        container.querySelector("[data-state='collapsed']"),
+      ).not.toBeNull();
+      expect(screen.getByTestId("session-screen")).toBeTruthy();
+    });
+
+    test("once the turn settles, the X closes again", () => {
+      fakeController.status = "streaming";
+      const { props } = show();
+      fireEvent.click(screen.getByLabelText(enMessages.common.close));
+      expect(props.onClose).not.toHaveBeenCalled();
+
+      // Expand, let the turn finish, close for real.
+      fireEvent.click(screen.getByLabelText(enMessages.artifacts.panelExpand));
+      fakeController.status = "ready";
+      fireEvent.click(screen.getByLabelText(enMessages.common.close));
+
+      expect(props.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    test("below lg the close is honoured — but the user is told, never left guessing", () => {
+      // There is no collapse to route to there (the panel is a Sheet Radix
+      // portals out of this subtree, and it costs the artifact no width), and
+      // refusing the close would trap the user behind a panel they cannot
+      // dismiss for as long as the turn runs. So it closes — with a warning,
+      // because the artifact will now stop updating.
+      desktopViewport = false;
+      fakeController.status = "streaming";
+      const { props } = show();
+
+      fireEvent.click(screen.getByLabelText(enMessages.common.close));
+
+      expect(props.onClose).toHaveBeenCalledTimes(1);
+      expect(toastSpies.warning).toHaveBeenCalledWith(
+        enMessages.artifacts.panelClosedWhileWorking,
+      );
+      expect(toastSpies.info).not.toHaveBeenCalled();
+    });
+
+    test("a settled turn below lg closes with nothing to say", () => {
+      desktopViewport = false;
+      const { props } = show();
+
+      fireEvent.click(screen.getByLabelText(enMessages.common.close));
+
+      expect(props.onClose).toHaveBeenCalledTimes(1);
+      expect(toastSpies.warning).not.toHaveBeenCalled();
+      expect(toastSpies.info).not.toHaveBeenCalled();
+    });
   });
 
   test("never calls onProgress itself — SessionScreenInner (chat feature) owns that derivation", () => {

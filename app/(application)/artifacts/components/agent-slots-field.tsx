@@ -44,7 +44,13 @@ function AgentSlotsFieldRows({ value, onChange, disabled = false }: Omit<AgentSl
   const [key, setKey] = React.useState("");
   const [agentId, setAgentId] = React.useState("");
 
-  const { data } = useQuery(GET_AGENTS, {
+  // `error` is destructured and rendered, not swallowed: a failed query also
+  // yields `agents = []`, which makes the Select empty and `canAdd`
+  // permanently false — a dead "Add" button indistinguishable from "this
+  // instance has no agents at all". This field is the feature's ONLY
+  // configuration surface, so a silent failure here means an admin cannot
+  // assign an agent and is told nothing about why.
+  const { data, error } = useQuery(GET_AGENTS, {
     variables: { page: 1, limit: 200, filters: [{ active: { eq: true } }] },
   });
   const agents: Agent[] = data?.agentsPagination?.items ?? [];
@@ -117,6 +123,11 @@ function AgentSlotsFieldRows({ value, onChange, disabled = false }: Omit<AgentSl
           {t("agentSlotAdd")}
         </Button>
       </div>
+      {error && (
+        <p role="alert" className="text-xs text-destructive">
+          {t("agentSlotsLoadFailed")}
+        </p>
+      )}
       {duplicate && <p className="text-xs text-destructive">{t("agentSlotDuplicateKey")}</p>}
     </div>
   );

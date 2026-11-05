@@ -112,7 +112,16 @@ async function loadPanelData(
     // check as /content.
     const slotsRes = await fetch(`${base}/panel`, { headers: credHeaders, cache: "no-store" });
     if (!slotsRes.ok) return NO_PANEL;
-    const stored = ((await slotsRes.json())?.agent_slots ?? []) as AgentSlot[];
+    // Shape-checked, not `?? []` cast: this is an untyped JSON body, and the
+    // column behind it is `jsonb` that a now-fixed raw-array write could have
+    // left holding `{}` on an older backend (see the backend's
+    // `readAgentSlots`). An object reaching `.map` below throws into this
+    // function's catch, which is the SILENT failure mode — the panel simply
+    // never appears.
+    const body = (await slotsRes.json()) as { agent_slots?: unknown };
+    const stored: AgentSlot[] = Array.isArray(body?.agent_slots)
+      ? (body.agent_slots as AgentSlot[])
+      : [];
     const ids = [...new Set(stored.map((slot) => slot?.agentId).filter(Boolean))];
     // Most artifacts have no assignments, and this is the branch they take:
     // no agents query is issued at all.

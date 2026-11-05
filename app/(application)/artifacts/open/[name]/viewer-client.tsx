@@ -159,7 +159,9 @@ export function ArtifactViewer({
 
   // Turn and tool progress counted into a nonce for the frame. The chat
   // controller exists only inside AgentPanel, so the panel reports and this
-  // host counts; Task 10 adds the emission.
+  // host counts — the derivation itself lives in the chat feature
+  // (`useTurnProgress`, run by SessionScreenInner over the one controller it
+  // owns) and reaches here through AgentPanel's `onProgress` pass-through.
   const [progress, setProgress] = React.useState<{ nonce: number; reason: "tool" | "turn" }>({ nonce: 0, reason: "turn" });
   const onProgress = React.useCallback((reason: "tool" | "turn") => {
     setProgress((prev) => ({ nonce: prev.nonce + 1, reason }));

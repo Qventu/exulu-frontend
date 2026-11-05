@@ -87,7 +87,14 @@ export function CreateArtifactDialog({ open, onOpenChange, onCreated }: CreateAr
     }
     try {
       setPhase({ kind: "publishing" });
-      const created = await sharedArtifactsApi.create({ s3key, name: slug, content_type: contentType, expires_at: null, ...sharingPayload(sharing) });
+      // `POST /shared-artifacts` ignores agent_slots — its insert does not
+      // carry the column — and this dialog does not even render the field
+      // (it passes no `isApp`, so AgentSlotsField stays hidden): assignments
+      // are made from the sharing dialog once the share exists. Dropped here
+      // rather than sent, so nothing reads the create route as a write path
+      // for it.
+      const { agent_slots: _unsentAgentSlots, ...share } = sharingPayload(sharing);
+      const created = await sharedArtifactsApi.create({ s3key, name: slug, content_type: contentType, expires_at: null, ...share });
       toast.success(t("published", { name: created.name }));
       onCreated(created.name);
       onOpenChange(false);

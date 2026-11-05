@@ -49,7 +49,12 @@ export function SharingDialog({ name, onOpenChange, onSaved }: SharingDialogProp
           expiry: unexpired(s.expires_at) ? "keep" : "never",
           rightsMode: s.auth_mode === "regular" ? asRightsMode(s.rights_mode) : "private",
           rbac: s.rbac,
-          agentSlots: s.agent_slots ?? [],
+          // Shape-checked for the same reason page.tsx is: `AgentSlotsField`
+          // calls `.some` on this, and an older backend could still answer
+          // with the `{}` a raw-array write left in the jsonb column (see the
+          // backend's `readAgentSlots`) — which would throw while rendering
+          // the dialog, with no way back to a saveable state.
+          agentSlots: Array.isArray(s.agent_slots) ? s.agent_slots : [],
         });
       })
       .catch(() => {
