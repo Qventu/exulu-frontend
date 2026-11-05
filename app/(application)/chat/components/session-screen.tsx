@@ -32,7 +32,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type { Agent } from "@/types/models/agent";
 import type { AgentSession } from "@/types/models/agent-session";
-import { useChatSession } from "../hooks";
+import { useChatSession, type ChatSessionController } from "../hooks";
 import { CHAT_COLUMN, useChatShell } from "./chat-shell";
 import { ChatHeader } from "./chat-header";
 import { Composer } from "./composer";
@@ -48,6 +48,31 @@ export interface SessionScreenProps {
   /** Forwarded to useChatSession (see its doc comment) — omit for the
    *  default internal /chat/<agent>/<id> lazy-create destination. */
   sessionPath?: (sessionId: string) => string;
+  /**
+   * Hands the instantiated controller to a host that cannot otherwise reach
+   * it — `useChatSession` runs exactly once, here, inside
+   * `SessionScreenInner` (single-instance rule), and the artifact panel
+   * (artifacts/open/[name]/agent-panel.tsx) sits one layer above this
+   * component with no handle on it at all. That host needs a LIVE
+   * reference so an artifact's `exulu:panel:open` request — which can
+   * arrive more than once while the SAME panel instance stays mounted —
+   * always reaches the current controller, not a snapshot from whenever
+   * the panel first opened.
+   *
+   * Deliberately typed as the whole `ChatSessionController`, chat's own
+   * public type, rather than a narrower artifacts-specific shape: that
+   * keeps this file from needing to know anything about `OpenPanelRequest`
+   * or `applyOpenRequest` (both artifacts-feature concepts) — the artifacts
+   * side calls the controller's own already-public methods
+   * (`seedInput`/`addSessionItems`/`addSessionFiles`/`setFilesPanelOpen`)
+   * itself, the same way Composer and ChatHeader do.
+   *
+   * Called every render (the controller is a fresh object literal each
+   * time, same as every other `[controller]`-keyed effect in this feature),
+   * so the receiving ref is always current — see the matching effect order
+   * note in agent-panel.tsx for why that is safe within one commit.
+   */
+  onController?: (controller: ChatSessionController) => void;
 }
 
 export function SessionScreen(props: SessionScreenProps) {
@@ -78,6 +103,7 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
   initialMessages,
   beginLazyCreate,
   sessionPath,
+  onController,
 }: SessionScreenProps & { beginLazyCreate: () => () => void }) {
   const t = useTranslations("chat");
   const controller = useChatSession({
@@ -87,6 +113,15 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
     beginLazyCreate,
     sessionPath,
   });
+
+  // Hands this instance to the host — see the doc comment on
+  // SessionScreenProps.onController. Every render, deliberately: `controller`
+  // is a fresh object literal each time (useChatSession returns a new one
+  // per call, like every hook in this feature), so the only way the host's
+  // reference stays current is to resync it every time this does.
+  React.useEffect(() => {
+    onController?.(controller);
+  }, [controller, onController]);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">

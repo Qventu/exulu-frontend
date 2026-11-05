@@ -187,6 +187,35 @@ export interface ChatSessionController {
   filesPanelOpen: boolean;
   setFilesPanelOpen: (open: boolean) => Promise<void>;
   sessionFilesCount: number | null;
+  /**
+   * Adopt already-uploaded S3 keys (the artifact-panel attach flow: an
+   * artifact iframe uploads with the VIEWER's token, then hands the chat
+   * panel the resulting keys) into this session's own file prefix, so the
+   * agent's sandbox sees them on the next turn. Mirrors `addSessionItems`
+   * exactly: lazy `ensureSession`, a toast on `errors.sessionCreateFailed`
+   * if that fails, then the adopt call, then `refreshFilesCount`.
+   * Deliberately NOT riding on the session-create mutation — session
+   * creation is lazy, and coupling the two means handling that race.
+   */
+  addSessionFiles: (keys: string[]) => Promise<void>;
+  // prefill seed channel (artifact-agent-panel plan, task 9) ----------------
+  // There is no `controller.setInput`: the composer owns `input` as its own
+  // `useState` (composer.tsx:114). The existing `?q=` deep link only works
+  // because the composer reads `useSearchParams()` itself, seeded ONCE per
+  // mount behind `deepLinkSeededRef` — deliberately, so a stale closure can
+  // never win a race against the user's first keystroke. That guard also
+  // means a SECOND artifact-panel button click, in an already-mounted
+  // panel, would be silently ignored by that path.
+  //
+  // So this is a separate, nonce-carrying, CONSUME-ONCE signal: `seedInput`
+  // bumps the nonce on every call — even called twice with identical text —
+  // and the composer applies it keyed on the nonce (not the text), then
+  // calls `consumePendingInput()` so a later unrelated re-render can never
+  // re-apply the same slot. The `?q=`/`?items=` deep link and its guard stay
+  // exactly as they are; this is a different channel for a different race.
+  pendingInput: { text: string; nonce: number } | null;
+  seedInput: (text: string) => void;
+  consumePendingInput: () => void;
   // memory panel (memory redesign spec §4.3)
   memoryPanelOpen: boolean;
   setMemoryPanelOpen: (open: boolean) => void;
@@ -1156,6 +1185,43 @@ export function useChatSession({
     }
   }, [status, refreshFilesCount]);
 
+  // --- attach already-uploaded keys (artifact-panel open request, task 9) ----------
+  const addSessionFiles = async (keys: string[]): Promise<void> => {
+    const session = await ensureSession();
+    if (!session) {
+      toast.error(t("errors.title"), {
+        description: t("errors.sessionCreateFailed"),
+      });
+      return;
+    }
+    // The adopt endpoint rejects a batch containing the same key twice
+    // outright — all-or-nothing, deliberately, because the server must not
+    // guess which duplicate the caller meant. Dedupe here rather than there,
+    // mirroring addSessionItems' own existing-filter above.
+    const unique = [...new Set(keys)];
+    if (unique.length === 0) return;
+    await sessionFilesApi.adopt(session.id, unique);
+    await refreshFilesCount(session.id);
+  };
+
+  // --- prefill seed channel (artifact-agent-panel plan, task 9) --------------------
+  // See the doc comment on ChatSessionController's `pendingInput` for why
+  // this exists at all. The nonce is the whole point: a plain `{ text }`
+  // re-seeded with the SAME string must still register as a fresh event, so
+  // the composer's effect can be keyed on the nonce rather than diffing text.
+  const [pendingInput, setPendingInput] = React.useState<{
+    text: string;
+    nonce: number;
+  } | null>(null);
+  const pendingInputNonceRef = React.useRef(0);
+  const seedInput = React.useCallback((text: string) => {
+    pendingInputNonceRef.current += 1;
+    setPendingInput({ text, nonce: pendingInputNonceRef.current });
+  }, []);
+  const consumePendingInput = React.useCallback(() => {
+    setPendingInput(null);
+  }, []);
+
   // --- memory panel (memory redesign spec §4.3) -------------------------------------
   const [memoryPanelOpen, setMemoryPanelOpen] = React.useState(false);
   const memoryContextId = agent.memory ?? null;
@@ -1328,6 +1394,10 @@ export function useChatSession({
     filesPanelOpen,
     setFilesPanelOpen,
     sessionFilesCount,
+    addSessionFiles,
+    pendingInput,
+    seedInput,
+    consumePendingInput,
     memoryPanelOpen,
     setMemoryPanelOpen,
     myMemoriesCount,

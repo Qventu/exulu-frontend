@@ -341,6 +341,30 @@ export function Composer({ controller, guestMode = false }: ComposerProps) {
     }
   }, [initialItems, initialQuestion, controller]);
 
+  // Controller seed channel (task 9: artifact-panel open-request prefill).
+  // NOT the deep-link effect above, and must not be merged with it: that one
+  // seeds ONCE per mount (deepLinkSeededRef), which is exactly wrong here —
+  // a second artifact-panel button click, while this same composer instance
+  // stays mounted, must still land. `controller.pendingInput` carries a
+  // nonce that bumps on every `seedInput` call (even with identical text),
+  // so this effect is keyed on the NONCE rather than the text — a value
+  // comparison would see no change on a repeat click and silently drop it.
+  // `consumePendingInput()` is called immediately after applying it, so the
+  // controller's slot returns to null and nothing here can re-apply the same
+  // seed on a later, unrelated re-render.
+  const lastSeedNonceRef = useRef<number | null>(null);
+  useEffect(() => {
+    const pending = controller.pendingInput;
+    if (!pending) return;
+    if (lastSeedNonceRef.current === pending.nonce) return;
+    lastSeedNonceRef.current = pending.nonce;
+    // Fill the composer and stop — this must NEVER submit. A compromised or
+    // buggy artifact can only get text in front of the user, never send it
+    // under the user's identity.
+    setInput(pending.text);
+    controller.consumePendingInput();
+  }, [controller]);
+
   // ── Esc priority chain for composer overlays (item 77) ─────────────────
   // The context modal is deliberately NOT in this chain: it hosts a nested
   // "New item" Radix dialog, and Radix's own layer handling must close the

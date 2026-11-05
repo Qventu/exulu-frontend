@@ -19,6 +19,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import * as React from "react";
@@ -73,18 +74,42 @@ vi.mock("@/app/(application)/chat/hooks", () => ({
   }),
 }));
 
+// The minimal stand-in for a mounted `ChatSessionController` that task 9's
+// openRequest wiring reads from — NOT a `ChatSessionController` fixture (the
+// real interface has ~40 fields; this is only the 4 methods
+// `applyOpenRequest` is ever handed), so it is typed to its own narrow shape
+// rather than the production type or an `as never`/`as any` escape.
+const fakeController = vi.hoisted(() => ({
+  seedInput: vi.fn(),
+  addSessionItems: vi.fn(async () => {}),
+  addSessionFiles: vi.fn(async () => {}),
+  setFilesPanelOpen: vi.fn(async () => {}),
+}));
+
 // Stands in for the chat surface AND probes the shell context from where the
 // real SessionScreen's subtree reads it — ChatHeader's new-chat destination is
 // delivered that way, not by prop. The context module is pulled in with a
 // dynamic import because a static one would trip the cross-feature tier rule
-// (agent-panel.tsx carries a narrow, documented disable for its own three
+// (agent-panel.tsx carries a narrow, documented disable for its own four
 // imports; a test has no business widening that).
+//
+// Also simulates `onController` (task 9): the real SessionScreenInner calls
+// it every render with the live controller it just instantiated — this stub
+// does the same with `fakeController`, which is what lets this file prove
+// AgentPanel's openRequest effect reaches an actual controller handle rather
+// than asserting on its own internals.
 vi.mock("@/app/(application)/chat/components/session-screen", async () => {
   const { useChatShell } =
     await import("@/app/(application)/chat/components/chat-shell");
   return {
-    SessionScreen: (props: { sessionPath?: (id: string) => string }) => {
+    SessionScreen: (props: {
+      sessionPath?: (id: string) => string;
+      onController?: (controller: typeof fakeController) => void;
+    }) => {
       const shell = useChatShell();
+      React.useEffect(() => {
+        props.onController?.(fakeController);
+      });
       return (
         <div
           data-testid="session-screen"
@@ -121,6 +146,10 @@ beforeEach(() => {
   mediaListeners = [];
   desktopViewport = true;
   dockedWidth = 400;
+  fakeController.seedInput.mockClear();
+  fakeController.addSessionItems.mockClear();
+  fakeController.addSessionFiles.mockClear();
+  fakeController.setFilesPanelOpen.mockClear();
 
   // SidebarProvider/useIsMobile and SidePanel/useMediaQuery both read
   // matchMedia, which jsdom does not implement. Desktop by default: every
@@ -201,6 +230,7 @@ const show = (overrides: Overrides = {}) => {
     onClose: vi.fn(),
     onWidthChange: vi.fn(),
     onProgress: vi.fn(),
+    openRequest: null,
     ...overrides,
   };
   const view = render(
@@ -424,5 +454,99 @@ describe("AgentPanel", () => {
     const { props } = show();
 
     expect(props.onProgress).not.toHaveBeenCalled();
+  });
+
+  describe("openRequest (task 9: apply against the mounted controller)", () => {
+    test("seeds the prompt, opens the files panel, and adopts the files", async () => {
+      show({
+        openRequest: {
+          nonce: 1,
+          request: {
+            type: "exulu:panel:open",
+            v: 2,
+            slot: "advisor",
+            prompt: "Summarise this filing",
+            items: ["ctx-1"],
+            files: ["user_1/report.pdf"],
+          },
+        },
+      });
+
+      // seedInput is synchronous (applied before applyOpenRequest's first
+      // await), so it is already visible; the rest runs after the effect's
+      // fire-and-forget promise chain settles, hence waitFor.
+      expect(fakeController.seedInput).toHaveBeenCalledWith(
+        "Summarise this filing",
+      );
+      await waitFor(() => {
+        expect(fakeController.addSessionItems).toHaveBeenCalledWith(["ctx-1"]);
+        expect(fakeController.setFilesPanelOpen).toHaveBeenCalledWith(true);
+        expect(fakeController.addSessionFiles).toHaveBeenCalledWith([
+          "user_1/report.pdf",
+        ]);
+      });
+    });
+
+    test("does not apply a null openRequest", () => {
+      show({ openRequest: null });
+
+      expect(fakeController.seedInput).not.toHaveBeenCalled();
+    });
+
+    test("a second click on the ALREADY-mounted panel (new nonce) is applied again", () => {
+      const { rerender, props } = show({
+        openRequest: {
+          nonce: 1,
+          request: { type: "exulu:panel:open", v: 2, slot: "advisor", prompt: "First" },
+        },
+      });
+      expect(fakeController.seedInput).toHaveBeenCalledWith("First");
+
+      act(() => {
+        rerender(
+          <NextIntlClientProvider locale="en" messages={enMessages}>
+            <UserContext.Provider value={{ user: { id: 7 } }}>
+              <SidebarProvider>
+                <AgentPanel
+                  {...props}
+                  openRequest={{
+                    nonce: 2,
+                    request: { type: "exulu:panel:open", v: 2, slot: "advisor", prompt: "Second" },
+                  }}
+                />
+              </SidebarProvider>
+            </UserContext.Provider>
+          </NextIntlClientProvider>,
+        );
+      });
+
+      expect(fakeController.seedInput).toHaveBeenCalledWith("Second");
+      expect(fakeController.seedInput).toHaveBeenCalledTimes(2);
+    });
+
+    test("the SAME nonce is not re-applied on an unrelated re-render", () => {
+      const openRequest = {
+        nonce: 1,
+        request: { type: "exulu:panel:open" as const, v: 2, slot: "advisor", prompt: "First" },
+      };
+      const { rerender, props } = show({ openRequest });
+      expect(fakeController.seedInput).toHaveBeenCalledTimes(1);
+
+      // A resize, a collapse toggle, anything — re-renders with the SAME
+      // openRequest value must not re-seed.
+      act(() => {
+        rerender(
+          <NextIntlClientProvider locale="en" messages={enMessages}>
+            <UserContext.Provider value={{ user: { id: 7 } }}>
+              <SidebarProvider>
+                <AgentPanel {...props} openRequest={openRequest} />
+              </SidebarProvider>
+            </UserContext.Provider>
+          </NextIntlClientProvider>,
+        );
+      });
+
+      expect(fakeController.seedInput).toHaveBeenCalledTimes(1);
+    });
   });
 });

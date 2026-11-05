@@ -263,6 +263,15 @@ export function usePublicChatSession({
     filesPanelOpen: false,
     setFilesPanelOpen: async () => {},
     sessionFilesCount: null,
+    // No artifact panel reaches the guest surface (it is an internal
+    // /artifacts/open page, not a public route), so nothing ever calls this.
+    addSessionFiles: async () => {},
+    // prefill seed channel (task 9) — nothing on the guest surface ever
+    // calls seedInput, so this stays permanently null; Composer reads
+    // pendingInput unconditionally, so the shape still has to be here.
+    pendingInput: null,
+    seedInput: () => {},
+    consumePendingInput: () => {},
     // memory panel — guests never see it (header chip is gated on a
     // non-null myMemoriesCount, which stays null here)
     memoryPanelOpen: false,

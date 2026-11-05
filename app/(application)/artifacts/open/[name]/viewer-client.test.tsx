@@ -70,40 +70,74 @@ vi.mock("@/app/(application)/chat/hooks", () => ({
   }),
 }));
 
+// The minimal stand-in for a mounted controller that task 9's openRequest
+// wiring reaches (same shape and reasoning as agent-panel.test.tsx's own
+// fakeController) — NOT a `ChatSessionController` fixture, just the 4
+// methods `applyOpenRequest` is ever handed.
+const fakeController = vi.hoisted(() => ({
+  seedInput: vi.fn(),
+  addSessionItems: vi.fn(async () => {}),
+  addSessionFiles: vi.fn(async () => {}),
+  setFilesPanelOpen: vi.fn(async () => {}),
+}));
+
 // Probes the two props the page decides for the panel. The messages are
 // rendered, not only counted, so a foreign conversation's text can be asserted
 // absent from the document rather than merely absent from a count.
+//
+// Also simulates `onController` (task 9), the same way SessionScreenInner
+// really does — every render, with `fakeController` standing in for the live
+// controller — so a test here can observe whether AgentPanel's openRequest
+// effect reached an actual controller handle, including across an AgentPanel
+// REMOUNT (closing and reopening the panel): this mock lives for the whole
+// test file, so `fakeController` is the one thing that survives a remount to
+// prove whether a stale request was (wrongly) re-applied to it.
 vi.mock("@/app/(application)/chat/components/session-screen", () => ({
   SessionScreen: (props: {
     agent: Agent;
     initialSession: AgentSession | null;
     initialMessages: UIMessage[];
-  }) => (
-    <div
-      data-testid="session-screen"
-      data-agent-id={props.agent.id}
-      data-session-id={props.initialSession?.id ?? "(none)"}
-      data-message-count={String(props.initialMessages.length)}
-    >
-      {props.initialMessages.map((message) => (
-        <span key={message.id}>
-          {message.parts.map((part) => (part.type === "text" ? part.text : "")).join("")}
-        </span>
-      ))}
-    </div>
-  ),
+    onController?: (controller: typeof fakeController) => void;
+  }) => {
+    React.useEffect(() => {
+      props.onController?.(fakeController);
+    });
+    return (
+      <div
+        data-testid="session-screen"
+        data-agent-id={props.agent.id}
+        data-session-id={props.initialSession?.id ?? "(none)"}
+        data-message-count={String(props.initialMessages.length)}
+      >
+        {props.initialMessages.map((message) => (
+          <span key={message.id}>
+            {message.parts.map((part) => (part.type === "text" ? part.text : "")).join("")}
+          </span>
+        ))}
+      </div>
+    );
+  },
 }));
+
+/** The `onOpenRequest` the viewer handed to the (stubbed) frame, captured so
+ *  a test can simulate the artifact's postMessage without the real channel —
+ *  functions do not survive the `panel` prop's JSON serialisation below, so
+ *  this is the only way to reach it. */
+let capturedOnOpenRequest: ((request: unknown) => void) | null = null;
 
 // Probes `panel`. Serialised rather than captured in a closure so the
 // assertion reads the exact bytes the viewer handed over — an agent id hiding
 // in an unexpected field would show up in the string.
 vi.mock("@/app/artifacts/[artifact_name]/artifact-frame", () => ({
-  ArtifactFrame: (props: { panel?: unknown }) => (
-    <div
-      data-testid="artifact-frame"
-      data-panel={props.panel === undefined ? "(none)" : JSON.stringify(props.panel)}
-    />
-  ),
+  ArtifactFrame: (props: { panel?: { onOpenRequest?: (request: unknown) => void } }) => {
+    capturedOnOpenRequest = props.panel?.onOpenRequest ?? null;
+    return (
+      <div
+        data-testid="artifact-frame"
+        data-panel={props.panel === undefined ? "(none)" : JSON.stringify(props.panel)}
+      />
+    );
+  },
 }));
 
 import { choosePanelState, resolveSlots, type ResolvedSlot } from "./resolve-slots";
@@ -160,6 +194,11 @@ const realGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
 beforeEach(() => {
   artifactPx = 1000;
   resizeCallbacks = [];
+  capturedOnOpenRequest = null;
+  fakeController.seedInput.mockClear();
+  fakeController.addSessionItems.mockClear();
+  fakeController.addSessionFiles.mockClear();
+  fakeController.setFilesPanelOpen.mockClear();
   // The URL is this component's own state store; a test that opened a panel
   // must not leave `?agent=` behind for the next one.
   window.history.replaceState(null, "", "/");
@@ -549,6 +588,60 @@ describe("ArtifactViewer → ArtifactFrame panel prop", () => {
     show({ slots: [SLOT_ANALYSE] });
 
     expect((panelOf() as { progressNonce?: number }).progressNonce).toBeUndefined();
+  });
+});
+
+describe("ArtifactViewer → openRequest wiring (task 9)", () => {
+  test("an artifact's exulu:panel:open request reaches the mounted controller", async () => {
+    show({ slots: [SLOT_ANALYSE] });
+
+    act(() => {
+      capturedOnOpenRequest?.({
+        type: "exulu:panel:open",
+        v: 2,
+        slot: "analyse",
+        prompt: "Summarise this filing",
+      });
+    });
+    await panelScreen();
+
+    await waitFor(() =>
+      expect(fakeController.seedInput).toHaveBeenCalledWith("Summarise this filing"),
+    );
+  });
+
+  test("closing and reopening through the viewer's own button does not replay a stale request", async () => {
+    // The bug this guards: the viewer's plain header CTA (AgentTrigger,
+    // below) opens a slot with NO prefill at all — it is not an open
+    // REQUEST — so a request left over from an earlier artifact-triggered
+    // open must not resurface on a later, unrelated open of the same slot.
+    show({ slots: [SLOT_ANALYSE] });
+
+    act(() => {
+      capturedOnOpenRequest?.({
+        type: "exulu:panel:open",
+        v: 2,
+        slot: "analyse",
+        prompt: "Summarise this filing",
+      });
+    });
+    await panelScreen();
+    await waitFor(() => expect(fakeController.seedInput).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByLabelText(enMessages.common.close));
+    expect(screen.queryByTestId("session-screen")).toBeNull();
+
+    // Reopen the SAME slot through the viewer's own button — never through
+    // onOpenRequest.
+    fireEvent.click(screen.getByTestId(CTA));
+    await panelScreen();
+
+    // Give any (wrongly) re-queued application a chance to run before
+    // asserting its absence.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(fakeController.seedInput).toHaveBeenCalledTimes(1);
   });
 });
 

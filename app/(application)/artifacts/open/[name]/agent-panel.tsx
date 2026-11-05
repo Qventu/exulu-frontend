@@ -58,7 +58,12 @@ import * as React from "react";
  * The alternative is forking it, which this plan explicitly forbids. The guest
  * chat shell makes the same reach (app/public/agents/[id]/components/
  * public-chat-shell.tsx); it simply sits outside a feature folder, so no rule
- * fires on it. Narrowed to these three imports on purpose. */
+ * fires on it. Narrowed to these four imports on purpose — the fourth
+ * (`ChatSessionController`, task 9) is a TYPE ONLY, for the ref that receives
+ * the live controller instance via SessionScreen's `onController` (see that
+ * prop's doc comment): an artifact's `exulu:panel:open` request has to reach
+ * the mounted controller, and this is the only place that controller is ever
+ * exposed outside the chat feature. */
 import {
   ChatShellContext,
   type ChatShellContextValue,
@@ -68,6 +73,7 @@ import {
   type HistoryRailPaths,
 } from "@/app/(application)/chat/components/history-rail";
 import { SessionScreen } from "@/app/(application)/chat/components/session-screen";
+import type { ChatSessionController } from "@/app/(application)/chat/hooks";
 /* eslint-enable no-restricted-imports */
 import {
   LG_QUERY,
@@ -75,10 +81,12 @@ import {
   useMediaQuery,
 } from "@/components/primitives/side-panel";
 import { Button } from "@/components/ui/button";
+import type { OpenPanelRequest } from "@/lib/artifacts/agent-panel-protocol";
 import { cn } from "@/lib/utils";
 import type { Agent } from "@/types/models/agent";
 import type { AgentSession } from "@/types/models/agent-session";
 
+import { applyOpenRequest } from "./apply-open-request";
 import { useTransientNavCollapse } from "./use-transient-nav-collapse";
 
 export interface AgentPanelProps {
@@ -128,6 +136,21 @@ export interface AgentPanelProps {
    * that fires it; nothing calls it yet.
    */
   onProgress: (reason: "tool" | "turn") => void;
+  /**
+   * An artifact's `exulu:panel:open` request (task 4's `OpenPanelRequest`),
+   * tagged with a nonce by the viewer every time it fires. Applied against
+   * the mounted controller via `applyOpenRequest` — prefilling the composer
+   * and/or attaching files, never sending.
+   *
+   * Nonce-tagged rather than passed as the bare request so a SECOND request
+   * for the SAME slot, while this exact panel instance stays mounted (the
+   * artifact's button can be clicked more than once without the panel
+   * closing in between), is still detected as a fresh event — a value
+   * comparison on the request object would see no change and silently drop
+   * it. `null` while nothing is pending; a request already applied is not
+   * re-applied on an unrelated re-render (tracked by nonce, not identity).
+   */
+  openRequest: { request: OpenPanelRequest; nonce: number } | null;
 }
 
 /** Mount inside `SidebarProvider` — see the file header's last paragraph. */
@@ -151,9 +174,47 @@ function MountedAgentPanel({
   // prop's doc comment). Taking it now means the host can pass it from the
   // start and that wiring is a change inside this component only.
   onProgress,
+  openRequest,
 }: Omit<AgentPanelProps, "open">) {
   const t = useTranslations("artifacts");
   const basePath = `/artifacts/open/${encodeURIComponent(artifactName)}`;
+
+  // --- reaching the controller SessionScreen instantiates below ------------
+  // The only handle this component ever gets on it: SessionScreenInner calls
+  // this every render (see SessionScreenProps.onController's doc comment),
+  // so the ref is always the current instance. A plain ref rather than
+  // state on purpose — updating it must not itself cause a re-render, and
+  // nothing here needs to react to the controller changing, only to read it
+  // when an openRequest arrives.
+  const controllerRef = React.useRef<ChatSessionController | null>(null);
+  const handleController = React.useCallback(
+    (controller: ChatSessionController) => {
+      controllerRef.current = controller;
+    },
+    [],
+  );
+
+  // Applies at most once per nonce. React fires a child's effects before its
+  // parent's within the same commit, and SessionScreen (a descendant of this
+  // component) is ALWAYS mounted whenever this component is — even while
+  // `collapsedNow` hides it with `display:none` below, never unmounted — so
+  // `controllerRef.current` is already set by the time this effect runs,
+  // including on the very first commit where the panel opens with a request
+  // already pending.
+  const appliedNonceRef = React.useRef<number | null>(null);
+  React.useEffect(() => {
+    if (!openRequest) return;
+    if (appliedNonceRef.current === openRequest.nonce) return;
+    appliedNonceRef.current = openRequest.nonce;
+    const controller = controllerRef.current;
+    if (!controller) return;
+    void applyOpenRequest(openRequest.request, {
+      seedInput: controller.seedInput,
+      addSessionItems: controller.addSessionItems,
+      addSessionFiles: controller.addSessionFiles,
+      setFilesPanelOpen: controller.setFilesPanelOpen,
+    });
+  }, [openRequest]);
 
   const [collapsed, setCollapsed] = React.useState(false);
   // `undefined` until hydrated, so this is "we KNOW we are below lg" — the
@@ -389,6 +450,9 @@ function MountedAgentPanel({
                 // land. Read at call time by the controller
                 // (hooks.ts sessionPathRef), so identity per render is free.
                 sessionPath={paths.session}
+                // task 9: the only way this component ever gets a handle on
+                // the controller it has no other reach into.
+                onController={handleController}
               />
             </div>
           </SidePanel>

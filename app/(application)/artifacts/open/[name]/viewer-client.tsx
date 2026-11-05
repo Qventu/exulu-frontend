@@ -109,7 +109,6 @@ export function ArtifactViewer({
   const [activeKey, setActiveKey] = React.useState<string | null>(initialSlotKey);
   const activeSlot = offered.find((slot) => slot.key === activeKey) ?? null;
   const activeSlotKey = activeSlot?.key ?? null;
-  const closePanel = React.useCallback(() => setActiveKey(null), []);
 
   // --- what the artifact is told about its own box -------------------------
   // The channel carries the ARTIFACT's viewport width, not the panel's, so
@@ -166,10 +165,44 @@ export function ArtifactViewer({
     setProgress((prev) => ({ nonce: prev.nonce + 1, reason }));
   }, []);
 
+  // The request is tagged with a fresh nonce on every call — never passed
+  // through bare — because the artifact can send `exulu:panel:open` more
+  // than once while the SAME panel instance stays mounted (clicking its own
+  // button twice without closing the panel in between), and AgentPanel
+  // applies it against the mounted controller keyed on this nonce, not on
+  // request identity (see openRequest's doc comment on AgentPanelProps and
+  // the matching consume-once seed on the controller for why — composer.tsx,
+  // ChatSessionController.pendingInput).
+  const openRequestNonceRef = React.useRef(0);
+  const [openRequest, setOpenRequest] = React.useState<{
+    request: OpenPanelRequest;
+    nonce: number;
+  } | null>(null);
+
   const onOpenRequest = React.useCallback((request: OpenPanelRequest) => {
     // The frame has already checked the slot against the list it was given,
     // and a key naming no offered slot resolves to no panel here anyway.
     setActiveKey(request.slot);
+    openRequestNonceRef.current += 1;
+    setOpenRequest({ request, nonce: openRequestNonceRef.current });
+  }, []);
+
+  // The viewer's OWN header button (AgentTrigger below) opens a slot with no
+  // prefill at all — it is not an open REQUEST, just "open this agent" — so
+  // it must clear any pending one. Without this, picking a different slot
+  // (or the same one again) through this plain button after an artifact-
+  // triggered open would hand the FRESH panel a stale prompt/items/files
+  // left over from a previous, unrelated open.
+  const chooseSlot = React.useCallback((key: string) => {
+    setActiveKey(key);
+    setOpenRequest(null);
+  }, []);
+
+  // Same reasoning as chooseSlot: closing must not leave a stale request
+  // behind for whatever opens next, including the SAME slot reopened later.
+  const closePanel = React.useCallback(() => {
+    setActiveKey(null);
+    setOpenRequest(null);
   }, []);
 
   // `?session=` is a URL the user can type, and the history rail's rows and
@@ -234,7 +267,7 @@ export function ArtifactViewer({
           <Badge variant="secondary" className="hidden shrink-0 md:inline-flex">{t(type.labelKey)}</Badge>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <AgentTrigger slots={offered} onChoose={setActiveKey} />
+          <AgentTrigger slots={offered} onChoose={chooseSlot} />
           {canFavorite && <FavoriteToggle pressed={favorite} onToggle={() => void toggle(name)} label={favorite ? t("unfavorite") : t("favorite")} />}
           <Button type="button" variant="ghost" size="icon" aria-label={t("openInNewTab")} title={t("openInNewTab")} onClick={openShare}>
             <ExternalLink aria-hidden="true" className="size-4" />
@@ -312,6 +345,7 @@ export function ArtifactViewer({
             onClose={closePanel}
             onWidthChange={onPanelWidthChange}
             onProgress={onProgress}
+            openRequest={openRequest}
           />
         )}
       </div>
