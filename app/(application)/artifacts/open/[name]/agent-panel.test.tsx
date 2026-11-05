@@ -13,7 +13,13 @@
  * page's URL. The chat hooks are stubbed for the same reason: the rail reads
  * its recents through Apollo.
  */
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -96,27 +102,46 @@ const AGENT = { id: "agent-1", name: "Pitch Analyst", type: "agent" as const };
 
 /** Captured ResizeObserver callbacks, so a resize can be driven by hand. */
 let resizeCallbacks: ResizeObserverCallback[] = [];
-let stubWidth = 400;
+/** matchMedia change listeners, so a breakpoint flip can be driven by hand. */
+let mediaListeners: Array<() => void> = [];
+let desktopViewport = true;
+/** The docked panel's width in the simulated layout below. */
+let dockedWidth = 400;
+/** The collapsed edge's width: the `w-8` its container carries. */
+const EDGE_PX = 32;
 const realGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+
+const flipViewport = (toDesktop: boolean) => {
+  desktopViewport = toDesktop;
+  for (const listener of mediaListeners) listener();
+};
 
 beforeEach(() => {
   resizeCallbacks = [];
-  stubWidth = 400;
+  mediaListeners = [];
+  desktopViewport = true;
+  dockedWidth = 400;
 
   // SidebarProvider/useIsMobile and SidePanel/useMediaQuery both read
-  // matchMedia, which jsdom does not implement. Desktop: every min-width query
-  // matches, no max-width one does — so SidePanel renders its DOCKED branch,
-  // which is the one that takes width away from the artifact.
+  // matchMedia, which jsdom does not implement. Desktop by default: every
+  // min-width query matches, no max-width one does — so SidePanel renders its
+  // DOCKED branch, the one that takes width away from the artifact. Listeners
+  // are captured so a test can narrow the window mid-life (useMediaQuery
+  // subscribes through useSyncExternalStore).
   window.matchMedia = ((query: string) => ({
-    matches: !query.includes("max-width"),
+    get matches() {
+      return query.includes("max-width") ? !desktopViewport : desktopViewport;
+    },
     media: query,
-    addEventListener: () => {},
+    addEventListener: (_event: string, listener: () => void) => {
+      mediaListeners.push(listener);
+    },
     removeEventListener: () => {},
     addListener: () => {},
     removeListener: () => {},
     onchange: null,
     dispatchEvent: () => false,
-  })) as typeof window.matchMedia;
+  })) as unknown as typeof window.matchMedia;
 
   class RO {
     constructor(callback: ResizeObserverCallback) {
@@ -128,15 +153,29 @@ beforeEach(() => {
   }
   (window as unknown as { ResizeObserver: typeof RO }).ResizeObserver = RO;
 
-  // jsdom has no layout: every box is 0×0. The panel reports what it measures,
-  // so the measurement has to be stubbed for the report to mean anything.
+  // jsdom computes no layout: every box is 0×0, so the panel would report 0 in
+  // every state and the three widths it contracts to deliver would all pass
+  // vacuously. This stands in for flow layout, mapping each state onto the
+  // geometry a browser would produce:
+  //   - collapsed: only the thin edge is in the row;
+  //   - docked:    the panel is in the row at its (dragged) width;
+  //   - Sheet:     nothing is — Radix portals it out of this subtree.
+  // State, not class names: the root declares it, and CSS is what turns it
+  // into geometry.
   HTMLElement.prototype.getBoundingClientRect = function () {
+    const element = this as HTMLElement;
+    const width =
+      element.dataset.state === "collapsed"
+        ? EDGE_PX
+        : element.querySelector("[role='complementary']")
+          ? dockedWidth
+          : 0;
     return {
-      width: stubWidth,
+      width,
       height: 600,
       top: 0,
       left: 0,
-      right: stubWidth,
+      right: width,
       bottom: 600,
       x: 0,
       y: 0,
@@ -242,12 +281,102 @@ describe("AgentPanel", () => {
 
     expect(props.onWidthChange).toHaveBeenCalledWith(400);
 
-    stubWidth = 640;
-    for (const callback of resizeCallbacks) {
-      callback([], {} as ResizeObserver);
-    }
+    // A resize drag: the box changes without this component knowing, which is
+    // what the observer is for.
+    dockedWidth = 640;
+    act(() => {
+      for (const callback of resizeCallbacks)
+        callback([], {} as ResizeObserver);
+    });
 
     expect(props.onWidthChange).toHaveBeenCalledWith(640);
+  });
+
+  test("reports the thin edge's width when it collapses", () => {
+    // Task 8 turns these numbers into the artifact's viewport, so each state
+    // this component contracts to report needs its own coverage. No observer
+    // is fired here on purpose: a collapse is a change THIS component makes,
+    // so it must report without waiting for the observer's next frame.
+    // Own spy rather than the one `show` defaults in: this test clears it
+    // between the mount report and the collapse, and `props` is a union once
+    // overrides are spread in, so it has no mock type to clear.
+    const onWidthChange = vi.fn();
+    show({ onWidthChange });
+    onWidthChange.mockClear();
+
+    fireEvent.click(screen.getByLabelText(enMessages.artifacts.panelCollapse));
+
+    expect(onWidthChange).toHaveBeenCalledWith(EDGE_PX);
+    // Ties EDGE_PX to the production class: jsdom computes no layout, so the
+    // `w-8` on the edge container IS its width.
+    expect(
+      screen.getByLabelText(enMessages.artifacts.panelExpand).parentElement
+        ?.className,
+    ).toContain("w-8");
+  });
+
+  test("reports zero below lg, where it overlays instead of squeezing", () => {
+    desktopViewport = false;
+    const { container, props } = show();
+
+    expect(props.onWidthChange).toHaveBeenCalledWith(0);
+    // Nothing of the panel is in the artifact's row — SidePanel's Sheet is
+    // portalled to the body, which is why it costs the artifact no width...
+    expect(container.querySelector("[role='complementary']")).toBeNull();
+    // ...and the conversation is mounted all the same.
+    expect(screen.getByTestId("session-screen")).toBeTruthy();
+  });
+
+  test("offers no collapse control below lg, where it would discard the chat", () => {
+    // A Sheet's content is portalled out of the panel's subtree, so hiding
+    // cannot reach it; collapsing could only close it, and Radix unmounts
+    // closed sheet content — the conversation would vanish under a control
+    // that promises to keep it. Close (the X) is the right affordance there.
+    desktopViewport = false;
+    show();
+
+    expect(
+      screen.queryByLabelText(enMessages.artifacts.panelCollapse),
+    ).toBeNull();
+    expect(
+      screen.queryByLabelText(enMessages.artifacts.panelExpand),
+    ).toBeNull();
+    expect(screen.getByLabelText(enMessages.common.close)).toBeTruthy();
+  });
+
+  test("a collapsed panel narrowed past lg comes back as the sheet", () => {
+    // Otherwise it would be stranded: the edge is not rendered below lg, so a
+    // panel left collapsed would have no way back and the host would still
+    // believe it was open.
+    const { container, props } = show();
+    fireEvent.click(screen.getByLabelText(enMessages.artifacts.panelCollapse));
+    expect(container.querySelector("[data-state='collapsed']")).not.toBeNull();
+
+    act(() => flipViewport(false));
+
+    expect(container.querySelector("[data-state='collapsed']")).toBeNull();
+    expect(screen.getByTestId("session-screen")).toBeTruthy();
+    expect(
+      screen.queryByLabelText(enMessages.artifacts.panelExpand),
+    ).toBeNull();
+    expect(props.onWidthChange).toHaveBeenLastCalledWith(0);
+  });
+
+  test("focus follows the collapse, in both directions", () => {
+    // Both controls live in the subtree the other state removes, so without
+    // this activeElement falls back to <body> — and SidePanel's own focus
+    // management cannot help, because its `open` never changes.
+    show();
+
+    fireEvent.click(screen.getByLabelText(enMessages.artifacts.panelCollapse));
+    expect(document.activeElement).toBe(
+      screen.getByLabelText(enMessages.artifacts.panelExpand),
+    );
+
+    fireEvent.click(screen.getByLabelText(enMessages.artifacts.panelExpand));
+    expect(document.activeElement).toBe(
+      screen.getByLabelText(enMessages.artifacts.panelCollapse),
+    );
   });
 
   test("collapsing keeps the session mounted and gives the artifact its width back", () => {

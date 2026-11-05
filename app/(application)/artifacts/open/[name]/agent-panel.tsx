@@ -30,7 +30,18 @@
  * Below `lg` `SidePanel` is a Sheet, so the panel overlays the artifact
  * instead of squeezing it and this component occupies no width in the row —
  * which is exactly what `onWidthChange` then reports (0), because it measures
- * its own root rather than asking the panel how wide it thinks it is.
+ * its own root rather than asking the panel how wide it thinks it is. The
+ * collapse control and the edge are therefore NOT offered there: collapse
+ * buys the artifact no width when the panel never took any, and a Sheet's
+ * content is portalled out of this subtree, so hiding cannot reach it — the
+ * control would have to close the sheet, which Radix unmounts, discarding the
+ * conversation a control labelled "collapse" just promised to keep. Below
+ * `lg` the X is the right and only affordance.
+ *
+ * Must be mounted inside the app shell's `SidebarProvider`: it collapses the
+ * nav for as long as it is open, and the hook that does that reads the sidebar
+ * context unconditionally — so `AgentPanel` needs the provider even while
+ * `open` is false.
  */
 
 import type { UIMessage } from "ai";
@@ -103,9 +114,11 @@ export interface AgentPanelProps {
   onProgress: (reason: "tool" | "turn") => void;
 }
 
+/** Mount inside `SidebarProvider` — see the file header's last paragraph. */
 export function AgentPanel({ open, ...rest }: AgentPanelProps) {
   // Unconditional (hook rules) and inert while closed: the app nav stands down
   // for as long as the panel is up, without writing the user's sidebar cookie.
+  // This is also why the provider is required even when `open` is false.
   useTransientNavCollapse(open);
   if (!open) return null;
   return <MountedAgentPanel {...rest} />;
@@ -131,6 +144,11 @@ function MountedAgentPanel({
   // same reading SidePanel itself takes of the same query (it exports both so
   // a host deciding how the panel behaves cannot drift from it).
   const sheetMode = useMediaQuery(LG_QUERY) === false;
+  // Collapse is a ≥lg affordance only (see the file header). Deriving it
+  // instead of guarding each use also settles the resize case: a panel
+  // collapsed on a wide window that is then narrowed past lg comes back as the
+  // Sheet rather than vanishing behind an edge that is no longer rendered.
+  const collapsedNow = collapsed && !sheetMode;
 
   // --- what this panel takes from the artifact ------------------------------
   // Measured off this component's own root instead of read out of SidePanel:
@@ -143,26 +161,53 @@ function MountedAgentPanel({
     onWidthChangeRef.current = onWidthChange;
   }, [onWidthChange]);
 
+  const reportedWidthRef = React.useRef<number | null>(null);
+  const reportWidth = React.useCallback(() => {
+    const element = rootRef.current;
+    if (!element) return;
+    const width = Math.round(element.getBoundingClientRect().width);
+    // Resize observers fire per frame during a drag; the host posts every
+    // report into the artifact's port, so only send real changes.
+    if (width === reportedWidthRef.current) return;
+    reportedWidthRef.current = width;
+    onWidthChangeRef.current(width);
+  }, []);
+
+  // Keyed on the collapse so a state change THIS component made is reported in
+  // the same commit, rather than waiting for the observer's next frame — the
+  // artifact reflows off these numbers. The observer still covers the changes
+  // this component does not make: a resize drag, a breakpoint flip.
   React.useEffect(() => {
     const element = rootRef.current;
     if (!element) return;
-    let reported: number | null = null;
-    const report = () => {
-      const width = Math.round(element.getBoundingClientRect().width);
-      // Resize observers fire per frame during a drag; the host posts every
-      // report into the artifact's port, so only send real changes.
-      if (width === reported) return;
-      reported = width;
-      onWidthChangeRef.current(width);
-    };
-    report();
+    reportWidth();
     // Guarded rather than assumed: a test environment without a ResizeObserver
     // still gets the mount report instead of a crash.
     if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(report);
+    const observer = new ResizeObserver(reportWidth);
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [collapsedNow, reportWidth]);
+
+  // --- focus must not fall on the floor -------------------------------------
+  // Collapsing puts the focused collapse button inside a display:none subtree,
+  // and expanding takes the edge button away — in both directions activeElement
+  // would fall back to <body>, and SidePanel's own focus effect cannot help
+  // because its `open` never changes. So hand focus to whichever control
+  // replaced the one that just went away.
+  const edgeButtonRef = React.useRef<HTMLButtonElement>(null);
+  const collapseButtonRef = React.useRef<HTMLButtonElement>(null);
+  const collapseSettledRef = React.useRef(false);
+  React.useEffect(() => {
+    // Not on mount: there SidePanel moves focus into the panel itself, and
+    // stealing it to a control would undo that.
+    if (!collapseSettledRef.current) {
+      collapseSettledRef.current = true;
+      return;
+    }
+    if (collapsedNow) edgeButtonRef.current?.focus();
+    else collapseButtonRef.current?.focus();
+  }, [collapsedNow]);
 
   // --- the alternate ChatShellContext --------------------------------------
   const [historySheetOpen, setHistorySheetOpen] = React.useState(false);
@@ -247,12 +292,13 @@ function MountedAgentPanel({
         // State reflected the way components/ui/sidebar.tsx reflects its own,
         // so the collapse is inspectable from the DOM (host, tests, styling)
         // and not only from React state.
-        data-state={collapsed ? "collapsed" : "expanded"}
+        data-state={collapsedNow ? "collapsed" : "expanded"}
         className="flex h-full min-h-0 shrink-0"
       >
-        {collapsed ? (
+        {collapsedNow ? (
           <div className="flex h-full w-8 shrink-0 items-center justify-center border-l bg-background">
             <Button
+              ref={edgeButtonRef}
               type="button"
               variant="ghost"
               size="icon"
@@ -268,13 +314,18 @@ function MountedAgentPanel({
 
         {/* `hidden` while collapsed rather than unmounted: display:none keeps
             the controller, the message list and an in-flight stream alive, so
-            expanding returns to the same conversation. The Sheet below lg is
-            portalled out of this subtree, so hiding cannot reach it — there,
-            collapsing closes the sheet instead and the edge above is the way
-            back. */}
-        <div className={cn("flex h-full min-h-0", collapsed && "hidden")}>
+            expanding returns to the same conversation. Below lg this never
+            applies (`collapsedNow` is false there by construction), which is
+            the point: a Sheet's content is portalled out of this subtree, so
+            hiding could not reach it and the only way to "collapse" it would
+            be to close it — and Radix unmounts closed sheet content, throwing
+            away exactly what the control promises to keep. */}
+        <div className={cn("flex h-full min-h-0", collapsedNow && "hidden")}>
           <SidePanel
-            open={collapsed ? !sheetMode : true}
+            // Always open: a collapse is the `hidden` above, never a close, so
+            // the Sheet below lg can never be the thing that swallows the
+            // conversation.
+            open
             onOpenChange={(next) => {
               // SidePanel's own close affordances (the header X, Escape, a
               // sheet dismissal) mean close, not collapse.
@@ -285,17 +336,21 @@ function MountedAgentPanel({
             storageKey="artifact-agent-panel"
             mobileSize="full"
             actions={
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8 shrink-0"
-                aria-label={t("panelCollapse")}
-                title={t("panelCollapse")}
-                onClick={() => setCollapsed(true)}
-              >
-                <PanelRightClose aria-hidden="true" className="size-4" />
-              </Button>
+              // Not offered in Sheet mode — see the file header.
+              sheetMode ? undefined : (
+                <Button
+                  ref={collapseButtonRef}
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 shrink-0"
+                  aria-label={t("panelCollapse")}
+                  title={t("panelCollapse")}
+                  onClick={() => setCollapsed(true)}
+                >
+                  <PanelRightClose aria-hidden="true" className="size-4" />
+                </Button>
+              )
             }
           >
             <div className="flex h-full min-h-0 w-full">

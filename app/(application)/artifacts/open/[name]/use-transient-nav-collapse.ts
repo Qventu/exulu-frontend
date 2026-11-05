@@ -42,14 +42,23 @@ function readSidebarCookie(): string | null {
  * and same `path=/` scope, so the provider's own write is overwritten rather
  * than shadowed by a second cookie at a narrower path. A user who had no
  * sidebar cookie keeps having none.
+ *
+ * `finally`, because the cookie is written by `mutate` itself: if it threw
+ * after writing and before returning, the user's global nav preference would
+ * be left clobbered — precisely the failure this hook exists to prevent.
+ * `setOpen` cannot throw today; the whole value of the hook rests on this
+ * line, so it does not depend on that staying true.
  */
 function withoutPersisting(mutate: () => void) {
   const prior = readSidebarCookie();
-  mutate();
-  document.cookie =
-    prior === null
-      ? `${SIDEBAR_COOKIE_NAME}=; path=/; max-age=0`
-      : `${SIDEBAR_COOKIE_NAME}=${prior}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+  try {
+    mutate();
+  } finally {
+    document.cookie =
+      prior === null
+        ? `${SIDEBAR_COOKIE_NAME}=; path=/; max-age=0`
+        : `${SIDEBAR_COOKIE_NAME}=${prior}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+  }
 }
 
 /**
@@ -77,8 +86,14 @@ export function useTransientNavCollapse(active: boolean) {
 
   React.useEffect(() => {
     if (!active) return;
+    // Captured here rather than re-derived in the cleanup: the restore target
+    // is "whatever it was when this panel took it over". Reading it back as a
+    // literal `true` would be correct only by way of the guard below, which
+    // puts the pairing a reader has to infer — and makes a later loosening of
+    // that guard silently restore the wrong state.
+    const wasOpen = openRef.current;
     // Already collapsed — nothing to collapse, and so nothing to restore.
-    if (!openRef.current) return;
+    if (!wasOpen) return;
 
     withoutPersisting(() => setOpenRef.current(false));
 
@@ -86,7 +101,7 @@ export function useTransientNavCollapse(active: boolean) {
       // The nav is expanded again, which this hook did not do: the user did.
       // Leave it.
       if (openRef.current) return;
-      withoutPersisting(() => setOpenRef.current(true));
+      withoutPersisting(() => setOpenRef.current(wasOpen));
     };
   }, [active]);
 }

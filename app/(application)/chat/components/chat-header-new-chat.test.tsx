@@ -154,6 +154,13 @@ describe("ChatHeader new-chat destination", () => {
     // lot of Radix to drive for one string. Both sites now read the same
     // resolved href, and this is what guards the one the clicks above cannot
     // reach (and anything added later).
+    // Limits, so the next reader does not have to work them out: the regex
+    // stops at the first `)`, so a nested call would be truncated, and it
+    // looks only at `router.push` — a destination introduced via
+    // `router.replace` or a `<Link href>` would slip past it. Both make it
+    // fail CLOSED (a truncated argument is not the string it expects, and a
+    // guard that sees nothing new cannot wrongly pass something), which is why
+    // it is worth having as it is rather than growing a parser.
     const source = readFileSync(join(__dirname, "chat-header.tsx"), "utf8");
     const pushes = [...source.matchAll(/router\.push\(([^)]*)\)/g)].map(
       (match) => match[1],
