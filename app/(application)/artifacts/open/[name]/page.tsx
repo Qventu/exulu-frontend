@@ -37,7 +37,7 @@ import {
 import type { Agent } from "@/types/models/agent";
 import type { AgentSession } from "@/types/models/agent-session";
 
-import { resolveSlots, type ResolvedSlot } from "./resolve-slots";
+import { choosePanelState, resolveSlots, type ResolvedSlot } from "./resolve-slots";
 import { ArtifactViewer, type ViewerStatus } from "./viewer-client";
 
 export const dynamic = "force-dynamic";
@@ -133,41 +133,31 @@ async function loadPanelData(
     const slots = resolveSlots(stored, agents);
     if (slots.length === 0) return NO_PANEL;
 
-    const addressed = url.agent
-      ? (slots.find((slot) => slot.key === url.agent) ?? null)
-      : null;
-    if (!url.session) {
-      return { ...NO_PANEL, slots, initialSlotKey: addressed?.key ?? null };
+    // Only when the URL names one — a page without `?session=` must not pay
+    // for a session query.
+    let session: AgentSession | null = null;
+    if (url.session) {
+      const sessionData = await fetchGraphQLServerSide(
+        GET_AGENT_SESSION_BY_ID.loc?.source.body || "",
+        { id: url.session },
+      );
+      // Also RBAC-scoped (resolvers/index.ts applies access control to every
+      // `*ById`), so a session belonging to another user comes back null and
+      // the panel opens a new chat instead — the first half of "never render
+      // someone else's conversation". The second half (the user's own
+      // session, but another agent's) is choosePanelState's `keep`.
+      session = (sessionData?.agent_sessionById ?? null) as AgentSession | null;
     }
 
-    const sessionData = await fetchGraphQLServerSide(
-      GET_AGENT_SESSION_BY_ID.loc?.source.body || "",
-      { id: url.session },
-    );
-    // Also RBAC-scoped (resolvers/index.ts applies access control to every
-    // `*ById`), so a session belonging to another user comes back null and
-    // the panel opens a new chat instead — the first half of "never render
-    // someone else's conversation".
-    const session = (sessionData?.agent_sessionById ?? null) as AgentSession | null;
-    const owner = session
-      ? (slots.find((slot) => slot.agent.id === session.agent) ?? null)
-      : null;
-    // A history-rail row and the lazy session create both land on
-    // `?session=<id>` with no `?agent=` — every session in the panel lives at
-    // the same URL — so when `?agent=` is absent the slot is found from the
-    // session's own agent. That is what makes a reload of that URL reopen the
-    // panel where it was.
-    const active = url.agent ? addressed : owner;
-    // The second half: the session is kept only when its agent is the one the
-    // addressed slot points at. `?agent=analyse&session=<a review session>`
-    // opens the analyst with a new chat. The viewer re-checks this against the
-    // slot the user actually has open, which is the case this side cannot see.
-    const keep = session !== null && owner !== null && owner.key === active?.key;
+    const { initialSlotKey, keep } = choosePanelState({ slots, session, urlAgent: url.agent });
     return {
       slots,
-      initialSlotKey: active?.key ?? null,
+      initialSlotKey,
       initialSession: keep ? session : null,
-      initialMessages: keep ? await loadSessionMessages(url.session) : [],
+      // Fetched only once the session is known to be one this viewer will be
+      // shown: a conversation that is going to be discarded must not be
+      // loaded into the page's payload at all.
+      initialMessages: keep && url.session ? await loadSessionMessages(url.session) : [],
     };
   } catch {
     return NO_PANEL;

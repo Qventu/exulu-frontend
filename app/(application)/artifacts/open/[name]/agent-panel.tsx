@@ -97,12 +97,28 @@ export interface AgentPanelProps {
   open: boolean;
   onClose: () => void;
   /**
-   * The width in px this panel takes AWAY from the artifact, reported on mount
-   * and on every resize: the dragged panel width when docked, the thin edge
-   * when collapsed, and 0 below `lg` where the panel overlays instead. The
-   * host turns it into the artifact's own viewport width for the channel. A
-   * closed panel reports nothing (it is unmounted) — the host knows it closed
-   * it.
+   * Called on mount and on every resize with the width in px THIS PANEL
+   * occupies: the dragged panel width when docked, the thin edge when
+   * collapsed, and 0 below `lg` where the panel overlays the artifact instead
+   * of squeezing it. A closed panel reports nothing (it is unmounted) — the
+   * host knows it closed it.
+   *
+   * It is **not** the number the host puts on the artifact channel. The
+   * artifact is told the width IT has (spec: "the parent posts the artifact's
+   * new viewport width over the port so the artifact can reflow itself"),
+   * which the host measures off the artifact's own box — a panel width cannot
+   * answer "do I still have room for three columns?" without the total, and
+   * the docked → Sheet breakpoint flip can change the artifact's width with
+   * no call to this at all. A host wanting the artifact's width must measure
+   * the artifact; `viewer-client.tsx` does.
+   *
+   * So what this is FOR is the call, not the number: a collapse is a change
+   * this component makes, and reporting it lets the host re-measure in the
+   * same commit instead of waiting for its own observer's next frame. The
+   * width stays in the signature because it is a measured fact about this
+   * component that its own tests assert per state (400 docked, 32 collapsed,
+   * 0 in sheet mode) — that is the proof the geometry is read correctly, and
+   * dropping the parameter would delete it.
    */
   onWidthChange: (width: number) => void;
   /**

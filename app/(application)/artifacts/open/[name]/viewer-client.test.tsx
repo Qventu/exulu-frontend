@@ -18,10 +18,14 @@ import { NextIntlClientProvider } from "next-intl";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { UIMessage } from "ai";
+
 import { UserContext } from "@/app/(application)/authenticated";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
+import type { AgentSlot } from "@/lib/api/shared-artifacts";
 import enMessages from "@/messages/en.json";
 import type { Agent } from "@/types/models/agent";
+import type { AgentSession } from "@/types/models/agent-session";
 
 // HistoryRail imports the agent switcher, which imports the Lottie player —
 // and lottie-web throws on import under jsdom (no canvas). Same mock the chat
@@ -71,9 +75,9 @@ vi.mock("@/app/(application)/chat/hooks", () => ({
 // absent from the document rather than merely absent from a count.
 vi.mock("@/app/(application)/chat/components/session-screen", () => ({
   SessionScreen: (props: {
-    agent: { id: string };
-    initialSession: { id: string } | null;
-    initialMessages: { id?: string; text?: string }[];
+    agent: Agent;
+    initialSession: AgentSession | null;
+    initialMessages: UIMessage[];
   }) => (
     <div
       data-testid="session-screen"
@@ -81,8 +85,10 @@ vi.mock("@/app/(application)/chat/components/session-screen", () => ({
       data-session-id={props.initialSession?.id ?? "(none)"}
       data-message-count={String(props.initialMessages.length)}
     >
-      {props.initialMessages.map((message, index) => (
-        <span key={message.id ?? index}>{message.text}</span>
+      {props.initialMessages.map((message) => (
+        <span key={message.id}>
+          {message.parts.map((part) => (part.type === "text" ? part.text : "")).join("")}
+        </span>
       ))}
     </div>
   ),
@@ -100,7 +106,7 @@ vi.mock("@/app/artifacts/[artifact_name]/artifact-frame", () => ({
   ),
 }));
 
-import { resolveSlots, type ResolvedSlot } from "./resolve-slots";
+import { choosePanelState, resolveSlots, type ResolvedSlot } from "./resolve-slots";
 import { ArtifactViewer, type ArtifactViewerProps } from "./viewer-client";
 
 const agent = (id: string, name: string): Agent => ({ id, name, type: "agent" });
@@ -111,8 +117,14 @@ const REVIEWER = agent("agent-2", "Deal Reviewer");
 const SLOT_ANALYSE: ResolvedSlot = { key: "analyse", label: ANALYST.name, agent: ANALYST };
 const SLOT_REVIEW: ResolvedSlot = { key: "review", label: REVIEWER.name, agent: REVIEWER };
 
-/** A session of REVIEWER's, with a message whose text must never be rendered beside ANALYST. */
-const REVIEWER_SESSION = {
+/**
+ * Declared as the production types rather than cast: the comparison under
+ * test is `initialSession.agent === activeSlot.agent.id`, and `types/models/`
+ * is hand-maintained until codegen lands — so these are exactly the shapes
+ * that drift. Typed, a rename on either side fails the typecheck instead of
+ * the product.
+ */
+const REVIEWER_SESSION: AgentSession = {
   id: "session-of-agent-2",
   title: "Deal review",
   agent: REVIEWER.id,
@@ -124,10 +136,16 @@ const REVIEWER_SESSION = {
   project: "p1",
   session_items: [],
 };
-const FOREIGN_MESSAGE = { id: "m1", text: "Reviewer conversation body" };
+const ANALYST_SESSION: AgentSession = { ...REVIEWER_SESSION, id: "session-of-agent-1", agent: ANALYST.id };
 
-const ANALYST_SESSION = { ...REVIEWER_SESSION, id: "session-of-agent-1", agent: ANALYST.id };
-const OWN_MESSAGE = { id: "m2", text: "Analyst conversation body" };
+const message = (id: string, text: string): UIMessage => ({
+  id,
+  role: "assistant",
+  parts: [{ type: "text", text }],
+});
+/** Must never be rendered beside ANALYST. */
+const FOREIGN_MESSAGE = message("m1", "Reviewer conversation body");
+const OWN_MESSAGE = message("m2", "Analyst conversation body");
 
 const CTA = "agent-cta";
 
@@ -383,7 +401,7 @@ describe("ArtifactViewer panel URL state", () => {
   });
 
   test("closing the panel takes its state back out of the URL", async () => {
-    show({ slots: [SLOT_ANALYSE], initialSlotKey: "analyse", initialSession: ANALYST_SESSION as never });
+    show({ slots: [SLOT_ANALYSE], initialSlotKey: "analyse", initialSession: ANALYST_SESSION });
     await panelScreen();
     expect(window.location.search).not.toBe("");
 
@@ -396,8 +414,8 @@ describe("ArtifactViewer panel URL state", () => {
     show({
       slots: [SLOT_ANALYSE, SLOT_REVIEW],
       initialSlotKey: "analyse",
-      initialSession: ANALYST_SESSION as never,
-      initialMessages: [OWN_MESSAGE] as never,
+      initialSession: ANALYST_SESSION,
+      initialMessages: [OWN_MESSAGE],
     });
     await panelScreen();
 
@@ -412,8 +430,8 @@ describe("ArtifactViewer panel URL state", () => {
     show({
       slots: [SLOT_ANALYSE, SLOT_REVIEW],
       initialSlotKey: "analyse",
-      initialSession: ANALYST_SESSION as never,
-      initialMessages: [OWN_MESSAGE] as never,
+      initialSession: ANALYST_SESSION,
+      initialMessages: [OWN_MESSAGE],
     });
 
     const screenEl = await panelScreen();
@@ -430,8 +448,8 @@ describe("ArtifactViewer panel URL state", () => {
     show({
       slots: [SLOT_ANALYSE, SLOT_REVIEW],
       initialSlotKey: "analyse",
-      initialSession: REVIEWER_SESSION as never,
-      initialMessages: [FOREIGN_MESSAGE] as never,
+      initialSession: REVIEWER_SESSION,
+      initialMessages: [FOREIGN_MESSAGE],
     });
 
     const screenEl = await panelScreen();
@@ -448,8 +466,8 @@ describe("ArtifactViewer panel URL state", () => {
     show({
       slots: [SLOT_ANALYSE, SLOT_REVIEW],
       initialSlotKey: "analyse",
-      initialSession: ANALYST_SESSION as never,
-      initialMessages: [OWN_MESSAGE] as never,
+      initialSession: ANALYST_SESSION,
+      initialMessages: [OWN_MESSAGE],
     });
 
     await panelScreen();
@@ -563,12 +581,81 @@ describe("resolveSlots", () => {
 
   test("a malformed stored slot is dropped rather than rendered", () => {
     // The column is json written by an older client; a row that predates
-    // validation must degrade, not crash the page.
-    expect(
-      resolveSlots(
-        [{ key: "", agentId: ANALYST.id }, { key: "ok", agentId: "" }] as never,
-        [ANALYST],
-      ),
-    ).toEqual([]);
+    // validation must degrade, not crash the page. Cast because the point is
+    // input that is NOT a valid AgentSlot.
+    const malformed = [{ key: "", agentId: ANALYST.id }, { key: "ok", agentId: "" }] as AgentSlot[];
+
+    expect(resolveSlots(malformed, [ANALYST])).toEqual([]);
+  });
+});
+
+describe("choosePanelState", () => {
+  const SLOTS = [SLOT_ANALYSE, SLOT_REVIEW];
+
+  test("?agent= addresses a slot by key", () => {
+    expect(choosePanelState({ slots: SLOTS, session: null, urlAgent: "review" })).toEqual({
+      initialSlotKey: "review",
+      keep: false,
+    });
+  });
+
+  test("?agent= naming no offered slot opens nothing", () => {
+    expect(choosePanelState({ slots: SLOTS, session: null, urlAgent: "ghost" })).toEqual({
+      initialSlotKey: null,
+      keep: false,
+    });
+  });
+
+  test("a session alone finds its own slot, so a reload of ?session= reopens the panel", () => {
+    // The history rail's rows and the lazy session create both land on
+    // `?session=<id>` with no `?agent=`.
+    expect(choosePanelState({ slots: SLOTS, session: ANALYST_SESSION, urlAgent: undefined })).toEqual({
+      initialSlotKey: "analyse",
+      keep: true,
+    });
+  });
+
+  test("a session of another agent is not kept, and the addressed slot still opens", () => {
+    // Review Focus 4: a new chat on the slot the URL asked for, never the
+    // other agent's conversation.
+    expect(choosePanelState({ slots: SLOTS, session: REVIEWER_SESSION, urlAgent: "analyse" })).toEqual({
+      initialSlotKey: "analyse",
+      keep: false,
+    });
+  });
+
+  test("a session is kept when another slot points at the same agent", () => {
+    // Two slots may legitimately share one agent — the assignment UI rejects
+    // a duplicate KEY, not a duplicate agent. Comparing slot keys would find
+    // "deep" as the session's owner, decide it is not "analyse", and throw
+    // away the user's own conversation. The predicate is agent identity.
+    const deep: ResolvedSlot = { key: "deep", label: ANALYST.name, agent: ANALYST };
+
+    expect(choosePanelState({ slots: [deep, SLOT_ANALYSE], session: ANALYST_SESSION, urlAgent: "analyse" })).toEqual({
+      initialSlotKey: "analyse",
+      keep: true,
+    });
+  });
+
+  test("a session whose agent has no slot at all opens nothing", () => {
+    expect(choosePanelState({ slots: [SLOT_REVIEW], session: ANALYST_SESSION, urlAgent: undefined })).toEqual({
+      initialSlotKey: null,
+      keep: false,
+    });
+  });
+
+  test("a session that did not load leaves the addressed slot on a new chat", () => {
+    // Another user's session comes back null from the RBAC-scoped query.
+    expect(choosePanelState({ slots: SLOTS, session: null, urlAgent: "analyse" })).toEqual({
+      initialSlotKey: "analyse",
+      keep: false,
+    });
+  });
+
+  test("nothing in the URL opens nothing", () => {
+    expect(choosePanelState({ slots: SLOTS, session: null, urlAgent: undefined })).toEqual({
+      initialSlotKey: null,
+      keep: false,
+    });
   });
 });
