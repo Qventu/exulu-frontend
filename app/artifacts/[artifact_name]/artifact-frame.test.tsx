@@ -76,6 +76,23 @@ const request = (source: MessageEventSource | null, v: number = 1) =>
 /** Port delivery is queued, never synchronous — let the queue drain. */
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
+/** The frame's own genuine load event — never a synthesised one. */
+const loadOnce = (frame: HTMLIFrameElement) =>
+  new Promise<void>((resolve) => frame.addEventListener("load", () => resolve(), { once: true }));
+
+/**
+ * Drains the loop long enough to catch a message that should not arrive.
+ *
+ * A retired port is answered with silence by design, so assertions about one
+ * have no in-band barrier to wait on and have to settle instead. Every test
+ * that uses this first exercises the same path on the *live* port as a
+ * positive control, which both proves the path works and shows how few turns
+ * it actually needs — far fewer than this.
+ */
+const settle = async (turns = 40) => {
+  for (let turn = 0; turn < turns; turn += 1) await flush();
+};
+
 /**
  * Resolves on the first port message of a given type.
  *
@@ -668,9 +685,7 @@ describe("ArtifactFrame", () => {
     stubFetch();
     const panel = { slots: SLOTS, onOpenRequest: vi.fn(), viewport: { width: 0, open: false } };
     const { frame, rerenderWith } = renderFrame(true, panel);
-    const loaded = new Promise<void>((resolve) =>
-      frame.addEventListener("load", () => resolve(), { once: true }),
-    );
+    const loaded = loadOnce(frame);
     const { ofType, until } = handshake(frame);
     await until("exulu:identity:grant");
     const seeded = ofType("exulu:panel:viewport").length;
@@ -687,30 +702,85 @@ describe("ArtifactFrame", () => {
     stubFetch();
     const panel = { slots: SLOTS, onOpenRequest: vi.fn(), viewport: { width: 0, open: false } };
     const { frame, rerenderWith } = renderFrame(true, panel);
-    const loaded = new Promise<void>((resolve) =>
-      frame.addEventListener("load", () => resolve(), { once: true }),
-    );
+    const loaded = loadOnce(frame);
+    const { ofType, until } = handshake(frame);
+    await until("exulu:identity:grant");
+    await loaded; // this document's own load
+
+    // Positive control: the live document's port is receiving (the seed plus
+    // this change).
+    rerenderWith({ ...panel, viewport: { width: 420, open: true } });
+    expect(await until("exulu:panel:viewport", 2)).toHaveLength(2);
+
+    // A self-navigation. The old port2 can outlive the document that was
+    // handed it (allow-popups is on), so host state — slot keys, viewport,
+    // progress — must stop flowing to a finished load's port.
+    fireEvent.load(frame);
+    rerenderWith({ ...panel, viewport: { width: 500, open: true } });
+    rerenderWith({ ...panel, viewport: { width: 500, open: true }, progressNonce: 1 });
+    await settle();
+
+    expect(ofType("exulu:panel:viewport")).toHaveLength(2);
+    expect(ofType("exulu:session:progress")).toEqual([]);
+  });
+
+  /* ---------------------------------------------------------------------
+   * A retired port is served nothing at all — not host state, not a token,
+   * not a panel open. Pre-existing for the refresh branch (the identity
+   * flow predates this work), fixed here because it is one line in the same
+   * handler as the new code and it is the credential that is at stake.
+   * ------------------------------------------------------------------ */
+
+  test("a port retired by a navigation gets no fresh grant, and no token is minted for it", async () => {
+    const fetchMock = stubFetch();
+    const { frame } = renderFrame(true);
+    const loaded = loadOnce(frame);
     const { port, ofType, until } = handshake(frame);
     await until("exulu:identity:grant");
-    const seeded = ofType("exulu:panel:viewport").length;
-
     await loaded; // this document's own load
-    fireEvent.load(frame); // a self-navigation: the port is retired
+    expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    // The old port2 can outlive the document that was handed it
-    // (allow-popups is on), so host state — slot keys, viewport, progress —
-    // must stop flowing to a finished load's port.
-    rerenderWith({ ...panel, viewport: { width: 420, open: true } });
-    rerenderWith({ ...panel, viewport: { width: 420, open: true }, progressNonce: 1 });
+    // Positive control: while this document is live, a refresh is answered.
+    port.postMessage({ type: "exulu:identity:refresh", v: 1 });
+    expect(await until("exulu:identity:grant", 2)).toHaveLength(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
 
-    // Barrier: an open request is answered on the port it arrived on, not via
-    // the retired portRef, so its ack still comes back and proves the queue
-    // drained — anything the re-renders had queued would have arrived first.
+    // The artifact navigates itself. Its port2 may live on in a popup it was
+    // transferred to before navigating — a document the host never vetted —
+    // and a short-lived grant must not become a renewable one in its hands.
+    fireEvent.load(frame);
+
+    port.postMessage({ type: "exulu:identity:refresh", v: 1 });
+    await settle();
+
+    // The point is that no token is minted at all, not that one is minted and
+    // discarded: the identity route is never called for this port.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(ofType("exulu:identity:grant")).toHaveLength(2);
+    // Not even a denial: the document that could act on one is gone.
+    expect(ofType("exulu:identity:denied")).toEqual([]);
+  });
+
+  test("a port retired by a navigation cannot open the panel", async () => {
+    stubFetch();
+    const onOpenRequest = vi.fn();
+    const { frame } = renderFrame(true, { slots: SLOTS, onOpenRequest });
+    const loaded = loadOnce(frame);
+    const { port, ofType, until } = handshake(frame);
+    await until("exulu:identity:grant");
+    await loaded;
+
+    // Positive control: the live document's request is accepted.
     port.postMessage(openRequest("analyse"));
     expect(await until("exulu:panel:open:ack")).toHaveLength(1);
+    expect(onOpenRequest).toHaveBeenCalledTimes(1);
 
-    expect(ofType("exulu:panel:viewport")).toHaveLength(seeded);
-    expect(ofType("exulu:session:progress")).toEqual([]);
+    fireEvent.load(frame); // a self-navigation: the port is retired
+    port.postMessage(openRequest("analyse", { prompt: "from a stale popup" }));
+    await settle();
+
+    expect(onOpenRequest).toHaveBeenCalledTimes(1);
+    expect(ofType("exulu:panel:open:ack")).toHaveLength(1);
   });
 
   // The port may already be closed — the frame unmounted, or navigated and

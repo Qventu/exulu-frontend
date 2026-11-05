@@ -252,6 +252,19 @@ export function ArtifactFrame({
       const channel = new MessageChannel();
       ports.push(channel.port1);
       channel.port1.onmessage = async (portEvent: MessageEvent) => {
+        // Nothing is served to a port that is no longer the live document's.
+        // A navigation retires the port (see portSawLoadRef) while its port2
+        // can live on in, say, a popup the artifact transferred it to before
+        // navigating — a document the host never vetted. Such a port must not
+        // be able to mint a fresh token through the refresh branch, which is
+        // why this sits above the dispatch: `fetchGrant()` is never reached,
+        // so no token is minted at all rather than minted and then dropped.
+        // It must not be able to drive a panel open either. One gate for the
+        // whole handler, so a later branch cannot forget it; the answer to a
+        // retired port is silence, not a denial, because the document that
+        // could act on one is gone. Unmount is covered separately — cleanup
+        // closes the ports — so this covers navigation without unmount.
+        if (portRef.current !== channel.port1) return;
         // Two protocols share this port, so dispatch by shape — and try the
         // panel channel first, since the identity branch below rejects
         // anything not stamped v: 1 and a panel message could never survive
