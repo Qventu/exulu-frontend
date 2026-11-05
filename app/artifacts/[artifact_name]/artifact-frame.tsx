@@ -321,6 +321,16 @@ export function ArtifactFrame({
       void (async () => {
         const grant = await fetchGrant();
         if (cancelled) return;
+        // The third and last site that posts to this port, gated like the
+        // handler above — and the one that reaches the original threat this
+        // whole design exists for. An artifact can request identity and
+        // navigate itself to an attacker-controlled document mid-handshake;
+        // the port-first handoff defeats that because a port dies with the
+        // document that received it, but an artifact that passed `port2` to a
+        // popup first keeps it alive, and this in-flight grant would post the
+        // token straight into it. A gate covering only some posting sites is
+        // worse than none, because it reads as complete.
+        if (portRef.current !== channel.port1) return;
         channel.port1.postMessage(grant ?? denied("unavailable"));
       })();
     };

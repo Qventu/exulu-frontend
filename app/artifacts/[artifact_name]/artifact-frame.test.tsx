@@ -761,6 +761,58 @@ describe("ArtifactFrame", () => {
     expect(ofType("exulu:identity:denied")).toEqual([]);
   });
 
+  // Review Focus / the original threat: the file's comment describes an
+  // artifact requesting identity and then navigating itself to an
+  // attacker-controlled document. The port-first handoff defeats that because
+  // a port dies with the document that received it — unless the artifact
+  // passed `port2` to a popup first, which keeps it alive while the first
+  // fetch is still in flight. That in-flight grant is the third posting site.
+  test("a navigation while the first fetch is in flight delivers no grant to the retired port", async () => {
+    // Hold the identity route open so the navigation can land mid-handshake.
+    const releases: ((value: any) => void)[] = [];
+    const fetchMock = vi.fn(() => new Promise((resolve) => releases.push(resolve)));
+    vi.stubGlobal("fetch", fetchMock);
+    const ok = () => ({ ok: true, status: 200, json: async () => GRANT_BODY });
+
+    const { frame } = renderFrame(true);
+    const loaded = loadOnce(frame);
+    const { post, received, ofType } = handshake(frame);
+    await loaded; // this document's own load; its grant is still in flight
+
+    fireEvent.load(frame); // the artifact navigates itself mid-handshake
+
+    // The new document asks, as it must (the load reset the one-answer-per-
+    // load guard), and becomes the live port.
+    window.dispatchEvent(request(frame.contentWindow));
+    const live = (post.mock.calls[1]![2] as Transferable[])[0] as MessagePort;
+    const liveReceived: any[] = [];
+    live.onmessage = (event) => liveReceived.push(event.data);
+    live.start();
+
+    // Resolve the retired port's fetch FIRST, then the live one's. Its
+    // continuation is therefore queued first, so the live grant arriving
+    // proves the retired one's continuation has already run and chose not to
+    // post — this negative has a real barrier, not just a settle.
+    expect(releases).toHaveLength(2);
+    releases[0]!(ok());
+    releases[1]!(ok());
+
+    for (let turn = 0; turn < 200 && liveReceived.length === 0; turn += 1) await flush();
+
+    // Positive control: the live document's in-flight grant is delivered.
+    expect(liveReceived.find((m) => m.type === "exulu:identity:grant")).toMatchObject({
+      type: "exulu:identity:grant",
+      v: 1,
+      token: "jwt-abc",
+    });
+    // The retired port gets no credential — and no denial either.
+    expect(ofType("exulu:identity:grant")).toEqual([]);
+    expect(ofType("exulu:identity:denied")).toEqual([]);
+    // Nothing carrying the credential ever reached it, under any type.
+    expect(received.find((m) => JSON.stringify(m).includes("jwt-abc"))).toBeUndefined();
+    live.close();
+  });
+
   test("a port retired by a navigation cannot open the panel", async () => {
     stubFetch();
     const onOpenRequest = vi.fn();
