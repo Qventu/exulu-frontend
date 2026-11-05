@@ -5854,6 +5854,8 @@
     "agentSlotAdd": "Add",
     "agentSlotRemove": "Remove {key}",
     "agentSlotDuplicateKey": "That key is already assigned to an agent.",
+    "panelCollapse": "Collapse agent panel",
+    "panelExpand": "Expand agent panel",
     "sharingSave": "Save",
     "sharingSaved": "Sharing updated",
     "sharingFailed": "Could not update sharing",

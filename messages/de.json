@@ -5854,6 +5854,8 @@
     "agentSlotAdd": "Hinzufügen",
     "agentSlotRemove": "{key} entfernen",
     "agentSlotDuplicateKey": "Dieser Schlüssel ist bereits einem Agenten zugewiesen.",
+    "panelCollapse": "Agenten-Panel einklappen",
+    "panelExpand": "Agenten-Panel ausklappen",
     "sharingSave": "Speichern",
     "sharingSaved": "Freigabe aktualisiert",
     "sharingFailed": "Freigabe konnte nicht aktualisiert werden",
