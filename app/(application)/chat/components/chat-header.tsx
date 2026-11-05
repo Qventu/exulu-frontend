@@ -82,7 +82,7 @@ const CHIP =
 export function ChatHeader({ controller }: ChatHeaderProps) {
   const t = useTranslations("chat");
   const router = useRouter();
-  const { toggleHistory, startNewChat } = useChatShell();
+  const { toggleHistory, startNewChat, newChatPath } = useChatShell();
   const { user } = React.useContext(UserContext);
   const {
     agent,
@@ -96,6 +96,11 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
     agent.id,
   );
   const { models } = useAvailableModels();
+  // Absent from the context = internal chat, where this stays the literal it
+  // has always been. The artifact panel supplies its own so a new chat lands
+  // beside the artifact instead of navigating away from it (see
+  // ChatShellContextValue.newChatPath).
+  const newChatHref = newChatPath ?? `/chat/${agent.id}/new`;
 
   // ── Header-local overlay state ────────────────────────────────────────────
   const [shareOpen, setShareOpen] = React.useState(false);
@@ -423,7 +428,7 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
                   // Push alone no-ops after a lazy session create (stale
                   // router tree — see ChatShellContextValue.startNewChat).
                   startNewChat();
-                  router.push(`/chat/${agent.id}/new`);
+                  router.push(newChatHref);
                 }}
                 className="size-11 sm:hidden"
               >
@@ -498,7 +503,7 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
             throw new Error("delete-failed");
           }
           startNewChat();
-          router.push(`/chat/${agent.id}/new`);
+          router.push(newChatHref);
         }}
       />
     </TooltipProvider>

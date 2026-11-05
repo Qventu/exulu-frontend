@@ -57,6 +57,16 @@ export interface ChatShellContextValue {
   newChatNonce: number;
   startNewChat: () => void;
   /**
+   * Where a new-chat action should NAVIGATE to, as opposed to startNewChat's
+   * remount signal. Omitted by internal chat, which keeps the literal
+   * `/chat/<agent>/new` at every call site; a host that mounts the chat
+   * somewhere else (the artifact panel, on /artifacts/open/<name>) supplies
+   * its own, or the header's new-chat button would navigate the user out of
+   * that host. `HistoryRailPaths.newChat` is the same parameter for the rail;
+   * this is the header catching up.
+   */
+  newChatPath?: string;
+  /**
    * hooks.ts createSession marks the lazy-create window (mutation in flight,
    * URL swap not yet landed) so startNewChat can treat "URL still /new but a
    * session is being born" as needing the bump too. Returns an end callback

@@ -67,14 +67,28 @@ vi.mock("@/app/(application)/chat/hooks", () => ({
   }),
 }));
 
-vi.mock("@/app/(application)/chat/components/session-screen", () => ({
-  SessionScreen: (props: { sessionPath?: (id: string) => string }) => (
-    <div
-      data-testid="session-screen"
-      data-session-path={props.sessionPath?.("session-9") ?? "(none)"}
-    />
-  ),
-}));
+// Stands in for the chat surface AND probes the shell context from where the
+// real SessionScreen's subtree reads it — ChatHeader's new-chat destination is
+// delivered that way, not by prop. The context module is pulled in with a
+// dynamic import because a static one would trip the cross-feature tier rule
+// (agent-panel.tsx carries a narrow, documented disable for its own three
+// imports; a test has no business widening that).
+vi.mock("@/app/(application)/chat/components/session-screen", async () => {
+  const { useChatShell } =
+    await import("@/app/(application)/chat/components/chat-shell");
+  return {
+    SessionScreen: (props: { sessionPath?: (id: string) => string }) => {
+      const shell = useChatShell();
+      return (
+        <div
+          data-testid="session-screen"
+          data-session-path={props.sessionPath?.("session-9") ?? "(none)"}
+          data-new-chat-path={shell.newChatPath ?? "(none)"}
+        />
+      );
+    },
+  };
+});
 
 import { AgentPanel } from "./agent-panel";
 
@@ -208,6 +222,19 @@ describe("AgentPanel", () => {
     expect(
       screen.getByTestId("session-screen").getAttribute("data-session-path"),
     ).toBe("/artifacts/open/pitch?session=session-9");
+  });
+
+  test("sends the header's new chat to the artifact URL too", () => {
+    // ChatHeader navigates by itself (its new-chat button, and the return to a
+    // fresh chat after a delete); it reads the destination off the shell
+    // context, so the panel has to put it there or the user is navigated off
+    // the artifact page. See chat/components/chat-header-new-chat.test.tsx for
+    // the header's own half of this contract.
+    show();
+
+    expect(
+      screen.getByTestId("session-screen").getAttribute("data-new-chat-path"),
+    ).toBe("/artifacts/open/pitch");
   });
 
   test("reports its width on mount and on resize", () => {

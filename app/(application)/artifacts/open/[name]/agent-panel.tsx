@@ -211,6 +211,10 @@ function MountedAgentPanel({
       toggleHistory,
       newChatNonce,
       startNewChat,
+      // ChatHeader navigates on its own (its new-chat button, and the
+      // after-delete return to a fresh chat); without this it would push
+      // /chat/<agent>/new and take the user off the artifact page.
+      newChatPath: basePath,
       beginLazyCreate,
     }),
     [
@@ -220,6 +224,7 @@ function MountedAgentPanel({
       toggleHistory,
       newChatNonce,
       startNewChat,
+      basePath,
       beginLazyCreate,
     ],
   );
