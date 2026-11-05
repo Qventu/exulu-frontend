@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import type { Agent } from "@/types/models/agent";
 import type { AgentSession } from "@/types/models/agent-session";
 import { useChatSession, type ChatSessionController } from "../hooks";
+import { useTurnProgress } from "../use-turn-progress";
 import { CHAT_COLUMN, useChatShell } from "./chat-shell";
 import { ChatHeader } from "./chat-header";
 import { Composer } from "./composer";
@@ -73,6 +74,16 @@ export interface SessionScreenProps {
    * note in agent-panel.tsx for why that is safe within one commit.
    */
   onController?: (controller: ChatSessionController) => void;
+  /**
+   * Fires once per actual tool-completion or turn-completion transition (see
+   * `useTurnProgress`), never on a bare re-render. `AgentPanel` is the only
+   * caller today — it has no reach into this controller to derive the signal
+   * itself (see `onController`'s doc comment for why), so this component
+   * derives it HERE, over the one controller instance it owns, and relays it
+   * up. Omit for a host with nothing to tell (every other `SessionScreen`
+   * caller).
+   */
+  onProgress?: (reason: "tool" | "turn") => void;
 }
 
 export function SessionScreen(props: SessionScreenProps) {
@@ -104,6 +115,7 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
   beginLazyCreate,
   sessionPath,
   onController,
+  onProgress,
 }: SessionScreenProps & { beginLazyCreate: () => () => void }) {
   const t = useTranslations("chat");
   const controller = useChatSession({
@@ -122,6 +134,24 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
   React.useEffect(() => {
     onController?.(controller);
   }, [controller, onController]);
+
+  // Task 10: relay tool/turn progress to a host that cannot derive it itself
+  // (see onProgress's doc comment). `useTurnProgress` only bumps its own
+  // `nonce` on a REAL transition, never on a bare re-render — but this effect
+  // still runs once on mount regardless, the same as the `onController` one
+  // above. Without the ref below, that mount run would call `onProgress`
+  // with nonce 0's reason even though nothing has happened yet, and the
+  // viewer counts every call into its own nonce (see viewer-client.tsx) —
+  // one spurious call here would announce one fabricated event to the
+  // artifact. The ref seeds to the hook's own starting value, so only a
+  // nonce that has actually moved since the last commit calls out.
+  const progress = useTurnProgress(controller);
+  const lastProgressNonceRef = React.useRef(progress.nonce);
+  React.useEffect(() => {
+    if (lastProgressNonceRef.current === progress.nonce) return;
+    lastProgressNonceRef.current = progress.nonce;
+    onProgress?.(progress.reason);
+  }, [progress.nonce, progress.reason, onProgress]);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">

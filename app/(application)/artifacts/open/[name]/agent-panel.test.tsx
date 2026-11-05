@@ -108,6 +108,7 @@ vi.mock("@/app/(application)/chat/components/session-screen", async () => {
     SessionScreen: (props: {
       sessionPath?: (id: string) => string;
       onController?: (controller: typeof fakeController) => void;
+      onProgress?: (reason: "tool" | "turn") => void;
     }) => {
       const shell = useChatShell();
       React.useEffect(() => {
@@ -118,6 +119,13 @@ vi.mock("@/app/(application)/chat/components/session-screen", async () => {
           data-testid="session-screen"
           data-session-path={props.sessionPath?.("session-9") ?? "(none)"}
           data-new-chat-path={shell.newChatPath ?? "(none)"}
+          // Task 10: the real SessionScreenInner derives the bump itself
+          // and calls this; this stub has no controller to derive it from,
+          // so it only proves AgentPanel handed the SAME function down —
+          // the one concrete thing this host is responsible for getting
+          // right (a dropped forward is a silent no-op, not a type error,
+          // because the prop is optional on both ends).
+          data-has-on-progress={props.onProgress ? "yes" : "no"}
         />
       );
     },
@@ -459,6 +467,16 @@ describe("AgentPanel", () => {
     const { props } = show();
 
     expect(props.onProgress).not.toHaveBeenCalled();
+  });
+
+  test("forwards onProgress to SessionScreen, which owns the actual derivation", () => {
+    // SessionScreenInner (the real component, stubbed here) is the one that
+    // calls useTurnProgress over its own controller and invokes this — this
+    // host's only job is to hand down the SAME callback it was given, the
+    // same way it already does for sessionPath and onController.
+    const { getByTestId } = show();
+
+    expect(getByTestId("session-screen").dataset.hasOnProgress).toBe("yes");
   });
 
   describe("openRequest (task 9: apply against the mounted controller)", () => {

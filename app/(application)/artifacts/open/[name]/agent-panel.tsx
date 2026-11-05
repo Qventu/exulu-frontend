@@ -133,8 +133,13 @@ export interface AgentPanelProps {
   /**
    * Turn/tool progress for the artifact's channel. Declared here because the
    * chat controller exists ONLY inside this component — `SessionScreen`
-   * instantiates it and the viewer page cannot reach it. Task 10 owns the hook
-   * that fires it; nothing calls it yet.
+   * instantiates it and the viewer page cannot reach it. But the derivation
+   * itself (`useTurnProgress`) lives in the chat feature and runs inside
+   * `SessionScreenInner`, over the one controller instance IT owns — this
+   * component has no reach into that controller either (see
+   * `controllerRef`'s doc comment: a ref, imperative, read-only-on-demand,
+   * not a render-time value a derivation hook could run over). So this is a
+   * plain pass-through, straight to `SessionScreen`'s own `onProgress` prop.
    */
   onProgress: (reason: "tool" | "turn") => void;
   /**
@@ -186,9 +191,6 @@ function MountedAgentPanel({
   artifactName,
   onClose,
   onWidthChange,
-  // Accepted and deliberately unwired: Task 10 adds the emission (see the
-  // prop's doc comment). Taking it now means the host can pass it from the
-  // start and that wiring is a change inside this component only.
   onProgress,
   openRequest,
   onRequestApplied,
@@ -496,6 +498,10 @@ function MountedAgentPanel({
                 // task 9: the only way this component ever gets a handle on
                 // the controller it has no other reach into.
                 onController={handleController}
+                // task 10: SessionScreenInner derives the bump itself (it
+                // owns the controller useTurnProgress needs); this is a
+                // straight relay to the viewer's progressNonce counter.
+                onProgress={onProgress}
               />
             </div>
           </SidePanel>
