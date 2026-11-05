@@ -44,7 +44,7 @@ import { useLanguage } from "@/components/shell/language-provider";
 import { getPresignedUrl } from "@/components/primitives/file-picker";
 import { getToken } from "@/lib/api/client";
 import { getSessionClaimChecks, postClaimCheck, type ClaimCheckRequest } from "@/lib/api/claim-check";
-import { sessionFilesApi } from "@/lib/api/session-files";
+import { MAX_ADOPT_KEYS, sessionFilesApi } from "@/lib/api/session-files";
 import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
 import type { Agent } from "@/types/models/agent";
 import type { AgentSession } from "@/types/models/agent-session";
@@ -185,7 +185,17 @@ export interface ChatSessionController {
   suggestions: string[];
   // session files panel (items 64/79)
   filesPanelOpen: boolean;
-  setFilesPanelOpen: (open: boolean) => Promise<void>;
+  /**
+   * `persist` (default `true`) mirrors the open/closed state to the stable
+   * "chat.sessionFilesPanel.open" localStorage key, which is this user's
+   * GLOBAL default for every future chat. That default must be the user's
+   * own choice, not a side effect of something else opening the panel on
+   * their behalf — pass `false` for a transient open (the artifact-panel
+   * open-request flow, task 9: an artifact attaching files must show them
+   * to the user without opting every unrelated chat into "files panel open
+   * by default" forever).
+   */
+  setFilesPanelOpen: (open: boolean, persist?: boolean) => Promise<void>;
   sessionFilesCount: number | null;
   /**
    * Adopt already-uploaded S3 keys (the artifact-panel attach flow: an
@@ -1134,7 +1144,10 @@ export function useChatSession({
     }
   }, []);
 
-  const setFilesPanelOpen = async (open: boolean): Promise<void> => {
+  const setFilesPanelOpen = async (
+    open: boolean,
+    persist: boolean = true,
+  ): Promise<void> => {
     if (open) {
       const session = await ensureSession();
       if (!session) {
@@ -1145,6 +1158,9 @@ export function useChatSession({
       }
     }
     setFilesPanelOpenState(open);
+    // See the doc comment on the controller interface's `setFilesPanelOpen`:
+    // a transient open must not become the user's new global default.
+    if (!persist) return;
     try {
       window.localStorage.setItem("chat.sessionFilesPanel.open", String(open));
     } catch {
@@ -1187,6 +1203,21 @@ export function useChatSession({
 
   // --- attach already-uploaded keys (artifact-panel open request, task 9) ----------
   const addSessionFiles = async (keys: string[]): Promise<void> => {
+    // The adopt endpoint rejects a batch containing the same key twice
+    // outright — all-or-nothing, deliberately, because the server must not
+    // guess which duplicate the caller meant. Dedupe here rather than there,
+    // mirroring addSessionItems' own existing-filter above.
+    //
+    // Checked, and deduped, BEFORE ensureSession: addSessionItems calls
+    // ensureSession first and only then discovers there is nothing fresh to
+    // pin, which — for THIS function — would eagerly create a chat session
+    // for zero files. Unreachable through applyOpenRequest today (it never
+    // calls this with an empty list), but the next direct caller would hit
+    // it, so the check moved rather than copying a mirror that has its own
+    // cost here.
+    const unique = [...new Set(keys)];
+    if (unique.length === 0) return;
+
     const session = await ensureSession();
     if (!session) {
       toast.error(t("errors.title"), {
@@ -1194,13 +1225,17 @@ export function useChatSession({
       });
       return;
     }
-    // The adopt endpoint rejects a batch containing the same key twice
-    // outright — all-or-nothing, deliberately, because the server must not
-    // guess which duplicate the caller meant. Dedupe here rather than there,
-    // mirroring addSessionItems' own existing-filter above.
-    const unique = [...new Set(keys)];
-    if (unique.length === 0) return;
-    await sessionFilesApi.adopt(session.id, unique);
+    // The server 403s the WHOLE request over MAX_ADOPT_KEYS, with no
+    // `detail` on the error body (so the generic `request()` throw only
+    // carries the status text) — chunk rather than let an artifact's
+    // attach list grow past the cap and have the caller see a bare
+    // "Forbidden" for a batch that should have mostly worked. Sequential,
+    // not Promise.all, for the same reason the backend route itself adopts
+    // sequentially: each accepted key is read whole into memory to mirror
+    // into the sandbox.
+    for (let i = 0; i < unique.length; i += MAX_ADOPT_KEYS) {
+      await sessionFilesApi.adopt(session.id, unique.slice(i, i + MAX_ADOPT_KEYS));
+    }
     await refreshFilesCount(session.id);
   };
 

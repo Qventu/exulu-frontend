@@ -31,6 +31,16 @@ export interface AdoptFilesResult {
     rejected: AdoptRejected[];
 }
 
+/**
+ * Mirrors the backend's own cap on a single adopt request
+ * (backend/src/exulu/session-file-adopt.ts, `MAX_ADOPT_KEYS`) — a batch over
+ * this gets the WHOLE request refused with a 403, not a partial copy. A
+ * caller adopting more keys than this in one go (hooks.ts addSessionFiles)
+ * must split into batches of at most this many rather than forward an
+ * oversized one and have the server reject everything.
+ */
+export const MAX_ADOPT_KEYS = 20;
+
 export const sessionFilesApi = {
     /** List files in this session's S3 folder. */
     list: async (sessionId: string): Promise<{ files: SessionFile[] }> =>

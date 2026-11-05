@@ -260,6 +260,17 @@ function NavProbe() {
   return <span data-testid="nav-open">{String(open)}</span>;
 }
 
+const wrapped = (props: ArtifactViewerProps) => (
+  <NextIntlClientProvider locale="en" messages={enMessages}>
+    <UserContext.Provider value={{ user: { id: 7 } }}>
+      <SidebarProvider>
+        <NavProbe />
+        <ArtifactViewer {...props} />
+      </SidebarProvider>
+    </UserContext.Provider>
+  </NextIntlClientProvider>
+);
+
 const show = (overrides: Partial<ArtifactViewerProps> = {}) => {
   const props: ArtifactViewerProps = {
     name: "pitch",
@@ -273,17 +284,16 @@ const show = (overrides: Partial<ArtifactViewerProps> = {}) => {
     initialMessages: [],
     ...overrides,
   };
-  const view = render(
-    <NextIntlClientProvider locale="en" messages={enMessages}>
-      <UserContext.Provider value={{ user: { id: 7 } }}>
-        <SidebarProvider>
-          <NavProbe />
-          <ArtifactViewer {...props} />
-        </SidebarProvider>
-      </UserContext.Provider>
-    </NextIntlClientProvider>,
-  );
-  return { ...view, props };
+  const view = render(wrapped(props));
+  // Re-renders the SAME tree with new props merged over the ones this call
+  // used — e.g. simulating the in-panel history rail navigating to a
+  // different `?session=`, which this page re-fetches and re-renders with
+  // server-side, WITHOUT unmounting `ArtifactViewer` itself (only the
+  // `AgentPanel` keyed on `panelSession.id` inside it remounts).
+  const rerenderWith = (next: Partial<ArtifactViewerProps>) => {
+    view.rerender(wrapped({ ...props, ...next }));
+  };
+  return { ...view, props, rerenderWith };
 };
 
 /**
@@ -638,6 +648,41 @@ describe("ArtifactViewer → openRequest wiring (task 9)", () => {
 
     // Give any (wrongly) re-queued application a chance to run before
     // asserting its absence.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(fakeController.seedInput).toHaveBeenCalledTimes(1);
+  });
+
+  test("a rail-style session change after a request has been applied does not replay it", async () => {
+    // A different door to the SAME bug: the in-panel history rail (and "New
+    // chat") navigate WITHIN this route (`?session=<id>`), which this page
+    // re-renders with a new `initialSession` prop — never unmounting
+    // `ArtifactViewer`. `panelSession` (derived from it) is in `AgentPanel`'s
+    // own key, so this alone remounts the panel, resetting its internal
+    // `appliedNonceRef` — the CTA-click guard above does not cover this path
+    // at all, since neither `chooseSlot` nor `closePanel` run here.
+    const { rerenderWith } = show({ slots: [SLOT_ANALYSE], initialSession: null });
+
+    act(() => {
+      capturedOnOpenRequest?.({
+        type: "exulu:panel:open",
+        v: 2,
+        slot: "analyse",
+        prompt: "Summarise this filing",
+      });
+    });
+    await panelScreen();
+    await waitFor(() => expect(fakeController.seedInput).toHaveBeenCalledTimes(1));
+
+    // Same slot, a DIFFERENT session of the same agent — exactly what
+    // clicking a rail row (or "New chat", landing on a fresh session once
+    // one exists) produces.
+    act(() => {
+      rerenderWith({ initialSession: ANALYST_SESSION });
+    });
+    await panelScreen();
+
     await act(async () => {
       await Promise.resolve();
     });

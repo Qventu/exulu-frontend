@@ -5858,6 +5858,7 @@
     "panelExpand": "Expand agent panel",
     "openAgentPanel": "Open an agent",
     "openAgentNamed": "Open {name} beside this artifact",
+    "openRequestFailed": "Could not prepare everything for this agent",
     "sharingSave": "Save",
     "sharingSaved": "Sharing updated",
     "sharingFailed": "Could not update sharing",

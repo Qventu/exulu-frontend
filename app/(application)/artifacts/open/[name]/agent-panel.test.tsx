@@ -29,6 +29,9 @@ import { UserContext } from "@/app/(application)/authenticated";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import enMessages from "@/messages/en.json";
 
+const toastSpies = vi.hoisted(() => ({ error: vi.fn() }));
+vi.mock("sonner", () => ({ toast: toastSpies }));
+
 // HistoryRail imports the agent switcher, which imports the Lottie player —
 // and lottie-web throws on import under jsdom (no canvas). Same mock the chat
 // feature's own component tests use.
@@ -150,6 +153,7 @@ beforeEach(() => {
   fakeController.addSessionItems.mockClear();
   fakeController.addSessionFiles.mockClear();
   fakeController.setFilesPanelOpen.mockClear();
+  toastSpies.error.mockClear();
 
   // SidebarProvider/useIsMobile and SidePanel/useMediaQuery both read
   // matchMedia, which jsdom does not implement. Desktop by default: every
@@ -231,6 +235,7 @@ const show = (overrides: Overrides = {}) => {
     onWidthChange: vi.fn(),
     onProgress: vi.fn(),
     openRequest: null,
+    onRequestApplied: vi.fn(),
     ...overrides,
   };
   const view = render(
@@ -480,7 +485,11 @@ describe("AgentPanel", () => {
       );
       await waitFor(() => {
         expect(fakeController.addSessionItems).toHaveBeenCalledWith(["ctx-1"]);
-        expect(fakeController.setFilesPanelOpen).toHaveBeenCalledWith(true);
+        // `false`: a transient open — an artifact's attach must not flip
+        // this user's GLOBAL "files panel open by default" preference for
+        // every future, unrelated chat (ChatSessionController.
+        // setFilesPanelOpen's `persist` param).
+        expect(fakeController.setFilesPanelOpen).toHaveBeenCalledWith(true, false);
         expect(fakeController.addSessionFiles).toHaveBeenCalledWith([
           "user_1/report.pdf",
         ]);
@@ -491,6 +500,45 @@ describe("AgentPanel", () => {
       show({ openRequest: null });
 
       expect(fakeController.seedInput).not.toHaveBeenCalled();
+    });
+
+    test("reports the request applied the moment dispatch is committed to, not on completion", () => {
+      // onRequestApplied is the viewer's cue to clear its own openRequest
+      // state (see AgentPanelProps' doc comment) — it must fire even while
+      // the orchestration is still in flight, so a remount that lands
+      // before it settles still finds nothing stale to replay.
+      const onRequestApplied = vi.fn();
+      fakeController.addSessionItems.mockImplementationOnce(
+        () => new Promise(() => {}), // never resolves in this test's lifetime
+      );
+
+      show({
+        onRequestApplied,
+        openRequest: {
+          nonce: 1,
+          request: { type: "exulu:panel:open", v: 2, slot: "advisor", items: ["ctx-1"] },
+        },
+      });
+
+      expect(onRequestApplied).toHaveBeenCalledTimes(1);
+    });
+
+    test("surfaces a toast when applying the request fails, instead of an unhandled rejection", async () => {
+      fakeController.addSessionItems.mockRejectedValueOnce(new Error("network error"));
+
+      show({
+        openRequest: {
+          nonce: 1,
+          request: { type: "exulu:panel:open", v: 2, slot: "advisor", items: ["ctx-1"] },
+        },
+      });
+
+      await waitFor(() =>
+        expect(toastSpies.error).toHaveBeenCalledWith(
+          enMessages.artifacts.openRequestFailed,
+          { description: "network error" },
+        ),
+      );
     });
 
     test("a second click on the ALREADY-mounted panel (new nonce) is applied again", () => {

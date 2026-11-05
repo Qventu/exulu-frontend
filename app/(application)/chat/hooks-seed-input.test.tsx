@@ -26,6 +26,8 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { DocumentNode } from "@apollo/client";
+
 import de from "@/messages/de.json";
 import { ConfigContext, type ConfigContextType } from "@/components/shell/config-context";
 import { LanguageProvider } from "@/components/shell/language-provider";
@@ -38,7 +40,11 @@ const sessionFiles = vi.hoisted(() => ({
   list: vi.fn().mockResolvedValue({ files: [] }),
   adopt: vi.fn().mockResolvedValue({ adopted: [{ key: "dest/report.pdf", name: "report.pdf" }], rejected: [] }),
 }));
-vi.mock("@/lib/api/session-files", () => ({ sessionFilesApi: sessionFiles }));
+vi.mock("@/lib/api/session-files", () => ({
+  sessionFilesApi: sessionFiles,
+  // addSessionFiles chunks by this cap (mirrors the backend's own).
+  MAX_ADOPT_KEYS: 20,
+}));
 
 vi.mock("@/lib/api/claim-check", () => ({
   postClaimCheck: vi.fn().mockResolvedValue({}),
@@ -60,6 +66,19 @@ const mutations = vi.hoisted(() => ({
   createAgentSession: vi.fn(),
 }));
 
+/**
+ * A `DocumentNode`'s first definition's operation name, if it has one.
+ * `DefinitionNode` is a union (operations, fragments, schema/type system
+ * definitions, ...) and only some members carry `name` at all, so this
+ * narrows with `in` rather than reaching for `any` on the parameter the way
+ * the pre-existing `hooks-session-path.test.tsx`/`hooks-session-catchup.
+ * test.tsx` mocks do.
+ */
+function operationName(document: DocumentNode): string {
+  const def = document.definitions[0];
+  return def && "name" in def && def.name ? def.name.value : "unknown";
+}
+
 vi.mock("@apollo/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@apollo/client")>();
   return {
@@ -72,8 +91,8 @@ vi.mock("@apollo/client", async (importOriginal) => {
       startPolling: vi.fn(),
       stopPolling: vi.fn(),
     })),
-    useMutation: vi.fn((document: any) => {
-      const name = document?.definitions?.[0]?.name?.value ?? "unknown";
+    useMutation: vi.fn((document: DocumentNode) => {
+      const name = operationName(document);
       if (name === "createAgentSession") {
         return [mutations.createAgentSession, { loading: false }];
       }
@@ -245,5 +264,33 @@ describe("useChatSession — addSessionFiles", () => {
 
     expect(sessionFiles.adopt).not.toHaveBeenCalled();
     expect(toastSpies.error).toHaveBeenCalled();
+  });
+
+  test("never calls ensureSession for an empty (post-dedupe) key list", async () => {
+    const { result } = mount();
+
+    await act(async () => {
+      await result.current.addSessionFiles([]);
+    });
+
+    expect(mutations.createAgentSession).not.toHaveBeenCalled();
+    expect(sessionFiles.adopt).not.toHaveBeenCalled();
+  });
+
+  test("chunks a batch larger than the adopt cap into multiple requests", async () => {
+    // The server 403s the WHOLE batch over MAX_ADOPT_KEYS (mocked to 20
+    // above) rather than copying the first 20 — this proves the client
+    // splits BEFORE that happens, instead of forwarding an oversized batch.
+    mutations.createAgentSession.mockResolvedValue(createdSessionResult);
+    const { result } = mount();
+    const keys = Array.from({ length: 25 }, (_, i) => `key-${i}`);
+
+    await act(async () => {
+      await result.current.addSessionFiles(keys);
+    });
+
+    expect(sessionFiles.adopt).toHaveBeenCalledTimes(2);
+    expect(sessionFiles.adopt).toHaveBeenNthCalledWith(1, "session-9", keys.slice(0, 20));
+    expect(sessionFiles.adopt).toHaveBeenNthCalledWith(2, "session-9", keys.slice(20));
   });
 });

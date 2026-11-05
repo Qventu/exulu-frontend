@@ -5858,6 +5858,7 @@
     "panelExpand": "Agenten-Panel ausklappen",
     "openAgentPanel": "Agent öffnen",
     "openAgentNamed": "{name} neben diesem Artefakt öffnen",
+    "openRequestFailed": "Konnte nicht alles für diesen Agenten vorbereiten",
     "sharingSave": "Speichern",
     "sharingSaved": "Freigabe aktualisiert",
     "sharingFailed": "Freigabe konnte nicht aktualisiert werden",

@@ -48,6 +48,7 @@ import type { UIMessage } from "ai";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import * as React from "react";
+import { toast } from "sonner";
 
 /* eslint-disable no-restricted-imports --
  * Cross-feature imports (artifacts → chat). The tier rule's own remedy
@@ -151,6 +152,21 @@ export interface AgentPanelProps {
    * re-applied on an unrelated re-render (tracked by nonce, not identity).
    */
   openRequest: { request: OpenPanelRequest; nonce: number } | null;
+  /**
+   * Fires the moment this component commits to dispatching `openRequest`
+   * (not when the dispatched work finishes) — the viewer's cue to clear its
+   * own `openRequest` state. This is the ONLY door covered by the owner-typed
+   * guard above (clicking the plain header CTA, or closing the panel): the
+   * in-panel history rail and "New chat" navigate WITHIN this route
+   * (`?session=<id>`), which the page re-renders with a new `initialSession`
+   * prop WITHOUT unmounting the viewer — only `AgentPanel` itself remounts,
+   * because `panelSession.id` is in its key. A remount resets THIS
+   * component's own `appliedNonceRef`, so without this callback the still
+   * non-null `openRequest` the viewer is holding would be re-applied against
+   * the brand new controller. The viewer owns clearing it because it is the
+   * one piece of state that survives every door a remount can come through.
+   */
+  onRequestApplied: () => void;
 }
 
 /** Mount inside `SidebarProvider` — see the file header's last paragraph. */
@@ -175,6 +191,7 @@ function MountedAgentPanel({
   // start and that wiring is a change inside this component only.
   onProgress,
   openRequest,
+  onRequestApplied,
 }: Omit<AgentPanelProps, "open">) {
   const t = useTranslations("artifacts");
   const basePath = `/artifacts/open/${encodeURIComponent(artifactName)}`;
@@ -205,16 +222,42 @@ function MountedAgentPanel({
   React.useEffect(() => {
     if (!openRequest) return;
     if (appliedNonceRef.current === openRequest.nonce) return;
-    appliedNonceRef.current = openRequest.nonce;
     const controller = controllerRef.current;
+    // No handle yet THIS commit — retry on a later render rather than
+    // marking the nonce applied for work that never ran. Should not happen
+    // given the ordering above, but costs nothing to leave recoverable.
     if (!controller) return;
+    // Marked the moment dispatch is committed to, before the async work
+    // below even starts — this is also the signal `onRequestApplied` relays
+    // to the viewer (see that prop's doc comment): once a request has been
+    // handed to a controller, it must never be handed to another one,
+    // including a DIFFERENT controller behind a later remount of this exact
+    // component (the in-panel history rail, "New chat").
+    appliedNonceRef.current = openRequest.nonce;
+    onRequestApplied();
+    // The panel's own files-panel open is transient (see
+    // ChatSessionController.setFilesPanelOpen's `persist` param) — an
+    // artifact's attach must not flip every future, unrelated chat's
+    // default to "files panel open" via the persisted localStorage flag.
     void applyOpenRequest(openRequest.request, {
       seedInput: controller.seedInput,
       addSessionItems: controller.addSessionItems,
       addSessionFiles: controller.addSessionFiles,
-      setFilesPanelOpen: controller.setFilesPanelOpen,
+      setFilesPanelOpen: (open: boolean) => controller.setFilesPanelOpen(open, false),
+    }).catch((err) => {
+      // Was `void`, so any items/files failure (an over-cap batch, a
+      // rejected adopt, a network error) was an UNHANDLED rejection with
+      // zero user feedback — exactly the silent failure the spec's "the
+      // user must see what the agent is about to receive" rule exists to
+      // prevent. The prompt itself can't be the cause (seedInput cannot
+      // throw), so what's missing is always an attachment, never the text
+      // already on screen.
+      console.error("[agent-panel] openRequest application failed", err);
+      toast.error(t("openRequestFailed"), {
+        description: err instanceof Error ? err.message : undefined,
+      });
     });
-  }, [openRequest]);
+  }, [openRequest, onRequestApplied, t]);
 
   const [collapsed, setCollapsed] = React.useState(false);
   // `undefined` until hydrated, so this is "we KNOW we are below lg" — the

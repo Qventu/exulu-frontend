@@ -205,6 +205,16 @@ export function ArtifactViewer({
     setOpenRequest(null);
   }, []);
 
+  // AgentPanel's own cue that it has committed to dispatching `openRequest`
+  // (see that prop's doc comment on AgentPanelProps). This is the door
+  // `chooseSlot`/`closePanel` above do NOT cover: the in-panel history rail
+  // and "New chat" navigate to `?session=<id>` WITHIN this same route, which
+  // this page re-renders with a new `initialSession` prop without unmounting
+  // THIS component — only `AgentPanel`, keyed on `panelSession.id`,
+  // remounts. Clearing here is what stops that fresh instance from
+  // re-applying a request this component is still holding.
+  const onRequestApplied = React.useCallback(() => setOpenRequest(null), []);
+
   // `?session=` is a URL the user can type, and the history rail's rows and
   // the lazy session create both land on `?session=<id>` with no `?agent=` —
   // so the id the page loaded is not necessarily this slot's. The page has
@@ -346,6 +356,7 @@ export function ArtifactViewer({
             onWidthChange={onPanelWidthChange}
             onProgress={onProgress}
             openRequest={openRequest}
+            onRequestApplied={onRequestApplied}
           />
         )}
       </div>
