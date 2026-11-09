@@ -141,14 +141,6 @@ export default async function PublicAgentPage({
       : { initialSession: null, initialMessages: [] };
     return (
       <PublicChatScreen
-        // Remount when the session changes. The client seeds its session and
-        // messages with useState(initialSession)/useState-equivalents, which
-        // only honour their argument on first mount — and unlike the internal
-        // chat, where every session is its own route segment, this route stays
-        // the same and only the query param varies, so without a key the
-        // subtree survives the navigation and keeps showing the old
-        // conversation.
-        key={sessionParam ?? "new"}
         meta={meta}
         animations={animationUrls(meta)}
         mode="authenticated"
@@ -161,7 +153,6 @@ export default async function PublicAgentPage({
 
   return (
     <PublicChatScreen
-      key={sessionParam ?? "new"}
       meta={meta}
       animations={animationUrls(meta)}
       mode="anonymous"

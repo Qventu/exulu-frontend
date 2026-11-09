@@ -207,14 +207,32 @@ function PublicChatBody({
 }
 
 /**
- * Remounts the conversation when the shell signals a new chat, the same way
- * session-screen.tsx keys on newChatNonce internally. Must live INSIDE
- * PublicChatShell — useChatShell() only has a provider there, which is also
- * why anonymous mode (no shell) does not use it.
+ * Remounts the conversation — and ONLY the conversation — when the session
+ * changes or the shell signals a new chat. Sits inside PublicChatShell so the
+ * history rail above it survives the switch; keying the whole screen instead
+ * made the rail refetch and the page visibly reload on every session click.
+ *
+ * This is the public equivalent of the internal split, where the shell and
+ * rail live in [agent]/layout.tsx and only [session]/page.tsx remounts.
+ *
+ * Both parts of the key are needed: the session id covers navigating between
+ * sessions, and newChatNonce covers "New chat" after a lazy create, where the
+ * URL was swapped with history.replaceState and the id is already null on both
+ * sides of the click.
  */
-function NewChatBoundary({ children }: { children: React.ReactNode }) {
+function ConversationBoundary({
+  sessionId,
+  children,
+}: {
+  sessionId?: string;
+  children: React.ReactNode;
+}) {
   const { newChatNonce } = useChatShell();
-  return <React.Fragment key={newChatNonce}>{children}</React.Fragment>;
+  return (
+    <React.Fragment key={`${sessionId ?? "new"}:${newChatNonce}`}>
+      {children}
+    </React.Fragment>
+  );
 }
 
 /** Authenticated body — instantiates the Apollo-backed session manager and the
@@ -255,7 +273,7 @@ function AuthenticatedChatBody({
         activeSessionId={sessionManager.currentSession?.id}
         onNewChat={sessionManager.startNewSession}
       >
-        <NewChatBoundary>
+        <ConversationBoundary sessionId={sessionManager.currentSession?.id}>
           <PublicChatBody
             meta={meta}
             agent={agent}
@@ -264,7 +282,7 @@ function AuthenticatedChatBody({
             sessionManager={sessionManager}
             initialMessages={initialMessages}
           />
-        </NewChatBoundary>
+        </ConversationBoundary>
       </PublicChatShell>
     </UserContext.Provider>
   );

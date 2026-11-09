@@ -69,6 +69,24 @@ export function usePublicSessionManager({
     currentSessionRef.current = currentSession;
   }, [currentSession]);
 
+  // Follow the server across a navigation. This hook sits ABOVE the
+  // conversation's remount boundary — the rail needs currentSession for its
+  // highlight, so it must stay mounted — which means it cannot pick up a new
+  // ?session= by being recreated. It has to react to the prop instead.
+  //
+  // Keyed on the id, not the object: the server hands us a fresh object every
+  // render, and a lazy create changes currentSession WITHOUT a server render
+  // (the URL is swapped via history.replaceState, which Next never sees). With
+  // the id as the dependency that case leaves this effect dormant and does not
+  // clobber the session just created.
+  const initialSessionId = initialSession?.id;
+  React.useEffect(() => {
+    if (initialSessionId === currentSessionRef.current?.id) return;
+    const next = initialSessionId ? { id: initialSessionId } : null;
+    currentSessionRef.current = next as PublicSession | null;
+    setCurrentSession(next as PublicSession | null);
+  }, [initialSessionId]);
+
   const [createAgentSession] = useMutation(CREATE_AGENT_SESSION);
 
   const ensureSession =
