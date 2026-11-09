@@ -87,20 +87,21 @@ describe("public agent page — session switching", () => {
     expect(tag![0]).toMatch(/initialMessages=\{initialSession \?/);
   });
 
-  it("bumps the new-chat nonce only when a push cannot navigate", () => {
-    // Bumping unconditionally remounted before router.push resolved, so the
-    // conversation re-seeded from the session being left and "New chat"
-    // needed two clicks.
+  it("bumps the new-chat nonce from the SERVER session, not Next's view", () => {
+    // Next 14.1+ observes history.replaceState, so useSearchParams reports a
+    // lazily created session the server has never rendered. Deciding on that
+    // skipped the nonce, the key never moved, and "New chat" left the previous
+    // conversation on screen. Only the server session answers the real
+    // question: will this push change what the key reads?
     const src = readFileSync(
       join(__dirname, "components/public-chat-shell.tsx"),
       "utf8",
     );
     const fn = src.slice(src.indexOf("const startNewChat"));
     const body = fn.slice(0, fn.indexOf("}, ["));
-    expect(body).toMatch(/searchParams/);
-    expect(body).toMatch(/router\.push/);
+    expect(body).toMatch(/serverSessionId/);
+    expect(body).not.toMatch(/searchParams/);
     expect(body).toMatch(/setNewChatNonce/);
-    // the bump must be in the branch, not unconditional
-    expect(body.indexOf("if (")).toBeLessThan(body.indexOf("setNewChatNonce"));
+    expect(body).toMatch(/router\.push/);
   });
 });

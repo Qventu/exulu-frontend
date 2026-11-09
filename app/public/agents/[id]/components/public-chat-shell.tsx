@@ -21,7 +21,7 @@
  * = a fresh chat, and close the sheet).
  */
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import {
@@ -43,6 +43,12 @@ export interface PublicChatShellProps {
   /** The rail's active-session highlight (URL-param driven, not pathname). */
   activeSessionId?: string;
   /**
+   * The session the SERVER last rendered, which is what the conversation's
+   * remount key reads. Not the same as activeSessionId: a lazily created
+   * session is known to the client only.
+   */
+  serverSessionId?: string;
+  /**
    * Clear the caller's session state when a new chat starts. The nonce below
    * only remounts the conversation BELOW this shell; the session manager lives
    * above it, so without this the next message would be posted into the
@@ -56,11 +62,11 @@ export function PublicChatShell({
   agent,
   basePath,
   activeSessionId,
+  serverSessionId,
   onNewChat,
   children,
 }: PublicChatShellProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [historySheetOpen, setHistorySheetOpen] = React.useState(false);
   // Mirrors ChatShell: bumped by startNewChat so the conversation subtree
@@ -116,24 +122,24 @@ export function PublicChatShell({
   const startNewChat = React.useCallback(() => {
     setHistorySheetOpen(false);
     onNewChat?.();
-    // Prefer letting the navigation drive the remount: the server then sends
-    // the empty conversation along with it, so nothing has to guess.
+    // The only question that matters: will this push change the value the
+    // conversation's key reads? That key reads the SERVER session, so only the
+    // server session can answer it.
     //
-    // The nonce is the fallback for the one case a navigation cannot handle —
-    // after a lazy session create the URL was swapped with
-    // history.replaceState, which Next never saw, so router.push(basePath) is
-    // a no-op and no new props ever arrive. useSearchParams reflects NEXT's
-    // view, not the address bar, which is exactly the distinction needed here.
+    // After a lazy create the server has never seen this session — it was put
+    // in the URL with history.replaceState — so pushing basePath leaves the
+    // server session null on both sides and the key never moves. The nonce is
+    // the only thing that can force the remount there.
     //
-    // Bumping it unconditionally is what made "New chat" need two clicks: the
-    // nonce remounted the conversation immediately, while initialMessages
-    // still held the session being left.
-    if (searchParams?.get("session")) {
-      router.push(basePath);
-    } else {
+    // Asking Next's useSearchParams instead looked equivalent and is not:
+    // Next 14.1+ observes replaceState, so it reported a session the server
+    // had never rendered, the nonce was skipped, and "New chat" left the
+    // conversation on screen.
+    if (!serverSessionId) {
       setNewChatNonce((n) => n + 1);
     }
-  }, [basePath, onNewChat, router, searchParams]);
+    router.push(basePath);
+  }, [basePath, onNewChat, router, serverSessionId]);
 
   // Inert lazy-create window — public chat never keys on it (see file header).
   const beginLazyCreate = React.useCallback(() => () => {}, []);

@@ -274,6 +274,7 @@ function AuthenticatedChatBody({
         agent={agent}
         basePath={basePath}
         activeSessionId={sessionManager.currentSession?.id}
+        serverSessionId={initialSession?.id}
         onNewChat={sessionManager.startNewSession}
       >
         <ConversationBoundary sessionId={initialSession?.id}>
