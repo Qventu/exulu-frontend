@@ -215,10 +215,13 @@ function PublicChatBody({
  * This is the public equivalent of the internal split, where the shell and
  * rail live in [agent]/layout.tsx and only [session]/page.tsx remounts.
  *
- * Both parts of the key are needed: the session id covers navigating between
- * sessions, and newChatNonce covers "New chat" after a lazy create, where the
- * URL was swapped with history.replaceState and the id is already null on both
- * sides of the click.
+ * Keyed on the SERVER's session, not the manager's: the server id changes only
+ * on a real navigation, whereas the manager's changes on a lazy create too —
+ * which would remount mid-send and kill the in-flight stream the
+ * replaceState in use-public-session-manager exists to protect.
+ *
+ * newChatNonce covers the one case navigation cannot: "New chat" after a lazy
+ * create, where Next still believes it is at basePath and push() is a no-op.
  */
 function ConversationBoundary({
   sessionId,
@@ -273,14 +276,19 @@ function AuthenticatedChatBody({
         activeSessionId={sessionManager.currentSession?.id}
         onNewChat={sessionManager.startNewSession}
       >
-        <ConversationBoundary sessionId={sessionManager.currentSession?.id}>
+        <ConversationBoundary sessionId={initialSession?.id}>
           <PublicChatBody
             meta={meta}
             agent={agent}
             mode="authenticated"
             userId={userId}
             sessionManager={sessionManager}
-            initialMessages={initialMessages}
+            // Seeded from the same source the boundary is keyed on, so the
+            // messages always belong to the session that caused the remount.
+            // Gating on the manager's currentSession instead would show an
+            // empty conversation when opening a session from a fresh chat,
+            // because it only catches up an effect later.
+            initialMessages={initialSession ? initialMessages : []}
           />
         </ConversationBoundary>
       </PublicChatShell>

@@ -64,4 +64,43 @@ describe("public agent page — session switching", () => {
     expect(src).toMatch(/React\.useEffect/);
     expect(src).toMatch(/initialSession\?\.id/);
   });
+
+  it("keys the boundary on the SERVER session, not the manager's", () => {
+    // The manager's currentSession also moves on a lazy create — with no
+    // server render, because the URL is swapped via history.replaceState.
+    // Keying on it would remount mid-send and kill the in-flight stream that
+    // replaceState exists to protect.
+    const src = screen();
+    const tag = src.match(/<ConversationBoundary[^>]*>/);
+    expect(tag).not.toBeNull();
+    expect(tag![0]).toMatch(/initialSession/);
+    expect(tag![0]).not.toMatch(/currentSession/);
+  });
+
+  it("seeds messages from the same source the key uses", () => {
+    // Mismatched sources showed an empty conversation when opening a session
+    // from a fresh chat: the key had already changed while currentSession was
+    // still catching up in an effect.
+    const src = screen();
+    const tag = src.match(/<PublicChatBody[\s\S]*?\/>/);
+    expect(tag).not.toBeNull();
+    expect(tag![0]).toMatch(/initialMessages=\{initialSession \?/);
+  });
+
+  it("bumps the new-chat nonce only when a push cannot navigate", () => {
+    // Bumping unconditionally remounted before router.push resolved, so the
+    // conversation re-seeded from the session being left and "New chat"
+    // needed two clicks.
+    const src = readFileSync(
+      join(__dirname, "components/public-chat-shell.tsx"),
+      "utf8",
+    );
+    const fn = src.slice(src.indexOf("const startNewChat"));
+    const body = fn.slice(0, fn.indexOf("}, ["));
+    expect(body).toMatch(/searchParams/);
+    expect(body).toMatch(/router\.push/);
+    expect(body).toMatch(/setNewChatNonce/);
+    // the bump must be in the branch, not unconditional
+    expect(body.indexOf("if (")).toBeLessThan(body.indexOf("setNewChatNonce"));
+  });
 });

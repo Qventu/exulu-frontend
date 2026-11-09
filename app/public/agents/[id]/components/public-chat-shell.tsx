@@ -21,7 +21,7 @@
  * = a fresh chat, and close the sheet).
  */
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import {
@@ -60,6 +60,7 @@ export function PublicChatShell({
   children,
 }: PublicChatShellProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [historySheetOpen, setHistorySheetOpen] = React.useState(false);
   // Mirrors ChatShell: bumped by startNewChat so the conversation subtree
@@ -114,10 +115,25 @@ export function PublicChatShell({
   // A bare base URL is a fresh chat; also close the mobile sheet.
   const startNewChat = React.useCallback(() => {
     setHistorySheetOpen(false);
-    setNewChatNonce((n) => n + 1);
     onNewChat?.();
-    router.push(basePath);
-  }, [basePath, onNewChat, router]);
+    // Prefer letting the navigation drive the remount: the server then sends
+    // the empty conversation along with it, so nothing has to guess.
+    //
+    // The nonce is the fallback for the one case a navigation cannot handle —
+    // after a lazy session create the URL was swapped with
+    // history.replaceState, which Next never saw, so router.push(basePath) is
+    // a no-op and no new props ever arrive. useSearchParams reflects NEXT's
+    // view, not the address bar, which is exactly the distinction needed here.
+    //
+    // Bumping it unconditionally is what made "New chat" need two clicks: the
+    // nonce remounted the conversation immediately, while initialMessages
+    // still held the session being left.
+    if (searchParams?.get("session")) {
+      router.push(basePath);
+    } else {
+      setNewChatNonce((n) => n + 1);
+    }
+  }, [basePath, onNewChat, router, searchParams]);
 
   // Inert lazy-create window — public chat never keys on it (see file header).
   const beginLazyCreate = React.useCallback(() => () => {}, []);
