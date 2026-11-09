@@ -22,7 +22,10 @@ import { useMutation } from "@apollo/client";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 
-import { CREATE_AGENT_SESSION } from "@/app/(application)/chat/queries";
+import {
+  CREATE_AGENT_SESSION,
+  GET_AGENT_SESSIONS,
+} from "@/app/(application)/chat/queries";
 
 /** The minimal session shape the public transport needs (only the id). */
 export interface PublicSession {
@@ -87,7 +90,15 @@ export function usePublicSessionManager({
     setCurrentSession(next as PublicSession | null);
   }, [initialSessionId]);
 
-  const [createAgentSession] = useMutation(CREATE_AGENT_SESSION);
+  // Refetch the history the rail renders from, exactly as the internal
+  // useSessionMutations does. Without it a session created lazily on the first
+  // message never reaches GET_AGENT_SESSIONS, so the new conversation was
+  // missing from the rail until a full page reload re-ran the query. The
+  // operation name is listed alongside the document because an instance
+  // registered under its name is not matched by the document alone.
+  const [createAgentSession] = useMutation(CREATE_AGENT_SESSION, {
+    refetchQueries: [GET_AGENT_SESSIONS, "GetAgentSessions"],
+  });
 
   const ensureSession =
     React.useCallback<PublicSessionManager["ensureSession"]>(async () => {
