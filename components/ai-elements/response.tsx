@@ -21,7 +21,7 @@ import { BundledLanguage } from 'shiki';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DocumentNode, useMutation, useQuery } from '@apollo/client';
+import { gql, useMutation, useQuery } from '@apollo/client';
 import { GET_CHUNK_BY_ID, UPDATE_ITEM } from '@/queries/queries';
 import { getPresignedUrl } from '../primitives/file-picker';
 import { ConfirmDialog } from '../primitives/confirm-dialog';
@@ -339,6 +339,11 @@ const WebSearchCitationBadge = ({ url, title, snippet }: {
   );
 };
 
+// Stand-ins so the Apollo hooks below always receive a parsed document, even
+// when the citation's context cannot form one; both are always skipped.
+const NOOP_QUERY = gql`query CitationBadgeNoop { __typename }`;
+const NOOP_MUTATION = gql`mutation CitationBadgeNoop { __typename }`;
+
 // Custom component to render citations as badges with hover dialog
 const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, itemId }: {
   itemName: string;
@@ -349,22 +354,29 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  if (!context) {
-    return null;
-  }
-
-  let query: DocumentNode | undefined = undefined;
-  try {
-    query = GET_CHUNK_BY_ID(context);
-  } catch (error) {
-    console.error('Error parsing citation:', error);
-    return null;
-  }
+  // Every hook below runs on every render. A badge keeps its position in the
+  // markdown tree across re-renders, so an early return here (for an empty
+  // or unparseable context) changed the hook count between renders and threw
+  // "Rendered fewer/more hooks" into the page-level error boundary — the
+  // "Navigationsfehler" page ALGI users hit on turns that cite memories
+  // (2026-11-11). Unusable contexts resolve to `undefined` instead and the
+  // badge decides what to render after the last hook.
+  const { query, mutation } = useMemo(() => {
+    if (!context) return { query: undefined, mutation: undefined };
+    try {
+      return { query: GET_CHUNK_BY_ID(context), mutation: UPDATE_ITEM(context) };
+    } catch (error) {
+      console.error('Error parsing citation:', error);
+      return { query: undefined, mutation: undefined };
+    }
+  }, [context]);
+  // Memory citations carry no chunk: nothing to look up, the badge stays flat.
+  const queryable = Boolean(query && chunkId);
 
   // Only fetch chunk data when hover card is opened
-  const { data, loading } = useQuery(query, {
+  const { data, loading } = useQuery(query ?? NOOP_QUERY, {
     variables: { id: chunkId },
-    skip: !isOpen || !context, // Skip query if not open or no context provided
+    skip: !isOpen || !queryable,
     onError: (error) => {
       console.error('Error fetching chunk:', error);
     }
@@ -372,7 +384,7 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
 
   const [deactivated, setDeactivated] = useState(false);
   const [confirmDeactivateOpen, setConfirmDeactivateOpen] = useState(false);
-  const [updateItem, { loading: deactivating }] = useMutation(UPDATE_ITEM(context));
+  const [updateItem, { loading: deactivating }] = useMutation(mutation ?? NOOP_MUTATION);
 
   // ConfirmDialog enforces the destructive-confirmation flow (design-system audit
   // R5; primitives/confirm-dialog.tsx). Reject onConfirm to keep the dialog open.
@@ -432,6 +444,11 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
     loadPdfUrl();
   }, [chunk?.chunk_metadata?.pdf, chunk?.chunk_metadata?.document]);
 
+  // Last hook above — only now may the badge opt out of rendering.
+  if (!context || !query) {
+    return null;
+  }
+
   const page = chunk?.chunk_metadata?.page ? parseInt(chunk.chunk_metadata.page) : 1;
   // The demo names the knowledge base as the Wissen page does; the product
   // shows the id with underscores spaced (and Title Case via the class).
@@ -463,7 +480,7 @@ const KnowledgeSourceCitationBadge = ({ itemName, chunkId, chunkIndex, context, 
   // inert layer's exemption, exactly as every badge did before the dialog
   // was let through. "Chunk … not found" behind a badge the tour invites
   // the visitor to press would be worse than a badge that does not open.
-  if (demo && !demoCitationOpenable(chunkId)) {
+  if ((demo && !demoCitationOpenable(chunkId)) || !queryable) {
     return (
       <Badge
         variant="secondary"
@@ -656,7 +673,10 @@ const components = {
       const citationContent = decodeURIComponent(dataCitation);
       // Each cite-marker contains a single citation in format:
       // item_name|item_id|chunk_id|chunk_index|context.
-      const citeParts = citationContent.split('|');
+      // Memory recall cites with quoted values ({item_name: "…", context:
+      // "agent_memory_context"}) and the renderer's field regex keeps the
+      // quotes; a quoted context cannot name a GraphQL field, so they go.
+      const citeParts = citationContent.split('|').map((part) => part.trim().replace(/^["']+|["']+$/g, ''));
 
       if (citeParts.length >= 5) {
         // Extract just the filename from the path if it includes slashes
