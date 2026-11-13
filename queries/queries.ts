@@ -109,7 +109,9 @@ name
 model
 feedback
 suggestions_enabled
+sandbox_enabled
 memory
+memory_config
 instructions
 welcomemessage
 defaultagent
@@ -135,6 +137,7 @@ capabilities {
   audio
   video
 }
+created_by
 rights_mode
 RBAC {
       type
