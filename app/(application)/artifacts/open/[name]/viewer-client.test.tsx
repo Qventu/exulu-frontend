@@ -797,3 +797,19 @@ describe("choosePanelState", () => {
     });
   });
 });
+
+describe("ArtifactViewer host height", () => {
+  test("the viewer bounds itself to the viewport like the chat shell does", () => {
+    // The app shell gives pages no definite height (SidebarProvider is
+    // min-h-svh, the content column scrolls), so an `h-full` chain under it
+    // resolves to auto and grows with the panel's conversation instead of
+    // letting the message column scroll — the composer ends up below the
+    // fold. The chat route owns a dvh-bounded host (chat-shell.tsx); the
+    // viewer, which hosts the same SessionScreen beside the artifact, must too.
+    show();
+    const root = screen.getByTestId("artifact-viewer");
+    expect(root.className).toContain("md:h-[calc(100dvh-3rem)]");
+    expect(root.className).toContain("h-[calc(100dvh-3rem-env(safe-area-inset-top))]");
+    expect(root.className).not.toMatch(/\bh-full\b/);
+  });
+});

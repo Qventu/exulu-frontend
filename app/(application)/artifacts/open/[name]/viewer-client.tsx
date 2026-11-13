@@ -265,8 +265,18 @@ export function ArtifactViewer({
     window.history.replaceState(null, "", target);
   }, [activeSlotKey, panelSessionId, initialSlotKey, renderedSessionId]);
 
+  // dvh-bounded host, same arithmetic as chat-shell.tsx: the app shell gives
+  // pages no definite height (SidebarProvider is min-h-svh and the content
+  // column scrolls), so an `h-full` here resolves to auto and the panel's
+  // conversation grows the whole page instead of scrolling inside its column —
+  // the composer lands below the fold. The fixed h-12 top bar (md) and the
+  // mobile top bar (below md, plus the safe-area inset) are subtracted exactly
+  // as on the non-session chat routes.
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+    <div
+      data-testid="artifact-viewer"
+      className="flex h-[calc(100dvh-3rem-env(safe-area-inset-top))] min-h-0 w-full flex-1 flex-col overflow-hidden md:h-[calc(100dvh-3rem)]"
+    >
       <div className="flex items-center gap-2 border-b px-2 py-2 md:px-4">
         <Button asChild variant="ghost" size="sm" className="shrink-0">
           <Link href="/artifacts" aria-label={t("viewerBack")}>
