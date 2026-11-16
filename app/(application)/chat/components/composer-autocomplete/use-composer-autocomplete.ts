@@ -11,6 +11,7 @@ import * as React from "react";
 import { useLazyQuery } from "@apollo/client";
 import { useTranslations } from "next-intl";
 
+import { projectFilesApi } from "@/lib/api/project-files";
 import { sessionFilesApi, type SessionFile } from "@/lib/api/session-files";
 import type { AgentTool } from "@/types/models/agent";
 
@@ -223,6 +224,35 @@ export function useComposerAutocomplete({
     };
   }, [atOpenKey, sessionId]);
 
+  // ── "@" source: the project's shared files (project sessions only) ──────
+  // Seeded from the controller's copy, re-fetched per menu open like the
+  // session's. A failure keeps the seed: the session group still works.
+  const project = controller.projectFiles ?? null;
+  const projectId = project?.id ?? null;
+  const [fetchedProjectFiles, setFetchedProjectFiles] = React.useState<{
+    projectId: string;
+    files: SessionFile[];
+  } | null>(null);
+  React.useEffect(() => {
+    if (atOpenKey === null || !projectId) return;
+    let cancelled = false;
+    projectFilesApi
+      .list(projectId)
+      .then((res) => {
+        if (!cancelled) setFetchedProjectFiles({ projectId, files: res.files });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [atOpenKey, projectId]);
+  const projectFiles = React.useMemo<SessionFile[]>(() => {
+    if (!project) return [];
+    return fetchedProjectFiles?.projectId === project.id
+      ? fetchedProjectFiles.files
+      : project.files;
+  }, [project, fetchedProjectFiles]);
+
   const fileItems = React.useMemo<Suggestion[]>(
     () =>
       (sessionFiles ?? []).map((f) => ({
@@ -232,6 +262,22 @@ export function useComposerAutocomplete({
         displayName: f.name,
       })),
     [sessionFiles],
+  );
+  // `project/<name>` is how the agent's prompt and tools address a project
+  // file; a bare name always means the session's.
+  const projectName = project?.name ?? "";
+  const projectFileItems = React.useMemo<Suggestion[]>(
+    () =>
+      projectFiles.map((f) => ({
+        id: `project-file:${f.key}`,
+        kind: "file",
+        name: `project/${f.name}`,
+        displayName: f.name,
+        group: t("composer.autocomplete.projectFilesGroup", {
+          name: projectName,
+        }),
+      })),
+    [projectFiles, projectName, t],
   );
 
   // ── Filtering (flat, group-ordered: commands then tools then skills / files) ──────────
@@ -246,8 +292,11 @@ export function useComposerAutocomplete({
         ...filterSuggestions(skillItems, trigger.query),
       ];
     }
-    return filterSuggestions(fileItems, trigger.query);
-  }, [trigger, COMMANDS, toolItems, skillItems, fileItems]);
+    return [
+      ...filterSuggestions(fileItems, trigger.query),
+      ...filterSuggestions(projectFileItems, trigger.query),
+    ];
+  }, [trigger, COMMANDS, toolItems, skillItems, fileItems, projectFileItems]);
 
   const menuOpen =
     !!trigger &&
@@ -348,8 +397,11 @@ export function useComposerAutocomplete({
     [tools, skills],
   );
   const atNames = React.useMemo(
-    () => (sessionFiles ?? []).map((f) => f.name),
-    [sessionFiles],
+    () => [
+      ...(sessionFiles ?? []).map((f) => f.name),
+      ...projectFiles.map((f) => `project/${f.name}`),
+    ],
+    [sessionFiles, projectFiles],
   );
   const tokenRanges = React.useMemo(
     () => findTokenRanges(input, { slash: slashNames, at: atNames }),
@@ -368,7 +420,7 @@ export function useComposerAutocomplete({
     onBlur,
     tokenRanges,
     filesStatus,
-    hasAnyFiles: (sessionFiles ?? []).length > 0,
+    hasAnyFiles: (sessionFiles ?? []).length > 0 || projectFiles.length > 0,
     listboxId: LISTBOX_ID,
     activeOptionId: menuOpen && items.length > 0 ? optionId(activeIndex) : null,
   };

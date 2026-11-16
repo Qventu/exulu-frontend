@@ -412,6 +412,20 @@ export const GET_PROMPT_BY_ID = gql`
 `;
 
 // ---------------------------------------------------------------------------
+// Project files section (the session's project, files sidebar)
+// ---------------------------------------------------------------------------
+
+/** Only the name: the files sidebar heads its project section with it. */
+export const GET_CHAT_PROJECT_NAME = gql`
+  query GetChatProjectName($id: ID!) {
+    projectById(id: $id) {
+      id
+      name
+    }
+  }
+`;
+
+// ---------------------------------------------------------------------------
 // Feedback
 // ---------------------------------------------------------------------------
 

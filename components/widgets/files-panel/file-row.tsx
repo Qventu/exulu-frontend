@@ -23,6 +23,7 @@ import {
     FileSpreadsheet,
     FileText,
     FileType2,
+    FolderInput,
     Link2,
     Trash2,
 } from "lucide-react";
@@ -98,12 +99,15 @@ export function FileRow({
     file,
     onPreview,
     onDelete,
+    onPromote,
 }: {
     scope: FileScope;
     file: SessionFile;
     onPreview: (file: SessionFile) => void;
     /** Signals intent only — the parent confirms via the shared ConfirmDialog. */
     onDelete: (file: SessionFile) => void;
+    /** "Add to project" — given only on session rows the user may promote. */
+    onPromote?: (file: SessionFile) => void;
 }) {
     const t = useTranslations("chat");
     const tCommon = useTranslations("common");
@@ -200,6 +204,27 @@ export function FileRow({
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>{t("files.share")}</TooltipContent>
+                        </Tooltip>
+                    )}
+                    {onPromote && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={ACTION_BUTTON_CLASSES}
+                                    onClick={() => onPromote(file)}
+                                    aria-label={t("files.addToProject")}
+                                >
+                                    <FolderInput
+                                        className="size-4"
+                                        aria-hidden="true"
+                                    />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                {t("files.addToProject")}
+                            </TooltipContent>
                         </Tooltip>
                     )}
                     {canDelete && (

@@ -1,5 +1,6 @@
 import { getToken, getUris, request } from "@/lib/api/client";
 import type { SessionFile } from "@/lib/api/session-files";
+import { isDemoMode } from "@/lib/demo/flag";
 
 /** A project folder holds at most this many files (backend enforces it). */
 export const MAX_PROJECT_FILES = 200;
@@ -12,6 +13,18 @@ export class ProjectFilesError extends Error {
     ) {
         super(`Project file limit of ${max} reached`);
         this.name = "ProjectFilesError";
+    }
+}
+
+/**
+ * The caller may not see this project's files (403), or the project is gone
+ * (404). Not a failure to show: the chat simply has no project section then.
+ * Kept apart from other errors so a network blip never hides the section.
+ */
+export class ProjectFilesAccessError extends Error {
+    constructor(public readonly status: number) {
+        super(`No access to the project's files (${status})`);
+        this.name = "ProjectFilesAccessError";
     }
 }
 
@@ -28,11 +41,31 @@ export interface PromoteResult {
 
 export const projectFilesApi = {
     /** `canWrite` rides on the listing so the UI needs no second permission call.
-     *  403/404 throw: the caller treats them as "no project section". */
+     *  403/404 throw ProjectFilesAccessError: the caller treats them as "no
+     *  project section". Uses fetch directly because the shared `request`
+     *  drops the status. The demo has no project folders, so it answers
+     *  like a project the visitor cannot see. */
     list: async (
         projectId: string,
-    ): Promise<{ canWrite: boolean; files: SessionFile[] }> =>
-        request(`/projects/${projectId}/files`, "GET"),
+    ): Promise<{ canWrite: boolean; files: SessionFile[] }> => {
+        if (isDemoMode()) throw new ProjectFilesAccessError(404);
+        const uris = await getUris();
+        const token = await getToken();
+        if (!token) throw new Error("No valid session token available.");
+        const res = await fetch(`${uris.base}/projects/${projectId}/files`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        if (res.status === 403 || res.status === 404) {
+            throw new ProjectFilesAccessError(res.status);
+        }
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.detail ?? res.statusText);
+        return json;
+    },
 
     /**
      * A name clash is an expected outcome the caller turns into a confirm, so

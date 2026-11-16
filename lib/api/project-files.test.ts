@@ -7,7 +7,11 @@ const client = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/api/client", () => client);
 
-import { ProjectFilesError, projectFilesApi } from "./project-files";
+import {
+  ProjectFilesAccessError,
+  ProjectFilesError,
+  projectFilesApi,
+} from "./project-files";
 
 const reply = (status: number, body: unknown) =>
   vi.fn(async () => ({
@@ -22,10 +26,30 @@ describe("projectFilesApi", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("list asks the project route and returns canWrite with the files", async () => {
-    client.request.mockResolvedValue({ canWrite: true, files: [] });
+    const f = reply(200, { canWrite: true, files: [] });
+    vi.stubGlobal("fetch", f);
     const res = await projectFilesApi.list("p1");
-    expect(client.request).toHaveBeenCalledWith("/projects/p1/files", "GET");
+    expect((f.mock.calls[0] as unknown as [string])[0]).toBe(
+      "https://api/projects/p1/files",
+    );
     expect(res).toEqual({ canWrite: true, files: [] });
+  });
+
+  it.each([403, 404])(
+    "list turns %i into a ProjectFilesAccessError (no project section)",
+    async (status) => {
+      vi.stubGlobal("fetch", reply(status, { detail: "no" }));
+      await expect(projectFilesApi.list("p1")).rejects.toBeInstanceOf(
+        ProjectFilesAccessError,
+      );
+    },
+  );
+
+  it("list keeps other failures as plain errors", async () => {
+    vi.stubGlobal("fetch", reply(500, { detail: "boom" }));
+    const err = await projectFilesApi.list("p1").catch((e) => e);
+    expect(err).not.toBeInstanceOf(ProjectFilesAccessError);
+    expect(err.message).toBe("boom");
   });
 
   it("uploadSign returns the signed url on 200", async () => {

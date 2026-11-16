@@ -27,10 +27,13 @@ export function UploadZone({
     scope,
     onUploadComplete,
     inputRef: externalInputRef,
+    compact = false,
 }: {
     scope: FileScope;
     onUploadComplete: () => void;
     inputRef?: MutableRefObject<HTMLInputElement | null>;
+    /** One line instead of the tall zone: two zones share one sidebar. */
+    compact?: boolean;
 }) {
     const t = useTranslations("chat");
     const format = useFormatter();
@@ -88,7 +91,11 @@ export function UploadZone({
                     setIsDragging(false);
                     handleFiles(e.dataTransfer.files);
                 }}
-                className={`flex min-h-11 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed p-4 text-center transition-colors duration-150 motion-reduce:transition-none ${
+                className={`${
+                    compact
+                        ? "flex min-h-11 cursor-pointer flex-wrap items-center justify-center gap-x-2 rounded-md border-2 border-dashed px-3 py-2"
+                        : "flex min-h-11 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed p-4"
+                } text-center transition-colors duration-150 motion-reduce:transition-none ${
                     isDragging
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/40 hover:bg-muted/30"
@@ -109,7 +116,7 @@ export function UploadZone({
                 {uploadingCount > 0 ? (
                     <>
                         <Loader2
-                            className="size-5 animate-spin text-primary"
+                            className={`${compact ? "size-4" : "size-5"} animate-spin text-primary`}
                             aria-hidden="true"
                         />
                         <p
@@ -124,7 +131,7 @@ export function UploadZone({
                 ) : (
                     <>
                         <Upload
-                            className="size-5 text-muted-foreground"
+                            className={`${compact ? "size-4" : "size-5"} text-muted-foreground`}
                             aria-hidden="true"
                         />
                         <p className="text-xs font-medium">

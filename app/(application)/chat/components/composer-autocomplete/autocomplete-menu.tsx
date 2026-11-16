@@ -92,7 +92,9 @@ export function AutocompleteMenu({
         {items.map((item, index) => {
           const Icon = KIND_ICON[item.kind];
           const active = index === activeIndex;
-          const showHeader = index === 0 || items[index - 1].kind !== item.kind;
+          const prev = items[index - 1];
+          const showHeader =
+            index === 0 || prev.kind !== item.kind || prev.group !== item.group;
           return (
             <React.Fragment key={item.id}>
               {showHeader && (
@@ -100,7 +102,7 @@ export function AutocompleteMenu({
                   role="presentation"
                   className="px-2 py-1.5 text-xs font-medium text-muted-foreground"
                 >
-                  {groupLabel[item.kind]}
+                  {item.group ?? groupLabel[item.kind]}
                 </li>
               )}
               <li

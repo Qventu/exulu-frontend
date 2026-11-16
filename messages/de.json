@@ -1400,6 +1400,7 @@
         "noFilesYet": "Noch keine Dateien in dieser Sitzung",
         "noMatches": "Keine Treffer",
         "off": "aus",
+        "projectFilesGroup": "Projekt · {name}",
         "skillsGroup": "Skills",
         "toolsGroup": "Tools"
       },
@@ -1481,6 +1482,8 @@
       "titlePositive": "Was hat Ihnen gefallen?"
     },
     "files": {
+      "addedToProject": "Zum Projekt hinzugefügt",
+      "addToProject": "Zum Projekt hinzufügen",
       "backToFiles": "Zurück zu den Dateien",
       "browse": "Dateien hochladen",
       "count": "{count, plural, one {# Datei} other {# Dateien}}",
@@ -1511,7 +1514,12 @@
       "privacyNote": "Dateien in dieser Sitzung werden nicht mit anderen Sitzungen, Projekten oder Wissensdatenbanken geteilt.",
       "privacyNoteProject": "Dateien in diesem Projekt sind für alle sichtbar, die Zugriff auf das Projekt haben.",
       "projectFull": "Dieses Projekt hat sein Limit von {max} Dateien erreicht. Löschen Sie eine Datei, um eine weitere hinzuzufügen.",
+      "projectSection": "Projekt · {name}",
+      "projectSectionNote": "Für alle sichtbar, die Zugriff auf dieses Projekt haben.",
+      "promoteClashDescription": "Im Projekt gibt es bereits eine Datei namens {name}. Ersetzen?",
+      "promoteFailed": "„{name}“ konnte nicht zum Projekt hinzugefügt werden: {message}",
       "renderingPreview": "Vorschau wird erstellt …",
+      "sessionSection": "Diese Sitzung",
       "share": "Teilen",
       "title": "Sitzungsdateien",
       "tooLargeToPreview": "Die Datei ist {size} groß — zu groß für eine Inline-Vorschau. Nutzen Sie „Herunterladen“.",

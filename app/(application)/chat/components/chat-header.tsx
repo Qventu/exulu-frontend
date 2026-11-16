@@ -180,7 +180,13 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
   // means "not resolved yet" (list in flight, or it failed) — render nothing
   // rather than a label-only chip that flashes in and out on zero-file
   // sessions. The files panel stays reachable via ＋ → "Session files".
-  const filesCount = controller.sessionFilesCount;
+  // In a project session the chip counts the project's shared files too,
+  // matching the two sections the panel opens on.
+  const filesCount =
+    controller.sessionFilesCount === null
+      ? null
+      : controller.sessionFilesCount +
+        (controller.projectFiles?.files.length ?? 0);
   const showFilesChip = !!session && filesCount !== null && filesCount > 0;
 
   // ── Save as Routine gate (items 28/30): ≥1 user + ≥1 assistant message ───

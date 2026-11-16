@@ -238,7 +238,20 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
         dock={!compact}
       >
         {controller.session && (
-          <SessionFilesContent sessionId={controller.session.id} />
+          <SessionFilesContent
+            sessionId={controller.session.id}
+            project={
+              controller.projectFiles
+                ? {
+                    id: controller.projectFiles.id,
+                    name: controller.projectFiles.name,
+                    canWrite: controller.projectFiles.canWrite,
+                  }
+                : undefined
+            }
+            onProjectListed={controller.syncProjectFiles}
+            onProjectAccessLost={() => controller.syncProjectFiles?.(null)}
+          />
         )}
       </SidePanel>
 

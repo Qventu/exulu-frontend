@@ -1400,6 +1400,7 @@
         "noFilesYet": "No files in this session yet",
         "noMatches": "No matches",
         "off": "off",
+        "projectFilesGroup": "Project · {name}",
         "skillsGroup": "Skills",
         "toolsGroup": "Tools"
       },
@@ -1481,6 +1482,8 @@
       "titlePositive": "What did you like?"
     },
     "files": {
+      "addedToProject": "Added to project",
+      "addToProject": "Add to project",
       "backToFiles": "Back to files",
       "browse": "Upload files",
       "count": "{count, plural, one {# file} other {# files}}",
@@ -1511,7 +1514,12 @@
       "privacyNote": "Files in this session aren't shared with other sessions, projects, or knowledge bases.",
       "privacyNoteProject": "Files in this project are visible to everyone with access to the project.",
       "projectFull": "This project has reached its limit of {max} files. Delete a file to add another.",
+      "projectSection": "Project · {name}",
+      "projectSectionNote": "Visible to everyone with access to this project.",
+      "promoteClashDescription": "A file named {name} already exists in the project. Replace it?",
+      "promoteFailed": "Couldn't add \"{name}\" to the project: {message}",
       "renderingPreview": "Rendering preview…",
+      "sessionSection": "This session",
       "share": "Share",
       "title": "Session files",
       "tooLargeToPreview": "File is {size} — too large to preview inline. Use Download to view.",
