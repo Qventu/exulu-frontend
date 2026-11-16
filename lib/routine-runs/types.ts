@@ -1,3 +1,4 @@
+import type { WorkStatusActor } from "./work-status";
 /**
  * Hand-maintained types for the Plan-1 `routineRuns` GraphQL API (contract
  * SDL in docs/superpowers/specs/2026-07-15-email-triggered-routines-design.md
@@ -36,6 +37,10 @@ export interface RoutineRun {
   outputTokens?: number | null;
   /** Approximate $ cost (catalog list prices, agent-LLM only); null if unpriced. */
   costUsd?: number | null;
+  /** Work status key (routine-defined), separate from the technical state. */
+  work_status?: string | null;
+  work_status_updated_at?: string | null;
+  work_status_updated_by?: WorkStatusActor | null;
 }
 
 export interface RoutineRunPage {

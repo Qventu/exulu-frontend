@@ -4434,7 +4434,8 @@
         "triggers": "Auslöser",
         "runs": "Läufe",
         "queue": "Warteschlange",
-        "danger": "Gefahrenzone"
+        "danger": "Gefahrenzone",
+        "workStatuses": "Arbeitsstatus"
       },
       "basics": {
         "description": "Geben Sie dieser Routine einen Namen, eine Beschreibung und den ausführenden Agenten.",
@@ -4623,7 +4624,31 @@
         "api": "API"
       }
     },
-    "runActionLabel": "Ausführen"
+    "runActionLabel": "Ausführen",
+    "workStatus": {
+      "title": "Arbeitsstatus",
+      "description": "Eigene Status für die Läufe dieser Routine, z. B. als Abarbeitungsliste.",
+      "labelPlaceholder": "Bezeichnung",
+      "key": "Schlüssel",
+      "color": "Farbe",
+      "done": "Erledigt",
+      "default": "Standard",
+      "add": "Status hinzufügen",
+      "remove": "Status entfernen",
+      "save": "Speichern",
+      "saved": "Arbeitsstatus gespeichert",
+      "saveFailed": "Arbeitsstatus konnte nicht gespeichert werden",
+      "empty": "Noch keine Status. Ohne Status zeigt die Lauf-Liste nur den technischen Zustand.",
+      "validation": {
+        "defaultMissing": "Bitte einen Standardstatus wählen.",
+        "defaultIsDone": "Der Standardstatus darf kein Erledigt-Status sein.",
+        "labelEmpty": "Jeder Status braucht eine Bezeichnung.",
+        "noDoneStatus": "Kein Status ist als erledigt markiert – alle Läufe bleiben im Bereich „Offen“."
+      },
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
+      "readOnly": "Nur Personen mit Schreibrecht auf die Routine können die Status ändern."
+    }
   },
   "routineRuns": {
     "filters": {
@@ -4728,7 +4753,25 @@
     "emptyDescription": "Keine Läufe entsprechen den aktuellen Filtern.",
     "pagination": "Seite {page} von {pages}",
     "previousPage": "Vorherige Seite",
-    "nextPage": "Nächste Seite"
+    "nextPage": "Nächste Seite",
+    "workStatus": {
+      "label": "Arbeitsstatus",
+      "none": "Kein Status",
+      "clear": "Kein Status",
+      "removed": "Dieser Status wurde aus der Routine entfernt.",
+      "updateFailed": "Status konnte nicht gesetzt werden",
+      "setBy": {
+        "user": "von einem Mitarbeiter gesetzt",
+        "tool": "vom Tool {name} gesetzt",
+        "agent": "vom Agenten gesetzt",
+        "default": "Standardstatus"
+      },
+      "areas": {
+        "open": "Offen",
+        "done": "Erledigt"
+      },
+      "filter": "Status"
+    }
   },
   "settings": {
     "account": {

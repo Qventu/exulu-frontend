@@ -35,6 +35,12 @@ import { StatusDot } from "@/components/primitives/status-dot";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -73,7 +79,10 @@ import {
   ROUTINE_RUNS,
 } from "@/lib/routine-runs/queries";
 import type { RoutineRun, RoutineRunPage } from "@/lib/routine-runs/types";
+import type { WorkStatusConfig } from "@/lib/routine-runs/work-status";
 import { cn } from "@/lib/utils";
+
+import { WorkStatusBadge } from "./work-status-badge";
 
 export interface RoutineRunsListProps {
   /** Scope to one routine (per-routine Runs section). Omit = global page. */
@@ -83,6 +92,12 @@ export interface RoutineRunsListProps {
   /** Start with the needs-attention lens on (global page default). */
   defaultNeedsAttention?: boolean;
   pageSize?: number;
+  /**
+   * The routine's work statuses (per-routine list only). With statuses the
+   * list splits into an open and a done area and every row gets a status
+   * badge; without, it is the single list it always was.
+   */
+  workStatuses?: WorkStatusConfig;
 }
 
 export function RoutineRunsList({
@@ -90,6 +105,7 @@ export function RoutineRunsList({
   showRoutineColumn = false,
   defaultNeedsAttention = false,
   pageSize = 20,
+  workStatuses,
 }: RoutineRunsListProps) {
   const t = useTranslations("routineRuns");
 
@@ -98,28 +114,18 @@ export function RoutineRunsList({
     needsAttention: defaultNeedsAttention,
   });
   const [searchInput, setSearchInput] = React.useState("");
-  // `?run=<id>` opens that row on load — a deep link for a notification or a
-  // guided walk. Read once; the user's clicks own the state afterwards.
-  const searchParams = useSearchParams();
-  const [expandedId, setExpandedId] = React.useState<string | null>(
-    () => searchParams?.get("run") ?? null,
-  );
-  // The param can change while the list stays mounted (a client-side
-  // navigation to the same page with a different `run`): follow it.
-  const runParam = searchParams?.get("run") ?? null;
-  React.useEffect(() => {
-    if (runParam) setExpandedId(runParam);
-  }, [runParam]);
-  const [showRawById, setShowRawById] = React.useState<Record<string, boolean>>(
-    {},
-  );
-  const [cancelTarget, setCancelTarget] = React.useState<RoutineRun | null>(
-    null,
-  );
-  const [deleteTarget, setDeleteTarget] = React.useState<RoutineRun | null>(
-    null,
-  );
-  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  // "Done" is defined per routine, so the areas exist only in a list
+  // scoped to one routine that has statuses.
+  const statuses = workflow ? (workStatuses?.statuses ?? []) : [];
+  const hasStatuses = statuses.length > 0;
+  const [chosenStatuses, setStatusFilter] = React.useState<string[]>([]);
+  // A status removed from the routine cannot stay in the filter.
+  const keptStatuses = chosenStatuses.filter((key) => statuses.some((status) => status.key === key));
+  const statusFilter = keptStatuses.length > 0 ? keptStatuses : NO_STATUS_FILTER;
+  // Which statuses count as done decides which area a run is in.
+  const doneSignature = statuses.filter((status) => status.done).map((status) => status.key).join(",");
+  // A change in one area (a status moved, a run deleted) reloads the other.
+  const [refresh, setRefresh] = React.useState<{ version: number; from: string }>({ version: 0, from: "" });
 
   // Debounced text search — 300 ms, resets to page 1 on change.
   React.useEffect(() => {
@@ -133,61 +139,6 @@ export function RoutineRunsList({
     return () => window.clearTimeout(handle);
   }, [searchInput]);
 
-  const { data, loading, refetch } = useQuery<{
-    routineRuns?: RoutineRunPage;
-  }>(ROUTINE_RUNS, {
-    variables: buildRoutineRunsVariables(filter, { workflow, limit: pageSize }),
-    fetchPolicy: "cache-and-network",
-  });
-
-  const [cancelMutate] = useMutation(CANCEL_ROUTINE_RUN);
-  const [deleteMutate] = useMutation(DELETE_ROUTINE_RUN);
-  const [retryMutate, retryState] = useMutation(RETRY_ROUTINE_RUN);
-
-  const runs = data?.routineRuns?.items ?? [];
-  const total = data?.routineRuns?.total ?? 0;
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
-
-  const { cancellable, deletable } = partitionSelection(runs, selectedIds);
-  const selectedCount = runs.filter((r) => selectedIds.has(r.id)).length;
-  const allSelected = runs.length > 0 && selectedCount === runs.length;
-  const someSelected = selectedCount > 0 && !allSelected;
-
-  const toggleSelectAll = (checked: boolean) =>
-    setSelectedIds(checked ? new Set(runs.map((r) => r.id)) : new Set());
-
-  const [bulkConfirm, setBulkConfirm] = React.useState<
-    "cancel" | "delete" | null
-  >(null);
-
-  const runBulk = async () => {
-    if (!bulkConfirm) return;
-    const ids = bulkConfirm === "cancel" ? cancellable : deletable;
-    const mutate = bulkConfirm === "cancel" ? cancelMutate : deleteMutate;
-    const results = await Promise.allSettled(
-      ids.map((id) => mutate({ variables: { id } })),
-    );
-    const ok = results.filter((r) => r.status === "fulfilled").length;
-    const failed = results.length - ok;
-    if (failed === 0) {
-      toast.success(
-        t(bulkConfirm === "cancel" ? "bulk.toast.cancelled" : "bulk.toast.deleted", {
-          count: ok,
-        }),
-      );
-    } else {
-      toast.error(t("bulk.toast.partial", { ok, failed }));
-    }
-    setBulkConfirm(null);
-    setSelectedIds(new Set());
-    await refetch();
-  };
-
-  const selectionResetKey = JSON.stringify({ filter, workflow, pageSize });
-  React.useEffect(() => {
-    setSelectedIds(new Set());
-  }, [selectionResetKey]);
-
   const patchFilter = (patch: Partial<RunsFilterState>) =>
     setFilter((f) => ({ ...f, ...patch, page: 1 }));
 
@@ -195,55 +146,6 @@ export function RoutineRunsList({
     (ALL_RUN_STATES as readonly string[]).includes(state)
       ? t(`state.${state}`)
       : state;
-
-  const toggleSelected = (id: string, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  };
-
-  const handleConfirmCancel = async () => {
-    if (!cancelTarget) return;
-    try {
-      await cancelMutate({ variables: { id: cancelTarget.id } });
-      toast.success(t("toast.cancelled"));
-      await refetch();
-    } catch (err) {
-      toast.error(t("toast.cancelFailed"), {
-        description: (err as Error).message,
-      });
-      throw err; // keep ConfirmDialog open
-    }
-  };
-
-  const handleRetry = async (run: RoutineRun) => {
-    try {
-      await retryMutate({ variables: { id: run.id } });
-      toast.success(t("toast.retried"));
-      await refetch();
-    } catch (err) {
-      toast.error(t("toast.retryFailed"), {
-        description: (err as Error).message,
-      });
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await deleteMutate({ variables: { id: deleteTarget.id } });
-      toast.success(t("toast.deleted"));
-      await refetch();
-    } catch (err) {
-      toast.error(t("toast.deleteFailed"), {
-        description: (err as Error).message,
-      });
-      throw err; // keep ConfirmDialog open
-    }
-  };
 
   return (
     <div className="space-y-3">
@@ -292,6 +194,34 @@ export function RoutineRunsList({
             ))}
           </SelectContent>
         </Select>
+
+        {hasStatuses ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" aria-label={t("workStatus.filter")}>
+                {t("workStatus.filter")}
+                {statusFilter.length > 0 ? ` (${statusFilter.length})` : ""}
+                <ChevronDown aria-hidden className="size-3.5 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {statuses.map((status) => (
+                <DropdownMenuCheckboxItem
+                  key={status.key}
+                  checked={statusFilter.includes(status.key)}
+                  onSelect={(event) => event.preventDefault()}
+                  onCheckedChange={(checked) =>
+                    setStatusFilter((prev) =>
+                      checked ? [...prev, status.key] : prev.filter((key) => key !== status.key),
+                    )
+                  }
+                >
+                  {status.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
 
         <Input
           type="datetime-local"
@@ -350,6 +280,257 @@ export function RoutineRunsList({
         </div>
       </div>
 
+      {(hasStatuses ? (["open", "done"] as const) : ([undefined] as const)).map((area) => (
+        <RunsArea
+          key={area ?? "all"}
+          area={area}
+          filter={filter}
+          statusFilter={hasStatuses ? statusFilter : NO_STATUS_FILTER}
+          workflow={workflow}
+          workStatuses={hasStatuses ? workStatuses : undefined}
+          showRoutineColumn={showRoutineColumn}
+          pageSize={pageSize}
+          refresh={refresh}
+          doneSignature={doneSignature}
+          onMutated={(from) => setRefresh((r) => ({ version: r.version + 1, from }))}
+          stateLabel={stateLabel}
+          t={t}
+        />
+      ))}
+    </div>
+  );
+}
+
+const NO_STATUS_FILTER: string[] = [];
+
+interface RunsAreaProps {
+  /** "open" / "done" when the routine has work statuses; undefined = the single list. */
+  area?: "open" | "done";
+  filter: RunsFilterState;
+  statusFilter: string[];
+  workflow?: string;
+  workStatuses?: WorkStatusConfig;
+  showRoutineColumn: boolean;
+  pageSize: number;
+  refresh: { version: number; from: string };
+  /** Changes when the routine's done statuses change: the areas reload. */
+  doneSignature: string;
+  onMutated: (from: string) => void;
+  stateLabel: (state: string) => string;
+  t: ReturnType<typeof useTranslations>;
+}
+
+/**
+ * One list of runs with its own query, page, selection and dialogs. The
+ * filter bar above is shared; with work statuses there are two of these
+ * (open, done), each under a heading that carries its count.
+ */
+function RunsArea({
+  area,
+  filter,
+  statusFilter,
+  workflow,
+  workStatuses,
+  showRoutineColumn,
+  pageSize,
+  refresh,
+  doneSignature,
+  onMutated,
+  stateLabel,
+  t,
+}: RunsAreaProps) {
+  const areaKey = area ?? "all";
+  // Done work is out of the way until someone looks for it.
+  const [collapsed, setCollapsed] = React.useState(area === "done");
+  // The page belongs to the area; any filter change starts again at page 1.
+  const filterKey = JSON.stringify({ filter, statusFilter });
+  const [pageState, setPageState] = React.useState({ key: filterKey, page: 1 });
+  const page = pageState.key === filterKey ? pageState.page : 1;
+  const setPage = (next: number) => setPageState({ key: filterKey, page: next });
+  const variables = {
+    ...buildRoutineRunsVariables({ ...filter, page }, { workflow, limit: pageSize }),
+    ...(area ? { workStatusOpen: area === "open" } : {}),
+    ...(statusFilter.length > 0 ? { workStatuses: statusFilter } : {}),
+  };
+
+  // `?run=<id>` opens that row on load — a deep link for a notification or a
+  // guided walk. Read once; the user's clicks own the state afterwards.
+  const searchParams = useSearchParams();
+  const [expandedId, setExpandedId] = React.useState<string | null>(
+    () => searchParams?.get("run") ?? null,
+  );
+  // The param can change while the list stays mounted (a client-side
+  // navigation to the same page with a different `run`): follow it.
+  const runParam = searchParams?.get("run") ?? null;
+  React.useEffect(() => {
+    if (runParam) setExpandedId(runParam);
+  }, [runParam]);
+  const [showRawById, setShowRawById] = React.useState<Record<string, boolean>>(
+    {},
+  );
+  const [cancelTarget, setCancelTarget] = React.useState<RoutineRun | null>(
+    null,
+  );
+  const [deleteTarget, setDeleteTarget] = React.useState<RoutineRun | null>(
+    null,
+  );
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+
+  const { data, loading, refetch } = useQuery<{
+    routineRuns?: RoutineRunPage;
+  }>(ROUTINE_RUNS, {
+    variables,
+    fetchPolicy: "cache-and-network",
+  });
+
+  const [cancelMutate] = useMutation(CANCEL_ROUTINE_RUN);
+  const [deleteMutate] = useMutation(DELETE_ROUTINE_RUN);
+  const [retryMutate, retryState] = useMutation(RETRY_ROUTINE_RUN);
+
+  const runs = data?.routineRuns?.items ?? [];
+  const total = data?.routineRuns?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+  const reload = async () => {
+    await refetch();
+    onMutated(areaKey);
+  };
+  const { version: refreshVersion, from: refreshFrom } = refresh;
+  React.useEffect(() => {
+    if (refreshVersion > 0 && refreshFrom !== areaKey) void refetch();
+  }, [refreshVersion, refreshFrom, areaKey, refetch]);
+  const loadedSignature = React.useRef(doneSignature);
+  React.useEffect(() => {
+    if (loadedSignature.current === doneSignature) return;
+    loadedSignature.current = doneSignature;
+    void refetch();
+  }, [doneSignature, refetch]);
+  // The last run of a page left it (set to done, deleted): show the page
+  // before instead of an empty list under a count that says there are runs.
+  const loadedPage = data?.routineRuns ? page : null;
+  React.useEffect(() => {
+    if (loadedPage !== null && !loading && runs.length === 0 && loadedPage > pageCount) {
+      setPage(pageCount);
+    }
+    // setPage is recreated every render; the values above decide.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedPage, loading, runs.length, pageCount]);
+  // A deep-linked run that sits in the collapsed area opens that area.
+  const linkedRunHere = !!runParam && runs.some((r) => r.id === runParam);
+  React.useEffect(() => {
+    if (linkedRunHere) setCollapsed(false);
+  }, [linkedRunHere]);
+
+
+  const { cancellable, deletable } = partitionSelection(runs, selectedIds);
+  const selectedCount = runs.filter((r) => selectedIds.has(r.id)).length;
+  const allSelected = runs.length > 0 && selectedCount === runs.length;
+  const someSelected = selectedCount > 0 && !allSelected;
+
+  const toggleSelectAll = (checked: boolean) =>
+    setSelectedIds(checked ? new Set(runs.map((r) => r.id)) : new Set());
+
+  const [bulkConfirm, setBulkConfirm] = React.useState<
+    "cancel" | "delete" | null
+  >(null);
+
+  const runBulk = async () => {
+    if (!bulkConfirm) return;
+    const ids = bulkConfirm === "cancel" ? cancellable : deletable;
+    const mutate = bulkConfirm === "cancel" ? cancelMutate : deleteMutate;
+    const results = await Promise.allSettled(
+      ids.map((id) => mutate({ variables: { id } })),
+    );
+    const ok = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.length - ok;
+    if (failed === 0) {
+      toast.success(
+        t(bulkConfirm === "cancel" ? "bulk.toast.cancelled" : "bulk.toast.deleted", {
+          count: ok,
+        }),
+      );
+    } else {
+      toast.error(t("bulk.toast.partial", { ok, failed }));
+    }
+    setBulkConfirm(null);
+    setSelectedIds(new Set());
+    await reload();
+  };
+
+  const selectionResetKey = JSON.stringify({ filterKey, page, workflow, pageSize });
+  React.useEffect(() => {
+    setSelectedIds(new Set());
+  }, [selectionResetKey]);
+
+  const toggleSelected = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget) return;
+    try {
+      await cancelMutate({ variables: { id: cancelTarget.id } });
+      toast.success(t("toast.cancelled"));
+      await reload();
+    } catch (err) {
+      toast.error(t("toast.cancelFailed"), {
+        description: (err as Error).message,
+      });
+      throw err; // keep ConfirmDialog open
+    }
+  };
+
+  const handleRetry = async (run: RoutineRun) => {
+    try {
+      await retryMutate({ variables: { id: run.id } });
+      toast.success(t("toast.retried"));
+      await reload();
+    } catch (err) {
+      toast.error(t("toast.retryFailed"), {
+        description: (err as Error).message,
+      });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutate({ variables: { id: deleteTarget.id } });
+      toast.success(t("toast.deleted"));
+      await reload();
+    } catch (err) {
+      toast.error(t("toast.deleteFailed"), {
+        description: (err as Error).message,
+      });
+      throw err; // keep ConfirmDialog open
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {area ? (
+        <button
+          type="button"
+          aria-expanded={!collapsed}
+          onClick={() => setCollapsed((value) => !value)}
+          className="flex items-center gap-1.5 rounded-sm text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ChevronDown
+            aria-hidden
+            className={cn("size-4 text-muted-foreground transition-transform", collapsed && "-rotate-90")}
+          />
+          {data?.routineRuns
+            ? `${t(`workStatus.areas.${area}`)} (${total})`
+            : t(`workStatus.areas.${area}`)}
+        </button>
+      ) : null}
+      {collapsed ? null : (
+        <>
       {runs.length > 0 ? (
         <div className="flex items-center gap-3 rounded-md border bg-muted/20 px-3 py-2 text-sm">
           <Checkbox
@@ -431,6 +612,8 @@ export function RoutineRunsList({
               t={t}
               selected={selectedIds.has(run.id)}
               onSelectChange={(checked) => toggleSelected(run.id, checked)}
+              workStatuses={workStatuses}
+              onStatusChanged={() => void reload()}
             />
           ))}
         </ul>
@@ -440,15 +623,15 @@ export function RoutineRunsList({
       {pageCount > 1 ? (
         <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
           <span>
-            {t("pagination", { page: filter.page, pages: pageCount })}
+            {t("pagination", { page, pages: pageCount })}
           </span>
           <Button
             type="button"
             variant="outline"
             size="icon"
             aria-label={t("previousPage")}
-            disabled={filter.page <= 1}
-            onClick={() => setFilter((f) => ({ ...f, page: f.page - 1 }))}
+            disabled={page <= 1}
+            onClick={() => setPage(page - 1)}
           >
             <ChevronLeft aria-hidden="true" className="size-4" />
           </Button>
@@ -457,8 +640,8 @@ export function RoutineRunsList({
             variant="outline"
             size="icon"
             aria-label={t("nextPage")}
-            disabled={filter.page >= pageCount}
-            onClick={() => setFilter((f) => ({ ...f, page: f.page + 1 }))}
+            disabled={page >= pageCount}
+            onClick={() => setPage(page + 1)}
           >
             <ChevronRight aria-hidden="true" className="size-4" />
           </Button>
@@ -510,6 +693,8 @@ export function RoutineRunsList({
         }
         onConfirm={runBulk}
       />
+        </>
+      )}
     </div>
   );
 }
@@ -529,6 +714,8 @@ interface RunRowProps {
   t: ReturnType<typeof useTranslations>;
   selected: boolean;
   onSelectChange: (checked: boolean) => void;
+  workStatuses?: WorkStatusConfig;
+  onStatusChanged?: () => void;
 }
 
 function RunRow({
@@ -546,6 +733,8 @@ function RunRow({
   t,
   selected,
   onSelectChange,
+  workStatuses,
+  onStatusChanged,
 }: RunRowProps) {
   const mapped = mapRunDot(run.state);
   const badge = triggerBadge(run);
@@ -574,7 +763,10 @@ function RunRow({
     <li className={cn(run.state === "filtered" && "opacity-60")}>
       <div
         className={cn(
-          "grid grid-cols-[auto_1fr] items-center gap-3 px-3",
+          "grid items-center gap-3 px-3",
+          // The status badge has its own menu, so it sits beside the row's
+          // toggle button, not inside it.
+          workStatuses ? "grid-cols-[auto_200px_1fr]" : "grid-cols-[auto_1fr]",
           expanded && "bg-muted/30",
         )}
       >
@@ -583,6 +775,9 @@ function RunRow({
           onCheckedChange={(checked) => onSelectChange(checked === true)}
           aria-label={t("bulk.selectRow")}
         />
+        {workStatuses ? (
+          <WorkStatusBadge run={run} config={workStatuses} onChanged={onStatusChanged} />
+        ) : null}
         <button
           type="button"
           onClick={onToggle}

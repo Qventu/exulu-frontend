@@ -4434,7 +4434,8 @@
         "triggers": "Triggers",
         "runs": "Runs",
         "queue": "Queue",
-        "danger": "Danger zone"
+        "danger": "Danger zone",
+        "workStatuses": "Work status"
       },
       "basics": {
         "description": "Give this routine a name, description, and the agent that runs it.",
@@ -4623,7 +4624,31 @@
         "api": "API"
       }
     },
-    "runActionLabel": "Run"
+    "runActionLabel": "Run",
+    "workStatus": {
+      "title": "Work status",
+      "description": "Custom statuses for this routine's runs, e.g. to use the run list as a work queue.",
+      "labelPlaceholder": "Label",
+      "key": "Key",
+      "color": "Colour",
+      "done": "Done",
+      "default": "Default",
+      "add": "Add status",
+      "remove": "Remove status",
+      "save": "Save",
+      "saved": "Work statuses saved",
+      "saveFailed": "Could not save the work statuses",
+      "empty": "No statuses yet. Without statuses the run list only shows the technical state.",
+      "validation": {
+        "defaultMissing": "Please choose a default status.",
+        "defaultIsDone": "The default status must not be a done status.",
+        "labelEmpty": "Every status needs a label.",
+        "noDoneStatus": "No status is marked as done — all runs stay in the “Open” area."
+      },
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "readOnly": "Only people who may edit the routine can change the statuses."
+    }
   },
   "routineRuns": {
     "filters": {
@@ -4728,7 +4753,25 @@
     "emptyDescription": "No runs match the current filters.",
     "pagination": "Page {page} of {pages}",
     "previousPage": "Previous page",
-    "nextPage": "Next page"
+    "nextPage": "Next page",
+    "workStatus": {
+      "label": "Work status",
+      "none": "No status",
+      "clear": "No status",
+      "removed": "This status was removed from the routine.",
+      "updateFailed": "Could not set the status",
+      "setBy": {
+        "user": "set by a team member",
+        "tool": "set by the tool {name}",
+        "agent": "set by the agent",
+        "default": "Default status"
+      },
+      "areas": {
+        "open": "Open",
+        "done": "Done"
+      },
+      "filter": "Status"
+    }
   },
   "settings": {
     "account": {
