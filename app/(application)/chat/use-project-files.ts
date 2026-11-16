@@ -12,8 +12,9 @@
  *
  * Refreshed on project change, on the files change bus (uploads, promotes),
  * after each turn (the caller), and from the open panel's own 5 s poll via
- * `syncProjectFiles`, so a session detached while the panel is open loses
- * the section on the next poll.
+ * `syncProjectFiles`. A poll answers for the project id it was given, so losing
+ * access to the project (403/404) drops the section on the next poll; a session
+ * detached from its project keeps showing the section until the page reloads.
  */
 
 import { useQuery } from "@apollo/client";
