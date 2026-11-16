@@ -31,7 +31,7 @@ import * as React from "react";
 
 import { Brand } from "@/components/shell/brand";
 
-import { LocaleSwitcher } from "./locale-switcher";
+import { LocaleSwitcher } from "@/components/shell/locale-switcher";
 
 export interface AuthShellProps {
   /** Backend-served brand panel image; pane is omitted when unset. */

@@ -16,9 +16,10 @@
  * button (clicking it is a no-op): disabled buttons leave the tab order, so
  * keyboard/SR users could never perceive which language is active.
  *
- * MIGRATION-STUB: codebase-structure.md §2.5 homes this in
- * `components/shell/locale-switcher.tsx` (variants "footer" | "menu");
- * built route-locally per the parallel protocol with the same prop API.
+ * Homed here per codebase-structure.md §2.5 (variants "footer" | "menu"). It
+ * was built route-locally under (authentication) and moved when the guest chat
+ * became a second consumer: guests have no account to carry a language
+ * preference on, so the switcher is their only way to change it.
  */
 
 import { useTranslations } from "next-intl";

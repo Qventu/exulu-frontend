@@ -45,6 +45,7 @@ import { UserContext } from "@/app/(application)/authenticated";
 import { useChatShell } from "@/app/(application)/chat/components/chat-shell";
 import { Composer } from "@/app/(application)/chat/components/composer";
 import { MessageColumn } from "@/app/(application)/chat/components/message-column";
+import { LocaleSwitcher } from "@/components/shell/locale-switcher";
 import { Button } from "@/components/ui/button";
 import { useKeyboardInset } from "@/hooks/use-keyboard-inset";
 import type { PublicAgentMeta } from "@/lib/api/public-agents";
@@ -165,6 +166,9 @@ function PublicChatBody({
           ) : null}
           <p className="min-w-0 truncate text-sm font-medium">{agent.name}</p>
           <div className="ml-auto flex items-center gap-1">
+            {/* Guests have no account to hold a language preference, so this
+                is their only way to change it. ?lang= presets it for them. */}
+            <LocaleSwitcher />
             <Button
               variant="ghost"
               size="sm"

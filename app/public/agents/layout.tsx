@@ -17,6 +17,7 @@ import * as React from "react";
 
 import { ConfigContextProvider } from "@/components/shell/config-context";
 import { LanguageProvider } from "@/components/shell/language-provider";
+import { LocaleFromQuery } from "@/components/shell/locale-from-query";
 import { ThemeProvider } from "@/components/shell/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { LOCALE_COOKIE, Locale, defaultLocale } from "@/i18n/config";
@@ -83,6 +84,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       >
         <ConfigContextProvider config={config}>
           <LanguageProvider initialLocale={locale} initialMessages={messages}>
+            {/* ?lang=de|en presets the UI language for a guest, who has no
+                account to carry the preference on. Applied once, then removed
+                from the URL — see components/shell/locale-from-query.tsx. */}
+            <React.Suspense fallback={null}>
+              <LocaleFromQuery />
+            </React.Suspense>
             <ThemeProvider
               attribute="class"
               defaultTheme="system"
