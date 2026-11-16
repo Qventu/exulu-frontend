@@ -91,11 +91,9 @@ export function WorkStatusesSection({ routineId, saved, canWrite, onSaved, onDir
   const config = toConfig(draft);
   const { errors, warnings } = validateWorkStatusDraft(config);
   const dirty = JSON.stringify(config) !== baseline;
-  const reportDirty = React.useRef(onDirtyChange);
-  reportDirty.current = onDirtyChange;
   React.useEffect(() => {
-    reportDirty.current?.(dirty);
-  }, [dirty]);
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   const patchRow = (id: string, patch: Partial<Row>) =>
     setDraft((current) => {

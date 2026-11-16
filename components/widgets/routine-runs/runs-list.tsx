@@ -120,12 +120,8 @@ export function RoutineRunsList({
   const hasStatuses = statuses.length > 0;
   const [chosenStatuses, setStatusFilter] = React.useState<string[]>([]);
   // A status removed from the routine cannot stay in the filter.
-  const statusKeys = statuses.map((status) => status.key).join(",");
-  const statusFilter = React.useMemo(() => {
-    const known = statusKeys.split(",");
-    const kept = chosenStatuses.filter((key) => known.includes(key));
-    return kept.length > 0 ? kept : NO_STATUS_FILTER;
-  }, [chosenStatuses, statusKeys]);
+  const keptStatuses = chosenStatuses.filter((key) => statuses.some((status) => status.key === key));
+  const statusFilter = keptStatuses.length > 0 ? keptStatuses : NO_STATUS_FILTER;
   // Which statuses count as done decides which area a run is in.
   const doneSignature = statuses.filter((status) => status.done).map((status) => status.key).join(",");
   // A change in one area (a status moved, a run deleted) reloads the other.
