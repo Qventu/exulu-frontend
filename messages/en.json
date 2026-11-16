@@ -1754,6 +1754,7 @@
       "errors": "{count} failed"
     },
     "documentReading": {
+      "errorUnknown": "The document could not be read.",
       "title": "Reading document",
       "ocr": "Recognising text",
       "vision": "Checking figures and tables",

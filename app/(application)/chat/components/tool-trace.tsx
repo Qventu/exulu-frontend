@@ -23,7 +23,6 @@ import type { DynamicToolUIPart } from "ai";
 import { ChevronRight, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { DocumentReading, isDocumentReadingPart } from "@/components/ai-elements/document-reading";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import { isDemoMode } from "@/lib/demo/flag";
 import { toolLabel } from "@/lib/demo/overlays";
@@ -104,21 +103,6 @@ export const ToolTrace = ({ parts }: ToolTraceProps) => {
         ) : null}
         <div>
           {parts.map((part, index) => {
-            // Defensive: parse_document is excluded from traces upstream, but a
-            // surface that builds its own trace still gets the progress card.
-            if (isDocumentReadingPart(part)) {
-              return (
-                <DocumentReading
-                  key={part.toolCallId ?? `${part.type}-${index}`}
-                  part={part}
-                  streaming={
-                    RUNNING.has(part.state) ||
-                    (part as { preliminary?: boolean }).preliminary === true
-                  }
-                  className="mt-0 rounded-none border-0 border-t"
-                />
-              );
-            }
             const name = displayName(formatToolName(part), rawToolName(part));
             const preview = getInputSummary(part.input);
             return (

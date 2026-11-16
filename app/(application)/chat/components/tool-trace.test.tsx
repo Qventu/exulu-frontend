@@ -85,4 +85,19 @@ describe("ToolTrace", () => {
       expect(row.textContent?.startsWith(titles[index])).toBe(true);
     });
   });
+
+  it("shows a finished parse_document row as the compact line, not the JSON dump", () => {
+    const secret = "DOCUMENT-BODY-TEXT";
+    renderTrace([
+      call("tool-bash"),
+      call("tool-parse_document", {
+        input: { filename: "a.pdf" },
+        output: { content: secret, totalPages: 12, fromStore: true },
+      }),
+    ]);
+    fireEvent.click(screen.getByText(enMessages.chat.toolTrace.title));
+    expect(screen.getByText("a.pdf · 12 pages")).toBeDefined();
+    expect(screen.getByText("already read")).toBeDefined();
+    expect(screen.queryByText(new RegExp(secret))).toBeNull();
+  });
 });

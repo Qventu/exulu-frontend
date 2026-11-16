@@ -47,14 +47,32 @@ const parseMaybeJson = (value: unknown): unknown => {
   }
 };
 
-/** Unwraps a string / `{ result }` envelope; tolerant of unknown shapes. */
-const unwrap = (output: unknown): Record<string, unknown> | null => {
+interface FinalOutput {
+  payload: Record<string, unknown> | null;
+  /** Set when the final output is not a successful read. */
+  error: string | null;
+}
+
+const describe = (value: unknown): string =>
+  typeof value === "string" ? value : JSON.stringify(value) ?? "";
+
+/**
+ * Unwraps a string / `{ result }` envelope. A final output counts as a
+ * success only when it is an object carrying `content`; anything else
+ * (plain string, `{ result: "text" }`, `{ error }`) is an error to show.
+ */
+const unwrap = (output: unknown): FinalOutput => {
   let value = parseMaybeJson(output);
   if (value && typeof value === "object" && "result" in value) {
-    const inner = parseMaybeJson((value as { result: unknown }).result);
-    if (inner && typeof inner === "object") value = inner;
+    value = parseMaybeJson((value as { result: unknown }).result);
   }
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+  if (!value || typeof value !== "object") {
+    return { payload: null, error: describe(value) };
+  }
+  const obj = value as Record<string, unknown>;
+  if (typeof obj.error === "string") return { payload: obj, error: obj.error };
+  if (typeof obj.content !== "string") return { payload: obj, error: describe(obj) };
+  return { payload: obj, error: null };
 };
 
 const num = (v: unknown): number =>
@@ -75,7 +93,8 @@ export const DocumentReading = ({ part, streaming, className }: DocumentReadingP
   const t = useTranslations("chat.documentReading");
 
   const inputName = (part.input as { filename?: unknown } | undefined)?.filename;
-  const out = unwrap(part.output);
+  const final = unwrap(part.output);
+  const out = final.payload;
   const preliminary = part.state === "output-available" && part.preliminary === true;
 
   const filename =
@@ -98,23 +117,29 @@ export const DocumentReading = ({ part, streaming, className }: DocumentReadingP
   const nameRow = (suffix?: React.ReactNode, icon?: React.ReactNode) => (
     <div className="flex items-center gap-2 text-foreground">
       {icon ?? <FileText aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />}
-      <span className="truncate font-medium">{filename}</span>
+      <span className="truncate font-medium" title={filename}>
+        {filename || t("title")}
+      </span>
       {suffix}
     </div>
   );
 
-  // Errors: SDK-level, or the tool's own { error } payload.
-  const error =
+  // Errors: SDK-level, or a final output that is not a successful read.
+  const message =
     part.state === "output-error"
-      ? part.errorText ?? ""
-      : !preliminary && typeof out?.error === "string"
-        ? out.error
+      ? part.errorText
+        ? t("error", { message: part.errorText })
+        : t("errorUnknown")
+      : part.state === "output-available" && !preliminary && final.error !== null
+        ? final.error
+          ? t("error", { message: final.error })
+          : t("errorUnknown")
         : null;
-  if (error !== null) {
+  if (message !== null) {
     return shell(
       <>
         {nameRow()}
-        <p className="mt-1 text-destructive">{t("error", { message: error })}</p>
+        <p className="mt-1 text-destructive">{message}</p>
       </>,
       "error",
     );
@@ -126,8 +151,8 @@ export const DocumentReading = ({ part, streaming, className }: DocumentReadingP
     return shell(
       <div className="flex items-center gap-2 text-foreground">
         <FileText aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="truncate">
-          {pages ? `${filename} · ${t("pages", { count: pages })}` : filename}
+        <span className="truncate" title={filename}>
+          {!filename ? t("title") : pages ? `${filename} · ${t("pages", { count: pages })}` : filename}
         </span>
         {out?.fromStore === true ? (
           <span className="shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -178,6 +203,7 @@ export const DocumentReading = ({ part, streaming, className }: DocumentReadingP
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={percent}
+          aria-valuetext={t("page", { done, total })}
         />
       ) : (
         <div
@@ -192,7 +218,7 @@ export const DocumentReading = ({ part, streaming, className }: DocumentReadingP
         <span>{progress?.phase ? t(progress.phase) : t("title")}</span>
         {determinate ? <span>{t("page", { done, total })}</span> : null}
       </div>
-      {total >= LONG_DOCUMENT_PAGES ? <p className="mt-1">{t("longHint")}</p> : null}
+      {total >= LONG_DOCUMENT_PAGES && progress?.phase !== "cached" ? <p className="mt-1">{t("longHint")}</p> : null}
     </>,
   );
 };

@@ -38,12 +38,27 @@ export const GROUPING_EXCLUDED_TOOL_TYPES = [
   "tool-memory_remember",
   "tool-memory_update",
   "tool-memory_forget",
-  // DocumentReading: its progress bar must stay visible, not fold into a
-  // collapsed group or trace card.
-  "tool-parse_document",
 ] as const;
 
 const EXCLUDED = new Set<string>(GROUPING_EXCLUDED_TOOL_TYPES);
+
+/**
+ * A parse_document read that is still in progress (input only, or a
+ * preliminary progress output). It renders its own progress card and must
+ * stay visible, so it never folds into a group or trace. A FINISHED read
+ * (final output or error) groups and traces like any other tool.
+ */
+export const isRunningDocumentRead = (part: unknown): boolean => {
+  const p = part as { type?: unknown; state?: unknown; preliminary?: unknown } | null;
+  if (typeof p?.type !== "string" || p.type.toLowerCase() !== "tool-parse_document") {
+    return false;
+  }
+  return (
+    p.state === "input-streaming" ||
+    p.state === "input-available" ||
+    (p.state === "output-available" && p.preliminary === true)
+  );
+};
 
 /**
  * A part list entry to render: either a single part (rendered exactly as
@@ -75,6 +90,7 @@ const isGroupableToolPart = (part: unknown): boolean => {
   // Any context_search variant (agentic_context_search, …) renders through
   // ContextSearchResults; the renderer matches it by substring, so do the same.
   if (lower.includes("context_search")) return false;
+  if (isRunningDocumentRead(part)) return false;
   return true;
 };
 
@@ -105,7 +121,11 @@ export function groupRenderUnits<TPart>(
 
     const type = (part as { type: string }).type;
     let end = i + 1;
-    while (end < parts.length && (parts[end] as { type?: unknown })?.type === type) {
+    while (
+      end < parts.length &&
+      (parts[end] as { type?: unknown })?.type === type &&
+      !isRunningDocumentRead(parts[end])
+    ) {
       end += 1;
     }
 
@@ -181,6 +201,7 @@ const isTraceableToolPart = (part: unknown): boolean => {
     const lower = type.toLowerCase();
     if (EXCLUDED.has(lower)) return false;
     if (lower.includes("context_search")) return false;
+    if (isRunningDocumentRead(part)) return false;
   }
   const state = (part as { state?: unknown }).state;
   return state !== "approval-requested" && state !== "approval-responded";

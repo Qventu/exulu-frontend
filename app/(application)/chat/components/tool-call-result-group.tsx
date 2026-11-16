@@ -23,6 +23,7 @@ import {
   ToolInput,
   ToolOutput,
 } from "@/components/ai-elements/tool";
+import { DocumentReading, isDocumentReadingPart } from "@/components/ai-elements/document-reading";
 import { Response } from "@/components/ai-elements/response";
 import { computeUntypedToolData } from "@/components/message-renderer-tool-data";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -48,6 +49,21 @@ export const ToolCallRow = ({
   title?: string;
 }) => {
   const t = useTranslations("chat");
+  // A finished parse_document read shows the card's compact line (name,
+  // pages, badge or error) instead of a JSON dump of the document content.
+  // Running reads never reach a group or trace, so no streaming state.
+  if (
+    isDocumentReadingPart(part) &&
+    (part.state === "output-available" || part.state === "output-error")
+  ) {
+    return (
+      <DocumentReading
+        part={part}
+        streaming={false}
+        className="mt-0 rounded-none border-0 border-t"
+      />
+    );
+  }
   const summary = getInputSummary(part.input);
   const title =
     titleOverride ?? summary ?? t("toolGroup.callIndex", { index: index + 1, count: total });
