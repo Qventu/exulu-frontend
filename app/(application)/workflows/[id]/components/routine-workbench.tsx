@@ -116,8 +116,9 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
   // would otherwise be discarded silently — the Sheet's own ConfirmDialog
   // only guards Sheet close).
   const [stepsSheetDirty, setStepsSheetDirty] = React.useState(false);
+  const [workStatusesDirty, setWorkStatusesDirty] = React.useState(false);
   const { guardDialog } = useUnsavedChangesGuard(
-    editor.dirty || stepsSheetDirty,
+    editor.dirty || stepsSheetDirty || workStatusesDirty,
   );
 
   // Filter out the Danger section from the SectionNav when the user has no
@@ -201,6 +202,7 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
               saved={workStatuses}
               canWrite={workbench.access.canWrite}
               onSaved={setWorkStatuses}
+              onDirtyChange={setWorkStatusesDirty}
             />
             <RunsSection
               routine={routine}

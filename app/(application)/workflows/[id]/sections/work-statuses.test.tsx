@@ -42,11 +42,11 @@ function saveMock() {
   return { mock, calls };
 }
 
-function show(saved: WorkStatusConfig, opts: { mocks?: unknown[]; canWrite?: boolean; onSaved?: (c: WorkStatusConfig) => void } = {}) {
+function show(saved: WorkStatusConfig, opts: { mocks?: unknown[]; canWrite?: boolean; onSaved?: (c: WorkStatusConfig) => void; onDirtyChange?: (dirty: boolean) => void } = {}) {
   return render(
     <NextIntlClientProvider locale="de" messages={de as never}>
       <MockedProvider mocks={(opts.mocks ?? []) as never}>
-        <WorkStatusesSection routineId="wf-1" saved={saved} canWrite={opts.canWrite ?? true} onSaved={opts.onSaved ?? (() => {})} />
+        <WorkStatusesSection routineId="wf-1" saved={saved} canWrite={opts.canWrite ?? true} onSaved={opts.onSaved ?? (() => {})} onDirtyChange={opts.onDirtyChange} />
       </MockedProvider>
     </NextIntlClientProvider>,
   );
@@ -137,5 +137,15 @@ describe("WorkStatusesSection", () => {
     expect(labelOf(rows()[0]).disabled).toBe(true);
     expect(screen.queryByRole("button", { name: "Status hinzufügen" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Speichern" })).toBeNull();
+  });
+
+  it("reports unsaved changes, and that they are gone after the save", async () => {
+    const save = saveMock();
+    const onDirtyChange = vi.fn();
+    show(SAVED, { mocks: [save.mock], onDirtyChange });
+    add("Rückfrage");
+    await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(true));
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(false));
   });
 });

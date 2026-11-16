@@ -115,4 +115,27 @@ describe("WorkStatusBadge", () => {
     expect(JSON.stringify(toastError.mock.calls[0][1])).toContain("Unknown work status");
     expect(screen.getByRole("button", { name: /Arbeitsstatus/ }).textContent).toContain("Neu");
   });
+
+  it("keeps showing the new status after a successful change until the row itself is updated", async () => {
+    // The app's Apollo cache does not normalise, so the row's run prop only
+    // changes when the list has been reloaded.
+    const onChanged = vi.fn();
+    show({
+      onChanged,
+      mocks: [{ request: { query: SET_ROUTINE_RUN_WORK_STATUS, variables: { id: "jr-1", status: "erledigt" } }, result: { data: { setRoutineRunWorkStatus: resultRun("erledigt") } } }],
+    });
+    openMenu();
+    fireEvent.click(await screen.findByRole("menuitem", { name: /Erledigt/ }));
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole("button", { name: /Arbeitsstatus/ }).hasAttribute("disabled")).toBe(false));
+    expect(screen.getByRole("button", { name: /Arbeitsstatus/ }).textContent).toContain("Erledigt");
+  });
+
+  it("says who set the status and when, in the tooltip and inside the menu", async () => {
+    show({ run: { ...RUN, work_status_updated_at: "2026-11-16T12:00:00.000Z", work_status_updated_by: { kind: "tool", id: "generate_offer_xml" } } });
+    const button = screen.getByRole("button", { name: /Arbeitsstatus/ });
+    expect(button.getAttribute("title")).toMatch(/vom Tool generate_offer_xml gesetzt · 16\.11\./);
+    openMenu();
+    expect((await screen.findByTestId("work-status-set-by")).textContent).toMatch(/vom Tool generate_offer_xml gesetzt · 16\.11\./);
+  });
 });

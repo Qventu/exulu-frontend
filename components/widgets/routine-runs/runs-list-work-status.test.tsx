@@ -127,4 +127,56 @@ describe("RoutineRunsList with work statuses", () => {
     await waitFor(() => expect(open.calls.at(-1)?.workStatuses).toEqual(["neu"]));
     await waitFor(() => expect(done.calls.at(-1)?.workStatuses).toEqual(["neu"]));
   });
+
+  it("reloads both areas when the routine's statuses change, and drops a removed status from the filter", async () => {
+    const open = runsMock((v) => v.workStatusOpen === true, [run("a", "Anfrage A", "neu")]);
+    const done = runsMock((v) => v.workStatusOpen === false, []);
+    const tree = (config: typeof CONFIG) => (
+      <NextIntlClientProvider locale="de" messages={de as never}>
+        <MockedProvider mocks={[open.mock, done.mock] as never}>
+          <RoutineRunsList workflow="wf-1" workStatuses={config} />
+        </MockedProvider>
+      </NextIntlClientProvider>
+    );
+    const view = render(tree(CONFIG));
+    await screen.findByText("Anfrage A");
+    const filter = screen.getByRole("button", { name: "Status" });
+    filter.focus();
+    fireEvent.keyDown(filter, { key: "Enter" });
+    fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /Neu/ }));
+    await waitFor(() => expect(open.calls.at(-1)?.workStatuses).toEqual(["neu"]));
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    const before = { open: open.calls.length, done: done.calls.length };
+
+    // The editor saved: "Neu" is gone, "Offen" now counts as done.
+    view.rerender(tree(parseWorkStatusConfig({ statuses: [{ key: "offen", label: "Offen", done: true }, { key: "erledigt", label: "Erledigt", done: true }], default: null })));
+
+    await waitFor(() => {
+      expect(open.calls.length).toBeGreaterThan(before.open);
+      expect(done.calls.length).toBeGreaterThan(before.done);
+    });
+    await waitFor(() => expect("workStatuses" in (open.calls.at(-1) ?? {})).toBe(false));
+  });
+
+  it("steps back a page when the current page comes back empty", async () => {
+    const twenty = Array.from({ length: 20 }, (_, i) => run(`r${i}`, `Anfrage ${i}`, null));
+    const calls: Record<string, unknown>[] = [];
+    const mock = {
+      request: { query: ROUTINE_RUNS },
+      variableMatcher: () => true,
+      maxUsageCount: Number.POSITIVE_INFINITY,
+      result: (vars: Record<string, unknown>) => {
+        calls.push(vars);
+        // Page 2 held one run that has just left the list.
+        const first = calls.filter((c) => c.page === 1).length === 1 && vars.page === 1;
+        return { data: { routineRuns: { __typename: "RoutineRunPage", items: vars.page === 1 ? twenty : [], total: first ? 21 : 20, page: vars.page, limit: 20 } } };
+      },
+    };
+    show([mock]);
+    await screen.findByText("Anfrage 0");
+    fireEvent.click(screen.getByRole("button", { name: "Nächste Seite" }));
+    await waitFor(() => expect(calls.some((c) => c.page === 2)).toBe(true));
+    await waitFor(() => expect(calls.at(-1)?.page).toBe(1));
+    expect(await screen.findByText("Anfrage 0")).toBeTruthy();
+  });
 });

@@ -118,7 +118,16 @@ export function RoutineRunsList({
   // scoped to one routine that has statuses.
   const statuses = workflow ? (workStatuses?.statuses ?? []) : [];
   const hasStatuses = statuses.length > 0;
-  const [statusFilter, setStatusFilter] = React.useState<string[]>([]);
+  const [chosenStatuses, setStatusFilter] = React.useState<string[]>([]);
+  // A status removed from the routine cannot stay in the filter.
+  const statusKeys = statuses.map((status) => status.key).join(",");
+  const statusFilter = React.useMemo(() => {
+    const known = statusKeys.split(",");
+    const kept = chosenStatuses.filter((key) => known.includes(key));
+    return kept.length > 0 ? kept : NO_STATUS_FILTER;
+  }, [chosenStatuses, statusKeys]);
+  // Which statuses count as done decides which area a run is in.
+  const doneSignature = statuses.filter((status) => status.done).map((status) => status.key).join(",");
   // A change in one area (a status moved, a run deleted) reloads the other.
   const [refresh, setRefresh] = React.useState<{ version: number; from: string }>({ version: 0, from: "" });
 
@@ -286,6 +295,7 @@ export function RoutineRunsList({
           showRoutineColumn={showRoutineColumn}
           pageSize={pageSize}
           refresh={refresh}
+          doneSignature={doneSignature}
           onMutated={(from) => setRefresh((r) => ({ version: r.version + 1, from }))}
           stateLabel={stateLabel}
           t={t}
@@ -307,6 +317,8 @@ interface RunsAreaProps {
   showRoutineColumn: boolean;
   pageSize: number;
   refresh: { version: number; from: string };
+  /** Changes when the routine's done statuses change: the areas reload. */
+  doneSignature: string;
   onMutated: (from: string) => void;
   stateLabel: (state: string) => string;
   t: ReturnType<typeof useTranslations>;
@@ -326,6 +338,7 @@ function RunsArea({
   showRoutineColumn,
   pageSize,
   refresh,
+  doneSignature,
   onMutated,
   stateLabel,
   t,
@@ -390,6 +403,22 @@ function RunsArea({
   React.useEffect(() => {
     if (refreshVersion > 0 && refreshFrom !== areaKey) void refetch();
   }, [refreshVersion, refreshFrom, areaKey, refetch]);
+  const loadedSignature = React.useRef(doneSignature);
+  React.useEffect(() => {
+    if (loadedSignature.current === doneSignature) return;
+    loadedSignature.current = doneSignature;
+    void refetch();
+  }, [doneSignature, refetch]);
+  // The last run of a page left it (set to done, deleted): show the page
+  // before instead of an empty list under a count that says there are runs.
+  const loadedPage = data?.routineRuns ? page : null;
+  React.useEffect(() => {
+    if (loadedPage !== null && !loading && runs.length === 0 && loadedPage > pageCount) {
+      setPage(pageCount);
+    }
+    // setPage is recreated every render; the values above decide.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedPage, loading, runs.length, pageCount]);
   // A deep-linked run that sits in the collapsed area opens that area.
   const linkedRunHere = !!runParam && runs.some((r) => r.id === runParam);
   React.useEffect(() => {
@@ -741,7 +770,7 @@ function RunRow({
           "grid items-center gap-3 px-3",
           // The status badge has its own menu, so it sits beside the row's
           // toggle button, not inside it.
-          workStatuses ? "grid-cols-[auto_170px_1fr]" : "grid-cols-[auto_1fr]",
+          workStatuses ? "grid-cols-[auto_200px_1fr]" : "grid-cols-[auto_1fr]",
           expanded && "bg-muted/30",
         )}
       >

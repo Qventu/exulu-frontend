@@ -77,9 +77,11 @@ export interface WorkStatusesSectionProps {
   saved: WorkStatusConfig;
   canWrite: boolean;
   onSaved: (config: WorkStatusConfig) => void;
+  /** Lets the page guard navigation while status edits are unsaved. */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function WorkStatusesSection({ routineId, saved, canWrite, onSaved }: WorkStatusesSectionProps) {
+export function WorkStatusesSection({ routineId, saved, canWrite, onSaved, onDirtyChange }: WorkStatusesSectionProps) {
   const t = useTranslations("routines.workStatus");
   const [draft, setDraft] = React.useState<Draft>(() => toDraft(saved));
   const [baseline, setBaseline] = React.useState(() => JSON.stringify(toConfig(toDraft(saved))));
@@ -89,6 +91,11 @@ export function WorkStatusesSection({ routineId, saved, canWrite, onSaved }: Wor
   const config = toConfig(draft);
   const { errors, warnings } = validateWorkStatusDraft(config);
   const dirty = JSON.stringify(config) !== baseline;
+  const reportDirty = React.useRef(onDirtyChange);
+  reportDirty.current = onDirtyChange;
+  React.useEffect(() => {
+    reportDirty.current?.(dirty);
+  }, [dirty]);
 
   const patchRow = (id: string, patch: Partial<Row>) =>
     setDraft((current) => {

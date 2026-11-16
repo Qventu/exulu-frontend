@@ -12,7 +12,7 @@
 
 import { useMutation } from "@apollo/client";
 import { Check, ChevronDown } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -21,6 +21,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -48,9 +49,16 @@ export function WorkStatusBadge({ run, config, onChanged, className }: WorkStatu
   const [setStatus, { loading }] = useMutation<{ setRoutineRunWorkStatus: RoutineRun }>(
     SET_ROUTINE_RUN_WORK_STATUS,
   );
-  // Shown while the request is in flight; dropped again on success or error,
-  // so a failed change falls back to the run's real status.
+  // The status just chosen. It stays on screen after the request succeeded,
+  // until the list hands this row its reloaded run (the app's Apollo cache
+  // does not normalise, so the mutation result alone never updates the row).
+  // A failed change drops it and falls back to the run's real status.
   const [pending, setPending] = React.useState<string | null | undefined>(undefined);
+  const locale = useLocale();
+  const runStatus = run.work_status ?? null;
+  React.useEffect(() => {
+    setPending(undefined);
+  }, [runStatus, run.work_status_updated_at]);
 
   if (config.statuses.length === 0) return null;
 
@@ -64,11 +72,10 @@ export function WorkStatusBadge({ run, config, onChanged, className }: WorkStatu
       const { data } = await setStatus({ variables: { id: run.id, status } });
       if (data?.setRoutineRunWorkStatus) onChanged?.(data.setRoutineRunWorkStatus);
     } catch (error) {
+      setPending(undefined);
       toast.error(t("updateFailed"), {
         description: error instanceof Error ? error.message : undefined,
       });
-    } finally {
-      setPending(undefined);
     }
   };
 
@@ -78,7 +85,14 @@ export function WorkStatusBadge({ run, config, onChanged, className }: WorkStatu
       ? t("setBy.tool", { name: String(actor.id ?? "") })
       : t(`setBy.${actor.kind}`)
     : undefined;
-  const title = current?.removed ? t("removed") : setBy;
+  const setAt = run.work_status_updated_at ? new Date(run.work_status_updated_at) : null;
+  const setInfo =
+    pending === undefined && setBy
+      ? setAt && !Number.isNaN(setAt.getTime())
+        ? `${setBy} · ${new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" }).format(setAt)}`
+        : setBy
+      : undefined;
+  const title = current?.removed ? t("removed") : setInfo;
 
   return (
     <DropdownMenu>
@@ -100,7 +114,7 @@ export function WorkStatusBadge({ run, config, onChanged, className }: WorkStatu
               current?.removed && "italic",
             )}
           >
-            <span className="max-w-[180px] truncate">{current ? current.label : t("none")}</span>
+            <span className="max-w-[150px] truncate">{current ? current.label : t("none")}</span>
             <ChevronDown className="size-3 opacity-60" aria-hidden />
           </Badge>
         </button>
@@ -120,6 +134,12 @@ export function WorkStatusBadge({ run, config, onChanged, className }: WorkStatu
         <DropdownMenuItem onSelect={() => void choose(null)} className="text-muted-foreground">
           {t("clear")}
         </DropdownMenuItem>
+        {setInfo ? (
+          // The tooltip is mouse-only; here keyboard and touch users get it too.
+          <DropdownMenuLabel data-testid="work-status-set-by" className="max-w-64 text-xs font-normal text-muted-foreground">
+            {setInfo}
+          </DropdownMenuLabel>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );
