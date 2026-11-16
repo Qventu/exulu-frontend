@@ -4434,7 +4434,8 @@
         "triggers": "Auslöser",
         "runs": "Läufe",
         "queue": "Warteschlange",
-        "danger": "Gefahrenzone"
+        "danger": "Gefahrenzone",
+        "workStatuses": "Arbeitsstatus"
       },
       "basics": {
         "description": "Geben Sie dieser Routine einen Namen, eine Beschreibung und den ausführenden Agenten.",
@@ -4643,7 +4644,10 @@
         "defaultIsDone": "Der Standardstatus darf kein Erledigt-Status sein.",
         "labelEmpty": "Jeder Status braucht eine Bezeichnung.",
         "noDoneStatus": "Kein Status ist als erledigt markiert – alle Läufe bleiben im Bereich „Offen“."
-      }
+      },
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
+      "readOnly": "Nur Personen mit Schreibrecht auf die Routine können die Status ändern."
     }
   },
   "routineRuns": {

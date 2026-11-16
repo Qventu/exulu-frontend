@@ -13,12 +13,17 @@ import { useTranslations } from "next-intl";
 
 import { DetailSection } from "@/components/primitives/detail-section";
 import { RoutineRunsList } from "@/components/widgets/routine-runs/runs-list";
-import { parseWorkStatusConfig } from "@/lib/routine-runs/work-status";
+import {
+  parseWorkStatusConfig,
+  type WorkStatusConfig,
+} from "@/lib/routine-runs/work-status";
 
 import type { Routine } from "../../types";
 
 export interface RunsSectionProps {
   routine: Routine;
+  /** Work statuses as last saved in this page; defaults to the routine's own. */
+  workStatuses?: WorkStatusConfig;
   /**
    * Kept for call-site compatibility with routine-workbench.tsx; the v2
    * RoutineRunsList manages its own retry flow via cancelRoutineRun /
@@ -27,14 +32,14 @@ export interface RunsSectionProps {
   onRetry?: (prefill: Record<string, string>) => void;
 }
 
-export function RunsSection({ routine }: RunsSectionProps) {
+export function RunsSection({ routine, workStatuses }: RunsSectionProps) {
   const t = useTranslations("routines");
   return (
     <section id="runs" className="scroll-mt-20" tabIndex={-1}>
       <DetailSection title={t("runs.title")} defaultOpen={true}>
         <RoutineRunsList
           workflow={routine.id}
-          workStatuses={parseWorkStatusConfig(routine.work_statuses)}
+          workStatuses={workStatuses ?? parseWorkStatusConfig(routine.work_statuses)}
         />
       </DetailSection>
     </section>

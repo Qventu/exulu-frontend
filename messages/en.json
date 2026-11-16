@@ -4434,7 +4434,8 @@
         "triggers": "Triggers",
         "runs": "Runs",
         "queue": "Queue",
-        "danger": "Danger zone"
+        "danger": "Danger zone",
+        "workStatuses": "Work status"
       },
       "basics": {
         "description": "Give this routine a name, description, and the agent that runs it.",
@@ -4643,7 +4644,10 @@
         "defaultIsDone": "The default status must not be a done status.",
         "labelEmpty": "Every status needs a label.",
         "noDoneStatus": "No status is marked as done — all runs stay in the “Open” area."
-      }
+      },
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "readOnly": "Only people who may edit the routine can change the statuses."
     }
   },
   "routineRuns": {

@@ -17,6 +17,7 @@
  *        <AccessSection />     (id="access")
  *        <StepsSection />      (id="steps")
  *        <TriggersSection />   (id="triggers") — Email · Schedule · API tabs
+ *        <WorkStatusesSection /> (id="workStatuses")
  *        <RunsSection />       (id="runs")
  *        <DangerSection />     (id="danger") — Delete (canDelete only)
  *    SaveBar + useUnsavedChangesGuard (page-level, for Basics + Access)
@@ -70,6 +71,8 @@ import { RunRoutineDialog } from "../../components/run-routine-dialog";
 import { RUN_WORKFLOW } from "../../queries";
 import type { Routine } from "../../types";
 import { useRoutineEditor, useRoutineWorkbench, useScrollSpy } from "../hooks";
+import { parseWorkStatusConfig } from "@/lib/routine-runs/work-status";
+
 import { AccessSection } from "../sections/access";
 import { BasicsSection } from "../sections/basics";
 import { DangerSection } from "../sections/danger";
@@ -77,6 +80,7 @@ import { QueueSection } from "../sections/queue";
 import { RunsSection } from "../sections/runs";
 import { StepsSection } from "../sections/steps";
 import { TriggersSection } from "../sections/triggers";
+import { WorkStatusesSection } from "../sections/work-statuses";
 import { RoutineHeader } from "./routine-header";
 import { StepsEditorSheet } from "./steps-editor-sheet";
 
@@ -86,6 +90,7 @@ export const ROUTINE_SECTION_IDS = [
   "access",
   "steps",
   "triggers",
+  "workStatuses",
   "runs",
   "danger",
 ] as const;
@@ -100,6 +105,11 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
   const t = useTranslations("routines");
   const workbench = useRoutineWorkbench(routine);
   const editor = useRoutineEditor(routine);
+  // The routine prop comes from the server fetch and does not change after a
+  // save, so the saved work statuses live here for the runs list below.
+  const [workStatuses, setWorkStatuses] = React.useState(() =>
+    parseWorkStatusConfig(routine.work_statuses),
+  );
 
   // Surface the Steps Sheet's local dirty state up so the page-level guard
   // catches cross-page navigation while step edits are pending (Link clicks
@@ -186,8 +196,15 @@ export function RoutineWorkbench({ routine }: RoutineWorkbenchProps) {
               onOpenSheet={workbench.openStepsSheet}
             />
             <TriggersSection routine={routine} access={workbench.access} />
+            <WorkStatusesSection
+              routineId={routine.id}
+              saved={workStatuses}
+              canWrite={workbench.access.canWrite}
+              onSaved={setWorkStatuses}
+            />
             <RunsSection
               routine={routine}
+              workStatuses={workStatuses}
               onRetry={(prefill) => workbench.openRun(prefill)}
             />
             <DangerSection {...sectionProps} />
