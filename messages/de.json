@@ -1753,6 +1753,20 @@
       "callIndex": "Aufruf {index} von {count}",
       "errors": "{count} fehlgeschlagen"
     },
+    "documentReading": {
+      "title": "Dokument lesen",
+      "ocr": "Text wird erkannt",
+      "vision": "Abbildungen und Tabellen werden geprüft",
+      "storing": "Ergebnis wird gespeichert",
+      "text": "Text wird gelesen",
+      "cached": "Gespeicherter Text wird geladen",
+      "page": "Seite {done} von {total}",
+      "longHint": "Das Ergebnis wird gespeichert, der nächste Zugriff ist sofort da.",
+      "pages": "{count, plural, one {# Seite} other {# Seiten}}",
+      "alreadyRead": "bereits gelesen",
+      "interrupted": "Lesen abgebrochen",
+      "error": "Dokument konnte nicht gelesen werden: {message}"
+    },
     "toolTrace": {
       "sequence": "Abfolge der Tool-Aufrufe",
       "title": "Tool-Aufrufe"

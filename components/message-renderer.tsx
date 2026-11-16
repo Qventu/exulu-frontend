@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { toast } from "sonner"
 import { TodoList } from "./ai-elements/todo-list"
+import { DocumentReading, isDocumentReadingPart, type DocumentReadingPart } from "./ai-elements/document-reading"
 import { FileItem } from "./primitives/file-picker"
 import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation"
@@ -1147,6 +1148,20 @@ const MessageItem = memo(function MessageItem({
                   const state: "input-streaming" | "input-available" | "output-available" | "output-error" = dynamicToolPart.state;
                   return (
                     <TodoList todos={output.result} showPriority={true} state={state} />
+                  )
+                }
+
+                // Approval / denial states fall through to the generic card, which
+                // owns the approval buttons.
+                if (isDocumentReadingPart(part) && !['approval-requested', 'approval-responded', 'output-denied'].includes((part as any).state)) {
+                  return (
+                    <DocumentReading
+                      key={`${message.id}-${i}`}
+                      part={part as DocumentReadingPart}
+                      streaming={
+                        status !== "ready" && status !== "error" && isLastMessage && message.role === 'assistant'
+                      }
+                    />
                   )
                 }
 

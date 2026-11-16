@@ -38,6 +38,9 @@ export const GROUPING_EXCLUDED_TOOL_TYPES = [
   "tool-memory_remember",
   "tool-memory_update",
   "tool-memory_forget",
+  // DocumentReading: its progress bar must stay visible, not fold into a
+  // collapsed group or trace card.
+  "tool-parse_document",
 ] as const;
 
 const EXCLUDED = new Set<string>(GROUPING_EXCLUDED_TOOL_TYPES);
