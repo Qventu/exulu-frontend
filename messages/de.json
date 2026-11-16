@@ -835,7 +835,9 @@
         "pickerNoResults": "Nichts gefunden.",
         "pickerAlreadyEnabled": "Aktiviert",
         "pickerSelected": "{selected} ausgewählt · {addable} verfügbar",
-        "pickerAdd": "{count} hinzufügen"
+        "pickerAdd": "{count} hinzufügen",
+        "createProjectLabel": "Projekte anlegen",
+        "createProjectDescription": "Der Agent kann nach Freigabe aus einer Unterhaltung ein Projekt anlegen und die Dateien der Sitzung dorthin verschieben."
       },
       "unsavedChanges": "Ungespeicherte Änderungen an diesem Agenten"
     },
@@ -1333,7 +1335,13 @@
       "groupMixed": "Beantwortet: {tool} ({count})",
       "groupMore": "und {count} weitere",
       "groupTitle": "{tool} {count}-mal ausführen?",
-      "title": "{tool} ausführen?"
+      "title": "{tool} ausführen?",
+      "createProject": {
+        "summary": "Projekt „{name}“ anlegen {count, plural, =0 {ohne Dateien zu verschieben} one {und 1 Datei dorthin verschieben} other {und # Dateien dorthin verschieben}}",
+        "files": "Dateien",
+        "noFiles": "Keine Dateien",
+        "private": "Das Projekt ist zunächst nur für dich sichtbar."
+      }
     },
     "attach": {
       "addKnowledge": "Wissen hinzufügen",
@@ -1805,6 +1813,9 @@
       "reloaded": "{count} Skill(s) in dieses Gespräch neu geladen.",
       "reloadNoSandbox": "Noch keine Sandbox offen; die Skills werden mit deiner nächsten Nachricht geladen.",
       "reloadFailed": "Skills konnten nicht neu geladen werden"
+    },
+    "createProject": {
+      "open": "Projekt öffnen"
     }
   },
   "common": {

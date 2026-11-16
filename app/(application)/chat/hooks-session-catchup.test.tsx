@@ -151,7 +151,8 @@ const mount = (initialSession: AgentSession | null) =>
     { wrapper: Wrapper },
   );
 
-const sessionRowQuery = () => gqlCalls.queries.filter((q) => q.name === "GetAgentSessionById");
+// The catch-up poll only: the create_project one-shot lookup (no pollInterval) shares the document.
+const sessionRowQuery = () => gqlCalls.queries.filter((q) => q.name === "GetAgentSessionById" && q.options?.pollInterval !== undefined);
 
 beforeEach(() => {
   gqlCalls.queries.length = 0;

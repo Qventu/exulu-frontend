@@ -79,6 +79,7 @@ import { MemoryStack } from "./memory-stack";
 import { SkillCard } from "./skill-card";
 import { isSkillToolPart } from "./skill-card-data";
 import { RecalledMemories } from "./recalled-memories";
+import { OpenProjectLink } from "./create-project-card";
 import { ToolCallApproval } from "./tool-call-approval";
 import { ToolCallApprovalGroup } from "./tool-call-approval-group";
 import { summarizeToolGroup } from "./tool-call-group-data";
@@ -199,6 +200,7 @@ function makeUntypedToolPart(
     }
 
     return (
+      <>
       <Tool key={callId} className="mt-3" defaultOpen={false} data-demo-id="chat-tool-trace">
         <ToolHeader
           title={toolTitle}
@@ -230,6 +232,8 @@ function makeUntypedToolPart(
           />
         </ToolContent>
       </Tool>
+      {(untypedToolPart.type as string) === "tool-create_project" && untypedToolPart.state === "output-available" && <OpenProjectLink output={output} />}
+      </>
     );
   };
   UntypedToolPart.displayName = "UntypedToolPart";

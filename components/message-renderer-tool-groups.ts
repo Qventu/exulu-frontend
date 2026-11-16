@@ -38,6 +38,8 @@ export const GROUPING_EXCLUDED_TOOL_TYPES = [
   "tool-memory_remember",
   "tool-memory_update",
   "tool-memory_forget",
+  // The project link in its result must stay visible, not fold into a trace.
+  "tool-create_project",
 ] as const;
 
 const EXCLUDED = new Set<string>(GROUPING_EXCLUDED_TOOL_TYPES);

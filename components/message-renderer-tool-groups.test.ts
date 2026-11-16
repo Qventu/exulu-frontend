@@ -371,6 +371,11 @@ describe("traceRenderUnits", () => {
     expect(shape(trace(parts))).toEqual(["part:tool-a", "part:tool-memory_remember", "part:tool-b"]);
   });
 
+  it("keeps a finished create_project call out of a trace, so its project link stays visible", () => {
+    const parts = [tool("tool-a"), tool("tool-create_project"), tool("tool-b"), tool("tool-c")];
+    expect(shape(trace(parts))).toEqual(["part:tool-a", "part:tool-create_project", "trace:2"]);
+  });
+
   it("respects the caller's output-shape check, splitting around the member that fails it", () => {
     const image = tool("tool-image_generation");
     const parts = [tool("tool-a"), tool("tool-b"), image, tool("tool-c")];

@@ -1,0 +1,50 @@
+"use client";
+
+/**
+ * create_project: the approval summary (what exactly is approved: the project
+ * name and the files to move) and the "open project" link under the result.
+ * Never navigates by itself.
+ */
+
+import { ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
+
+import { describeCreateProjectInput, projectLinkOf } from "../lib/create-project";
+
+export function CreateProjectApprovalSummary({ input }: { input: unknown }) {
+  const t = useTranslations("chat");
+  const { name, files } = describeCreateProjectInput(input);
+  return (
+    <div className="space-y-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+      <p className="font-medium">{t("approval.createProject.summary", { name, count: files.length })}</p>
+      <div>
+        <p className="text-xs text-muted-foreground">{t("approval.createProject.files")}</p>
+        {files.length === 0 ? (
+          <p className="text-muted-foreground">{t("approval.createProject.noFiles")}</p>
+        ) : (
+          <ul className="list-disc pl-5">
+            {files.map((file) => (
+              <li key={file} className="break-all">
+                {file}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">{t("approval.createProject.private")}</p>
+    </div>
+  );
+}
+
+export function OpenProjectLink({ output }: { output: unknown }) {
+  const t = useTranslations("chat");
+  const href = projectLinkOf(output);
+  if (!href) return null;
+  return (
+    <Link href={href} className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline">
+      {t("createProject.open")}
+      <ExternalLink aria-hidden="true" className="size-3.5" />
+    </Link>
+  );
+}

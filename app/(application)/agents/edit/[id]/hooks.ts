@@ -149,7 +149,7 @@ function defaultFirewall(agent: Agent | undefined): FirewallState {
   };
 }
 
-function defaultTools(agent: Agent | undefined): AgentTool[] {
+export function defaultTools(agent: Agent | undefined): AgentTool[] {
   // Legacy data may arrive as string[] (form.tsx:239-242 comment).
   const raw: any = agent?.tools;
   if (!raw) return [];

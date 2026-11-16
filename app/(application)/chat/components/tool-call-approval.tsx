@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+import { CreateProjectApprovalSummary } from "./create-project-card";
 import { getInputSummary } from "./tool-call-group-data";
 
 export interface ToolCallApprovalProps {
@@ -100,6 +101,9 @@ export const ToolCallApproval = ({
   if (part.state === "approval-requested") {
     const approvalId = part.approval.id as string;
     const inputSummary = getInputSummary(part.input);
+    // create_project always asks: the summary names what is approved and
+    // "allow for this chat" is not offered (the backend ignores it anyway).
+    const isCreateProject = toolId === "tool-create_project";
 
     return (
       <Card className="mt-3 border-border bg-card" data-demo-id="chat-tool-approval">
@@ -120,7 +124,9 @@ export const ToolCallApproval = ({
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {inputSummary && (
+          {isCreateProject ? (
+            <CreateProjectApprovalSummary input={part.input} />
+          ) : inputSummary && (
             <p className="line-clamp-3 break-all rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-xs text-muted-foreground">
               {inputSummary}
             </p>
@@ -134,16 +140,18 @@ export const ToolCallApproval = ({
             >
               {t("approval.allowOnce")}
             </Button>
-            <Button
-              variant="outline"
-              className="h-11 sm:h-9 sm:flex-1"
-              onClick={() => {
-                addToolApprovalResponse({ id: approvalId, approved: true });
-                onApproveForChat(toolId);
-              }}
-            >
-              {t("approval.allowForChat")}
-            </Button>
+            {!isCreateProject && (
+              <Button
+                variant="outline"
+                className="h-11 sm:h-9 sm:flex-1"
+                onClick={() => {
+                  addToolApprovalResponse({ id: approvalId, approved: true });
+                  onApproveForChat(toolId);
+                }}
+              >
+                {t("approval.allowForChat")}
+              </Button>
+            )}
             <Button
               variant="outline"
               className="h-11 text-destructive hover:text-destructive sm:h-9 sm:flex-1"

@@ -88,6 +88,7 @@ import { withApprovedTools } from "./approved-tools-body";
 import { savedIdsFromMessages } from "./components/memory-panel-data";
 import { answerTextOf, collectSources, hasPendingToolApproval, parseClaimCheckTrigger } from "./components/claim-check-data";
 import type { ClaimCheckState } from "./components/claim-check";
+import { createProjectCallIds } from "./lib/create-project";
 import { useChatProjectFiles, type ChatProjectFiles } from "./use-project-files";
 
 // ---------------------------------------------------------------------------
@@ -647,6 +648,8 @@ export function useChatSession({
     // without a remount (App Router preserves client state across param-only
     // navigations — the legacy monolith reset currentSession the same way).
     setMessages(initialMessages);
+    handledProjectCalls.current = new Set(createProjectCallIds(initialMessages));
+    setProjectLookupId(null);
     clearError();
     setServerContextBlocked(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -737,6 +740,39 @@ export function useChatSession({
     setCatchingUp(false);
     router.refresh();
   }, [catchingUp, watchedRow, status, router]);
+
+  // --- project created by the agent (create_project tool) ---------------------
+  // The session row gains a project when the tool finishes, but this hook read
+  // `session.project` once on mount. A finished call seen NOW (not one already
+  // in the history, which a reopened chat gets from the row itself) triggers a
+  // single refetch of the row; its project id then feeds useChatProjectFiles.
+  const handledProjectCalls = React.useRef<Set<string>>(new Set(createProjectCallIds(initialMessages)));
+  const [projectLookupId, setProjectLookupId] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    const fresh = createProjectCallIds(messages).filter((id) => !handledProjectCalls.current.has(id));
+    if (fresh.length === 0) return;
+    fresh.forEach((id) => handledProjectCalls.current.add(id));
+    const sessionId = currentSessionRef.current?.id;
+    if (sessionId && sessionId !== "new") setProjectLookupId(sessionId);
+  }, [messages]);
+
+  const projectLookup = useQuery(GET_AGENT_SESSION_BY_ID, {
+    variables: { id: projectLookupId },
+    skip: !projectLookupId,
+    fetchPolicy: "network-only",
+  });
+  const projectLookupRow = projectLookup.data?.agent_sessionById;
+  React.useEffect(() => {
+    if (!projectLookupId) return;
+    if (!projectLookupRow && !projectLookup.error) return; // still loading
+    const project = projectLookupRow?.project as string | null | undefined;
+    if (project && currentSessionRef.current?.id === projectLookupId) {
+      const next = { ...currentSessionRef.current, project } as AgentSession;
+      currentSessionRef.current = next;
+      setCurrentSession(next);
+    }
+    setProjectLookupId(null);
+  }, [projectLookupId, projectLookupRow, projectLookup.error]);
 
   // --- token accounting (items 27/38) ------------------------------------------
   // Derived with useMemo (not state + effect): the effect variant queued a
