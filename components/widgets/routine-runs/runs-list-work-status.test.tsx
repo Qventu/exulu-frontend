@@ -36,7 +36,7 @@ const CONFIG = parseWorkStatusConfig({
 const run = (id: string, subject: string, status: string | null) => ({
   __typename: "RoutineRun",
   id, job_id: null, state: "completed", trigger: "email", trigger_metadata: { subject }, session: null, workflow: "wf-1",
-  workflowName: "Ersatzteil Angebot", agent: null, error: null, tries: 1, createdAt: null, updatedAt: null,
+  workflowName: "Angebote", agent: null, error: null, tries: 1, createdAt: null, updatedAt: null,
   inputTokens: null, outputTokens: null, costUsd: null,
   work_status: status, work_status_updated_at: null, work_status_updated_by: null,
 });
