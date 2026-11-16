@@ -9,7 +9,6 @@
  */
 
 import { FileText, Loader2 } from "lucide-react";
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { Progress } from "@/components/ui/progress";
@@ -74,12 +73,10 @@ export interface DocumentReadingProps {
 
 export const DocumentReading = ({ part, streaming, className }: DocumentReadingProps) => {
   const t = useTranslations("chat.documentReading");
-  const [sawPreliminary, setSawPreliminary] = useState(false);
 
   const inputName = (part.input as { filename?: unknown } | undefined)?.filename;
   const out = unwrap(part.output);
   const preliminary = part.state === "output-available" && part.preliminary === true;
-  if (preliminary && !sawPreliminary) setSawPreliminary(true);
 
   const filename =
     (typeof out?.filename === "string" && out.filename) ||
@@ -132,7 +129,7 @@ export const DocumentReading = ({ part, streaming, className }: DocumentReadingP
         <span className="truncate">
           {pages ? `${filename} · ${t("pages", { count: pages })}` : filename}
         </span>
-        {!sawPreliminary ? (
+        {out?.fromStore === true ? (
           <span className="shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] text-muted-foreground">
             {t("alreadyRead")}
           </span>

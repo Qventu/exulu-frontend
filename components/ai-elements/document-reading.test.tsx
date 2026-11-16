@@ -89,11 +89,18 @@ describe("DocumentReading done", () => {
     output,
   });
 
-  it("shows one line with name and pages, plus 'bereits gelesen' without prior progress", () => {
-    render(wrap(<DocumentReading part={done({ content: "x", totalPages: 120, totalLines: 1, offset: 0, linesReturned: 1 })} streaming={false} />));
+  it("shows one line with name and pages, with the badge only when fromStore is true", () => {
+    const { rerender } = render(wrap(<DocumentReading part={done({ content: "x", totalPages: 120, fromStore: true })} streaming={false} />));
     expect(screen.getByText("handbuch.pdf · 120 Seiten")).toBeDefined();
     expect(screen.getByText("bereits gelesen")).toBeDefined();
     expect(screen.queryByRole("progressbar")).toBeNull();
+    rerender(wrap(<DocumentReading part={done({ content: "x", totalPages: 120 })} streaming={false} />));
+    expect(screen.queryByText("bereits gelesen")).toBeNull();
+  });
+
+  it("shows the badge for a reloaded history part carrying fromStore", () => {
+    render(wrap(<DocumentReading part={done({ result: { content: "x", fromStore: true } })} streaming={false} />));
+    expect(screen.getByText("bereits gelesen")).toBeDefined();
   });
 
   it("uses the singular and omits unknown pages", () => {
@@ -106,13 +113,6 @@ describe("DocumentReading done", () => {
   it("unwraps a nested result payload", () => {
     render(wrap(<DocumentReading part={done({ result: { content: "x", totalPages: 3 } })} streaming={false} />));
     expect(screen.getByText("handbuch.pdf · 3 Seiten")).toBeDefined();
-  });
-
-  it("omits the badge when progress was shown before finishing", () => {
-    const { rerender } = render(wrap(<DocumentReading part={running({})} streaming />));
-    rerender(wrap(<DocumentReading part={done({ content: "x", totalPages: 120 })} streaming />));
-    expect(screen.getByText("handbuch.pdf · 120 Seiten")).toBeDefined();
-    expect(screen.queryByText("bereits gelesen")).toBeNull();
   });
 
   it("shows the error text", () => {
