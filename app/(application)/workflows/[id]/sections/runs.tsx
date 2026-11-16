@@ -13,6 +13,7 @@ import { useTranslations } from "next-intl";
 
 import { DetailSection } from "@/components/primitives/detail-section";
 import { RoutineRunsList } from "@/components/widgets/routine-runs/runs-list";
+import { parseWorkStatusConfig } from "@/lib/routine-runs/work-status";
 
 import type { Routine } from "../../types";
 
@@ -31,7 +32,10 @@ export function RunsSection({ routine }: RunsSectionProps) {
   return (
     <section id="runs" className="scroll-mt-20" tabIndex={-1}>
       <DetailSection title={t("runs.title")} defaultOpen={true}>
-        <RoutineRunsList workflow={routine.id} />
+        <RoutineRunsList
+          workflow={routine.id}
+          workStatuses={parseWorkStatusConfig(routine.work_statuses)}
+        />
       </DetailSection>
     </section>
   );
