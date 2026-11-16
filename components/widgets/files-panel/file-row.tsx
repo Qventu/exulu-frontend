@@ -47,17 +47,47 @@ function IconFor({ name }: { name: string }) {
     const cat = getPreviewCategory(name);
     switch (cat) {
         case "text":
-            return <FileText className="size-4 text-muted-foreground" aria-hidden="true" />;
+            return (
+                <FileText
+                    className="size-4 text-muted-foreground"
+                    aria-hidden="true"
+                />
+            );
         case "code":
-            return <FileCode className="size-4 text-muted-foreground" aria-hidden="true" />;
+            return (
+                <FileCode
+                    className="size-4 text-muted-foreground"
+                    aria-hidden="true"
+                />
+            );
         case "image":
-            return <FileImage className="size-4 text-muted-foreground" aria-hidden="true" />;
+            return (
+                <FileImage
+                    className="size-4 text-muted-foreground"
+                    aria-hidden="true"
+                />
+            );
         case "pdf":
-            return <FileType2 className="size-4 text-muted-foreground" aria-hidden="true" />;
+            return (
+                <FileType2
+                    className="size-4 text-muted-foreground"
+                    aria-hidden="true"
+                />
+            );
         case "office":
-            return <FileSpreadsheet className="size-4 text-muted-foreground" aria-hidden="true" />;
+            return (
+                <FileSpreadsheet
+                    className="size-4 text-muted-foreground"
+                    aria-hidden="true"
+                />
+            );
         default:
-            return <FileIcon className="size-4 text-muted-foreground" aria-hidden="true" />;
+            return (
+                <FileIcon
+                    className="size-4 text-muted-foreground"
+                    aria-hidden="true"
+                />
+            );
     }
 }
 
@@ -106,10 +136,14 @@ export function FileRow({
                             </span>
                         </div>
                     ) : (
-                        <div className="truncate text-sm font-medium">{file.name}</div>
+                        <div className="truncate text-sm font-medium">
+                            {file.name}
+                        </div>
                     )}
                     <div className="text-xs text-muted-foreground">
-                        {formatBytes(file.size)}{" · "}<RelativeTime date={file.lastModified} />
+                        {formatBytes(file.size)}
+                        {" · "}
+                        <RelativeTime date={file.lastModified} />
                     </div>
                 </button>
                 <div className="flex shrink-0 items-center gap-1">
@@ -140,44 +174,53 @@ export function FileRow({
                                     download={file.name}
                                     aria-label={t("files.download")}
                                 >
-                                    <Download className="size-4" aria-hidden="true" />
+                                    <Download
+                                        className="size-4"
+                                        aria-hidden="true"
+                                    />
                                 </a>
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>{t("files.download")}</TooltipContent>
                     </Tooltip>
                     {canShare && (
-<Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className={ACTION_BUTTON_CLASSES}
-                                onClick={() => setShareOpen(true)}
-                                aria-label={t("files.share")}
-                            >
-                                <Link2 className="size-4" aria-hidden="true" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{t("files.share")}</TooltipContent>
-                    </Tooltip>
-)}
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={ACTION_BUTTON_CLASSES}
+                                    onClick={() => setShareOpen(true)}
+                                    aria-label={t("files.share")}
+                                >
+                                    <Link2
+                                        className="size-4"
+                                        aria-hidden="true"
+                                    />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t("files.share")}</TooltipContent>
+                        </Tooltip>
+                    )}
                     {canDelete && (
-<Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className={`${ACTION_BUTTON_CLASSES} text-destructive hover:text-destructive`}
-                                onClick={() => onDelete(file)}
-                                aria-label={tCommon("delete")}
-                            >
-                                <Trash2 className="size-4" aria-hidden="true" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{tCommon("delete")}</TooltipContent>
-                    </Tooltip>
-)}
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={`${ACTION_BUTTON_CLASSES} text-destructive hover:text-destructive`}
+                                    onClick={() => onDelete(file)}
+                                    aria-label={tCommon("delete")}
+                                >
+                                    <Trash2
+                                        className="size-4"
+                                        aria-hidden="true"
+                                    />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{tCommon("delete")}</TooltipContent>
+                        </Tooltip>
+                    )}
                 </div>
             </div>
             {canShare && (

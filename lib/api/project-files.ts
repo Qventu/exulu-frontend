@@ -46,20 +46,26 @@ export const projectFilesApi = {
         const uris = await getUris();
         const token = await getToken();
         if (!token) throw new Error("No valid session token available.");
-        const res = await fetch(`${uris.base}/projects/${projectId}/files/upload-sign`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
+        const res = await fetch(
+            `${uris.base}/projects/${projectId}/files/upload-sign`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(body),
             },
-            body: JSON.stringify(body),
-        });
+        );
         const json = await res.json().catch(() => ({}));
         if (res.status === 409 && json?.error === "exists") {
             return { exists: true, lastModified: json.lastModified };
         }
         if (res.status === 400 && json?.error === "project_full") {
-            throw new ProjectFilesError("project_full", json.max ?? MAX_PROJECT_FILES);
+            throw new ProjectFilesError(
+                "project_full",
+                json.max ?? MAX_PROJECT_FILES,
+            );
         }
         if (!res.ok) throw new Error(json?.detail ?? res.statusText);
         return json;
@@ -73,7 +79,8 @@ export const projectFilesApi = {
     },
 
     /** 409 (nothing copied, names clash) resolves with the body so the caller
-     *  can confirm and retry with `overwrite`. */
+     *  can confirm and retry with `overwrite`; so does a 500 that carries the
+     *  per-key `rejected` list. */
     promote: async (
         projectId: string,
         body: { sessionId: string; keys: string[]; overwrite?: boolean },
@@ -81,16 +88,23 @@ export const projectFilesApi = {
         const uris = await getUris();
         const token = await getToken();
         if (!token) throw new Error("No valid session token available.");
-        const res = await fetch(`${uris.base}/projects/${projectId}/files/promote`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
+        const res = await fetch(
+            `${uris.base}/projects/${projectId}/files/promote`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(body),
             },
-            body: JSON.stringify(body),
-        });
+        );
         const json = await res.json().catch(() => ({}));
-        if (!res.ok && res.status !== 409) throw new Error(json?.detail ?? res.statusText);
+        // 409 (clashes) and a 500 where every copy failed both carry the
+        // per-key result; only a body without it (`{detail}`) is a plain failure.
+        if (!res.ok && !Array.isArray(json?.promoted)) {
+            throw new Error(json?.detail ?? res.statusText);
+        }
         return json;
     },
 

@@ -87,6 +87,28 @@ describe("projectFilesApi", () => {
     ).toMatchObject({ promoted: [], clashes: ["a.md"] });
   });
 
+  it("promote resolves with the result body on a 500 that carries one", async () => {
+    const body = {
+      promoted: [],
+      rejected: [{ key: "k", reason: "copy_failed" }],
+      clashes: [],
+    };
+    vi.stubGlobal("fetch", reply(500, body));
+    expect(
+      await projectFilesApi.promote("p1", { sessionId: "s1", keys: ["k"] }),
+    ).toEqual(body);
+  });
+
+  it("promote throws on a 500 with only a detail", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reply(500, { detail: "Failed to copy files into the project." }),
+    );
+    await expect(
+      projectFilesApi.promote("p1", { sessionId: "s1", keys: ["k"] }),
+    ).rejects.toThrow("Failed to copy files into the project.");
+  });
+
   it("delete encodes the key", async () => {
     client.request.mockResolvedValue({ deleted: true });
     await projectFilesApi.delete("p1", "projects/p1/a b.md");

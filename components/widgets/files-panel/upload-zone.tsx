@@ -4,7 +4,8 @@
  * Drag-drop / browse uploader for the session files panel (chat.md item 83 —
  * flow unchanged). Route-local relocation of
  * components/session-files/upload-zone.tsx. The upload itself (sign → PUT →
- * sync-to-sandbox, sequential, size-checked up front) lives in ./upload.ts,
+ * sync-to-sandbox for sessions only; projects are synced by the backend each
+ * turn; sequential, size-checked up front) lives in ./upload.ts,
  * shared with the conversation-wide drop target; this component owns only
  * the zone's UI state and triggers the parent's list refresh afterwards.
  *
@@ -68,78 +69,94 @@ export function UploadZone({
 
     return (
         <>
-        <label
-            htmlFor={inputId}
-            onDragEnter={(e) => {
-                e.preventDefault();
-                setIsDragging(true);
-            }}
-            onDragOver={(e) => {
-                e.preventDefault();
-                setIsDragging(true);
-            }}
-            onDragLeave={(e) => {
-                e.preventDefault();
-                setIsDragging(false);
-            }}
-            onDrop={(e) => {
-                e.preventDefault();
-                setIsDragging(false);
-                handleFiles(e.dataTransfer.files);
-            }}
-            className={`flex min-h-11 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed p-4 text-center transition-colors duration-150 motion-reduce:transition-none ${isDragging
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/40 hover:bg-muted/30"
-                }`}
-        >
-            <input
-                ref={(el) => {
-                    inputRef.current = el;
-                    if (externalInputRef) externalInputRef.current = el;
+            <label
+                htmlFor={inputId}
+                onDragEnter={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
                 }}
-                id={inputId}
-                type="file"
-                multiple
-                className="sr-only"
-                onChange={(e) => handleFiles(e.target.files)}
-                disabled={uploadingCount > 0}
+                onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                }}
+                onDragLeave={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                }}
+                onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    handleFiles(e.dataTransfer.files);
+                }}
+                className={`flex min-h-11 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed p-4 text-center transition-colors duration-150 motion-reduce:transition-none ${
+                    isDragging
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/40 hover:bg-muted/30"
+                }`}
+            >
+                <input
+                    ref={(el) => {
+                        inputRef.current = el;
+                        if (externalInputRef) externalInputRef.current = el;
+                    }}
+                    id={inputId}
+                    type="file"
+                    multiple
+                    className="sr-only"
+                    onChange={(e) => handleFiles(e.target.files)}
+                    disabled={uploadingCount > 0}
+                />
+                {uploadingCount > 0 ? (
+                    <>
+                        <Loader2
+                            className="size-5 animate-spin text-primary"
+                            aria-hidden="true"
+                        />
+                        <p
+                            className="text-xs text-muted-foreground"
+                            role="status"
+                        >
+                            {t("files.uploadingCount", {
+                                count: uploadingCount,
+                            })}
+                        </p>
+                    </>
+                ) : (
+                    <>
+                        <Upload
+                            className="size-5 text-muted-foreground"
+                            aria-hidden="true"
+                        />
+                        <p className="text-xs font-medium">
+                            {t("files.dropOrClick")}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                            {t("files.maxPerFile", {
+                                limit: formatBytes(MAX_UPLOAD_BYTES),
+                            })}
+                        </p>
+                    </>
+                )}
+            </label>
+            <ConfirmDialog
+                open={pendingOverwrite !== null}
+                onOpenChange={(open) => {
+                    if (!open) answerOverwrite(false);
+                }}
+                title={t("files.overwriteTitle")}
+                description={
+                    pendingOverwrite
+                        ? t("files.overwriteDescription", {
+                              name: pendingOverwrite.name,
+                              when: format.relativeTime(
+                                  new Date(pendingOverwrite.lastModified),
+                              ),
+                          })
+                        : undefined
+                }
+                confirmLabel={t("files.overwriteConfirm")}
+                onConfirm={async () => answerOverwrite(true)}
             />
-            {uploadingCount > 0 ? (
-                <>
-                    <Loader2 className="size-5 animate-spin text-primary" aria-hidden="true" />
-                    <p className="text-xs text-muted-foreground" role="status">
-                        {t("files.uploadingCount", { count: uploadingCount })}
-                    </p>
-                </>
-            ) : (
-                <>
-                    <Upload className="size-5 text-muted-foreground" aria-hidden="true" />
-                    <p className="text-xs font-medium">{t("files.dropOrClick")}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                        {t("files.maxPerFile", { limit: formatBytes(MAX_UPLOAD_BYTES) })}
-                    </p>
-                </>
-            )}
-        </label>
-        <ConfirmDialog
-            open={pendingOverwrite !== null}
-            onOpenChange={(open) => {
-                if (!open) answerOverwrite(false);
-            }}
-            title={t("files.overwriteTitle")}
-            description={
-                pendingOverwrite
-                    ? t("files.overwriteDescription", {
-                          name: pendingOverwrite.name,
-                          when: format.relativeTime(
-                              new Date(pendingOverwrite.lastModified),
-                          ),
-                      })
-                    : undefined
-            }
-            confirmLabel={t("files.overwriteConfirm")}
-            onConfirm={async () => answerOverwrite(true)}
-        />
         </>
     );
 }

@@ -81,7 +81,21 @@ export function SessionFilesContent({ sessionId }: SessionFilesContentProps) {
     return <FilesPanelContent scope={scope} />;
 }
 
-export function FilesPanelContent({ scope }: FilesPanelContentProps) {
+export function FilesPanelContent({
+    scope: scopeProp,
+}: FilesPanelContentProps) {
+    // Callers may build `scope` inline; key on its primitive fields so an
+    // equal-but-new object neither rebuilds the adapter nor restarts the poll.
+    const folderId =
+        scopeProp.kind === "session"
+            ? scopeProp.sessionId
+            : scopeProp.projectId;
+    const projectName = scopeProp.kind === "project" ? scopeProp.name : "";
+    const projectCanWrite = scopeProp.kind === "project" && scopeProp.canWrite;
+    const scope = useMemo(
+        () => scopeProp,
+        [scopeProp.kind, folderId, projectName, projectCanWrite],
+    );
     const adapter = useMemo(() => fileScopeAdapter(scope), [scope]);
     const isProject = scope.kind === "project";
     const t = useTranslations("chat");
@@ -118,7 +132,10 @@ export function FilesPanelContent({ scope }: FilesPanelContentProps) {
     // A drop on the conversation (chat-drop-target.tsx) uploads outside this
     // panel; refresh at once rather than on the next poll tick.
     useEffect(
-        () => subscribeFilesChanged(scope, () => { void refresh(); }),
+        () =>
+            subscribeFilesChanged(scope, () => {
+                void refresh();
+            }),
         [scope, refresh],
     );
 
@@ -164,9 +181,16 @@ export function FilesPanelContent({ scope }: FilesPanelContentProps) {
                 <>
                     {/* Item 84: session-scope privacy note on the title info line. */}
                     <div className="flex shrink-0 items-start gap-2 border-b border-border bg-muted/30 px-3 py-2 text-[11px] leading-snug text-muted-foreground">
-                        <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                        <Info
+                            className="mt-0.5 size-3.5 shrink-0"
+                            aria-hidden="true"
+                        />
                         <span>
-                            {t(isProject ? "files.privacyNoteProject" : "files.privacyNote")}
+                            {t(
+                                isProject
+                                    ? "files.privacyNoteProject"
+                                    : "files.privacyNote",
+                            )}
                             {files !== null && (
                                 <>
                                     {" · "}
@@ -182,7 +206,10 @@ export function FilesPanelContent({ scope }: FilesPanelContentProps) {
                                 variant="error"
                                 title={t("files.errorTitle")}
                                 description={error}
-                                action={{ label: tCommon("retry"), onClick: refresh }}
+                                action={{
+                                    label: tCommon("retry"),
+                                    onClick: refresh,
+                                }}
                             />
                         ) : files === null ? (
                             <FileRowSkeletons />
