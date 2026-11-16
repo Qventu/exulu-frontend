@@ -27,20 +27,25 @@
 
 import { FolderOpen, Info } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { sessionFilesApi, type SessionFile } from "@/lib/api/session-files";
+import type { SessionFile } from "@/lib/api/session-files";
 
 import { FileRow } from "./file-row";
 import { PreviewPane } from "./preview-pane";
-import { subscribeSessionFilesChanged } from "./upload";
+import { fileScopeAdapter, type FileScope } from "./scope";
+import { subscribeFilesChanged } from "./upload";
 import { UploadZone } from "./upload-zone";
 
 const POLL_INTERVAL_MS = 5_000;
+
+export interface FilesPanelContentProps {
+    scope: FileScope;
+}
 
 export interface SessionFilesContentProps {
     sessionId: string;
@@ -66,7 +71,19 @@ function FileRowSkeletons() {
     );
 }
 
+/** The session panel: unchanged entry point for the chat screen. */
 export function SessionFilesContent({ sessionId }: SessionFilesContentProps) {
+    // Memoised so the scope keeps its identity across the 5 s poll re-renders.
+    const scope = useMemo<FileScope>(
+        () => ({ kind: "session", sessionId }),
+        [sessionId],
+    );
+    return <FilesPanelContent scope={scope} />;
+}
+
+export function FilesPanelContent({ scope }: FilesPanelContentProps) {
+    const adapter = useMemo(() => fileScopeAdapter(scope), [scope]);
+    const isProject = scope.kind === "project";
     const t = useTranslations("chat");
     const tCommon = useTranslations("common");
 
@@ -79,13 +96,13 @@ export function SessionFilesContent({ sessionId }: SessionFilesContentProps) {
 
     const refresh = useCallback(async () => {
         try {
-            const res = await sessionFilesApi.list(sessionId);
+            const res = await adapter.list();
             setFiles(res.files);
             setError(null);
         } catch (err: any) {
             setError(err.message);
         }
-    }, [sessionId]);
+    }, [adapter]);
 
     // Initial load + 5s polling while mounted so agent-produced files appear
     // live (item 80 — unchanged cadence). Stops on unmount/panel close
@@ -101,8 +118,8 @@ export function SessionFilesContent({ sessionId }: SessionFilesContentProps) {
     // A drop on the conversation (chat-drop-target.tsx) uploads outside this
     // panel; refresh at once rather than on the next poll tick.
     useEffect(
-        () => subscribeSessionFilesChanged(sessionId, () => { void refresh(); }),
-        [sessionId, refresh],
+        () => subscribeFilesChanged(scope, () => { void refresh(); }),
+        [scope, refresh],
     );
 
     // Keep the preview file's metadata in sync with the polled list — if it
@@ -122,7 +139,7 @@ export function SessionFilesContent({ sessionId }: SessionFilesContentProps) {
         if (!fileToDelete) return;
         const file = fileToDelete;
         try {
-            await sessionFilesApi.delete(sessionId, file.key);
+            await adapter.delete(file.key);
             setFiles((curr) =>
                 curr ? curr.filter((f) => f.key !== file.key) : curr,
             );
@@ -133,13 +150,13 @@ export function SessionFilesContent({ sessionId }: SessionFilesContentProps) {
             // Re-throw so the ConfirmDialog stays open for retry/cancel.
             throw err;
         }
-    }, [fileToDelete, previewFile, sessionId, t]);
+    }, [fileToDelete, previewFile, adapter, t]);
 
     return (
         <div className="flex h-full min-h-0 flex-col">
             {previewFile ? (
                 <PreviewPane
-                    sessionId={sessionId}
+                    scope={scope}
                     file={previewFile}
                     onBack={() => setPreviewFile(null)}
                 />
@@ -149,7 +166,7 @@ export function SessionFilesContent({ sessionId }: SessionFilesContentProps) {
                     <div className="flex shrink-0 items-start gap-2 border-b border-border bg-muted/30 px-3 py-2 text-[11px] leading-snug text-muted-foreground">
                         <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                         <span>
-                            {t("files.privacyNote")}
+                            {t(isProject ? "files.privacyNoteProject" : "files.privacyNote")}
                             {files !== null && (
                                 <>
                                     {" · "}
@@ -174,16 +191,28 @@ export function SessionFilesContent({ sessionId }: SessionFilesContentProps) {
                                 variant="quiet"
                                 icon={FolderOpen}
                                 title={t("files.emptyTitle")}
-                                description={t("files.emptyDescription")}
-                                action={{
-                                    label: t("files.browse"),
-                                    onClick: () => browseInputRef.current?.click(),
-                                }}
+                                description={t(
+                                    !isProject
+                                        ? "files.emptyDescription"
+                                        : adapter.canWrite
+                                          ? "files.emptyDescriptionProject"
+                                          : "files.emptyDescriptionProjectReadOnly",
+                                )}
+                                action={
+                                    adapter.canWrite
+                                        ? {
+                                              label: t("files.browse"),
+                                              onClick: () =>
+                                                  browseInputRef.current?.click(),
+                                          }
+                                        : undefined
+                                }
                             />
                         ) : (
                             files.map((file) => (
                                 <FileRow
                                     key={file.key}
+                                    scope={scope}
                                     file={file}
                                     onPreview={setPreviewFile}
                                     onDelete={setFileToDelete}
@@ -193,13 +222,15 @@ export function SessionFilesContent({ sessionId }: SessionFilesContentProps) {
                     </div>
 
                     {/* Item 83: upload zone, bottom of the panel, flow unchanged. */}
-                    <div className="shrink-0 border-t border-border p-3">
-                        <UploadZone
-                            sessionId={sessionId}
-                            onUploadComplete={refresh}
-                            inputRef={browseInputRef}
-                        />
-                    </div>
+                    {adapter.canWrite && (
+                        <div className="shrink-0 border-t border-border p-3">
+                            <UploadZone
+                                scope={scope}
+                                onUploadComplete={refresh}
+                                inputRef={browseInputRef}
+                            />
+                        </div>
+                    )}
                 </>
             )}
 
@@ -212,7 +243,12 @@ export function SessionFilesContent({ sessionId }: SessionFilesContentProps) {
                 title={t("files.deleteTitle")}
                 description={
                     fileToDelete
-                        ? t("files.deleteDescription", { name: fileToDelete.name })
+                        ? t(
+                              isProject
+                                  ? "files.deleteDescriptionProject"
+                                  : "files.deleteDescription",
+                              { name: fileToDelete.name },
+                          )
                         : undefined
                 }
                 variant="destructive"

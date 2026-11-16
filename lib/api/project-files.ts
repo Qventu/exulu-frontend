@@ -1,0 +1,104 @@
+import { getToken, getUris, request } from "@/lib/api/client";
+import type { SessionFile } from "@/lib/api/session-files";
+
+/** A project folder holds at most this many files (backend enforces it). */
+export const MAX_PROJECT_FILES = 200;
+
+/** Typed failure the UI can word precisely; everything else stays a plain Error. */
+export class ProjectFilesError extends Error {
+    constructor(
+        public readonly code: "project_full",
+        public readonly max: number,
+    ) {
+        super(`Project file limit of ${max} reached`);
+        this.name = "ProjectFilesError";
+    }
+}
+
+export type UploadSignResult =
+    | { uploadUrl: string; key: string }
+    | { exists: true; lastModified: string };
+
+export interface PromoteResult {
+    promoted: { key: string; name: string }[];
+    rejected: { key: string; reason: string }[];
+    /** Names that already exist in the project. Non-empty means NOTHING was copied. */
+    clashes: string[];
+}
+
+export const projectFilesApi = {
+    /** `canWrite` rides on the listing so the UI needs no second permission call.
+     *  403/404 throw: the caller treats them as "no project section". */
+    list: async (
+        projectId: string,
+    ): Promise<{ canWrite: boolean; files: SessionFile[] }> =>
+        request(`/projects/${projectId}/files`, "GET"),
+
+    /**
+     * A name clash is an expected outcome the caller turns into a confirm, so
+     * 409 resolves as `{ exists: true }` rather than throwing. Uses fetch
+     * directly because the shared `request` drops the error body.
+     */
+    uploadSign: async (
+        projectId: string,
+        body: { filename: string; contentType: string; overwrite?: boolean },
+    ): Promise<UploadSignResult> => {
+        const uris = await getUris();
+        const token = await getToken();
+        if (!token) throw new Error("No valid session token available.");
+        const res = await fetch(`${uris.base}/projects/${projectId}/files/upload-sign`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(body),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (res.status === 409 && json?.error === "exists") {
+            return { exists: true, lastModified: json.lastModified };
+        }
+        if (res.status === 400 && json?.error === "project_full") {
+            throw new ProjectFilesError("project_full", json.max ?? MAX_PROJECT_FILES);
+        }
+        if (!res.ok) throw new Error(json?.detail ?? res.statusText);
+        return json;
+    },
+
+    delete: async (projectId: string, key: string): Promise<void> => {
+        await request(
+            `/projects/${projectId}/files?key=${encodeURIComponent(key)}`,
+            "DELETE",
+        );
+    },
+
+    /** 409 (nothing copied, names clash) resolves with the body so the caller
+     *  can confirm and retry with `overwrite`. */
+    promote: async (
+        projectId: string,
+        body: { sessionId: string; keys: string[]; overwrite?: boolean },
+    ): Promise<PromoteResult> => {
+        const uris = await getUris();
+        const token = await getToken();
+        if (!token) throw new Error("No valid session token available.");
+        const res = await fetch(`${uris.base}/projects/${projectId}/files/promote`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(body),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok && res.status !== 409) throw new Error(json?.detail ?? res.statusText);
+        return json;
+    },
+
+    /** Async because the token comes from the session; mirrors sessionFilesApi. */
+    previewPdfUrl: async (projectId: string, key: string): Promise<string> => {
+        const uris = await getUris();
+        const token = await getToken();
+        if (!token) throw new Error("No valid session token available.");
+        return `${uris.base}/projects/${projectId}/file/preview-pdf?key=${encodeURIComponent(key)}&auth=${encodeURIComponent(token)}`;
+    },
+};

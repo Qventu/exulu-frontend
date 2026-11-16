@@ -19,7 +19,7 @@ const upload = vi.hoisted(() => ({
     rejected: false,
   })),
 }));
-vi.mock("./upload", () => ({ uploadSessionFiles: upload.uploadSessionFiles }));
+vi.mock("@/components/widgets/files-panel/upload", () => ({ uploadSessionFiles: upload.uploadSessionFiles }));
 
 import { ChatDropTarget } from "./chat-drop-target";
 

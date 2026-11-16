@@ -13,32 +13,52 @@
  */
 
 import { Loader2, Upload } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useRef, useState, type MutableRefObject } from "react";
+import { useFormatter, useTranslations } from "next-intl";
+import { useId, useRef, useState, type MutableRefObject } from "react";
 
-import { uploadSessionFiles } from "./upload";
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
+
+import type { FileScope } from "./scope";
+import { uploadFiles } from "./upload";
 import { formatBytes, MAX_UPLOAD_BYTES } from "./utils";
 
 export function UploadZone({
-    sessionId,
+    scope,
     onUploadComplete,
     inputRef: externalInputRef,
 }: {
-    sessionId: string;
+    scope: FileScope;
     onUploadComplete: () => void;
     inputRef?: MutableRefObject<HTMLInputElement | null>;
 }) {
     const t = useTranslations("chat");
+    const format = useFormatter();
     const [isDragging, setIsDragging] = useState(false);
     const [uploadingCount, setUploadingCount] = useState(0);
     const inputRef = useRef<HTMLInputElement | null>(null);
+    const inputId = useId();
+    // A name clash in a project pauses the upload on this confirm; the
+    // promise resolves with the user's answer.
+    const [pendingOverwrite, setPendingOverwrite] = useState<{
+        name: string;
+        lastModified: string;
+        resolve: (overwrite: boolean) => void;
+    } | null>(null);
+    const confirmOverwrite = (name: string, lastModified: string) =>
+        new Promise<boolean>((resolve) =>
+            setPendingOverwrite({ name, lastModified, resolve }),
+        );
+    const answerOverwrite = (overwrite: boolean) => {
+        pendingOverwrite?.resolve(overwrite);
+        setPendingOverwrite(null);
+    };
 
     const handleFiles = async (fileList: FileList | null) => {
         if (!fileList || fileList.length === 0) return;
         const files = Array.from(fileList);
         setUploadingCount(files.length);
         try {
-            await uploadSessionFiles(sessionId, files, t);
+            await uploadFiles(scope, files, t, { confirmOverwrite });
         } finally {
             setUploadingCount(0);
             onUploadComplete();
@@ -47,8 +67,9 @@ export function UploadZone({
     };
 
     return (
+        <>
         <label
-            htmlFor="session-files-upload"
+            htmlFor={inputId}
             onDragEnter={(e) => {
                 e.preventDefault();
                 setIsDragging(true);
@@ -76,7 +97,7 @@ export function UploadZone({
                     inputRef.current = el;
                     if (externalInputRef) externalInputRef.current = el;
                 }}
-                id="session-files-upload"
+                id={inputId}
                 type="file"
                 multiple
                 className="sr-only"
@@ -100,5 +121,25 @@ export function UploadZone({
                 </>
             )}
         </label>
+        <ConfirmDialog
+            open={pendingOverwrite !== null}
+            onOpenChange={(open) => {
+                if (!open) answerOverwrite(false);
+            }}
+            title={t("files.overwriteTitle")}
+            description={
+                pendingOverwrite
+                    ? t("files.overwriteDescription", {
+                          name: pendingOverwrite.name,
+                          when: format.relativeTime(
+                              new Date(pendingOverwrite.lastModified),
+                          ),
+                      })
+                    : undefined
+            }
+            confirmLabel={t("files.overwriteConfirm")}
+            onConfirm={async () => answerOverwrite(true)}
+        />
+        </>
     );
 }

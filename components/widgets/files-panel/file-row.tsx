@@ -14,6 +14,7 @@
 
 import { useState } from "react";
 import {
+    Bot,
     Download,
     Eye,
     File as FileIcon,
@@ -39,6 +40,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { SessionFile } from "@/lib/api/session-files";
 
+import type { FileScope } from "./scope";
 import { formatBytes, getPreviewCategory } from "./utils";
 
 function IconFor({ name }: { name: string }) {
@@ -62,10 +64,12 @@ function IconFor({ name }: { name: string }) {
 const ACTION_BUTTON_CLASSES = "h-11 w-11 md:h-8 md:w-8";
 
 export function FileRow({
+    scope,
     file,
     onPreview,
     onDelete,
 }: {
+    scope: FileScope;
     file: SessionFile;
     onPreview: (file: SessionFile) => void;
     /** Signals intent only — the parent confirms via the shared ConfirmDialog. */
@@ -74,6 +78,11 @@ export function FileRow({
     const t = useTranslations("chat");
     const tCommon = useTranslations("common");
     const [shareOpen, setShareOpen] = useState(false);
+    // A read-only project member sees the folder but cannot change it.
+    const canDelete = scope.kind === "session" || scope.canWrite;
+    // Sharing signs a key under the caller's own session prefix; a project
+    // key is not one, so the project folder offers download only.
+    const canShare = scope.kind === "session";
 
     return (
         <TooltipProvider delayDuration={300}>
@@ -84,9 +93,23 @@ export function FileRow({
                     onClick={() => onPreview(file)}
                     className="min-h-11 min-w-0 flex-1 py-1 text-left"
                 >
-                    <div className="truncate text-sm font-medium">{file.name}</div>
+                    {file.origin === "agent" ? (
+                        <div className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+                            <span className="truncate">{file.name}</span>
+                            <span
+                                className="shrink-0 text-muted-foreground"
+                                title={t("files.createdByAgent")}
+                                aria-label={t("files.createdByAgent")}
+                                role="img"
+                            >
+                                <Bot className="size-3.5" aria-hidden="true" />
+                            </span>
+                        </div>
+                    ) : (
+                        <div className="truncate text-sm font-medium">{file.name}</div>
+                    )}
                     <div className="text-xs text-muted-foreground">
-                        {formatBytes(file.size)} · <RelativeTime date={file.lastModified} />
+                        {formatBytes(file.size)}{" · "}<RelativeTime date={file.lastModified} />
                     </div>
                 </button>
                 <div className="flex shrink-0 items-center gap-1">
@@ -123,21 +146,24 @@ export function FileRow({
                         </TooltipTrigger>
                         <TooltipContent>{t("files.download")}</TooltipContent>
                     </Tooltip>
-                    <Tooltip>
+                    {canShare && (
+<Tooltip>
                         <TooltipTrigger asChild>
                             <Button
                                 variant="ghost"
                                 size="icon"
                                 className={ACTION_BUTTON_CLASSES}
                                 onClick={() => setShareOpen(true)}
-                                aria-label="Share"
+                                aria-label={t("files.share")}
                             >
                                 <Link2 className="size-4" aria-hidden="true" />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Share</TooltipContent>
+                        <TooltipContent>{t("files.share")}</TooltipContent>
                     </Tooltip>
-                    <Tooltip>
+)}
+                    {canDelete && (
+<Tooltip>
                         <TooltipTrigger asChild>
                             <Button
                                 variant="ghost"
@@ -151,14 +177,17 @@ export function FileRow({
                         </TooltipTrigger>
                         <TooltipContent>{tCommon("delete")}</TooltipContent>
                     </Tooltip>
+)}
                 </div>
             </div>
-            <ShareArtifactDialog
-                open={shareOpen}
-                onOpenChange={setShareOpen}
-                s3Key={file.key}
-                contentType={file.contentType}
-            />
+            {canShare && (
+                <ShareArtifactDialog
+                    open={shareOpen}
+                    onOpenChange={setShareOpen}
+                    s3Key={file.key}
+                    contentType={file.contentType}
+                />
+            )}
         </TooltipProvider>
     );
 }

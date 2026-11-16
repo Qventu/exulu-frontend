@@ -16,7 +16,7 @@ export const IMPORT_SAMPLE_ROWS = 500;
  * limits above the file tripped.
  *
  * Local rather than shared: the repo's only other byte formatter lives in the
- * chat feature (app/(application)/chat/components/session-files/utils.ts), and
+ * chat feature (components/widgets/files-panel/utils.ts), and
  * app/(application)/data may not import another feature's folder
  * (codebase-structure §1.2, enforced by eslint). Locale-independent, like that
  * one.

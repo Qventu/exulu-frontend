@@ -40,7 +40,7 @@ import { Composer } from "./composer";
 import { MemoryPanelContent } from "./memory-panel";
 import { MessageColumn } from "./message-column";
 import { ChatDropTarget } from "./session-files/chat-drop-target";
-import { SessionFilesContent } from "./session-files/panel-content";
+import { SessionFilesContent } from "@/components/widgets/files-panel/panel-content";
 
 export interface SessionScreenProps {
   agent: Agent;

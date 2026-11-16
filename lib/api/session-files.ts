@@ -7,6 +7,9 @@ export interface SessionFile {
     lastModified: string;
     contentType: string;
     presignedUrl: string;
+    /** Who wrote the file: the agent (artifact persistence) or a user upload.
+     *  Absent on responses from a backend that predates project files. */
+    origin?: "agent" | "user";
 }
 
 /** One key the adopt endpoint copied in. `key` is the DESTINATION key

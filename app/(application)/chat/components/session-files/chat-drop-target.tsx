@@ -32,8 +32,8 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 import type { ChatSessionController } from "../../hooks";
-import { uploadSessionFiles } from "./upload";
-import { formatBytes, MAX_UPLOAD_BYTES } from "./utils";
+import { uploadSessionFiles } from "@/components/widgets/files-panel/upload";
+import { formatBytes, MAX_UPLOAD_BYTES } from "@/components/widgets/files-panel/utils";
 
 export type ChatDropController = Pick<
   ChatSessionController,
