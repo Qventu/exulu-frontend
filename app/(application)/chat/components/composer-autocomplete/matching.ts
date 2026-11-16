@@ -26,6 +26,7 @@ export interface Suggestion {
   displayName: string; // prettified for display
   description?: string;
   disabled?: boolean; // tool toggled off this session (greyed, still selectable)
+  group?: string; // overrides the kind's group header, e.g. "Project · Atlas"
 }
 
 const isWhitespace = (ch: string | undefined) => ch !== undefined && /\s/.test(ch);

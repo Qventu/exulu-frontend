@@ -44,7 +44,11 @@ import { useLanguage } from "@/components/shell/language-provider";
 import { getPresignedUrl } from "@/components/primitives/file-picker";
 import { getToken } from "@/lib/api/client";
 import { getSessionClaimChecks, postClaimCheck, type ClaimCheckRequest } from "@/lib/api/claim-check";
-import { MAX_ADOPT_KEYS, sessionFilesApi } from "@/lib/api/session-files";
+import {
+  MAX_ADOPT_KEYS,
+  sessionFilesApi,
+  type SessionFile,
+} from "@/lib/api/session-files";
 import { checkChatSessionWriteAccess } from "@/lib/check-chat-session-write-access";
 import type { Agent } from "@/types/models/agent";
 import type { AgentSession } from "@/types/models/agent-session";
@@ -84,6 +88,7 @@ import { withApprovedTools } from "./approved-tools-body";
 import { savedIdsFromMessages } from "./components/memory-panel-data";
 import { answerTextOf, collectSources, hasPendingToolApproval, parseClaimCheckTrigger } from "./components/claim-check-data";
 import type { ClaimCheckState } from "./components/claim-check";
+import { useChatProjectFiles, type ChatProjectFiles } from "./use-project-files";
 
 // ---------------------------------------------------------------------------
 // Shared types (binding contracts)
@@ -211,6 +216,16 @@ export interface ChatSessionController {
    */
   setFilesPanelOpen: (open: boolean, persist?: boolean) => Promise<void>;
   sessionFilesCount: number | null;
+  /**
+   * The session's project folder (sidebar section, header chip, "@" list).
+   * `null`: no project, or the caller may not see its files. Optional
+   * because surfaces without project sessions (guest chat) leave it out.
+   */
+  projectFiles?: ChatProjectFiles | null;
+  /** The open panel's project poll feeds back in here; `null` = access lost. */
+  syncProjectFiles?: (
+    listing: { canWrite: boolean; files: SessionFile[] } | null,
+  ) => void;
   /**
    * Adopt already-uploaded S3 keys (the artifact-panel attach flow: an
    * artifact iframe uploads with the VIEWER's token, then hands the chat
@@ -1208,7 +1223,12 @@ export function useChatSession({
     refreshFilesCount(id);
   }, [currentSession?.id, refreshFilesCount]);
 
-  // Refresh after each completed turn (streaming → ready).
+  // --- the session's project folder (project files, sidebar section) --------------
+  const { projectFiles, refreshProjectFiles, syncProjectFiles } =
+    useChatProjectFiles(currentSession?.project || null);
+
+  // Refresh after each completed turn (streaming → ready): the agent may
+  // have written files, and a promote may have run as a tool.
   const prevStatusRef = React.useRef<ChatStatus>(status as ChatStatus);
   React.useEffect(() => {
     const prev = prevStatusRef.current;
@@ -1216,8 +1236,9 @@ export function useChatSession({
     const id = currentSessionRef.current?.id;
     if (prev === "streaming" && status === "ready" && id && id !== "new") {
       refreshFilesCount(id);
+      void refreshProjectFiles();
     }
-  }, [status, refreshFilesCount]);
+  }, [status, refreshFilesCount, refreshProjectFiles]);
 
   // --- attach already-uploaded keys (artifact-panel open request, task 9) ----------
   const addSessionFiles = async (keys: string[]): Promise<void> => {
@@ -1447,6 +1468,8 @@ export function useChatSession({
     filesPanelOpen,
     setFilesPanelOpen,
     sessionFilesCount,
+    projectFiles,
+    syncProjectFiles,
     addSessionFiles,
     pendingInput,
     seedInput,

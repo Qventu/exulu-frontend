@@ -79,7 +79,7 @@ vi.mock("./components/session-files/chat-drop-target", () => ({
     <div>{children}</div>
   ),
 }));
-vi.mock("./components/session-files/panel-content", () => ({
+vi.mock("@/components/widgets/files-panel/panel-content", () => ({
   SessionFilesContent: () => <div data-testid="files-body" />,
 }));
 

@@ -16,8 +16,9 @@ import { useEffect, useState } from "react";
 import { CodePreview } from "@/components/custom/code-preview";
 import { TextPreview } from "@/components/custom/text-preview";
 import { Button } from "@/components/ui/button";
-import { sessionFilesApi, type SessionFile } from "@/lib/api/session-files";
+import type { SessionFile } from "@/lib/api/session-files";
 
+import { fileScopeAdapter, type FileScope } from "./scope";
 import { formatBytes, getPreviewCategory } from "./utils";
 
 const INLINE_TEXT_MAX_BYTES = 200 * 1024;
@@ -67,16 +68,18 @@ function CenteredSpinner({ label }: { label: string }) {
 }
 
 export function PreviewPane({
-    sessionId,
+    scope,
     file,
     onBack,
 }: {
-    sessionId: string;
+    scope: FileScope;
     file: SessionFile;
     onBack: () => void;
 }) {
     const t = useTranslations("chat");
     const category = getPreviewCategory(file.name);
+    // Callers may rebuild `scope` each render; the folder key is its identity.
+    const folderKey = fileScopeAdapter(scope).changeKey;
     const [textBody, setTextBody] = useState<string | null>(null);
     const [textError, setTextError] = useState<string | null>(null);
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -114,13 +117,13 @@ export function PreviewPane({
     }, [file.presignedUrl, file.size, category]);
 
     // Resolve the LibreOffice-rendered preview URL for Office binaries
-    // (unchanged transport: sessionFilesApi.previewPdfUrl).
+    // (transport picked by the scope adapter).
     useEffect(() => {
         if (category !== "office") return;
         let cancelled = false;
         setPdfUrl(null);
-        sessionFilesApi
-            .previewPdfUrl(sessionId, file.key)
+        fileScopeAdapter(scope)
+            .previewPdfUrl(file.key)
             .then((url) => {
                 if (!cancelled) setPdfUrl(url);
             })
@@ -130,7 +133,9 @@ export function PreviewPane({
         return () => {
             cancelled = true;
         };
-    }, [sessionId, file.key, category]);
+        // `scope` is rebuilt by callers each render; `folderKey` is its identity.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [folderKey, file.key, category]);
 
     return (
         <div className="flex h-full min-h-0 flex-col">

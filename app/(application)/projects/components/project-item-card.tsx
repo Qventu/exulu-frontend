@@ -112,11 +112,11 @@ export function ProjectItemCard({
               {prettyContext(context)}
             </p>
             <Badge variant="outline" className="text-xs">
-              {t("files.entireContext")}
+              {t("knowledge.entireContext")}
             </Badge>
           </div>
           <RemoveButton
-            label={t("files.removeItem")}
+            label={t("knowledge.removeItem")}
             onRemove={() => onRemove(gid)}
           />
         </CardContent>
@@ -149,14 +149,14 @@ export function ProjectItemCard({
           />
           <div className="min-w-0 flex-1 space-y-1">
             <p className="text-sm font-medium text-muted-foreground">
-              {t("files.orphanTitle")}
+              {t("knowledge.orphanTitle")}
             </p>
             <p className="text-xs text-muted-foreground">
-              {t("files.orphanDescription")}
+              {t("knowledge.orphanDescription")}
             </p>
           </div>
           <RemoveButton
-            label={t("files.removeItem")}
+            label={t("knowledge.removeItem")}
             onRemove={() => onRemove(gid)}
           />
         </CardContent>
@@ -193,13 +193,13 @@ export function ProjectItemCard({
               item.chunks_count > 0 && (
                 <>
                   <span aria-hidden="true">·</span>
-                  <span>{t("files.chunks", { count: item.chunks_count })}</span>
+                  <span>{t("knowledge.chunks", { count: item.chunks_count })}</span>
                 </>
               )}
           </div>
         </div>
         <RemoveButton
-          label={t("files.removeItem")}
+          label={t("knowledge.removeItem")}
           onRemove={() => onRemove(gid)}
         />
       </CardContent>

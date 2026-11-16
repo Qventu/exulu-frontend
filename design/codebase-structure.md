@@ -49,7 +49,7 @@
 │   │   │       ├── search/page.tsx
 │   │   │       └── [session]/
 │   │   │           ├── page.tsx
-│   │   │           ├── components/    # chat-header, composer, attach-menu, usage-popover, session-files/*
+│   │   │           ├── components/    # chat-header, composer, attach-menu, usage-popover, session-files/chat-drop-target (the rest of session-files is the shared components/widgets/files-panel widget)
 │   │   │           └── hooks/          # use-chat-session.ts (transport + state)
 │   │   ├── agents/
 │   │   │   ├── page.tsx                # thin: guard + compose
@@ -491,7 +491,7 @@ When `design/pages/<page>.md` is implemented, that PR also:
 
 1. Moves the page's single-importer components from flat `components/` into
    `<feature>/components/` (e.g. `role-form.tsx` → roles, `budget-editor.tsx` → budgets,
-   `tag-selector.tsx`/`reranker-selector.tsx` → their owners, `session-files/` → chat).
+   `tag-selector.tsx`/`reranker-selector.tsx` → their owners, `session-files/` → chat; since project files, everything but `chat-drop-target` lives in `components/widgets/files-panel`).
 2. Extracts its GraphQL ops from `queries/queries.ts` into `<feature>/queries.ts` or
    `lib/graphql/operations/<domain>.ts`; updates that domain's importers in the same PR.
    `queries/queries.ts` shrinks monotonically; **once a domain has moved, editing it in the

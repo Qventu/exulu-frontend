@@ -40,7 +40,7 @@ import { Composer } from "./composer";
 import { MemoryPanelContent } from "./memory-panel";
 import { MessageColumn } from "./message-column";
 import { ChatDropTarget } from "./session-files/chat-drop-target";
-import { SessionFilesContent } from "./session-files/panel-content";
+import { SessionFilesContent } from "@/components/widgets/files-panel/panel-content";
 
 export interface SessionScreenProps {
   agent: Agent;
@@ -238,7 +238,20 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
         dock={!compact}
       >
         {controller.session && (
-          <SessionFilesContent sessionId={controller.session.id} />
+          <SessionFilesContent
+            sessionId={controller.session.id}
+            project={
+              controller.projectFiles
+                ? {
+                    id: controller.projectFiles.id,
+                    name: controller.projectFiles.name,
+                    canWrite: controller.projectFiles.canWrite,
+                  }
+                : undefined
+            }
+            onProjectListed={controller.syncProjectFiles}
+            onProjectAccessLost={() => controller.syncProjectFiles?.(null)}
+          />
         )}
       </SidePanel>
 
