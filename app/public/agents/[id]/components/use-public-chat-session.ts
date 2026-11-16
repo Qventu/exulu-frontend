@@ -104,7 +104,15 @@ export function usePublicChatSession({
         // that header and attaches Authorization server-side, so no bearer
         // token is sent client-side. The backend loads history from the DB.
         if (mode === "authenticated" && sessionManager) {
-          const session = await sessionManager.ensureSession();
+          // Name the session after the message that is starting it. The
+          // AI SDK carries text in message parts, so collect those rather
+          // than reading a `content` field that is not there.
+          const outgoing = messages[messages.length - 1];
+          const titleText = (outgoing?.parts ?? [])
+            .map((part) => (part.type === "text" ? part.text : ""))
+            .join(" ")
+            .trim();
+          const session = await sessionManager.ensureSession(titleText);
           if (!session) {
             throw new Error("No session available.");
           }

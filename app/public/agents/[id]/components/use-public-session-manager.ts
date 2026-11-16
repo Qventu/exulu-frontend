@@ -36,8 +36,12 @@ export interface PublicSessionManager {
   /** Latest session id, readable synchronously by the transport. */
   currentSessionRef: React.MutableRefObject<PublicSession | null>;
   currentSession: PublicSession | null;
-  /** Lazily create the server session on first send; idempotent thereafter. */
-  ensureSession: () => Promise<PublicSession | null>;
+  /**
+   * Lazily create the server session on first send; idempotent thereafter.
+   * `title` is the text of the message that triggered the create — the rail
+   * shows it, so without it every guest conversation is called "New chat".
+   */
+  ensureSession: (title?: string) => Promise<PublicSession | null>;
   /** Drop the current session so the next send starts a fresh one. */
   startNewSession: () => void;
   /** Point the manager at an existing session (history resume). */
@@ -101,7 +105,7 @@ export function usePublicSessionManager({
   });
 
   const ensureSession =
-    React.useCallback<PublicSessionManager["ensureSession"]>(async () => {
+    React.useCallback<PublicSessionManager["ensureSession"]>(async (title) => {
       if (currentSessionRef.current) return currentSessionRef.current;
       // $user is Float in the mutation signature — coerce the id to a number
       // (external users may arrive as a string).
@@ -111,7 +115,12 @@ export function usePublicSessionManager({
         variables: {
           agent: agentId,
           user: Number.isFinite(userNum) ? userNum : undefined,
-          title: t("newChat"),
+          // Name the session after the message that started it, the same
+          // way and with the same cut as internal chat
+          // (app/(application)/chat/hooks.ts). The literal stays only as a
+          // fallback for a create with no text — otherwise every guest
+          // conversation is listed as "New chat" and the rail is unreadable.
+          title: title?.trim().slice(0, 50) || t("newChat"),
           rights_mode: "private",
           RBAC: { users: [], roles: [] },
         },
