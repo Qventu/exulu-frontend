@@ -207,6 +207,37 @@ describe("SessionFilesContent in a project session", () => {
     expect(toast.success).not.toHaveBeenCalled();
   });
 
+  it("a double click sends one promote, not two", async () => {
+    let resolve!: (v: unknown) => void;
+    api.promote.mockReturnValue(new Promise((r) => (resolve = r)));
+    render(wrap(<SessionFilesContent sessionId="s1" project={project(true)} />));
+    const button = await screen.findByRole("button", { name: "Add to project" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(api.promote).toHaveBeenCalledTimes(1);
+    resolve({
+      promoted: [{ key: "projects/p1/notes.md", name: "notes.md" }],
+      rejected: [],
+      clashes: [],
+    });
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    // The guard is released afterwards: a later click promotes again.
+    api.promote.mockResolvedValue({ promoted: [], rejected: [], clashes: ["notes.md"] });
+    fireEvent.click(button);
+    await waitFor(() => expect(api.promote).toHaveBeenCalledTimes(2));
+  });
+
+  it("an empty rejection uses the translated generic message, not hardcoded English", async () => {
+    api.promote.mockResolvedValue({ promoted: [], rejected: [], clashes: [] });
+    render(wrap(<SessionFilesContent sessionId="s1" project={project(true)} />));
+    fireEvent.click(await screen.findByRole("button", { name: "Add to project" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(toast.error.mock.calls[0][0]).toContain(
+      enMessages.chat.files.promoteFailedGeneric,
+    );
+    expect(toast.error.mock.calls[0][0]).not.toContain("not copied");
+  });
+
   it("a thrown promote error gets an error toast naming the file", async () => {
     api.promote.mockRejectedValue(new Error("Forbidden"));
     render(wrap(<SessionFilesContent sessionId="s1" project={project(true)} />));

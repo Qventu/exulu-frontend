@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * Files tab (inventory 22-28; ladder rows 22-28). The L2 curation surface:
+ * Knowledge tab (inventory 22-28; ladder rows 22-28). The L2 curation surface:
  * - mini-toolbar with the live "n / 15" counter (the 15-item copy is finally
- *   TRUE — ladder row 23) and the "Add files" trigger, disabled at the limit
+ *   TRUE — ladder row 23) and the "Add knowledge" trigger, disabled at the limit
  *   with an always-reachable explanation (Tooltip + visible helper on touch);
  * - responsive card grid (1 → sm:2 → lg:3, fixes the cramped 2-col-at-390px);
  * - the shared ItemsSelectionModal with BOTH dead halves of UX 3 wired:
@@ -41,7 +41,7 @@ export interface AddItemsOptions {
   silent?: boolean;
 }
 
-export function FilesTab({
+export function KnowledgeTab({
   projectItems,
   onAddItems,
   onRemoveItem,
@@ -63,7 +63,7 @@ export function FilesTab({
       disabled={atLimit}
     >
       <Plus aria-hidden="true" className="mr-2 size-4" />
-      {t("files.addFiles")}
+      {t("knowledge.addFiles")}
     </Button>
   );
 
@@ -72,7 +72,7 @@ export function FilesTab({
       {/* Mini-toolbar: counter + Add files (ladder rows 22-23). */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground" aria-live="polite">
-          {t("files.counter", {
+          {t("knowledge.counter", {
             count: projectItems.length,
             max: MAX_PROJECT_ITEMS,
           })}
@@ -87,7 +87,7 @@ export function FilesTab({
                 </span>
               </TooltipTrigger>
               <TooltipContent>
-                {t("files.limitTooltip", { max: MAX_PROJECT_ITEMS })}
+                {t("knowledge.limitTooltip", { max: MAX_PROJECT_ITEMS })}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -98,17 +98,17 @@ export function FilesTab({
       {/* Touch path for the disabled-state explanation (T7). */}
       {atLimit && (
         <p className="text-xs text-muted-foreground">
-          {t("files.limitTooltip", { max: MAX_PROJECT_ITEMS })}
+          {t("knowledge.limitTooltip", { max: MAX_PROJECT_ITEMS })}
         </p>
       )}
 
       {projectItems.length === 0 ? (
         <EmptyState
           icon={Files}
-          title={t("files.emptyTitle")}
-          description={t("files.emptyDescription")}
+          title={t("knowledge.emptyTitle")}
+          description={t("knowledge.emptyDescription")}
           action={{
-            label: t("files.addFiles"),
+            label: t("knowledge.addFiles"),
             onClick: () => setModalOpen(true),
           }}
         />

@@ -3,7 +3,8 @@
 /**
  * Project detail — "a project is a place you work, not a record you
  * administer" (projects.md §3). L1 = the Sessions tab plus ONE purple
- * "New session"; Files and Settings (details · access · danger zone) sit in
+ * "New session"; Files (the shared folder), Knowledge (pinned items) and
+ * Settings (details · access · danger zone) sit in
  * URL-backed tabs (?tab=, fixes UX 6 fully: sections are linkable,
  * refresh-safe AND back-button-steppable — tab switches push history
  * entries; only sub-state like the ?edit=1 toggle replaces). The double
@@ -51,16 +52,19 @@ import {
   useProjectSessions,
 } from "../hooks";
 import { UPDATE_PROJECT } from "../queries";
-import { type AddItemsOptions, FilesTab } from "./files-tab";
+import { type AddItemsOptions, KnowledgeTab } from "./knowledge-tab";
 import { NewSessionDialog } from "./new-session-dialog";
 import { ProjectAvatar } from "./project-avatar";
 import { ProjectBudgetIndicator } from "./project-budget-indicator";
+import { ProjectFilesTab } from "./project-files-tab";
 import { SessionsTab } from "./sessions-tab";
 import { SettingsTab } from "./settings-tab";
 import { ProjectDetailSkeleton } from "./skeletons";
 import { VisibilityBadge } from "./visibility-badge";
 
-type TabValue = "sessions" | "files" | "settings";
+type TabValue = "sessions" | "files" | "knowledge" | "settings";
+
+const TAB_VALUES: readonly string[] = ["files", "knowledge", "settings"];
 
 const TAB_CONTENT_MOTION =
   "mt-6 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-150";
@@ -82,14 +86,16 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   /* ------------------------- URL-backed tab state ------------------------- */
 
   const tabParam = searchParams.get("tab");
-  const tab: TabValue =
-    tabParam === "files" || tabParam === "settings" ? tabParam : "sessions";
+  const tab: TabValue = TAB_VALUES.includes(tabParam ?? "")
+    ? (tabParam as TabValue)
+    : "sessions";
   const editParam = searchParams.get("edit") === "1";
 
   const setTab = React.useCallback(
     (next: string, options?: { edit?: boolean; replace?: boolean }) => {
-      const nextTab: TabValue =
-        next === "files" || next === "settings" ? next : "sessions";
+      const nextTab: TabValue = TAB_VALUES.includes(next)
+        ? (next as TabValue)
+        : "sessions";
       const nextEdit = options?.edit === true;
       // Identical target = no-op (no duplicate history entries).
       if (nextTab === tab && nextEdit === editParam) return;
@@ -142,24 +148,24 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
       const added = next.length - current.length;
       if (next.length > MAX_PROJECT_ITEMS) {
         const remaining = Math.max(0, MAX_PROJECT_ITEMS - current.length);
-        const message = t("files.limitToast", { remaining });
+        const message = t("knowledge.limitToast", { remaining });
         if (options?.throwOnLimit) throw new Error(message);
         toast.error(message);
         return;
       }
       if (added === 0) {
-        if (!options?.silent) toast.message(t("files.addedToast", { count: 0 }));
+        if (!options?.silent) toast.message(t("knowledge.addedToast", { count: 0 }));
         return;
       }
       try {
         await persistItems(next, current);
         if (!options?.silent) {
-          toast.success(t("files.addedToast", { count: added }));
+          toast.success(t("knowledge.addedToast", { count: added }));
         }
       } catch (mutationError) {
         console.error("Error adding project items:", mutationError);
         if (options?.throwOnLimit) throw mutationError;
-        toast.error(t("files.addError"));
+        toast.error(t("knowledge.addError"));
       }
     },
     [persistItems, projectItems, t],
@@ -171,7 +177,7 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
       const next = current.filter((entry) => entry !== gid);
       void persistItems(next, current).catch((mutationError) => {
         console.error("Error removing project item:", mutationError);
-        toast.error(t("files.removeError"));
+        toast.error(t("knowledge.removeError"));
       });
     },
     [persistItems, projectItems, t],
@@ -344,11 +350,12 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
       />
 
       <Tabs value={tab} onValueChange={(value) => setTab(value)}>
-        {/* ≤3 tabs → full-width segmented control on phones (S1). */}
-        <TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
+        {/* Four tabs → 2x2 grid on phones, inline from sm. */}
+        <TabsList className="grid h-auto w-full grid-cols-2 sm:inline-flex sm:h-10 sm:w-auto">
           <TabsTrigger value="sessions">{t("tabs.sessions")}</TabsTrigger>
-          <TabsTrigger value="files" className="gap-1.5">
-            {t("tabs.files")}
+          <TabsTrigger value="files">{t("tabs.files")}</TabsTrigger>
+          <TabsTrigger value="knowledge" className="gap-1.5">
+            {t("tabs.knowledge")}
             {projectItems.length > 0 && (
               <Badge variant="secondary" className="px-1.5 text-xs">
                 {projectItems.length}/{MAX_PROJECT_ITEMS}
@@ -372,7 +379,11 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
         </TabsContent>
 
         <TabsContent value="files" className={TAB_CONTENT_MOTION}>
-          <FilesTab
+          <ProjectFilesTab projectId={project.id} projectName={project.name} />
+        </TabsContent>
+
+        <TabsContent value="knowledge" className={TAB_CONTENT_MOTION}>
+          <KnowledgeTab
             projectItems={projectItems}
             onAddItems={handleAddItems}
             onRemoveItem={handleRemoveItem}

@@ -245,7 +245,12 @@ function SessionAndProjectFiles({
 
     // A name clash pauses the promote on a confirm; nothing was copied yet.
     const [clash, setClash] = useState<SessionFile | null>(null);
+    // A double click must not send two promotes: the second would see the
+    // first's file as a clash and open a spurious "Replace it?" dialog.
+    const inFlight = useRef<Set<string>>(new Set());
     const promote = async (file: SessionFile, overwrite = false) => {
+        if (inFlight.current.has(file.key)) return;
+        inFlight.current.add(file.key);
         const failed = (message: string) =>
             toast.error(t("files.promoteFailed", { name: file.name, message }));
         try {
@@ -259,7 +264,7 @@ function SessionAndProjectFiles({
                 return;
             }
             if (res.rejected?.length || !res.promoted?.length) {
-                failed(res.rejected?.[0]?.reason ?? "not copied");
+                failed(res.rejected?.[0]?.reason ?? t("files.promoteFailedGeneric"));
                 return;
             }
             toast.success(t("files.addedToProject"));
@@ -267,6 +272,8 @@ function SessionAndProjectFiles({
             notifyFilesChanged(sessionScope);
         } catch (err) {
             failed(err instanceof Error ? err.message : String(err));
+        } finally {
+            inFlight.current.delete(file.key);
         }
     };
 
