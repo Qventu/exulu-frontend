@@ -7,6 +7,8 @@ module.exports = {
 		"./components/**/*.{ts,tsx}",
 		"./app/**/*.{ts,tsx}",
 		"./src/**/*.{ts,tsx}",
+		// Class maps that live outside the component tree (work-status colours).
+		"./lib/routine-runs/**/*.{ts,tsx}",
 	],
 	prefix: "",
 	theme: {
