@@ -40,6 +40,7 @@ const TEMPLATE_ITEM_SELECTION = `
   rights_mode
   created_by
   steps_json
+  work_statuses
   variables
   createdAt
   updatedAt
@@ -90,6 +91,7 @@ export const GET_WORKFLOW_TEMPLATE_BY_ID = gql`
       description
       rights_mode
       steps_json
+      work_statuses
       variables
       createdAt
       updatedAt
@@ -133,6 +135,7 @@ export const CREATE_WORKFLOW_TEMPLATE = gql`
           ${RBAC_SELECTION}
         }
         steps_json
+        work_statuses
         createdAt
         agent
         updatedAt
@@ -151,6 +154,7 @@ export const UPDATE_WORKFLOW_TEMPLATE = gql`
     $steps_json: JSON
     $agent: String
     $queue: String
+    $work_statuses: JSON
   ) {
     workflow_templatesUpdateOneById(
       id: $id
@@ -162,6 +166,7 @@ export const UPDATE_WORKFLOW_TEMPLATE = gql`
         steps_json: $steps_json
         agent: $agent
         queue: $queue
+        work_statuses: $work_statuses
       }
     ) {
       item {
@@ -177,6 +182,7 @@ export const UPDATE_WORKFLOW_TEMPLATE = gql`
           ${RBAC_SELECTION}
         }
         steps_json
+        work_statuses
         createdAt
         updatedAt
       }

@@ -45,6 +45,8 @@ export interface Routine {
   RBAC: RoutineRbac;
   variables?: string[] | null;
   steps_json?: UIMessage[] | null;
+  /** Raw per-routine work-status config; read it through parseWorkStatusConfig. */
+  work_statuses?: unknown;
   createdAt: string;
   updatedAt: string;
 

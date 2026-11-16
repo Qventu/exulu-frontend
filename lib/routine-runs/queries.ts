@@ -23,6 +23,9 @@ const ROUTINE_RUN_SELECTION = `
   inputTokens
   outputTokens
   costUsd
+  work_status
+  work_status_updated_at
+  work_status_updated_by
 `;
 
 export const ROUTINE_RUNS = gql`
@@ -36,6 +39,8 @@ export const ROUTINE_RUNS = gql`
     $to: Date
     $search: String
     $needsAttention: Boolean
+    $workStatuses: [String!]
+    $workStatusOpen: Boolean
   ) {
     routineRuns(
       page: $page
@@ -47,6 +52,8 @@ export const ROUTINE_RUNS = gql`
       to: $to
       search: $search
       needsAttention: $needsAttention
+      workStatuses: $workStatuses
+      workStatusOpen: $workStatusOpen
     ) {
       items {
         ${ROUTINE_RUN_SELECTION}
@@ -106,6 +113,14 @@ export const ROUTINE_NAME_BY_ID = gql`
     workflow_templateById(id: $id) {
       id
       name
+    }
+  }
+`;
+
+export const SET_ROUTINE_RUN_WORK_STATUS = gql`
+  mutation SetRoutineRunWorkStatus($id: ID!, $status: String) {
+    setRoutineRunWorkStatus(id: $id, status: $status) {
+      ${ROUTINE_RUN_SELECTION}
     }
   }
 `;
