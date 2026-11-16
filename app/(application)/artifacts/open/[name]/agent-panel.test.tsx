@@ -119,6 +119,7 @@ vi.mock("@/app/(application)/chat/components/session-screen", async () => {
       sessionPath?: (id: string) => string;
       onController?: (controller: typeof fakeController) => void;
       onProgress?: (reason: "tool" | "turn") => void;
+      compact?: boolean;
     }) => {
       const shell = useChatShell();
       React.useEffect(() => {
@@ -136,6 +137,11 @@ vi.mock("@/app/(application)/chat/components/session-screen", async () => {
           // right (a dropped forward is a silent no-op, not a type error,
           // because the prop is optional on both ends).
           data-has-on-progress={props.onProgress ? "yes" : "no"}
+          // The chat's side panels size themselves off the WINDOW, which is
+          // the wrong ruler inside this column — see `compact` on
+          // SessionScreenProps, and chat/hooks-files-panel.test.tsx for what
+          // the real SessionScreen does with it.
+          data-compact={props.compact ? "yes" : "no"}
         />
       );
     },
@@ -317,6 +323,18 @@ describe("AgentPanel", () => {
     expect(
       screen.getByTestId("session-screen").getAttribute("data-session-path"),
     ).toBe("/artifacts/open/pitch?session=session-9");
+  });
+
+  test("mounts the chat in compact mode", () => {
+    // Without it the session-files panel restores a preference set in
+    // full-page chat and DOCKS beside the conversation, in a column that has
+    // no width to give: the observed symptom was a 90px composer next to an
+    // empty "No files yet" panel.
+    show();
+
+    expect(
+      screen.getByTestId("session-screen").getAttribute("data-compact"),
+    ).toBe("yes");
   });
 
   test("sends the header's new chat to the artifact URL too", () => {

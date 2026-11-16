@@ -84,6 +84,23 @@ export interface SessionScreenProps {
    * caller).
    */
   onProgress?: (reason: "tool" | "turn") => void;
+  /**
+   * The host column is narrow (the artifact viewer's agent panel, ~700px —
+   * not the window, which SidePanel's breakpoints are about). Two
+   * consequences, both of them about the side panels this file renders:
+   *
+   * - `restoreFilesPanel: false` — the persisted
+   *   "chat.sessionFilesPanel.open" preference is global, so a user who left
+   *   the panel open in full-page chat got it re-opened here, showing "No
+   *   files yet": the documents an artifact conversation is about live in a
+   *   knowledge base, not in the session's files. It is almost never what
+   *   the user wants in this host, so it is not restored — only opened on
+   *   purpose (attach menu, header button, drop, an artifact's open request).
+   * - `dock={false}` on BOTH panels — docking takes its width from the
+   *   conversation beside it rather than from spare viewport, which in a
+   *   700px column left a 90px composer. Opened on purpose, they overlay.
+   */
+  compact?: boolean;
 }
 
 export function SessionScreen(props: SessionScreenProps) {
@@ -116,6 +133,7 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
   sessionPath,
   onController,
   onProgress,
+  compact = false,
 }: SessionScreenProps & { beginLazyCreate: () => () => void }) {
   const t = useTranslations("chat");
   const controller = useChatSession({
@@ -124,6 +142,8 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
     initialMessages,
     beginLazyCreate,
     sessionPath,
+    // See `compact` on SessionScreenProps.
+    restoreFilesPanel: !compact,
   });
 
   // Hands this instance to the host — see the doc comment on
@@ -215,6 +235,7 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
         resizable
         storageKey="chat-files"
         mobileSize="full"
+        dock={!compact}
       >
         {controller.session && (
           <SessionFilesContent sessionId={controller.session.id} />
@@ -232,6 +253,7 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
         resizable
         storageKey="chat-memory"
         mobileSize="full"
+        dock={!compact}
       >
         <MemoryPanelContent controller={controller} />
       </SidePanel>

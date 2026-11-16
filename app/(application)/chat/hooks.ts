@@ -124,6 +124,20 @@ export interface UseChatSessionArgs {
    * doesn't rewrite that host's URL out from under it.
    */
   sessionPath?: (sessionId: string) => string;
+  /**
+   * Whether the persisted "chat.sessionFilesPanel.open" preference may
+   * re-open the files panel on mount. Default true (full-page chat, where
+   * the preference was set and where a docked panel costs nothing).
+   *
+   * A host whose column is too narrow to afford the panel passes false: the
+   * preference is global, so a user who once left the panel open in chat
+   * would otherwise get it restored in every other surface that mounts this
+   * hook — including one where the panel is almost never what they want (the
+   * artifact viewer's agent panel: those files live in a knowledge base, not
+   * in the session). Only the RESTORE is suppressed; an explicit
+   * setFilesPanelOpen(true) still opens and still persists.
+   */
+  restoreFilesPanel?: boolean;
 }
 
 /**
@@ -353,6 +367,7 @@ export function useChatSession({
   initialMessages,
   beginLazyCreate,
   sessionPath = (id: string) => `/chat/${agent.id}/${id}`,
+  restoreFilesPanel = true,
 }: UseChatSessionArgs): ChatSessionController {
   const t = useTranslations("chat");
   const configContext = React.useContext(ConfigContext);
@@ -1136,13 +1151,16 @@ export function useChatSession({
   // --- session files panel (items 64/79) -------------------------------------------
   const [filesPanelOpen, setFilesPanelOpenState] = React.useState(false);
   React.useEffect(() => {
+    // See restoreFilesPanel's doc comment: a host too narrow for the panel
+    // opts out of the global preference, not out of opening it at all.
+    if (!restoreFilesPanel) return;
     try {
       const stored = window.localStorage.getItem("chat.sessionFilesPanel.open");
       if (stored === "true") setFilesPanelOpenState(true);
     } catch {
       // localStorage can throw in private browsing / SSR; default-closed is fine.
     }
-  }, []);
+  }, [restoreFilesPanel]);
 
   const setFilesPanelOpen = async (
     open: boolean,

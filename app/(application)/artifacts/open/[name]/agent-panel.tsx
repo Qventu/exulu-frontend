@@ -564,6 +564,12 @@ function MountedAgentPanel({
                 // owns the controller useTurnProgress needs); this is a
                 // straight relay to the viewer's progressNonce counter.
                 onProgress={onProgress}
+                // This host IS the narrow column `compact` is about: the
+                // conversation shares it with the rail and sits beside the
+                // artifact, so a docked session-files panel (restored here
+                // from a preference the user set in full-page chat, and
+                // empty besides) left the composer 90px wide.
+                compact
               />
             </div>
           </SidePanel>

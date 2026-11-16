@@ -28,6 +28,12 @@ import { cn } from "@/lib/utils";
  * - `< md`: bottom Sheet, `max-h-[85dvh]` (or `h-dvh` via `mobileSize="full"`
  *   for document-like content), internally scrollable, safe-area padded (V1/V3).
  *
+ * `dock={false}` opts out of the first rule entirely: the panel is a Sheet at
+ * every width. Those breakpoints assume the panel's host is the window, which
+ * is false inside an already-narrow column (the artifact viewer's agent
+ * panel) — there a docked panel takes its width from the content beside it,
+ * not from screen real estate the viewport has to spare.
+ *
  * Header: title (+ optional description) + `actions` slot (OverflowMenu) + close.
  * The body is a single unpadded scroll container (V2) — content owns its padding.
  */
@@ -111,6 +117,12 @@ export interface SidePanelProps {
   maxWidth?: number;
   /** Bottom-sheet height below `md`: "full" (`h-dvh`) for document-like content (T2). */
   mobileSize?: "default" | "full";
+  /**
+   * Allow the docked `≥ lg` presentation. `false` forces Sheet mode at every
+   * width — for a host whose own column is narrower than the viewport, where
+   * docking would come out of the content's width rather than the window's.
+   */
+  dock?: boolean;
   className?: string;
   children: React.ReactNode;
 }
@@ -127,6 +139,7 @@ export function SidePanel({
   minWidth = DEFAULT_MIN_WIDTH,
   maxWidth = DEFAULT_MAX_WIDTH,
   mobileSize = "default",
+  dock = true,
   className,
   children,
 }: SidePanelProps) {
@@ -135,7 +148,9 @@ export function SidePanel({
   const isAboveMd = useMediaQuery(MD_QUERY);
   // Sheet only once we KNOW we're below lg; pre-hydration renders the docked
   // markup (CSS-guarded by `lg:` classes) so desktop SSR paints without a flash.
-  const sheetMode = isDesktop === false;
+  // A host that forbids docking skips the breakpoint entirely — including
+  // pre-hydration, where there is nothing to flash into.
+  const sheetMode = !dock || isDesktop === false;
 
   const [panelWidth, setPanelWidth] = React.useState(() =>
     clamp(width, minWidth, maxWidth),
