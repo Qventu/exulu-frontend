@@ -119,6 +119,18 @@ vi.mock("@/app/(application)/chat/components/session-screen", () => ({
   },
 }));
 
+// Task 6: the viewer's project probe runs one Apollo query. Only the client
+// the probe reaches through `useApolloClient` is faked; nothing else on this
+// page talks to Apollo once the chat hooks and favourites above are stubbed.
+const apollo = vi.hoisted(() => ({ query: vi.fn() }));
+vi.mock("@apollo/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@apollo/client")>()),
+  useApolloClient: () => apollo,
+}));
+
+/** The frame's `probeProject`, captured the same way as `onOpenRequest`. */
+let capturedProbeProject: ((projectId: string) => Promise<boolean>) | null = null;
+
 /** The `onOpenRequest` the viewer handed to the (stubbed) frame, captured so
  *  a test can simulate the artifact's postMessage without the real channel —
  *  functions do not survive the `panel` prop's JSON serialisation below, so
@@ -129,8 +141,14 @@ let capturedOnOpenRequest: ((request: unknown) => void) | null = null;
 // assertion reads the exact bytes the viewer handed over — an agent id hiding
 // in an unexpected field would show up in the string.
 vi.mock("@/app/artifacts/[artifact_name]/artifact-frame", () => ({
-  ArtifactFrame: (props: { panel?: { onOpenRequest?: (request: unknown) => void } }) => {
+  ArtifactFrame: (props: {
+    panel?: {
+      onOpenRequest?: (request: unknown) => void;
+      probeProject?: (projectId: string) => Promise<boolean>;
+    };
+  }) => {
     capturedOnOpenRequest = props.panel?.onOpenRequest ?? null;
+    capturedProbeProject = props.panel?.probeProject ?? null;
     return (
       <div
         data-testid="artifact-frame"
@@ -195,6 +213,8 @@ beforeEach(() => {
   artifactPx = 1000;
   resizeCallbacks = [];
   capturedOnOpenRequest = null;
+  capturedProbeProject = null;
+  apollo.query.mockReset();
   fakeController.seedInput.mockClear();
   fakeController.addSessionItems.mockClear();
   fakeController.addSessionFiles.mockClear();
@@ -687,6 +707,57 @@ describe("ArtifactViewer → openRequest wiring (task 9)", () => {
       await Promise.resolve();
     });
     expect(fakeController.seedInput).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ArtifactViewer → probeProject (task 6)", () => {
+  const PROJECT = "0b9f3c1e-5d2a-4c7b-9e8f-1a2b3c4d5e6f";
+
+  const probe = () => {
+    show({ slots: [SLOT_ANALYSE] });
+    expect(capturedProbeProject).toBeTypeOf("function");
+    return capturedProbeProject!(PROJECT);
+  };
+
+  test("asks the server, bypassing the cache, and resolves true when the project comes back", async () => {
+    apollo.query.mockResolvedValue({ data: { projectById: { id: PROJECT } } });
+
+    await expect(probe()).resolves.toBe(true);
+    expect(apollo.query).toHaveBeenCalledTimes(1);
+    expect(apollo.query.mock.calls[0][0]).toMatchObject({
+      variables: { id: PROJECT },
+      fetchPolicy: "network-only",
+    });
+    expect(
+      apollo.query.mock.calls[0][0].query.definitions[0].name.value,
+    ).toBe("ProbeProjectAccess");
+  });
+
+  test("resolves false when the project does not come back (no access, or no such project)", async () => {
+    apollo.query.mockResolvedValue({ data: { projectById: null } });
+
+    await expect(probe()).resolves.toBe(false);
+  });
+
+  test("resolves false when the query rejects", async () => {
+    apollo.query.mockRejectedValue(new Error("network down"));
+
+    await expect(probe()).resolves.toBe(false);
+  });
+
+  test("resolves false when the result carries GraphQL errors, even beside an id", async () => {
+    apollo.query.mockResolvedValue({
+      data: { projectById: { id: PROJECT } },
+      errors: [{ message: "Forbidden" }],
+    });
+
+    await expect(probe()).resolves.toBe(false);
+  });
+
+  test("no panel, no probe", () => {
+    show({ slots: [] });
+
+    expect(capturedProbeProject).toBeNull();
   });
 });
 

@@ -97,7 +97,24 @@ import type { Agent } from "@/types/models/agent";
 import type { AgentSession } from "@/types/models/agent-session";
 
 import { applyOpenRequest } from "./apply-open-request";
+import { needsFreshSession } from "./session-reuse";
 import { useTransientNavCollapse } from "./use-transient-nav-collapse";
+
+/** Stable identity: SessionScreenInner is memoized on its props. */
+const NO_MESSAGES: UIMessage[] = [];
+
+/**
+ * A session this panel started for an open request whose project did not
+ * match the mounted one (task 6, see `needsFreshSession`). `nonce` is the
+ * `newChatNonce` the fresh SessionScreen is keyed on; `project` is what its
+ * lazy create lands in — `null` for none. `over` is the `initialSession` prop
+ * it displaced: see `activeFresh` for why it is remembered.
+ */
+type FreshSession = {
+  nonce: number;
+  project: string | null;
+  over: AgentSession | null;
+};
 
 export interface AgentPanelProps {
   agent: Agent;
@@ -219,11 +236,39 @@ function MountedAgentPanel({
   // re-render, and nothing here needs to react to the controller changing,
   // only to read it on demand.
   const controllerRef = React.useRef<ChatSessionController | null>(null);
+
+  // --- which SessionScreen is mounted (task 6) ------------------------------
+  // `newChatNonce` keys SessionScreen's inner part (session-screen.tsx), so
+  // bumping it remounts the conversation with a new controller. Two doors
+  // bump it: the user's New chat (`startNewChat` below) and an open request
+  // whose project does not match the mounted session's (`fresh`, set by the
+  // effect below). One counter for both, so there is one remount mechanism.
+  const [newChatNonce, setNewChatNonce] = React.useState(0);
+  // While set (and active, below), SessionScreen and HistoryRail are rendered
+  // as if there were no `initialSession`: the conversation the page loaded
+  // stays untouched, in the rail and server-side, and the new screen creates
+  // its session lazily inside `fresh.project`.
+  const [fresh, setFresh] = React.useState<FreshSession | null>(null);
+  // Only while the page still hands down the session it displaced. A rail
+  // row for THAT conversation navigates to `?session=<its id>`: the viewer's
+  // key for this component does not change (same id), but the page renders a
+  // new `initialSession` object, and that navigation must show the
+  // conversation the user clicked rather than stay on the fresh screen. No
+  // remount is needed for it — useChatSession's "reset on session
+  // navigation" effect takes the new prop, as it does in full-page chat.
+  const activeFresh = fresh && fresh.over === initialSession ? fresh : null;
+
+  // The `newChatNonce` of the SessionScreen whose controller is in the ref.
+  // Re-created per nonce, so the remounted screen hands up its controller
+  // tagged with ITS nonce: the open-request effect compares the two before
+  // trusting the handle (see the stale-handle guard there).
+  const controllerNonceRef = React.useRef<number | null>(null);
   const handleController = React.useCallback(
     (controller: ChatSessionController) => {
       controllerRef.current = controller;
+      controllerNonceRef.current = newChatNonce;
     },
-    [],
+    [newChatNonce],
   );
 
   // Applies at most once per nonce. React fires a child's effects before its
@@ -232,7 +277,10 @@ function MountedAgentPanel({
   // `collapsedNow` hides it with `display:none` below, never unmounted — so
   // `controllerRef.current` is already set by the time this effect runs,
   // including on the very first commit where the panel opens with a request
-  // already pending.
+  // already pending — and on the commit that remounts SessionScreen for a
+  // fresh session (below): the new SessionScreenInner is a descendant too, so
+  // its mount effect has put the NEW controller in the ref before this effect
+  // re-runs on the `fresh`/`newChatNonce` change.
   const appliedNonceRef = React.useRef<number | null>(null);
   React.useEffect(() => {
     if (!openRequest) return;
@@ -246,6 +294,55 @@ function MountedAgentPanel({
     // change on an unrelated render, so nothing would re-run it. If this ever
     // fires, the request is dropped and the fix is the ordering, not a retry.
     if (!controller) return;
+    // Stale-handle guard (task 6): the handle must belong to the SessionScreen
+    // mounted for this render's nonce. Equally unreachable under the ordering
+    // above; if it ever were not, the request waiting on a fresh session
+    // would otherwise be applied to the very conversation it was moved away
+    // from. Dropped instead, the same trade as the guard above.
+    if (controllerNonceRef.current !== newChatNonce) return;
+
+    // --- the reuse rule (task 6) ---------------------------------------------
+    // A request lands in the mounted session only when both name the same
+    // project, none equalling none (session-reuse.ts says why both
+    // directions matter). The frame strips a project its access probe did
+    // not confirm, so `request.project` present means "confirmed", and no
+    // session is ever created with a project that was not.
+    //
+    // The current project is the live session's while there is one; before
+    // the lazy create there is no row yet, so it is what this screen WILL
+    // create in — the fresh session's project, or none. `|| null` rather than
+    // `?? null`, the same reading useChatProjectFiles takes of the row.
+    const session = controller.session;
+    const currentProject =
+      session && session.id !== "new"
+        ? session.project || null
+        : (activeFresh?.project ?? null);
+    const requestedProject = openRequest.request.project ?? null;
+    if (needsFreshSession(currentProject, requestedProject)) {
+      // Remount into a fresh session, and apply NOTHING here: the nonce is
+      // not marked and the viewer is not told, so the request is still
+      // pending when this effect re-runs on the remount commit — against
+      // the new controller, whose current project then matches, exactly once.
+      const nonce = newChatNonce + 1;
+      setFresh({ nonce, project: requestedProject, over: initialSession });
+      setNewChatNonce(nonce);
+      // `?session=` would reopen the old conversation on a reload; everything
+      // else (`?agent=`, the hash) stays. Written raw for the reason the
+      // viewer writes its own URL state raw: a router navigation would re-run
+      // the page and reload the artifact. The fresh session's lazy create
+      // puts its own id back (sessionPath below).
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("session")) {
+        url.searchParams.delete("session");
+        window.history.replaceState(
+          null,
+          "",
+          `${url.pathname}${url.search}${url.hash}`,
+        );
+      }
+      return;
+    }
+
     // Marked the moment dispatch is committed to, before the async work
     // below even starts — this is also the signal `onRequestApplied` relays
     // to the viewer (see that prop's doc comment): once a request has been
@@ -276,7 +373,7 @@ function MountedAgentPanel({
         description: err instanceof Error ? err.message : undefined,
       });
     });
-  }, [openRequest, onRequestApplied, t]);
+  }, [openRequest, onRequestApplied, t, activeFresh, initialSession, newChatNonce]);
 
   const [collapsed, setCollapsed] = React.useState(false);
   // `undefined` until hydrated, so this is "we KNOW we are below lg" — the
@@ -389,7 +486,6 @@ function MountedAgentPanel({
   // transient surface beside an artifact, and borrowing the full page's
   // "chat.historyRail.collapsed" key would redecide that preference for it.
   const [railCollapsed, setRailCollapsed] = React.useState(true);
-  const [newChatNonce, setNewChatNonce] = React.useState(0);
 
   // <lg opens the history Sheet, ≥lg toggles the docked rail — decided at
   // invocation time, mirroring ChatShell, so a resize between clicks always
@@ -408,9 +504,12 @@ function MountedAgentPanel({
   // job; the nonce is what makes the screen go pristine when that navigation
   // cannot (after a lazy create the URL was swapped with a raw replaceState the
   // router never saw, so pushing the bare URL diffs as "nothing changed").
-  // SessionScreen keys itself on the nonce.
+  // SessionScreen keys itself on the nonce. It also ends a fresh session
+  // (task 6): a New chat is the user's own, and never inherits the project an
+  // artifact's request put the previous screen in.
   const startNewChat = React.useCallback(() => {
     setHistorySheetOpen(false);
+    setFresh(null);
     setNewChatNonce((nonce) => nonce + 1);
   }, []);
 
@@ -542,16 +641,22 @@ function MountedAgentPanel({
                 agent={agent}
                 paths={paths}
                 // URL-param driven here, not pathname: every session lives at
-                // the same route.
-                activeSessionId={initialSession?.id}
+                // the same route. Nothing is active while a fresh session is
+                // open: the loaded one is no longer on screen.
+                activeSessionId={activeFresh ? undefined : initialSession?.id}
                 // The slot picked the agent — switching it would open a
                 // conversation the artifact never asked for.
                 hideAgentSwitcher
               />
               <SessionScreen
                 agent={agent}
-                initialSession={initialSession}
-                initialMessages={initialMessages}
+                // A fresh session (task 6) starts with nothing; the loaded
+                // conversation is left as it is, not cleared.
+                initialSession={activeFresh ? null : initialSession}
+                initialMessages={activeFresh ? NO_MESSAGES : initialMessages}
+                // What the lazy create lands in. Only ever a project the
+                // frame's access probe confirmed (see the reuse rule above).
+                project={activeFresh ? activeFresh.project : undefined}
                 // The same URL the rail links a session to, deliberately:
                 // where a session LIVES is where a freshly created one must
                 // land. Read at call time by the controller

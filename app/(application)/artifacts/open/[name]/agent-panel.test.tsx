@@ -94,9 +94,30 @@ const fakeController = vi.hoisted(() => ({
   // the cross-feature tier rule this file deliberately does not widen).
   status: "ready" as "ready" | "submitted" | "streaming" | "error",
   seedInput: vi.fn(),
-  addSessionItems: vi.fn(async () => {}),
-  addSessionFiles: vi.fn(async () => {}),
-  setFilesPanelOpen: vi.fn(async () => {}),
+  // Parameters typed so the per-mount controllers below can relay to them.
+  addSessionItems: vi.fn(async (_ids: string[]) => {}),
+  addSessionFiles: vi.fn(async (_keys: string[]) => {}),
+  setFilesPanelOpen: vi.fn(async (_open: boolean, _persist?: boolean) => {}),
+}));
+
+/**
+ * One record per controller the stub below instantiates (task 6, project
+ * sessions): the reuse rule remounts the session screen, so "which controller
+ * got the prompt" is the assertion that matters, not only "was it seeded".
+ * Every per-mount controller still relays to `fakeController`'s spies, so the
+ * older tests above keep asserting on those unchanged.
+ */
+type StubMount = {
+  id: number;
+  initialSessionId: string | null;
+  project: string | null | undefined;
+  seeds: string[];
+  files: string[][];
+};
+const stubMounts = vi.hoisted(() => ({
+  list: [] as StubMount[],
+  /** Mount ids whose controller is NOT handed up (the stale-handle guard test). */
+  withhold: new Set<number>(),
 }));
 
 // Stands in for the chat surface AND probes the shell context from where the
@@ -108,41 +129,92 @@ const fakeController = vi.hoisted(() => ({
 //
 // Also simulates `onController` (task 9): the real SessionScreenInner calls
 // it every render with the live controller it just instantiated — this stub
-// does the same with `fakeController`, which is what lets this file prove
+// does the same with a per-mount controller relaying to `fakeController`'s
+// spies, which is what lets this file prove
 // AgentPanel's openRequest effect reaches an actual controller handle rather
 // than asserting on its own internals.
+//
+// Task 6: like the real SessionScreen, the stub keys its inner part on the
+// shell's `newChatNonce`, and each inner instance owns ONE controller whose
+// `session` is the `initialSession` it was mounted with — the real
+// controller's state before a lazy create. That is what lets these tests see
+// a remount (a new `StubMount` record) and which controller a request reached.
 vi.mock("@/app/(application)/chat/components/session-screen", async () => {
   const { useChatShell } =
     await import("@/app/(application)/chat/components/chat-shell");
+  type StubProps = {
+    initialSession?: { id: string; project?: string | null } | null;
+    project?: string | null;
+    sessionPath?: (id: string) => string;
+    onController?: (controller: unknown) => void;
+    onProgress?: (reason: "tool" | "turn") => void;
+    compact?: boolean;
+  };
+  const StubInner = (props: StubProps & { newChat: () => void }) => {
+    const shell = useChatShell();
+    const [mount] = React.useState(() => {
+      const record: StubMount = {
+        id: stubMounts.list.length + 1,
+        initialSessionId: props.initialSession?.id ?? null,
+        project: props.project,
+        seeds: [],
+        files: [],
+      };
+      stubMounts.list.push(record);
+      const controller = {
+        // Read through, so a test can still put a turn in flight after mount.
+        get status() {
+          return fakeController.status;
+        },
+        session: props.initialSession ?? null,
+        seedInput: (text: string) => {
+          record.seeds.push(text);
+          fakeController.seedInput(text);
+        },
+        addSessionItems: (ids: string[]) => fakeController.addSessionItems(ids),
+        addSessionFiles: (keys: string[]) => {
+          record.files.push(keys);
+          return fakeController.addSessionFiles(keys);
+        },
+        setFilesPanelOpen: (open: boolean, persist?: boolean) =>
+          fakeController.setFilesPanelOpen(open, persist),
+      };
+      return { record, controller };
+    });
+    React.useEffect(() => {
+      if (stubMounts.withhold.has(mount.record.id)) return;
+      props.onController?.(mount.controller);
+    });
+    return (
+      <div
+        data-testid="session-screen"
+        data-mount={String(mount.record.id)}
+        data-initial-session={props.initialSession?.id ?? "(none)"}
+        data-project={props.project ?? "(none)"}
+        data-session-path={props.sessionPath?.("session-9") ?? "(none)"}
+        data-new-chat-path={shell.newChatPath ?? "(none)"}
+        // Task 10: the real SessionScreenInner derives the bump itself and
+        // calls this; this stub has no controller to derive it from, so it
+        // only proves AgentPanel handed the SAME function down — the one
+        // concrete thing this host is responsible for getting right (a
+        // dropped forward is a silent no-op, not a type error, because the
+        // prop is optional on both ends).
+        data-has-on-progress={props.onProgress ? "yes" : "no"}
+        // The chat's side panels size themselves off the WINDOW, which is the
+        // wrong ruler inside this column — see `compact` on
+        // SessionScreenProps, and chat/hooks-files-panel.test.tsx for what
+        // the real SessionScreen does with it.
+        data-compact={props.compact ? "yes" : "no"}
+      >
+        <button type="button" data-testid="stub-new-chat" onClick={props.newChat} />
+      </div>
+    );
+  };
   return {
-    SessionScreen: (props: {
-      sessionPath?: (id: string) => string;
-      onController?: (controller: typeof fakeController) => void;
-      onProgress?: (reason: "tool" | "turn") => void;
-      compact?: boolean;
-    }) => {
+    SessionScreen: (props: StubProps) => {
       const shell = useChatShell();
-      React.useEffect(() => {
-        props.onController?.(fakeController);
-      });
       return (
-        <div
-          data-testid="session-screen"
-          data-session-path={props.sessionPath?.("session-9") ?? "(none)"}
-          data-new-chat-path={shell.newChatPath ?? "(none)"}
-          // Task 10: the real SessionScreenInner derives the bump itself
-          // and calls this; this stub has no controller to derive it from,
-          // so it only proves AgentPanel handed the SAME function down —
-          // the one concrete thing this host is responsible for getting
-          // right (a dropped forward is a silent no-op, not a type error,
-          // because the prop is optional on both ends).
-          data-has-on-progress={props.onProgress ? "yes" : "no"}
-          // The chat's side panels size themselves off the WINDOW, which is
-          // the wrong ruler inside this column — see `compact` on
-          // SessionScreenProps, and chat/hooks-files-panel.test.tsx for what
-          // the real SessionScreen does with it.
-          data-compact={props.compact ? "yes" : "no"}
-        />
+        <StubInner key={shell.newChatNonce} newChat={shell.startNewChat} {...props} />
       );
     },
   };
@@ -174,6 +246,9 @@ beforeEach(() => {
   desktopViewport = true;
   dockedWidth = 400;
   fakeController.status = "ready";
+  stubMounts.list.length = 0;
+  stubMounts.withhold.clear();
+  window.history.replaceState(null, "", "/");
   fakeController.seedInput.mockClear();
   fakeController.addSessionItems.mockClear();
   fakeController.addSessionFiles.mockClear();
@@ -737,6 +812,262 @@ describe("AgentPanel", () => {
       });
 
       expect(fakeController.seedInput).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  /**
+   * Task 6 (project sessions from artifacts): a request lands in the mounted
+   * session only when both name the same project ("none" being one of them);
+   * otherwise the panel starts a fresh session — in the requested project, or
+   * in none — and applies the request there, exactly once. Downstream of the
+   * frame, `request.project` present means "access confirmed": the frame
+   * strips a project its probe did not confirm.
+   */
+  describe("openRequest and the session's project (task 6)", () => {
+    const SESSION_NO_PROJECT = { ...SESSION, id: "session-2", project: null };
+
+    const request = (nonce: number, prompt: string, project?: string) => ({
+      nonce,
+      request: {
+        type: "exulu:panel:open" as const,
+        v: 2,
+        slot: "advisor",
+        prompt,
+        ...(project ? { project } : {}),
+      },
+    });
+
+    const screenAttr = (name: string) =>
+      screen.getByTestId("session-screen").getAttribute(`data-${name}`);
+
+    /** Re-renders the same tree with a new openRequest (a second artifact click). */
+    const rerequest = (
+      view: ReturnType<typeof show>,
+      openRequest: ReturnType<typeof request>,
+    ) =>
+      act(() => {
+        view.rerender(
+          <NextIntlClientProvider locale="en" messages={enMessages}>
+            <UserContext.Provider value={{ user: { id: 7 } }}>
+              <SidebarProvider>
+                <AgentPanel {...view.props} openRequest={openRequest} />
+              </SidebarProvider>
+            </UserContext.Provider>
+          </NextIntlClientProvider>,
+        );
+      });
+
+    test("request with a project, no session yet: the screen gets the project and the prompt", () => {
+      const onRequestApplied = vi.fn();
+      show({ onRequestApplied, openRequest: request(1, "Bid", "p1") });
+
+      expect(screenAttr("project")).toBe("p1");
+      expect(screenAttr("initial-session")).toBe("(none)");
+      const last = stubMounts.list.at(-1)!;
+      expect(last.project).toBe("p1");
+      expect(last.seeds).toEqual(["Bid"]);
+      expect(fakeController.seedInput).toHaveBeenCalledTimes(1);
+      expect(onRequestApplied).toHaveBeenCalledTimes(1);
+    });
+
+    test("request with project p1 while the mounted session has project p1: no remount", () => {
+      show({ initialSession: SESSION as never, openRequest: request(1, "More", "p1") });
+
+      expect(stubMounts.list).toHaveLength(1);
+      expect(stubMounts.list[0].seeds).toEqual(["More"]);
+      expect(screenAttr("initial-session")).toBe("session-1");
+    });
+
+    test("request with project p1 while the mounted session has no project: remount, seeded once", () => {
+      const onRequestApplied = vi.fn();
+      show({
+        initialSession: SESSION_NO_PROJECT as never,
+        onRequestApplied,
+        openRequest: request(1, "Bid", "p1"),
+      });
+
+      expect(stubMounts.list).toHaveLength(2);
+      expect(stubMounts.list[0].seeds).toEqual([]);
+      expect(stubMounts.list[1]).toMatchObject({
+        initialSessionId: null,
+        project: "p1",
+        seeds: ["Bid"],
+      });
+      expect(screenAttr("initial-session")).toBe("(none)");
+      expect(screenAttr("project")).toBe("p1");
+      expect(fakeController.seedInput).toHaveBeenCalledTimes(1);
+      expect(onRequestApplied).toHaveBeenCalledTimes(1);
+    });
+
+    test("request without project while the mounted session has project p1: remount without either", () => {
+      show({ initialSession: SESSION as never, openRequest: request(1, "Hello") });
+
+      expect(stubMounts.list).toHaveLength(2);
+      expect(stubMounts.list[0].seeds).toEqual([]);
+      expect(stubMounts.list[1]).toMatchObject({
+        initialSessionId: null,
+        project: null,
+        seeds: ["Hello"],
+      });
+      expect(screenAttr("project")).toBe("(none)");
+    });
+
+    test("request without project, session without project: no remount", () => {
+      show({
+        initialSession: SESSION_NO_PROJECT as never,
+        openRequest: request(1, "Hello"),
+      });
+
+      expect(stubMounts.list).toHaveLength(1);
+      expect(stubMounts.list[0].seeds).toEqual(["Hello"]);
+    });
+
+    test("the rail stops marking the old conversation while a fresh one is open", () => {
+      const view = show({ initialSession: SESSION as never });
+      const row = () =>
+        view.container.querySelector(
+          'a[href="/artifacts/open/pitch?session=session-1"]',
+        );
+      expect(row()?.getAttribute("aria-current")).toBe("page");
+
+      rerequest(view, request(1, "Hello"));
+
+      expect(row()?.getAttribute("aria-current")).toBeNull();
+    });
+
+    test("a rail click back to the displaced conversation shows it again", () => {
+      // Same id, so the viewer's key for the panel does not change; the page
+      // renders a new session object for the navigation, and that must end
+      // the fresh screen (useChatSession's reset effect takes it from there).
+      const view = show({ initialSession: SESSION as never });
+      rerequest(view, request(1, "Hello"));
+      expect(screenAttr("initial-session")).toBe("(none)");
+      const mounted = stubMounts.list.length;
+
+      act(() => {
+        view.rerender(
+          <NextIntlClientProvider locale="en" messages={enMessages}>
+            <UserContext.Provider value={{ user: { id: 7 } }}>
+              <SidebarProvider>
+                <AgentPanel
+                  {...view.props}
+                  initialSession={{ ...SESSION } as never}
+                  openRequest={null}
+                />
+              </SidebarProvider>
+            </UserContext.Provider>
+          </NextIntlClientProvider>,
+        );
+      });
+
+      expect(screenAttr("initial-session")).toBe("session-1");
+      expect(screenAttr("project")).toBe("(none)");
+      expect(stubMounts.list).toHaveLength(mounted);
+    });
+
+    test("on a remount the URL loses ?session= and keeps ?agent=", () => {
+      window.history.replaceState(
+        null,
+        "",
+        "/artifacts/open/pitch?agent=advisor&session=session-1#top",
+      );
+
+      show({ initialSession: SESSION as never, openRequest: request(1, "Hello") });
+
+      expect(window.location.pathname).toBe("/artifacts/open/pitch");
+      expect(window.location.search).toBe("?agent=advisor");
+      expect(window.location.hash).toBe("#top");
+    });
+
+    test("a reused session leaves the URL alone", () => {
+      window.history.replaceState(null, "", "/artifacts/open/pitch?agent=advisor&session=session-1");
+
+      show({ initialSession: SESSION as never, openRequest: request(1, "More", "p1") });
+
+      expect(window.location.search).toBe("?agent=advisor&session=session-1");
+    });
+
+    test("a second request for the same project lands in the fresh session without another remount", () => {
+      const view = show({
+        initialSession: SESSION_NO_PROJECT as never,
+        openRequest: request(1, "First", "p1"),
+      });
+      expect(stubMounts.list).toHaveLength(2);
+
+      rerequest(view, request(2, "Second", "p1"));
+
+      expect(stubMounts.list).toHaveLength(2);
+      expect(stubMounts.list[1].seeds).toEqual(["First", "Second"]);
+    });
+
+    test("requests in quick succession for different projects each get their own session, once each", () => {
+      const view = show({
+        initialSession: SESSION_NO_PROJECT as never,
+        openRequest: request(1, "First", "p1"),
+      });
+
+      rerequest(view, request(2, "Second", "p2"));
+
+      expect(stubMounts.list.map((mount) => [mount.project, mount.seeds])).toEqual([
+        [undefined, []],
+        ["p1", ["First"]],
+        ["p2", ["Second"]],
+      ]);
+      expect(fakeController.seedInput).toHaveBeenCalledTimes(2);
+    });
+
+    test("a stale controller handle is never used for a request waiting on a remount", () => {
+      // The ordering the effect relies on (child effects first) puts the new
+      // controller in the ref before the effect re-runs. Should that ever not
+      // hold, the request must be dropped, not applied to the conversation
+      // it was moved away from.
+      stubMounts.withhold.add(2);
+      const onRequestApplied = vi.fn();
+      show({
+        initialSession: SESSION as never,
+        onRequestApplied,
+        openRequest: request(1, "Hello"),
+      });
+
+      expect(stubMounts.list).toHaveLength(2);
+      expect(fakeController.seedInput).not.toHaveBeenCalled();
+      expect(onRequestApplied).not.toHaveBeenCalled();
+    });
+
+    test("New chat after a project request starts without a project", () => {
+      show({ openRequest: request(1, "Bid", "p1") });
+      expect(screenAttr("project")).toBe("p1");
+
+      fireEvent.click(screen.getByTestId("stub-new-chat"));
+
+      expect(screenAttr("project")).toBe("(none)");
+      expect(stubMounts.list.at(-1)!.project).toBeUndefined();
+    });
+
+    test("files of a project request (or a later drop) go to the project's fresh controller", async () => {
+      // The real controller's addSessionFiles and the drop target both reach
+      // createSession through ensureSession, which reads the `project` prop
+      // checked here (chat/hooks-session-path.test.tsx covers that half).
+      show({
+        initialSession: SESSION_NO_PROJECT as never,
+        openRequest: {
+          nonce: 1,
+          request: {
+            type: "exulu:panel:open",
+            v: 2,
+            slot: "advisor",
+            files: ["user_7/tender.pdf"],
+            project: "p1",
+          },
+        },
+      });
+
+      await waitFor(() =>
+        expect(stubMounts.list[1].files).toEqual([["user_7/tender.pdf"]]),
+      );
+      expect(stubMounts.list[0].files).toEqual([]);
+      expect(screenAttr("project")).toBe("p1");
+      expect(screenAttr("initial-session")).toBe("(none)");
     });
   });
 });

@@ -59,3 +59,18 @@ export const UPDATE_USER_FAVOURITE_ARTIFACTS = gql`
     }
   }
 `;
+
+/**
+ * The agent panel's project probe (task 6): does this viewer have access to
+ * the project an artifact's open request names? `projectById` is RBAC-scoped
+ * like every generic `*ById`, so a project the viewer may not read comes back
+ * null. Only `id` on purpose — the projects feature's GET_PROJECT_BY_ID
+ * selects the computed `budget`, which costs a spend lookup per call.
+ */
+export const PROBE_PROJECT_ACCESS = gql`
+  query ProbeProjectAccess($id: ID!) {
+    projectById(id: $id) {
+      id
+    }
+  }
+`;
