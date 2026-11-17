@@ -80,6 +80,7 @@ import { SkillCard } from "./skill-card";
 import { isSkillToolPart } from "./skill-card-data";
 import { RecalledMemories } from "./recalled-memories";
 import { OpenProjectLink, SessionProjectContext } from "./create-project-card";
+import { describeCreateProjectInput } from "../lib/create-project";
 import { ToolCallApproval } from "./tool-call-approval";
 import { ToolCallApprovalGroup } from "./tool-call-approval-group";
 import { summarizeToolGroup } from "./tool-call-group-data";
@@ -235,7 +236,9 @@ function makeUntypedToolPart(
             />
           </ToolContent>
         </Tool>
-          {showProjectLink && <OpenProjectLink output={output} />}
+          {showProjectLink && (
+            <OpenProjectLink output={output} name={describeCreateProjectInput(untypedToolPart.input).name} />
+          )}
       </>
     );
   };

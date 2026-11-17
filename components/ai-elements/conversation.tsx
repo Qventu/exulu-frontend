@@ -84,7 +84,9 @@ export const ConversationScrollButton = ({
     !isAtBottom && (
       <Button
         className={cn(
-          "absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full",
+          // shadow-md: the button floats over the last lines of the conversation;
+          // without a shadow it read as a glyph printed into the text.
+          "absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full shadow-md",
           className
         )}
         onClick={handleScrollToBottom}

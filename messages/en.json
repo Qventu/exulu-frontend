@@ -1501,6 +1501,7 @@
       "download": "Download",
       "downloadNamed": "Download {name}",
       "dropHint": "The agent can read them on its next turn.",
+      "chooseFolder": "Choose a folder",
       "dropOrClick": "Drop files or click to upload",
       "dropReadOnly": "You can't add files to this session.",
       "dropTitle": "Drop files to add them to this session",
@@ -1816,7 +1817,9 @@
       "reloadFailed": "Could not reload the skills"
     },
     "createProject": {
-      "open": "Open project"
+      "open": "Open project",
+      "label": "Project",
+      "newTab": "Opens in a new tab"
     }
   },
   "common": {

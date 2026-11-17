@@ -67,6 +67,13 @@ export interface ChatShellContextValue {
    */
   newChatPath?: string;
   /**
+   * The host already shows the agent's name right above the chat (the
+   * artifact panel's title bar), so ChatHeader drops its own copy and the
+   * "/" after it. In a narrow host the repeated name also took the room the
+   * session title needs: the title shrank to one letter.
+   */
+  hostShowsAgentName?: boolean;
+  /**
    * hooks.ts createSession marks the lazy-create window (mutation in flight,
    * URL swap not yet landed) so startNewChat can treat "URL still /new but a
    * session is being born" as needing the bump too. Returns an end callback

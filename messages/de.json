@@ -1501,6 +1501,7 @@
       "download": "Herunterladen",
       "downloadNamed": "{name} herunterladen",
       "dropHint": "Der Agent kann sie in seiner nächsten Antwort lesen.",
+      "chooseFolder": "Ordner wählen",
       "dropOrClick": "Dateien hierher ziehen oder klicken zum Hochladen",
       "dropReadOnly": "Sie können dieser Sitzung keine Dateien hinzufügen.",
       "dropTitle": "Dateien hier ablegen, um sie dieser Sitzung hinzuzufügen",
@@ -1816,7 +1817,9 @@
       "reloadFailed": "Skills konnten nicht neu geladen werden"
     },
     "createProject": {
-      "open": "Projekt öffnen"
+      "open": "Projekt öffnen",
+      "label": "Projekt",
+      "newTab": "Öffnet in einem neuen Tab"
     }
   },
   "common": {

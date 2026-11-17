@@ -94,10 +94,12 @@ describe("OpenProjectLink", () => {
   it("links to the project found in the result", () => {
     render(
       <NextIntlClientProvider locale="de" messages={de}>
-        <OpenProjectLink output={{ result: `Projekt angelegt: /projects/${ID}` }} sessionProjectId={ID} />
+        <OpenProjectLink output={{ result: `Projekt angelegt: /projects/${ID}` }} name="Pitch Alpha" sessionProjectId={ID} />
       </NextIntlClientProvider>,
     );
+    expect(screen.getByText("Pitch Alpha")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Projekt öffnen" }).getAttribute("href")).toBe(`/projects/${ID}`);
+    expect(screen.getByRole("link", { name: "Projekt öffnen" }).getAttribute("target")).toBe("_blank");
   });
 
   it("renders nothing when the session has no such project, even if the text names a path", () => {

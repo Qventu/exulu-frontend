@@ -2,13 +2,17 @@
 
 /**
  * create_project: the approval summary (what exactly is approved: the project
- * name and the files to move) and the "open project" link under the result.
- * Never navigates by itself.
+ * name and the files to move) and the project card under the result.
+ * Never navigates by itself; the link opens a new tab, so the chat (or the
+ * artifact hosting it) stays where it is.
  */
 
+import { ExternalLink, FolderOpen } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { createContext, useContext } from "react";
+
+import { Button } from "@/components/ui/button";
 
 import { describeCreateProjectInput, projectIdOf } from "../lib/create-project";
 
@@ -50,15 +54,39 @@ export const SessionProjectContext = createContext<string>("");
  * the session's own project (known after the session lookup), so a failure
  * text that merely mentions a /projects path never gets a link.
  */
-export function OpenProjectLink({ output, sessionProjectId }: { output: unknown; sessionProjectId?: string | null }) {
+export function OpenProjectLink({
+  output,
+  name,
+  sessionProjectId,
+}: {
+  output: unknown;
+  /** The project's name as the call gave it; the card falls back to a generic title without it. */
+  name?: string;
+  sessionProjectId?: string | null;
+}) {
   const t = useTranslations("chat");
   const fromContext = useContext(SessionProjectContext);
   sessionProjectId = sessionProjectId ?? fromContext;
   const id = projectIdOf(output);
   if (!id || !sessionProjectId || String(sessionProjectId).toLowerCase() !== id.toLowerCase()) return null;
+  const title = name?.trim();
   return (
-    <Link href={`/projects/${id}`} className="mt-2 inline-flex items-center text-sm font-medium text-primary underline-offset-4 hover:underline">
-      {t("createProject.open")}
-    </Link>
+    <div className="mt-2 flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+        <FolderOpen className="size-4" aria-hidden="true" />
+      </div>
+      <div className="min-w-0 flex-1">
+        {title ? <p className="text-xs text-muted-foreground">{t("createProject.label")}</p> : null}
+        <p className="truncate text-sm font-medium" title={title || undefined}>
+          {title || t("createProject.label")}
+        </p>
+      </div>
+      <Button asChild variant="outline" size="sm" className="shrink-0 gap-1.5">
+        <Link href={`/projects/${id}`} target="_blank" rel="noopener noreferrer" title={t("createProject.newTab")}>
+          {t("createProject.open")}
+          <ExternalLink className="size-3.5" aria-hidden="true" />
+        </Link>
+      </Button>
+    </div>
   );
 }

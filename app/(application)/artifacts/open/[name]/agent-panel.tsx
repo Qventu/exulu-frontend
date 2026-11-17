@@ -552,6 +552,7 @@ function MountedAgentPanel({
       // after-delete return to a fresh chat); without this it would push
       // /chat/<agent>/new and take the user off the artifact page.
       newChatPath: basePath,
+      hostShowsAgentName: true,
       beginLazyCreate,
     }),
     [
@@ -655,7 +656,12 @@ function MountedAgentPanel({
               )
             }
           >
-            <div className="flex h-full min-h-0 w-full">
+            {/* overflow-clip: SidePanel's body is a scroll container, and anything
+                in here that pokes past the panel (or a scrollIntoView from the
+                conversation) would scroll the whole chat, header and composer
+                included. Only MessageColumn scrolls; clip, unlike hidden, is
+                not scrollable programmatically either. */}
+            <div className="flex h-full min-h-0 w-full overflow-clip">
               <HistoryRail
                 agent={agent}
                 paths={paths}

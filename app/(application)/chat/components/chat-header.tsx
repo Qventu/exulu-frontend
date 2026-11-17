@@ -82,7 +82,7 @@ const CHIP =
 export function ChatHeader({ controller }: ChatHeaderProps) {
   const t = useTranslations("chat");
   const router = useRouter();
-  const { toggleHistory, startNewChat, newChatPath } = useChatShell();
+  const { toggleHistory, startNewChat, newChatPath, hostShowsAgentName } = useChatShell();
   const { user } = React.useContext(UserContext);
   const {
     agent,
@@ -288,18 +288,25 @@ export function ChatHeader({ controller }: ChatHeaderProps) {
         </Tooltip>
 
         {/* Identity + title cluster (item 10 / item 14) */}
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        {/* overflow-hidden: the cluster's fixed-width members (name, usage
+            chip) can together exceed it in a narrow host, and without the
+            clip they painted over the chips on the right. */}
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
           <AgentVisual
             agent={agent}
             status={controller.status}
             className="size-6 shrink-0"
           />
-          <span className="max-w-24 shrink-0 truncate text-sm font-medium sm:max-w-48">
-            {agent.name}
-          </span>
-          <span className="shrink-0 text-muted-foreground" aria-hidden="true">
-            /
-          </span>
+          {hostShowsAgentName ? null : (
+            <>
+              <span className="max-w-24 shrink-0 truncate text-sm font-medium sm:max-w-48">
+                {agent.name}
+              </span>
+              <span className="shrink-0 text-muted-foreground" aria-hidden="true">
+                /
+              </span>
+            </>
+          )}
 
           {editingTitle && session ? (
             <Input
