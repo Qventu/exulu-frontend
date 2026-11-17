@@ -113,6 +113,9 @@ type StubMount = {
   project: string | null | undefined;
   seeds: string[];
   files: string[][];
+  /** The live controller, so a test can stand in for a lazy create by
+   *  setting its `session` (the panel reads it at request time). */
+  controller: { session: { id: string; project?: string | null } | null };
 };
 const stubMounts = vi.hoisted(() => ({
   list: [] as StubMount[],
@@ -159,6 +162,7 @@ vi.mock("@/app/(application)/chat/components/session-screen", async () => {
         project: props.project,
         seeds: [],
         files: [],
+        controller: { session: null },
       };
       stubMounts.list.push(record);
       const controller = {
@@ -179,6 +183,7 @@ vi.mock("@/app/(application)/chat/components/session-screen", async () => {
         setFilesPanelOpen: (open: boolean, persist?: boolean) =>
           fakeController.setFilesPanelOpen(open, persist),
       };
+      record.controller = controller;
       return { record, controller };
     });
     React.useEffect(() => {
@@ -1034,6 +1039,43 @@ describe("AgentPanel", () => {
       expect(onRequestApplied).not.toHaveBeenCalled();
     });
 
+    test.each([
+      // A no-project request displaces a p1 session; a p1 request displaces
+      // one without a project. Either way the fresh screen sits over a loaded
+      // conversation the New chat must not bring back.
+      ["without a project", SESSION, undefined],
+      ["with project p1", SESSION_NO_PROJECT, "p1"],
+    ] as const)(
+      "New chat after a fresh session (request %s) never brings back the displaced conversation",
+      (_label, initialSession, project) => {
+        show({ initialSession: initialSession as never, openRequest: request(1, "Hello", project) });
+        expect(screenAttr("initial-session")).toBe("(none)");
+
+        fireEvent.click(screen.getByTestId("stub-new-chat"));
+
+        expect(screenAttr("initial-session")).toBe("(none)");
+        expect(screenAttr("project")).toBe("(none)");
+        expect(stubMounts.list.at(-1)).toMatchObject({ initialSessionId: null });
+        expect(stubMounts.list.at(-1)!.project ?? null).toBeNull();
+      },
+    );
+
+    test("a session lazily created in p1, then a p1 request: reused, no remount", () => {
+      const view = show({
+        initialSession: SESSION_NO_PROJECT as never,
+        openRequest: request(1, "First", "p1"),
+      });
+      expect(stubMounts.list).toHaveLength(2);
+      // The fresh screen's lazy create has run: its controller now holds the
+      // real row, in p1.
+      stubMounts.list[1].controller.session = { id: "s-new", project: "p1" };
+
+      rerequest(view, request(2, "Second", "p1"));
+
+      expect(stubMounts.list).toHaveLength(2);
+      expect(stubMounts.list[1].seeds).toEqual(["First", "Second"]);
+    });
+
     test("New chat after a project request starts without a project", () => {
       show({ openRequest: request(1, "Bid", "p1") });
       expect(screenAttr("project")).toBe("p1");
@@ -1041,13 +1083,15 @@ describe("AgentPanel", () => {
       fireEvent.click(screen.getByTestId("stub-new-chat"));
 
       expect(screenAttr("project")).toBe("(none)");
-      expect(stubMounts.list.at(-1)!.project).toBeUndefined();
+      // `null` (still a fresh screen, over no session) is "none" too.
+      expect(stubMounts.list.at(-1)!.project ?? null).toBeNull();
     });
 
-    test("files of a project request (or a later drop) go to the project's fresh controller", async () => {
-      // The real controller's addSessionFiles and the drop target both reach
-      // createSession through ensureSession, which reads the `project` prop
-      // checked here (chat/hooks-session-path.test.tsx covers that half).
+    test("files of a project request go to the project's fresh controller", async () => {
+      // The real controller's addSessionFiles reaches createSession through
+      // ensureSession, which reads the `project` prop checked here; a later
+      // drop takes the same path (chat/hooks-session-path.test.tsx covers
+      // that half).
       show({
         initialSession: SESSION_NO_PROJECT as never,
         openRequest: {

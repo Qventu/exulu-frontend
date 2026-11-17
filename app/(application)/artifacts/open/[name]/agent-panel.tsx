@@ -257,6 +257,11 @@ function MountedAgentPanel({
   // remount is needed for it — useChatSession's "reset on session
   // navigation" effect takes the new prop, as it does in full-page chat.
   const activeFresh = fresh && fresh.over === initialSession ? fresh : null;
+  // An inactive fresh state is dead: dropped, so nothing stale is left for a
+  // later render (or a later New chat) to read.
+  React.useEffect(() => {
+    if (fresh && !activeFresh) setFresh(null);
+  }, [fresh, activeFresh]);
 
   // The `newChatNonce` of the SessionScreen whose controller is in the ref.
   // Re-created per nonce, so the remounted screen hands up its controller
@@ -504,14 +509,24 @@ function MountedAgentPanel({
   // job; the nonce is what makes the screen go pristine when that navigation
   // cannot (after a lazy create the URL was swapped with a raw replaceState the
   // router never saw, so pushing the bare URL diffs as "nothing changed").
-  // SessionScreen keys itself on the nonce. It also ends a fresh session
-  // (task 6): a New chat is the user's own, and never inherits the project an
-  // artifact's request put the previous screen in.
+  // SessionScreen keys itself on the nonce.
+  //
+  // Over a fresh session (task 6) a New chat must neither inherit its project
+  // nor bring back the conversation it displaced. Clearing `fresh` would do
+  // the latter: the remount would get the page's `initialSession` again, and
+  // after the raw replaceState that dropped `?session=`, the New chat
+  // navigation can diff as "nothing changed" — so the user's "new" chat
+  // would BE the displaced one, and their next message would land in it.
+  // So it stays fresh, over the same session, with no project. Without an
+  // active fresh state this is the plain bump it always was.
   const startNewChat = React.useCallback(() => {
     setHistorySheetOpen(false);
-    setFresh(null);
-    setNewChatNonce((nonce) => nonce + 1);
-  }, []);
+    const nonce = newChatNonce + 1;
+    setFresh(
+      activeFresh ? { nonce, project: null, over: initialSession } : null,
+    );
+    setNewChatNonce(nonce);
+  }, [activeFresh, initialSession, newChatNonce]);
 
   // Inert: ChatShell needs the lazy-create window to decide whether a New chat
   // click must bump the nonce, because its gate reads the router's `[session]`
