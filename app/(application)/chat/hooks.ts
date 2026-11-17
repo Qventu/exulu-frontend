@@ -144,6 +144,14 @@ export interface UseChatSessionArgs {
    * setFilesPanelOpen(true) still opens and still persists.
    */
   restoreFilesPanel?: boolean;
+  /**
+   * Project for a session this screen creates lazily. Ignored when
+   * initialSession is set: an existing conversation keeps whatever project it
+   * has. The artifact panel passes the project an artifact's open request
+   * named, and only once the viewer's access to it was confirmed — this hook
+   * trusts the id it is given, as the project page's new-session dialog does.
+   */
+  project?: string | null;
 }
 
 /**
@@ -384,6 +392,7 @@ export function useChatSession({
   beginLazyCreate,
   sessionPath = (id: string) => `/chat/${agent.id}/${id}`,
   restoreFilesPanel = true,
+  project = null,
 }: UseChatSessionArgs): ChatSessionController {
   const t = useTranslations("chat");
   const configContext = React.useContext(ConfigContext);
@@ -849,6 +858,14 @@ export function useChatSession({
   React.useEffect(() => {
     sessionPathRef.current = sessionPath;
   }, [sessionPath]);
+  // Same mirror for the project a lazy create lands in (see `project` on
+  // UseChatSessionArgs). Only createSession reads it, and createSession only
+  // runs while there is no session yet — so "ignored when initialSession is
+  // set" needs no check of its own.
+  const projectRef = React.useRef(project);
+  React.useEffect(() => {
+    projectRef.current = project;
+  }, [project]);
 
   const createSession = async (
     title: string,
@@ -862,6 +879,9 @@ export function useChatSession({
     // shell's desync gate would misread a New Chat click as "already
     // pristine" — open the window so it bumps anyway.
     const endLazyCreate = beginLazyCreate();
+    // Read once, before the await: the row stored below must name the project
+    // the session was actually created in.
+    const lazyProject = projectRef.current;
     try {
       const result = await createAgentSession({
         variables: {
@@ -873,6 +893,9 @@ export function useChatSession({
             users: [],
             roles: [],
           },
+          // Only when set: an absent key, not `project: null`, is what every
+          // other lazy create has always sent.
+          ...(lazyProject ? { project: lazyProject } : {}),
         },
       });
 
@@ -884,6 +907,10 @@ export function useChatSession({
         const newSession = result.data.agent_sessionsCreateOne
           .item as AgentSession;
         newSession.created_by = user.id;
+        // The mutation selects only `id`; without this the project chip and
+        // file list (useChatProjectFiles, keyed on session.project) would wait
+        // for a refetch nothing triggers.
+        if (lazyProject) newSession.project = lazyProject;
         // Sync the ref immediately — the transport may read it before React
         // re-renders (the legacy effect-only sync was a latent race).
         currentSessionRef.current = newSession;
