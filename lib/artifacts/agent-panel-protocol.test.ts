@@ -177,6 +177,16 @@ describe("project field", () => {
     expect(parseOpenPanelRequest({ ...base, project: uuid })?.project).toBe(uuid);
   });
 
+  test("lowercases an uppercase uuid", () => {
+    expect(parseOpenPanelRequest({ ...base, project: uuid.toUpperCase() })?.project).toBe(uuid);
+  });
+
+  test("drops a uuid with a trailing newline, keeps the request", () => {
+    const parsed = parseOpenPanelRequest({ ...base, project: `${uuid}\n` });
+    expect(parsed).not.toBeNull();
+    expect(parsed?.project).toBeUndefined();
+  });
+
   test("drops a project that is not a strict uuid, keeps the request", () => {
     for (const project of ["abc", "", 42, null, {}, ` ${uuid} `, `${uuid}/../x`]) {
       const parsed = parseOpenPanelRequest({ ...base, project });

@@ -256,6 +256,10 @@ function MountedAgentPanel({
   // conversation the user clicked rather than stay on the fresh screen. No
   // remount is needed for it — useChatSession's "reset on session
   // navigation" effect takes the new prop, as it does in full-page chat.
+  // Warning: this keys on object identity. A `router.refresh()` reaching this
+  // page would hand down a new object for the SAME session and end a live fresh
+  // screen. Anyone adding a refresh here must switch this check to a navigation
+  // signal (e.g. the session id in the URL) instead.
   const activeFresh = fresh && fresh.over === initialSession ? fresh : null;
   // An inactive fresh state is dead: dropped, so nothing stale is left for a
   // later render (or a later New chat) to read.

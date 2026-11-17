@@ -132,9 +132,12 @@ export function parseOpenPanelRequest(data: unknown): OpenPanelRequest | null {
   // Unlike prompt/items/files, a malformed project does not reject the
   // request: it is dropped. A host that does not understand the field must
   // behave exactly like an old host, and "no project" is always a safe
-  // reading. The value is passed on exactly as received (no trimming).
+  // reading. The value is not trimmed, but it is lowercased: the check above is
+  // case-insensitive, while `agent_sessions.project` is a uuid column and comes
+  // back lowercase, so an uppercase id kept as sent would never match the
+  // mounted session and would open a new empty session on every request.
   if (typeof data.project === "string" && UUID_PATTERN.test(data.project)) {
-    result.project = data.project;
+    result.project = data.project.toLowerCase();
   }
 
   return result;
