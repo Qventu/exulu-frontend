@@ -1333,7 +1333,13 @@
       "groupMixed": "Answered: {tool} ({count})",
       "groupMore": "and {count} more",
       "groupTitle": "Run {tool} {count} times?",
-      "title": "Run {tool}?"
+      "title": "Run {tool}?",
+      "createProject": {
+        "summary": "Create project “{name}” {count, plural, =0 {without moving any files} one {and move 1 file there} other {and move # files there}}",
+        "files": "Files",
+        "noFiles": "No files",
+        "private": "The project is only visible to you at first."
+      }
     },
     "attach": {
       "addKnowledge": "Add knowledge",
@@ -1753,6 +1759,24 @@
       "callIndex": "Call {index} of {count}",
       "errors": "{count} failed"
     },
+    "documentReading": {
+      "errorUnknown": "The document could not be read.",
+      "title": "Reading document",
+      "ocr": "Recognising text",
+      "vision": "Checking figures and tables",
+      "storing": "Saving the result",
+      "text": "Reading text",
+      "cached": "Loading stored text",
+      "page": "Page {done} of {total}",
+      "longHint": "The result is kept, the next read is instant.",
+      "pages": "{count, plural, one {# page} other {# pages}}",
+      "alreadyRead": "already read",
+      "interrupted": "Reading was interrupted",
+      "error": "The document could not be read: {message}",
+      "backgroundRead": "Still being read in the background",
+      "pageRange": "pp. {pages}",
+      "fromLine": "from line {offset}"
+    },
     "toolTrace": {
       "sequence": "Sequence of tool calls",
       "title": "Tool calls"
@@ -1790,6 +1814,9 @@
       "reloaded": "{count} skill(s) reloaded into this conversation.",
       "reloadNoSandbox": "No sandbox is open yet; the skills load with your next message.",
       "reloadFailed": "Could not reload the skills"
+    },
+    "createProject": {
+      "open": "Open project"
     }
   },
   "common": {

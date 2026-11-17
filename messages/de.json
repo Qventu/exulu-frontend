@@ -1333,7 +1333,13 @@
       "groupMixed": "Beantwortet: {tool} ({count})",
       "groupMore": "und {count} weitere",
       "groupTitle": "{tool} {count}-mal ausführen?",
-      "title": "{tool} ausführen?"
+      "title": "{tool} ausführen?",
+      "createProject": {
+        "summary": "Projekt „{name}“ anlegen {count, plural, =0 {ohne Dateien zu verschieben} one {und 1 Datei dorthin verschieben} other {und # Dateien dorthin verschieben}}",
+        "files": "Dateien",
+        "noFiles": "Keine Dateien",
+        "private": "Das Projekt ist zunächst nur für Sie sichtbar."
+      }
     },
     "attach": {
       "addKnowledge": "Wissen hinzufügen",
@@ -1753,6 +1759,24 @@
       "callIndex": "Aufruf {index} von {count}",
       "errors": "{count} fehlgeschlagen"
     },
+    "documentReading": {
+      "errorUnknown": "Dokument konnte nicht gelesen werden.",
+      "title": "Dokument lesen",
+      "ocr": "Text wird erkannt",
+      "vision": "Abbildungen und Tabellen werden geprüft",
+      "storing": "Ergebnis wird gespeichert",
+      "text": "Text wird gelesen",
+      "cached": "Gespeicherter Text wird geladen",
+      "page": "Seite {done} von {total}",
+      "longHint": "Das Ergebnis wird gespeichert, der nächste Zugriff ist sofort da.",
+      "pages": "{count, plural, one {# Seite} other {# Seiten}}",
+      "alreadyRead": "bereits gelesen",
+      "interrupted": "Lesen wurde unterbrochen",
+      "error": "Dokument konnte nicht gelesen werden: {message}",
+      "backgroundRead": "Wird im Hintergrund fertig gelesen",
+      "pageRange": "S. {pages}",
+      "fromLine": "ab Zeile {offset}"
+    },
     "toolTrace": {
       "sequence": "Abfolge der Tool-Aufrufe",
       "title": "Tool-Aufrufe"
@@ -1790,6 +1814,9 @@
       "reloaded": "{count} Skill(s) in dieses Gespräch neu geladen.",
       "reloadNoSandbox": "Noch keine Sandbox offen; die Skills werden mit deiner nächsten Nachricht geladen.",
       "reloadFailed": "Skills konnten nicht neu geladen werden"
+    },
+    "createProject": {
+      "open": "Projekt öffnen"
     }
   },
   "common": {

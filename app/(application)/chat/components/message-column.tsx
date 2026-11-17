@@ -79,6 +79,7 @@ import { MemoryStack } from "./memory-stack";
 import { SkillCard } from "./skill-card";
 import { isSkillToolPart } from "./skill-card-data";
 import { RecalledMemories } from "./recalled-memories";
+import { OpenProjectLink, SessionProjectContext } from "./create-project-card";
 import { ToolCallApproval } from "./tool-call-approval";
 import { ToolCallApprovalGroup } from "./tool-call-approval-group";
 import { summarizeToolGroup } from "./tool-call-group-data";
@@ -198,38 +199,44 @@ function makeUntypedToolPart(
       );
     }
 
+    const showProjectLink =
+      (untypedToolPart.type as string) === "tool-create_project" && untypedToolPart.state === "output-available";
+
     return (
-      <Tool key={callId} className="mt-3" defaultOpen={false} data-demo-id="chat-tool-trace">
-        <ToolHeader
-          title={toolTitle}
-          // The product title-cases a tool name ("Context Search"); a German
-          // label is a phrase and must keep its own casing.
-          className={isDemoMode() ? undefined : "capitalize"}
-          type={styleToolName as `tool-${string}`}
-          state={untypedToolPart.state}
-        />
-        <ToolContent>
-          <ToolInput input={untypedToolPart.input} />
-          <ToolOutput
-            output={
-              output ? (
-                // chunked: tool outputs can stream in while expanded — only
-                // the growing last markdown block re-parses per tick.
-                <Response chunked>
-                  {typeof output === "string"
-                    ? output
-                    : JSON.stringify(output, null, 2)}
-                </Response>
-              ) : (
-                !untypedToolPart.errorText && (
-                  <Skeleton className="h-4 w-full" />
-                )
-              )
-            }
-            errorText={untypedToolPart.errorText}
+      <>
+        <Tool key={callId} className="mt-3" defaultOpen={false} data-demo-id="chat-tool-trace">
+          <ToolHeader
+            title={toolTitle}
+            // The product title-cases a tool name ("Context Search"); a German
+            // label is a phrase and must keep its own casing.
+            className={isDemoMode() ? undefined : "capitalize"}
+            type={styleToolName as `tool-${string}`}
+            state={untypedToolPart.state}
           />
-        </ToolContent>
-      </Tool>
+          <ToolContent>
+            <ToolInput input={untypedToolPart.input} />
+            <ToolOutput
+              output={
+                output ? (
+                  // chunked: tool outputs can stream in while expanded — only
+                  // the growing last markdown block re-parses per tick.
+                  <Response chunked>
+                    {typeof output === "string"
+                      ? output
+                      : JSON.stringify(output, null, 2)}
+                  </Response>
+                ) : (
+                  !untypedToolPart.errorText && (
+                    <Skeleton className="h-4 w-full" />
+                  )
+                )
+              }
+              errorText={untypedToolPart.errorText}
+            />
+          </ToolContent>
+        </Tool>
+          {showProjectLink && <OpenProjectLink output={output} />}
+      </>
     );
   };
   UntypedToolPart.displayName = "UntypedToolPart";
@@ -474,7 +481,7 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
   const isEmpty = !messages || messages.length === 0;
 
   return (
-    <>
+    <SessionProjectContext.Provider value={controller.session?.project ?? ""}>
       <Conversation data-demo-id="chat-messages">
         {isEmpty && (
           <div className="flex size-full items-center justify-center overflow-y-hidden">
@@ -584,6 +591,6 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
         }}
         canDeactivateSources={canDeactivateSources}
       />
-    </>
+    </SessionProjectContext.Provider>
   );
 }

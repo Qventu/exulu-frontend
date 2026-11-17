@@ -19,6 +19,7 @@
  * `panel` half of the frame's channel.
  */
 
+import { useApolloClient } from "@apollo/client";
 import type { UIMessage } from "ai";
 import { ArrowLeft, Bot, Download, ExternalLink, FileWarning, LayoutGrid, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -38,6 +39,7 @@ import { artifactType, displayFilename } from "@/lib/artifacts/artifact-type";
 import type { AgentSession } from "@/types/models/agent-session";
 
 import { useFavoriteArtifacts } from "../../hooks";
+import { PROBE_PROJECT_ACCESS } from "../../queries";
 
 import type { ResolvedSlot } from "./resolve-slots";
 
@@ -217,6 +219,32 @@ export function ArtifactViewer({
   // re-applying a request this component is still holding.
   const onRequestApplied = React.useCallback(() => setOpenRequest(null), []);
 
+  // The frame's access check for a project an artifact's request names
+  // (task 5 asks, this answers). Only a project the viewer can read comes
+  // back — `projectById` is RBAC-scoped — and the frame forwards the project
+  // to AgentPanel only on `true`, which is what lets the panel create a
+  // session inside it. So anything short of a clean answer is "no": a
+  // rejection, and a result carrying GraphQL errors even beside an id.
+  // `network-only`: access can be revoked between two requests, and a cached
+  // yes would outlive it.
+  const client = useApolloClient();
+  const probeProject = React.useCallback(
+    async (id: string): Promise<boolean> => {
+      try {
+        const result = await client.query({
+          query: PROBE_PROJECT_ACCESS,
+          variables: { id },
+          fetchPolicy: "network-only",
+        });
+        if (result.errors?.length) return false;
+        return Boolean(result.data?.projectById?.id);
+      } catch {
+        return false;
+      }
+    },
+    [client],
+  );
+
   // `?session=` is a URL the user can type, and the history rail's rows and
   // the lazy session create both land on `?session=<id>` with no `?agent=` —
   // so the id the page loaded is not necessarily this slot's. The page has
@@ -329,6 +357,7 @@ export function ArtifactViewer({
                       // owner-typed slot key.
                       slots: offered.map((slot) => ({ key: slot.key, label: slot.label })),
                       onOpenRequest,
+                      probeProject,
                       // The ARTIFACT's own width, measured above — what it
                       // needs in order to decide whether to reflow. Never
                       // the panel's width.

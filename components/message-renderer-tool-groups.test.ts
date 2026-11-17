@@ -371,6 +371,11 @@ describe("traceRenderUnits", () => {
     expect(shape(trace(parts))).toEqual(["part:tool-a", "part:tool-memory_remember", "part:tool-b"]);
   });
 
+  it("keeps a finished create_project call out of a trace, so its project link stays visible", () => {
+    const parts = [tool("tool-a"), tool("tool-create_project"), tool("tool-b"), tool("tool-c")];
+    expect(shape(trace(parts))).toEqual(["part:tool-a", "part:tool-create_project", "trace:2"]);
+  });
+
   it("respects the caller's output-shape check, splitting around the member that fails it", () => {
     const image = tool("tool-image_generation");
     const parts = [tool("tool-a"), tool("tool-b"), image, tool("tool-c")];
@@ -386,5 +391,51 @@ describe("traceRenderUnits", () => {
   it("passes non-tool units through untouched", () => {
     const parts = [text("hi"), stepStart(), { type: "file", url: "x" } as any];
     expect(shape(trace(parts))).toEqual(["part:text", "part:step-start", "part:file"]);
+  });
+});
+
+describe("parse_document grouping", () => {
+  const read = (overrides: Record<string, unknown> = {}) =>
+    tool("tool-parse_document", { output: { content: "x" }, ...overrides });
+  const running = () =>
+    read({ state: "output-available", preliminary: true, output: { status: "reading" } });
+  const search = () => tool("tool-search");
+  const trace = (parts: any[]) =>
+    traceRenderUnits(groupRenderUnits(parts), () => true);
+
+  it("groups 20 finished reads into one group", () => {
+    const parts = Array.from({ length: 20 }, () => read());
+    expect(shape(groupRenderUnits(parts))).toEqual(["group:tool-parse_documentx20"]);
+  });
+
+  it("traces search, parse, search, parse, search into one trace of 5", () => {
+    const parts = [search(), read(), search(), read({ state: "output-error" }), search()];
+    expect(shape(trace(parts))).toEqual(["trace:5"]);
+  });
+
+  it("leaves a running read standalone after a group of finished reads", () => {
+    const parts = [read(), read(), read(), running()];
+    expect(shape(groupRenderUnits(parts))).toEqual([
+      "group:tool-parse_documentx3",
+      "part:tool-parse_document",
+    ]);
+  });
+
+  it.each([
+    ["input-streaming", {}],
+    ["input-available", {}],
+  ])("keeps a %s read standalone", (state, extra) => {
+    expect(shape(groupRenderUnits([read({ state, ...extra }), read({ state, ...extra })]))).toEqual([
+      "part:tool-parse_document",
+      "part:tool-parse_document",
+    ]);
+  });
+
+  it("keeps an aborted preliminary read standalone inside a trace run", () => {
+    expect(shape(trace([search(), running(), search()]))).toEqual([
+      "part:tool-search",
+      "part:tool-parse_document",
+      "part:tool-search",
+    ]);
   });
 });

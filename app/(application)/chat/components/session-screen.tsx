@@ -101,6 +101,10 @@ export interface SessionScreenProps {
    *   700px column left a 90px composer. Opened on purpose, they overlay.
    */
   compact?: boolean;
+  /** Project for a session this screen creates lazily. Ignored when
+   *  initialSession is set. Forwarded to useChatSession (see its doc
+   *  comment); the artifact panel is the only caller today. */
+  project?: string | null;
 }
 
 export function SessionScreen(props: SessionScreenProps) {
@@ -134,6 +138,7 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
   onController,
   onProgress,
   compact = false,
+  project,
 }: SessionScreenProps & { beginLazyCreate: () => () => void }) {
   const t = useTranslations("chat");
   const controller = useChatSession({
@@ -144,6 +149,7 @@ const SessionScreenInner = React.memo(function SessionScreenInner({
     sessionPath,
     // See `compact` on SessionScreenProps.
     restoreFilesPanel: !compact,
+    project,
   });
 
   // Hands this instance to the host — see the doc comment on

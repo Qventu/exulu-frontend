@@ -15,6 +15,8 @@
  * `syncProjectFiles`. A poll answers for the project id it was given, so losing
  * access to the project (403/404) drops the section on the next poll; a session
  * detached from its project keeps showing the section until the page reloads.
+ * A project the agent creates mid-chat reaches this hook as a new id (see
+ * useChatSession), so the section appears without a reload.
  */
 
 import { useQuery } from "@apollo/client";

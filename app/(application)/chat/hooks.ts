@@ -88,6 +88,7 @@ import { withApprovedTools } from "./approved-tools-body";
 import { savedIdsFromMessages } from "./components/memory-panel-data";
 import { answerTextOf, collectSources, hasPendingToolApproval, parseClaimCheckTrigger } from "./components/claim-check-data";
 import type { ClaimCheckState } from "./components/claim-check";
+import { createProjectCallIds } from "./lib/create-project";
 import { useChatProjectFiles, type ChatProjectFiles } from "./use-project-files";
 
 // ---------------------------------------------------------------------------
@@ -143,6 +144,14 @@ export interface UseChatSessionArgs {
    * setFilesPanelOpen(true) still opens and still persists.
    */
   restoreFilesPanel?: boolean;
+  /**
+   * Project for a session this screen creates lazily. Ignored when
+   * initialSession is set: an existing conversation keeps whatever project it
+   * has. The artifact panel passes the project an artifact's open request
+   * named, and only once the viewer's access to it was confirmed — this hook
+   * trusts the id it is given, as the project page's new-session dialog does.
+   */
+  project?: string | null;
 }
 
 /**
@@ -383,6 +392,7 @@ export function useChatSession({
   beginLazyCreate,
   sessionPath = (id: string) => `/chat/${agent.id}/${id}`,
   restoreFilesPanel = true,
+  project = null,
 }: UseChatSessionArgs): ChatSessionController {
   const t = useTranslations("chat");
   const configContext = React.useContext(ConfigContext);
@@ -647,6 +657,8 @@ export function useChatSession({
     // without a remount (App Router preserves client state across param-only
     // navigations — the legacy monolith reset currentSession the same way).
     setMessages(initialMessages);
+    handledProjectCalls.current = new Set(createProjectCallIds(initialMessages));
+    clearProjectLookup();
     clearError();
     setServerContextBlocked(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -738,6 +750,87 @@ export function useChatSession({
     router.refresh();
   }, [catchingUp, watchedRow, status, router]);
 
+  // --- project created by the agent (create_project tool) ---------------------
+  // The session row gains a project when the tool finishes, but this hook read
+  // `session.project` once on mount. A finished call seen NOW (not one already
+  // in the history, which a reopened chat gets from the row itself) triggers a
+  // refetch of the row; its project id then feeds useChatProjectFiles. A call
+  // counts as handled only once its lookup has settled, a row that is still
+  // without a project is retried once, and a call that finishes while a lookup
+  // is in flight is looked up again right after it.
+  const handledProjectCalls = React.useRef<Set<string> | null>(null);
+  if (handledProjectCalls.current === null) handledProjectCalls.current = new Set(createProjectCallIds(initialMessages));
+  const pendingProjectCalls = React.useRef<Set<string>>(new Set());
+  const inFlightProjectCalls = React.useRef<string[]>([]);
+  const projectRetryTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [projectLookup, setProjectLookup] = React.useState<{ sessionId: string; attempt: number } | null>(null);
+
+  const clearProjectLookup = () => {
+    if (projectRetryTimer.current) clearTimeout(projectRetryTimer.current);
+    projectRetryTimer.current = null;
+    pendingProjectCalls.current = new Set();
+    inFlightProjectCalls.current = [];
+    setProjectLookup(null);
+  };
+
+  React.useEffect(() => {
+    for (const id of createProjectCallIds(messages)) {
+      if (!handledProjectCalls.current!.has(id)) pendingProjectCalls.current.add(id);
+    }
+    if (projectLookup || projectRetryTimer.current || pendingProjectCalls.current.size === 0) return;
+    const sessionId = currentSessionRef.current?.id;
+    if (!sessionId || sessionId === "new") return;
+    inFlightProjectCalls.current = [...pendingProjectCalls.current];
+    setProjectLookup({ sessionId, attempt: 0 });
+  }, [messages, projectLookup]);
+
+  React.useEffect(
+    () => () => {
+      if (projectRetryTimer.current) clearTimeout(projectRetryTimer.current);
+    },
+    [],
+  );
+
+  const projectLookupQuery = useQuery(GET_AGENT_SESSION_BY_ID, {
+    variables: { id: projectLookup?.sessionId },
+    skip: !projectLookup,
+    fetchPolicy: "network-only",
+  });
+  const projectLookupRow = projectLookupQuery.data?.agent_sessionById;
+  React.useEffect(() => {
+    if (!projectLookup || projectLookupQuery.loading) return;
+    const settle = () => {
+      for (const id of inFlightProjectCalls.current) {
+        handledProjectCalls.current!.add(id);
+        pendingProjectCalls.current.delete(id);
+      }
+      inFlightProjectCalls.current = [];
+      setProjectLookup(null);
+    };
+    const project = projectLookupRow?.project as string | null | undefined;
+    if (project) {
+      if (currentSessionRef.current?.id === projectLookup.sessionId) {
+        const next = { ...currentSessionRef.current, project } as AgentSession;
+        currentSessionRef.current = next;
+        setCurrentSession(next);
+      }
+      settle();
+      return;
+    }
+    if (projectLookupRow && projectLookup.attempt === 0) {
+      // The row exists but has no project yet: look once more shortly.
+      const { sessionId } = projectLookup;
+      setProjectLookup(null);
+      projectRetryTimer.current = setTimeout(() => {
+        projectRetryTimer.current = null;
+        if (currentSessionRef.current?.id !== sessionId) return;
+        setProjectLookup({ sessionId, attempt: 1 });
+      }, 1500);
+      return;
+    }
+    settle(); // no row, an error, or the retry also found nothing: give up quietly
+  }, [projectLookup, projectLookupRow, projectLookupQuery.loading, projectLookupQuery.error]);
+
   // --- token accounting (items 27/38) ------------------------------------------
   // Derived with useMemo (not state + effect): the effect variant queued a
   // second full re-render after every throttled stream tick.
@@ -765,6 +858,14 @@ export function useChatSession({
   React.useEffect(() => {
     sessionPathRef.current = sessionPath;
   }, [sessionPath]);
+  // Same mirror for the project a lazy create lands in (see `project` on
+  // UseChatSessionArgs). Only createSession reads it, and createSession only
+  // runs while there is no session yet — so "ignored when initialSession is
+  // set" needs no check of its own.
+  const projectRef = React.useRef(project);
+  React.useEffect(() => {
+    projectRef.current = project;
+  }, [project]);
 
   const createSession = async (
     title: string,
@@ -778,6 +879,9 @@ export function useChatSession({
     // shell's desync gate would misread a New Chat click as "already
     // pristine" — open the window so it bumps anyway.
     const endLazyCreate = beginLazyCreate();
+    // Read once, before the await: the row stored below must name the project
+    // the session was actually created in.
+    const lazyProject = projectRef.current;
     try {
       const result = await createAgentSession({
         variables: {
@@ -789,6 +893,9 @@ export function useChatSession({
             users: [],
             roles: [],
           },
+          // Only when set: an absent key, not `project: null`, is what every
+          // other lazy create has always sent.
+          ...(lazyProject ? { project: lazyProject } : {}),
         },
       });
 
@@ -800,6 +907,10 @@ export function useChatSession({
         const newSession = result.data.agent_sessionsCreateOne
           .item as AgentSession;
         newSession.created_by = user.id;
+        // The mutation selects only `id`; without this the project chip and
+        // file list (useChatProjectFiles, keyed on session.project) would wait
+        // for a refetch nothing triggers.
+        if (lazyProject) newSession.project = lazyProject;
         // Sync the ref immediately — the transport may read it before React
         // re-renders (the legacy effect-only sync was a latent race).
         currentSessionRef.current = newSession;

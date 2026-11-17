@@ -22,6 +22,11 @@
  * validated pieces rather than returning (or spreading) its input, so
  * unknown or malformed properties on a hostile or malformed message can
  * never reach a consumer.
+ *
+ * The channel also carries an optional project id from the artifact
+ * (`OpenPanelRequest.project`), answered by an optional status on the ack.
+ * The id is untrusted: it is only ever used as the argument of an
+ * access-checked lookup, never as proof of access.
  */
 
 export const CHANNEL_V = 2;
@@ -58,7 +63,10 @@ export interface OpenPanelRequest {
   prompt?: string;
   items?: string[];
   files?: string[];
+  project?: string;
 }
+
+export type PanelProjectStatus = "attached" | "denied";
 
 export interface OpenPanelAck {
   type: "exulu:panel:open:ack";
@@ -66,7 +74,10 @@ export interface OpenPanelAck {
   slot: string;
   accepted: boolean;
   reason?: string;
+  project?: PanelProjectStatus;
 }
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** A plain object guard that narrows away `null`, arrays and primitives. */
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -118,6 +129,17 @@ export function parseOpenPanelRequest(data: unknown): OpenPanelRequest | null {
   if (files === INVALID) return null;
   if (files !== undefined) result.files = files;
 
+  // Unlike prompt/items/files, a malformed project does not reject the
+  // request: it is dropped. A host that does not understand the field must
+  // behave exactly like an old host, and "no project" is always a safe
+  // reading. The value is not trimmed, but it is lowercased: the check above is
+  // case-insensitive, while `agent_sessions.project` is a uuid column and comes
+  // back lowercase, so an uppercase id kept as sent would never match the
+  // mounted session and would open a new empty session on every request.
+  if (typeof data.project === "string" && UUID_PATTERN.test(data.project)) {
+    result.project = data.project.toLowerCase();
+  }
+
   return result;
 }
 
@@ -137,8 +159,14 @@ export function turnProgress(reason: "tool" | "turn"): TurnProgress {
 }
 
 /** The host's reply to an `exulu:panel:open` request: whether it was accepted, and why not when it wasn't. */
-export function openPanelAck(slot: string, accepted: boolean, reason?: string): OpenPanelAck {
+export function openPanelAck(
+  slot: string,
+  accepted: boolean,
+  reason?: string,
+  project?: PanelProjectStatus,
+): OpenPanelAck {
   const ack: OpenPanelAck = { type: "exulu:panel:open:ack", v: CHANNEL_V, slot, accepted };
   if (reason !== undefined) ack.reason = reason;
+  if (project !== undefined) ack.project = project;
   return ack;
 }

@@ -168,3 +168,45 @@ describe("openPanelAck", () => {
     });
   });
 });
+
+describe("project field", () => {
+  const base = { type: "exulu:panel:open", v: 2, slot: "analyse" };
+  const uuid = "123e4567-e89b-42d3-a456-426614174000";
+
+  test("keeps a uuid project", () => {
+    expect(parseOpenPanelRequest({ ...base, project: uuid })?.project).toBe(uuid);
+  });
+
+  test("lowercases an uppercase uuid", () => {
+    expect(parseOpenPanelRequest({ ...base, project: uuid.toUpperCase() })?.project).toBe(uuid);
+  });
+
+  test("drops a uuid with a trailing newline, keeps the request", () => {
+    const parsed = parseOpenPanelRequest({ ...base, project: `${uuid}\n` });
+    expect(parsed).not.toBeNull();
+    expect(parsed?.project).toBeUndefined();
+  });
+
+  test("drops a project that is not a strict uuid, keeps the request", () => {
+    for (const project of ["abc", "", 42, null, {}, ` ${uuid} `, `${uuid}/../x`]) {
+      const parsed = parseOpenPanelRequest({ ...base, project });
+      expect(parsed).not.toBeNull();
+      expect(parsed).not.toHaveProperty("project");
+    }
+  });
+
+  test("the result never aliases the input", () => {
+    const parsed = parseOpenPanelRequest({ ...base, project: uuid, extra: "x" });
+    expect(parsed).not.toHaveProperty("extra");
+  });
+
+  test("openPanelAck carries project only when given", () => {
+    expect(openPanelAck("analyse", true)).not.toHaveProperty("project");
+    expect(openPanelAck("analyse", true, undefined, "attached").project).toBe("attached");
+    expect(openPanelAck("analyse", true, undefined, "denied").project).toBe("denied");
+  });
+
+  test("CHANNEL_V is 2", () => {
+    expect(CHANNEL_V).toBe(2);
+  });
+});

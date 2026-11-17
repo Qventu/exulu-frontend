@@ -221,3 +221,66 @@ describe("useChatSession — the lazy-create destination", () => {
     expect(replaceStateSpy).not.toHaveBeenCalledWith(null, "", "/path-a/session-9");
   });
 });
+
+/**
+ * Task 6 (project sessions from artifacts): a session created lazily by a
+ * screen that was handed a `project` is created INSIDE it — the same
+ * variables the project page's new-session dialog sends — and the stored row
+ * carries the id at once, so useChatProjectFiles shows the project chip
+ * without waiting for a refetch (the create mutation selects only `id`).
+ */
+describe("useChatSession — the lazy-create project", () => {
+  const mountWithProject = (project?: string | null) =>
+    renderHook(
+      () =>
+        useChatSession({
+          agent: AGENT,
+          initialSession: null,
+          initialMessages: [],
+          beginLazyCreate: () => () => {},
+          project,
+        }),
+      { wrapper: Wrapper },
+    );
+
+  test("a send creates the session in the project and stores it on the row", async () => {
+    mutations.createAgentSession.mockResolvedValue(createdSessionResult);
+    const { result } = mountWithProject("p1");
+
+    await act(async () => {
+      await result.current.sendUserMessage("hi");
+    });
+
+    expect(mutations.createAgentSession).toHaveBeenCalledTimes(1);
+    const { variables } = mutations.createAgentSession.mock.calls[0][0];
+    expect(variables.project).toBe("p1");
+    expect(variables.rights_mode).toBe("private");
+    expect(result.current.session?.project).toBe("p1");
+  });
+
+  test("a lazy create from a dropped file (ensureSession) carries it too", async () => {
+    mutations.createAgentSession.mockResolvedValue(createdSessionResult);
+    const { result } = mountWithProject("p1");
+
+    await act(async () => {
+      await result.current.ensureSession();
+    });
+
+    const { variables } = mutations.createAgentSession.mock.calls[0][0];
+    expect(variables.project).toBe("p1");
+    expect(result.current.session?.project).toBe("p1");
+  });
+
+  test.each([undefined, null])("without a project (%s) the variables name none", async (project) => {
+    mutations.createAgentSession.mockResolvedValue(createdSessionResult);
+    const { result } = mountWithProject(project);
+
+    await act(async () => {
+      await result.current.sendUserMessage("hi");
+    });
+
+    const { variables } = mutations.createAgentSession.mock.calls[0][0];
+    expect("project" in variables).toBe(false);
+    expect(variables.rights_mode).toBe("private");
+  });
+});
