@@ -106,6 +106,18 @@ describe("useTurnProgress", () => {
     expect(result.current).toEqual({ nonce: 1, reason: "tool" });
   });
 
+  test("a preliminary output-available is not terminal; the final one bumps once", () => {
+    const { result, rerender } = mount({ messages: [], status: "streaming", enabled: true });
+    rerender({
+      messages: [toolMessage({ ...done("c1"), preliminary: true } as DynamicToolUIPart)],
+      status: "streaming",
+      enabled: true,
+    });
+    expect(result.current.nonce).toBe(0);
+    rerender({ messages: [toolMessage(done("c1"))], status: "streaming", enabled: true });
+    expect(result.current).toEqual({ nonce: 1, reason: "tool" });
+  });
+
   test("bumps for output-error too — the artifact should refetch either way", () => {
     const { result, rerender } = mount({
       messages: [],

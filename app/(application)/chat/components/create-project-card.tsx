@@ -8,6 +8,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { createContext, useContext } from "react";
 
 import { describeCreateProjectInput, projectIdOf } from "../lib/create-project";
 
@@ -37,12 +38,22 @@ export function CreateProjectApprovalSummary({ input }: { input: unknown }) {
 }
 
 /**
+ * The open session's project id, provided by MessageColumn. A context rather
+ * than a factory argument: the tool-card components are built by memoised
+ * factories, and a changing project id in their deps would give every card a
+ * new identity (remounting them and losing their expanded state).
+ */
+export const SessionProjectContext = createContext<string>("");
+
+/**
  * Only for the project that was really created: the id in the result must be
  * the session's own project (known after the session lookup), so a failure
  * text that merely mentions a /projects path never gets a link.
  */
 export function OpenProjectLink({ output, sessionProjectId }: { output: unknown; sessionProjectId?: string | null }) {
   const t = useTranslations("chat");
+  const fromContext = useContext(SessionProjectContext);
+  sessionProjectId = sessionProjectId ?? fromContext;
   const id = projectIdOf(output);
   if (!id || !sessionProjectId || String(sessionProjectId).toLowerCase() !== id.toLowerCase()) return null;
   return (

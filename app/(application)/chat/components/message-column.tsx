@@ -79,7 +79,7 @@ import { MemoryStack } from "./memory-stack";
 import { SkillCard } from "./skill-card";
 import { isSkillToolPart } from "./skill-card-data";
 import { RecalledMemories } from "./recalled-memories";
-import { OpenProjectLink } from "./create-project-card";
+import { OpenProjectLink, SessionProjectContext } from "./create-project-card";
 import { ToolCallApproval } from "./tool-call-approval";
 import { ToolCallApprovalGroup } from "./tool-call-approval-group";
 import { summarizeToolGroup } from "./tool-call-group-data";
@@ -116,7 +116,6 @@ function makeUntypedToolPart(
   onCredentialResume: (provider: string, kind?: "credentials" | "oauth") => void,
   guestMode: boolean,
   sessionId: string,
-  projectId: string,
 ) {
   const UntypedToolPart = ({
     agent: _agent,
@@ -236,7 +235,7 @@ function makeUntypedToolPart(
             />
           </ToolContent>
         </Tool>
-          {showProjectLink && <OpenProjectLink output={output} sessionProjectId={projectId} />}
+          {showProjectLink && <OpenProjectLink output={output} />}
       </>
     );
   };
@@ -433,9 +432,8 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
         handleCredentialResume,
         guestMode,
         controller.session?.id ?? "",
-        controller.session?.project ?? "",
       ),
-    [controller.approveToolForChat, handleCredentialResume, guestMode, controller.session?.id, controller.session?.project],
+    [controller.approveToolForChat, handleCredentialResume, guestMode, controller.session?.id],
   );
   const GroupedToolPartComponent = useMemo(
     () =>
@@ -483,7 +481,7 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
   const isEmpty = !messages || messages.length === 0;
 
   return (
-    <>
+    <SessionProjectContext.Provider value={controller.session?.project ?? ""}>
       <Conversation data-demo-id="chat-messages">
         {isEmpty && (
           <div className="flex size-full items-center justify-center overflow-y-hidden">
@@ -593,6 +591,6 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
         }}
         canDeactivateSources={canDeactivateSources}
       />
-    </>
+    </SessionProjectContext.Provider>
   );
 }

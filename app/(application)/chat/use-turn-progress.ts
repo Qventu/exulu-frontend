@@ -93,6 +93,8 @@ export function useTurnProgress(
         // never do, and must not be dereferenced as if they did.
         if (!isToolUIPart(part)) continue;
         if (!TERMINAL_STATES.has(part.state)) continue;
+        // A preliminary output-available is a progress update, not the end.
+        if ((part as { preliminary?: boolean }).preliminary === true) continue;
         if (seenToolCallIds.current.has(part.toolCallId)) continue;
         seenToolCallIds.current.add(part.toolCallId);
         bump("tool");

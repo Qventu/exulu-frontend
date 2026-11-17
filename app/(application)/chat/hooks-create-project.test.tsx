@@ -26,20 +26,41 @@ vi.mock("next/navigation", () => ({
 
 type Row = { project: string | null } | null;
 // One response per lookup activation (the last one repeats); "error" simulates a failed request.
-const lookup = vi.hoisted(() => ({ activations: 0, wasActive: false, responses: [{ project: "p1" }] as (Row | "error")[] }));
+const lookup = vi.hoisted(() => ({
+  activations: 0,
+  wasActive: false,
+  rendersInActivation: 0,
+  hold: false, // keep the request loading until released
+  responses: [{ project: "p1" }] as (Row | "error")[],
+  seenOptions: [] as { fetchPolicy?: string; skip?: boolean }[],
+}));
 vi.mock("@apollo/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@apollo/client")>();
   return {
     ...actual,
-    useQuery: vi.fn((_doc: unknown, options?: { skip?: boolean; pollInterval?: number; variables?: { id?: string } }) => {
-      // The one-shot session lookup: active, for s1, not the catch-up poll.
-      const isLookup = options?.skip === false && options.pollInterval === undefined && options.variables?.id === "s1";
-      if (isLookup && !lookup.wasActive) lookup.activations += 1;
-      lookup.wasActive = isLookup;
+    useQuery: vi.fn((doc: any, options?: { skip?: boolean; pollInterval?: number; fetchPolicy?: string; variables?: { id?: string } }) => {
+      // The lookup call site: the session-by-id document WITHOUT the catch-up poll's pollInterval.
+      const name = doc?.definitions?.[0]?.name?.value;
+      const isLookupSite = name === "GetAgentSessionById" && options?.pollInterval === undefined;
+      const idle = { data: undefined, previousData: undefined, loading: false, refetch: vi.fn() };
+      if (!isLookupSite) return idle;
+      if (options?.skip !== false) {
+        lookup.wasActive = false; // skipped: the activation (if any) has ended
+        return idle;
+      }
+      if (!lookup.wasActive) {
+        lookup.activations += 1;
+        lookup.rendersInActivation = 0;
+      }
+      lookup.wasActive = true;
+      lookup.rendersInActivation += 1;
+      lookup.seenOptions.push({ fetchPolicy: options?.fetchPolicy, skip: options?.skip });
+      // Like Apollo: the first render of a request is loading with no data; the answer comes on a later render.
+      if (lookup.rendersInActivation === 1 || lookup.hold) return { data: undefined, previousData: undefined, loading: true, refetch: vi.fn() };
       const response = lookup.responses[Math.min(lookup.activations, lookup.responses.length) - 1];
       return {
-        data: isLookup && response !== "error" ? { agent_sessionById: response } : undefined,
-        error: isLookup && response === "error" ? new Error("boom") : undefined,
+        data: response !== "error" ? { agent_sessionById: response } : undefined,
+        error: response === "error" ? new Error("boom") : undefined,
         previousData: undefined,
         loading: false,
         refetch: vi.fn(),
@@ -101,11 +122,20 @@ const render = (initialMessages: UIMessage[], initialSession: AgentSession = SES
     { wrapper: Wrapper },
   );
 
+// The mocked query is not reactive: a second render stands in for Apollo delivering the answer.
+const flush = async (rerender: () => void) => {
+  await act(async () => rerender());
+  await act(async () => rerender());
+};
+
 const lastProjectArg = () => mockProjectFiles.mock.calls.at(-1)?.[0];
 
 beforeEach(() => {
   lookup.activations = 0;
   lookup.wasActive = false;
+  lookup.rendersInActivation = 0;
+  lookup.hold = false;
+  lookup.seenOptions = [];
   lookup.responses = [{ project: "p1" }];
 });
 afterEach(() => {
@@ -120,14 +150,14 @@ describe("useChatSession — project created by the agent", () => {
     expect(lastProjectArg()).toBeNull();
 
     mockUseChat.mockReturnValue(chatReturn([call("output-available", { output: { result: "ok" } })]));
-    await act(async () => rerender());
+    await flush(rerender);
     expect(lastProjectArg()).toBe("p1");
     expect(result.current.session?.project).toBe("p1");
 
     // More ticks / re-renders: no second lookup.
     mockUseChat.mockReturnValue(chatReturn([call("output-available", { output: { result: "ok" } })], "ready"));
-    await act(async () => rerender());
-    await act(async () => rerender());
+    await flush(rerender);
+    await flush(rerender);
     expect(lookup.activations).toBe(1);
   });
 
@@ -135,7 +165,7 @@ describe("useChatSession — project created by the agent", () => {
     const done = call("output-available", { output: { result: "ok" } });
     mockUseChat.mockReturnValue(chatReturn([done], "ready"));
     const { rerender } = render([done], { ...SESSION, project: "p1" });
-    await act(async () => rerender());
+    await flush(rerender);
     expect(lookup.activations).toBe(0);
   });
 
@@ -144,7 +174,7 @@ describe("useChatSession — project created by the agent", () => {
     const { rerender } = render([]);
     for (const state of ["output-error", "output-denied"]) {
       mockUseChat.mockReturnValue(chatReturn([call(state)]));
-      await act(async () => rerender());
+      await flush(rerender);
     }
     expect(lookup.activations).toBe(0);
     expect(lastProjectArg()).toBeNull();
@@ -157,12 +187,14 @@ describe("useChatSession — project created by the agent", () => {
       mockUseChat.mockReturnValue(chatReturn([call("approval-responded")]));
       const { rerender, result } = render([]);
       mockUseChat.mockReturnValue(chatReturn([call("output-available", { output: { result: "failed" } })]));
-      await act(async () => rerender());
+      await flush(rerender);
       expect(lookup.activations).toBe(1);
       await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+      await flush(rerender);
       expect(lookup.activations).toBe(2);
       await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
-      await act(async () => rerender());
+      await flush(rerender);
+      await flush(rerender);
       expect(lookup.activations).toBe(2);
       expect(lastProjectArg()).toBeNull();
       expect(result.current.session?.project).toBe("");
@@ -177,9 +209,10 @@ describe("useChatSession — project created by the agent", () => {
       lookup.responses = [{ project: null }, { project: "p2" }];
       mockUseChat.mockReturnValue(chatReturn([call("output-available", { output: { result: "ok" } })]));
       const { rerender, result } = render([]);
-      await act(async () => rerender());
+      await flush(rerender);
       expect(lastProjectArg()).toBeNull();
       await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+      await flush(rerender);
       expect(result.current.session?.project).toBe("p2");
       expect(lastProjectArg()).toBe("p2");
     } finally {
@@ -191,14 +224,14 @@ describe("useChatSession — project created by the agent", () => {
     lookup.responses = [null, { project: "p1" }];
     mockUseChat.mockReturnValue(chatReturn([call("output-available", { output: { result: "ok" } })]));
     const { rerender, result } = render([]);
-    await act(async () => rerender());
+    await flush(rerender);
     expect(lookup.activations).toBe(1);
     expect(lastProjectArg()).toBeNull();
 
     const second = { ...call("output-available", { output: { result: "ok" } }) };
     (second.parts[0] as any).toolCallId = "tc2";
     mockUseChat.mockReturnValue(chatReturn([second]));
-    await act(async () => rerender());
+    await flush(rerender);
     expect(lookup.activations).toBe(2);
     expect(result.current.session?.project).toBe("p1");
   });
@@ -207,12 +240,12 @@ describe("useChatSession — project created by the agent", () => {
     lookup.responses = ["error", { project: "p1" }];
     mockUseChat.mockReturnValue(chatReturn([call("output-available", { output: { result: "ok" } })]));
     const { rerender } = render([]);
-    await act(async () => rerender());
+    await flush(rerender);
     expect(lookup.activations).toBe(1);
     const second = call("output-available", { output: { result: "ok" } });
     (second.parts[0] as any).toolCallId = "tc2";
     mockUseChat.mockReturnValue(chatReturn([second]));
-    await act(async () => rerender());
+    await flush(rerender);
     expect(lookup.activations).toBe(2);
   });
 
@@ -222,13 +255,15 @@ describe("useChatSession — project created by the agent", () => {
       lookup.responses = [{ project: null }, { project: null }, { project: "p3" }];
       mockUseChat.mockReturnValue(chatReturn([call("output-available", { output: { result: "ok" } })]));
       const { rerender, result } = render([]);
-      await act(async () => rerender());
+      await flush(rerender);
       const second = call("output-available", { output: { result: "ok" } });
       (second.parts[0] as any).toolCallId = "tc2";
       mockUseChat.mockReturnValue(chatReturn([call("output-available", { output: { result: "ok" } }), second]));
-      await act(async () => rerender());
+      await flush(rerender);
       await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+      await flush(rerender);
       await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+      await flush(rerender);
       expect(result.current.session?.project).toBe("p3");
     } finally {
       vi.useRealTimers();
@@ -245,15 +280,52 @@ describe("useChatSession — project created by the agent", () => {
         () => useChatSession({ agent: AGENT, initialSession: session, initialMessages: [], beginLazyCreate: () => () => {} }),
         { wrapper: Wrapper },
       );
-      await act(async () => rerender());
+      await flush(rerender);
       expect(lookup.activations).toBe(1);
       session = { ...SESSION, id: "s2" };
       mockUseChat.mockReturnValue(chatReturn([]));
-      await act(async () => rerender());
+      await flush(rerender);
       await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+      await flush(rerender);
       expect(lookup.activations).toBe(1);
       expect(result.current.session?.id).toBe("s2");
       expect(result.current.session?.project).toBe("");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("looks the session up network-only, and waits for the answer before settling", async () => {
+    mockUseChat.mockReturnValue(chatReturn([call("output-available", { output: { result: "ok" } })]));
+    const { rerender, result } = render([]);
+    lookup.hold = true;
+    await flush(rerender);
+    await flush(rerender);
+    expect(lookup.seenOptions.every((o) => o.fetchPolicy === "network-only")).toBe(true);
+    expect(lookup.activations).toBe(1);
+    // Still loading: nothing may be decided, and the lookup must not give up.
+    expect(result.current.session?.project).toBe("");
+    lookup.hold = false;
+    await flush(rerender);
+    expect(result.current.session?.project).toBe("p1");
+    expect(lookup.activations).toBe(1);
+  });
+
+  it("does not touch state or restart when unmounted during the retry delay", async () => {
+    vi.useFakeTimers();
+    try {
+      lookup.responses = [{ project: null }, { project: "p9" }];
+      mockUseChat.mockReturnValue(chatReturn([call("output-available", { output: { result: "ok" } })]));
+      const { rerender, unmount } = render([]);
+      await flush(rerender);
+      expect(lookup.activations).toBe(1);
+      const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+      unmount();
+      await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+      expect(vi.getTimerCount()).toBe(0);
+      expect(lookup.activations).toBe(1);
+      expect(errors).not.toHaveBeenCalled();
+      errors.mockRestore();
     } finally {
       vi.useRealTimers();
     }

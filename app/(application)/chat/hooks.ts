@@ -749,7 +749,8 @@ export function useChatSession({
   // counts as handled only once its lookup has settled, a row that is still
   // without a project is retried once, and a call that finishes while a lookup
   // is in flight is looked up again right after it.
-  const handledProjectCalls = React.useRef<Set<string>>(new Set(createProjectCallIds(initialMessages)));
+  const handledProjectCalls = React.useRef<Set<string> | null>(null);
+  if (handledProjectCalls.current === null) handledProjectCalls.current = new Set(createProjectCallIds(initialMessages));
   const pendingProjectCalls = React.useRef<Set<string>>(new Set());
   const inFlightProjectCalls = React.useRef<string[]>([]);
   const projectRetryTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -765,7 +766,7 @@ export function useChatSession({
 
   React.useEffect(() => {
     for (const id of createProjectCallIds(messages)) {
-      if (!handledProjectCalls.current.has(id)) pendingProjectCalls.current.add(id);
+      if (!handledProjectCalls.current!.has(id)) pendingProjectCalls.current.add(id);
     }
     if (projectLookup || projectRetryTimer.current || pendingProjectCalls.current.size === 0) return;
     const sessionId = currentSessionRef.current?.id;
@@ -791,7 +792,7 @@ export function useChatSession({
     if (!projectLookup || projectLookupQuery.loading) return;
     const settle = () => {
       for (const id of inFlightProjectCalls.current) {
-        handledProjectCalls.current.add(id);
+        handledProjectCalls.current!.add(id);
         pendingProjectCalls.current.delete(id);
       }
       inFlightProjectCalls.current = [];
