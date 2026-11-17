@@ -98,7 +98,7 @@ describe("SessionFilesContent without a project", () => {
       screen.getByText(enMessages.chat.files.privacyNote, { exact: false }),
     ).toBeTruthy();
     expect(screen.queryByText(enMessages.chat.files.sessionSection)).toBeNull();
-    expect(container.querySelectorAll('input[type="file"]')).toHaveLength(1);
+    expect(container.querySelectorAll('input[type="file"]:not([webkitdirectory])')).toHaveLength(1);
     expect(api.projectList).not.toHaveBeenCalled();
   });
 
@@ -136,7 +136,7 @@ describe("SessionFilesContent in a project session", () => {
     expect(
       screen.getByText(enMessages.chat.files.privacyNote, { exact: false }),
     ).toBeTruthy();
-    expect(container.querySelectorAll('input[type="file"]')).toHaveLength(2);
+    expect(container.querySelectorAll('input[type="file"]:not([webkitdirectory])')).toHaveLength(2);
     expect(
       screen.getAllByRole("button", { name: "Add to project" }),
     ).toHaveLength(1);
@@ -149,7 +149,7 @@ describe("SessionFilesContent in a project session", () => {
     );
     await screen.findByText("brief.pdf");
     await screen.findByText("notes.md");
-    expect(container.querySelectorAll('input[type="file"]')).toHaveLength(1);
+    expect(container.querySelectorAll('input[type="file"]:not([webkitdirectory])')).toHaveLength(1);
     expect(screen.queryByRole("button", { name: "Add to project" })).toBeNull();
   });
 

@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 
 import type { ChatSessionController } from "../../hooks";
 import { uploadSessionFiles } from "@/components/widgets/files-panel/upload";
+import { filesFromDrop } from "@/lib/dropped-files";
 import { formatBytes, MAX_UPLOAD_BYTES } from "@/components/widgets/files-panel/utils";
 
 export type ChatDropController = Pick<
@@ -101,9 +102,13 @@ export function ChatDropTarget({
   const onDrop = async (event: React.DragEvent) => {
     if (!carriesFiles(event)) return;
     event.preventDefault();
-    const files = Array.from(event.dataTransfer?.files ?? []);
+    // Started before anything is awaited: the dropped items are only readable
+    // while the event is being dispatched. A dropped folder becomes its files.
+    const dropped = filesFromDrop(event.dataTransfer);
     endDrag();
-    if (!enabled || files.length === 0) return;
+    if (!enabled) return;
+    const files = await dropped;
+    if (files.length === 0) return;
 
     setUploadingCount(files.length);
     try {
