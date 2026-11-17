@@ -85,6 +85,50 @@ function announce(
 }
 
 /**
+ * How long the frame waits on the host's project-access probe before it
+ * answers `denied`. Below the artifact's own 10 second ack wait, so a slow
+ * probe still ends in an ack rather than in the artifact giving up.
+ */
+export const PROJECT_PROBE_TIMEOUT_MS = 8000;
+
+/**
+ * Asks the host whether the viewer may open `projectId`, settling to `true`
+ * only on a confirmed yes.
+ *
+ * Every other outcome — no probe on this host, a probe that throws
+ * synchronously, one that rejects, one that resolves anything but `true`, one
+ * that outlives `PROJECT_PROBE_TIMEOUT_MS` — collapses to `false`, and never
+ * rejects: the caller turns `false` into the single `denied` answer, so the
+ * artifact (untrusted code) cannot tell a missing project from a forbidden
+ * one, or either from a slow backend, by what it receives.
+ */
+function probeProjectAccess(
+  probe: ((projectId: string) => Promise<boolean>) | undefined,
+  projectId: string,
+): Promise<boolean> {
+  if (!probe) return Promise.resolve(false);
+  return new Promise<boolean>((resolve) => {
+    const timer = setTimeout(() => resolve(false), PROJECT_PROBE_TIMEOUT_MS);
+    const settle = (allowed: boolean) => {
+      clearTimeout(timer);
+      resolve(allowed);
+    };
+    let answer: Promise<boolean>;
+    try {
+      // Promise.resolve: a host returning a bare value must not throw on `.then`.
+      answer = Promise.resolve(probe(projectId));
+    } catch {
+      settle(false);
+      return;
+    }
+    answer.then(
+      (allowed) => settle(allowed === true),
+      () => settle(false),
+    );
+  });
+}
+
+/**
  * Renders a shared artifact, and — only when a platform administrator has
  * granted the capability — answers the artifact's identity handshake.
  *
@@ -141,6 +185,11 @@ export function ArtifactFrame({
     viewport?: { width: number; open: boolean };
     progressNonce?: number;
     progressReason?: "tool" | "turn";
+    /**
+     * Whether the viewer may open this project. Consulted only for an open
+     * request that names one; absent means no project is ever attached.
+     */
+    probeProject?: (projectId: string) => Promise<boolean>;
   };
   /**
    * The share route renders the frame full-screen (the default); the
@@ -197,6 +246,11 @@ export function ArtifactFrame({
   // gap needs the holder to say so: a liveness declaration or a post-load
   // re-handshake in the artifact-side client (see the channel protocol).
   const portSawLoadRef = useRef(false);
+  // Arrival number of the latest panel-open request. A request whose project
+  // probe is still in flight when a later one arrives has been overtaken: it
+  // is still acked, but it must not reach `onOpenRequest` and reopen the
+  // panel over what the later request asked for.
+  const openSeqRef = useRef(0);
 
   useEffect(() => {
     if (!grantIdentity) return;
@@ -249,7 +303,12 @@ export function ArtifactFrame({
      * the ack, so a silently dropped request would hang its UI for good.
      */
     const answerOpenRequest = (port: MessagePort, req: OpenPanelRequest) => {
+      // Counted on arrival, before any check, so every later request —
+      // whatever its fate — supersedes an earlier one still probing.
+      const seq = ++openSeqRef.current;
       const host = panelRef.current;
+      // Panel and slot are checked before any probe: a request that could
+      // never open anything must not make the host look a project up.
       if (!host) {
         announce(port, openPanelAck(req.slot, false, "no-panel"));
         return;
@@ -258,10 +317,55 @@ export function ArtifactFrame({
         announce(port, openPanelAck(req.slot, false, "unknown-slot"));
         return;
       }
-      // Ack before handing over: the artifact's UI waits on it, and it must
-      // not be lost to a throw from the host's own handler.
-      announce(port, openPanelAck(req.slot, true));
-      host.onOpenRequest(req);
+      const projectId = req.project;
+      if (projectId === undefined) {
+        // No project: today's path, synchronous, and the ack has no project
+        // field at all.
+        // Ack before handing over: the artifact's UI waits on it, and it must
+        // not be lost to a throw from the host's own handler.
+        announce(port, openPanelAck(req.slot, true));
+        host.onOpenRequest(req);
+        return;
+      }
+      void (async () => {
+        const allowed = await probeProjectAccess(host.probeProject, projectId);
+        // Re-checked after the await exactly as the refresh branch does:
+        // `cancelled` covers unmount, and a navigation sets nothing — a
+        // document can post a request and navigate in the next statement,
+        // leaving its port2 in a popup. A retired port gets silence, not an
+        // ack: no project status, and no session attached on its behalf.
+        if (cancelled) return;
+        if (portRef.current !== port) return;
+        // The panel or the slot may have gone while the probe ran; the slot
+        // allowlist is the trust boundary, so it is checked again against
+        // the latest host rather than the one captured before the await.
+        const latest = panelRef.current;
+        if (!latest) {
+          announce(port, openPanelAck(req.slot, false, "no-panel"));
+          return;
+        }
+        if (!latest.slots.some((slot) => slot.key === req.slot)) {
+          announce(port, openPanelAck(req.slot, false, "unknown-slot"));
+          return;
+        }
+        // `denied` is still an accepted open: the panel opens, only without
+        // the project. One ack shape for every way access was not confirmed.
+        announce(port, openPanelAck(req.slot, true, undefined, allowed ? "attached" : "denied"));
+        // Overtaken by a later request: acked above, but not handed over.
+        if (seq !== openSeqRef.current) return;
+        if (allowed) {
+          latest.onOpenRequest(req);
+          return;
+        }
+        // Rebuilt from the validated fields rather than spread-and-delete, so
+        // the host can only ever see `project` on a confirmed request — a
+        // field added to the request later cannot carry it through either.
+        const withoutProject: OpenPanelRequest = { type: req.type, v: req.v, slot: req.slot };
+        if (req.prompt !== undefined) withoutProject.prompt = req.prompt;
+        if (req.items !== undefined) withoutProject.items = req.items;
+        if (req.files !== undefined) withoutProject.files = req.files;
+        latest.onOpenRequest(withoutProject);
+      })();
     };
 
     const onMessage = (event: MessageEvent) => {
