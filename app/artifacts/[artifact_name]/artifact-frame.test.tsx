@@ -1271,5 +1271,163 @@ describe("ArtifactFrame", () => {
       expect(onOpenRequest).toHaveBeenCalledTimes(1);
       expect(onOpenRequest.mock.calls[0]![0]).toMatchObject({ prompt: "B", project: PROJECT });
     });
+
+    test("the slots shrinking while the probe runs: rejected unknown-slot, no project, not handed over", async () => {
+      stubFetch();
+      const probe = controllableProbe();
+      const onOpenRequest = vi.fn();
+      const panel = { slots: SLOTS, onOpenRequest, probeProject: probe.probeProject };
+      const { frame, rerenderWith } = renderFrame(true, panel);
+      const { port, until } = handshake(frame);
+      await until("exulu:identity:grant");
+
+      port.postMessage(openRequest("analyse", { project: PROJECT }));
+      await probe.called();
+      rerenderWith({ ...panel, slots: [] });
+      probe.calls[0]!.resolve(true);
+
+      const acks = await until("exulu:panel:open:ack");
+      expect(acks).toEqual([
+        { type: "exulu:panel:open:ack", v: 2, slot: "analyse", accepted: false, reason: "unknown-slot" },
+      ]);
+      expect(Object.keys(acks[0])).not.toContain("project");
+      await settle();
+      expect(onOpenRequest).not.toHaveBeenCalled();
+    });
+
+    test("the panel going away while the probe runs: rejected no-panel, no project, not handed over", async () => {
+      stubFetch();
+      const probe = controllableProbe();
+      const onOpenRequest = vi.fn();
+      const { frame, rerenderWith } = renderFrame(true, {
+        slots: SLOTS,
+        onOpenRequest,
+        probeProject: probe.probeProject,
+      });
+      const { port, until } = handshake(frame);
+      await until("exulu:identity:grant");
+
+      port.postMessage(openRequest("analyse", { project: PROJECT }));
+      await probe.called();
+      rerenderWith(undefined);
+      probe.calls[0]!.resolve(true);
+
+      const acks = await until("exulu:panel:open:ack");
+      expect(acks).toEqual([
+        { type: "exulu:panel:open:ack", v: 2, slot: "analyse", accepted: false, reason: "no-panel" },
+      ]);
+      expect(Object.keys(acks[0])).not.toContain("project");
+      await settle();
+      expect(onOpenRequest).not.toHaveBeenCalled();
+    });
+
+    test("a rejected request does not overtake a pending valid one", async () => {
+      stubFetch();
+      const probe = controllableProbe();
+      const onOpenRequest = vi.fn();
+      const { frame } = renderFrame(true, {
+        slots: SLOTS,
+        onOpenRequest,
+        probeProject: probe.probeProject,
+      });
+      const { port, until } = handshake(frame);
+      await until("exulu:identity:grant");
+
+      port.postMessage(openRequest("analyse", { prompt: "A", project: PROJECT }));
+      await probe.called();
+      port.postMessage(openRequest("some-other-agent", { prompt: "C" }));
+      expect(await until("exulu:panel:open:ack")).toEqual([
+        {
+          type: "exulu:panel:open:ack",
+          v: 2,
+          slot: "some-other-agent",
+          accepted: false,
+          reason: "unknown-slot",
+        },
+      ]);
+
+      probe.calls[0]!.resolve(true);
+
+      expect((await until("exulu:panel:open:ack", 2))[1]).toEqual({
+        type: "exulu:panel:open:ack",
+        v: 2,
+        slot: "analyse",
+        accepted: true,
+        project: "attached",
+      });
+      expect(onOpenRequest).toHaveBeenCalledTimes(1);
+      expect(onOpenRequest).toHaveBeenCalledWith({
+        type: "exulu:panel:open",
+        v: 2,
+        slot: "analyse",
+        prompt: "A",
+        project: PROJECT,
+      });
+    });
+
+    test("a probe that settles before the timeout leaves no timer behind", async () => {
+      stubFetch();
+      const probe = controllableProbe();
+      const onOpenRequest = vi.fn();
+      const { frame } = renderFrame(true, {
+        slots: SLOTS,
+        onOpenRequest,
+        probeProject: probe.probeProject,
+      });
+      const { port, ofType, until } = handshake(frame);
+      await until("exulu:identity:grant");
+
+      const turn = () => new Promise((resolve) => setImmediate(resolve));
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      try {
+        port.postMessage(openRequest("analyse", { project: PROJECT }));
+        for (let i = 0; i < 200 && probe.probeProject.mock.calls.length === 0; i += 1) await turn();
+        expect(probe.probeProject).toHaveBeenCalledTimes(1);
+        // Positive control: the frame's timer is armed while the probe runs.
+        expect(vi.getTimerCount()).toBe(1);
+        probe.calls[0]!.resolve(true);
+        for (let i = 0; i < 200 && ofType("exulu:panel:open:ack").length === 0; i += 1) await turn();
+        expect(ofType("exulu:panel:open:ack")).toHaveLength(1);
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    test("a probe resolving true after the timeout fired changes nothing: one ack, denied", async () => {
+      stubFetch();
+      const probe = controllableProbe();
+      const onOpenRequest = vi.fn();
+      const { frame } = renderFrame(true, {
+        slots: SLOTS,
+        onOpenRequest,
+        probeProject: probe.probeProject,
+      });
+      const { port, ofType, until } = handshake(frame);
+      await until("exulu:identity:grant");
+
+      const turn = () => new Promise((resolve) => setImmediate(resolve));
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      try {
+        port.postMessage(
+          openRequest("analyse", { prompt: "Summarise the pitch", files: ["f-1"], project: PROJECT }),
+        );
+        for (let i = 0; i < 200 && probe.probeProject.mock.calls.length === 0; i += 1) await turn();
+        expect(probe.probeProject).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(PROJECT_PROBE_TIMEOUT_MS);
+        for (let i = 0; i < 200 && ofType("exulu:panel:open:ack").length === 0; i += 1) await turn();
+        probe.calls[0]!.resolve(true);
+      } finally {
+        vi.useRealTimers();
+      }
+      await settle();
+
+      expect(ofType("exulu:panel:open:ack")).toEqual([
+        { type: "exulu:panel:open:ack", v: 2, slot: "analyse", accepted: true, project: "denied" },
+      ]);
+      expect(onOpenRequest).toHaveBeenCalledTimes(1);
+      expect(onOpenRequest.mock.calls[0]![0]).toEqual(withoutProject);
+      expect(Object.keys(onOpenRequest.mock.calls[0]![0])).not.toContain("project");
+    });
   });
 });

@@ -246,10 +246,13 @@ export function ArtifactFrame({
   // gap needs the holder to say so: a liveness declaration or a post-load
   // re-handshake in the artifact-side client (see the channel protocol).
   const portSawLoadRef = useRef(false);
-  // Arrival number of the latest panel-open request. A request whose project
-  // probe is still in flight when a later one arrives has been overtaken: it
-  // is still acked, but it must not reach `onOpenRequest` and reopen the
-  // panel over what the later request asked for.
+  // Arrival number of the latest panel-open request that passed the panel and
+  // slot checks. A request whose project probe is still in flight when a later
+  // valid one arrives has been overtaken: it is still acked, but it must not
+  // reach `onOpenRequest` and reopen the panel over what the later request
+  // asked for. A rejected request does not count — it opens nothing, so it
+  // must not cost an earlier valid request its hand-over (which would tell the
+  // artifact "accepted, attached" for a panel that never opens).
   const openSeqRef = useRef(0);
 
   useEffect(() => {
@@ -303,9 +306,6 @@ export function ArtifactFrame({
      * the ack, so a silently dropped request would hang its UI for good.
      */
     const answerOpenRequest = (port: MessagePort, req: OpenPanelRequest) => {
-      // Counted on arrival, before any check, so every later request —
-      // whatever its fate — supersedes an earlier one still probing.
-      const seq = ++openSeqRef.current;
       const host = panelRef.current;
       // Panel and slot are checked before any probe: a request that could
       // never open anything must not make the host look a project up.
@@ -317,6 +317,8 @@ export function ArtifactFrame({
         announce(port, openPanelAck(req.slot, false, "unknown-slot"));
         return;
       }
+      // Counted only once the request could open something (see openSeqRef).
+      const seq = ++openSeqRef.current;
       const projectId = req.project;
       if (projectId === undefined) {
         // No project: today's path, synchronous, and the ack has no project
