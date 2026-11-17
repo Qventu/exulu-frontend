@@ -835,9 +835,7 @@
         "pickerNoResults": "Nichts gefunden.",
         "pickerAlreadyEnabled": "Aktiviert",
         "pickerSelected": "{selected} ausgewählt · {addable} verfügbar",
-        "pickerAdd": "{count} hinzufügen",
-        "createProjectLabel": "Projekte anlegen",
-        "createProjectDescription": "Der Agent kann nach Freigabe aus einer Unterhaltung ein Projekt anlegen und die Dateien der Sitzung dorthin verschieben."
+        "pickerAdd": "{count} hinzufügen"
       },
       "unsavedChanges": "Ungespeicherte Änderungen an diesem Agenten"
     },

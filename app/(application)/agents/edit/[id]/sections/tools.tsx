@@ -14,17 +14,14 @@ import { useTranslations } from "next-intl";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { SettingRow } from "@/components/primitives/setting-row";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import type { AgentTool } from "@/types/models/agent";
 import type { ExuluTool } from "@/types/models/tool";
 
 import { AddItemsDialog, type PickerKind } from "../components/add-items-dialog";
 import { AgentToolWithDetails } from "../components/agent-hierarchy-view";
 import { AgentToolCard } from "../components/agent-tool-card";
-import { CREATE_PROJECT_TOOL_ID, isCreateProjectEnabled, withCreateProject } from "../components/create-project-switch";
 import { KB_EDITOR_TOOL_ID } from "../components/kb-editing/config-schema";
 import { KbEditingConfigPanel } from "../components/kb-editing/kb-editing-config-panel";
 import { ToolConfigurationElement } from "../components/tool-config-fields";
@@ -43,8 +40,7 @@ export function ToolsSection({ editor, refs }: EditorSectionProps) {
     const agents: ExuluTool[] = [];
     const tools: ExuluTool[] = [];
     for (const tool of refs.tools) {
-      // The agentic search and create_project tools have their own switches.
-      if (tool.id === "agentic_context_search" || tool.id === CREATE_PROJECT_TOOL_ID) continue;
+      if (tool.id === "agentic_context_search") continue;
       (tool.category === "agents" ? agents : tools).push(tool);
     }
     return { agentCatalogue: agents, toolCatalogue: tools };
@@ -58,7 +54,7 @@ export function ToolsSection({ editor, refs }: EditorSectionProps) {
   // instance keep a minimal card so they can still be removed.
   const enabledAgents = agentCatalogue.filter((t) => enabledIds.has(t.id));
   const enabledTools = toolCatalogue.filter((t) => enabledIds.has(t.id));
-  const orphanTools = editor.tools.filter((et) => !byId.has(et.id) && et.id !== "agentic_context_search" && et.id !== CREATE_PROJECT_TOOL_ID);
+  const orphanTools = editor.tools.filter((et) => !byId.has(et.id) && et.id !== "agentic_context_search");
   const enabledSkills: SkillRef[] = editor.skills.map((s) => refs.skills.find((r) => r.id === s.id) ?? s);
 
   const toolConfigEntry = (tool: ExuluTool): AgentTool => ({
@@ -135,10 +131,6 @@ export function ToolsSection({ editor, refs }: EditorSectionProps) {
         </div>
       ) : (
         <>
-          <SettingRow htmlFor="agent-create-projects" label={t("editor.tools.createProjectLabel")} description={t("editor.tools.createProjectDescription")}>
-            <Switch id="agent-create-projects" checked={isCreateProjectEnabled(editor.tools)} onCheckedChange={(on) => editor.setTools(withCreateProject(editor.tools, on))} />
-          </SettingRow>
-
           {/* Sub-agents */}
           <div className="space-y-3">
             {groupHeader(<Network className="size-4 text-primary" />, t("editor.tools.subAgents"), t("editor.tools.subAgentsHint"), enabledAgents.length, "agents")}

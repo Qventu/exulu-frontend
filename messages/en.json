@@ -835,9 +835,7 @@
         "pickerNoResults": "Nothing matches.",
         "pickerAlreadyEnabled": "Enabled",
         "pickerSelected": "{selected} selected · {addable} available",
-        "pickerAdd": "Add {count}",
-        "createProjectLabel": "Create projects",
-        "createProjectDescription": "After approval the agent can turn a conversation into a project and move the session's files there."
+        "pickerAdd": "Add {count}"
       },
       "unsavedChanges": "Unsaved changes to this agent"
     },
