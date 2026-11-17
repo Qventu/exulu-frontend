@@ -23,7 +23,9 @@ const refs = { tools: [CATALOGUE_ENTRY], toolsLoading: false, skills: [], variab
 let saved: any[] = [];
 function Harness({ initial }: { initial: any[] }) {
   const [tools, setTools] = React.useState<any[]>(initial);
-  saved = tools;
+  React.useEffect(() => {
+    saved = tools;
+  }, [tools]);
   return <ToolsSection agent={{} as any} refs={refs} editor={{ tools, skills: [], setTools, setSkills: vi.fn() } as any} />;
 }
 const mount = (initial: any[]) =>
