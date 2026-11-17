@@ -11,30 +11,24 @@ import { useTranslations } from "next-intl";
 
 import { describeCreateProjectInput, projectIdOf } from "../lib/create-project";
 
-const FILES_SHOWN = 10;
-
 export function CreateProjectApprovalSummary({ input }: { input: unknown }) {
   const t = useTranslations("chat");
   const { name, files } = describeCreateProjectInput(input);
-  const shown = files.slice(0, FILES_SHOWN);
   return (
     <div className="space-y-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
-      <p className="font-medium">{t("approval.createProject.summary", { name, count: files.length })}</p>
+      <p className="font-medium [overflow-wrap:anywhere]">{t("approval.createProject.summary", { name, count: files.length })}</p>
       <div>
         <p className="text-xs text-muted-foreground">{t("approval.createProject.files")}</p>
         {files.length === 0 ? (
           <p className="text-muted-foreground">{t("approval.createProject.noFiles")}</p>
         ) : (
           <ul className="max-h-48 list-disc overflow-y-auto pl-5">
-            {shown.map((file) => (
-              <li key={file} className="break-all">
+            {files.map((file, i) => (
+              <li key={`${i}-${file}`} className="[overflow-wrap:anywhere]">
                 {file}
               </li>
             ))}
           </ul>
-        )}
-        {files.length > FILES_SHOWN && (
-          <p className="text-xs text-muted-foreground">{t("approval.groupMore", { count: files.length - FILES_SHOWN })}</p>
         )}
       </div>
       <p className="text-xs text-muted-foreground">{t("approval.createProject.private")}</p>

@@ -80,10 +80,20 @@ describe("DocumentReading running", () => {
     expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toBe("Seite 75 von 120");
   });
 
-  it("shows an interrupted line instead of a bar once streaming has ended", () => {
+  it("says the read was interrupted when it mounts already not streaming (reload, older message)", () => {
     render(wrap(<DocumentReading part={running({})} streaming={false} />));
-    expect(screen.getByText("Lesen abgebrochen")).toBeDefined();
+    expect(screen.getByText("Lesen wurde unterbrochen")).toBeDefined();
     expect(screen.queryByRole("progressbar")).toBeNull();
+  });
+
+  it("says it is finished in the background when the stream ends during this mount, keeping the last progress", () => {
+    const { rerender } = render(wrap(<DocumentReading part={running({})} streaming />));
+    rerender(wrap(<DocumentReading part={running({})} streaming={false} />));
+    expect(screen.getByText("Wird im Hintergrund fertig gelesen")).toBeDefined();
+    expect(screen.getByText("Seite 75 von 120")).toBeDefined();
+    expect(screen.getByText("Text wird erkannt")).toBeDefined();
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.queryByText("Lesen wurde unterbrochen")).toBeNull();
   });
 });
 
@@ -145,6 +155,38 @@ describe("DocumentReading done", () => {
     expect(screen.getByText("Dokument lesen")).toBeDefined();
   });
 
+  it("treats a truncated output (small context window) as a success, pages unknown", () => {
+    render(wrap(<DocumentReading part={done({ truncated: true, notice: "zu lang", preview: "abc" })} streaming={false} />));
+    expect(screen.getByText("handbuch.pdf")).toBeDefined();
+    expect(screen.queryByText(/nicht gelesen werden/)).toBeNull();
+    cleanup();
+    render(wrap(<DocumentReading part={done({ result: { truncated: true, notice: "zu lang", preview: "abc" } })} streaming={false} />));
+    expect(screen.getByText("handbuch.pdf")).toBeDefined();
+    expect(screen.getByTestId("document-reading").className).not.toContain("destructive");
+  });
+
+  it("clamps a long error to three lines and keeps the full text in the title", () => {
+    const long = "Fehler ".repeat(80).trim();
+    render(wrap(<DocumentReading part={done({ error: long })} streaming={false} />));
+    const p = screen.getByText(/Fehler Fehler/);
+    expect(p.className).toContain("line-clamp-3");
+    expect(p.className).toContain("[overflow-wrap:anywhere]");
+    expect(p.getAttribute("title")).toContain(long);
+  });
+
+  it("tells repeated reads apart: pages range, or a start line", () => {
+    const withInput = (input: Record<string, unknown>) => ({
+      type: "tool-parse_document", state: "output-available",
+      input: { filename: "handbuch.pdf", ...input }, output: { content: "x", totalPages: 120 },
+    });
+    const { rerender } = render(wrap(<DocumentReading part={withInput({ pages: "12-20" })} streaming={false} />));
+    expect(screen.getByText("handbuch.pdf · 120 Seiten · S. 12-20")).toBeDefined();
+    rerender(wrap(<DocumentReading part={withInput({ offset: 40, limit: 20 })} streaming={false} />));
+    expect(screen.getByText("handbuch.pdf · 120 Seiten · ab Zeile 40")).toBeDefined();
+    rerender(wrap(<DocumentReading part={withInput({})} streaming={false} />));
+    expect(screen.getByText("handbuch.pdf · 120 Seiten")).toBeDefined();
+  });
+
   it("shows the error text", () => {
     render(wrap(<DocumentReading part={done({ error: "Datei beschädigt" })} streaming={false} />));
     expect(screen.getByText(/Datei beschädigt/)).toBeDefined();
@@ -160,14 +202,14 @@ describe("through the real MessageRenderer", () => {
   const tree = (pagesDone: number, status: "streaming" | "ready") =>
     wrap(<MessageRenderer messages={msgs(pagesDone)} agent={{ id: "a", name: "A" } as never} status={status} />);
 
-  it("re-renders when a preliminary update changes pagesDone, and shows interrupted after the stream", () => {
+  it("re-renders when a preliminary update changes pagesDone, and says it finishes in the background after the stream", () => {
     const { rerender } = render(tree(25, "streaming"));
     expect(screen.getByText("Seite 25 von 120")).toBeDefined();
     rerender(tree(50, "streaming"));
     expect(screen.getByText("Seite 50 von 120")).toBeDefined();
     expect(screen.queryByText("Seite 25 von 120")).toBeNull();
     rerender(tree(50, "ready"));
-    expect(screen.getByText("Lesen abgebrochen")).toBeDefined();
+    expect(screen.getByText("Wird im Hintergrund fertig gelesen")).toBeDefined();
   });
 
   it("shows a finished read in an earlier message as done while the last message streams", () => {

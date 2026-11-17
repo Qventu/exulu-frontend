@@ -10,6 +10,7 @@
 
 import { FileText, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import * as React from "react";
 
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -71,6 +72,9 @@ const unwrap = (output: unknown): FinalOutput => {
   }
   const obj = value as Record<string, unknown>;
   if (typeof obj.error === "string") return { payload: obj, error: obj.error };
+  // The backend's output guard on small context windows: the read worked, the
+  // text was cut. A success without a page count.
+  if (obj.truncated === true) return { payload: obj, error: null };
   if (typeof obj.content !== "string") return { payload: obj, error: describe(obj) };
   return { payload: obj, error: null };
 };
@@ -91,6 +95,14 @@ export interface DocumentReadingProps {
 
 export const DocumentReading = ({ part, streaming, className }: DocumentReadingProps) => {
   const t = useTranslations("chat.documentReading");
+
+  // The backend never aborts a read: after a Stop it finishes in the
+  // background and the turn is saved. A card that watched the stream end says
+  // so; one that mounts after the fact (reload) can only say it was cut off.
+  const [sawStreaming, setSawStreaming] = React.useState(streaming);
+  React.useEffect(() => {
+    if (streaming) setSawStreaming(true);
+  }, [streaming]);
 
   const inputName = (part.input as { filename?: unknown } | undefined)?.filename;
   const final = unwrap(part.output);
@@ -139,7 +151,9 @@ export const DocumentReading = ({ part, streaming, className }: DocumentReadingP
     return shell(
       <>
         {nameRow()}
-        <p className="mt-1 text-destructive">{message}</p>
+        <p className="mt-1 line-clamp-3 text-destructive [overflow-wrap:anywhere]" title={message}>
+          {message}
+        </p>
       </>,
       "error",
     );
@@ -148,11 +162,20 @@ export const DocumentReading = ({ part, streaming, className }: DocumentReadingP
   // Finished.
   if (part.state === "output-available" && !preliminary) {
     const pages = num(out?.totalPages);
+    const input = (part.input ?? {}) as { pages?: unknown; offset?: unknown };
+    const range =
+      (typeof input.pages === "string" && input.pages.trim()) || (typeof input.pages === "number" ? String(input.pages) : "");
+    const fromLine = num(part.input && (part.input as { offset?: unknown }).offset);
+    const parts = [
+      filename,
+      pages ? t("pages", { count: pages }) : "",
+      range ? t("pageRange", { pages: range }) : fromLine ? t("fromLine", { offset: fromLine }) : "",
+    ].filter(Boolean);
     return shell(
       <div className="flex items-center gap-2 text-foreground">
         <FileText aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="truncate" title={filename}>
-          {!filename ? t("title") : pages ? `${filename} · ${t("pages", { count: pages })}` : filename}
+          {!filename ? t("title") : parts.join(" · ")}
         </span>
         {out?.fromStore === true ? (
           <span className="shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -160,16 +183,6 @@ export const DocumentReading = ({ part, streaming, className }: DocumentReadingP
           </span>
         ) : null}
       </div>,
-    );
-  }
-
-  // Left running although the turn is over: the user stopped it.
-  if (!streaming) {
-    return shell(
-      <>
-        {nameRow()}
-        <p className="mt-1">{t("interrupted")}</p>
-      </>,
     );
   }
 
@@ -185,6 +198,23 @@ export const DocumentReading = ({ part, streaming, className }: DocumentReadingP
   const determinate = total > 0;
   const done = Math.min(progress?.pagesDone ?? 0, total);
   const percent = determinate ? Math.round((done / total) * 100) : 0;
+
+  // Left running although the turn is over: a Stop. Seen live, the read goes
+  // on in the background; found like this on mount, it was cut off.
+  if (!streaming) {
+    return shell(
+      <>
+        {nameRow()}
+        <p className="mt-1">{sawStreaming ? t("backgroundRead") : t("interrupted")}</p>
+        {sawStreaming && (progress?.phase || determinate) ? (
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <span>{progress?.phase ? t(progress.phase) : ""}</span>
+            {determinate ? <span>{t("page", { done, total })}</span> : null}
+          </div>
+        ) : null}
+      </>,
+    );
+  }
 
   return shell(
     <>

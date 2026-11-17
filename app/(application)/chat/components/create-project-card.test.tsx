@@ -35,7 +35,7 @@ describe("create_project approval card", () => {
     expect(screen.getByText(/Projekt „Messe 2027“ anlegen und 2 Dateien dorthin verschieben/)).toBeTruthy();
     expect(screen.getByText("angebot.pdf")).toBeTruthy();
     expect(screen.getByText("skizze.png")).toBeTruthy();
-    expect(screen.getByText("Das Projekt ist zunächst nur für dich sichtbar.")).toBeTruthy();
+    expect(screen.getByText("Das Projekt ist zunächst nur für Sie sichtbar.")).toBeTruthy();
   });
 
   it("uses singular and zero wording", () => {
@@ -70,14 +70,23 @@ describe("create_project approval card", () => {
 });
 
 describe("long file lists", () => {
-  it("shows ten names, counts the rest and keeps the buttons in reach", () => {
+  it("lists every file inside a bounded scroll box that wraps long names", () => {
     const names = Array.from({ length: 60 }, (_, i) => `datei-${i}.pdf`);
-    renderApproval(part(names));
-    expect(screen.getByText("datei-9.pdf")).toBeTruthy();
-    expect(screen.queryByText("datei-10.pdf")).toBeNull();
-    expect(screen.getByText("und 50 weitere")).toBeTruthy();
-    expect(screen.getByRole("list").className).toContain("overflow-y-auto");
+    renderApproval(part(names, "x".repeat(200)));
+    expect(screen.getByText("datei-59.pdf")).toBeTruthy();
+    expect(screen.getAllByRole("listitem")).toHaveLength(60);
+    expect(screen.queryByText(/weitere/)).toBeNull();
+    const list = screen.getByRole("list");
+    expect(list.className).toContain("overflow-y-auto");
+    expect(list.className).toContain("max-h-48");
+    expect(screen.getByText("datei-0.pdf").className).toContain("[overflow-wrap:anywhere]");
+    expect(screen.getByText(/x{200}/).className).toContain("[overflow-wrap:anywhere]");
     expect(screen.getByText("Einmal erlauben")).toBeTruthy();
+  });
+
+  it("keys duplicate names without collision", () => {
+    renderApproval(part(["a.pdf", "a.pdf"]));
+    expect(screen.getAllByText("a.pdf")).toHaveLength(2);
   });
 });
 

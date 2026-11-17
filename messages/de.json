@@ -1338,7 +1338,7 @@
         "summary": "Projekt „{name}“ anlegen {count, plural, =0 {ohne Dateien zu verschieben} one {und 1 Datei dorthin verschieben} other {und # Dateien dorthin verschieben}}",
         "files": "Dateien",
         "noFiles": "Keine Dateien",
-        "private": "Das Projekt ist zunächst nur für dich sichtbar."
+        "private": "Das Projekt ist zunächst nur für Sie sichtbar."
       }
     },
     "attach": {
@@ -1771,8 +1771,11 @@
       "longHint": "Das Ergebnis wird gespeichert, der nächste Zugriff ist sofort da.",
       "pages": "{count, plural, one {# Seite} other {# Seiten}}",
       "alreadyRead": "bereits gelesen",
-      "interrupted": "Lesen abgebrochen",
-      "error": "Dokument konnte nicht gelesen werden: {message}"
+      "interrupted": "Lesen wurde unterbrochen",
+      "error": "Dokument konnte nicht gelesen werden: {message}",
+      "backgroundRead": "Wird im Hintergrund fertig gelesen",
+      "pageRange": "S. {pages}",
+      "fromLine": "ab Zeile {offset}"
     },
     "toolTrace": {
       "sequence": "Abfolge der Tool-Aufrufe",
