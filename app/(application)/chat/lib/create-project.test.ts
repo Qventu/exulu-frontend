@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { UIMessage } from "ai";
 
-import { createProjectCallIds, describeCreateProjectInput, projectLinkOf } from "./create-project";
+import { createProjectCallIds, describeCreateProjectInput, projectIdOf } from "./create-project";
 
 const msg = (parts: unknown[]): UIMessage => ({ id: "m", role: "assistant", parts }) as unknown as UIMessage;
 const call = (toolCallId: string, extra: Record<string, unknown>) => ({ type: "tool-create_project", toolCallId, ...extra });
@@ -34,14 +34,18 @@ describe("describeCreateProjectInput", () => {
   });
 });
 
-describe("projectLinkOf", () => {
+describe("projectIdOf", () => {
   const id = "123e4567-e89b-12d3-a456-426614174000";
   it("extracts the project link from a result envelope or string", () => {
-    expect(projectLinkOf({ result: `Created. Open /projects/${id} now.` })).toBe(`/projects/${id}`);
-    expect(projectLinkOf(`see /projects/${id}`)).toBe(`/projects/${id}`);
+    expect(projectIdOf({ result: `Created. Open /projects/${id} now.` })).toBe(id);
+    expect(projectIdOf(`see /projects/${id}`)).toBe(id);
+  });
+  it("rejects a malformed id", () => {
+    expect(projectIdOf({ result: "/projects/123e4567-e89b-12d3-a456-4266141740001" })).toBeNull();
+    expect(projectIdOf({ result: "/projects/----------------------------------------" })).toBeNull();
   });
   it("returns null without a link", () => {
-    expect(projectLinkOf({ result: "failed" })).toBeNull();
-    expect(projectLinkOf(undefined)).toBeNull();
+    expect(projectIdOf({ result: "failed" })).toBeNull();
+    expect(projectIdOf(undefined)).toBeNull();
   });
 });

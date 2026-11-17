@@ -6,15 +6,17 @@
  * Never navigates by itself.
  */
 
-import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
-import { describeCreateProjectInput, projectLinkOf } from "../lib/create-project";
+import { describeCreateProjectInput, projectIdOf } from "../lib/create-project";
+
+const FILES_SHOWN = 10;
 
 export function CreateProjectApprovalSummary({ input }: { input: unknown }) {
   const t = useTranslations("chat");
   const { name, files } = describeCreateProjectInput(input);
+  const shown = files.slice(0, FILES_SHOWN);
   return (
     <div className="space-y-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
       <p className="font-medium">{t("approval.createProject.summary", { name, count: files.length })}</p>
@@ -23,13 +25,16 @@ export function CreateProjectApprovalSummary({ input }: { input: unknown }) {
         {files.length === 0 ? (
           <p className="text-muted-foreground">{t("approval.createProject.noFiles")}</p>
         ) : (
-          <ul className="list-disc pl-5">
-            {files.map((file) => (
+          <ul className="max-h-48 list-disc overflow-y-auto pl-5">
+            {shown.map((file) => (
               <li key={file} className="break-all">
                 {file}
               </li>
             ))}
           </ul>
+        )}
+        {files.length > FILES_SHOWN && (
+          <p className="text-xs text-muted-foreground">{t("approval.groupMore", { count: files.length - FILES_SHOWN })}</p>
         )}
       </div>
       <p className="text-xs text-muted-foreground">{t("approval.createProject.private")}</p>
@@ -37,14 +42,18 @@ export function CreateProjectApprovalSummary({ input }: { input: unknown }) {
   );
 }
 
-export function OpenProjectLink({ output }: { output: unknown }) {
+/**
+ * Only for the project that was really created: the id in the result must be
+ * the session's own project (known after the session lookup), so a failure
+ * text that merely mentions a /projects path never gets a link.
+ */
+export function OpenProjectLink({ output, sessionProjectId }: { output: unknown; sessionProjectId?: string | null }) {
   const t = useTranslations("chat");
-  const href = projectLinkOf(output);
-  if (!href) return null;
+  const id = projectIdOf(output);
+  if (!id || !sessionProjectId || String(sessionProjectId).toLowerCase() !== id.toLowerCase()) return null;
   return (
-    <Link href={href} className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline">
+    <Link href={`/projects/${id}`} className="mt-2 inline-flex items-center text-sm font-medium text-primary underline-offset-4 hover:underline">
       {t("createProject.open")}
-      <ExternalLink aria-hidden="true" className="size-3.5" />
     </Link>
   );
 }

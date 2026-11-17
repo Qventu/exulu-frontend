@@ -116,6 +116,7 @@ function makeUntypedToolPart(
   onCredentialResume: (provider: string, kind?: "credentials" | "oauth") => void,
   guestMode: boolean,
   sessionId: string,
+  projectId: string,
 ) {
   const UntypedToolPart = ({
     agent: _agent,
@@ -199,40 +200,43 @@ function makeUntypedToolPart(
       );
     }
 
+    const showProjectLink =
+      (untypedToolPart.type as string) === "tool-create_project" && untypedToolPart.state === "output-available";
+
     return (
       <>
-      <Tool key={callId} className="mt-3" defaultOpen={false} data-demo-id="chat-tool-trace">
-        <ToolHeader
-          title={toolTitle}
-          // The product title-cases a tool name ("Context Search"); a German
-          // label is a phrase and must keep its own casing.
-          className={isDemoMode() ? undefined : "capitalize"}
-          type={styleToolName as `tool-${string}`}
-          state={untypedToolPart.state}
-        />
-        <ToolContent>
-          <ToolInput input={untypedToolPart.input} />
-          <ToolOutput
-            output={
-              output ? (
-                // chunked: tool outputs can stream in while expanded — only
-                // the growing last markdown block re-parses per tick.
-                <Response chunked>
-                  {typeof output === "string"
-                    ? output
-                    : JSON.stringify(output, null, 2)}
-                </Response>
-              ) : (
-                !untypedToolPart.errorText && (
-                  <Skeleton className="h-4 w-full" />
-                )
-              )
-            }
-            errorText={untypedToolPart.errorText}
+        <Tool key={callId} className="mt-3" defaultOpen={false} data-demo-id="chat-tool-trace">
+          <ToolHeader
+            title={toolTitle}
+            // The product title-cases a tool name ("Context Search"); a German
+            // label is a phrase and must keep its own casing.
+            className={isDemoMode() ? undefined : "capitalize"}
+            type={styleToolName as `tool-${string}`}
+            state={untypedToolPart.state}
           />
-        </ToolContent>
-      </Tool>
-      {(untypedToolPart.type as string) === "tool-create_project" && untypedToolPart.state === "output-available" && <OpenProjectLink output={output} />}
+          <ToolContent>
+            <ToolInput input={untypedToolPart.input} />
+            <ToolOutput
+              output={
+                output ? (
+                  // chunked: tool outputs can stream in while expanded — only
+                  // the growing last markdown block re-parses per tick.
+                  <Response chunked>
+                    {typeof output === "string"
+                      ? output
+                      : JSON.stringify(output, null, 2)}
+                  </Response>
+                ) : (
+                  !untypedToolPart.errorText && (
+                    <Skeleton className="h-4 w-full" />
+                  )
+                )
+              }
+              errorText={untypedToolPart.errorText}
+            />
+          </ToolContent>
+        </Tool>
+          {showProjectLink && <OpenProjectLink output={output} sessionProjectId={projectId} />}
       </>
     );
   };
@@ -429,8 +433,9 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
         handleCredentialResume,
         guestMode,
         controller.session?.id ?? "",
+        controller.session?.project ?? "",
       ),
-    [controller.approveToolForChat, handleCredentialResume, guestMode, controller.session?.id],
+    [controller.approveToolForChat, handleCredentialResume, guestMode, controller.session?.id, controller.session?.project],
   );
   const GroupedToolPartComponent = useMemo(
     () =>

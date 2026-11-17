@@ -69,14 +69,39 @@ describe("create_project approval card", () => {
   });
 });
 
+describe("long file lists", () => {
+  it("shows ten names, counts the rest and keeps the buttons in reach", () => {
+    const names = Array.from({ length: 60 }, (_, i) => `datei-${i}.pdf`);
+    renderApproval(part(names));
+    expect(screen.getByText("datei-9.pdf")).toBeTruthy();
+    expect(screen.queryByText("datei-10.pdf")).toBeNull();
+    expect(screen.getByText("und 50 weitere")).toBeTruthy();
+    expect(screen.getByRole("list").className).toContain("overflow-y-auto");
+    expect(screen.getByText("Einmal erlauben")).toBeTruthy();
+  });
+});
+
 describe("OpenProjectLink", () => {
   it("links to the project found in the result", () => {
     render(
       <NextIntlClientProvider locale="de" messages={de}>
-        <OpenProjectLink output={{ result: `Projekt angelegt: /projects/${ID}` }} />
+        <OpenProjectLink output={{ result: `Projekt angelegt: /projects/${ID}` }} sessionProjectId={ID} />
       </NextIntlClientProvider>,
     );
     expect(screen.getByRole("link", { name: "Projekt öffnen" }).getAttribute("href")).toBe(`/projects/${ID}`);
+  });
+
+  it("renders nothing when the session has no such project, even if the text names a path", () => {
+    const output = { result: `Fehlgeschlagen, siehe /projects/${ID}` };
+    for (const sessionProjectId of [undefined, "", "other-project"]) {
+      const { container } = render(
+        <NextIntlClientProvider locale="de" messages={de}>
+          <OpenProjectLink output={output} sessionProjectId={sessionProjectId} />
+        </NextIntlClientProvider>,
+      );
+      expect(container.textContent).toBe("");
+      cleanup();
+    }
   });
 
   it("renders nothing without a link", () => {

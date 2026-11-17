@@ -2,7 +2,7 @@ import type { UIMessage } from "ai";
 
 export const CREATE_PROJECT_PART_TYPE = "tool-create_project";
 
-const PROJECT_LINK = /\/projects\/[0-9a-f-]{36}/i;
+const PROJECT_LINK = /\/projects\/([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})(?![0-9a-z-])/i;
 
 /**
  * toolCallIds of create_project calls that have finished successfully: final
@@ -29,13 +29,13 @@ export function describeCreateProjectInput(input: unknown): { name: string; file
   return { name, files };
 }
 
-/** The relative `/projects/<id>` link inside a create_project output, if any. */
-export function projectLinkOf(output: unknown): string | null {
+/** The project id of the relative `/projects/<id>` link inside a create_project output, if any. */
+export function projectIdOf(output: unknown): string | null {
   const text =
     typeof output === "string"
       ? output
       : output && typeof output === "object" && typeof (output as { result?: unknown }).result === "string"
         ? (output as { result: string }).result
         : "";
-  return text.match(PROJECT_LINK)?.[0] ?? null;
+  return text.match(PROJECT_LINK)?.[1] ?? null;
 }

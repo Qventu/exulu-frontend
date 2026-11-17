@@ -649,7 +649,7 @@ export function useChatSession({
     // navigations — the legacy monolith reset currentSession the same way).
     setMessages(initialMessages);
     handledProjectCalls.current = new Set(createProjectCallIds(initialMessages));
-    setProjectLookupId(null);
+    clearProjectLookup();
     clearError();
     setServerContextBlocked(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -745,34 +745,81 @@ export function useChatSession({
   // The session row gains a project when the tool finishes, but this hook read
   // `session.project` once on mount. A finished call seen NOW (not one already
   // in the history, which a reopened chat gets from the row itself) triggers a
-  // single refetch of the row; its project id then feeds useChatProjectFiles.
+  // refetch of the row; its project id then feeds useChatProjectFiles. A call
+  // counts as handled only once its lookup has settled, a row that is still
+  // without a project is retried once, and a call that finishes while a lookup
+  // is in flight is looked up again right after it.
   const handledProjectCalls = React.useRef<Set<string>>(new Set(createProjectCallIds(initialMessages)));
-  const [projectLookupId, setProjectLookupId] = React.useState<string | null>(null);
-  React.useEffect(() => {
-    const fresh = createProjectCallIds(messages).filter((id) => !handledProjectCalls.current.has(id));
-    if (fresh.length === 0) return;
-    fresh.forEach((id) => handledProjectCalls.current.add(id));
-    const sessionId = currentSessionRef.current?.id;
-    if (sessionId && sessionId !== "new") setProjectLookupId(sessionId);
-  }, [messages]);
+  const pendingProjectCalls = React.useRef<Set<string>>(new Set());
+  const inFlightProjectCalls = React.useRef<string[]>([]);
+  const projectRetryTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [projectLookup, setProjectLookup] = React.useState<{ sessionId: string; attempt: number } | null>(null);
 
-  const projectLookup = useQuery(GET_AGENT_SESSION_BY_ID, {
-    variables: { id: projectLookupId },
-    skip: !projectLookupId,
+  const clearProjectLookup = () => {
+    if (projectRetryTimer.current) clearTimeout(projectRetryTimer.current);
+    projectRetryTimer.current = null;
+    pendingProjectCalls.current = new Set();
+    inFlightProjectCalls.current = [];
+    setProjectLookup(null);
+  };
+
+  React.useEffect(() => {
+    for (const id of createProjectCallIds(messages)) {
+      if (!handledProjectCalls.current.has(id)) pendingProjectCalls.current.add(id);
+    }
+    if (projectLookup || projectRetryTimer.current || pendingProjectCalls.current.size === 0) return;
+    const sessionId = currentSessionRef.current?.id;
+    if (!sessionId || sessionId === "new") return;
+    inFlightProjectCalls.current = [...pendingProjectCalls.current];
+    setProjectLookup({ sessionId, attempt: 0 });
+  }, [messages, projectLookup]);
+
+  React.useEffect(
+    () => () => {
+      if (projectRetryTimer.current) clearTimeout(projectRetryTimer.current);
+    },
+    [],
+  );
+
+  const projectLookupQuery = useQuery(GET_AGENT_SESSION_BY_ID, {
+    variables: { id: projectLookup?.sessionId },
+    skip: !projectLookup,
     fetchPolicy: "network-only",
   });
-  const projectLookupRow = projectLookup.data?.agent_sessionById;
+  const projectLookupRow = projectLookupQuery.data?.agent_sessionById;
   React.useEffect(() => {
-    if (!projectLookupId) return;
-    if (!projectLookupRow && !projectLookup.error) return; // still loading
+    if (!projectLookup || projectLookupQuery.loading) return;
+    const settle = () => {
+      for (const id of inFlightProjectCalls.current) {
+        handledProjectCalls.current.add(id);
+        pendingProjectCalls.current.delete(id);
+      }
+      inFlightProjectCalls.current = [];
+      setProjectLookup(null);
+    };
     const project = projectLookupRow?.project as string | null | undefined;
-    if (project && currentSessionRef.current?.id === projectLookupId) {
-      const next = { ...currentSessionRef.current, project } as AgentSession;
-      currentSessionRef.current = next;
-      setCurrentSession(next);
+    if (project) {
+      if (currentSessionRef.current?.id === projectLookup.sessionId) {
+        const next = { ...currentSessionRef.current, project } as AgentSession;
+        currentSessionRef.current = next;
+        setCurrentSession(next);
+      }
+      settle();
+      return;
     }
-    setProjectLookupId(null);
-  }, [projectLookupId, projectLookupRow, projectLookup.error]);
+    if (projectLookupRow && projectLookup.attempt === 0) {
+      // The row exists but has no project yet: look once more shortly.
+      const { sessionId } = projectLookup;
+      setProjectLookup(null);
+      projectRetryTimer.current = setTimeout(() => {
+        projectRetryTimer.current = null;
+        if (currentSessionRef.current?.id !== sessionId) return;
+        setProjectLookup({ sessionId, attempt: 1 });
+      }, 1500);
+      return;
+    }
+    settle(); // no row, an error, or the retry also found nothing: give up quietly
+  }, [projectLookup, projectLookupRow, projectLookupQuery.loading, projectLookupQuery.error]);
 
   // --- token accounting (items 27/38) ------------------------------------------
   // Derived with useMemo (not state + effect): the effect variant queued a
