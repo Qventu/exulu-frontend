@@ -121,3 +121,18 @@ export function groupRememberParts(parts: ReadonlyArray<Record<string, unknown>>
   flush();
   return groups;
 }
+
+/**
+ * A memory type as shown to the reader. The values are whatever the memory
+ * context's enum defines and are usually written like constants
+ * ("PREFERENCE", "work_instruction"); the stored value stays untouched, only
+ * the label is made readable. A value that is already mixed-case is someone's
+ * deliberate spelling and is left alone.
+ */
+export function memoryTypeLabel(value: string): string {
+  const isConstantCase = value === value.toUpperCase() || value === value.toLowerCase();
+  if (!isConstantCase) return value;
+  const spaced = value.replace(/[_-]+/g, " ").trim();
+  if (!spaced) return value;
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
+}

@@ -1262,13 +1262,12 @@
     },
     "memory": {
       "rememberTitle": "Remember this?",
-      "rememberHint": "Nothing is saved until you choose Save.",
       "updateTitle": "Update this memory?",
       "forgetTitle": "Forget this memory?",
       "forgetDescription": "“{title}” will be deleted from {agent}'s memory.",
-      "wording": "Wording",
+      "wording": "What {agent} will remember",
       "type": "Type",
-      "whoCanSee": "Who can see this",
+      "whoCanSee": "Who is this for",
       "pickSubjects": "Choose at least one user, role or team.",
       "save": "Save",
       "saveAll": "Save all ({count})",
@@ -1316,7 +1315,16 @@
       "panelTip": "Tip: say \"forget that\" in the chat.",
       "allMine": "All my memories",
       "panelEmptyTitle": "{agent} doesn't remember anything about you yet",
-      "panelEmptyDescription": "Say \"remember that …\" in the chat. You'll check the wording and choose who can see it before anything is saved."
+      "panelEmptyDescription": "Say \"remember that …\" in the chat. You'll check the wording and choose who can see it before anything is saved.",
+      "rememberDescription": "{agent} would like to keep this for future chats. Check the text and choose who it applies to. Nothing is saved until you choose Save.",
+      "wordingMissing": "Enter what should be remembered to save.",
+      "modeMeaning": {
+        "private": "Only you. {agent} uses it in your chats and nobody else can see it.",
+        "public": "Everyone who uses {agent}. It can shape the answers your colleagues get, and they can see it.",
+        "users": "Only the people you pick. {agent} uses it in their chats and yours.",
+        "roles": "Everyone with the roles you pick. {agent} uses it in their chats and yours.",
+        "teams": "Everyone in the teams you pick. {agent} uses it in their chats and yours."
+      }
     },
     "approval": {
       "allowForChat": "Allow for this chat",

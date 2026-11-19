@@ -79,3 +79,61 @@ describe("MemoryCard wording", () => {
     expect(wording()).toBeNull();
   });
 });
+
+/**
+ * Usability pass on the same card. The person who reported the empty field
+ * also had no way to tell what the card wanted from them: "Wording", a type in
+ * capitals, and Private/Public with no word on what either means for a memory.
+ */
+describe("MemoryCard — what it tells the reader", () => {
+  afterEach(cleanup);
+
+  const complete = (input: Record<string, unknown> = {}) =>
+    part(
+      "approval-requested",
+      { title: "Busprobleme", information: WORDING, type: "FACT", ...input },
+      { id: "ap-1" },
+    );
+
+  it("says what is happening and that nothing is saved yet, above the form", async () => {
+    render(view(complete()));
+    const intro = await screen.findByText(/Newton would like to keep this/);
+    expect(intro.textContent).toContain("Nothing is saved until you choose Save");
+    const box = screen.getByRole("textbox");
+    // Above, not below: DOCUMENT_POSITION_FOLLOWING means the textbox comes after.
+    expect(intro.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("labels the text by what it is for, naming the agent", async () => {
+    render(view(complete()));
+    expect(await screen.findByLabelText("What Newton will remember")).toBe(screen.getByRole("textbox"));
+  });
+
+  it("explains what the chosen visibility means for a memory", async () => {
+    render(view(complete()));
+    const meaning = await screen.findByTestId("memory-visibility-meaning");
+    expect(meaning.textContent).toMatch(/Only you/);
+  });
+
+  it("explains a public memory in terms of other people's answers", async () => {
+    render(view(complete({ visibility: "public" })));
+    const meaning = await screen.findByTestId("memory-visibility-meaning");
+    expect(meaning.textContent).toMatch(/Everyone who uses Newton/);
+    expect(meaning.textContent).toMatch(/colleagues/);
+  });
+
+  it("says why Save is unavailable when there is no text", async () => {
+    render(view(complete({ information: "" })));
+    await screen.findByRole("textbox");
+    expect(screen.getByText("Enter what should be remembered to save.")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("gives no such reason once there is text", async () => {
+    render(view(complete()));
+    await screen.findByRole("textbox");
+    expect(screen.queryByText("Enter what should be remembered to save.")).toBeNull();
+    expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+});
+

@@ -34,7 +34,7 @@ import type { Agent } from "@/types/models/agent";
 
 import { GET_CONTEXT_BY_ID, GET_ITEMS, PAGINATION_POSTFIX } from "../queries";
 import {
-  DECLINED_REASON, encodeMemoryDecision, memoryProposalFromPart, memoryResolvedState,
+  DECLINED_REASON, encodeMemoryDecision, memoryProposalFromPart, memoryResolvedState, memoryTypeLabel,
   type MemoryDecision, type RbacGrant, type RightsMode,
 } from "./memory-card-data";
 import { useMemoryEdits } from "./memory-stack";
@@ -221,6 +221,8 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
       (state.rights_mode === "roles" && state.roles.length === 0) ||
       (state.rights_mode === "teams" && state.teams.length === 0));
 
+  const wordingMissing = !isUpdate && !state.information.trim();
+
   // ── Forget: ConfirmDialog instead of a form ───────────────────────────────
   if (proposal.kind === "forget") {
     return (
@@ -252,31 +254,53 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
           <Bookmark className="size-4 text-muted-foreground" aria-hidden="true" />
           {isUpdate ? t("memory.updateTitle") : t("memory.rememberTitle")}
         </CardTitle>
+        {/* What is happening and what is expected of the reader, BEFORE the
+            form: the card appears where an answer would, and without this it
+            reads as a form nobody asked for. */}
+        {!isUpdate && (
+          <p className="text-sm text-muted-foreground">
+            {t("memory.rememberDescription", { agent: agent.name })}
+          </p>
+        )}
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-4">
         {isUpdate && <MemoryRef memoryId={proposal.memoryId} agent={agent} label={t("memory.current")} />}
         <div className="space-y-1">
-          <Label htmlFor={`mem-${part.toolCallId}`}>{isUpdate ? t("memory.proposed") : t("memory.wording")}</Label>
-          <Textarea id={`mem-${part.toolCallId}`} value={state.information} rows={3} onChange={(e) => setState((s) => (s ? { ...s, information: e.target.value } : s))} />
+          <Label htmlFor={`mem-${part.toolCallId}`}>{isUpdate ? t("memory.proposed") : t("memory.wording", { agent: agent.name })}</Label>
+          <Textarea id={`mem-${part.toolCallId}`} value={state.information} rows={3}
+            aria-describedby={wordingMissing ? `mem-${part.toolCallId}-missing` : undefined}
+            onChange={(e) => setState((s) => (s ? { ...s, information: e.target.value } : s))} />
+          {/* Save is disabled without wording; say why instead of leaving a
+              dead button. */}
+          {wordingMissing && (
+            <p id={`mem-${part.toolCallId}-missing`} className="text-xs text-muted-foreground">{t("memory.wordingMissing")}</p>
+          )}
         </div>
         {typeValues.length > 0 && (
           <div className="space-y-1">
-            <Label>{t("memory.type")}</Label>
+            <Label id={`mem-${part.toolCallId}-type`}>{t("memory.type")}</Label>
             <Select value={state.type || typeValues[0]} onValueChange={(v) => setState((s) => (s ? { ...s, type: v } : s))}>
-              <SelectTrigger className="w-full sm:w-56"><SelectValue /></SelectTrigger>
-              <SelectContent>{typeValues.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
+              <SelectTrigger className="w-full sm:w-56" aria-labelledby={`mem-${part.toolCallId}-type`}><SelectValue /></SelectTrigger>
+              <SelectContent>{typeValues.map((v) => <SelectItem key={v} value={v}>{memoryTypeLabel(v)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
         )}
         {!isUpdate && (
           <div className="space-y-1">
             <Label>{t("memory.whoCanSee")}</Label>
-            <RBACControl subjectLabel="memory" initialRightsMode={state.rights_mode} initialUsers={[]} initialRoles={[]} initialTeams={[]}
+            <RBACControl subjectLabel="memory" label={t("memory.whoCanSee")} initialRightsMode={state.rights_mode} initialUsers={[]} initialRoles={[]} initialTeams={[]}
               onChange={(rights_mode, users, roles, teams) => setState((s) => (s ? { ...s, rights_mode, users, roles, teams } : s))} />
             {/* A subject mode (users/roles/teams) with nobody actually picked
                 yet would save to no one — block Save instead (finding 10). */}
-            {subjectsMissing && (
+            {subjectsMissing ? (
               <p className="text-xs text-muted-foreground">{t("memory.pickSubjects")}</p>
+            ) : (
+              // What the chosen mode MEANS for a memory. "Private" and "Public"
+              // alone do not say that a public memory shapes the answers other
+              // people get — which is the decision this card exists for.
+              <p className="text-xs text-muted-foreground" data-testid="memory-visibility-meaning">
+                {t(`memory.modeMeaning.${state.rights_mode}`, { agent: agent.name })}
+              </p>
             )}
           </div>
         )}
@@ -290,7 +314,6 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
             <Button className="h-11 sm:h-9 sm:flex-1" disabled={isUpdate ? !(state.information.trim() || state.type) : !state.information.trim() || subjectsMissing} onClick={() => decide(true)}>{isUpdate ? t("memory.update") : t("memory.save")}</Button>
           </div>
         )}
-        {!isUpdate && <p className="text-xs text-muted-foreground">{t("memory.rememberHint")}</p>}
       </CardContent>
     </Card>
   );

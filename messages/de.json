@@ -1261,14 +1261,13 @@
       "title": "Agent auswählen"
     },
     "memory": {
-      "rememberTitle": "Im Gedächtnis speichern?",
-      "rememberHint": "Nichts wird gespeichert, bevor du „Speichern“ wählst.",
+      "rememberTitle": "Soll ich mir das merken?",
       "updateTitle": "Diese Erinnerung aktualisieren?",
       "forgetTitle": "Diese Erinnerung vergessen?",
       "forgetDescription": "„{title}“ wird aus dem Gedächtnis von {agent} gelöscht.",
-      "wording": "Wortlaut",
+      "wording": "Das merkt sich {agent}",
       "type": "Typ",
-      "whoCanSee": "Wer kann das sehen",
+      "whoCanSee": "Für wen gilt das",
       "pickSubjects": "Wähle mindestens einen Nutzer, eine Rolle oder ein Team.",
       "save": "Speichern",
       "saveAll": "Alle speichern ({count})",
@@ -1316,7 +1315,16 @@
       "panelTip": "Tipp: Sag im Chat „vergiss das“.",
       "allMine": "Alle meine Erinnerungen",
       "panelEmptyTitle": "{agent} erinnert sich noch an nichts über dich",
-      "panelEmptyDescription": "Sag im Chat „merk dir …“. Du prüfst den Wortlaut und wählst, wer es sehen darf, bevor etwas gespeichert wird."
+      "panelEmptyDescription": "Sag im Chat „merk dir …“. Du prüfst den Wortlaut und wählst, wer es sehen darf, bevor etwas gespeichert wird.",
+      "rememberDescription": "{agent} möchte sich das für künftige Chats merken. Prüfe den Text und wähle, für wen es gilt. Gespeichert wird erst, wenn du „Speichern“ wählst.",
+      "wordingMissing": "Trage ein, was gemerkt werden soll, um zu speichern.",
+      "modeMeaning": {
+        "private": "Nur für dich. {agent} nutzt es in deinen Chats, niemand sonst kann es sehen.",
+        "public": "Für alle, die {agent} nutzen. Es kann die Antworten deiner Kollegen beeinflussen, und sie können es sehen.",
+        "users": "Nur für die Personen, die du auswählst. {agent} nutzt es in ihren und deinen Chats.",
+        "roles": "Für alle mit den Rollen, die du auswählst. {agent} nutzt es in ihren und deinen Chats.",
+        "teams": "Für alle in den Teams, die du auswählst. {agent} nutzt es in ihren und deinen Chats."
+      }
     },
     "approval": {
       "allowForChat": "Für diesen Chat erlauben",

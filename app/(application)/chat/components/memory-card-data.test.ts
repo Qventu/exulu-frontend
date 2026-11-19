@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DECLINED_REASON, encodeMemoryDecision, groupRememberParts, isMemoryToolPart, memoryKind,
-  memoryProposalFromPart, memoryResolvedState,
-} from "./memory-card-data";
+  memoryProposalFromPart, memoryResolvedState, memoryTypeLabel } from "./memory-card-data";
 
 const part = (type: string, extra: Record<string, unknown> = {}) => ({ type, toolCallId: "c1", state: "approval-requested", ...extra }) as any;
 
@@ -83,3 +82,25 @@ describe("groupRememberParts", () => {
     ]);
   });
 });
+
+describe("memoryTypeLabel", () => {
+  it.each([
+    ["PREFERENCE", "Preference"],
+    ["WORK_INSTRUCTION", "Work instruction"],
+    ["work-instruction", "Work instruction"],
+    ["fact", "Fact"],
+  ])("makes the constant %s readable", (value, label) => {
+    expect(memoryTypeLabel(value)).toBe(label);
+  });
+
+  it("leaves a deliberately mixed-case value alone", () => {
+    expect(memoryTypeLabel("FST-Handbuch")).toBe("FST-Handbuch");
+    expect(memoryTypeLabel("Kundenwunsch")).toBe("Kundenwunsch");
+  });
+
+  it("returns an empty or separator-only value unchanged", () => {
+    expect(memoryTypeLabel("")).toBe("");
+    expect(memoryTypeLabel("__")).toBe("__");
+  });
+});
+

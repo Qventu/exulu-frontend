@@ -66,6 +66,7 @@ export function RBACControl({
   initialRightsMode,
   modalMode = false,
   subjectLabel = 'agent',
+  label,
   initialUsers,
   initialRoles,
   initialTeams,
@@ -81,6 +82,14 @@ export function RBACControl({
    * existing call sites render byte-identical copy.
    */
   subjectLabel?: string,
+  /**
+   * Name of the control when the caller renders its own visible label above
+   * it. The built-in "Visibility & sharing" heading is then left out, so the
+   * same thing is not announced twice (the chat memory card showed "Who can
+   * see this" directly above it), and this text names the picker for screen
+   * readers instead.
+   */
+  label?: string,
   initialRightsMode: 'private' | 'users' | 'roles' | 'teams' | 'public' /* | 'projects' */ | undefined,
   // Accepts either shape (see IncomingUserId); normalised to numbers on the way
   // in, so onChange always emits the numeric ids the API expects.
@@ -206,13 +215,14 @@ export function RBACControl({
   return (
     <>
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Visibility & sharing</Label>
+        {label ? null : <Label className="text-sm font-medium">Visibility & sharing</Label>}
         <Popover modal={modalMode || false} open={visibilitySelectorOpen} onOpenChange={setVisibilitySelectorOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               role="combobox"
               aria-expanded={visibilitySelectorOpen}
+              aria-label={label}
               className="w-full justify-between text-sm capitalize"
             >
               {visibilityOptions.find(option => option.value === visibility)?.label || "Select visibility..."}
