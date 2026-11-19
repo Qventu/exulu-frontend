@@ -7,7 +7,24 @@ import {
   EMAIL_LIMITS,
 } from "@/lib/public-auth/otp-rate-limit";
 
+import { knownHosts, normalizeHost, readHostRoutingConfig } from "@/lib/host-routing";
+
 export const dynamic = "force-dynamic";
+
+// With AUTH_TRUST_HOST set, NextAuth builds its sign-in, callback and e-mail
+// link URLs from the request's host instead of NEXTAUTH_URL — which is what
+// lets one deployment sign people in under several hostnames. It reads
+// X-Forwarded-Host first, and a caller can send that header. Unchecked, a
+// forged value would put a foreign hostname into a sign-in e-mail sent to
+// someone else. So when host routing is on, only the configured hostnames are
+// answered for.
+function untrustedHost(req: NextRequest): Response | null {
+  const allowed = knownHosts(readHostRoutingConfig());
+  if (!allowed) return null;
+  const host = normalizeHost(req.headers.get("x-forwarded-host") ?? req.headers.get("host"));
+  if (host && allowed.includes(host)) return null;
+  return NextResponse.json({ error: "UnknownHost" }, { status: 400 });
+}
 
 async function handler(request: any, response: any) {
   const authOptions = await getAuthOptions();
@@ -55,10 +72,14 @@ async function limited(req: NextRequest): Promise<Response | null> {
 }
 
 export async function GET(req: NextRequest, ctx: any) {
+  const rejected = untrustedHost(req);
+  if (rejected) return rejected;
   return handler(req, ctx);
 }
 
 export async function POST(req: NextRequest, ctx: any) {
+  const rejected = untrustedHost(req);
+  if (rejected) return rejected;
   const blocked = await limited(req);
   if (blocked) return blocked;
   return handler(req, ctx);

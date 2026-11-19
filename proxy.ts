@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { LOCALE_COOKIE, defaultLocale, locales, type Locale } from './i18n/config';
+import { decideHostRouting, localeFromSearch, readHostRoutingConfig } from './lib/host-routing';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -129,10 +130,42 @@ export function buildCsp(): string {
 }
 
 export default function proxy(request: NextRequest) {
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-next-pathname', encodeURIComponent(request.nextUrl.pathname));
+    // Which part of the product this hostname serves (lib/host-routing.ts).
+    // Decided on the Host header alone: it is what the platform routed on,
+    // whereas X-Forwarded-Host can be supplied by the caller, and this decision
+    // is what keeps the internal application off the public hostname.
+    const routing = decideHostRouting(
+        request.headers.get('host'),
+        request.nextUrl.pathname,
+        readHostRoutingConfig(),
+    );
 
-    const locale = request.cookies.get(LOCALE_COOKIE)?.value || defaultLocale;
+    if (routing.kind === 'notFound') {
+        return new NextResponse('Not found', {
+            status: 404,
+            headers: { 'Content-Security-Policy': buildCsp() },
+        });
+    }
+
+    if (routing.kind === 'redirect') {
+        // Path and query travel along, so a link sent out under the old
+        // address — including its ?lang= — lands on the same page.
+        const target = request.nextUrl.clone();
+        target.protocol = 'https';
+        target.host = routing.host;
+        target.port = '';
+        return NextResponse.redirect(target, 307);
+    }
+
+    const pathname = routing.kind === 'rewrite' ? routing.pathname : request.nextUrl.pathname;
+
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-next-pathname', encodeURIComponent(pathname));
+
+    // ?lang= wins over the cookie for this request and is written to the cookie
+    // on the way out, so it survives the redirects that follow a first visit.
+    const queryLocale = localeFromSearch(request.nextUrl.searchParams.get('lang'));
+    const locale = queryLocale || request.cookies.get(LOCALE_COOKIE)?.value || defaultLocale;
     const validLocale = locales.includes(locale as Locale) ? locale : defaultLocale;
     requestHeaders.set('x-locale', validLocale);
 
@@ -149,11 +182,23 @@ export default function proxy(request: NextRequest) {
     const tour = request.nextUrl.searchParams.get('tour');
     if (tour) requestHeaders.set('x-demo-tour', tour);
 
-    const response = NextResponse.next({
-        request: {
-            headers: requestHeaders,
-        },
-    });
+    let response: NextResponse;
+    if (routing.kind === 'rewrite') {
+        // A rewrite, not a redirect: the address bar keeps the bare hostname.
+        const target = request.nextUrl.clone();
+        target.pathname = routing.pathname;
+        response = NextResponse.rewrite(target, { request: { headers: requestHeaders } });
+    } else {
+        response = NextResponse.next({ request: { headers: requestHeaders } });
+    }
+
+    if (queryLocale) {
+        response.cookies.set(LOCALE_COOKIE, queryLocale, {
+            path: '/',
+            maxAge: 60 * 60 * 24 * 365,
+            sameSite: 'lax',
+        });
+    }
 
     response.headers.set('Content-Security-Policy', buildCsp());
 
