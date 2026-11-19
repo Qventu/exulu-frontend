@@ -124,6 +124,12 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
 
   React.useEffect(() => {
     if (state !== null) return;
+    // Seed only once the call asks for approval. The part exists earlier,
+    // while the model is still writing its arguments, and its input is then
+    // partial or `{}`. Seeding from that — this effect runs once — left the
+    // wording empty for good and Save dead, whenever the context query below
+    // was already cached and no longer delayed the seed past the streaming.
+    if (!approvalId) return;
     if (agent.memory && loading) return;
     if (needsCurrentWording && currentItemLoading) return;
     setState({
@@ -133,7 +139,7 @@ export function MemoryCard({ part, agent, addToolApprovalResponse, inStack = fal
       rights_mode: preselect(agent, context?.configuration?.defaultRightsMode, proposal?.visibility ?? null),
       users: [], roles: [], teams: [],
     });
-  }, [state, agent, loading, proposal, context, typeValues, needsCurrentWording, currentItemLoading, currentInformation]);
+  }, [state, approvalId, agent, loading, proposal, context, typeValues, needsCurrentWording, currentItemLoading, currentInformation]);
 
   // Register current edits with the stack so "Save all" can read them.
   // No-ops while `state` is still null — nothing to register yet.
