@@ -68,6 +68,7 @@ function toAgent(meta: PublicAgentMeta, animations?: AnimationUrls): Agent {
     description: meta.description,
     image: meta.image ?? undefined,
     welcomemessage: meta.welcomemessage,
+    welcomemessage_translations: meta.welcomemessage_translations,
     slug: meta.slug,
     // Absolute URLs, not storage keys: AgentVisual resolves a key through an
     // authenticated presigned-URL endpoint, which a guest cannot call, so it

@@ -26,7 +26,7 @@ import type {
   DynamicToolUIPart,
   UIMessage,
 } from "ai";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { UserContext } from "@/app/(application)/authenticated";
@@ -52,6 +52,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ClaimCheckSourceType } from "@/lib/api/claim-check";
 import { can } from "@/lib/rights";
 import { cn } from "@/lib/utils";
+import { resolveWelcomeMessage } from "@/lib/welcome-message";
 import type { Agent } from "@/types/models/agent";
 
 import type { ChatSessionController } from "../hooks";
@@ -385,6 +386,10 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
   const t = useTranslations("chat");
   const { user } = useContext(UserContext);
   const { agent, messages, status, catchingUp } = controller;
+  // The welcome message can have a version per language (lib/welcome-message.ts);
+  // the reader gets theirs, or the default.
+  const locale = useLocale();
+  const welcomeMessage = resolveWelcomeMessage(agent, locale);
 
   // Messages-local state: the feedback dialog target (items 57/58).
   const [feedbackTarget, setFeedbackTarget] = useState<FeedbackTarget | null>(
@@ -504,11 +509,11 @@ export function MessageColumn({ controller, guestMode = false }: MessageColumnPr
                   className="h-16 w-auto object-contain"
                 />
               )}
-              {agent.welcomemessage ? (
+              {welcomeMessage ? (
                 <Message from="assistant" key="welcome-message" className="mt-4">
                   <MessageContent id="message_id_welcome_message">
                     <Response className="chat-response-container">
-                      {agent.welcomemessage}
+                      {welcomeMessage}
                     </Response>
                   </MessageContent>
                 </Message>

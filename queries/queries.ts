@@ -114,6 +114,7 @@ memory
 memory_config
 instructions
 welcomemessage
+welcomemessage_translations
 defaultagent
 description
 active

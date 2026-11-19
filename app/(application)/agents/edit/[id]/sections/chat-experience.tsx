@@ -13,8 +13,8 @@ import { SettingRow } from "@/components/primitives/setting-row";
 import { Form, FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 
+import { WelcomeMessageField } from "../components/welcome-message-field";
 import type { EditorSectionProps } from "./types";
 
 export function ChatExperienceSection({ editor }: EditorSectionProps) {
@@ -33,31 +33,24 @@ export function ChatExperienceSection({ editor }: EditorSectionProps) {
 
       <Form {...editor.form}>
         <div className="space-y-3">
-          {/* Welcome message — uses a setting-row-styled wrapper but with a
-              full-width textarea below the label. */}
+          {/* Welcome message — the default (English) plus an optional
+              version per further interface language. */}
           <FormField
             control={editor.form.control}
             name="welcomemessage"
             render={({ field }) => (
-              <div className="space-y-2 rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <label
-                    htmlFor="agent-welcome-message"
-                    className="text-sm font-medium"
-                  >
-                    {t("editor.chatExperience.welcomeLabel")}
-                  </label>
-                  <p className="text-sm text-muted-foreground">
-                    {t("editor.chatExperience.welcomeDescription")}
-                  </p>
-                </div>
-                <Textarea
-                  id="agent-welcome-message"
-                  rows={3}
-                  {...field}
-                  value={field.value ?? ""}
-                />
-              </div>
+              <FormField
+                control={editor.form.control}
+                name="welcomemessage_translations"
+                render={({ field: translations }) => (
+                  <WelcomeMessageField
+                    value={field.value}
+                    onChange={field.onChange}
+                    translations={translations.value}
+                    onTranslationsChange={translations.onChange}
+                  />
+                )}
+              />
             )}
           />
 

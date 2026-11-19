@@ -23,6 +23,8 @@ export interface Agent {
     modelName?: string;
     providerName?: string;
     welcomemessage?: string;
+    /** Further language versions of the welcome message, keyed by locale (lib/welcome-message.ts). */
+    welcomemessage_translations?: Record<string, string> | string | null;
     defaultagent?: boolean;
     type: "agent";
     name: string;
