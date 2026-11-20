@@ -6,6 +6,8 @@ export interface PublicAgentMeta {
   description: string;
   image: string | null;
   welcomemessage: string;
+  /** Language versions keyed by locale. Absent on backends that predate the field. */
+  welcomemessage_translations?: Record<string, string>;
   slug: string;
   guest_auth_mode: PublicAgentAuthMode;
   guest_has_cover: boolean;

@@ -23,6 +23,10 @@
  */
 
 import { useMutation, useQuery } from "@apollo/client";
+import {
+  readWelcomeTranslations,
+  writeWelcomeTranslations,
+} from "@/lib/welcome-message";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -79,6 +83,9 @@ export const agentEditorSchema = z.object({
     .nullable()
     .optional(),
   welcomemessage: z.string().nullable().optional(),
+  // Language versions of the welcome message, keyed by locale. Kept as the
+  // raw draft while editing; trimmed and emptied-to-null on save.
+  welcomemessage_translations: z.record(z.string(), z.string()).optional(),
   defaultagent: z.boolean().optional(),
   feedback: z.boolean().optional(),
   suggestions_enabled: z.boolean().optional(),
@@ -236,6 +243,9 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       description: agent.description ?? "",
       instructions: agent.instructions ?? "",
       welcomemessage: (agent as any).welcomemessage ?? "",
+      welcomemessage_translations: readWelcomeTranslations(
+        (agent as any).welcomemessage_translations,
+      ),
       defaultagent: !!(agent as any).defaultagent,
       feedback: !!(agent as any).feedback,
       suggestions_enabled: !!(agent as any).suggestions_enabled,
@@ -358,6 +368,12 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       description: values.description,
       instructions: values.instructions,
       welcomemessage: values.welcomemessage,
+      // Stringified like the other json columns in this mutation; null when
+      // no version is written.
+      welcomemessage_translations: (() => {
+        const stored = writeWelcomeTranslations(values.welcomemessage_translations);
+        return stored ? JSON.stringify(stored) : null;
+      })(),
       defaultagent: values.defaultagent,
       category: values.category,
       active: values.active,
@@ -454,6 +470,9 @@ export function useAgentEditor(agent: Agent): UseAgentEditor {
       description: agent.description ?? "",
       instructions: agent.instructions ?? "",
       welcomemessage: (agent as any).welcomemessage ?? "",
+      welcomemessage_translations: readWelcomeTranslations(
+        (agent as any).welcomemessage_translations,
+      ),
       defaultagent: !!(agent as any).defaultagent,
       feedback: !!(agent as any).feedback,
       suggestions_enabled: !!(agent as any).suggestions_enabled,

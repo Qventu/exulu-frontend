@@ -75,6 +75,7 @@ export const AGENT_EDITOR_FIELDS = `
   memory_config
   instructions
   welcomemessage
+  welcomemessage_translations
   defaultagent
   description
   active
@@ -354,6 +355,7 @@ export const UPDATE_AGENT_EDITOR = gql`
     $model: String
     $description: String
     $welcomemessage: String
+    $welcomemessage_translations: JSON
     $defaultagent: Boolean
     $memory: String
     $memory_config: JSON
@@ -383,6 +385,7 @@ export const UPDATE_AGENT_EDITOR = gql`
         model: $model
         description: $description
         welcomemessage: $welcomemessage
+        welcomemessage_translations: $welcomemessage_translations
         defaultagent: $defaultagent
         memory: $memory
         memory_config: $memory_config

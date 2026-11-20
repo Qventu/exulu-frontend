@@ -418,8 +418,10 @@
         "sandboxLabel": "Datei-Sandbox",
         "suggestionsDescription": "Schlägt nach jeder Antwort bis zu 3 mögliche Folgefragen vor. Nutzt das Modell des Agenten; Tokens zählen zum Limit.",
         "suggestionsLabel": "Folge-Vorschläge",
-        "welcomeDescription": "Wird angezeigt, wenn der Agent erstmals im Chat geladen wird.",
-        "welcomeLabel": "Willkommensnachricht"
+        "welcomeDescription": "Wird angezeigt, wenn der Agent erstmals im Chat geladen wird. Bitte auf Englisch schreiben: Das ist der Standard, für Englisch und für jede Sprache ohne eigene Fassung unten.",
+        "welcomeLabel": "Willkommensnachricht",
+        "welcomeTranslationsDescription": "Optional. Wer die Oberfläche in einer dieser Sprachen nutzt, sieht diese Fassung statt des Standards.",
+        "welcomeTranslationsLabel": "Sprachversionen"
       },
       "developer": {
         "curlLabel": "curl",

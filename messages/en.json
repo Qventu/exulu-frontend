@@ -418,8 +418,10 @@
         "sandboxLabel": "File sandbox",
         "suggestionsDescription": "After each reply, suggest up to 3 messages the user might send next. Uses the agent’s model; tokens count toward limits.",
         "suggestionsLabel": "Follow-up suggestions",
-        "welcomeDescription": "Shown when the agent is first loaded in chat.",
-        "welcomeLabel": "Welcome message"
+        "welcomeDescription": "Shown when the agent is first loaded in chat. Write it in English: it is the default, used for English and for any language without a version below.",
+        "welcomeLabel": "Welcome message",
+        "welcomeTranslationsDescription": "Optional. Readers using one of these languages see this version instead of the default.",
+        "welcomeTranslationsLabel": "Language versions"
       },
       "developer": {
         "curlLabel": "curl",
