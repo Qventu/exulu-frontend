@@ -15,6 +15,7 @@
  * - Chrome (wordmark, cover pane, slim footer with dynamic © year, terms
  *   link, locale toggle) lives in the route-local AuthShell frame.
  */
+import { microsoftSettings } from "@/lib/auth/oauth-providers";
 import "../globals.css";
 import { fontVariables } from "@/lib/fonts";
 import type { Viewport } from "next";
@@ -47,6 +48,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const config = {
     backend: process.env.BACKEND || "",
     google_client_id: process.env.GOOGLE_CLIENT_ID || "",
+    microsoft_enabled: !!microsoftSettings(process.env),
     auth_mode: process.env.AUTH_MODE || "",
     public_auth: {
       otp_available: !!process.env.EMAIL_SERVER_HOST,

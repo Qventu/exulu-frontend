@@ -1025,8 +1025,8 @@
       "Default": "Bei der Anmeldung ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
       "EmailSignin": "Der Anmeldecode konnte nicht gesendet werden. Prüfen Sie die Adresse und versuchen Sie es erneut.",
       "OAuthAccountNotLinked": "Diese E-Mail-Adresse ist bereits mit einer anderen Anmeldemethode verknüpft. Verwenden Sie stattdessen diese Methode.",
-      "OAuthCallback": "Die Google-Anmeldung wurde nicht abgeschlossen. Bitte versuchen Sie es erneut.",
-      "OAuthSignin": "Die Google-Anmeldung konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
+      "OAuthCallback": "Die Anmeldung mit Ihrem Google- oder Microsoft-Konto wurde nicht abgeschlossen. Bitte versuchen Sie es erneut.",
+      "OAuthSignin": "Die Anmeldung mit Ihrem Google- oder Microsoft-Konto konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
       "SessionRequired": "Bitte melden Sie sich an, um fortzufahren.",
       "Verification": "Der Code ist ungültig oder abgelaufen. Fordern Sie einen neuen an und versuchen Sie es erneut.",
       "title": "Anmeldung fehlgeschlagen"
@@ -1048,6 +1048,7 @@
     },
     "signIn": {
       "continueWithGoogle": "Mit Google fortfahren",
+      "continueWithMicrosoft": "Mit Microsoft fortfahren",
       "emailLabel": "E-Mail",
       "emailPlaceholder": "m@beispiel.de",
       "noAccount": "Kein Konto? Wenden Sie sich an Ihren Administrator.",

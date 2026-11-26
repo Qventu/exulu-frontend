@@ -45,6 +45,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
 import google from "../../../public/assets/google.svg";
+import microsoft from "../../../public/assets/microsoft.svg";
+import { GOOGLE_PROVIDER_ID, MICROSOFT_PROVIDER_ID } from "@/lib/auth/oauth-providers";
 import { AuthErrorAlert } from "./components/auth-error-alert";
 import { OtpStep } from "./components/otp-step";
 
@@ -77,7 +79,8 @@ export default function Login() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
-  const [googleSubmitting, setGoogleSubmitting] = React.useState(false);
+  // Id of the external provider the browser is being redirected to, if any.
+  const [oauthSubmitting, setOauthSubmitting] = React.useState<string | null>(null);
   // Seeded from ?error= (NextAuth full-redirect failures land here because
   // pages.signIn = /login); afterwards state-driven — no replace() loops.
   const [error, setError] = React.useState<string | null>(
@@ -89,7 +92,7 @@ export default function Login() {
     if (urlError) setError(urlError);
   }, [urlError]);
 
-  const pending = submitting || googleSubmitting;
+  const pending = submitting || oauthSubmitting !== null;
 
   async function handleIdentify(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -130,19 +133,28 @@ export default function Login() {
     }
   }
 
-  async function handleGoogleSignIn() {
+  async function handleOAuthSignIn(provider: string) {
     if (pending) return;
     setError(null);
-    setGoogleSubmitting(true);
+    setOauthSubmitting(provider);
     try {
       // Full redirect; pending state holds until the browser navigates (U10).
-      await signIn("google", { callbackUrl: destination });
+      await signIn(provider, { callbackUrl: destination });
     } catch (err: unknown) {
       console.error(err);
       setError("OAuthSignin");
-      setGoogleSubmitting(false);
+      setOauthSubmitting(null);
     }
   }
+
+  const oauthButtons = [
+    configContext?.google_client_id
+      ? { id: GOOGLE_PROVIDER_ID, icon: google, label: t("signIn.continueWithGoogle") }
+      : null,
+    configContext?.microsoft_enabled
+      ? { id: MICROSOFT_PROVIDER_ID, icon: microsoft, label: t("signIn.continueWithMicrosoft") }
+      : null,
+  ].filter((b) => b !== null);
 
   if (step === "verify") {
     return (
@@ -234,7 +246,7 @@ export default function Login() {
         </Button>
       </form>
 
-      {configContext?.google_client_id ? (
+      {oauthButtons.length > 0 ? (
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3" aria-hidden="true">
             <Separator className="flex-1" />
@@ -244,27 +256,32 @@ export default function Login() {
             <Separator className="flex-1" />
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            disabled={pending}
-            aria-busy={googleSubmitting}
-            onClick={handleGoogleSignIn}
-            className="h-11 w-full md:h-10"
-          >
-            {googleSubmitting ? (
-              // Token-colored spinner — visible on the outline background (U10).
-              <Loader2 aria-hidden="true" className="mr-2 size-4 animate-spin" />
-            ) : (
-              <Image
-                src={google}
-                alt=""
-                aria-hidden="true"
-                className="mr-2 size-4"
-              />
-            )}
-            {t("signIn.continueWithGoogle")}
-          </Button>
+          <div className="flex flex-col gap-2">
+            {oauthButtons.map((button) => (
+              <Button
+                key={button.id}
+                type="button"
+                variant="outline"
+                disabled={pending}
+                aria-busy={oauthSubmitting === button.id}
+                onClick={() => handleOAuthSignIn(button.id)}
+                className="h-11 w-full md:h-10"
+              >
+                {oauthSubmitting === button.id ? (
+                  // Token-colored spinner — visible on the outline background (U10).
+                  <Loader2 aria-hidden="true" className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Image
+                    src={button.icon}
+                    alt=""
+                    aria-hidden="true"
+                    className="mr-2 size-4"
+                  />
+                )}
+                {button.label}
+              </Button>
+            ))}
+          </div>
         </div>
       ) : null}
 

@@ -8,8 +8,10 @@ import { Pool } from "pg"
 import bcrypt from "bcryptjs";
 import { SignJWT, importJWK } from "jose"
 import GoogleProvider from "next-auth/providers/google";
+import AzureADProvider from "next-auth/providers/azure-ad";
 import { Provider } from "next-auth/providers";
 import { isEmailDomainAllowed } from "@/lib/auth/domain-allowlist";
+import { isOAuthProvider, microsoftSettings, oauthDisplayName, oauthEmail } from "@/lib/auth/oauth-providers";
 
 const generateJWT = async (payload) => {
   const secret = process.env.NEXTAUTH_SECRET;
@@ -158,6 +160,22 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   }))
 }
 
+const microsoft = microsoftSettings(process.env);
+if (microsoft) {
+  providers.push(AzureADProvider({
+    ...microsoft,
+    // Replaces the provider's own profile(), which downloads the user's photo
+    // from Microsoft Graph and returns it as a base64 data URL. With JWT
+    // sessions that image would travel in the session cookie on every request.
+    profile: (profile: any) => ({
+      id: profile.sub,
+      name: profile.name,
+      email: oauthEmail(profile),
+      image: null,
+    }),
+  }))
+}
+
 export const getAuthOptions = async (): Promise<NextAuthOptions> => {
   return {
     pages: {
@@ -181,10 +199,12 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
         try {
           let email = user.email;
 
-          if (account?.provider === "google") {
-            email = profile?.email;
+          const oauth = isOAuthProvider(account?.provider);
+
+          if (oauth) {
+            email = oauthEmail(profile);
             if (!email) {
-              console.error("[EXULU] Google auth failed, no email in profile.")
+              console.error(`[EXULU] ${account.provider} auth failed, no email in profile.`)
               return false;
             }
           }
@@ -252,12 +272,12 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
             await client.query('UPDATE users SET "emailVerified" = $1 WHERE LOWER(email) = LOWER($2)', [new Date(), email])
           }
 
-          // If google auth, create the user if it doesn't exist.
+          // If Google or Microsoft auth, create the user if it doesn't exist.
           if (
             !existingUser &&
-            account?.provider === "google"
+            oauth
           ) {
-            const name = profile?.given_name || "";
+            const name = oauthDisplayName(profile);
             const defaultRoleQueryResult = await client.query('SELECT * FROM roles WHERE name = $1', ["default"])
             const defaultRole = defaultRoleQueryResult?.rows[0];
             const insertResult = await client.query('INSERT INTO users ("email", "name", "createdAt", "updatedAt", "emailVerified", "last_used", "type", "super_admin", "role") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *', [email, name, new Date(), new Date(), new Date(), new Date(), "user", false, defaultRole?.id])
@@ -265,10 +285,10 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
           }
 
           if (existingUser) {
-            if (account?.provider === "google") {
+            if (oauth) {
 
               const queryResult = await client.query('SELECT * FROM accounts WHERE provider = $1 AND "providerAccountId" = $2', [
-                'google',
+                account.provider,
                 account.providerAccountId
               ])
 
@@ -288,7 +308,7 @@ export const getAuthOptions = async (): Promise<NextAuthOptions> => {
                 ])
               } else {
                 await client.query('INSERT INTO accounts ("provider", "providerAccountId", "access_token", "refresh_token", "expires_at", "id_token", "scope", "session_state", "token_type", "userId", "type") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)', [
-                  'google',
+                  account.provider,
                   account.providerAccountId,
                   account.access_token,
                   account.refresh_token,

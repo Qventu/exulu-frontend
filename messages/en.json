@@ -1025,8 +1025,8 @@
       "Default": "Something went wrong while signing you in. Please try again.",
       "EmailSignin": "The sign-in code could not be sent. Check the address and try again.",
       "OAuthAccountNotLinked": "This email is already linked to a different sign-in method. Use that method instead.",
-      "OAuthCallback": "Google sign-in did not complete. Please try again.",
-      "OAuthSignin": "Google sign-in could not be started. Please try again.",
+      "OAuthCallback": "The sign-in with your Google or Microsoft account did not complete. Please try again.",
+      "OAuthSignin": "The sign-in with your Google or Microsoft account could not be started. Please try again.",
       "SessionRequired": "Please sign in to continue.",
       "Verification": "That code is invalid or has expired. Request a new one and try again.",
       "title": "Sign-in failed"
@@ -1048,6 +1048,7 @@
     },
     "signIn": {
       "continueWithGoogle": "Continue with Google",
+      "continueWithMicrosoft": "Continue with Microsoft",
       "emailLabel": "Email",
       "emailPlaceholder": "m@example.com",
       "noAccount": "No account? Ask your administrator.",
