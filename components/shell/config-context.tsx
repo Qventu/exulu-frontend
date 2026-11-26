@@ -5,6 +5,8 @@ import { createContext } from "react";
 export type ConfigContextType = {
     backend: string;
     google_client_id: string;
+    /** Microsoft (Entra ID) sign-in is configured on the server. */
+    microsoft_enabled?: boolean;
     auth_mode: string;
     feedback?: FeedbackConfig;
     transcription?: {

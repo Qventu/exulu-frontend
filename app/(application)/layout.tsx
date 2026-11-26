@@ -1,3 +1,4 @@
+import { microsoftSettings } from "@/lib/auth/oauth-providers";
 import "../globals.css";
 import { DEMO_BRAND } from "@/lib/demo/brand";
 import { DEMO_THEME } from "@/lib/demo/theme";
@@ -100,6 +101,7 @@ export default async function RootLayout({
         },
         backend: process.env.BACKEND || "",
         google_client_id: process.env.GOOGLE_CLIENT_ID || "",
+        microsoft_enabled: !!microsoftSettings(process.env),
         auth_mode: process.env.AUTH_MODE || "",
         n8n: {
             enabled: typeof process.env.N8N_URL === "string" && process.env.N8N_URL !== "",

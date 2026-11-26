@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { microsoftSettings } from "@/lib/auth/oauth-providers";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export async function GET(request: Request) {
         backend: process.env.BACKEND,
         s3_endpoint: process.env.COMPANION_S3_ENDPOINT,
         google_client_id: process.env.GOOGLE_CLIENT_ID,
+        microsoft_enabled: !!microsoftSettings(process.env),
         auth_mode: process.env.AUTH_MODE,
         langfuse: process.env.LANGFUSE_URI,
         // FEEDBACK_TOKEN is deliberately NOT included: this endpoint is
